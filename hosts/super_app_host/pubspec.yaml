@@ -1,0 +1,26 @@
+name: super_app_host
+description: First-party Flutter host app for mini_program_sdk local proof.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  flutter:
+    sdk: flutter
+  mini_program_contracts:
+    path: ../../packages/mini_program_contracts
+  mini_program_sdk:
+    path: ../../packages/mini_program_sdk
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/mini_programs/profile_center/manifest.json
+    - assets/mini_programs/profile_center/screens/profile_center_home.json

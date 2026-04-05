@@ -1,0 +1,57 @@
+# Vendored or local reference repositories
+/stac-dev/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.orig
+*.log
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Environment and local-only config
+.env
+.env.*
+!.env.example
+
+# Dart and Flutter generated state
+**/.dart_tool/
+**/.packages
+**/.pub/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.metadata
+**/pubspec.lock
+**/build/
+**/.build/
+**/coverage/
+
+# Flutter platform generated files
+**/.symlinks/
+**/GeneratedPluginRegistrant.*
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/Pods/
+**/xcuserdata/
+
+# Signing files
+**/key.properties
+**/*.jks
+**/*.keystore
+

@@ -1,0 +1,10 @@
+{
+  "miniProgramId": "profile_center",
+  "requireContextForLatest": true,
+  "enforceManifestCapabilities": true,
+  "requiredQueryParameters": [
+    "hostApp",
+    "sdkVersion",
+    "capabilities"
+  ]
+}

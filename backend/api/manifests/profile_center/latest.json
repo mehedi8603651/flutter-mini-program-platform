@@ -1,0 +1,15 @@
+{
+  "id": "profile_center",
+  "version": "1.0.0",
+  "entry": "profile_center_home",
+  "contractVersion": "1.0.0",
+  "sdkVersionRange": ">=1.0.0 <2.0.0",
+  "requiredCapabilities": [
+    "analytics",
+    "native_navigation"
+  ],
+  "fallback": {
+    "strategy": "errorView",
+    "message": "Profile Center is temporarily unavailable in this host app."
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "appBar": {
+    "title": {
+      "data": "Profile Center",
+      "type": "text"
+    },
+    "type": "appBar"
+  },
+  "body": {
+    "child": {
+      "padding": {
+        "left": 24.0,
+        "top": 24.0,
+        "right": 24.0,
+        "bottom": 24.0
+      },
+      "child": {
+        "crossAxisAlignment": "start",
+        "children": [
+          {
+            "data": "Portable account module",
+            "style": {
+              "type": "custom",
+              "color": "#1A202C",
+              "fontSize": 28.0,
+              "fontWeight": "w700"
+            },
+            "type": "text"
+          },
+          {
+            "height": 12.0,
+            "type": "sizedBox"
+          },
+          {
+            "data": "This mini-program is delivered through the shared SDK and keeps native work behind the host bridge.",
+            "type": "text"
+          },
+          {
+            "height": 24.0,
+            "type": "sizedBox"
+          },
+          {
+            "padding": {
+              "left": 16.0,
+              "top": 16.0,
+              "right": 16.0,
+              "bottom": 16.0
+            },
+            "decoration": {
+              "color": "#FFFFFF",
+              "borderRadius": {
+                "topLeft": 20.0,
+                "topRight": 20.0,
+                "bottomLeft": 20.0,
+                "bottomRight": 20.0
+              }
+            },
+            "child": {
+              "crossAxisAlignment": "start",
+              "children": [
+                {
+                  "data": "Preview user",
+                  "style": {
+                    "type": "custom",
+                    "fontSize": 16.0,
+                    "fontWeight": "w600"
+                  },
+                  "type": "text"
+                },
+                {
+                  "height": 8.0,
+                  "type": "sizedBox"
+                },
+                {
+                  "data": "Name: Guest User",
+                  "type": "text"
+                },
+                {
+                  "data": "Tier: Super App Preview",
+                  "type": "text"
+                }
+              ],
+              "type": "column"
+            },
+            "type": "container"
+          },
+          {
+            "height": 24.0,
+            "type": "sizedBox"
+          },
+          {
+            "onPressed": {
+              "actionType": "hostAction",
+              "requestId": "profile-track-open",
+              "action": "trackEvent",
+              "payload": {
+                "name": "profile_center_opened",
+                "properties": {
+                  "source": "profile_center",
+                  "surface": "profile_center"
+                }
+              }
+            },
+            "child": {
+              "data": "Track Profile Event",
+              "type": "text"
+            },
+            "type": "filledButton"
+          },
+          {
+            "height": 12.0,
+            "type": "sizedBox"
+          },
+          {
+            "onPressed": {
+              "actionType": "hostAction",
+              "requestId": "profile-open-native-editor",
+              "action": "openNativeScreen",
+              "payload": {
+                "route": "profile_editor",
+                "args": {
+                  "userId": "guest_001",
+                  "source": "profile_center"
+                },
+                "expectResult": true
+              }
+            },
+            "child": {
+              "data": "Open Native Edit Screen",
+              "type": "text"
+            },
+            "type": "filledButton"
+          }
+        ],
+        "type": "column"
+      },
+      "type": "singleChildScrollView"
+    },
+    "type": "safeArea"
+  },
+  "type": "scaffold"
+}

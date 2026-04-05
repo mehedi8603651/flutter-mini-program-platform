@@ -1,0 +1,11 @@
+{
+  "miniProgramId": "profile_center",
+  "defaultVersion": "1.0.0",
+  "hostRules": [
+    {
+      "hostApp": "super_app_host",
+      "version": "1.0.0",
+      "enabled": true
+    }
+  ]
+}

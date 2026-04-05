@@ -1,0 +1,77 @@
+# super_app_host
+
+First-party Flutter host app for the portable mini-program platform.
+
+## What it proves
+
+- installs `mini_program_sdk`
+- registers host capabilities
+- implements a concrete `HostBridge`
+- loads one built mini-program through `MiniProgramSource`
+- renders the mini-program with the shared SDK
+- opens a host-owned native screen through `openNativeScreen`
+- can switch between bundled asset delivery and local backend HTTP delivery
+
+## Current local flow
+
+1. Launch the app.
+2. Open `Profile Center` from the host list.
+3. Render the portable screen through `MiniProgramHost`.
+4. Trigger `trackEvent` or `openNativeScreen` from the mini-program.
+5. Use `Preview capability failure` to confirm the SDK rejects unsupported capability sets with controlled fallback UI.
+
+## Source of truth
+
+The actual Stac-authored mini-program lives in
+`mini_programs/profile_center`.
+
+For local host proof, this app currently bundles a copied snapshot of:
+
+- `mini_programs/profile_center/manifest.json`
+- `mini_programs/profile_center/stac/.build/screens/profile_center_home.json`
+
+Those files are loaded as Flutter assets through `LocalMiniProgramSource`.
+Refresh them after rebuilding the mini-program:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\sync_assets.ps1
+```
+
+## Local backend mode
+
+This host defaults to bundled assets so it can run without a server.
+
+To test local backend delivery:
+
+1. Publish the current mini-program into `backend/api/`
+2. Start the real local backend service
+3. Launch the host in `local_backend` mode
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1
+cd D:\flutter-mini-program-platform\backend\local_backend_service
+dart pub get
+dart run bin\server.dart
+flutter run --dart-define=SUPER_APP_SOURCE_MODE=local_backend --dart-define=SUPER_APP_BACKEND_BASE_URL=http://127.0.0.1:8080/api/
+```
+
+If you start the backend on another port, update
+`SUPER_APP_BACKEND_BASE_URL` to match it.
+
+In local backend mode, this host automatically sends its delivery context to
+the backend `latest` manifest route:
+
+- `hostApp=super_app_host`
+- `sdkVersion=1.0.0`
+- `capabilities=auth,analytics,native_navigation`
+
+If you test on an Android emulator instead of Windows desktop, use
+`http://10.0.2.2:8080/api/` for `SUPER_APP_BACKEND_BASE_URL`.
+
+## Commands
+
+```bash
+flutter run
+flutter test
+flutter analyze
+```

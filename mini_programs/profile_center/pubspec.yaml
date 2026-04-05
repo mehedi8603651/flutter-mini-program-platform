@@ -1,0 +1,13 @@
+name: profile_center_mini_program
+description: Portable Stac-authored profile center mini-program.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  stac_core: ^1.4.0
+
+dev_dependencies:
+  lints: ^6.0.0
