@@ -54,6 +54,29 @@ void main() {
       expect(result.actionName, ActionNames.trackEvent);
     });
 
+    test('routes callSecureApi to the host bridge', () async {
+      final bridge = _FakeHostBridge();
+      const logger = DebugPrintSdkLogger();
+      final dispatcher = HostActionDispatcher(
+        hostBridge: bridge,
+        logger: logger,
+      );
+      final request = HostActionRequest.callSecureApi(
+        requestId: 'req-002b',
+        payload: const CallSecureApiActionPayload(
+          endpoint: 'feedback/submit',
+          body: <String, dynamic>{'source': 'feedback_form'},
+        ),
+      );
+
+      final result = await dispatcher.dispatch(request);
+
+      expect(bridge.callSecureApiCalls, hasLength(1));
+      expect(bridge.callSecureApiCalls.single.endpoint, 'feedback/submit');
+      expect(result.isSuccess, isTrue);
+      expect(result.actionName, ActionNames.callSecureApi);
+    });
+
     test('returns unknownAction failure for unsupported actions', () async {
       final bridge = _FakeHostBridge();
       const logger = DebugPrintSdkLogger();
@@ -96,6 +119,7 @@ void main() {
 
 class _FakeHostBridge implements HostBridge {
   final List<OpenNativeScreenActionPayload> openNativeScreenCalls = [];
+  final List<CallSecureApiActionPayload> callSecureApiCalls = [];
   final List<TrackEventActionPayload> trackEventCalls = [];
 
   @override
@@ -106,6 +130,17 @@ class _FakeHostBridge implements HostBridge {
     return HostActionResult.success(
       message: 'opened',
       data: const {'opened': true},
+    );
+  }
+
+  @override
+  Future<HostActionResult> callSecureApi(
+    CallSecureApiActionPayload payload,
+  ) async {
+    callSecureApiCalls.add(payload);
+    return HostActionResult.success(
+      message: 'secured',
+      data: const {'secured': true},
     );
   }
 

@@ -52,7 +52,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Mini-program unavailable'), findsOneWidget);
+      expect(find.text('SDK update required'), findsOneWidget);
       expect(
         find.textContaining('requires SDK >=1.0.0 <2.0.0'),
         findsOneWidget,
@@ -83,6 +83,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      expect(find.text('Host capability mismatch'), findsOneWidget);
       expect(
         find.textContaining('required capabilities: native_navigation'),
         findsOneWidget,
@@ -113,7 +114,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Mini-program unavailable'), findsOneWidget);
+      expect(find.text('Release unavailable'), findsOneWidget);
       expect(
         find.textContaining('not enabled for host "partner_app_host"'),
         findsOneWidget,
@@ -144,7 +145,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Mini-program unavailable'), findsOneWidget);
+      expect(find.text('Backend unavailable'), findsOneWidget);
       expect(
         find.text(
           'Failed to reach the mini-program backend while loading manifest.',
@@ -240,6 +241,37 @@ void main() {
       expect(bridge.trackEventCalls, hasLength(1));
       expect(bridge.trackEventCalls.single.name, 'profile_opened');
     });
+
+    testWidgets('dispatches secure_api through the registered parser', (
+      tester,
+    ) async {
+      final bridge = _FakeHostBridge();
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(
+          requiredCapabilities: const [Capability.secureApi],
+        ),
+        screenJson: _secureApiScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'feedback_form',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: bridge,
+            capabilityRegistry: CapabilityRegistry(const [Capability.secureApi]),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Submit Securely'));
+      await tester.pumpAndSettle();
+
+      expect(bridge.callSecureApiCalls, hasLength(1));
+      expect(bridge.callSecureApiCalls.single.endpoint, 'feedback/submit');
+    });
   });
 }
 
@@ -286,6 +318,7 @@ class _FailingManifestSource implements MiniProgramSource {
 
 class _FakeHostBridge implements HostBridge {
   final List<OpenNativeScreenActionPayload> openNativeScreenCalls = [];
+  final List<CallSecureApiActionPayload> callSecureApiCalls = [];
   final List<TrackEventActionPayload> trackEventCalls = [];
 
   @override
@@ -296,6 +329,17 @@ class _FakeHostBridge implements HostBridge {
     return HostActionResult.success(
       actionName: ActionNames.openNativeScreen,
       data: const {'opened': true},
+    );
+  }
+
+  @override
+  Future<HostActionResult> callSecureApi(
+    CallSecureApiActionPayload payload,
+  ) async {
+    callSecureApiCalls.add(payload);
+    return HostActionResult.success(
+      actionName: ActionNames.callSecureApi,
+      data: const {'secured': true},
     );
   }
 
@@ -358,6 +402,27 @@ const Map<String, dynamic> _actionScreenJson = <String, dynamic>{
         },
       },
       'child': <String, dynamic>{'type': 'text', 'data': 'Track Event'},
+    },
+  },
+};
+
+const Map<String, dynamic> _secureApiScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'hostAction',
+        'requestId': 'req-secure-1',
+        'action': 'callSecureApi',
+        'payload': <String, dynamic>{
+          'endpoint': 'feedback/submit',
+          'method': 'POST',
+          'body': <String, dynamic>{'source': 'feedback_form'},
+        },
+      },
+      'child': <String, dynamic>{'type': 'text', 'data': 'Submit Securely'},
     },
   },
 };

@@ -122,12 +122,21 @@ class _PublishedArtifactRepository {
         miniProgramId: miniProgramId,
         context: context,
       );
+      final responseBody = Map<String, Object?>.from(selection.manifestJson)
+        ..['deliveryMetadata'] = selection.decision.toJson();
+      final headers = <String, String>{
+        HttpHeaders.contentTypeHeader: _jsonContentType,
+        'x-mini-program-version': selection.version,
+        'x-mini-program-selection-mode': selection.decision.selectionMode,
+      };
+      final matchedRuleId = selection.decision.matchedRuleId;
+      if (matchedRuleId != null) {
+        headers['x-mini-program-matched-rule-id'] = matchedRuleId;
+      }
 
       return Response.ok(
-        jsonEncode(selection.manifestJson),
-        headers: <String, String>{
-          HttpHeaders.contentTypeHeader: _jsonContentType,
-        },
+        jsonEncode(responseBody),
+        headers: headers,
       );
     } on ManifestSelectionException catch (error) {
       return _jsonResponse(
@@ -305,6 +314,17 @@ class _PublishedArtifactRepository {
       final tenantIdError = _validateSegment(tenantId, label: 'tenantId');
       if (tenantIdError != null) {
         return tenantIdError;
+      }
+    }
+
+    final pinnedVersion = context.pinnedVersion;
+    if (pinnedVersion != null) {
+      final pinnedVersionError = _validateSegment(
+        pinnedVersion,
+        label: 'pinnedVersion',
+      );
+      if (pinnedVersionError != null) {
+        return pinnedVersionError;
       }
     }
 

@@ -65,11 +65,31 @@ void main() {
       'manifests/feedback_form/latest.json',
       <String, Object?>{
         'id': 'feedback_form',
-        'version': '1.0.0',
+        'version': '1.1.0',
         'entry': 'feedback_form_home',
         'contractVersion': '1.0.0',
         'sdkVersionRange': '>=1.0.0 <2.0.0',
-        'requiredCapabilities': <String>['analytics', 'native_navigation'],
+        'requiredCapabilities': <String>[
+          'analytics',
+          'secure_api',
+          'native_navigation',
+        ],
+      },
+    );
+    await _writeJsonFile(
+      tempDirectory,
+      'manifests/feedback_form/versions/1.1.0.json',
+      <String, Object?>{
+        'id': 'feedback_form',
+        'version': '1.1.0',
+        'entry': 'feedback_form_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': <String>[
+          'analytics',
+          'secure_api',
+          'native_navigation',
+        ],
       },
     );
     await _writeJsonFile(
@@ -83,6 +103,11 @@ void main() {
         'sdkVersionRange': '>=1.0.0 <2.0.0',
         'requiredCapabilities': <String>['analytics', 'native_navigation'],
       },
+    );
+    await _writeJsonFile(
+      tempDirectory,
+      'screens/feedback_form/1.1.0/feedback_form_home.json',
+      <String, Object?>{'type': 'scaffold', 'versionLabel': '1.1.0'},
     );
     await _writeJsonFile(
       tempDirectory,
@@ -133,6 +158,25 @@ void main() {
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['id'], 'profile_center');
     expect(body['version'], '1.1.0');
+    expect(
+      body['deliveryMetadata'],
+      isA<Map<String, dynamic>>()
+          .having(
+            (metadata) => metadata['selectionMode'],
+            'selectionMode',
+            'matched_rule',
+          )
+          .having(
+            (metadata) => metadata['matchedRuleId'],
+            'matchedRuleId',
+            'super-app-android-v1',
+          )
+          .having(
+            (metadata) => metadata['resolvedVersion'],
+            'resolvedVersion',
+            '1.1.0',
+          ),
+    );
   });
 
   test('serves 1.0.0 latest for partner_app_host', () async {
@@ -217,7 +261,25 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,secure_api',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['version'], '1.1.0');
+  });
+
+  test('serves a pinned profile_center version when requested', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth&pinnedVersion=1.0.0',
         ),
       ),
     );
@@ -226,6 +288,20 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['version'], '1.0.0');
+    expect(
+      body['deliveryMetadata'],
+      isA<Map<String, dynamic>>()
+          .having(
+            (metadata) => metadata['selectionMode'],
+            'selectionMode',
+            'pinned_version',
+          )
+          .having(
+            (metadata) => metadata['requestedPinnedVersion'],
+            'requestedPinnedVersion',
+            '1.0.0',
+          ),
+    );
   });
 
   test(
@@ -281,6 +357,47 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['errorCode'], 'host_not_enabled');
+  });
+
+  test('returns 412 when a matching rollout rule is disabled', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&tenantId=blocked_lab&capabilities=analytics,native_navigation,secure_api',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.preconditionFailed);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], 'host_not_enabled');
+    final details = body['details'] as Map<String, dynamic>;
+    expect(details['matchedRuleId'], 'partner-feedback-disabled-lab');
+    expect(details['resolvedVersion'], '1.1.0');
+  });
+
+  test('returns 412 when feedback_form secure_api capability is missing', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.preconditionFailed);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], 'missing_capabilities');
+    final details = body['details'] as Map<String, dynamic>;
+    expect(details['missingCapabilities'], contains('secure_api'));
   });
 
   test('returns 412 when request capabilities are missing', () async {
@@ -421,6 +538,7 @@ Future<void> _writeProfileCenterPolicies(Directory rootDirectory) async {
       'defaultVersion': '1.0.0',
       'rules': <Map<String, Object?>>[
         <String, Object?>{
+          'id': 'super-app-android-v1',
           'hostApp': 'super_app_host',
           'platform': 'android',
           'hostVersionRange': '>=1.0.0 <2.0.0',
@@ -428,18 +546,21 @@ Future<void> _writeProfileCenterPolicies(Directory rootDirectory) async {
           'enabled': true,
         },
         <String, Object?>{
+          'id': 'partner-vip-tenant',
           'hostApp': 'partner_app_host',
           'tenantId': 'vip_partner',
           'version': '1.1.0',
           'enabled': true,
         },
         <String, Object?>{
+          'id': 'partner-zh-locale',
           'hostApp': 'partner_app_host',
           'locale': 'zh',
           'version': '1.1.0',
           'enabled': true,
         },
         <String, Object?>{
+          'id': 'partner-default',
           'hostApp': 'partner_app_host',
           'version': '1.0.0',
           'enabled': true,
@@ -475,15 +596,30 @@ Future<void> _writeFeedbackFormPolicies(Directory rootDirectory) async {
       'defaultVersion': '1.0.0',
       'rules': <Map<String, Object?>>[
         <String, Object?>{
+          'id': 'super-feedback-android',
           'hostApp': 'super_app_host',
           'platform': 'android',
           'hostVersionRange': '>=1.0.0 <2.0.0',
-          'version': '1.0.0',
+          'version': '1.1.0',
           'enabled': true,
         },
         <String, Object?>{
+          'id': 'super-feedback-default',
+          'hostApp': 'super_app_host',
+          'version': '1.1.0',
+          'enabled': true,
+        },
+        <String, Object?>{
+          'id': 'partner-feedback-disabled-lab',
           'hostApp': 'partner_app_host',
-          'version': '1.0.0',
+          'tenantId': 'blocked_lab',
+          'version': '1.1.0',
+          'enabled': false,
+        },
+        <String, Object?>{
+          'id': 'partner-feedback-default',
+          'hostApp': 'partner_app_host',
+          'version': '1.1.0',
           'enabled': true,
         },
       ],

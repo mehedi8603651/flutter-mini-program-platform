@@ -1,11 +1,12 @@
 {
   "id": "feedback_form",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "entry": "feedback_form_home",
   "contractVersion": "1.0.0",
   "sdkVersionRange": ">=1.0.0 <2.0.0",
   "requiredCapabilities": [
     "analytics",
+    "secure_api",
     "native_navigation"
   ],
   "fallback": {

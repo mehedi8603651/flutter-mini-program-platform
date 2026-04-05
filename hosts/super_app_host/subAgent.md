@@ -8,6 +8,7 @@ Implement the first-party Flutter host app that proves the end-to-end mobile min
 local host integration path for:
 - host capability registration
 - concrete `HostBridge` wiring
+- host-owned `secure_api` endpoint handling
 - asset-backed `MiniProgramSource` delivery
 - local backend HTTP delivery through `HttpMiniProgramSource`
 - mini-program list and entry flow
@@ -33,7 +34,7 @@ local host integration path for:
 
 ## MVP Direction
 - Validate one mini-program locally first.
-- Prefer auth, analytics, and native navigation before harder capabilities like payment.
+- Prefer auth, analytics, secure API, and native navigation before harder capabilities like payment.
 
 ## Current Structure
 - `pubspec.yaml`
@@ -54,6 +55,7 @@ local host integration path for:
 ## Runtime Rules
 - Keep host-specific routing and analytics logic inside this app.
 - Expose only approved bridge actions already defined in contracts.
+- Keep secure API endpoints allowlisted inside this host bridge.
 - Treat this app as the first proof host, not as the default for all partner hosts.
 - Map portable route aliases to host-native routes inside `HostBridge`, not inside the mini-program source.
 - Keep the host asset snapshot in sync with the real built output from `mini_programs/profile_center` and `mini_programs/feedback_form` by using `tools/sync_assets.ps1`.

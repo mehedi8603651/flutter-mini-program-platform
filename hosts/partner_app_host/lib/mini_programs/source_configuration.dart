@@ -12,6 +12,8 @@ class PartnerAppHostSourceConfiguration {
     this.platform,
     this.locale,
     this.tenantId,
+    this.hostVersionOverride,
+    this.pinnedVersion,
   });
 
   factory PartnerAppHostSourceConfiguration.fromEnvironment() {
@@ -23,12 +25,30 @@ class PartnerAppHostSourceConfiguration {
       'PARTNER_APP_TENANT_ID',
       defaultValue: '',
     );
+    const rawHostVersion = String.fromEnvironment(
+      'PARTNER_APP_HOST_VERSION',
+      defaultValue: '',
+    );
+    const rawPlatform = String.fromEnvironment(
+      'PARTNER_APP_PLATFORM',
+      defaultValue: '',
+    );
+    const rawLocale = String.fromEnvironment(
+      'PARTNER_APP_LOCALE',
+      defaultValue: '',
+    );
+    const rawPinnedVersion = String.fromEnvironment(
+      'PARTNER_APP_PINNED_VERSION',
+      defaultValue: '',
+    );
 
     return PartnerAppHostSourceConfiguration(
       backendApiBaseUri: Uri.parse(rawBackendBaseUrl),
-      platform: _defaultPlatform(),
-      locale: _defaultLocale(),
+      platform: _nullIfBlank(rawPlatform) ?? _defaultPlatform(),
+      locale: _nullIfBlank(rawLocale) ?? _defaultLocale(),
       tenantId: _nullIfBlank(rawTenantId),
+      hostVersionOverride: _nullIfBlank(rawHostVersion),
+      pinnedVersion: _nullIfBlank(rawPinnedVersion),
     );
   }
 
@@ -37,6 +57,8 @@ class PartnerAppHostSourceConfiguration {
   final String? platform;
   final String? locale;
   final String? tenantId;
+  final String? hostVersionOverride;
+  final String? pinnedVersion;
 
   MiniProgramSource buildSource({
     required String hostAppId,
@@ -50,13 +72,21 @@ class PartnerAppHostSourceConfiguration {
       manifestRequestQueryParametersBuilder: (_) => _buildManifestContext(
         hostAppId: hostAppId,
         sdkVersion: sdkVersion,
-        hostVersion: hostVersion,
+        hostVersion: hostVersionOverride ?? hostVersion,
         capabilityRegistry: capabilityRegistry,
       ),
     );
   }
 
-  String get description => 'Local backend ($backendApiBaseUri)';
+  String get description {
+    final labels = <String>[
+      if (hostVersionOverride != null) 'hostVersion=$hostVersionOverride',
+      if (tenantId != null) 'tenantId=$tenantId',
+      if (pinnedVersion != null) 'pinnedVersion=$pinnedVersion',
+    ];
+    final suffix = labels.isEmpty ? '' : '; ${labels.join(', ')}';
+    return 'Local backend ($backendApiBaseUri$suffix)';
+  }
 
   Map<String, String> _buildManifestContext({
     required String hostAppId,
@@ -86,6 +116,11 @@ class PartnerAppHostSourceConfiguration {
     final tenantIdValue = tenantId;
     if (tenantIdValue != null) {
       queryParameters['tenantId'] = tenantIdValue;
+    }
+
+    final pinnedVersionValue = pinnedVersion;
+    if (pinnedVersionValue != null) {
+      queryParameters['pinnedVersion'] = pinnedVersionValue;
     }
 
     return queryParameters;

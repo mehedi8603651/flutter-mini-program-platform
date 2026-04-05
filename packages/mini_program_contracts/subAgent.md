@@ -42,9 +42,9 @@ Define the shared language of the platform before any runtime or host behavior i
 
 ## v1 Contract Surface
 - Manifest contract: `MiniProgramManifest`, `MiniProgramFallback`, `MiniProgramFallbackStrategy`
-- Capabilities: `auth`, `analytics`, `native_navigation`
-- Actions: `openNativeScreen`, `trackEvent`
-- Action payloads: `OpenNativeScreenActionPayload`, `TrackEventActionPayload`
+- Capabilities: `auth`, `analytics`, `secure_api`, `native_navigation`
+- Actions: `openNativeScreen`, `callSecureApi`, `trackEvent`
+- Action payloads: `OpenNativeScreenActionPayload`, `CallSecureApiActionPayload`, `TrackEventActionPayload`
 - Host bridge envelope: `HostActionRequest`, `HostActionResult`, `HostActionStatus`
 - SDK compatibility: `SdkVersionRange`
 - Shared constants: `MiniProgramErrorCodes`, `FeatureFlagKey`
@@ -75,12 +75,10 @@ Define the shared language of the platform before any runtime or host behavior i
 - `lib/feature_flags.dart`
 
 ## Next Step
-The next implementation phase is `packages/mini_program_sdk`.
+Keep this package stable while future capabilities are proposed.
 
-The SDK should consume these contracts to add:
-- `HostBridge` interface
-- manifest loading/parsing
-- SDK version compatibility checks
-- capability matching
-- host action dispatch using `HostActionRequest` / `HostActionResult`
-- fallback error handling for unsupported manifests or capabilities
+Any new bridge capability must still land here first:
+- capability enum value
+- action name
+- typed payload
+- stable wire compatibility

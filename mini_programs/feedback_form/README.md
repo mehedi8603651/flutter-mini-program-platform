@@ -5,10 +5,10 @@ Portable feedback mini-program authored with Stac DSL.
 ## Current scope
 
 - renders one feedback screen with local form validation
-- uses approved `hostAction` payloads for `trackEvent` and `openNativeScreen`
+- uses approved `hostAction` payloads for `callSecureApi`, `trackEvent`, and `openNativeScreen`
 - stays portable by using the route alias `feedback_follow_up`
-- current authored manifest version is `1.0.0`
-- current backend rollout sends `1.0.0` to both `super_app_host` and `partner_app_host`
+- current authored manifest version is `1.1.0`
+- current backend rollout sends `1.1.0` to both `super_app_host` and `partner_app_host`
 
 ## Structure
 

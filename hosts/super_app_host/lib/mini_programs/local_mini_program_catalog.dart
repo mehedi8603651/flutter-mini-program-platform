@@ -34,10 +34,12 @@ abstract final class LocalMiniProgramCatalog {
         title: 'Feedback Form',
         description:
             'A portable feedback flow authored in Stac DSL that validates '
-            'locally, tracks analytics through the shared bridge, and opens a '
-            'host-owned follow-up screen.',
+            'locally, submits through a host-owned secure API, tracks '
+            'analytics through the shared bridge, and opens a host-owned '
+            'follow-up screen.',
         requiredCapabilities: <Capability>[
           Capability.analytics,
+          Capability.secureApi,
           Capability.nativeNavigation,
         ],
       );

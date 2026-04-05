@@ -13,6 +13,7 @@ void main() {
         sdkVersionRange: const SdkVersionRange(value: '>=1.0.0 <2.0.0'),
         requiredCapabilities: const [
           Capability.auth,
+          Capability.secureApi,
           Capability.nativeNavigation,
         ],
         featureFlags: const ['profile_center_v2'],
@@ -26,7 +27,11 @@ void main() {
       final json = manifest.toJson();
 
       expect(json['sdkVersionRange'], '>=1.0.0 <2.0.0');
-      expect(json['requiredCapabilities'], ['auth', 'native_navigation']);
+      expect(json['requiredCapabilities'], [
+        'auth',
+        'secure_api',
+        'native_navigation',
+      ]);
       expect(json['featureFlags'], ['profile_center_v2']);
       expect(json['fallback'], {
         'strategy': 'hostRoute',
@@ -87,9 +92,17 @@ void main() {
           name: 'recharge_started',
           properties: const {'miniProgramId': 'recharge', 'step': 1},
         );
+        final callSecureApiPayload = CallSecureApiActionPayload(
+          endpoint: 'feedback/submit',
+          body: const {'source': 'feedback_form'},
+        );
         final openNativeScreenRequest = HostActionRequest.openNativeScreen(
           requestId: 'req-001',
           payload: openNativeScreenPayload,
+        );
+        final callSecureApiRequest = HostActionRequest.callSecureApi(
+          requestId: 'req-001b',
+          payload: callSecureApiPayload,
         );
         final trackEventRequest = HostActionRequest.trackEvent(
           requestId: 'req-002',
@@ -103,12 +116,20 @@ void main() {
           openNativeScreenPayload,
         );
         expect(
+          CallSecureApiActionPayload.fromJson(callSecureApiPayload.toJson()),
+          callSecureApiPayload,
+        );
+        expect(
           TrackEventActionPayload.fromJson(trackEventPayload.toJson()),
           trackEventPayload,
         );
         expect(
           HostActionRequest.fromJson(openNativeScreenRequest.toJson()),
           openNativeScreenRequest,
+        );
+        expect(
+          HostActionRequest.fromJson(callSecureApiRequest.toJson()),
+          callSecureApiRequest,
         );
         expect(
           HostActionRequest.fromJson(trackEventRequest.toJson()),
@@ -118,6 +139,7 @@ void main() {
           openNativeScreenRequest.actionName,
           ActionNames.openNativeScreen,
         );
+        expect(callSecureApiRequest.actionName, ActionNames.callSecureApi);
         expect(trackEventRequest.actionName, ActionNames.trackEvent);
       },
     );

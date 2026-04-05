@@ -16,6 +16,7 @@ class HostBridgeImpl implements HostBridge {
     'profile_editor': AppRoutes.nativeProfileReview,
     'feedback_follow_up': AppRoutes.nativeFeedbackDesk,
   };
+  static const String _feedbackSubmitEndpoint = 'feedback/submit';
 
   @override
   Future<HostActionResult> openNativeScreen(
@@ -61,6 +62,47 @@ class HostBridgeImpl implements HostBridge {
         message: 'Failed to open partner native screen "${payload.route}".',
       );
     }
+  }
+
+  @override
+  Future<HostActionResult> callSecureApi(
+    CallSecureApiActionPayload payload,
+  ) async {
+    final method = payload.method.trim().toUpperCase();
+    if (payload.endpoint != _feedbackSubmitEndpoint) {
+      return HostActionResult.failed(
+        actionName: ActionNames.callSecureApi,
+        message:
+            'Secure API endpoint "${payload.endpoint}" is not allowlisted in partner_app_host.',
+      );
+    }
+
+    if (method != 'POST') {
+      return HostActionResult.failed(
+        actionName: ActionNames.callSecureApi,
+        message:
+            'Secure API endpoint "${payload.endpoint}" only supports POST in partner_app_host.',
+      );
+    }
+
+    debugPrint(
+      '[partner_app_host][secure_api] $method ${payload.endpoint} ${payload.body}',
+    );
+
+    final message = payload.body['message']?.toString().trim();
+    return HostActionResult.success(
+      actionName: ActionNames.callSecureApi,
+      message: 'Queued secure feedback for partner host review.',
+      data: <String, dynamic>{
+        'endpoint': payload.endpoint,
+        'method': method,
+        'status': 'queued',
+        'host': 'partner_app_host',
+        'ticketId': 'partner-feedback-101',
+        'desk': 'partner_feedback_desk',
+        if (message != null && message.isNotEmpty) 'messagePreview': message,
+      },
+    );
   }
 
   @override

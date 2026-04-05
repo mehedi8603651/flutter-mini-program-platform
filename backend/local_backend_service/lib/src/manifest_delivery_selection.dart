@@ -12,6 +12,7 @@ class DeliveryContext {
     this.platform,
     this.locale,
     this.tenantId,
+    this.pinnedVersion,
     this.capabilities = const <String>{},
   });
 
@@ -32,6 +33,7 @@ class DeliveryContext {
       platform: _nullIfBlank(queryParameters['platform']),
       locale: _nullIfBlank(queryParameters['locale']),
       tenantId: _nullIfBlank(queryParameters['tenantId']),
+      pinnedVersion: _nullIfBlank(queryParameters['pinnedVersion']),
       capabilities: capabilities,
     );
   }
@@ -42,6 +44,7 @@ class DeliveryContext {
   final String? platform;
   final String? locale;
   final String? tenantId;
+  final String? pinnedVersion;
   final Set<String> capabilities;
 
   bool get hasContext =>
@@ -51,6 +54,7 @@ class DeliveryContext {
       platform != null ||
       locale != null ||
       tenantId != null ||
+      pinnedVersion != null ||
       capabilities.isNotEmpty;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -60,7 +64,46 @@ class DeliveryContext {
     'platform': platform,
     'locale': locale,
     'tenantId': tenantId,
+    'pinnedVersion': pinnedVersion,
     'capabilities': capabilities.toList()..sort(),
+  };
+}
+
+class DeliveryDecision {
+  const DeliveryDecision({
+    required this.selectionMode,
+    required this.resolvedVersion,
+    required this.deliveryContext,
+    this.requestedPinnedVersion,
+    this.matchedRuleId,
+    this.matchedRule,
+  });
+
+  final String selectionMode;
+  final String resolvedVersion;
+  final Map<String, dynamic> deliveryContext;
+  final String? requestedPinnedVersion;
+  final String? matchedRuleId;
+  final Map<String, dynamic>? matchedRule;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'selectionMode': selectionMode,
+    'resolvedVersion': resolvedVersion,
+    if (requestedPinnedVersion != null)
+      'requestedPinnedVersion': requestedPinnedVersion,
+    if (matchedRuleId != null) 'matchedRuleId': matchedRuleId,
+    if (matchedRule != null) 'matchedRule': matchedRule,
+    'deliveryContext': deliveryContext,
+  };
+
+  Map<String, dynamic> toErrorDetails() => <String, dynamic>{
+    'selectionMode': selectionMode,
+    'resolvedVersion': resolvedVersion,
+    if (requestedPinnedVersion != null)
+      'requestedPinnedVersion': requestedPinnedVersion,
+    if (matchedRuleId != null) 'matchedRuleId': matchedRuleId,
+    if (matchedRule != null) 'matchedRule': matchedRule,
+    if (deliveryContext.isNotEmpty) 'deliveryContext': deliveryContext,
   };
 }
 
@@ -68,10 +111,12 @@ class ManifestSelectionResult {
   const ManifestSelectionResult({
     required this.manifestJson,
     required this.version,
+    required this.decision,
   });
 
   final Map<String, dynamic> manifestJson;
   final String version;
+  final DeliveryDecision decision;
 }
 
 class ManifestSelectionException implements Exception {
@@ -108,39 +153,55 @@ class ManifestDeliverySelector {
       );
     }
 
-    final selectedVersion = _selectVersion(
+    final decision = _selectVersion(
       miniProgramId: miniProgramId,
       context: context,
       rolloutRules: rolloutRules,
     );
 
-    final manifestJson = await _readJsonMap(
-      path.join(
-        apiRootPath,
-        'manifests',
-        miniProgramId,
-        'versions',
-        '$selectedVersion.json',
-      ),
-      notFoundMessage:
-          'Manifest version "$selectedVersion" for mini-program "$miniProgramId" was not found.',
-    );
+    late final Map<String, dynamic> manifestJson;
+    try {
+      manifestJson = await _readJsonMap(
+        path.join(
+          apiRootPath,
+          'manifests',
+          miniProgramId,
+          'versions',
+          '${decision.resolvedVersion}.json',
+        ),
+        notFoundMessage:
+            'Manifest version "${decision.resolvedVersion}" for mini-program "$miniProgramId" was not found.',
+      );
+    } on ManifestSelectionException catch (error) {
+      throw ManifestSelectionException(
+        errorCode: error.errorCode,
+        message: error.message,
+        statusCode: error.statusCode,
+        details: <String, dynamic>{
+          ...error.details,
+          ...decision.toErrorDetails(),
+        },
+      );
+    }
 
     _validateSdkVersion(
       miniProgramId: miniProgramId,
       context: context,
       manifestJson: manifestJson,
+      decision: decision,
     );
     _validateCapabilities(
       miniProgramId: miniProgramId,
       context: context,
       capabilityPolicy: capabilityPolicy,
       manifestJson: manifestJson,
+      decision: decision,
     );
 
     return ManifestSelectionResult(
       manifestJson: manifestJson,
-      version: selectedVersion,
+      version: decision.resolvedVersion,
+      decision: decision,
     );
   }
 
@@ -199,13 +260,27 @@ class ManifestDeliverySelector {
     );
   }
 
-  String _selectVersion({
+  DeliveryDecision _selectVersion({
     required String miniProgramId,
     required DeliveryContext context,
     required _RolloutRules? rolloutRules,
   }) {
+    final requestedPinnedVersion = context.pinnedVersion;
+    if (requestedPinnedVersion != null) {
+      return DeliveryDecision(
+        selectionMode: 'pinned_version',
+        resolvedVersion: requestedPinnedVersion,
+        requestedPinnedVersion: requestedPinnedVersion,
+        deliveryContext: context.toJson(),
+      );
+    }
+
     if (rolloutRules == null) {
-      return _readStaticLatestVersion(miniProgramId);
+      return DeliveryDecision(
+        selectionMode: 'static_latest',
+        resolvedVersion: _readStaticLatestVersion(miniProgramId),
+        deliveryContext: context.toJson(),
+      );
     }
 
     for (final rule in rolloutRules.rules) {
@@ -225,13 +300,22 @@ class ManifestDeliverySelector {
           ),
           details: <String, dynamic>{
             'miniProgramId': miniProgramId,
+            'selectionMode': 'matched_rule',
+            'resolvedVersion': rule.version,
+            if (rule.id != null) 'matchedRuleId': rule.id,
             'deliveryContext': context.toJson(),
             'matchedRule': rule.toJson(),
           },
         );
       }
 
-      return rule.version;
+      return DeliveryDecision(
+        selectionMode: 'matched_rule',
+        resolvedVersion: rule.version,
+        matchedRuleId: rule.id,
+        matchedRule: rule.toJson(),
+        deliveryContext: context.toJson(),
+      );
     }
 
     final hostApp = context.hostApp;
@@ -250,7 +334,11 @@ class ManifestDeliverySelector {
       );
     }
 
-    return rolloutRules.defaultVersion;
+    return DeliveryDecision(
+      selectionMode: 'default_version',
+      resolvedVersion: rolloutRules.defaultVersion,
+      deliveryContext: context.toJson(),
+    );
   }
 
   String _buildDisabledRuleMessage({
@@ -307,6 +395,7 @@ class ManifestDeliverySelector {
     required String miniProgramId,
     required DeliveryContext context,
     required Map<String, dynamic> manifestJson,
+    required DeliveryDecision decision,
   }) {
     final sdkVersion = context.sdkVersion;
     if (sdkVersion == null) {
@@ -330,6 +419,7 @@ class ManifestDeliverySelector {
           'miniProgramId': miniProgramId,
           'sdkVersionRange': rawRange,
           'requestedSdkVersion': sdkVersion,
+          ...decision.toErrorDetails(),
         },
       );
     }
@@ -340,6 +430,7 @@ class ManifestDeliverySelector {
     required DeliveryContext context,
     required _CapabilityPolicy? capabilityPolicy,
     required Map<String, dynamic> manifestJson,
+    required DeliveryDecision decision,
   }) {
     if (capabilityPolicy?.enforceManifestCapabilities != true) {
       return;
@@ -355,6 +446,7 @@ class ManifestDeliverySelector {
         details: <String, dynamic>{
           'miniProgramId': miniProgramId,
           'missingQueryParameters': const <String>['capabilities'],
+          ...decision.toErrorDetails(),
         },
       );
     }
@@ -383,6 +475,7 @@ class ManifestDeliverySelector {
       details: <String, dynamic>{
         'miniProgramId': miniProgramId,
         'missingCapabilities': missingCapabilities,
+        ...decision.toErrorDetails(),
       },
     );
   }
@@ -440,6 +533,7 @@ class _RolloutRules {
 
 class _DeliveryRule {
   const _DeliveryRule({
+    this.id,
     this.hostApp,
     this.hostVersionRange,
     this.platform,
@@ -451,6 +545,9 @@ class _DeliveryRule {
 
   factory _DeliveryRule.fromJson(Map<String, dynamic> json) {
     return _DeliveryRule(
+      id:
+          _nullIfBlank(json['id']?.toString()) ??
+          _nullIfBlank(json['ruleId']?.toString()),
       hostApp: _nullIfBlank(json['hostApp']?.toString()),
       hostVersionRange: _nullIfBlank(json['hostVersionRange']?.toString()),
       platform: _nullIfBlank(json['platform']?.toString()),
@@ -461,6 +558,7 @@ class _DeliveryRule {
     );
   }
 
+  final String? id;
   final String? hostApp;
   final String? hostVersionRange;
   final String? platform;
@@ -508,6 +606,7 @@ class _DeliveryRule {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
     'hostApp': hostApp,
     'hostVersionRange': hostVersionRange,
     'platform': platform,
@@ -596,6 +695,8 @@ bool _hasRequiredParameter(String parameter, DeliveryContext context) {
       return context.locale != null;
     case 'tenantId':
       return context.tenantId != null;
+    case 'pinnedVersion':
+      return context.pinnedVersion != null;
     case 'capabilities':
       return context.capabilities.isNotEmpty;
     default:

@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
@@ -12,9 +13,12 @@ class SuperAppHostSourceConfiguration {
   SuperAppHostSourceConfiguration({
     required this.mode,
     this.backendApiBaseUri,
+    this.client,
     this.platform,
     this.locale,
     this.tenantId,
+    this.hostVersionOverride,
+    this.pinnedVersion,
   });
 
   factory SuperAppHostSourceConfiguration.fromEnvironment() {
@@ -30,21 +34,42 @@ class SuperAppHostSourceConfiguration {
       'SUPER_APP_TENANT_ID',
       defaultValue: '',
     );
+    const rawHostVersion = String.fromEnvironment(
+      'SUPER_APP_HOST_VERSION',
+      defaultValue: '',
+    );
+    const rawPlatform = String.fromEnvironment(
+      'SUPER_APP_PLATFORM',
+      defaultValue: '',
+    );
+    const rawLocale = String.fromEnvironment(
+      'SUPER_APP_LOCALE',
+      defaultValue: '',
+    );
+    const rawPinnedVersion = String.fromEnvironment(
+      'SUPER_APP_PINNED_VERSION',
+      defaultValue: '',
+    );
 
     return SuperAppHostSourceConfiguration(
       mode: _parseMode(rawMode),
       backendApiBaseUri: Uri.parse(rawBackendBaseUrl),
-      platform: _defaultPlatform(),
-      locale: _defaultLocale(),
+      platform: _nullIfBlank(rawPlatform) ?? _defaultPlatform(),
+      locale: _nullIfBlank(rawLocale) ?? _defaultLocale(),
       tenantId: _nullIfBlank(rawTenantId),
+      hostVersionOverride: _nullIfBlank(rawHostVersion),
+      pinnedVersion: _nullIfBlank(rawPinnedVersion),
     );
   }
 
   final SuperAppHostSourceMode mode;
   final Uri? backendApiBaseUri;
+  final http.Client? client;
   final String? platform;
   final String? locale;
   final String? tenantId;
+  final String? hostVersionOverride;
+  final String? pinnedVersion;
 
   MiniProgramSource buildSource({
     required String hostAppId,
@@ -65,10 +90,11 @@ class SuperAppHostSourceConfiguration {
 
         return HttpMiniProgramSource(
           apiBaseUri: apiBaseUri,
+          client: client,
           manifestRequestQueryParametersBuilder: (_) => _buildManifestContext(
             hostAppId: hostAppId,
             sdkVersion: sdkVersion,
-            hostVersion: hostVersion,
+            hostVersion: hostVersionOverride ?? hostVersion,
             capabilityRegistry: capabilityRegistry,
           ),
         );
@@ -80,7 +106,14 @@ class SuperAppHostSourceConfiguration {
       case SuperAppHostSourceMode.assets:
         return 'Bundled assets';
       case SuperAppHostSourceMode.localBackend:
-        return 'Local backend (${backendApiBaseUri ?? 'unconfigured'})';
+        final labels = <String>[
+          if (hostVersionOverride != null)
+            'hostVersion=$hostVersionOverride',
+          if (tenantId != null) 'tenantId=$tenantId',
+          if (pinnedVersion != null) 'pinnedVersion=$pinnedVersion',
+        ];
+        final suffix = labels.isEmpty ? '' : '; ${labels.join(', ')}';
+        return 'Local backend (${backendApiBaseUri ?? 'unconfigured'}$suffix)';
     }
   }
 
@@ -124,6 +157,11 @@ class SuperAppHostSourceConfiguration {
     final tenantIdValue = tenantId;
     if (tenantIdValue != null) {
       queryParameters['tenantId'] = tenantIdValue;
+    }
+
+    final pinnedVersionValue = pinnedVersion;
+    if (pinnedVersionValue != null) {
+      queryParameters['pinnedVersion'] = pinnedVersionValue;
     }
 
     return queryParameters;

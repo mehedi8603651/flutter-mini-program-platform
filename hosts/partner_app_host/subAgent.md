@@ -7,8 +7,9 @@ Provide a clean reference host for third-party or external Flutter apps that wan
 `partner_app_host` now exists as a runnable Flutter app and proves the second
 host integration path for:
 - backend-delivered mini-program loading through `HttpMiniProgramSource`
-- a smaller capability surface than `super_app_host`
+- a smaller capability surface than `super_app_host`, while still supporting `secure_api`
 - host-specific route alias mapping through a partner `HostBridge`
+- host-owned allowlisted secure API handling
 - rendering `profile_center` and `feedback_form` through backend-selected partner lanes
 - controlled fallback handling for unsupported capabilities
 
@@ -49,4 +50,4 @@ host integration path for:
 - `test/widget_test.dart`
 
 ## Next Step
-Broaden the portability proof by adding another mini-program or by introducing a partner-specific capability gap that the backend and SDK must both respect.
+Broaden the portability proof by adding another mini-program or by introducing partner-specific secure API policy differences that the backend and SDK must both respect.

@@ -7,6 +7,8 @@ enum Capability {
   auth,
   @JsonValue('analytics')
   analytics,
+  @JsonValue('secure_api')
+  secureApi,
   @JsonValue('native_navigation')
   nativeNavigation,
 }
@@ -16,6 +18,7 @@ extension CapabilityX on Capability {
   String get wireValue => switch (this) {
     Capability.auth => 'auth',
     Capability.analytics => 'analytics',
+    Capability.secureApi => 'secure_api',
     Capability.nativeNavigation => 'native_navigation',
   };
 }

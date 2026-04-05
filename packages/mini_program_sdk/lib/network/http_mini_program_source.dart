@@ -118,7 +118,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
         'uri': uri.toString(),
         'resourceLabel': resourceLabel,
         'statusCode': response.statusCode,
-        if (decodedBody != null) ...decodedBody,
+        if (decodedBody != null) ..._extractBackendDetails(decodedBody),
       },
     );
   }
@@ -135,5 +135,24 @@ class HttpMiniProgramSource implements MiniProgramSource {
     }
 
     return null;
+  }
+
+  Map<String, dynamic> _extractBackendDetails(Map<String, dynamic> decodedBody) {
+    final rawDetails = decodedBody['details'];
+    if (rawDetails is Map<String, dynamic>) {
+      return rawDetails;
+    }
+
+    if (rawDetails is Map) {
+      return rawDetails.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+    }
+
+    if (rawDetails != null) {
+      return <String, dynamic>{'backendDetails': rawDetails};
+    }
+
+    return const <String, dynamic>{};
   }
 }

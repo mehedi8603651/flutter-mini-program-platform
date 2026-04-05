@@ -6,11 +6,13 @@ void main() {
     test('capability values stay stable', () {
       expect(Capability.auth.wireValue, 'auth');
       expect(Capability.analytics.wireValue, 'analytics');
+      expect(Capability.secureApi.wireValue, 'secure_api');
       expect(Capability.nativeNavigation.wireValue, 'native_navigation');
     });
 
     test('action names stay stable', () {
       expect(ActionNames.openNativeScreen, 'openNativeScreen');
+      expect(ActionNames.callSecureApi, 'callSecureApi');
       expect(ActionNames.trackEvent, 'trackEvent');
     });
 

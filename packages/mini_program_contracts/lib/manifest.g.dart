@@ -86,5 +86,6 @@ Map<String, dynamic> _$MiniProgramManifestToJson(
 const _$CapabilityEnumMap = {
   Capability.auth: 'auth',
   Capability.analytics: 'analytics',
+  Capability.secureApi: 'secure_api',
   Capability.nativeNavigation: 'native_navigation',
 };

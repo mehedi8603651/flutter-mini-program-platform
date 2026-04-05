@@ -20,6 +20,10 @@ class HostActionDispatcher {
           );
           final result = await hostBridge.openNativeScreen(payload);
           return _correlate(result, request);
+        case ActionNames.callSecureApi:
+          final payload = CallSecureApiActionPayload.fromJson(request.payload);
+          final result = await hostBridge.callSecureApi(payload);
+          return _correlate(result, request);
         case ActionNames.trackEvent:
           final payload = TrackEventActionPayload.fromJson(request.payload);
           final result = await hostBridge.trackEvent(payload);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 import 'package:super_app_host/app/app_routes.dart';
@@ -11,6 +13,7 @@ import 'package:super_app_host/mini_programs/mini_program_entry_page.dart';
 import 'package:super_app_host/mini_programs/local_mini_program_source.dart';
 import 'package:super_app_host/mini_programs/native_feedback_inbox_page.dart';
 import 'package:super_app_host/mini_programs/native_profile_editor_page.dart';
+import 'package:super_app_host/mini_programs/source_configuration.dart';
 
 Future<void> _pumpUntilFound(
   WidgetTester tester,
@@ -85,7 +88,7 @@ void main() {
     await _pumpUntilFound(tester, find.text('Validate and continue'));
 
     expect(find.text('Portable feedback lane'), findsOneWidget);
-    expect(find.text('Release lane: Feedback Form v1.0.0'), findsOneWidget);
+    expect(find.text('Release lane: Feedback Form v1.1.0'), findsOneWidget);
     expect(find.text('Track feedback view'), findsOneWidget);
   });
 
@@ -108,9 +111,9 @@ void main() {
       ),
     );
     await tester.pump();
-    await _pumpUntilFound(tester, find.text('Mini-program unavailable'));
+    await _pumpUntilFound(tester, find.text('Host capability mismatch'));
 
-    expect(find.text('Mini-program unavailable'), findsOneWidget);
+    expect(find.text('Host capability mismatch'), findsOneWidget);
     expect(
       find.text('Profile Center is temporarily unavailable in this host app.'),
       findsOneWidget,
@@ -223,6 +226,73 @@ void main() {
     expect(result.isSuccess, isTrue);
     expect(result.data['queued'], isTrue);
     expect(result.data['channel'], 'mini_program');
+  });
+
+  test('host bridge maps secure feedback submission to a host API result', () async {
+    final bridge = HostBridgeImpl(navigatorKey: GlobalKey<NavigatorState>());
+
+    final result = await bridge.callSecureApi(
+      const CallSecureApiActionPayload(
+        endpoint: 'feedback/submit',
+        body: <String, dynamic>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        },
+      ),
+    );
+
+    expect(result.isSuccess, isTrue);
+    expect(result.actionName, ActionNames.callSecureApi);
+    expect(result.data['host'], 'super_app_host');
+    expect(result.data['status'], 'accepted');
+  });
+
+  test('source configuration sends super-app delivery context', () async {
+    late Uri requestUri;
+    final client = MockClient((request) async {
+      requestUri = request.url;
+      return http.Response(
+        '{"id":"profile_center","version":"1.0.0","entry":"profile_center_home","contractVersion":"1.0.0","sdkVersionRange":">=1.0.0 <2.0.0","requiredCapabilities":["analytics","native_navigation"]}',
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    final configuration = SuperAppHostSourceConfiguration(
+      mode: SuperAppHostSourceMode.localBackend,
+      backendApiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      client: client,
+      platform: 'android',
+      locale: 'en-US',
+      tenantId: 'internal-demo',
+      hostVersionOverride: '1.4.0',
+      pinnedVersion: '1.0.0',
+    );
+    final source = configuration.buildSource(
+      hostAppId: superAppHostId,
+      sdkVersion: superAppHostSdkVersion,
+      hostVersion: superAppHostVersion,
+      capabilityRegistry: superAppCapabilityRegistry,
+    );
+
+    final manifest = await source.loadManifest('profile_center');
+
+    expect(manifest.version, '1.0.0');
+    expect(requestUri.path, '/api/manifests/profile_center/latest.json');
+    expect(requestUri.queryParameters['hostApp'], superAppHostId);
+    expect(requestUri.queryParameters['sdkVersion'], superAppHostSdkVersion);
+    expect(requestUri.queryParameters['hostVersion'], '1.4.0');
+    expect(requestUri.queryParameters['platform'], 'android');
+    expect(requestUri.queryParameters['locale'], 'en-US');
+    expect(requestUri.queryParameters['tenantId'], 'internal-demo');
+    expect(requestUri.queryParameters['pinnedVersion'], '1.0.0');
+    expect(
+      requestUri.queryParameters['capabilities'],
+      'analytics,auth,native_navigation,secure_api',
+    );
+    expect(configuration.description, contains('hostVersion=1.4.0'));
+    expect(configuration.description, contains('tenantId=internal-demo'));
+    expect(configuration.description, contains('pinnedVersion=1.0.0'));
   });
 }
 

@@ -3,27 +3,30 @@
   "defaultVersion": "1.0.0",
   "rules": [
     {
+      "id": "super-feedback-android",
       "hostApp": "super_app_host",
       "platform": "android",
       "hostVersionRange": ">=1.0.0 <2.0.0",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "enabled": true
     },
     {
+      "id": "super-feedback-default",
       "hostApp": "super_app_host",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "enabled": true
     },
     {
+      "id": "partner-feedback-disabled-lab",
       "hostApp": "partner_app_host",
-      "platform": "android",
-      "hostVersionRange": ">=1.0.0 <2.0.0",
+      "tenantId": "blocked_lab",
       "version": "1.0.0",
-      "enabled": true
+      "enabled": false
     },
     {
+      "id": "partner-feedback-default",
       "hostApp": "partner_app_host",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "enabled": true
     }
   ]

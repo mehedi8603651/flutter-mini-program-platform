@@ -8,8 +8,10 @@ Reference Flutter host app for portable mini-program partner integration.
 - declares a smaller capability surface than `super_app_host`
 - loads multiple mini-programs from backend delivery
 - sends backend delivery context including `hostApp`, `hostVersion`, `platform`, `locale`, and capabilities
-- receives the backend-selected `1.0.0` lane while `super_app_host` receives `1.1.0`
+- can add debug release-control overrides such as `tenantId` and `pinnedVersion`
+- receives the backend-selected `profile_center` `1.0.0` lane while `super_app_host` receives `1.1.0`
 - maps portable route aliases such as `profile_editor` and `feedback_follow_up` to its own native Flutter pages
+- keeps `secure_api` host-owned and allowlisted inside its bridge
 
 ## Current flow
 
@@ -19,8 +21,8 @@ Reference Flutter host app for portable mini-program partner integration.
 4. The SDK loads `latest` from the backend with partner delivery context.
 5. The backend resolves that request to the partner lane for each mini-program:
    - `profile_center` -> `1.0.0`
-   - `feedback_form` -> `1.0.0`
-6. The mini-program renders and can still call `trackEvent` and `openNativeScreen`.
+   - `feedback_form` -> `1.1.0`
+6. The mini-program renders and can still call `callSecureApi`, `trackEvent`, and `openNativeScreen`.
 
 ## Run
 
@@ -40,6 +42,16 @@ flutter run --dart-define=PARTNER_APP_BACKEND_BASE_URL=http://127.0.0.1:9135/api
 
 On an Android emulator, use `http://10.0.2.2:8080/api/` instead of
 `http://127.0.0.1:8080/api/`.
+
+Useful debug overrides:
+
+```powershell
+flutter run ^
+  --dart-define=PARTNER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=PARTNER_APP_HOST_VERSION=1.2.3 ^
+  --dart-define=PARTNER_APP_TENANT_ID=campus-demo ^
+  --dart-define=PARTNER_APP_PINNED_VERSION=1.0.0
+```
 
 ## Commands
 

@@ -11,6 +11,7 @@ class SdkErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final diagnostics = _buildDiagnostics(failure.details);
 
     return Center(
       child: Padding(
@@ -27,7 +28,7 @@ class SdkErrorView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Mini-program unavailable',
+                _titleForFailure(failure.errorCode),
                 style: theme.textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -45,10 +46,90 @@ class SdkErrorView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ],
+              if (diagnostics.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                for (final line in diagnostics)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      line,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  static String _titleForFailure(String? errorCode) {
+    switch (errorCode) {
+      case 'backend_unreachable':
+        return 'Backend unavailable';
+      case 'host_not_enabled':
+      case 'delivery_rule_disabled':
+      case 'manifest_context_required':
+        return 'Release unavailable';
+      case 'unsupported_sdk_version':
+      case 'incompatible_sdk_version':
+        return 'SDK update required';
+      case 'missing_capabilities':
+      case 'unsupported_capability':
+        return 'Host capability mismatch';
+      case 'artifact_not_found':
+        return 'Release artifact missing';
+      default:
+        return 'Mini-program unavailable';
+    }
+  }
+
+  static List<String> _buildDiagnostics(Map<String, dynamic> details) {
+    final diagnostics = <String>[];
+
+    final requestedPinnedVersion = details['requestedPinnedVersion'];
+    if (requestedPinnedVersion is String && requestedPinnedVersion.isNotEmpty) {
+      diagnostics.add('Pinned version: $requestedPinnedVersion');
+    }
+
+    final resolvedVersion = details['resolvedVersion'];
+    if (resolvedVersion is String && resolvedVersion.isNotEmpty) {
+      diagnostics.add('Resolved version: $resolvedVersion');
+    }
+
+    final matchedRuleId = details['matchedRuleId'];
+    if (matchedRuleId is String && matchedRuleId.isNotEmpty) {
+      diagnostics.add('Matched rule: $matchedRuleId');
+    }
+
+    final missingCapabilities = details['missingCapabilities'];
+    if (missingCapabilities is Iterable) {
+      final values = missingCapabilities
+          .map((value) => value.toString())
+          .where((value) => value.isNotEmpty)
+          .toList();
+      if (values.isNotEmpty) {
+        diagnostics.add('Missing capabilities: ${values.join(', ')}');
+      }
+    }
+
+    final deliveryContext = details['deliveryContext'];
+    if (deliveryContext is Map) {
+      final hostApp = deliveryContext['hostApp'];
+      if (hostApp is String && hostApp.isNotEmpty) {
+        diagnostics.add('Host app: $hostApp');
+      }
+    } else {
+      final hostApp = details['hostApp'];
+      if (hostApp is String && hostApp.isNotEmpty) {
+        diagnostics.add('Host app: $hostApp');
+      }
+    }
+
+    return diagnostics;
   }
 }

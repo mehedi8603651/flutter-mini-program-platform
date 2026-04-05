@@ -288,6 +288,281 @@ as bool,
 
 
 /// @nodoc
+mixin _$CallSecureApiActionPayload {
+
+ String get endpoint; String get method; Map<String, dynamic> get body;
+/// Create a copy of CallSecureApiActionPayload
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CallSecureApiActionPayloadCopyWith<CallSecureApiActionPayload> get copyWith => _$CallSecureApiActionPayloadCopyWithImpl<CallSecureApiActionPayload>(this as CallSecureApiActionPayload, _$identity);
+
+  /// Serializes this CallSecureApiActionPayload to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallSecureApiActionPayload&&(identical(other.endpoint, endpoint) || other.endpoint == endpoint)&&(identical(other.method, method) || other.method == method)&&const DeepCollectionEquality().equals(other.body, body));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,endpoint,method,const DeepCollectionEquality().hash(body));
+
+@override
+String toString() {
+  return 'CallSecureApiActionPayload(endpoint: $endpoint, method: $method, body: $body)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CallSecureApiActionPayloadCopyWith<$Res>  {
+  factory $CallSecureApiActionPayloadCopyWith(CallSecureApiActionPayload value, $Res Function(CallSecureApiActionPayload) _then) = _$CallSecureApiActionPayloadCopyWithImpl;
+@useResult
+$Res call({
+ String endpoint, String method, Map<String, dynamic> body
+});
+
+
+
+
+}
+/// @nodoc
+class _$CallSecureApiActionPayloadCopyWithImpl<$Res>
+    implements $CallSecureApiActionPayloadCopyWith<$Res> {
+  _$CallSecureApiActionPayloadCopyWithImpl(this._self, this._then);
+
+  final CallSecureApiActionPayload _self;
+  final $Res Function(CallSecureApiActionPayload) _then;
+
+/// Create a copy of CallSecureApiActionPayload
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? endpoint = null,Object? method = null,Object? body = null,}) {
+  return _then(_self.copyWith(
+endpoint: null == endpoint ? _self.endpoint : endpoint // ignore: cast_nullable_to_non_nullable
+as String,method: null == method ? _self.method : method // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CallSecureApiActionPayload].
+extension CallSecureApiActionPayloadPatterns on CallSecureApiActionPayload {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CallSecureApiActionPayload value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CallSecureApiActionPayload() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CallSecureApiActionPayload value)  $default,){
+final _that = this;
+switch (_that) {
+case _CallSecureApiActionPayload():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CallSecureApiActionPayload value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CallSecureApiActionPayload() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String endpoint,  String method,  Map<String, dynamic> body)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CallSecureApiActionPayload() when $default != null:
+return $default(_that.endpoint,_that.method,_that.body);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String endpoint,  String method,  Map<String, dynamic> body)  $default,) {final _that = this;
+switch (_that) {
+case _CallSecureApiActionPayload():
+return $default(_that.endpoint,_that.method,_that.body);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String endpoint,  String method,  Map<String, dynamic> body)?  $default,) {final _that = this;
+switch (_that) {
+case _CallSecureApiActionPayload() when $default != null:
+return $default(_that.endpoint,_that.method,_that.body);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+@JsonSerializable(checked: true, explicitToJson: true)
+class _CallSecureApiActionPayload implements CallSecureApiActionPayload {
+  const _CallSecureApiActionPayload({required this.endpoint, this.method = 'POST', final  Map<String, dynamic> body = const <String, dynamic>{}}): _body = body;
+  factory _CallSecureApiActionPayload.fromJson(Map<String, dynamic> json) => _$CallSecureApiActionPayloadFromJson(json);
+
+@override final  String endpoint;
+@override@JsonKey() final  String method;
+ final  Map<String, dynamic> _body;
+@override@JsonKey() Map<String, dynamic> get body {
+  if (_body is EqualUnmodifiableMapView) return _body;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_body);
+}
+
+
+/// Create a copy of CallSecureApiActionPayload
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CallSecureApiActionPayloadCopyWith<_CallSecureApiActionPayload> get copyWith => __$CallSecureApiActionPayloadCopyWithImpl<_CallSecureApiActionPayload>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CallSecureApiActionPayloadToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CallSecureApiActionPayload&&(identical(other.endpoint, endpoint) || other.endpoint == endpoint)&&(identical(other.method, method) || other.method == method)&&const DeepCollectionEquality().equals(other._body, _body));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,endpoint,method,const DeepCollectionEquality().hash(_body));
+
+@override
+String toString() {
+  return 'CallSecureApiActionPayload(endpoint: $endpoint, method: $method, body: $body)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CallSecureApiActionPayloadCopyWith<$Res> implements $CallSecureApiActionPayloadCopyWith<$Res> {
+  factory _$CallSecureApiActionPayloadCopyWith(_CallSecureApiActionPayload value, $Res Function(_CallSecureApiActionPayload) _then) = __$CallSecureApiActionPayloadCopyWithImpl;
+@override @useResult
+$Res call({
+ String endpoint, String method, Map<String, dynamic> body
+});
+
+
+
+
+}
+/// @nodoc
+class __$CallSecureApiActionPayloadCopyWithImpl<$Res>
+    implements _$CallSecureApiActionPayloadCopyWith<$Res> {
+  __$CallSecureApiActionPayloadCopyWithImpl(this._self, this._then);
+
+  final _CallSecureApiActionPayload _self;
+  final $Res Function(_CallSecureApiActionPayload) _then;
+
+/// Create a copy of CallSecureApiActionPayload
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? endpoint = null,Object? method = null,Object? body = null,}) {
+  return _then(_CallSecureApiActionPayload(
+endpoint: null == endpoint ? _self.endpoint : endpoint // ignore: cast_nullable_to_non_nullable
+as String,method: null == method ? _self.method : method // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self._body : body // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$TrackEventActionPayload {
 
  String get name; Map<String, dynamic> get properties;

@@ -20,10 +20,17 @@ StacWidget feedbackExpectationsCard() {
         ),
         StacSizedBox(height: 10),
         StacText(data: '1. Local form validation runs in portable UI.'),
-        StacText(data: '2. Analytics stays behind the shared host bridge.'),
         StacText(
           data:
-              '3. The same route alias opens different native follow-up pages '
+              '2. Secure feedback submission stays behind the shared host bridge.',
+        ),
+        StacText(
+          data:
+              '3. Analytics stays behind the shared host bridge.',
+        ),
+        StacText(
+          data:
+              '4. The same route alias opens different native follow-up pages '
               'in each host app.',
         ),
       ],

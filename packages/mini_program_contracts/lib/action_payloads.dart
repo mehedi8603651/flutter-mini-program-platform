@@ -18,6 +18,20 @@ abstract class OpenNativeScreenActionPayload
       _$OpenNativeScreenActionPayloadFromJson(json);
 }
 
+/// Payload for a host-controlled secure API operation.
+@freezed
+abstract class CallSecureApiActionPayload with _$CallSecureApiActionPayload {
+  @JsonSerializable(checked: true, explicitToJson: true)
+  const factory CallSecureApiActionPayload({
+    required String endpoint,
+    @Default('POST') String method,
+    @Default(<String, dynamic>{}) Map<String, dynamic> body,
+  }) = _CallSecureApiActionPayload;
+
+  factory CallSecureApiActionPayload.fromJson(Map<String, dynamic> json) =>
+      _$CallSecureApiActionPayloadFromJson(json);
+}
+
 /// Payload for a host-controlled analytics event dispatch.
 @freezed
 abstract class TrackEventActionPayload with _$TrackEventActionPayload {

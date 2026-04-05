@@ -7,6 +7,9 @@ abstract interface class HostBridge {
     OpenNativeScreenActionPayload payload,
   );
 
+  /// Calls a host-owned secure API operation through an allowlisted endpoint.
+  Future<HostActionResult> callSecureApi(CallSecureApiActionPayload payload);
+
   /// Sends an analytics event through the host app's analytics stack.
   Future<HostActionResult> trackEvent(TrackEventActionPayload payload);
 }

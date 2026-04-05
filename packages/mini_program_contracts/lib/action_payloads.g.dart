@@ -28,6 +28,28 @@ Map<String, dynamic> _$OpenNativeScreenActionPayloadToJson(
   'expectResult': instance.expectResult,
 };
 
+_CallSecureApiActionPayload _$CallSecureApiActionPayloadFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('_CallSecureApiActionPayload', json, ($checkedConvert) {
+  final val = _CallSecureApiActionPayload(
+    endpoint: $checkedConvert('endpoint', (v) => v as String),
+    method: $checkedConvert('method', (v) => v as String? ?? 'POST'),
+    body: $checkedConvert(
+      'body',
+      (v) => v as Map<String, dynamic>? ?? const <String, dynamic>{},
+    ),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$CallSecureApiActionPayloadToJson(
+  _CallSecureApiActionPayload instance,
+) => <String, dynamic>{
+  'endpoint': instance.endpoint,
+  'method': instance.method,
+  'body': instance.body,
+};
+
 _TrackEventActionPayload _$TrackEventActionPayloadFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('_TrackEventActionPayload', json, ($checkedConvert) {

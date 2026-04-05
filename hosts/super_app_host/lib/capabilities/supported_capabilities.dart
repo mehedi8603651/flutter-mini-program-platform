@@ -5,6 +5,7 @@ final CapabilityRegistry superAppCapabilityRegistry = CapabilityRegistry(
   const <Capability>[
     Capability.auth,
     Capability.analytics,
+    Capability.secureApi,
     Capability.nativeNavigation,
   ],
 );

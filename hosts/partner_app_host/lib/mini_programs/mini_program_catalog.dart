@@ -28,7 +28,7 @@ abstract final class PartnerMiniProgramCatalog {
           Capability.analytics,
           Capability.nativeNavigation,
         ],
-        expectedLaneVersion: '1.0.0',
+        expectedLaneVersion: '1.1.0',
       );
 
   static const PartnerMiniProgramDefinition feedbackForm =
@@ -37,9 +37,11 @@ abstract final class PartnerMiniProgramCatalog {
         title: 'Feedback Form',
         description:
             'A second portable Stac mini-program delivered through the same '
-            'SDK and backend path, with partner-owned native follow-up.',
+            'SDK and backend path, with partner-owned secure API handling and '
+            'native follow-up.',
         requiredCapabilities: <Capability>[
           Capability.analytics,
+          Capability.secureApi,
           Capability.nativeNavigation,
         ],
         expectedLaneVersion: '1.0.0',

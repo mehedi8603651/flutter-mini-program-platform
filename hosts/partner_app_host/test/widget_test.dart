@@ -77,7 +77,7 @@ void main() {
     expect(find.text('Active release: Profile Center v1.1.0'), findsNothing);
   });
 
-  testWidgets('opens feedback form in the partner 1.0.0 lane', (tester) async {
+  testWidgets('opens feedback form in the partner 1.1.0 lane', (tester) async {
     final navigatorKey = GlobalKey<NavigatorState>();
 
     await tester.pumpWidget(
@@ -97,7 +97,7 @@ void main() {
     await _pumpUntilFound(tester, find.text('Validate and continue'));
 
     expect(find.text('Portable feedback lane'), findsOneWidget);
-    expect(find.text('Release lane: Feedback Form v1.0.0'), findsOneWidget);
+    expect(find.text('Release lane: Feedback Form v1.1.0'), findsOneWidget);
     expect(find.text('Track feedback view'), findsOneWidget);
   });
 
@@ -120,9 +120,9 @@ void main() {
       ),
     );
     await tester.pump();
-    await _pumpUntilFound(tester, find.text('Mini-program unavailable'));
+    await _pumpUntilFound(tester, find.text('Host capability mismatch'));
 
-    expect(find.text('Mini-program unavailable'), findsOneWidget);
+    expect(find.text('Host capability mismatch'), findsOneWidget);
     expect(
       find.text('Profile Center is temporarily unavailable in this host app.'),
       findsOneWidget,
@@ -238,6 +238,25 @@ void main() {
     },
   );
 
+  test('partner bridge maps secure feedback submission to its host API result', () async {
+    final bridge = HostBridgeImpl(navigatorKey: GlobalKey<NavigatorState>());
+
+    final result = await bridge.callSecureApi(
+      const CallSecureApiActionPayload(
+        endpoint: 'feedback/submit',
+        body: <String, dynamic>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        },
+      ),
+    );
+
+    expect(result.isSuccess, isTrue);
+    expect(result.actionName, ActionNames.callSecureApi);
+    expect(result.data['host'], 'partner_app_host');
+    expect(result.data['status'], 'queued');
+  });
+
   test('source configuration sends partner delivery context', () async {
     late Uri requestUri;
     final client = MockClient((request) async {
@@ -255,6 +274,8 @@ void main() {
       platform: 'android',
       locale: 'en-US',
       tenantId: 'campus-demo',
+      hostVersionOverride: '1.2.3',
+      pinnedVersion: '1.0.0',
     );
     final source = configuration.buildSource(
       hostAppId: partnerAppHostId,
@@ -269,14 +290,18 @@ void main() {
     expect(requestUri.path, '/api/manifests/profile_center/latest.json');
     expect(requestUri.queryParameters['hostApp'], partnerAppHostId);
     expect(requestUri.queryParameters['sdkVersion'], partnerAppHostSdkVersion);
-    expect(requestUri.queryParameters['hostVersion'], partnerAppHostVersion);
+    expect(requestUri.queryParameters['hostVersion'], '1.2.3');
     expect(requestUri.queryParameters['platform'], 'android');
     expect(requestUri.queryParameters['locale'], 'en-US');
     expect(requestUri.queryParameters['tenantId'], 'campus-demo');
+    expect(requestUri.queryParameters['pinnedVersion'], '1.0.0');
     expect(
       requestUri.queryParameters['capabilities'],
-      'analytics,native_navigation',
+      'analytics,native_navigation,secure_api',
     );
+    expect(configuration.description, contains('hostVersion=1.2.3'));
+    expect(configuration.description, contains('tenantId=campus-demo'));
+    expect(configuration.description, contains('pinnedVersion=1.0.0'));
   });
 }
 
@@ -306,12 +331,13 @@ class _PartnerLaneMiniProgramSource implements MiniProgramSource {
       case 'feedback_form':
         return const MiniProgramManifest(
           id: 'feedback_form',
-          version: '1.0.0',
+          version: '1.1.0',
           entry: 'feedback_form_home',
           contractVersion: '1.0.0',
           sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
           requiredCapabilities: <Capability>[
             Capability.analytics,
+            Capability.secureApi,
             Capability.nativeNavigation,
           ],
           fallback: MiniProgramFallback(
@@ -423,7 +449,7 @@ class _PartnerLaneMiniProgramSource implements MiniProgramSource {
                   <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
                   <String, dynamic>{
                     'type': 'text',
-                    'data': 'Release lane: Feedback Form v1.0.0',
+                    'data': 'Release lane: Feedback Form v1.1.0',
                   },
                   <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
                   <String, dynamic>{

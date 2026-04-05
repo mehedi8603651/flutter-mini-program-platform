@@ -45,6 +45,15 @@ abstract class HostActionRequest with _$HostActionRequest {
     payload: payload.toJson(),
   );
 
+  factory HostActionRequest.callSecureApi({
+    String? requestId,
+    required CallSecureApiActionPayload payload,
+  }) => HostActionRequest(
+    requestId: requestId,
+    actionName: ActionNames.callSecureApi,
+    payload: payload.toJson(),
+  );
+
   factory HostActionRequest.trackEvent({
     String? requestId,
     required TrackEventActionPayload payload,

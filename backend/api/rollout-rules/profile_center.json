@@ -3,6 +3,7 @@
   "defaultVersion": "1.0.0",
   "rules": [
     {
+      "id": "super-app-android-v1",
       "hostApp": "super_app_host",
       "platform": "android",
       "hostVersionRange": ">=1.0.0 <2.0.0",
@@ -10,18 +11,21 @@
       "enabled": true
     },
     {
-      "hostApp": "super_app_host",
-      "version": "1.1.0",
-      "enabled": true
-    },
-    {
+      "id": "partner-vip-tenant",
       "hostApp": "partner_app_host",
-      "platform": "android",
-      "hostVersionRange": ">=1.0.0 <2.0.0",
-      "version": "1.0.0",
+      "tenantId": "vip_partner",
+      "version": "1.1.0",
       "enabled": true
     },
     {
+      "id": "partner-zh-locale",
+      "hostApp": "partner_app_host",
+      "locale": "zh",
+      "version": "1.1.0",
+      "enabled": true
+    },
+    {
+      "id": "partner-default",
       "hostApp": "partner_app_host",
       "version": "1.0.0",
       "enabled": true

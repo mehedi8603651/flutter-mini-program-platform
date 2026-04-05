@@ -25,9 +25,10 @@ StacWidget feedbackFormHome() {
               StacSizedBox(height: 12),
               StacText(
                 data:
-                    'This second mini-program stays inside the current MVP '
-                    'capabilities: validate locally, track an event through the '
-                    'host bridge, and open a host-owned follow-up screen.',
+                    'This second mini-program stays inside the current host '
+                    'capabilities: validate locally, submit through a host-'
+                    'owned secure API, track an event through the bridge, and '
+                    'open a host-owned follow-up screen.',
               ),
               StacSizedBox(height: 16),
               StacContainer(
@@ -37,7 +38,7 @@ StacWidget feedbackFormHome() {
                   borderRadius: StacBorderRadius.all(18),
                 ),
                 child: StacText(
-                  data: 'Release lane: Feedback Form v1.0.0',
+                  data: 'Release lane: Feedback Form v1.1.0',
                   style: StacCustomTextStyle(
                     fontSize: 15,
                     fontWeight: StacFontWeight.w600,
@@ -103,6 +104,22 @@ StacWidget feedbackFormHome() {
                       StacAction(
                         jsonData: {
                           'actionType': 'hostAction',
+                          'requestId': 'feedback-submit-secure-api',
+                          'action': 'callSecureApi',
+                          'payload': {
+                            'endpoint': 'feedback/submit',
+                            'method': 'POST',
+                            'body': {
+                              'source': 'feedback_form',
+                              'flow': 'portable_feedback',
+                              'message': 'Validated feedback payload from portable UI.',
+                            },
+                          },
+                        },
+                      ),
+                      StacAction(
+                        jsonData: {
+                          'actionType': 'hostAction',
                           'requestId': 'feedback-submit-track',
                           'action': 'trackEvent',
                           'payload': {
@@ -119,7 +136,7 @@ StacWidget feedbackFormHome() {
                         content: {
                           'type': 'text',
                           'data':
-                              'Feedback validated locally. Opening host follow-up.',
+                              'Feedback validated locally and queued through the secure host API.',
                         },
                       ),
                       StacAction(

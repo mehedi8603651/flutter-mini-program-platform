@@ -8,11 +8,12 @@ Build the portable runtime that validates, loads, renders, and safely bridges mi
 - manifest loading through a host-provided source
 - HTTP-backed manifest and screen loading through `HttpMiniProgramSource`
 - manifest query-parameter support for backend delivery context
+- release-control aware backend loading with optional pinned-version context
 - SDK version validation
 - capability validation
 - feature-flag gating
 - Stac initialization and entry-screen rendering
-- approved host action dispatch for `openNativeScreen` and `trackEvent`
+- approved host action dispatch for `openNativeScreen`, `callSecureApi`, and `trackEvent`
 - controlled loading and fallback error UI
 - basic SDK logging
 
@@ -86,11 +87,13 @@ It is intentionally not the full backend-delivery or caching runtime yet.
 - Treat manifest feature flags as hard gates when an evaluator is provided.
 - Only dispatch approved contract actions through `HostBridge`.
 - Use `HostActionRequest` and `HostActionResult` for bridge handoff.
+- Keep `callSecureApi` allowlisted at the host layer. The SDK may dispatch it, but it must not invent endpoint policy.
 - Keep Stac custom action support inside the SDK, not in host apps.
 - Keep backend format assumptions out of the SDK except for explicit contracts and `MiniProgramSource`.
 - Keep screen loading version-aware. Hosts may ignore version for bundled assets, but backend loaders must not.
 - Pass host delivery context to backend loaders explicitly instead of hardcoding backend-side assumptions in widgets.
 - Preserve backend rejection messages and transport failures as structured source errors so hosts get controlled fallback UX on real devices.
+- Keep backend decision metadata intact enough for host-facing diagnostics when rollout or capability checks fail.
 - Keep auth passive in v1. `Capability.auth` may be validated, but auth bridge APIs are not part of this package yet.
 
 ## Deferred Until Later Phases
@@ -108,10 +111,9 @@ These are valid future additions, but they should not be added until the current
 - `flutter analyze`
 
 ## Next Step
-The next implementation phase is backend-driven multi-version delivery.
+The next implementation phase is stronger auth/session and production backend work on top of the current capability surface.
 
 That phase should keep using this SDK while adding:
-- multiple published manifest versions
-- backend-side version selection and rollout behavior
-- host verification that different backend contexts can return different `latest` manifests
-- caching only after delivery and fallback behavior are stable
+- clearer host-owned auth/session integration
+- richer secure API result handling where needed
+- caching only after delivery and fallback behavior remain stable

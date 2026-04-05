@@ -10,6 +10,7 @@ First-party Flutter host app for the portable mini-program platform.
 - loads one built mini-program through `MiniProgramSource`
 - loads multiple built mini-programs through `MiniProgramSource`
 - renders the mini-program with the shared SDK
+- executes allowlisted `secure_api` calls through the host bridge
 - opens a host-owned native screen through `openNativeScreen`
 - can switch between bundled asset delivery and local backend HTTP delivery
 
@@ -18,7 +19,7 @@ First-party Flutter host app for the portable mini-program platform.
 1. Launch the app.
 2. Open `Profile Center` or `Feedback Form` from the host list.
 3. Render the portable screen through `MiniProgramHost`.
-4. Trigger `trackEvent` or `openNativeScreen` from the mini-program.
+4. Trigger `callSecureApi`, `trackEvent`, or `openNativeScreen` from the mini-program.
 5. Use `Preview capability failure` to confirm the SDK rejects unsupported capability sets with controlled fallback UI.
 
 ## Source of truth
@@ -39,7 +40,7 @@ Those files are loaded as Flutter assets through `LocalMiniProgramSource`.
 The current bundled snapshots are:
 
 - `profile_center` `1.1.0`
-- `feedback_form` `1.0.0`
+- `feedback_form` `1.1.0`
 Refresh them after rebuilding the mini-program:
 
 ```powershell
@@ -76,15 +77,27 @@ the backend `latest` manifest route:
 - `platform`
 - `locale`
 - optional `tenantId`
-- `capabilities=auth,analytics,native_navigation`
+- optional `pinnedVersion`
+- `capabilities=auth,analytics,native_navigation,secure_api`
 
 With the current rollout sample, that context resolves:
 
 - `profile_center` `latest` -> `1.1.0`
-- `feedback_form` `latest` -> `1.0.0`
+- `feedback_form` `latest` -> `1.1.0`
 
 If you test on an Android emulator instead of Windows desktop, use
 `http://10.0.2.2:8080/api/` for `SUPER_APP_BACKEND_BASE_URL`.
+
+Useful debug overrides:
+
+```powershell
+flutter run ^
+  --dart-define=SUPER_APP_SOURCE_MODE=local_backend ^
+  --dart-define=SUPER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=SUPER_APP_HOST_VERSION=1.4.0 ^
+  --dart-define=SUPER_APP_TENANT_ID=internal-demo ^
+  --dart-define=SUPER_APP_PINNED_VERSION=1.0.0
+```
 
 ## Commands
 
