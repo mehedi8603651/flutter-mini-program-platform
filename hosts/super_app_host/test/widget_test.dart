@@ -46,6 +46,7 @@ void main() {
     await _pumpUntilFound(tester, find.text('Open Native Edit Screen'));
 
     expect(find.text('Portable account module'), findsOneWidget);
+    expect(find.text('Active release: Profile Center v1.1.0'), findsOneWidget);
     expect(find.text('Open Native Edit Screen'), findsOneWidget);
   });
 

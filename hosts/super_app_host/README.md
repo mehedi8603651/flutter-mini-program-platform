@@ -31,6 +31,7 @@ For local host proof, this app currently bundles a copied snapshot of:
 - `mini_programs/profile_center/stac/.build/screens/profile_center_home.json`
 
 Those files are loaded as Flutter assets through `LocalMiniProgramSource`.
+The current bundled snapshot is `profile_center` `1.1.0`.
 Refresh them after rebuilding the mini-program:
 
 ```powershell
@@ -64,6 +65,9 @@ the backend `latest` manifest route:
 - `hostApp=super_app_host`
 - `sdkVersion=1.0.0`
 - `capabilities=auth,analytics,native_navigation`
+
+With the current rollout sample, that context resolves `latest` to
+`profile_center` `1.1.0`.
 
 If you test on an Android emulator instead of Windows desktop, use
 `http://10.0.2.2:8080/api/` for `SUPER_APP_BACKEND_BASE_URL`.

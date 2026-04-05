@@ -23,10 +23,27 @@ StacWidget profileCenterHome() {
             StacSizedBox(height: 12),
             StacText(
               data:
-                  'This mini-program is delivered through the shared SDK and '
-                  'keeps native work behind the host bridge.',
+                  'This mini-program is delivered through the shared SDK, '
+                  'keeps native work behind the host bridge, and now proves '
+                  'backend-selected version rollout.',
             ),
             StacSizedBox(height: 24),
+            StacContainer(
+              padding: StacEdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: StacBoxDecoration(
+                color: '#DFF4EA',
+                borderRadius: StacBorderRadius.all(18),
+              ),
+              child: StacText(
+                data: 'Active release: Profile Center v1.1.0',
+                style: StacCustomTextStyle(
+                  fontSize: 15,
+                  fontWeight: StacFontWeight.w600,
+                  color: '#14532D',
+                ),
+              ),
+            ),
+            StacSizedBox(height: 16),
             profileSummaryCard(),
             StacSizedBox(height: 24),
             StacFilledButton(

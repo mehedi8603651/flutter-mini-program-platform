@@ -20,6 +20,8 @@ StacWidget profileSummaryCard() {
         StacSizedBox(height: 8),
         StacText(data: 'Name: Guest User'),
         StacText(data: 'Tier: Super App Preview'),
+        StacText(data: 'Release lane: backend-selected latest'),
+        StacText(data: 'Manifest version: 1.1.0'),
       ],
     ),
   );

@@ -51,6 +51,11 @@ manifest route can use query parameters such as:
 For the current `profile_center` sample, a missing required capability returns
 `412` with a JSON error body instead of a manifest.
 
+The current sample also proves backend-side version selection:
+
+- `super_app_host` resolves `latest` to `profile_center` `1.1.0`
+- `partner_app_host` resolves `latest` to `profile_center` `1.0.0`
+
 ## Verification
 
 ```powershell

@@ -1,6 +1,6 @@
 {
   "id": "profile_center",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "entry": "profile_center_home",
   "contractVersion": "1.0.0",
   "sdkVersionRange": ">=1.0.0 <2.0.0",

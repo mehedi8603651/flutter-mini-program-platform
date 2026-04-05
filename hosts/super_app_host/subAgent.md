@@ -58,6 +58,7 @@ local host integration path for:
 - Keep the host asset snapshot in sync with the real built output from `mini_programs/profile_center` by using `tools/sync_assets.ps1`.
 - Default to bundled assets for predictable local runs, and opt into local backend mode with `SUPER_APP_SOURCE_MODE=local_backend`.
 - In local backend mode, target the real Dart service in `backend/local_backend_service`, not a generic static file server.
+- The current host delivery lane resolves `profile_center` `latest` to `1.1.0` when running as `super_app_host`.
 
 ## Next Step
-Keep the real local backend service, then add version selection, rollout rules, and capability-aware delivery to it.
+Use this host as the reference integration while building `partner_app_host`, so the platform proves the same mini-program can run in multiple Flutter hosts with different delivery lanes.

@@ -19,7 +19,19 @@ void main() {
       'manifests/profile_center/latest.json',
       <String, Object?>{
         'id': 'profile_center',
-        'version': '1.0.0',
+        'version': '1.1.0',
+        'entry': 'profile_center_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': <String>['analytics', 'native_navigation'],
+      },
+    );
+    await _writeJsonFile(
+      tempDirectory,
+      'manifests/profile_center/versions/1.1.0.json',
+      <String, Object?>{
+        'id': 'profile_center',
+        'version': '1.1.0',
         'entry': 'profile_center_home',
         'contractVersion': '1.0.0',
         'sdkVersionRange': '>=1.0.0 <2.0.0',
@@ -41,7 +53,12 @@ void main() {
     await _writeJsonFile(
       tempDirectory,
       'screens/profile_center/1.0.0/profile_center_home.json',
-      <String, Object?>{'type': 'scaffold'},
+      <String, Object?>{'type': 'scaffold', 'versionLabel': '1.0.0'},
+    );
+    await _writeJsonFile(
+      tempDirectory,
+      'screens/profile_center/1.1.0/profile_center_home.json',
+      <String, Object?>{'type': 'scaffold', 'versionLabel': '1.1.0'},
     );
 
     handler = createLocalBackendHandler(apiRootDirectory: tempDirectory);
@@ -71,35 +88,7 @@ void main() {
   });
 
   test('serves the latest manifest from a .json endpoint', () async {
-    await _writeJsonFile(
-      tempDirectory,
-      'rollout-rules/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'defaultVersion': '1.0.0',
-        'hostRules': <Map<String, Object?>>[
-          <String, Object?>{
-            'hostApp': 'super_app_host',
-            'version': '1.0.0',
-            'enabled': true,
-          },
-        ],
-      },
-    );
-    await _writeJsonFile(
-      tempDirectory,
-      'capability-policies/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'requireContextForLatest': true,
-        'enforceManifestCapabilities': true,
-        'requiredQueryParameters': <String>[
-          'hostApp',
-          'sdkVersion',
-          'capabilities',
-        ],
-      },
-    );
+    await _writeProfileCenterPolicies(tempDirectory);
 
     final response = await handler(
       Request(
@@ -114,6 +103,24 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['id'], 'profile_center');
+    expect(body['version'], '1.1.0');
+  });
+
+  test('serves 1.0.0 latest for partner_app_host', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['version'], '1.0.0');
   });
 
@@ -152,41 +159,13 @@ void main() {
   );
 
   test('returns 412 when host app is not enabled by rollout rules', () async {
-    await _writeJsonFile(
-      tempDirectory,
-      'rollout-rules/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'defaultVersion': '1.0.0',
-        'hostRules': <Map<String, Object?>>[
-          <String, Object?>{
-            'hostApp': 'super_app_host',
-            'version': '1.0.0',
-            'enabled': true,
-          },
-        ],
-      },
-    );
-    await _writeJsonFile(
-      tempDirectory,
-      'capability-policies/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'requireContextForLatest': true,
-        'enforceManifestCapabilities': true,
-        'requiredQueryParameters': <String>[
-          'hostApp',
-          'sdkVersion',
-          'capabilities',
-        ],
-      },
-    );
+    await _writeProfileCenterPolicies(tempDirectory);
 
     final response = await handler(
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation',
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=unknown_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -198,35 +177,7 @@ void main() {
   });
 
   test('returns 412 when request capabilities are missing', () async {
-    await _writeJsonFile(
-      tempDirectory,
-      'rollout-rules/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'defaultVersion': '1.0.0',
-        'hostRules': <Map<String, Object?>>[
-          <String, Object?>{
-            'hostApp': 'super_app_host',
-            'version': '1.0.0',
-            'enabled': true,
-          },
-        ],
-      },
-    );
-    await _writeJsonFile(
-      tempDirectory,
-      'capability-policies/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'requireContextForLatest': true,
-        'enforceManifestCapabilities': true,
-        'requiredQueryParameters': <String>[
-          'hostApp',
-          'sdkVersion',
-          'capabilities',
-        ],
-      },
-    );
+    await _writeProfileCenterPolicies(tempDirectory);
 
     final response = await handler(
       Request(
@@ -244,35 +195,7 @@ void main() {
   });
 
   test('returns 412 when requested SDK version is incompatible', () async {
-    await _writeJsonFile(
-      tempDirectory,
-      'rollout-rules/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'defaultVersion': '1.0.0',
-        'hostRules': <Map<String, Object?>>[
-          <String, Object?>{
-            'hostApp': 'super_app_host',
-            'version': '1.0.0',
-            'enabled': true,
-          },
-        ],
-      },
-    );
-    await _writeJsonFile(
-      tempDirectory,
-      'capability-policies/profile_center.json',
-      <String, Object?>{
-        'miniProgramId': 'profile_center',
-        'requireContextForLatest': true,
-        'enforceManifestCapabilities': true,
-        'requiredQueryParameters': <String>[
-          'hostApp',
-          'sdkVersion',
-          'capabilities',
-        ],
-      },
-    );
+    await _writeProfileCenterPolicies(tempDirectory);
 
     final response = await handler(
       Request(
@@ -319,6 +242,24 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['type'], 'scaffold');
+    expect(body['versionLabel'], '1.0.0');
+  });
+
+  test('serves the new 1.1.0 screen from a versioned endpoint', () async {
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/screens/profile_center/1.1.0/profile_center_home.json',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['type'], 'scaffold');
+    expect(body['versionLabel'], '1.1.0');
   });
 
   test('returns 404 when a manifest is missing', () async {
@@ -362,4 +303,41 @@ Future<void> _writeJsonFile(
   );
   await file.parent.create(recursive: true);
   await file.writeAsString(jsonEncode(json));
+}
+
+Future<void> _writeProfileCenterPolicies(Directory rootDirectory) async {
+  await _writeJsonFile(
+    rootDirectory,
+    'rollout-rules/profile_center.json',
+    <String, Object?>{
+      'miniProgramId': 'profile_center',
+      'defaultVersion': '1.0.0',
+      'hostRules': <Map<String, Object?>>[
+        <String, Object?>{
+          'hostApp': 'super_app_host',
+          'version': '1.1.0',
+          'enabled': true,
+        },
+        <String, Object?>{
+          'hostApp': 'partner_app_host',
+          'version': '1.0.0',
+          'enabled': true,
+        },
+      ],
+    },
+  );
+  await _writeJsonFile(
+    rootDirectory,
+    'capability-policies/profile_center.json',
+    <String, Object?>{
+      'miniProgramId': 'profile_center',
+      'requireContextForLatest': true,
+      'enforceManifestCapabilities': true,
+      'requiredQueryParameters': <String>[
+        'hostApp',
+        'sdkVersion',
+        'capabilities',
+      ],
+    },
+  );
 }
