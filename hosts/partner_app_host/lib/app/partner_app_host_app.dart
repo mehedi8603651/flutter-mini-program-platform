@@ -7,6 +7,7 @@ import '../mini_programs/native_feedback_desk_page.dart';
 import '../mini_programs/mini_program_list_page.dart';
 import '../mini_programs/native_profile_review_page.dart';
 import '../mini_programs/source_configuration.dart';
+import '../services/auth_session_service.dart';
 import 'app_routes.dart';
 
 const String partnerAppHostId = 'partner_app_host';
@@ -62,7 +63,17 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
         (widget.source != null
             ? 'Injected source'
             : sourceConfiguration.description);
-    _hostBridge = HostBridgeImpl(navigatorKey: _navigatorKey);
+    final authSessionService = DemoAuthSessionService(
+      tenantId: sourceConfiguration.tenantId,
+    );
+    _hostBridge = HostBridgeImpl(
+      navigatorKey: _navigatorKey,
+      secureApiService: sourceConfiguration.buildSecureApiService(
+        hostAppId: partnerAppHostId,
+        hostVersion: partnerAppHostVersion,
+        authSessionService: authSessionService,
+      ),
+    );
   }
 
   @override

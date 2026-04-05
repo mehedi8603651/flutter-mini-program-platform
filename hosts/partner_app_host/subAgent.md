@@ -9,7 +9,7 @@ host integration path for:
 - backend-delivered mini-program loading through `HttpMiniProgramSource`
 - a smaller capability surface than `super_app_host`, while still supporting `secure_api`
 - host-specific route alias mapping through a partner `HostBridge`
-- host-owned allowlisted secure API handling
+- host-owned allowlisted secure API services behind the partner bridge
 - rendering `profile_center` and `feedback_form` through backend-selected partner lanes
 - controlled fallback handling for unsupported capabilities
 
@@ -40,6 +40,8 @@ host integration path for:
 - `lib/app/app_routes.dart`
 - `lib/app/partner_app_host_app.dart`
 - `lib/bridge/host_bridge_impl.dart`
+- `lib/services/auth_session_service.dart`
+- `lib/services/secure_api_service.dart`
 - `lib/capabilities/supported_capabilities.dart`
 - `lib/mini_programs/mini_program_catalog.dart`
 - `lib/mini_programs/source_configuration.dart`

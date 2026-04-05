@@ -272,6 +272,132 @@ void main() {
     expect(body['version'], '1.1.0');
   });
 
+  test('accepts secure feedback submission for allowlisted hosts', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost/api/secure/feedback/submit'),
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'authorization': 'Bearer super-demo-access-token',
+          'x-host-app': 'super_app_host',
+          'x-host-version': '1.4.0',
+          'x-host-user-id': 'super_demo_user',
+          'x-host-tenant-id': 'internal-demo',
+        },
+        body: jsonEncode(<String, Object?>{
+          'source': 'feedback_form',
+          'flow': 'portable_feedback',
+          'message': 'Validated feedback payload from portable UI.',
+        }),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.created);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['status'], 'accepted');
+    expect(body['endpoint'], 'feedback/submit');
+    expect(body['hostApp'], 'super_app_host');
+    expect(body['userId'], 'super_demo_user');
+    expect(body['tenantId'], 'internal-demo');
+    expect(body['flow'], 'portable_feedback');
+    expect(body['submissionId'], startsWith('super_app_host_'));
+  });
+
+  test('returns 401 when secure feedback headers are missing', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost/api/secure/feedback/submit'),
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'x-host-app': 'super_app_host',
+        },
+        body: jsonEncode(<String, Object?>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        }),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.unauthorized);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], 'secure_api_unauthorized');
+    expect(
+      (body['details'] as Map<String, dynamic>)['missingHeaders'],
+      containsAll(<String>[
+        'x-host-version',
+        'x-host-user-id',
+        'authorization',
+      ]),
+    );
+  });
+
+  test('returns 403 when secure feedback host is not allowlisted', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost/api/secure/feedback/submit'),
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'authorization': 'Bearer unknown-demo-access-token',
+          'x-host-app': 'unknown_host',
+          'x-host-version': '1.0.0',
+          'x-host-user-id': 'unknown_user',
+        },
+        body: jsonEncode(<String, Object?>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        }),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.forbidden);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], 'secure_api_host_forbidden');
+    expect(
+      (body['details'] as Map<String, dynamic>)['hostApp'],
+      'unknown_host',
+    );
+  });
+
+  test('returns 400 when secure feedback message is too short', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost/api/secure/feedback/submit'),
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'authorization': 'Bearer partner-demo-access-token',
+          'x-host-app': 'partner_app_host',
+          'x-host-version': '1.2.3',
+          'x-host-user-id': 'partner_demo_user',
+        },
+        body: jsonEncode(<String, Object?>{
+          'source': 'feedback_form',
+          'message': 'Too short',
+        }),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.badRequest);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], 'secure_api_validation_failed');
+    expect((body['details'] as Map<String, dynamic>)['minimumLength'], 12);
+  });
+
   test('serves a pinned profile_center version when requested', () async {
     await _writeProfileCenterPolicies(tempDirectory);
 
@@ -380,25 +506,28 @@ void main() {
     expect(details['resolvedVersion'], '1.1.0');
   });
 
-  test('returns 412 when feedback_form secure_api capability is missing', () async {
-    await _writeFeedbackFormPolicies(tempDirectory);
+  test(
+    'returns 412 when feedback_form secure_api capability is missing',
+    () async {
+      await _writeFeedbackFormPolicies(tempDirectory);
 
-    final response = await handler(
-      Request(
-        'GET',
-        Uri.parse(
-          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+      final response = await handler(
+        Request(
+          'GET',
+          Uri.parse(
+            'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(response.statusCode, HttpStatus.preconditionFailed);
-    final body =
-        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
-    expect(body['errorCode'], 'missing_capabilities');
-    final details = body['details'] as Map<String, dynamic>;
-    expect(details['missingCapabilities'], contains('secure_api'));
-  });
+      expect(response.statusCode, HttpStatus.preconditionFailed);
+      final body =
+          jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+      expect(body['errorCode'], 'missing_capabilities');
+      final details = body['details'] as Map<String, dynamic>;
+      expect(details['missingCapabilities'], contains('secure_api'));
+    },
+  );
 
   test('returns 412 when request capabilities are missing', () async {
     await _writeProfileCenterPolicies(tempDirectory);
@@ -640,6 +769,17 @@ Future<void> _writeFeedbackFormPolicies(Directory rootDirectory) async {
         'locale',
         'capabilities',
       ],
+    },
+  );
+  await _writeJsonFile(
+    rootDirectory,
+    'secure-api-policies/feedback_submit.json',
+    <String, Object?>{
+      'endpoint': 'feedback/submit',
+      'allowedMethods': <String>['POST'],
+      'allowedHosts': <String>['super_app_host', 'partner_app_host'],
+      'allowedSources': <String>['feedback_form'],
+      'minimumMessageLength': 12,
     },
   );
 }

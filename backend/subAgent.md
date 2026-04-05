@@ -10,6 +10,7 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
 - Rollout rules
 - Capability-aware delivery policy
 - Version pinning and compatibility responses
+- Local secure API policy enforcement
 
 ## Must Do
 - Keep delivery compatible with contract and SDK rules.
@@ -40,7 +41,8 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
   - `super_app_host` resolves `latest` to `1.1.0`
   - `partner_app_host` resolves `latest` to `1.0.0`
   - both hosts can also consume `feedback_form` `1.1.0`
-  - `feedback_form` delivery now proves capability-aware `secure_api` rollout checks
+- `feedback_form` delivery now proves capability-aware `secure_api` rollout checks
+- `POST /api/secure/feedback/submit` now provides a real local secure endpoint backed by `api/secure-api-policies/feedback_submit.json`
 
 ## Next Step
 - Move from local sample release control to a production backend service with persistent rollout storage, admin-managed pinning, and stronger observability.

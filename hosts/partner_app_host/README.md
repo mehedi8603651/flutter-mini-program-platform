@@ -11,7 +11,7 @@ Reference Flutter host app for portable mini-program partner integration.
 - can add debug release-control overrides such as `tenantId` and `pinnedVersion`
 - receives the backend-selected `profile_center` `1.0.0` lane while `super_app_host` receives `1.1.0`
 - maps portable route aliases such as `profile_editor` and `feedback_follow_up` to its own native Flutter pages
-- keeps `secure_api` host-owned and allowlisted inside its bridge
+- keeps `secure_api` host-owned and allowlisted through host-side services behind its bridge
 
 ## Current flow
 
@@ -23,6 +23,13 @@ Reference Flutter host app for portable mini-program partner integration.
    - `profile_center` -> `1.0.0`
    - `feedback_form` -> `1.1.0`
 6. The mini-program renders and can still call `callSecureApi`, `trackEvent`, and `openNativeScreen`.
+
+`callSecureApi` currently flows through:
+
+- `lib/services/auth_session_service.dart`
+- `lib/services/secure_api_service.dart`
+
+That keeps session and backend logic out of `HostBridgeImpl`.
 
 ## Run
 

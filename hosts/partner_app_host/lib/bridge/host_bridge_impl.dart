@@ -3,20 +3,25 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../app/app_routes.dart';
+import '../services/secure_api_service.dart';
 
 typedef TrackEventObserver = void Function(TrackEventActionPayload payload);
 
 class HostBridgeImpl implements HostBridge {
-  HostBridgeImpl({required this.navigatorKey, this.onTrackEvent});
+  HostBridgeImpl({
+    required this.navigatorKey,
+    required this.secureApiService,
+    this.onTrackEvent,
+  });
 
   final GlobalKey<NavigatorState> navigatorKey;
+  final SecureApiService secureApiService;
   final TrackEventObserver? onTrackEvent;
 
   static const Map<String, String> _routeAliases = <String, String>{
     'profile_editor': AppRoutes.nativeProfileReview,
     'feedback_follow_up': AppRoutes.nativeFeedbackDesk,
   };
-  static const String _feedbackSubmitEndpoint = 'feedback/submit';
 
   @override
   Future<HostActionResult> openNativeScreen(
@@ -68,41 +73,7 @@ class HostBridgeImpl implements HostBridge {
   Future<HostActionResult> callSecureApi(
     CallSecureApiActionPayload payload,
   ) async {
-    final method = payload.method.trim().toUpperCase();
-    if (payload.endpoint != _feedbackSubmitEndpoint) {
-      return HostActionResult.failed(
-        actionName: ActionNames.callSecureApi,
-        message:
-            'Secure API endpoint "${payload.endpoint}" is not allowlisted in partner_app_host.',
-      );
-    }
-
-    if (method != 'POST') {
-      return HostActionResult.failed(
-        actionName: ActionNames.callSecureApi,
-        message:
-            'Secure API endpoint "${payload.endpoint}" only supports POST in partner_app_host.',
-      );
-    }
-
-    debugPrint(
-      '[partner_app_host][secure_api] $method ${payload.endpoint} ${payload.body}',
-    );
-
-    final message = payload.body['message']?.toString().trim();
-    return HostActionResult.success(
-      actionName: ActionNames.callSecureApi,
-      message: 'Queued secure feedback for partner host review.',
-      data: <String, dynamic>{
-        'endpoint': payload.endpoint,
-        'method': method,
-        'status': 'queued',
-        'host': 'partner_app_host',
-        'ticketId': 'partner-feedback-101',
-        'desk': 'partner_feedback_desk',
-        if (message != null && message.isNotEmpty) 'messagePreview': message,
-      },
-    );
+    return secureApiService.call(payload);
   }
 
   @override

@@ -32,6 +32,7 @@ The source of truth still lives in `mini_programs/<id>`.
 - `api/screens/feedback_form/1.0.0/feedback_form_home.json`
 - `api/rollout-rules/feedback_form.json`
 - `api/capability-policies/feedback_form.json`
+- `api/secure-api-policies/feedback_submit.json`
 
 The current rollout sample uses two lanes:
 
@@ -78,6 +79,7 @@ Then the local backend serves:
 - `http://localhost:8080/api/manifests/feedback_form/versions/1.0.0.json`
 - `http://localhost:8080/api/screens/feedback_form/1.1.0/feedback_form_home.json`
 - `http://localhost:8080/api/screens/feedback_form/1.0.0/feedback_form_home.json`
+- `http://localhost:8080/api/secure/feedback/submit`
 
 For `profile_center`, the `latest` manifest route is context-aware. In local
 backend mode the host sends:
@@ -136,6 +138,38 @@ That request resolves `latest` to the pinned `1.0.0` artifact and returns
 ```powershell
 flutter run --dart-define=SUPER_APP_SOURCE_MODE=local_backend --dart-define=SUPER_APP_BACKEND_BASE_URL=http://127.0.0.1:8080/api/
 ```
+
+## Secure API sample
+
+The local backend now also exposes a real secure feedback endpoint:
+
+```text
+POST /api/secure/feedback/submit
+```
+
+Required headers:
+
+- `authorization: Bearer <token>`
+- `x-host-app`
+- `x-host-version`
+- `x-host-user-id`
+- optional `x-host-tenant-id`
+
+Required JSON body:
+
+- `source`
+- `message`
+- optional `flow`
+
+The current local policy is defined in:
+
+- `api/secure-api-policies/feedback_submit.json`
+
+It only allows:
+
+- `POST`
+- `super_app_host` and `partner_app_host`
+- `feedback_form` as the source mini-program
 
 ## Package verification
 

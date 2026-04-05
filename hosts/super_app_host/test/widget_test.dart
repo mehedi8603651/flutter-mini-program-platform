@@ -14,6 +14,8 @@ import 'package:super_app_host/mini_programs/local_mini_program_source.dart';
 import 'package:super_app_host/mini_programs/native_feedback_inbox_page.dart';
 import 'package:super_app_host/mini_programs/native_profile_editor_page.dart';
 import 'package:super_app_host/mini_programs/source_configuration.dart';
+import 'package:super_app_host/services/auth_session_service.dart';
+import 'package:super_app_host/services/secure_api_service.dart';
 
 Future<void> _pumpUntilFound(
   WidgetTester tester,
@@ -54,7 +56,10 @@ void main() {
           program: LocalMiniProgramCatalog.profileCenter,
           sdkVersion: superAppHostSdkVersion,
           source: const LocalMiniProgramSource(),
-          hostBridge: HostBridgeImpl(navigatorKey: navigatorKey),
+          hostBridge: HostBridgeImpl(
+            navigatorKey: navigatorKey,
+            secureApiService: _RecordingSecureApiService(),
+          ),
           capabilityRegistry: superAppCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
         ),
@@ -78,7 +83,10 @@ void main() {
           program: LocalMiniProgramCatalog.feedbackForm,
           sdkVersion: superAppHostSdkVersion,
           source: const LocalMiniProgramSource(),
-          hostBridge: HostBridgeImpl(navigatorKey: navigatorKey),
+          hostBridge: HostBridgeImpl(
+            navigatorKey: navigatorKey,
+            secureApiService: _RecordingSecureApiService(),
+          ),
           capabilityRegistry: superAppCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
         ),
@@ -104,7 +112,10 @@ void main() {
           program: LocalMiniProgramCatalog.profileCenter,
           sdkVersion: superAppHostSdkVersion,
           source: const _MissingCapabilityMiniProgramSource(),
-          hostBridge: HostBridgeImpl(navigatorKey: navigatorKey),
+          hostBridge: HostBridgeImpl(
+            navigatorKey: navigatorKey,
+            secureApiService: _RecordingSecureApiService(),
+          ),
           capabilityRegistry: superAppMissingNavigationCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
         ),
@@ -128,7 +139,10 @@ void main() {
     tester,
   ) async {
     final navigatorKey = GlobalKey<NavigatorState>();
-    final bridge = HostBridgeImpl(navigatorKey: navigatorKey);
+    final bridge = HostBridgeImpl(
+      navigatorKey: navigatorKey,
+      secureApiService: _RecordingSecureApiService(),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -180,7 +194,10 @@ void main() {
     tester,
   ) async {
     final navigatorKey = GlobalKey<NavigatorState>();
-    final bridge = HostBridgeImpl(navigatorKey: navigatorKey);
+    final bridge = HostBridgeImpl(
+      navigatorKey: navigatorKey,
+      secureApiService: _RecordingSecureApiService(),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -228,23 +245,75 @@ void main() {
     expect(result.data['channel'], 'mini_program');
   });
 
-  test('host bridge maps secure feedback submission to a host API result', () async {
-    final bridge = HostBridgeImpl(navigatorKey: GlobalKey<NavigatorState>());
+  test(
+    'host bridge delegates secure feedback submission to the secure API service',
+    () async {
+      final secureApiService = _RecordingSecureApiService();
+      final bridge = HostBridgeImpl(
+        navigatorKey: GlobalKey<NavigatorState>(),
+        secureApiService: secureApiService,
+      );
 
-    final result = await bridge.callSecureApi(
+      final result = await bridge.callSecureApi(
+        const CallSecureApiActionPayload(
+          endpoint: 'feedback/submit',
+          body: <String, dynamic>{
+            'source': 'feedback_form',
+            'message': 'Validated feedback payload from portable UI.',
+          },
+        ),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.actionName, ActionNames.callSecureApi);
+      expect(secureApiService.lastPayload?.endpoint, 'feedback/submit');
+      expect(result.data['status'], 'recorded');
+    },
+  );
+
+  test('secure API service posts host session context to the backend', () async {
+    late http.Request capturedRequest;
+    final client = MockClient((request) async {
+      capturedRequest = request;
+      return http.Response(
+        '{"message":"Secure feedback submission recorded.","submissionId":"super_secure_001","status":"accepted","hostApp":"super_app_host"}',
+        201,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+    final service = BackendSecureApiService(
+      apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      authSessionService: const DemoAuthSessionService(
+        tenantId: 'internal-demo',
+      ),
+      hostAppId: superAppHostId,
+      hostVersion: '1.4.0',
+      client: client,
+    );
+
+    final result = await service.call(
       const CallSecureApiActionPayload(
         endpoint: 'feedback/submit',
         body: <String, dynamic>{
           'source': 'feedback_form',
+          'flow': 'portable_feedback',
           'message': 'Validated feedback payload from portable UI.',
         },
       ),
     );
 
     expect(result.isSuccess, isTrue);
-    expect(result.actionName, ActionNames.callSecureApi);
-    expect(result.data['host'], 'super_app_host');
-    expect(result.data['status'], 'accepted');
+    expect(capturedRequest.method, 'POST');
+    expect(capturedRequest.url.path, '/api/secure/feedback/submit');
+    expect(capturedRequest.headers['x-host-app'], superAppHostId);
+    expect(capturedRequest.headers['x-host-version'], '1.4.0');
+    expect(capturedRequest.headers['x-host-user-id'], 'super_demo_user');
+    expect(capturedRequest.headers['x-host-tenant-id'], 'internal-demo');
+    expect(
+      capturedRequest.headers['authorization'],
+      'Bearer super-demo-access-token',
+    );
+    expect(result.data['submissionId'], 'super_secure_001');
   });
 
   test('source configuration sends super-app delivery context', () async {
@@ -332,5 +401,23 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
         },
       },
     };
+  }
+}
+
+class _RecordingSecureApiService implements SecureApiService {
+  CallSecureApiActionPayload? get lastPayload => _lastPayload;
+
+  CallSecureApiActionPayload? _lastPayload;
+
+  @override
+  Future<HostActionResult> call(CallSecureApiActionPayload payload) async {
+    _lastPayload = payload;
+    return HostActionResult.success(
+      actionName: ActionNames.callSecureApi,
+      data: <String, dynamic>{
+        'status': 'recorded',
+        'endpoint': payload.endpoint,
+      },
+    );
   }
 }

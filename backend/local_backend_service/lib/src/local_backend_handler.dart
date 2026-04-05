@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 import 'package:shelf/shelf.dart';
 
 import 'manifest_delivery_selection.dart';
+import 'secure_feedback_handler.dart';
 
 const String _jsonContentType = 'application/json; charset=utf-8';
 
@@ -19,19 +20,33 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
   final manifestSelector = ManifestDeliverySelector(
     apiRootPath: normalizedApiRootPath,
   );
+  final secureFeedbackHandler = SecureFeedbackHandler(
+    apiRootPath: normalizedApiRootPath,
+  );
 
   return (Request request) async {
+    final segments = request.url.pathSegments;
+    if (request.method == 'POST' &&
+        _matchesSegments(segments, const [
+          'api',
+          'secure',
+          'feedback',
+          'submit',
+        ])) {
+      return secureFeedbackHandler.handleSubmit(request);
+    }
+
     if (request.method != 'GET') {
       return _jsonResponse(
         statusCode: HttpStatus.methodNotAllowed,
         body: <String, Object?>{
           'errorCode': 'method_not_allowed',
-          'message': 'Only GET requests are supported.',
+          'message':
+              'Only GET requests and documented secure POST routes are supported.',
         },
       );
     }
 
-    final segments = request.url.pathSegments;
     if (_matchesSegments(segments, const ['health'])) {
       return _jsonResponse(
         body: <String, Object?>{
@@ -134,10 +149,7 @@ class _PublishedArtifactRepository {
         headers['x-mini-program-matched-rule-id'] = matchedRuleId;
       }
 
-      return Response.ok(
-        jsonEncode(responseBody),
-        headers: headers,
-      );
+      return Response.ok(jsonEncode(responseBody), headers: headers);
     } on ManifestSelectionException catch (error) {
       return _jsonResponse(
         statusCode: error.statusCode,

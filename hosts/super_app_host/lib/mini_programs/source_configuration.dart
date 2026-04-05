@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
+import '../services/auth_session_service.dart';
+import '../services/secure_api_service.dart';
 import 'local_mini_program_source.dart';
 
 enum SuperAppHostSourceMode { assets, localBackend }
@@ -101,14 +103,34 @@ class SuperAppHostSourceConfiguration {
     }
   }
 
+  SecureApiService buildSecureApiService({
+    required String hostAppId,
+    required String hostVersion,
+    required AuthSessionService authSessionService,
+  }) {
+    final apiBaseUri = backendApiBaseUri;
+    if (apiBaseUri == null) {
+      throw StateError(
+        'A backend API base URI is required for secure API service configuration.',
+      );
+    }
+
+    return BackendSecureApiService(
+      apiBaseUri: apiBaseUri,
+      authSessionService: authSessionService,
+      hostAppId: hostAppId,
+      hostVersion: hostVersionOverride ?? hostVersion,
+      client: client,
+    );
+  }
+
   String get description {
     switch (mode) {
       case SuperAppHostSourceMode.assets:
         return 'Bundled assets';
       case SuperAppHostSourceMode.localBackend:
         final labels = <String>[
-          if (hostVersionOverride != null)
-            'hostVersion=$hostVersionOverride',
+          if (hostVersionOverride != null) 'hostVersion=$hostVersionOverride',
           if (tenantId != null) 'tenantId=$tenantId',
           if (pinnedVersion != null) 'pinnedVersion=$pinnedVersion',
         ];

@@ -5,6 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
+import '../services/auth_session_service.dart';
+import '../services/secure_api_service.dart';
+
 class PartnerAppHostSourceConfiguration {
   PartnerAppHostSourceConfiguration({
     required this.backendApiBaseUri,
@@ -75,6 +78,20 @@ class PartnerAppHostSourceConfiguration {
         hostVersion: hostVersionOverride ?? hostVersion,
         capabilityRegistry: capabilityRegistry,
       ),
+    );
+  }
+
+  SecureApiService buildSecureApiService({
+    required String hostAppId,
+    required String hostVersion,
+    required AuthSessionService authSessionService,
+  }) {
+    return BackendSecureApiService(
+      apiBaseUri: backendApiBaseUri,
+      authSessionService: authSessionService,
+      hostAppId: hostAppId,
+      hostVersion: hostVersionOverride ?? hostVersion,
+      client: client,
     );
   }
 

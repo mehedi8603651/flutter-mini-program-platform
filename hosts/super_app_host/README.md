@@ -10,7 +10,7 @@ First-party Flutter host app for the portable mini-program platform.
 - loads one built mini-program through `MiniProgramSource`
 - loads multiple built mini-programs through `MiniProgramSource`
 - renders the mini-program with the shared SDK
-- executes allowlisted `secure_api` calls through the host bridge
+- executes allowlisted `secure_api` calls through host-side services and the host bridge
 - opens a host-owned native screen through `openNativeScreen`
 - can switch between bundled asset delivery and local backend HTTP delivery
 
@@ -21,6 +21,13 @@ First-party Flutter host app for the portable mini-program platform.
 3. Render the portable screen through `MiniProgramHost`.
 4. Trigger `callSecureApi`, `trackEvent`, or `openNativeScreen` from the mini-program.
 5. Use `Preview capability failure` to confirm the SDK rejects unsupported capability sets with controlled fallback UI.
+
+`callSecureApi` now goes through:
+
+- `lib/services/auth_session_service.dart`
+- `lib/services/secure_api_service.dart`
+
+The bridge stays thin and delegates network/session work to those services.
 
 ## Source of truth
 

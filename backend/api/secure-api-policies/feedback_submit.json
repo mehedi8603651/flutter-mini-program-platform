@@ -1,0 +1,7 @@
+{
+  "endpoint": "feedback/submit",
+  "allowedMethods": ["POST"],
+  "allowedHosts": ["super_app_host", "partner_app_host"],
+  "allowedSources": ["feedback_form"],
+  "minimumMessageLength": 12
+}
