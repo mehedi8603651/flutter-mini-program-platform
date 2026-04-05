@@ -171,6 +171,11 @@ It only allows:
 - `super_app_host` and `partner_app_host`
 - `feedback_form` as the source mini-program
 
+The current local auth/failure sample also supports:
+
+- `expired-` bearer tokens -> `401 secure_api_session_expired`
+- blocked demo users from `blockedUserIds` -> `403 secure_api_forbidden`
+
 ## Package verification
 
 ```powershell

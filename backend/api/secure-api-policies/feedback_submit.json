@@ -3,5 +3,7 @@
   "allowedMethods": ["POST"],
   "allowedHosts": ["super_app_host", "partner_app_host"],
   "allowedSources": ["feedback_form"],
+  "blockedUserIds": ["blocked_super_demo_user", "blocked_partner_demo_user"],
+  "expiredAccessTokenPrefixes": ["expired-"],
   "minimumMessageLength": 12
 }

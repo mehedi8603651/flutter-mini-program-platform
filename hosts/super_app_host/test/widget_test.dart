@@ -283,7 +283,10 @@ void main() {
     });
     final service = BackendSecureApiService(
       apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
-      authSessionService: const DemoAuthSessionService(
+      authSessionService: LocalAuthSessionService.seeded(
+        userId: 'super_demo_user',
+        accessToken: 'super-demo-access-token',
+        displayName: 'Super App User',
         tenantId: 'internal-demo',
       ),
       hostAppId: superAppHostId,
@@ -314,6 +317,74 @@ void main() {
       'Bearer super-demo-access-token',
     );
     expect(result.data['submissionId'], 'super_secure_001');
+  });
+
+  test(
+    'secure API service fails before network when no host session exists',
+    () async {
+      var networkCalled = false;
+      final client = MockClient((request) async {
+        networkCalled = true;
+        return http.Response('{}', 200);
+      });
+      final service = BackendSecureApiService(
+        apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+        authSessionService: LocalAuthSessionService.signedOut(),
+        hostAppId: superAppHostId,
+        hostVersion: '1.4.0',
+        client: client,
+      );
+
+      final result = await service.call(
+        const CallSecureApiActionPayload(
+          endpoint: 'feedback/submit',
+          body: <String, dynamic>{
+            'source': 'feedback_form',
+            'message': 'Validated feedback payload from portable UI.',
+          },
+        ),
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.errorCode, MiniProgramErrorCodes.secureApiSessionMissing);
+      expect(result.data['failureCategory'], 'auth');
+      expect(result.data['retryable'], isFalse);
+      expect(networkCalled, isFalse);
+    },
+  );
+
+  test('secure API service reports backend timeout as retryable', () async {
+    final client = MockClient((request) async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return http.Response('{}', 200);
+    });
+    final service = BackendSecureApiService(
+      apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      authSessionService: LocalAuthSessionService.seeded(
+        userId: 'super_demo_user',
+        accessToken: 'super-demo-access-token',
+        displayName: 'Super App User',
+      ),
+      hostAppId: superAppHostId,
+      hostVersion: '1.4.0',
+      client: client,
+      requestTimeout: const Duration(milliseconds: 10),
+    );
+
+    final result = await service.call(
+      const CallSecureApiActionPayload(
+        endpoint: 'feedback/submit',
+        body: <String, dynamic>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        },
+      ),
+    );
+
+    expect(result.isFailure, isTrue);
+    expect(result.errorCode, MiniProgramErrorCodes.backendTimeout);
+    expect(result.data['failureCategory'], 'transport');
+    expect(result.data['retryable'], isTrue);
   });
 
   test('source configuration sends super-app delivery context', () async {

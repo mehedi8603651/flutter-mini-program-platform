@@ -58,6 +58,7 @@ local host integration path for:
 - Keep host-specific routing and analytics logic inside this app.
 - Expose only approved bridge actions already defined in contracts.
 - Keep secure API endpoints allowlisted inside host services, with the bridge delegating only approved calls.
+- Keep local auth/session state host-owned. Use seeded local auth modes for local failure testing instead of hardcoding bridge stubs.
 - Treat this app as the first proof host, not as the default for all partner hosts.
 - Map portable route aliases to host-native routes inside `HostBridge`, not inside the mini-program source.
 - Keep the host asset snapshot in sync with the real built output from `mini_programs/profile_center` and `mini_programs/feedback_form` by using `tools/sync_assets.ps1`.

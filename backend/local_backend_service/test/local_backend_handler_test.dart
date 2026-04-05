@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:local_backend_service/local_backend_service.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -328,7 +329,7 @@ void main() {
     expect(response.statusCode, HttpStatus.unauthorized);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
-    expect(body['errorCode'], 'secure_api_unauthorized');
+    expect(body['errorCode'], MiniProgramErrorCodes.secureApiUnauthorized);
     expect(
       (body['details'] as Map<String, dynamic>)['missingHeaders'],
       containsAll(<String>[
@@ -363,11 +364,70 @@ void main() {
     expect(response.statusCode, HttpStatus.forbidden);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
-    expect(body['errorCode'], 'secure_api_host_forbidden');
+    expect(body['errorCode'], MiniProgramErrorCodes.secureApiForbidden);
     expect(
       (body['details'] as Map<String, dynamic>)['hostApp'],
       'unknown_host',
     );
+    expect(
+      (body['details'] as Map<String, dynamic>)['reason'],
+      'host_not_allowlisted',
+    );
+  });
+
+  test('returns 401 when secure feedback token is expired', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost/api/secure/feedback/submit'),
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'authorization': 'Bearer expired-super-demo-access-token',
+          'x-host-app': 'super_app_host',
+          'x-host-version': '1.4.0',
+          'x-host-user-id': 'super_demo_user',
+        },
+        body: jsonEncode(<String, Object?>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        }),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.unauthorized);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], MiniProgramErrorCodes.secureApiSessionExpired);
+  });
+
+  test('returns 403 when secure feedback user is blocked', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://localhost/api/secure/feedback/submit'),
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'authorization': 'Bearer partner-demo-access-token',
+          'x-host-app': 'partner_app_host',
+          'x-host-version': '1.2.3',
+          'x-host-user-id': 'blocked_partner_demo_user',
+        },
+        body: jsonEncode(<String, Object?>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        }),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.forbidden);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['errorCode'], MiniProgramErrorCodes.secureApiForbidden);
+    expect((body['details'] as Map<String, dynamic>)['reason'], 'user_blocked');
   });
 
   test('returns 400 when secure feedback message is too short', () async {
@@ -394,7 +454,7 @@ void main() {
     expect(response.statusCode, HttpStatus.badRequest);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
-    expect(body['errorCode'], 'secure_api_validation_failed');
+    expect(body['errorCode'], MiniProgramErrorCodes.secureApiValidationFailed);
     expect((body['details'] as Map<String, dynamic>)['minimumLength'], 12);
   });
 
@@ -779,6 +839,11 @@ Future<void> _writeFeedbackFormPolicies(Directory rootDirectory) async {
       'allowedMethods': <String>['POST'],
       'allowedHosts': <String>['super_app_host', 'partner_app_host'],
       'allowedSources': <String>['feedback_form'],
+      'blockedUserIds': <String>[
+        'blocked_super_demo_user',
+        'blocked_partner_demo_user',
+      ],
+      'expiredAccessTokenPrefixes': <String>['expired-'],
       'minimumMessageLength': 12,
     },
   );

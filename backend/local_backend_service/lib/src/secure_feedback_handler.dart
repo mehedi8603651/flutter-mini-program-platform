@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:path/path.dart' as path;
 import 'package:shelf/shelf.dart';
 
@@ -42,7 +43,7 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.unauthorized,
         body: <String, Object?>{
-          'errorCode': 'secure_api_unauthorized',
+          'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
           'message':
               'Missing required secure API headers: ${missingHeaders.join(', ')}.',
           'details': <String, Object?>{'missingHeaders': missingHeaders},
@@ -54,8 +55,34 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.unauthorized,
         body: <String, Object?>{
-          'errorCode': 'secure_api_unauthorized',
+          'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
           'message': 'Authorization header must use the Bearer scheme.',
+        },
+      );
+    }
+
+    final accessToken = authorization.substring('Bearer '.length).trim();
+    if (accessToken.isEmpty) {
+      return _jsonResponse(
+        statusCode: HttpStatus.unauthorized,
+        body: <String, Object?>{
+          'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
+          'message': 'Authorization header must include a bearer token.',
+        },
+      );
+    }
+
+    if (_isExpiredToken(accessToken, policy)) {
+      return _jsonResponse(
+        statusCode: HttpStatus.unauthorized,
+        body: <String, Object?>{
+          'errorCode': MiniProgramErrorCodes.secureApiSessionExpired,
+          'message':
+              'The host session has expired for secure feedback submission.',
+          'details': <String, Object?>{
+            'hostApp': hostApp,
+            'hostUserId': hostUserId,
+          },
         },
       );
     }
@@ -64,12 +91,29 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.forbidden,
         body: <String, Object?>{
-          'errorCode': 'secure_api_host_forbidden',
+          'errorCode': MiniProgramErrorCodes.secureApiForbidden,
           'message':
               'Host "$hostApp" is not allowlisted for secure feedback submission.',
           'details': <String, Object?>{
             'hostApp': hostApp,
+            'reason': 'host_not_allowlisted',
             'allowedHosts': policy.allowedHosts,
+          },
+        },
+      );
+    }
+
+    if (policy.blockedUserIds.contains(hostUserId)) {
+      return _jsonResponse(
+        statusCode: HttpStatus.forbidden,
+        body: <String, Object?>{
+          'errorCode': MiniProgramErrorCodes.secureApiForbidden,
+          'message':
+              'User "$hostUserId" is not allowed to submit secure feedback.',
+          'details': <String, Object?>{
+            'hostApp': hostApp,
+            'hostUserId': hostUserId,
+            'reason': 'user_blocked',
           },
         },
       );
@@ -93,7 +137,7 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.badRequest,
         body: <String, Object?>{
-          'errorCode': 'secure_api_invalid_payload',
+          'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
           'message':
               'Secure feedback submission requires: ${missingFields.join(', ')}.',
           'details': <String, Object?>{'missingFields': missingFields},
@@ -105,11 +149,12 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.forbidden,
         body: <String, Object?>{
-          'errorCode': 'secure_api_source_forbidden',
+          'errorCode': MiniProgramErrorCodes.secureApiForbidden,
           'message':
               'Source "$source" is not allowlisted for secure feedback submission.',
           'details': <String, Object?>{
             'source': source,
+            'reason': 'source_not_allowlisted',
             'allowedSources': policy.allowedSources,
           },
         },
@@ -120,7 +165,7 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.badRequest,
         body: <String, Object?>{
-          'errorCode': 'secure_api_validation_failed',
+          'errorCode': MiniProgramErrorCodes.secureApiValidationFailed,
           'message':
               'Feedback message must be at least ${policy.minimumMessageLength} characters.',
           'details': <String, Object?>{
@@ -188,7 +233,7 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.badRequest,
         body: <String, Object?>{
-          'errorCode': 'secure_api_invalid_payload',
+          'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
           'message': 'Secure feedback submission body must be a JSON object.',
         },
       );
@@ -196,12 +241,16 @@ class SecureFeedbackHandler {
       return _jsonResponse(
         statusCode: HttpStatus.badRequest,
         body: <String, Object?>{
-          'errorCode': 'secure_api_invalid_payload',
+          'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
           'message': 'Secure feedback submission body is not valid JSON.',
           'details': <String, Object?>{'reason': error.message},
         },
       );
     }
+  }
+
+  bool _isExpiredToken(String accessToken, _SecureFeedbackPolicy policy) {
+    return policy.expiredAccessTokenPrefixes.any(accessToken.startsWith);
   }
 }
 
@@ -212,6 +261,8 @@ class _SecureFeedbackPolicy {
     required this.allowedHosts,
     required this.allowedSources,
     required this.minimumMessageLength,
+    required this.blockedUserIds,
+    required this.expiredAccessTokenPrefixes,
   });
 
   factory _SecureFeedbackPolicy.fromJson(Map<String, dynamic> json) {
@@ -231,6 +282,16 @@ class _SecureFeedbackPolicy {
           .where((value) => value.isNotEmpty)
           .toList(),
       minimumMessageLength: json['minimumMessageLength'] as int? ?? 12,
+      blockedUserIds: (json['blockedUserIds'] as List<dynamic>? ?? const [])
+          .map((value) => value.toString().trim())
+          .where((value) => value.isNotEmpty)
+          .toList(),
+      expiredAccessTokenPrefixes:
+          (json['expiredAccessTokenPrefixes'] as List<dynamic>? ??
+                  const <String>['expired-'])
+              .map((value) => value.toString().trim())
+              .where((value) => value.isNotEmpty)
+              .toList(),
     );
   }
 
@@ -239,6 +300,8 @@ class _SecureFeedbackPolicy {
   final List<String> allowedHosts;
   final List<String> allowedSources;
   final int minimumMessageLength;
+  final List<String> blockedUserIds;
+  final List<String> expiredAccessTokenPrefixes;
 }
 
 String? _headerValue(Request request, String key) {

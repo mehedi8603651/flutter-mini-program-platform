@@ -33,6 +33,7 @@ host integration path for:
 - It should remain a template for "any Flutter app can adopt this SDK."
 - The current delivery lane resolves `profile_center` `latest` to `1.0.0` for `partner_app_host`.
 - It now sends explicit delivery context to backend `latest` routes: `hostApp`, `sdkVersion`, `hostVersion`, `platform`, `locale`, optional `tenantId`, and capabilities.
+- It now owns seeded local auth/session modes for local secure API failure testing without changing mini-program code.
 
 ## Current Structure
 - `pubspec.yaml`

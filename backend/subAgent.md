@@ -43,6 +43,7 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
   - both hosts can also consume `feedback_form` `1.1.0`
 - `feedback_form` delivery now proves capability-aware `secure_api` rollout checks
 - `POST /api/secure/feedback/submit` now provides a real local secure endpoint backed by `api/secure-api-policies/feedback_submit.json`
+- the secure endpoint now enforces local auth failure paths such as expired bearer tokens and blocked demo users
 
 ## Next Step
 - Move from local sample release control to a production backend service with persistent rollout storage, admin-managed pinning, and stronger observability.

@@ -30,6 +30,12 @@ Reference Flutter host app for portable mini-program partner integration.
 - `lib/services/secure_api_service.dart`
 
 That keeps session and backend logic out of `HostBridgeImpl`.
+The local auth model now supports seeded states for testing:
+
+- `authenticated`
+- `signed_out`
+- `expired`
+- `blocked`
 
 ## Run
 
@@ -57,7 +63,28 @@ flutter run ^
   --dart-define=PARTNER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
   --dart-define=PARTNER_APP_HOST_VERSION=1.2.3 ^
   --dart-define=PARTNER_APP_TENANT_ID=campus-demo ^
-  --dart-define=PARTNER_APP_PINNED_VERSION=1.0.0
+  --dart-define=PARTNER_APP_PINNED_VERSION=1.0.0 ^
+  --dart-define=PARTNER_APP_AUTH_STATE=authenticated
+```
+
+To test local auth and secure API failures without code changes:
+
+```powershell
+flutter run ^
+  --dart-define=PARTNER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=PARTNER_APP_AUTH_STATE=signed_out
+```
+
+```powershell
+flutter run ^
+  --dart-define=PARTNER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=PARTNER_APP_AUTH_STATE=expired
+```
+
+```powershell
+flutter run ^
+  --dart-define=PARTNER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=PARTNER_APP_AUTH_STATE=blocked
 ```
 
 ## Commands

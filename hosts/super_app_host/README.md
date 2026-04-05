@@ -28,6 +28,12 @@ First-party Flutter host app for the portable mini-program platform.
 - `lib/services/secure_api_service.dart`
 
 The bridge stays thin and delegates network/session work to those services.
+The local auth model now supports seeded states for testing:
+
+- `authenticated`
+- `signed_out`
+- `expired`
+- `blocked`
 
 ## Source of truth
 
@@ -103,7 +109,31 @@ flutter run ^
   --dart-define=SUPER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
   --dart-define=SUPER_APP_HOST_VERSION=1.4.0 ^
   --dart-define=SUPER_APP_TENANT_ID=internal-demo ^
-  --dart-define=SUPER_APP_PINNED_VERSION=1.0.0
+  --dart-define=SUPER_APP_PINNED_VERSION=1.0.0 ^
+  --dart-define=SUPER_APP_AUTH_STATE=authenticated
+```
+
+To test local auth and secure API failures without code changes:
+
+```powershell
+flutter run ^
+  --dart-define=SUPER_APP_SOURCE_MODE=local_backend ^
+  --dart-define=SUPER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=SUPER_APP_AUTH_STATE=signed_out
+```
+
+```powershell
+flutter run ^
+  --dart-define=SUPER_APP_SOURCE_MODE=local_backend ^
+  --dart-define=SUPER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=SUPER_APP_AUTH_STATE=expired
+```
+
+```powershell
+flutter run ^
+  --dart-define=SUPER_APP_SOURCE_MODE=local_backend ^
+  --dart-define=SUPER_APP_BACKEND_BASE_URL=http://10.0.2.2:8080/api/ ^
+  --dart-define=SUPER_APP_AUTH_STATE=blocked
 ```
 
 ## Commands

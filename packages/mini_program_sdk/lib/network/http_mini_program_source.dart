@@ -71,7 +71,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
       throw MiniProgramSourceException(
         message:
             'Failed to reach the mini-program backend while loading $resourceLabel.',
-        errorCode: 'backend_unreachable',
+        errorCode: MiniProgramErrorCodes.backendUnreachable,
         details: <String, dynamic>{
           'uri': uri.toString(),
           'resourceLabel': resourceLabel,
@@ -137,16 +137,16 @@ class HttpMiniProgramSource implements MiniProgramSource {
     return null;
   }
 
-  Map<String, dynamic> _extractBackendDetails(Map<String, dynamic> decodedBody) {
+  Map<String, dynamic> _extractBackendDetails(
+    Map<String, dynamic> decodedBody,
+  ) {
     final rawDetails = decodedBody['details'];
     if (rawDetails is Map<String, dynamic>) {
       return rawDetails;
     }
 
     if (rawDetails is Map) {
-      return rawDetails.map(
-        (key, value) => MapEntry(key.toString(), value),
-      );
+      return rawDetails.map((key, value) => MapEntry(key.toString(), value));
     }
 
     if (rawDetails != null) {

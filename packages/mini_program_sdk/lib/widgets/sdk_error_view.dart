@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 
 import '../mini_program_failure.dart';
 
@@ -69,8 +70,19 @@ class SdkErrorView extends StatelessWidget {
 
   static String _titleForFailure(String? errorCode) {
     switch (errorCode) {
-      case 'backend_unreachable':
+      case MiniProgramErrorCodes.backendUnreachable:
+      case MiniProgramErrorCodes.backendTimeout:
         return 'Backend unavailable';
+      case MiniProgramErrorCodes.secureApiSessionMissing:
+      case MiniProgramErrorCodes.secureApiSessionExpired:
+      case MiniProgramErrorCodes.secureApiUnauthorized:
+        return 'Sign-in required';
+      case MiniProgramErrorCodes.secureApiForbidden:
+      case MiniProgramErrorCodes.secureApiNotAllowlisted:
+        return 'Secure request blocked';
+      case MiniProgramErrorCodes.secureApiInvalidPayload:
+      case MiniProgramErrorCodes.secureApiValidationFailed:
+        return 'Secure request invalid';
       case 'host_not_enabled':
       case 'delivery_rule_disabled':
       case 'manifest_context_required':

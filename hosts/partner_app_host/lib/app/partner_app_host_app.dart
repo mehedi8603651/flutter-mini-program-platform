@@ -20,6 +20,7 @@ class PartnerAppHostApp extends StatefulWidget {
     this.source,
     this.sourceDescription,
     this.sourceConfiguration,
+    this.authSessionService,
     this.capabilityRegistry,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
   });
@@ -27,6 +28,7 @@ class PartnerAppHostApp extends StatefulWidget {
   final MiniProgramSource? source;
   final String? sourceDescription;
   final PartnerAppHostSourceConfiguration? sourceConfiguration;
+  final AuthSessionService? authSessionService;
   final CapabilityRegistry? capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
 
@@ -63,9 +65,9 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
         (widget.source != null
             ? 'Injected source'
             : sourceConfiguration.description);
-    final authSessionService = DemoAuthSessionService(
-      tenantId: sourceConfiguration.tenantId,
-    );
+    final authSessionService =
+        widget.authSessionService ??
+        _buildAuthSessionService(sourceConfiguration);
     _hostBridge = HostBridgeImpl(
       navigatorKey: _navigatorKey,
       secureApiService: sourceConfiguration.buildSecureApiService(
@@ -134,6 +136,39 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
         featureFlagEvaluator: widget.featureFlagEvaluator,
       ),
     );
+  }
+
+  AuthSessionService _buildAuthSessionService(
+    PartnerAppHostSourceConfiguration sourceConfiguration,
+  ) {
+    const rawAuthState = String.fromEnvironment(
+      'PARTNER_APP_AUTH_STATE',
+      defaultValue: 'authenticated',
+    );
+
+    return LocalAuthSessionService.seeded(
+      userId: 'partner_demo_user',
+      accessToken: 'partner-demo-access-token',
+      displayName: 'Partner App User',
+      tenantId: sourceConfiguration.tenantId,
+      mode: _parseAuthMode(rawAuthState),
+    );
+  }
+
+  LocalAuthSessionSeedMode _parseAuthMode(String rawValue) {
+    switch (rawValue.trim().toLowerCase()) {
+      case 'signed_out':
+      case 'signed-out':
+      case 'signedout':
+        return LocalAuthSessionSeedMode.signedOut;
+      case 'expired':
+        return LocalAuthSessionSeedMode.expired;
+      case 'blocked':
+        return LocalAuthSessionSeedMode.blocked;
+      case 'authenticated':
+      default:
+        return LocalAuthSessionSeedMode.authenticated;
+    }
   }
 
   Map<String, dynamic> _coerceArguments(Object? arguments) {

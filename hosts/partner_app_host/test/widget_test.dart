@@ -295,7 +295,10 @@ void main() {
       });
       final service = BackendSecureApiService(
         apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
-        authSessionService: const DemoAuthSessionService(
+        authSessionService: LocalAuthSessionService.seeded(
+          userId: 'partner_demo_user',
+          accessToken: 'partner-demo-access-token',
+          displayName: 'Partner App User',
           tenantId: 'campus-demo',
         ),
         hostAppId: partnerAppHostId,
@@ -326,6 +329,83 @@ void main() {
         'Bearer partner-demo-access-token',
       );
       expect(result.data['submissionId'], 'partner_secure_101');
+    },
+  );
+
+  test('partner secure API service fails on expired host session', () async {
+    var networkCalled = false;
+    final client = MockClient((request) async {
+      networkCalled = true;
+      return http.Response('{}', 200);
+    });
+    final service = BackendSecureApiService(
+      apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      authSessionService: LocalAuthSessionService.expired(
+        session: HostSession(
+          userId: 'partner_demo_user',
+          accessToken: 'expired-partner-demo-access-token',
+          displayName: 'Partner App User',
+        ),
+      ),
+      hostAppId: partnerAppHostId,
+      hostVersion: '1.2.3',
+      client: client,
+    );
+
+    final result = await service.call(
+      const CallSecureApiActionPayload(
+        endpoint: 'feedback/submit',
+        body: <String, dynamic>{
+          'source': 'feedback_form',
+          'message': 'Validated feedback payload from portable UI.',
+        },
+      ),
+    );
+
+    expect(result.isFailure, isTrue);
+    expect(result.errorCode, MiniProgramErrorCodes.secureApiSessionExpired);
+    expect(result.data['failureCategory'], 'auth');
+    expect(result.data['retryable'], isFalse);
+    expect(networkCalled, isFalse);
+  });
+
+  test(
+    'partner secure API service keeps backend forbidden errors structured',
+    () async {
+      final client = MockClient((request) async {
+        return http.Response(
+          '{"errorCode":"secure_api_forbidden","message":"User \\"blocked_partner_demo_user\\" is not allowed to submit secure feedback.","details":{"reason":"user_blocked","hostUserId":"blocked_partner_demo_user"}}',
+          403,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+      final service = BackendSecureApiService(
+        apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+        authSessionService: LocalAuthSessionService.seeded(
+          userId: 'blocked_partner_demo_user',
+          accessToken: 'partner-demo-access-token',
+          displayName: 'Blocked Partner User',
+        ),
+        hostAppId: partnerAppHostId,
+        hostVersion: '1.2.3',
+        client: client,
+      );
+
+      final result = await service.call(
+        const CallSecureApiActionPayload(
+          endpoint: 'feedback/submit',
+          body: <String, dynamic>{
+            'source': 'feedback_form',
+            'message': 'Validated feedback payload from portable UI.',
+          },
+        ),
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.errorCode, MiniProgramErrorCodes.secureApiForbidden);
+      expect(result.data['failureCategory'], 'policy');
+      expect(result.data['retryable'], isFalse);
+      expect(result.data['statusCode'], 403);
     },
   );
 
