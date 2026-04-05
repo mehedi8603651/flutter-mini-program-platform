@@ -13,6 +13,7 @@ class HostBridgeImpl implements HostBridge {
   final TrackEventObserver? onTrackEvent;
   static const Map<String, String> _routeAliases = <String, String>{
     'profile_editor': AppRoutes.nativeProfileEditor,
+    'feedback_follow_up': AppRoutes.nativeFeedbackInbox,
   };
 
   @override

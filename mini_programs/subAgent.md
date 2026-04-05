@@ -31,3 +31,7 @@ Author portable mobile mini-program flows using Stac DSL patterns and approved c
 - Its source-of-truth lives under `mini_programs/profile_center/stac/`.
 - Its current local build output path is `mini_programs/profile_center/stac/.build/`.
 - It uses approved `hostAction` payloads and a portable route alias instead of importing host route constants.
+- `feedback_form` now exists as the second real Stac-authored mini-program in this repo.
+- Its source-of-truth lives under `mini_programs/feedback_form/stac/`.
+- Its current local build output path is `mini_programs/feedback_form/stac/.build/`.
+- It proves portable local validation plus approved `trackEvent` and `openNativeScreen` bridge usage without introducing new platform capabilities.

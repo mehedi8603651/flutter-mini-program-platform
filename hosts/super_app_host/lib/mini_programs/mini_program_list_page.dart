@@ -57,8 +57,8 @@ class MiniProgramListPage extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'This first-party host proves the shared SDK can validate, '
-                    'render, and bridge one mobile mini-program locally before '
-                    'backend delivery is added.',
+                    'render, and bridge multiple mobile mini-programs through '
+                    'the same runtime and host bridge.',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: Colors.white.withValues(alpha: 0.92),
                     ),

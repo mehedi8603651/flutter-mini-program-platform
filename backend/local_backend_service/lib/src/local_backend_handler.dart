@@ -273,6 +273,41 @@ class _PublishedArtifactRepository {
       }
     }
 
+    final hostVersion = context.hostVersion;
+    if (hostVersion != null) {
+      final hostVersionError = _validateSegment(
+        hostVersion,
+        label: 'hostVersion',
+      );
+      if (hostVersionError != null) {
+        return hostVersionError;
+      }
+    }
+
+    final platform = context.platform;
+    if (platform != null) {
+      final platformError = _validateSegment(platform, label: 'platform');
+      if (platformError != null) {
+        return platformError;
+      }
+    }
+
+    final locale = context.locale;
+    if (locale != null) {
+      final localeError = _validateSegment(locale, label: 'locale');
+      if (localeError != null) {
+        return localeError;
+      }
+    }
+
+    final tenantId = context.tenantId;
+    if (tenantId != null) {
+      final tenantIdError = _validateSegment(tenantId, label: 'tenantId');
+      if (tenantIdError != null) {
+        return tenantIdError;
+      }
+    }
+
     for (final capability in context.capabilities) {
       final capabilityError = _validateSegment(
         capability,

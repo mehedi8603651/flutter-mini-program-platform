@@ -63,7 +63,7 @@ It is intentionally not the full backend-delivery or caching runtime yet.
 ## Current File Notes
 - `lib/network/mini_program_source.dart` defines the source contract for both asset and HTTP loaders.
 - `lib/network/http_mini_program_source.dart` provides the current backend-facing sample loader for static or server-hosted JSON delivery.
-- `lib/network/mini_program_source_exception.dart` carries backend rejection details into SDK fallback UI.
+- `lib/network/mini_program_source_exception.dart` carries backend rejection details and transport failures into SDK fallback UI.
 - `lib/cache/` is intentionally a placeholder. Persistent cache work is deferred until later phases.
 - `lib/rendering/stac_initializer.dart` owns the current parser/action initialization path.
 - `lib/observability/sdk_logger.dart` provides logging only. Error reporting and tracing are future additions, not current guarantees.
@@ -90,6 +90,7 @@ It is intentionally not the full backend-delivery or caching runtime yet.
 - Keep backend format assumptions out of the SDK except for explicit contracts and `MiniProgramSource`.
 - Keep screen loading version-aware. Hosts may ignore version for bundled assets, but backend loaders must not.
 - Pass host delivery context to backend loaders explicitly instead of hardcoding backend-side assumptions in widgets.
+- Preserve backend rejection messages and transport failures as structured source errors so hosts get controlled fallback UX on real devices.
 - Keep auth passive in v1. `Capability.auth` may be validated, but auth bridge APIs are not part of this package yet.
 
 ## Deferred Until Later Phases

@@ -23,19 +23,29 @@ The source of truth still lives in `mini_programs/<id>`.
 - `api/rollout-rules/profile_center.json`
 - `api/capability-policies/profile_center.json`
 
+`feedback_form` is published into:
+
+- `api/manifests/feedback_form/latest.json`
+- `api/manifests/feedback_form/versions/1.0.0.json`
+- `api/screens/feedback_form/1.0.0/feedback_form_home.json`
+- `api/rollout-rules/feedback_form.json`
+- `api/capability-policies/feedback_form.json`
+
 The current rollout sample uses two lanes:
 
 - `super_app_host` receives `profile_center` `1.1.0`
 - `partner_app_host` remains on `profile_center` `1.0.0`
+- both hosts receive `feedback_form` `1.0.0`
 - `latest.json` is still published, but the local backend service can override it through rollout rules when the request includes host context
+- rollout rules are now ordered and can match on `hostApp`, `hostVersionRange`, `platform`, `locale`, and optional `tenantId`
 
 ## Refresh sample files
 
-After rebuilding `mini_programs/profile_center`, republish the local backend
-sample:
+After rebuilding a mini-program, republish the local backend sample:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1 -MiniProgramId feedback_form
 ```
 
 ## Run the real local backend service
@@ -59,18 +69,25 @@ Then the local backend serves:
 - `http://localhost:8080/api/manifests/profile_center/versions/1.0.0.json`
 - `http://localhost:8080/api/screens/profile_center/1.1.0/profile_center_home.json`
 - `http://localhost:8080/api/screens/profile_center/1.0.0/profile_center_home.json`
+- `http://localhost:8080/api/manifests/feedback_form/latest.json`
+- `http://localhost:8080/api/manifests/feedback_form/versions/1.0.0.json`
+- `http://localhost:8080/api/screens/feedback_form/1.0.0/feedback_form_home.json`
 
 For `profile_center`, the `latest` manifest route is context-aware. In local
 backend mode the host sends:
 
 - `hostApp`
 - `sdkVersion`
+- `hostVersion`
+- `platform`
+- `locale`
+- optional `tenantId`
 - `capabilities`
 
 Example allowed request:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation,auth
+GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth
 ```
 
 That request resolves `latest` to `profile_center` `1.1.0`.
@@ -78,7 +95,7 @@ That request resolves `latest` to `profile_center` `1.1.0`.
 Example older-version lane:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation
+GET /api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation
 ```
 
 That request resolves `latest` to `profile_center` `1.0.0`.
@@ -86,7 +103,7 @@ That request resolves `latest` to `profile_center` `1.0.0`.
 Example rejected request:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&capabilities=analytics
+GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics
 ```
 
 That rejected request returns `412` because `native_navigation` is missing.

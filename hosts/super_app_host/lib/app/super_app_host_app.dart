@@ -3,6 +3,7 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../bridge/host_bridge_impl.dart';
 import '../capabilities/supported_capabilities.dart';
+import '../mini_programs/native_feedback_inbox_page.dart';
 import '../mini_programs/mini_program_list_page.dart';
 import '../mini_programs/native_profile_editor_page.dart';
 import '../mini_programs/source_configuration.dart';
@@ -10,6 +11,7 @@ import 'app_routes.dart';
 
 const String superAppHostId = 'super_app_host';
 const String superAppHostSdkVersion = '1.0.0';
+const String superAppHostVersion = '1.0.0';
 
 class SuperAppHostApp extends StatefulWidget {
   const SuperAppHostApp({
@@ -52,6 +54,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
         sourceConfiguration.buildSource(
           hostAppId: superAppHostId,
           sdkVersion: superAppHostSdkVersion,
+          hostVersion: superAppHostVersion,
           capabilityRegistry: _capabilityRegistry,
         );
     _sourceDescription =
@@ -99,6 +102,12 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
             final arguments = _coerceArguments(settings.arguments);
             return MaterialPageRoute<void>(
               builder: (_) => NativeProfileEditorPage(initialArgs: arguments),
+              settings: settings,
+            );
+          case AppRoutes.nativeFeedbackInbox:
+            final arguments = _coerceArguments(settings.arguments);
+            return MaterialPageRoute<void>(
+              builder: (_) => NativeFeedbackInboxPage(initialArgs: arguments),
               settings: settings,
             );
           default:

@@ -24,3 +24,5 @@ flutter:
   assets:
     - assets/mini_programs/profile_center/manifest.json
     - assets/mini_programs/profile_center/screens/profile_center_home.json
+    - assets/mini_programs/feedback_form/manifest.json
+    - assets/mini_programs/feedback_form/screens/feedback_form_home.json

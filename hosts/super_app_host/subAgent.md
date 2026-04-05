@@ -12,7 +12,7 @@ local host integration path for:
 - local backend HTTP delivery through `HttpMiniProgramSource`
 - mini-program list and entry flow
 - host-owned native route handling for `openNativeScreen`
-- loading a built snapshot from `mini_programs/profile_center`
+- loading built snapshots from `mini_programs/profile_center` and `mini_programs/feedback_form`
 - SDK fallback handling for an explicit unsupported-capability demo
 
 ## Owns
@@ -47,6 +47,7 @@ local host integration path for:
 - `lib/mini_programs/source_configuration.dart`
 - `lib/mini_programs/mini_program_list_page.dart`
 - `lib/mini_programs/mini_program_entry_page.dart`
+- `lib/mini_programs/native_feedback_inbox_page.dart`
 - `lib/mini_programs/native_profile_editor_page.dart`
 - `test/widget_test.dart`
 
@@ -55,9 +56,10 @@ local host integration path for:
 - Expose only approved bridge actions already defined in contracts.
 - Treat this app as the first proof host, not as the default for all partner hosts.
 - Map portable route aliases to host-native routes inside `HostBridge`, not inside the mini-program source.
-- Keep the host asset snapshot in sync with the real built output from `mini_programs/profile_center` by using `tools/sync_assets.ps1`.
+- Keep the host asset snapshot in sync with the real built output from `mini_programs/profile_center` and `mini_programs/feedback_form` by using `tools/sync_assets.ps1`.
 - Default to bundled assets for predictable local runs, and opt into local backend mode with `SUPER_APP_SOURCE_MODE=local_backend`.
 - In local backend mode, target the real Dart service in `backend/local_backend_service`, not a generic static file server.
+- In local backend mode, send explicit delivery context: `hostApp`, `sdkVersion`, `hostVersion`, `platform`, `locale`, optional `tenantId`, and declared capabilities.
 - The current host delivery lane resolves `profile_center` `latest` to `1.1.0` when running as `super_app_host`.
 
 ## Next Step

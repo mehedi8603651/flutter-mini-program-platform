@@ -60,6 +60,35 @@ void main() {
       'screens/profile_center/1.1.0/profile_center_home.json',
       <String, Object?>{'type': 'scaffold', 'versionLabel': '1.1.0'},
     );
+    await _writeJsonFile(
+      tempDirectory,
+      'manifests/feedback_form/latest.json',
+      <String, Object?>{
+        'id': 'feedback_form',
+        'version': '1.0.0',
+        'entry': 'feedback_form_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': <String>['analytics', 'native_navigation'],
+      },
+    );
+    await _writeJsonFile(
+      tempDirectory,
+      'manifests/feedback_form/versions/1.0.0.json',
+      <String, Object?>{
+        'id': 'feedback_form',
+        'version': '1.0.0',
+        'entry': 'feedback_form_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': <String>['analytics', 'native_navigation'],
+      },
+    );
+    await _writeJsonFile(
+      tempDirectory,
+      'screens/feedback_form/1.0.0/feedback_form_home.json',
+      <String, Object?>{'type': 'scaffold', 'versionLabel': '1.0.0'},
+    );
 
     handler = createLocalBackendHandler(apiRootDirectory: tempDirectory);
   });
@@ -94,7 +123,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation,auth',
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
         ),
       ),
     );
@@ -113,7 +142,82 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation',
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['version'], '1.0.0');
+  });
+
+  test(
+    'falls back to default version when hostVersion misses rollout rule',
+    () async {
+      await _writeProfileCenterPolicies(tempDirectory);
+
+      final response = await handler(
+        Request(
+          'GET',
+          Uri.parse(
+            'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=0.9.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
+          ),
+        ),
+      );
+
+      expect(response.statusCode, HttpStatus.ok);
+      final body =
+          jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+      expect(body['version'], '1.0.0');
+    },
+  );
+
+  test('serves locale-specific 1.1.0 lane for partner_app_host', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=zh-CN&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['version'], '1.1.0');
+  });
+
+  test('serves tenant-specific 1.1.0 lane for partner_app_host', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&tenantId=vip_partner&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['version'], '1.1.0');
+  });
+
+  test('serves feedback_form latest for partner_app_host', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -137,6 +241,9 @@ void main() {
           'requiredQueryParameters': <String>[
             'hostApp',
             'sdkVersion',
+            'hostVersion',
+            'platform',
+            'locale',
             'capabilities',
           ],
         },
@@ -165,7 +272,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=unknown_host&sdkVersion=1.0.0&capabilities=analytics,native_navigation',
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=unknown_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -183,7 +290,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&capabilities=analytics',
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics',
         ),
       ),
     );
@@ -201,7 +308,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=2.0.0&capabilities=analytics,native_navigation',
+          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=2.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -312,9 +419,23 @@ Future<void> _writeProfileCenterPolicies(Directory rootDirectory) async {
     <String, Object?>{
       'miniProgramId': 'profile_center',
       'defaultVersion': '1.0.0',
-      'hostRules': <Map<String, Object?>>[
+      'rules': <Map<String, Object?>>[
         <String, Object?>{
           'hostApp': 'super_app_host',
+          'platform': 'android',
+          'hostVersionRange': '>=1.0.0 <2.0.0',
+          'version': '1.1.0',
+          'enabled': true,
+        },
+        <String, Object?>{
+          'hostApp': 'partner_app_host',
+          'tenantId': 'vip_partner',
+          'version': '1.1.0',
+          'enabled': true,
+        },
+        <String, Object?>{
+          'hostApp': 'partner_app_host',
+          'locale': 'zh',
           'version': '1.1.0',
           'enabled': true,
         },
@@ -336,6 +457,51 @@ Future<void> _writeProfileCenterPolicies(Directory rootDirectory) async {
       'requiredQueryParameters': <String>[
         'hostApp',
         'sdkVersion',
+        'hostVersion',
+        'platform',
+        'locale',
+        'capabilities',
+      ],
+    },
+  );
+}
+
+Future<void> _writeFeedbackFormPolicies(Directory rootDirectory) async {
+  await _writeJsonFile(
+    rootDirectory,
+    'rollout-rules/feedback_form.json',
+    <String, Object?>{
+      'miniProgramId': 'feedback_form',
+      'defaultVersion': '1.0.0',
+      'rules': <Map<String, Object?>>[
+        <String, Object?>{
+          'hostApp': 'super_app_host',
+          'platform': 'android',
+          'hostVersionRange': '>=1.0.0 <2.0.0',
+          'version': '1.0.0',
+          'enabled': true,
+        },
+        <String, Object?>{
+          'hostApp': 'partner_app_host',
+          'version': '1.0.0',
+          'enabled': true,
+        },
+      ],
+    },
+  );
+  await _writeJsonFile(
+    rootDirectory,
+    'capability-policies/feedback_form.json',
+    <String, Object?>{
+      'miniProgramId': 'feedback_form',
+      'requireContextForLatest': true,
+      'enforceManifestCapabilities': true,
+      'requiredQueryParameters': <String>[
+        'hostApp',
+        'sdkVersion',
+        'hostVersion',
+        'platform',
+        'locale',
         'capabilities',
       ],
     },

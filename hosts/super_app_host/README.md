@@ -8,6 +8,7 @@ First-party Flutter host app for the portable mini-program platform.
 - registers host capabilities
 - implements a concrete `HostBridge`
 - loads one built mini-program through `MiniProgramSource`
+- loads multiple built mini-programs through `MiniProgramSource`
 - renders the mini-program with the shared SDK
 - opens a host-owned native screen through `openNativeScreen`
 - can switch between bundled asset delivery and local backend HTTP delivery
@@ -15,23 +16,30 @@ First-party Flutter host app for the portable mini-program platform.
 ## Current local flow
 
 1. Launch the app.
-2. Open `Profile Center` from the host list.
+2. Open `Profile Center` or `Feedback Form` from the host list.
 3. Render the portable screen through `MiniProgramHost`.
 4. Trigger `trackEvent` or `openNativeScreen` from the mini-program.
 5. Use `Preview capability failure` to confirm the SDK rejects unsupported capability sets with controlled fallback UI.
 
 ## Source of truth
 
-The actual Stac-authored mini-program lives in
-`mini_programs/profile_center`.
+The actual Stac-authored mini-programs live in:
+
+- `mini_programs/profile_center`
+- `mini_programs/feedback_form`
 
 For local host proof, this app currently bundles a copied snapshot of:
 
 - `mini_programs/profile_center/manifest.json`
 - `mini_programs/profile_center/stac/.build/screens/profile_center_home.json`
+- `mini_programs/feedback_form/manifest.json`
+- `mini_programs/feedback_form/stac/.build/screens/feedback_form_home.json`
 
 Those files are loaded as Flutter assets through `LocalMiniProgramSource`.
-The current bundled snapshot is `profile_center` `1.1.0`.
+The current bundled snapshots are:
+
+- `profile_center` `1.1.0`
+- `feedback_form` `1.0.0`
 Refresh them after rebuilding the mini-program:
 
 ```powershell
@@ -64,10 +72,16 @@ the backend `latest` manifest route:
 
 - `hostApp=super_app_host`
 - `sdkVersion=1.0.0`
+- `hostVersion=1.0.0`
+- `platform`
+- `locale`
+- optional `tenantId`
 - `capabilities=auth,analytics,native_navigation`
 
-With the current rollout sample, that context resolves `latest` to
-`profile_center` `1.1.0`.
+With the current rollout sample, that context resolves:
+
+- `profile_center` `latest` -> `1.1.0`
+- `feedback_form` `latest` -> `1.0.0`
 
 If you test on an Android emulator instead of Windows desktop, use
 `http://10.0.2.2:8080/api/` for `SUPER_APP_BACKEND_BASE_URL`.

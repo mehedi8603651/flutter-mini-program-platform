@@ -64,7 +64,21 @@ class HttpMiniProgramSource implements MiniProgramSource {
     Uri uri, {
     required String resourceLabel,
   }) async {
-    final response = await _client.get(uri);
+    late final http.Response response;
+    try {
+      response = await _client.get(uri);
+    } catch (error) {
+      throw MiniProgramSourceException(
+        message:
+            'Failed to reach the mini-program backend while loading $resourceLabel.',
+        errorCode: 'backend_unreachable',
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': resourceLabel,
+          'transportError': error.toString(),
+        },
+      );
+    }
 
     if (response.statusCode != 200) {
       throw _buildSourceException(

@@ -28,8 +28,22 @@ abstract final class LocalMiniProgramCatalog {
         ],
       );
 
+  static const LocalMiniProgramDefinition feedbackForm =
+      LocalMiniProgramDefinition(
+        id: 'feedback_form',
+        title: 'Feedback Form',
+        description:
+            'A portable feedback flow authored in Stac DSL that validates '
+            'locally, tracks analytics through the shared bridge, and opens a '
+            'host-owned follow-up screen.',
+        requiredCapabilities: <Capability>[
+          Capability.analytics,
+          Capability.nativeNavigation,
+        ],
+      );
+
   static const List<LocalMiniProgramDefinition> availablePrograms =
-      <LocalMiniProgramDefinition>[profileCenter];
+      <LocalMiniProgramDefinition>[profileCenter, feedbackForm];
 
   static LocalMiniProgramDefinition byId(String miniProgramId) {
     for (final program in availablePrograms) {

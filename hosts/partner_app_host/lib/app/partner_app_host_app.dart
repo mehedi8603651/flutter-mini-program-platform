@@ -3,6 +3,7 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../bridge/host_bridge_impl.dart';
 import '../capabilities/supported_capabilities.dart';
+import '../mini_programs/native_feedback_desk_page.dart';
 import '../mini_programs/mini_program_list_page.dart';
 import '../mini_programs/native_profile_review_page.dart';
 import '../mini_programs/source_configuration.dart';
@@ -10,6 +11,7 @@ import 'app_routes.dart';
 
 const String partnerAppHostId = 'partner_app_host';
 const String partnerAppHostSdkVersion = '1.0.0';
+const String partnerAppHostVersion = '1.0.0';
 
 class PartnerAppHostApp extends StatefulWidget {
   const PartnerAppHostApp({
@@ -52,6 +54,7 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
         sourceConfiguration.buildSource(
           hostAppId: partnerAppHostId,
           sdkVersion: partnerAppHostSdkVersion,
+          hostVersion: partnerAppHostVersion,
           capabilityRegistry: _capabilityRegistry,
         );
     _sourceDescription =
@@ -99,6 +102,12 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
             final arguments = _coerceArguments(settings.arguments);
             return MaterialPageRoute<void>(
               builder: (_) => NativeProfileReviewPage(initialArgs: arguments),
+              settings: settings,
+            );
+          case AppRoutes.nativeFeedbackDesk:
+            final arguments = _coerceArguments(settings.arguments);
+            return MaterialPageRoute<void>(
+              builder: (_) => NativeFeedbackDeskPage(initialArgs: arguments),
               settings: settings,
             );
           default:

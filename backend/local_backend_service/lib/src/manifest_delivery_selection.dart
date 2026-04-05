@@ -8,6 +8,10 @@ class DeliveryContext {
   const DeliveryContext({
     this.hostApp,
     this.sdkVersion,
+    this.hostVersion,
+    this.platform,
+    this.locale,
+    this.tenantId,
     this.capabilities = const <String>{},
   });
 
@@ -24,20 +28,38 @@ class DeliveryContext {
     return DeliveryContext(
       hostApp: _nullIfBlank(queryParameters['hostApp']),
       sdkVersion: _nullIfBlank(queryParameters['sdkVersion']),
+      hostVersion: _nullIfBlank(queryParameters['hostVersion']),
+      platform: _nullIfBlank(queryParameters['platform']),
+      locale: _nullIfBlank(queryParameters['locale']),
+      tenantId: _nullIfBlank(queryParameters['tenantId']),
       capabilities: capabilities,
     );
   }
 
   final String? hostApp;
   final String? sdkVersion;
+  final String? hostVersion;
+  final String? platform;
+  final String? locale;
+  final String? tenantId;
   final Set<String> capabilities;
 
   bool get hasContext =>
-      hostApp != null || sdkVersion != null || capabilities.isNotEmpty;
+      hostApp != null ||
+      sdkVersion != null ||
+      hostVersion != null ||
+      platform != null ||
+      locale != null ||
+      tenantId != null ||
+      capabilities.isNotEmpty;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'hostApp': hostApp,
     'sdkVersion': sdkVersion,
+    'hostVersion': hostVersion,
+    'platform': platform,
+    'locale': locale,
+    'tenantId': tenantId,
     'capabilities': capabilities.toList()..sort(),
   };
 }
@@ -186,37 +208,62 @@ class ManifestDeliverySelector {
       return _readStaticLatestVersion(miniProgramId);
     }
 
-    final hostApp = context.hostApp;
-    if (hostApp == null) {
-      return rolloutRules.defaultVersion;
-    }
-
-    for (final hostRule in rolloutRules.hostRules) {
-      if (hostRule.hostApp == hostApp) {
-        if (!hostRule.enabled) {
-          throw ManifestSelectionException(
-            errorCode: 'host_not_enabled',
-            message:
-                'Mini-program "$miniProgramId" is disabled for host "$hostApp".',
-            details: <String, dynamic>{
-              'miniProgramId': miniProgramId,
-              'hostApp': hostApp,
-            },
-          );
-        }
-        return hostRule.version;
+    for (final rule in rolloutRules.rules) {
+      if (!rule.matches(context)) {
+        continue;
       }
+
+      if (!rule.enabled) {
+        throw ManifestSelectionException(
+          errorCode: rule.hasHostRestriction
+              ? 'host_not_enabled'
+              : 'delivery_rule_disabled',
+          message: _buildDisabledRuleMessage(
+            miniProgramId: miniProgramId,
+            context: context,
+            rule: rule,
+          ),
+          details: <String, dynamic>{
+            'miniProgramId': miniProgramId,
+            'deliveryContext': context.toJson(),
+            'matchedRule': rule.toJson(),
+          },
+        );
+      }
+
+      return rule.version;
     }
 
-    throw ManifestSelectionException(
-      errorCode: 'host_not_enabled',
-      message:
-          'Mini-program "$miniProgramId" is not enabled for host "$hostApp".',
-      details: <String, dynamic>{
-        'miniProgramId': miniProgramId,
-        'hostApp': hostApp,
-      },
-    );
+    final hostApp = context.hostApp;
+    if (hostApp != null &&
+        rolloutRules.hasHostRestrictedRules &&
+        !rolloutRules.hasDeclaredRuleForHost(hostApp)) {
+      throw ManifestSelectionException(
+        errorCode: 'host_not_enabled',
+        message:
+            'Mini-program "$miniProgramId" is not enabled for host "$hostApp".',
+        details: <String, dynamic>{
+          'miniProgramId': miniProgramId,
+          'hostApp': hostApp,
+          'deliveryContext': context.toJson(),
+        },
+      );
+    }
+
+    return rolloutRules.defaultVersion;
+  }
+
+  String _buildDisabledRuleMessage({
+    required String miniProgramId,
+    required DeliveryContext context,
+    required _DeliveryRule rule,
+  }) {
+    final hostApp = context.hostApp;
+    if (hostApp != null && rule.hasHostRestriction) {
+      return 'Mini-program "$miniProgramId" is disabled for host "$hostApp".';
+    }
+
+    return 'Mini-program "$miniProgramId" is disabled for the current delivery context.';
   }
 
   String _readStaticLatestVersion(String miniProgramId) {
@@ -367,40 +414,146 @@ class ManifestDeliverySelector {
 }
 
 class _RolloutRules {
-  const _RolloutRules({required this.defaultVersion, required this.hostRules});
+  const _RolloutRules({required this.defaultVersion, required this.rules});
 
   factory _RolloutRules.fromJson(Map<String, dynamic> json) {
-    final rawHostRules = json['hostRules'] as List<dynamic>? ?? const [];
+    final rawRules =
+        json['rules'] as List<dynamic>? ??
+        json['hostRules'] as List<dynamic>? ??
+        const [];
     return _RolloutRules(
       defaultVersion: json['defaultVersion'] as String,
-      hostRules: rawHostRules
-          .map((value) => _HostRule.fromJson(value as Map<String, dynamic>))
+      rules: rawRules
+          .map((value) => _DeliveryRule.fromJson(value as Map<String, dynamic>))
           .toList(),
     );
   }
 
   final String defaultVersion;
-  final List<_HostRule> hostRules;
+  final List<_DeliveryRule> rules;
+
+  bool get hasHostRestrictedRules => rules.any((rule) => rule.hostApp != null);
+
+  bool hasDeclaredRuleForHost(String hostApp) =>
+      rules.any((rule) => rule.hostApp == hostApp);
 }
 
-class _HostRule {
-  const _HostRule({
-    required this.hostApp,
+class _DeliveryRule {
+  const _DeliveryRule({
+    this.hostApp,
+    this.hostVersionRange,
+    this.platform,
+    this.locale,
+    this.tenantId,
     required this.version,
     required this.enabled,
   });
 
-  factory _HostRule.fromJson(Map<String, dynamic> json) {
-    return _HostRule(
-      hostApp: json['hostApp'] as String,
+  factory _DeliveryRule.fromJson(Map<String, dynamic> json) {
+    return _DeliveryRule(
+      hostApp: _nullIfBlank(json['hostApp']?.toString()),
+      hostVersionRange: _nullIfBlank(json['hostVersionRange']?.toString()),
+      platform: _nullIfBlank(json['platform']?.toString()),
+      locale: _nullIfBlank(json['locale']?.toString()),
+      tenantId: _nullIfBlank(json['tenantId']?.toString()),
       version: json['version'] as String,
       enabled: json['enabled'] as bool? ?? true,
     );
   }
 
-  final String hostApp;
+  final String? hostApp;
+  final String? hostVersionRange;
+  final String? platform;
+  final String? locale;
+  final String? tenantId;
   final String version;
   final bool enabled;
+
+  bool get hasHostRestriction => hostApp != null;
+
+  bool matches(DeliveryContext context) {
+    if (hostApp != null && context.hostApp != hostApp) {
+      return false;
+    }
+
+    if (platform != null && context.platform != platform) {
+      return false;
+    }
+
+    if (locale != null && !_localeMatches(context.locale, locale!)) {
+      return false;
+    }
+
+    if (tenantId != null && context.tenantId != tenantId) {
+      return false;
+    }
+
+    final rawHostVersionRange = hostVersionRange;
+    if (rawHostVersionRange != null) {
+      final requestedHostVersion = context.hostVersion;
+      if (requestedHostVersion == null) {
+        return false;
+      }
+
+      final parsedRequestedHostVersion = _parseRequestedHostVersion(
+        requestedHostVersion,
+      );
+      final parsedRange = _parseHostVersionRange(rawHostVersionRange);
+      if (!parsedRange.allows(parsedRequestedHostVersion)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'hostApp': hostApp,
+    'hostVersionRange': hostVersionRange,
+    'platform': platform,
+    'locale': locale,
+    'tenantId': tenantId,
+    'version': version,
+    'enabled': enabled,
+  };
+}
+
+Version _parseRequestedHostVersion(String rawVersion) {
+  try {
+    return Version.parse(rawVersion);
+  } on FormatException {
+    throw ManifestSelectionException(
+      errorCode: 'invalid_request',
+      statusCode: HttpStatus.badRequest,
+      message:
+          'Request hostVersion "$rawVersion" is not a valid semantic version.',
+      details: <String, dynamic>{'parameter': 'hostVersion'},
+    );
+  }
+}
+
+VersionConstraint _parseHostVersionRange(String rawRange) {
+  try {
+    return VersionConstraint.parse(rawRange);
+  } on FormatException {
+    throw ManifestSelectionException(
+      errorCode: 'invalid_backend_json',
+      statusCode: HttpStatus.internalServerError,
+      message:
+          'Rollout rule hostVersionRange "$rawRange" is not a valid semantic version range.',
+    );
+  }
+}
+
+bool _localeMatches(String? requestedLocale, String expectedLocale) {
+  if (requestedLocale == null) {
+    return false;
+  }
+
+  final normalizedRequested = requestedLocale.toLowerCase();
+  final normalizedExpected = expectedLocale.toLowerCase();
+  return normalizedRequested == normalizedExpected ||
+      normalizedRequested.startsWith('$normalizedExpected-');
 }
 
 class _CapabilityPolicy {
@@ -435,6 +588,14 @@ bool _hasRequiredParameter(String parameter, DeliveryContext context) {
       return context.hostApp != null;
     case 'sdkVersion':
       return context.sdkVersion != null;
+    case 'hostVersion':
+      return context.hostVersion != null;
+    case 'platform':
+      return context.platform != null;
+    case 'locale':
+      return context.locale != null;
+    case 'tenantId':
+      return context.tenantId != null;
     case 'capabilities':
       return context.capabilities.isNotEmpty;
     default:

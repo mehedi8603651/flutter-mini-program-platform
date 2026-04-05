@@ -89,6 +89,32 @@ void main() {
       },
     );
 
+    test('wraps transport failures as backend_unreachable', () {
+      final source = HttpMiniProgramSource(
+        apiBaseUri: Uri.parse('http://localhost:8080/api/'),
+        client: MockClient((request) async {
+          throw http.ClientException('Connection refused', request.url);
+        }),
+      );
+
+      expect(
+        () => source.loadManifest('profile_center'),
+        throwsA(
+          isA<MiniProgramSourceException>()
+              .having(
+                (error) => error.errorCode,
+                'errorCode',
+                'backend_unreachable',
+              )
+              .having(
+                (error) => error.message,
+                'message',
+                'Failed to reach the mini-program backend while loading manifest.',
+              ),
+        ),
+      );
+    });
+
     test('falls back to a generic message for non-JSON backend errors', () {
       final source = HttpMiniProgramSource(
         apiBaseUri: Uri.parse('http://localhost:8080/api/'),

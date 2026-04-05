@@ -9,7 +9,7 @@ host integration path for:
 - backend-delivered mini-program loading through `HttpMiniProgramSource`
 - a smaller capability surface than `super_app_host`
 - host-specific route alias mapping through a partner `HostBridge`
-- rendering the same `profile_center` mini-program in a different delivery lane
+- rendering `profile_center` and `feedback_form` through backend-selected partner lanes
 - controlled fallback handling for unsupported capabilities
 
 ## Owns
@@ -31,6 +31,7 @@ host integration path for:
 - This host proves the platform is portable beyond your own app.
 - It should remain a template for "any Flutter app can adopt this SDK."
 - The current delivery lane resolves `profile_center` `latest` to `1.0.0` for `partner_app_host`.
+- It now sends explicit delivery context to backend `latest` routes: `hostApp`, `sdkVersion`, `hostVersion`, `platform`, `locale`, optional `tenantId`, and capabilities.
 
 ## Current Structure
 - `pubspec.yaml`
@@ -43,6 +44,7 @@ host integration path for:
 - `lib/mini_programs/source_configuration.dart`
 - `lib/mini_programs/mini_program_list_page.dart`
 - `lib/mini_programs/mini_program_entry_page.dart`
+- `lib/mini_programs/native_feedback_desk_page.dart`
 - `lib/mini_programs/native_profile_review_page.dart`
 - `test/widget_test.dart`
 

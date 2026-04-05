@@ -14,6 +14,7 @@ class HostBridgeImpl implements HostBridge {
 
   static const Map<String, String> _routeAliases = <String, String>{
     'profile_editor': AppRoutes.nativeProfileReview,
+    'feedback_follow_up': AppRoutes.nativeFeedbackDesk,
   };
 
   @override

@@ -1,0 +1,391 @@
+{
+  "appBar": {
+    "title": {
+      "data": "Feedback Form",
+      "type": "text"
+    },
+    "type": "appBar"
+  },
+  "body": {
+    "child": {
+      "padding": {
+        "left": 24.0,
+        "top": 24.0,
+        "right": 24.0,
+        "bottom": 24.0
+      },
+      "child": {
+        "autovalidateMode": "onUserInteraction",
+        "child": {
+          "crossAxisAlignment": "start",
+          "children": [
+            {
+              "data": "Portable feedback lane",
+              "style": {
+                "type": "custom",
+                "color": "#1A202C",
+                "fontSize": 28.0,
+                "fontWeight": "w700"
+              },
+              "type": "text"
+            },
+            {
+              "height": 12.0,
+              "type": "sizedBox"
+            },
+            {
+              "data": "This second mini-program stays inside the current MVP capabilities: validate locally, track an event through the host bridge, and open a host-owned follow-up screen.",
+              "type": "text"
+            },
+            {
+              "height": 16.0,
+              "type": "sizedBox"
+            },
+            {
+              "padding": {
+                "left": 14.0,
+                "top": 12.0,
+                "right": 14.0,
+                "bottom": 12.0
+              },
+              "decoration": {
+                "color": "#E0F2FE",
+                "borderRadius": {
+                  "topLeft": 18.0,
+                  "topRight": 18.0,
+                  "bottomLeft": 18.0,
+                  "bottomRight": 18.0
+                }
+              },
+              "child": {
+                "data": "Release lane: Feedback Form v1.0.0",
+                "style": {
+                  "type": "custom",
+                  "color": "#0C4A6E",
+                  "fontSize": 15.0,
+                  "fontWeight": "w600"
+                },
+                "type": "text"
+              },
+              "type": "container"
+            },
+            {
+              "height": 16.0,
+              "type": "sizedBox"
+            },
+            {
+              "padding": {
+                "left": 18.0,
+                "top": 18.0,
+                "right": 18.0,
+                "bottom": 18.0
+              },
+              "decoration": {
+                "color": "#FFFFFF",
+                "borderRadius": {
+                  "topLeft": 20.0,
+                  "topRight": 20.0,
+                  "bottomLeft": 20.0,
+                  "bottomRight": 20.0
+                }
+              },
+              "child": {
+                "crossAxisAlignment": "start",
+                "children": [
+                  {
+                    "data": "What this portable flow proves",
+                    "style": {
+                      "type": "custom",
+                      "color": "#1E293B",
+                      "fontSize": 16.0,
+                      "fontWeight": "w700"
+                    },
+                    "type": "text"
+                  },
+                  {
+                    "height": 10.0,
+                    "type": "sizedBox"
+                  },
+                  {
+                    "data": "1. Local form validation runs in portable UI.",
+                    "type": "text"
+                  },
+                  {
+                    "data": "2. Analytics stays behind the shared host bridge.",
+                    "type": "text"
+                  },
+                  {
+                    "data": "3. The same route alias opens different native follow-up pages in each host app.",
+                    "type": "text"
+                  }
+                ],
+                "type": "column"
+              },
+              "type": "container"
+            },
+            {
+              "height": 24.0,
+              "type": "sizedBox"
+            },
+            {
+              "data": "Feedback topic",
+              "style": {
+                "type": "custom",
+                "fontSize": 16.0,
+                "fontWeight": "w600"
+              },
+              "type": "text"
+            },
+            {
+              "height": 10.0,
+              "type": "sizedBox"
+            },
+            {
+              "spacing": 10.0,
+              "runSpacing": 10.0,
+              "children": [
+                {
+                  "padding": {
+                    "left": 12.0,
+                    "top": 8.0,
+                    "right": 12.0,
+                    "bottom": 8.0
+                  },
+                  "decoration": {
+                    "color": "#F8FAFC",
+                    "borderRadius": {
+                      "topLeft": 999.0,
+                      "topRight": 999.0,
+                      "bottomLeft": 999.0,
+                      "bottomRight": 999.0
+                    }
+                  },
+                  "child": {
+                    "data": "Performance",
+                    "style": {
+                      "type": "custom",
+                      "color": "#334155",
+                      "fontSize": 14.0,
+                      "fontWeight": "w500"
+                    },
+                    "type": "text"
+                  },
+                  "type": "container"
+                },
+                {
+                  "padding": {
+                    "left": 12.0,
+                    "top": 8.0,
+                    "right": 12.0,
+                    "bottom": 8.0
+                  },
+                  "decoration": {
+                    "color": "#F8FAFC",
+                    "borderRadius": {
+                      "topLeft": 999.0,
+                      "topRight": 999.0,
+                      "bottomLeft": 999.0,
+                      "bottomRight": 999.0
+                    }
+                  },
+                  "child": {
+                    "data": "Missing feature",
+                    "style": {
+                      "type": "custom",
+                      "color": "#334155",
+                      "fontSize": 14.0,
+                      "fontWeight": "w500"
+                    },
+                    "type": "text"
+                  },
+                  "type": "container"
+                },
+                {
+                  "padding": {
+                    "left": 12.0,
+                    "top": 8.0,
+                    "right": 12.0,
+                    "bottom": 8.0
+                  },
+                  "decoration": {
+                    "color": "#F8FAFC",
+                    "borderRadius": {
+                      "topLeft": 999.0,
+                      "topRight": 999.0,
+                      "bottomLeft": 999.0,
+                      "bottomRight": 999.0
+                    }
+                  },
+                  "child": {
+                    "data": "UI polish",
+                    "style": {
+                      "type": "custom",
+                      "color": "#334155",
+                      "fontSize": 14.0,
+                      "fontWeight": "w500"
+                    },
+                    "type": "text"
+                  },
+                  "type": "container"
+                },
+                {
+                  "padding": {
+                    "left": 12.0,
+                    "top": 8.0,
+                    "right": 12.0,
+                    "bottom": 8.0
+                  },
+                  "decoration": {
+                    "color": "#F8FAFC",
+                    "borderRadius": {
+                      "topLeft": 999.0,
+                      "topRight": 999.0,
+                      "bottomLeft": 999.0,
+                      "bottomRight": 999.0
+                    }
+                  },
+                  "child": {
+                    "data": "General suggestion",
+                    "style": {
+                      "type": "custom",
+                      "color": "#334155",
+                      "fontSize": 14.0,
+                      "fontWeight": "w500"
+                    },
+                    "type": "text"
+                  },
+                  "type": "container"
+                }
+              ],
+              "type": "wrap"
+            },
+            {
+              "height": 24.0,
+              "type": "sizedBox"
+            },
+            {
+              "id": "contact_hint",
+              "decoration": {
+                "labelText": "Contact hint (optional)",
+                "hintText": "Email or phone for follow-up"
+              },
+              "textInputAction": "next",
+              "maxLines": 1,
+              "type": "textFormField"
+            },
+            {
+              "height": 16.0,
+              "type": "sizedBox"
+            },
+            {
+              "id": "feedback_message",
+              "decoration": {
+                "labelText": "What should improve?",
+                "hintText": "Share at least 12 characters so the host team can act."
+              },
+              "textInputAction": "done",
+              "maxLines": 6,
+              "minLines": 4,
+              "validatorRules": [
+                {
+                  "rule": "^.{12,}$",
+                  "message": "Please share at least 12 characters of feedback."
+                }
+              ],
+              "type": "textFormField"
+            },
+            {
+              "height": 24.0,
+              "type": "sizedBox"
+            },
+            {
+              "onPressed": {
+                "isValid": {
+                  "actions": [
+                    {
+                      "actionType": "hostAction",
+                      "requestId": "feedback-submit-track",
+                      "action": "trackEvent",
+                      "payload": {
+                        "name": "feedback_form_submitted",
+                        "properties": {
+                          "source": "feedback_form",
+                          "flow": "portable_feedback"
+                        }
+                      }
+                    },
+                    {
+                      "content": {
+                        "type": "text",
+                        "data": "Feedback validated locally. Opening host follow-up."
+                      },
+                      "behavior": "floating",
+                      "actionType": "showSnackBar"
+                    },
+                    {
+                      "actionType": "hostAction",
+                      "requestId": "feedback-open-follow-up",
+                      "action": "openNativeScreen",
+                      "payload": {
+                        "route": "feedback_follow_up",
+                        "args": {
+                          "source": "feedback_form",
+                          "channel": "mini_program"
+                        },
+                        "expectResult": true
+                      }
+                    }
+                  ],
+                  "sync": true,
+                  "actionType": "multiAction"
+                },
+                "isNotValid": {
+                  "content": {
+                    "type": "text",
+                    "data": "Please complete the required feedback message first."
+                  },
+                  "behavior": "floating",
+                  "actionType": "showSnackBar"
+                },
+                "actionType": "validateForm"
+              },
+              "child": {
+                "data": "Validate and continue",
+                "type": "text"
+              },
+              "type": "filledButton"
+            },
+            {
+              "height": 12.0,
+              "type": "sizedBox"
+            },
+            {
+              "onPressed": {
+                "actionType": "hostAction",
+                "requestId": "feedback-track-open",
+                "action": "trackEvent",
+                "payload": {
+                  "name": "feedback_form_opened",
+                  "properties": {
+                    "source": "feedback_form",
+                    "surface": "feedback_form"
+                  }
+                }
+              },
+              "child": {
+                "data": "Track feedback view",
+                "type": "text"
+              },
+              "type": "outlinedButton"
+            }
+          ],
+          "type": "column"
+        },
+        "type": "form"
+      },
+      "type": "singleChildScrollView"
+    },
+    "type": "safeArea"
+  },
+  "type": "scaffold"
+}

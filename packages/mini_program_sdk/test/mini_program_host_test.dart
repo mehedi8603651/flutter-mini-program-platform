@@ -121,6 +121,39 @@ void main() {
       expect(find.text('Error code: host_not_enabled'), findsOneWidget);
     });
 
+    testWidgets('surfaces backend transport failures cleanly', (tester) async {
+      const source = _FailingManifestSource(
+        exception: MiniProgramSourceException(
+          message:
+              'Failed to reach the mini-program backend while loading manifest.',
+          errorCode: 'backend_unreachable',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mini-program unavailable'), findsOneWidget);
+      expect(
+        find.text(
+          'Failed to reach the mini-program backend while loading manifest.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Error code: backend_unreachable'), findsOneWidget);
+    });
+
     testWidgets('shows fallback error when feature flags are disabled', (
       tester,
     ) async {

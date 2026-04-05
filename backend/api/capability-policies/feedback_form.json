@@ -1,5 +1,5 @@
 {
-  "miniProgramId": "profile_center",
+  "miniProgramId": "feedback_form",
   "requireContextForLatest": true,
   "enforceManifestCapabilities": true,
   "requiredQueryParameters": [

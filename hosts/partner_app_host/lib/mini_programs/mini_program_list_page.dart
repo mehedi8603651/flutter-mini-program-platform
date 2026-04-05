@@ -58,7 +58,8 @@ class MiniProgramListPage extends StatelessWidget {
                   Text(
                     'This host stays lean: it supports only the capabilities '
                     'needed by the mini-program and relies on backend delivery '
-                    'to receive its own compatible release lane.',
+                    'to receive compatible release lanes for more than one '
+                    'portable flow.',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: Colors.white.withValues(alpha: 0.92),
                     ),
@@ -69,9 +70,6 @@ class MiniProgramListPage extends StatelessWidget {
                     runSpacing: 12,
                     children: [
                       _BannerPill(label: 'Delivery: $sourceDescription'),
-                      const _BannerPill(
-                        label: 'Expected lane: profile_center 1.0.0',
-                      ),
                     ],
                   ),
                 ],

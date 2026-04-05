@@ -8,6 +8,8 @@ import 'package:super_app_host/bridge/host_bridge_impl.dart';
 import 'package:super_app_host/capabilities/supported_capabilities.dart';
 import 'package:super_app_host/mini_programs/local_mini_program_catalog.dart';
 import 'package:super_app_host/mini_programs/mini_program_entry_page.dart';
+import 'package:super_app_host/mini_programs/local_mini_program_source.dart';
+import 'package:super_app_host/mini_programs/native_feedback_inbox_page.dart';
 import 'package:super_app_host/mini_programs/native_profile_editor_page.dart';
 
 Future<void> _pumpUntilFound(
@@ -33,21 +35,58 @@ void main() {
 
     expect(find.text('Super App Host'), findsOneWidget);
     expect(find.text('Profile Center'), findsOneWidget);
-    expect(find.text('Open mini-program'), findsOneWidget);
     expect(find.text('Delivery: Bundled assets'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
+    expect(find.text('Feedback Form'), findsOneWidget);
+    expect(find.text('Open mini-program'), findsWidgets);
   });
 
   testWidgets('opens the local profile center mini-program', (tester) async {
-    await tester.pumpWidget(const SuperAppHostApp());
-    await tester.pumpAndSettle();
+    final navigatorKey = GlobalKey<NavigatorState>();
 
-    await tester.tap(find.text('Open mini-program'));
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigatorKey,
+        home: MiniProgramEntryPage(
+          program: LocalMiniProgramCatalog.profileCenter,
+          sdkVersion: superAppHostSdkVersion,
+          source: const LocalMiniProgramSource(),
+          hostBridge: HostBridgeImpl(navigatorKey: navigatorKey),
+          capabilityRegistry: superAppCapabilityRegistry,
+          featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+        ),
+      ),
+    );
     await tester.pump();
     await _pumpUntilFound(tester, find.text('Open Native Edit Screen'));
 
     expect(find.text('Portable account module'), findsOneWidget);
     expect(find.text('Active release: Profile Center v1.1.0'), findsOneWidget);
     expect(find.text('Open Native Edit Screen'), findsOneWidget);
+  });
+
+  testWidgets('opens the local feedback form mini-program', (tester) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigatorKey,
+        home: MiniProgramEntryPage(
+          program: LocalMiniProgramCatalog.feedbackForm,
+          sdkVersion: superAppHostSdkVersion,
+          source: const LocalMiniProgramSource(),
+          hostBridge: HostBridgeImpl(navigatorKey: navigatorKey),
+          capabilityRegistry: superAppCapabilityRegistry,
+          featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Validate and continue'));
+
+    expect(find.text('Portable feedback lane'), findsOneWidget);
+    expect(find.text('Release lane: Feedback Form v1.0.0'), findsOneWidget);
+    expect(find.text('Track feedback view'), findsOneWidget);
   });
 
   testWidgets('shows the SDK fallback when host capabilities are missing', (
@@ -132,6 +171,58 @@ void main() {
     expect(result.isSuccess, isTrue);
     expect(result.data['saved'], isTrue);
     expect(result.data['userId'], 'guest_001');
+  });
+
+  testWidgets('host bridge maps feedback_follow_up to the native inbox page', (
+    tester,
+  ) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    final bridge = HostBridgeImpl(navigatorKey: navigatorKey);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigatorKey,
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.nativeFeedbackInbox) {
+            final args = settings.arguments! as Map<String, dynamic>;
+            return MaterialPageRoute<void>(
+              builder: (_) => NativeFeedbackInboxPage(initialArgs: args),
+              settings: settings,
+            );
+          }
+
+          return MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: SizedBox.shrink()),
+            settings: settings,
+          );
+        },
+      ),
+    );
+
+    final resultFuture = bridge.openNativeScreen(
+      const OpenNativeScreenActionPayload(
+        route: 'feedback_follow_up',
+        args: <String, dynamic>{
+          'source': 'feedback_form',
+          'channel': 'mini_program',
+        },
+        expectResult: true,
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Native Feedback Inbox'), findsOneWidget);
+    expect(find.text('Requested by: feedback_form'), findsOneWidget);
+
+    await tester.tap(find.text('Queue host follow-up'));
+    await tester.pumpAndSettle();
+
+    final result = await resultFuture;
+    expect(result.isSuccess, isTrue);
+    expect(result.data['queued'], isTrue);
+    expect(result.data['channel'], 'mini_program');
   });
 }
 

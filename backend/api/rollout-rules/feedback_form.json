@@ -1,17 +1,17 @@
 {
-  "miniProgramId": "profile_center",
+  "miniProgramId": "feedback_form",
   "defaultVersion": "1.0.0",
   "rules": [
     {
       "hostApp": "super_app_host",
       "platform": "android",
       "hostVersionRange": ">=1.0.0 <2.0.0",
-      "version": "1.1.0",
+      "version": "1.0.0",
       "enabled": true
     },
     {
       "hostApp": "super_app_host",
-      "version": "1.1.0",
+      "version": "1.0.0",
       "enabled": true
     },
     {

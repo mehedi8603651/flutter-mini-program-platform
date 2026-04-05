@@ -6,18 +6,20 @@ Reference Flutter host app for portable mini-program partner integration.
 
 - installs `mini_program_sdk` outside the first-party host
 - declares a smaller capability surface than `super_app_host`
-- loads the same `profile_center` mini-program from backend delivery
-- sends `hostApp=partner_app_host` delivery context
+- loads multiple mini-programs from backend delivery
+- sends backend delivery context including `hostApp`, `hostVersion`, `platform`, `locale`, and capabilities
 - receives the backend-selected `1.0.0` lane while `super_app_host` receives `1.1.0`
-- maps the same portable `profile_editor` route alias to its own native Flutter page
+- maps portable route aliases such as `profile_editor` and `feedback_follow_up` to its own native Flutter pages
 
 ## Current flow
 
 1. Start the local backend service.
 2. Launch `partner_app_host`.
-3. Open `Profile Center`.
+3. Open `Profile Center` or `Feedback Form`.
 4. The SDK loads `latest` from the backend with partner delivery context.
-5. The backend resolves that request to `profile_center` `1.0.0`.
+5. The backend resolves that request to the partner lane for each mini-program:
+   - `profile_center` -> `1.0.0`
+   - `feedback_form` -> `1.0.0`
 6. The mini-program renders and can still call `trackEvent` and `openNativeScreen`.
 
 ## Run

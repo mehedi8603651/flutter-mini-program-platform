@@ -27,14 +27,17 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
 
 ## Current Local Sample
 - `profile_center` is published as static sample files under `backend/api/`.
+- `feedback_form` is now published there as the second real mini-program sample.
 - Treat those files as derived artifacts, not source of truth.
-- Refresh them from `mini_programs/profile_center` with `tools/publish_local_backend.ps1`.
+- Refresh them from `mini_programs/<id>` with `tools/publish_local_backend.ps1`.
 - `backend/local_backend_service` now serves those published files through a real Dart HTTP process.
 - `super_app_host` can consume the service endpoints through the SDK's `HttpMiniProgramSource`.
 - `profile_center` now has local rollout rules and capability policy samples for dynamic `latest` manifest delivery.
+- The delivery selector now supports ordered rollout rules with `hostApp`, `hostVersionRange`, `platform`, `locale`, and optional `tenantId` matching.
 - The current sample proves backend-side version selection:
   - `super_app_host` resolves `latest` to `1.1.0`
   - `partner_app_host` resolves `latest` to `1.0.0`
+  - both hosts can also consume `feedback_form` `1.0.0`
 
 ## Next Step
-- Move from static policy samples to richer backend behavior such as broader rollout conditions, version pinning rules, and multi-mini-program delivery.
+- Move from local sample rules to stronger backend behavior such as pinned releases, richer rejection reasons, and multi-mini-program delivery.
