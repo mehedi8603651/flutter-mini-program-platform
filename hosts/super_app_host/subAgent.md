@@ -61,4 +61,4 @@ local host integration path for:
 - The current host delivery lane resolves `profile_center` `latest` to `1.1.0` when running as `super_app_host`.
 
 ## Next Step
-Use this host as the reference integration while building `partner_app_host`, so the platform proves the same mini-program can run in multiple Flutter hosts with different delivery lanes.
+Use this host as the richer first-party reference while evolving backend rollout rules, additional capabilities, and cross-host compatibility checks.

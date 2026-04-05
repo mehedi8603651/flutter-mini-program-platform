@@ -21,3 +21,7 @@ Integrate the portable SDK into real Flutter apps while keeping host logic isola
 ## Mobile Focus
 - `super_app_host` is the primary mobile app integration target.
 - `partner_app_host` should stay minimal and portable so other Flutter apps can copy the pattern.
+
+## Current Status
+- `super_app_host` proves the richer first-party lane and resolves `profile_center` to `1.1.0`.
+- `partner_app_host` now proves the portable partner lane and resolves the same mini-program to `1.0.0`.
