@@ -13,6 +13,272 @@ part of 'manifest.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$MiniProgramCachePolicy {
+
+ MiniProgramCacheMode get manifest; MiniProgramCacheMode get entryScreen;
+/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MiniProgramCachePolicyCopyWith<MiniProgramCachePolicy> get copyWith => _$MiniProgramCachePolicyCopyWithImpl<MiniProgramCachePolicy>(this as MiniProgramCachePolicy, _$identity);
+
+  /// Serializes this MiniProgramCachePolicy to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MiniProgramCachePolicy&&(identical(other.manifest, manifest) || other.manifest == manifest)&&(identical(other.entryScreen, entryScreen) || other.entryScreen == entryScreen));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,manifest,entryScreen);
+
+@override
+String toString() {
+  return 'MiniProgramCachePolicy(manifest: $manifest, entryScreen: $entryScreen)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MiniProgramCachePolicyCopyWith<$Res>  {
+  factory $MiniProgramCachePolicyCopyWith(MiniProgramCachePolicy value, $Res Function(MiniProgramCachePolicy) _then) = _$MiniProgramCachePolicyCopyWithImpl;
+@useResult
+$Res call({
+ MiniProgramCacheMode manifest, MiniProgramCacheMode entryScreen
+});
+
+
+
+
+}
+/// @nodoc
+class _$MiniProgramCachePolicyCopyWithImpl<$Res>
+    implements $MiniProgramCachePolicyCopyWith<$Res> {
+  _$MiniProgramCachePolicyCopyWithImpl(this._self, this._then);
+
+  final MiniProgramCachePolicy _self;
+  final $Res Function(MiniProgramCachePolicy) _then;
+
+/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? manifest = null,Object? entryScreen = null,}) {
+  return _then(_self.copyWith(
+manifest: null == manifest ? _self.manifest : manifest // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheMode,entryScreen: null == entryScreen ? _self.entryScreen : entryScreen // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheMode,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MiniProgramCachePolicy].
+extension MiniProgramCachePolicyPatterns on MiniProgramCachePolicy {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MiniProgramCachePolicy value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MiniProgramCachePolicy() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MiniProgramCachePolicy value)  $default,){
+final _that = this;
+switch (_that) {
+case _MiniProgramCachePolicy():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MiniProgramCachePolicy value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MiniProgramCachePolicy() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( MiniProgramCacheMode manifest,  MiniProgramCacheMode entryScreen)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MiniProgramCachePolicy() when $default != null:
+return $default(_that.manifest,_that.entryScreen);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( MiniProgramCacheMode manifest,  MiniProgramCacheMode entryScreen)  $default,) {final _that = this;
+switch (_that) {
+case _MiniProgramCachePolicy():
+return $default(_that.manifest,_that.entryScreen);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( MiniProgramCacheMode manifest,  MiniProgramCacheMode entryScreen)?  $default,) {final _that = this;
+switch (_that) {
+case _MiniProgramCachePolicy() when $default != null:
+return $default(_that.manifest,_that.entryScreen);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+@JsonSerializable(checked: true, explicitToJson: true)
+class _MiniProgramCachePolicy implements MiniProgramCachePolicy {
+  const _MiniProgramCachePolicy({this.manifest = MiniProgramCacheMode.staleWhileError, this.entryScreen = MiniProgramCacheMode.staleWhileError});
+  factory _MiniProgramCachePolicy.fromJson(Map<String, dynamic> json) => _$MiniProgramCachePolicyFromJson(json);
+
+@override@JsonKey() final  MiniProgramCacheMode manifest;
+@override@JsonKey() final  MiniProgramCacheMode entryScreen;
+
+/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MiniProgramCachePolicyCopyWith<_MiniProgramCachePolicy> get copyWith => __$MiniProgramCachePolicyCopyWithImpl<_MiniProgramCachePolicy>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MiniProgramCachePolicyToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MiniProgramCachePolicy&&(identical(other.manifest, manifest) || other.manifest == manifest)&&(identical(other.entryScreen, entryScreen) || other.entryScreen == entryScreen));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,manifest,entryScreen);
+
+@override
+String toString() {
+  return 'MiniProgramCachePolicy(manifest: $manifest, entryScreen: $entryScreen)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MiniProgramCachePolicyCopyWith<$Res> implements $MiniProgramCachePolicyCopyWith<$Res> {
+  factory _$MiniProgramCachePolicyCopyWith(_MiniProgramCachePolicy value, $Res Function(_MiniProgramCachePolicy) _then) = __$MiniProgramCachePolicyCopyWithImpl;
+@override @useResult
+$Res call({
+ MiniProgramCacheMode manifest, MiniProgramCacheMode entryScreen
+});
+
+
+
+
+}
+/// @nodoc
+class __$MiniProgramCachePolicyCopyWithImpl<$Res>
+    implements _$MiniProgramCachePolicyCopyWith<$Res> {
+  __$MiniProgramCachePolicyCopyWithImpl(this._self, this._then);
+
+  final _MiniProgramCachePolicy _self;
+  final $Res Function(_MiniProgramCachePolicy) _then;
+
+/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? manifest = null,Object? entryScreen = null,}) {
+  return _then(_MiniProgramCachePolicy(
+manifest: null == manifest ? _self.manifest : manifest // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheMode,entryScreen: null == entryScreen ? _self.entryScreen : entryScreen // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheMode,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$MiniProgramFallback {
 
  MiniProgramFallbackStrategy get strategy; String? get route; String? get message;
@@ -284,7 +550,7 @@ as String?,
 /// @nodoc
 mixin _$MiniProgramManifest {
 
- String get id; String get version; String get entry; String get contractVersion;@SdkVersionRangeConverter() SdkVersionRange get sdkVersionRange; List<Capability> get requiredCapabilities; List<FeatureFlagKey> get featureFlags; MiniProgramFallback? get fallback;
+ String get id; String get version; String get entry; String get contractVersion;@SdkVersionRangeConverter() SdkVersionRange get sdkVersionRange; List<Capability> get requiredCapabilities; List<FeatureFlagKey> get featureFlags; MiniProgramCachePolicy get cachePolicy; MiniProgramFallback? get fallback;
 /// Create a copy of MiniProgramManifest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -297,16 +563,16 @@ $MiniProgramManifestCopyWith<MiniProgramManifest> get copyWith => _$MiniProgramM
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MiniProgramManifest&&(identical(other.id, id) || other.id == id)&&(identical(other.version, version) || other.version == version)&&(identical(other.entry, entry) || other.entry == entry)&&(identical(other.contractVersion, contractVersion) || other.contractVersion == contractVersion)&&(identical(other.sdkVersionRange, sdkVersionRange) || other.sdkVersionRange == sdkVersionRange)&&const DeepCollectionEquality().equals(other.requiredCapabilities, requiredCapabilities)&&const DeepCollectionEquality().equals(other.featureFlags, featureFlags)&&(identical(other.fallback, fallback) || other.fallback == fallback));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MiniProgramManifest&&(identical(other.id, id) || other.id == id)&&(identical(other.version, version) || other.version == version)&&(identical(other.entry, entry) || other.entry == entry)&&(identical(other.contractVersion, contractVersion) || other.contractVersion == contractVersion)&&(identical(other.sdkVersionRange, sdkVersionRange) || other.sdkVersionRange == sdkVersionRange)&&const DeepCollectionEquality().equals(other.requiredCapabilities, requiredCapabilities)&&const DeepCollectionEquality().equals(other.featureFlags, featureFlags)&&(identical(other.cachePolicy, cachePolicy) || other.cachePolicy == cachePolicy)&&(identical(other.fallback, fallback) || other.fallback == fallback));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,version,entry,contractVersion,sdkVersionRange,const DeepCollectionEquality().hash(requiredCapabilities),const DeepCollectionEquality().hash(featureFlags),fallback);
+int get hashCode => Object.hash(runtimeType,id,version,entry,contractVersion,sdkVersionRange,const DeepCollectionEquality().hash(requiredCapabilities),const DeepCollectionEquality().hash(featureFlags),cachePolicy,fallback);
 
 @override
 String toString() {
-  return 'MiniProgramManifest(id: $id, version: $version, entry: $entry, contractVersion: $contractVersion, sdkVersionRange: $sdkVersionRange, requiredCapabilities: $requiredCapabilities, featureFlags: $featureFlags, fallback: $fallback)';
+  return 'MiniProgramManifest(id: $id, version: $version, entry: $entry, contractVersion: $contractVersion, sdkVersionRange: $sdkVersionRange, requiredCapabilities: $requiredCapabilities, featureFlags: $featureFlags, cachePolicy: $cachePolicy, fallback: $fallback)';
 }
 
 
@@ -317,11 +583,11 @@ abstract mixin class $MiniProgramManifestCopyWith<$Res>  {
   factory $MiniProgramManifestCopyWith(MiniProgramManifest value, $Res Function(MiniProgramManifest) _then) = _$MiniProgramManifestCopyWithImpl;
 @useResult
 $Res call({
- String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange, List<Capability> requiredCapabilities, List<FeatureFlagKey> featureFlags, MiniProgramFallback? fallback
+ String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange, List<Capability> requiredCapabilities, List<FeatureFlagKey> featureFlags, MiniProgramCachePolicy cachePolicy, MiniProgramFallback? fallback
 });
 
 
-$SdkVersionRangeCopyWith<$Res> get sdkVersionRange;$MiniProgramFallbackCopyWith<$Res>? get fallback;
+$SdkVersionRangeCopyWith<$Res> get sdkVersionRange;$MiniProgramCachePolicyCopyWith<$Res> get cachePolicy;$MiniProgramFallbackCopyWith<$Res>? get fallback;
 
 }
 /// @nodoc
@@ -334,7 +600,7 @@ class _$MiniProgramManifestCopyWithImpl<$Res>
 
 /// Create a copy of MiniProgramManifest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? version = null,Object? entry = null,Object? contractVersion = null,Object? sdkVersionRange = null,Object? requiredCapabilities = null,Object? featureFlags = null,Object? fallback = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? version = null,Object? entry = null,Object? contractVersion = null,Object? sdkVersionRange = null,Object? requiredCapabilities = null,Object? featureFlags = null,Object? cachePolicy = null,Object? fallback = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
@@ -343,7 +609,8 @@ as String,contractVersion: null == contractVersion ? _self.contractVersion : con
 as String,sdkVersionRange: null == sdkVersionRange ? _self.sdkVersionRange : sdkVersionRange // ignore: cast_nullable_to_non_nullable
 as SdkVersionRange,requiredCapabilities: null == requiredCapabilities ? _self.requiredCapabilities : requiredCapabilities // ignore: cast_nullable_to_non_nullable
 as List<Capability>,featureFlags: null == featureFlags ? _self.featureFlags : featureFlags // ignore: cast_nullable_to_non_nullable
-as List<FeatureFlagKey>,fallback: freezed == fallback ? _self.fallback : fallback // ignore: cast_nullable_to_non_nullable
+as List<FeatureFlagKey>,cachePolicy: null == cachePolicy ? _self.cachePolicy : cachePolicy // ignore: cast_nullable_to_non_nullable
+as MiniProgramCachePolicy,fallback: freezed == fallback ? _self.fallback : fallback // ignore: cast_nullable_to_non_nullable
 as MiniProgramFallback?,
   ));
 }
@@ -355,6 +622,15 @@ $SdkVersionRangeCopyWith<$Res> get sdkVersionRange {
   
   return $SdkVersionRangeCopyWith<$Res>(_self.sdkVersionRange, (value) {
     return _then(_self.copyWith(sdkVersionRange: value));
+  });
+}/// Create a copy of MiniProgramManifest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MiniProgramCachePolicyCopyWith<$Res> get cachePolicy {
+  
+  return $MiniProgramCachePolicyCopyWith<$Res>(_self.cachePolicy, (value) {
+    return _then(_self.copyWith(cachePolicy: value));
   });
 }/// Create a copy of MiniProgramManifest
 /// with the given fields replaced by the non-null parameter values.
@@ -450,10 +726,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange,  List<Capability> requiredCapabilities,  List<FeatureFlagKey> featureFlags,  MiniProgramFallback? fallback)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange,  List<Capability> requiredCapabilities,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MiniProgramManifest() when $default != null:
-return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.featureFlags,_that.fallback);case _:
+return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.featureFlags,_that.cachePolicy,_that.fallback);case _:
   return orElse();
 
 }
@@ -471,10 +747,10 @@ return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange,  List<Capability> requiredCapabilities,  List<FeatureFlagKey> featureFlags,  MiniProgramFallback? fallback)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange,  List<Capability> requiredCapabilities,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)  $default,) {final _that = this;
 switch (_that) {
 case _MiniProgramManifest():
-return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.featureFlags,_that.fallback);case _:
+return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.featureFlags,_that.cachePolicy,_that.fallback);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -491,10 +767,10 @@ return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange,  List<Capability> requiredCapabilities,  List<FeatureFlagKey> featureFlags,  MiniProgramFallback? fallback)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange,  List<Capability> requiredCapabilities,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)?  $default,) {final _that = this;
 switch (_that) {
 case _MiniProgramManifest() when $default != null:
-return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.featureFlags,_that.fallback);case _:
+return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.featureFlags,_that.cachePolicy,_that.fallback);case _:
   return null;
 
 }
@@ -506,7 +782,7 @@ return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.s
 
 @JsonSerializable(checked: true, explicitToJson: true)
 class _MiniProgramManifest implements MiniProgramManifest {
-  const _MiniProgramManifest({required this.id, required this.version, required this.entry, required this.contractVersion, @SdkVersionRangeConverter() required this.sdkVersionRange, required final  List<Capability> requiredCapabilities, final  List<FeatureFlagKey> featureFlags = const <FeatureFlagKey>[], this.fallback}): _requiredCapabilities = requiredCapabilities,_featureFlags = featureFlags;
+  const _MiniProgramManifest({required this.id, required this.version, required this.entry, required this.contractVersion, @SdkVersionRangeConverter() required this.sdkVersionRange, required final  List<Capability> requiredCapabilities, final  List<FeatureFlagKey> featureFlags = const <FeatureFlagKey>[], this.cachePolicy = const MiniProgramCachePolicy(), this.fallback}): _requiredCapabilities = requiredCapabilities,_featureFlags = featureFlags;
   factory _MiniProgramManifest.fromJson(Map<String, dynamic> json) => _$MiniProgramManifestFromJson(json);
 
 @override final  String id;
@@ -528,6 +804,7 @@ class _MiniProgramManifest implements MiniProgramManifest {
   return EqualUnmodifiableListView(_featureFlags);
 }
 
+@override@JsonKey() final  MiniProgramCachePolicy cachePolicy;
 @override final  MiniProgramFallback? fallback;
 
 /// Create a copy of MiniProgramManifest
@@ -543,16 +820,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MiniProgramManifest&&(identical(other.id, id) || other.id == id)&&(identical(other.version, version) || other.version == version)&&(identical(other.entry, entry) || other.entry == entry)&&(identical(other.contractVersion, contractVersion) || other.contractVersion == contractVersion)&&(identical(other.sdkVersionRange, sdkVersionRange) || other.sdkVersionRange == sdkVersionRange)&&const DeepCollectionEquality().equals(other._requiredCapabilities, _requiredCapabilities)&&const DeepCollectionEquality().equals(other._featureFlags, _featureFlags)&&(identical(other.fallback, fallback) || other.fallback == fallback));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MiniProgramManifest&&(identical(other.id, id) || other.id == id)&&(identical(other.version, version) || other.version == version)&&(identical(other.entry, entry) || other.entry == entry)&&(identical(other.contractVersion, contractVersion) || other.contractVersion == contractVersion)&&(identical(other.sdkVersionRange, sdkVersionRange) || other.sdkVersionRange == sdkVersionRange)&&const DeepCollectionEquality().equals(other._requiredCapabilities, _requiredCapabilities)&&const DeepCollectionEquality().equals(other._featureFlags, _featureFlags)&&(identical(other.cachePolicy, cachePolicy) || other.cachePolicy == cachePolicy)&&(identical(other.fallback, fallback) || other.fallback == fallback));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,version,entry,contractVersion,sdkVersionRange,const DeepCollectionEquality().hash(_requiredCapabilities),const DeepCollectionEquality().hash(_featureFlags),fallback);
+int get hashCode => Object.hash(runtimeType,id,version,entry,contractVersion,sdkVersionRange,const DeepCollectionEquality().hash(_requiredCapabilities),const DeepCollectionEquality().hash(_featureFlags),cachePolicy,fallback);
 
 @override
 String toString() {
-  return 'MiniProgramManifest(id: $id, version: $version, entry: $entry, contractVersion: $contractVersion, sdkVersionRange: $sdkVersionRange, requiredCapabilities: $requiredCapabilities, featureFlags: $featureFlags, fallback: $fallback)';
+  return 'MiniProgramManifest(id: $id, version: $version, entry: $entry, contractVersion: $contractVersion, sdkVersionRange: $sdkVersionRange, requiredCapabilities: $requiredCapabilities, featureFlags: $featureFlags, cachePolicy: $cachePolicy, fallback: $fallback)';
 }
 
 
@@ -563,11 +840,11 @@ abstract mixin class _$MiniProgramManifestCopyWith<$Res> implements $MiniProgram
   factory _$MiniProgramManifestCopyWith(_MiniProgramManifest value, $Res Function(_MiniProgramManifest) _then) = __$MiniProgramManifestCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange, List<Capability> requiredCapabilities, List<FeatureFlagKey> featureFlags, MiniProgramFallback? fallback
+ String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange, List<Capability> requiredCapabilities, List<FeatureFlagKey> featureFlags, MiniProgramCachePolicy cachePolicy, MiniProgramFallback? fallback
 });
 
 
-@override $SdkVersionRangeCopyWith<$Res> get sdkVersionRange;@override $MiniProgramFallbackCopyWith<$Res>? get fallback;
+@override $SdkVersionRangeCopyWith<$Res> get sdkVersionRange;@override $MiniProgramCachePolicyCopyWith<$Res> get cachePolicy;@override $MiniProgramFallbackCopyWith<$Res>? get fallback;
 
 }
 /// @nodoc
@@ -580,7 +857,7 @@ class __$MiniProgramManifestCopyWithImpl<$Res>
 
 /// Create a copy of MiniProgramManifest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? version = null,Object? entry = null,Object? contractVersion = null,Object? sdkVersionRange = null,Object? requiredCapabilities = null,Object? featureFlags = null,Object? fallback = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? version = null,Object? entry = null,Object? contractVersion = null,Object? sdkVersionRange = null,Object? requiredCapabilities = null,Object? featureFlags = null,Object? cachePolicy = null,Object? fallback = freezed,}) {
   return _then(_MiniProgramManifest(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,version: null == version ? _self.version : version // ignore: cast_nullable_to_non_nullable
@@ -589,7 +866,8 @@ as String,contractVersion: null == contractVersion ? _self.contractVersion : con
 as String,sdkVersionRange: null == sdkVersionRange ? _self.sdkVersionRange : sdkVersionRange // ignore: cast_nullable_to_non_nullable
 as SdkVersionRange,requiredCapabilities: null == requiredCapabilities ? _self._requiredCapabilities : requiredCapabilities // ignore: cast_nullable_to_non_nullable
 as List<Capability>,featureFlags: null == featureFlags ? _self._featureFlags : featureFlags // ignore: cast_nullable_to_non_nullable
-as List<FeatureFlagKey>,fallback: freezed == fallback ? _self.fallback : fallback // ignore: cast_nullable_to_non_nullable
+as List<FeatureFlagKey>,cachePolicy: null == cachePolicy ? _self.cachePolicy : cachePolicy // ignore: cast_nullable_to_non_nullable
+as MiniProgramCachePolicy,fallback: freezed == fallback ? _self.fallback : fallback // ignore: cast_nullable_to_non_nullable
 as MiniProgramFallback?,
   ));
 }
@@ -602,6 +880,15 @@ $SdkVersionRangeCopyWith<$Res> get sdkVersionRange {
   
   return $SdkVersionRangeCopyWith<$Res>(_self.sdkVersionRange, (value) {
     return _then(_self.copyWith(sdkVersionRange: value));
+  });
+}/// Create a copy of MiniProgramManifest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MiniProgramCachePolicyCopyWith<$Res> get cachePolicy {
+  
+  return $MiniProgramCachePolicyCopyWith<$Res>(_self.cachePolicy, (value) {
+    return _then(_self.copyWith(cachePolicy: value));
   });
 }/// Create a copy of MiniProgramManifest
 /// with the given fields replaced by the non-null parameter values.

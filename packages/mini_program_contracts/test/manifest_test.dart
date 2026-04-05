@@ -17,6 +17,10 @@ void main() {
           Capability.nativeNavigation,
         ],
         featureFlags: const ['profile_center_v2'],
+        cachePolicy: const MiniProgramCachePolicy(
+          manifest: MiniProgramCacheMode.staleWhileError,
+          entryScreen: MiniProgramCacheMode.noCache,
+        ),
         fallback: const MiniProgramFallback(
           strategy: MiniProgramFallbackStrategy.hostRoute,
           route: '/mini-program-unavailable',
@@ -33,6 +37,10 @@ void main() {
         'native_navigation',
       ]);
       expect(json['featureFlags'], ['profile_center_v2']);
+      expect(json['cachePolicy'], {
+        'manifest': 'staleWhileError',
+        'entryScreen': 'noCache',
+      });
       expect(json['fallback'], {
         'strategy': 'hostRoute',
         'route': '/mini-program-unavailable',
@@ -45,6 +53,8 @@ void main() {
       expect(decoded.hasFeatureFlag('profile_center_v2'), isTrue);
       expect(decoded.requiresCapability(Capability.auth), isTrue);
       expect(decoded.requiresCapability(Capability.analytics), isFalse);
+      expect(decoded.allowsManifestStaleCache, isTrue);
+      expect(decoded.allowsEntryScreenStaleCache, isFalse);
     });
 
     test('rejects unknown capability values during decode', () {
@@ -77,6 +87,29 @@ void main() {
         throwsA(isA<CheckedFromJsonException>()),
       );
     });
+
+    test(
+      'defaults cache policy to staleWhileError for manifest and entry screen',
+      () {
+        final manifest = MiniProgramManifest.fromJson({
+          'id': 'profile_center',
+          'version': '1.2.3',
+          'entry': 'screens/profile_home',
+          'contractVersion': '1.0.0',
+          'sdkVersionRange': '>=1.0.0 <2.0.0',
+          'requiredCapabilities': ['auth'],
+        });
+
+        expect(
+          manifest.cachePolicy.manifest,
+          MiniProgramCacheMode.staleWhileError,
+        );
+        expect(
+          manifest.cachePolicy.entryScreen,
+          MiniProgramCacheMode.staleWhileError,
+        );
+      },
+    );
   });
 
   group('payload models', () {

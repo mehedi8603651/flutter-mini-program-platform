@@ -21,6 +21,8 @@ void main() {
             source: source,
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -46,6 +48,8 @@ void main() {
             source: source,
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -77,6 +81,8 @@ void main() {
             source: source,
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -108,6 +114,8 @@ void main() {
             source: source,
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -139,6 +147,8 @@ void main() {
             source: source,
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -172,6 +182,8 @@ void main() {
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
             featureFlagEvaluator: const _RejectAllFeatureFlags(),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -200,6 +212,8 @@ void main() {
             source: source,
             hostBridge: _FakeHostBridge(),
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -230,6 +244,8 @@ void main() {
             source: source,
             hostBridge: bridge,
             capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );
@@ -260,7 +276,11 @@ void main() {
             sdkVersion: '1.1.0',
             source: source,
             hostBridge: bridge,
-            capabilityRegistry: CapabilityRegistry(const [Capability.secureApi]),
+            capabilityRegistry: CapabilityRegistry(const [
+              Capability.secureApi,
+            ]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
           ),
         ),
       );

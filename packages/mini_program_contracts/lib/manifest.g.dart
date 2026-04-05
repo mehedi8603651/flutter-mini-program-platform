@@ -6,6 +6,38 @@ part of 'manifest.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_MiniProgramCachePolicy _$MiniProgramCachePolicyFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('_MiniProgramCachePolicy', json, ($checkedConvert) {
+  final val = _MiniProgramCachePolicy(
+    manifest: $checkedConvert(
+      'manifest',
+      (v) =>
+          $enumDecodeNullable(_$MiniProgramCacheModeEnumMap, v) ??
+          MiniProgramCacheMode.staleWhileError,
+    ),
+    entryScreen: $checkedConvert(
+      'entryScreen',
+      (v) =>
+          $enumDecodeNullable(_$MiniProgramCacheModeEnumMap, v) ??
+          MiniProgramCacheMode.staleWhileError,
+    ),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$MiniProgramCachePolicyToJson(
+  _MiniProgramCachePolicy instance,
+) => <String, dynamic>{
+  'manifest': _$MiniProgramCacheModeEnumMap[instance.manifest]!,
+  'entryScreen': _$MiniProgramCacheModeEnumMap[instance.entryScreen]!,
+};
+
+const _$MiniProgramCacheModeEnumMap = {
+  MiniProgramCacheMode.staleWhileError: 'staleWhileError',
+  MiniProgramCacheMode.noCache: 'noCache',
+};
+
 _MiniProgramFallback _$MiniProgramFallbackFromJson(Map<String, dynamic> json) =>
     $checkedCreate('_MiniProgramFallback', json, ($checkedConvert) {
       final val = _MiniProgramFallback(
@@ -56,6 +88,12 @@ _MiniProgramManifest _$MiniProgramManifestFromJson(Map<String, dynamic> json) =>
               (v as List<dynamic>?)?.map((e) => e as String).toList() ??
               const <FeatureFlagKey>[],
         ),
+        cachePolicy: $checkedConvert(
+          'cachePolicy',
+          (v) => v == null
+              ? const MiniProgramCachePolicy()
+              : MiniProgramCachePolicy.fromJson(v as Map<String, dynamic>),
+        ),
         fallback: $checkedConvert(
           'fallback',
           (v) => v == null
@@ -80,6 +118,7 @@ Map<String, dynamic> _$MiniProgramManifestToJson(
       .map((e) => _$CapabilityEnumMap[e]!)
       .toList(),
   'featureFlags': instance.featureFlags,
+  'cachePolicy': instance.cachePolicy.toJson(),
   'fallback': instance.fallback?.toJson(),
 };
 

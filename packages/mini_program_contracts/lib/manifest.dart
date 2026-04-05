@@ -18,6 +18,37 @@ enum MiniProgramFallbackStrategy {
   messageOnly,
 }
 
+/// Contract-level cache behavior for a manifest or screen payload.
+///
+/// `staleWhileError` means the SDK should prefer fresh network data but may use
+/// a previously cached copy when backend loading fails for a retryable reason.
+/// `noCache` means the SDK must not persist or reuse cached copies.
+@JsonEnum(alwaysCreate: true)
+enum MiniProgramCacheMode {
+  @JsonValue('staleWhileError')
+  staleWhileError,
+  @JsonValue('noCache')
+  noCache,
+}
+
+/// Cache rules declared by a mini-program manifest.
+///
+/// These rules let the SDK cache low-risk content while keeping sensitive
+/// flows, such as secure API entry screens, explicitly non-cacheable.
+@freezed
+abstract class MiniProgramCachePolicy with _$MiniProgramCachePolicy {
+  @JsonSerializable(checked: true, explicitToJson: true)
+  const factory MiniProgramCachePolicy({
+    @Default(MiniProgramCacheMode.staleWhileError)
+    MiniProgramCacheMode manifest,
+    @Default(MiniProgramCacheMode.staleWhileError)
+    MiniProgramCacheMode entryScreen,
+  }) = _MiniProgramCachePolicy;
+
+  factory MiniProgramCachePolicy.fromJson(Map<String, dynamic> json) =>
+      _$MiniProgramCachePolicyFromJson(json);
+}
+
 /// Minimal fallback metadata declared by a mini-program manifest.
 @freezed
 abstract class MiniProgramFallback with _$MiniProgramFallback {
@@ -44,6 +75,7 @@ abstract class MiniProgramManifest with _$MiniProgramManifest {
     @SdkVersionRangeConverter() required SdkVersionRange sdkVersionRange,
     required List<Capability> requiredCapabilities,
     @Default(<FeatureFlagKey>[]) List<FeatureFlagKey> featureFlags,
+    @Default(MiniProgramCachePolicy()) MiniProgramCachePolicy cachePolicy,
     MiniProgramFallback? fallback,
   }) = _MiniProgramManifest;
 
@@ -58,4 +90,13 @@ extension MiniProgramManifestX on MiniProgramManifest {
   /// Whether the manifest requires a given host capability.
   bool requiresCapability(Capability capability) =>
       requiredCapabilities.contains(capability);
+
+  /// Whether the manifest itself may be reused from stale cache on backend
+  /// errors.
+  bool get allowsManifestStaleCache =>
+      cachePolicy.manifest == MiniProgramCacheMode.staleWhileError;
+
+  /// Whether the entry screen may be reused from stale cache on backend errors.
+  bool get allowsEntryScreenStaleCache =>
+      cachePolicy.entryScreen == MiniProgramCacheMode.staleWhileError;
 }

@@ -16,9 +16,11 @@ Build the portable runtime that validates, loads, renders, and safely bridges mi
 - approved host action dispatch for `openNativeScreen`, `callSecureApi`, and `trackEvent`
 - controlled loading and fallback error UI
 - basic SDK logging
+- in-memory manifest and screen caching with stale-on-error fallback
 
-This package is the **Phase 2 SDK skeleton** from the root `AGENTS.md`.
-It is intentionally not the full backend-delivery or caching runtime yet.
+This package is the current shared runtime from the root `AGENTS.md`.
+It now includes contract-driven in-memory caching for manifests and entry
+screens, but it is still not the full persistent/offline runtime.
 
 ## Owns
 - `HostBridge`
@@ -30,6 +32,7 @@ It is intentionally not the full backend-delivery or caching runtime yet.
 - Safe action dispatch
 - Fallback UI
 - Basic SDK logging
+- Contract-driven manifest and entry-screen caching
 
 ## Must Do
 - Fail early on incompatible SDK or capability requirements.
@@ -65,7 +68,8 @@ It is intentionally not the full backend-delivery or caching runtime yet.
 - `lib/network/mini_program_source.dart` defines the source contract for both asset and HTTP loaders.
 - `lib/network/http_mini_program_source.dart` provides the current backend-facing sample loader for static or server-hosted JSON delivery.
 - `lib/network/mini_program_source_exception.dart` carries backend rejection details and transport failures into SDK fallback UI.
-- `lib/cache/` is intentionally a placeholder. Persistent cache work is deferred until later phases.
+- `lib/cache/manifest_cache.dart` provides the current manifest cache abstraction and in-memory implementation.
+- `lib/cache/screen_cache.dart` provides the current entry-screen cache abstraction and in-memory implementation.
 - `lib/rendering/stac_initializer.dart` owns the current parser/action initialization path.
 - `lib/observability/sdk_logger.dart` provides logging only. Error reporting and tracing are future additions, not current guarantees.
 
@@ -95,6 +99,8 @@ It is intentionally not the full backend-delivery or caching runtime yet.
 - Preserve backend rejection messages and transport failures as structured source errors so hosts get controlled fallback UX on real devices.
 - Keep backend decision metadata intact enough for host-facing diagnostics when rollout or capability checks fail.
 - Keep auth passive in v1. `Capability.auth` may be validated, but auth bridge APIs are not part of this package yet.
+- Cache only when the manifest allows it. `noCache` manifests and entry screens must never reuse stale cached content.
+- Only use stale cache on retryable backend failures such as unreachable or timeout conditions.
 
 ## Deferred Until Later Phases
 - Persistent manifest, screen, and asset caching
@@ -111,9 +117,10 @@ These are valid future additions, but they should not be added until the current
 - `flutter analyze`
 
 ## Next Step
-The next implementation phase is stronger auth/session and production backend work on top of the current capability surface.
+The next implementation phase is stronger persistent cache/offline behavior and
+production backend work on top of the current capability surface.
 
 That phase should keep using this SDK while adding:
-- clearer host-owned auth/session integration
-- richer secure API result handling where needed
-- caching only after delivery and fallback behavior remain stable
+- persistent cache storage beyond in-memory session scope
+- richer stale-cache diagnostics where needed
+- cache metadata for more than manifest and entry-screen payloads

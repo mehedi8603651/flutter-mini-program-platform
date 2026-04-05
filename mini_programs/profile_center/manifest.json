@@ -8,6 +8,10 @@
     "analytics",
     "native_navigation"
   ],
+  "cachePolicy": {
+    "manifest": "staleWhileError",
+    "entryScreen": "staleWhileError"
+  },
   "fallback": {
     "strategy": "errorView",
     "message": "Profile Center is temporarily unavailable in this host app."

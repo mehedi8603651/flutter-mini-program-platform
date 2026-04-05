@@ -38,6 +38,17 @@ void main() {
         MiniProgramErrorCodes.invalidResultPayload,
         'invalid_result_payload',
       );
+      expect(MiniProgramErrorCodes.backendUnreachable, 'backend_unreachable');
+      expect(MiniProgramErrorCodes.backendTimeout, 'backend_timeout');
+      expect(
+        MiniProgramErrorCodes.secureApiNotAllowlisted,
+        'secure_api_not_allowlisted',
+      );
+    });
+
+    test('cache policy values stay stable', () {
+      expect(MiniProgramCacheMode.staleWhileError.name, 'staleWhileError');
+      expect(MiniProgramCacheMode.noCache.name, 'noCache');
     });
 
     test('feature flag keys remain string based', () {

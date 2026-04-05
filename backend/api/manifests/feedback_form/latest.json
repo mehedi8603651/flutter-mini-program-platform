@@ -9,6 +9,10 @@
     "secure_api",
     "native_navigation"
   ],
+  "cachePolicy": {
+    "manifest": "noCache",
+    "entryScreen": "noCache"
+  },
   "fallback": {
     "strategy": "errorView",
     "message": "Feedback Form is temporarily unavailable in this host app."

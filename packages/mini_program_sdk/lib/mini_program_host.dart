@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:stac/stac.dart';
 
+import 'cache/manifest_cache.dart';
+import 'cache/screen_cache.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
@@ -26,6 +28,8 @@ class MiniProgramHost extends StatefulWidget {
     required this.source,
     required this.hostBridge,
     required this.capabilityRegistry,
+    this.manifestCache,
+    this.screenCache,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
     this.loadingBuilder,
@@ -37,6 +41,8 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramSource source;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final ManifestCache? manifestCache;
+  final ScreenCache? screenCache;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
   final WidgetBuilder? loadingBuilder;
@@ -65,6 +71,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.source != oldWidget.source ||
         widget.hostBridge != oldWidget.hostBridge ||
         widget.capabilityRegistry != oldWidget.capabilityRegistry ||
+        widget.manifestCache != oldWidget.manifestCache ||
+        widget.screenCache != oldWidget.screenCache ||
         widget.featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
         widget.logger != oldWidget.logger) {
       _loadFuture = _loadMiniProgram();
@@ -78,6 +86,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       miniProgramId: widget.miniProgramId,
       sdkVersion: widget.sdkVersion,
       source: widget.source,
+      manifestCache: widget.manifestCache ?? InMemoryManifestCache.shared,
+      screenCache: widget.screenCache ?? InMemoryScreenCache.shared,
       capabilityRegistry: widget.capabilityRegistry,
       featureFlagEvaluator: widget.featureFlagEvaluator,
       logger: widget.logger,
