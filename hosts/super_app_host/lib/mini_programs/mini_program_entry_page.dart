@@ -32,6 +32,7 @@ class MiniProgramEntryPage extends StatelessWidget {
       hostBridge: hostBridge,
       capabilityRegistry: capabilityRegistry,
       featureFlagEvaluator: featureFlagEvaluator,
+      assetCache: cacheBundle?.assetCache,
       manifestCache: cacheBundle?.manifestCache,
       screenCache: cacheBundle?.screenCache,
       errorBuilder: (context, failure) {

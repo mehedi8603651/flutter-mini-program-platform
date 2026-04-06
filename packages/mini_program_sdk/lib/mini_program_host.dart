@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:stac/stac.dart';
 
+import 'cache/asset_cache.dart';
 import 'cache/manifest_cache.dart';
 import 'cache/screen_cache.dart';
 import 'capability_registry.dart';
@@ -9,12 +10,14 @@ import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
 import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
+import 'network/asset_resolver.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'rendering/stac_initializer.dart';
 import 'sdk_context.dart';
 import 'widgets/sdk_error_view.dart';
 import 'widgets/sdk_loading_view.dart';
+import 'widgets/sdk_offline_notice.dart';
 
 typedef MiniProgramErrorBuilder =
     Widget Function(BuildContext context, MiniProgramFailure failure);
@@ -28,6 +31,7 @@ class MiniProgramHost extends StatefulWidget {
     required this.source,
     required this.hostBridge,
     required this.capabilityRegistry,
+    this.assetCache,
     this.manifestCache,
     this.screenCache,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -41,6 +45,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramSource source;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final AssetCache? assetCache;
   final ManifestCache? manifestCache;
   final ScreenCache? screenCache;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -55,6 +60,7 @@ class MiniProgramHost extends StatefulWidget {
 class _MiniProgramHostState extends State<MiniProgramHost> {
   late Future<LoadedMiniProgram> _loadFuture;
   final ManifestLoader _manifestLoader = const ManifestLoader();
+  final AssetResolver _assetResolver = AssetResolver();
 
   @override
   void initState() {
@@ -71,6 +77,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.source != oldWidget.source ||
         widget.hostBridge != oldWidget.hostBridge ||
         widget.capabilityRegistry != oldWidget.capabilityRegistry ||
+        widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
         widget.screenCache != oldWidget.screenCache ||
         widget.featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
@@ -82,7 +89,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   Future<LoadedMiniProgram> _loadMiniProgram() async {
     await StacInitializer.ensureInitialized(logger: widget.logger);
 
-    return _manifestLoader.load(
+    final loadedMiniProgram = await _manifestLoader.load(
       miniProgramId: widget.miniProgramId,
       sdkVersion: widget.sdkVersion,
       source: widget.source,
@@ -91,6 +98,23 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       capabilityRegistry: widget.capabilityRegistry,
       featureFlagEvaluator: widget.featureFlagEvaluator,
       logger: widget.logger,
+    );
+
+    final resolvedAssets = await _assetResolver.resolveEntryScreenAssets(
+      manifest: loadedMiniProgram.manifest,
+      screenJson: loadedMiniProgram.entryScreenJson,
+      assetCache: widget.assetCache ?? NoOpAssetCache.shared,
+      logger: widget.logger,
+    );
+
+    return LoadedMiniProgram(
+      manifest: loadedMiniProgram.manifest,
+      entryScreenJson: resolvedAssets.screenJson,
+      usedStaleManifestCache: loadedMiniProgram.usedStaleManifestCache,
+      usedStaleEntryScreenCache: loadedMiniProgram.usedStaleEntryScreenCache,
+      cachedAssetCount: resolvedAssets.cachedAssetCount,
+      downloadedAssetCount: resolvedAssets.downloadedAssetCount,
+      failedAssetCount: resolvedAssets.failedAssetCount,
     );
   }
 
@@ -145,7 +169,20 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
                 return _buildError(context, failure);
               }
 
-              return rendered;
+              if (!loadedMiniProgram.usedStaleCache) {
+                return rendered;
+              }
+
+              return Stack(
+                children: [
+                  Positioned.fill(child: rendered),
+                  IgnorePointer(
+                    child: SdkOfflineNotice(
+                      cachedAssetCount: loadedMiniProgram.resolvedAssetCount,
+                    ),
+                  ),
+                ],
+              );
             },
           ),
         );

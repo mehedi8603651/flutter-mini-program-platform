@@ -156,6 +156,7 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
                 MiniProgramCacheBundle(
                   manifestCache: InMemoryManifestCache.shared,
                   screenCache: InMemoryScreenCache.shared,
+                  assetCache: NoOpAssetCache.shared,
                 ),
           );
         },

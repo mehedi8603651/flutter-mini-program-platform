@@ -17,15 +17,23 @@ class LoadedMiniProgram {
     required this.entryScreenJson,
     this.usedStaleManifestCache = false,
     this.usedStaleEntryScreenCache = false,
+    this.cachedAssetCount = 0,
+    this.downloadedAssetCount = 0,
+    this.failedAssetCount = 0,
   });
 
   final MiniProgramManifest manifest;
   final Map<String, dynamic> entryScreenJson;
   final bool usedStaleManifestCache;
   final bool usedStaleEntryScreenCache;
+  final int cachedAssetCount;
+  final int downloadedAssetCount;
+  final int failedAssetCount;
 
   bool get usedStaleCache =>
       usedStaleManifestCache || usedStaleEntryScreenCache;
+
+  int get resolvedAssetCount => cachedAssetCount + downloadedAssetCount;
 }
 
 /// Loads, validates, and resolves the entry screen for a mini-program.

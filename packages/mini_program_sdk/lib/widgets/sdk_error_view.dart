@@ -29,7 +29,7 @@ class SdkErrorView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                _titleForFailure(failure.errorCode),
+                _titleForFailure(failure),
                 style: theme.textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -68,10 +68,18 @@ class SdkErrorView extends StatelessWidget {
     );
   }
 
-  static String _titleForFailure(String? errorCode) {
+  static String _titleForFailure(MiniProgramFailure failure) {
+    final errorCode = failure.errorCode;
+    final cacheExpired =
+        failure.details['manifestCacheExpired'] == true ||
+        failure.details['entryScreenCacheExpired'] == true;
+
     switch (errorCode) {
       case MiniProgramErrorCodes.backendUnreachable:
       case MiniProgramErrorCodes.backendTimeout:
+        if (cacheExpired) {
+          return 'Offline copy unavailable';
+        }
         return 'Backend unavailable';
       case MiniProgramErrorCodes.secureApiSessionMissing:
       case MiniProgramErrorCodes.secureApiSessionExpired:
@@ -116,6 +124,13 @@ class SdkErrorView extends StatelessWidget {
     final matchedRuleId = details['matchedRuleId'];
     if (matchedRuleId is String && matchedRuleId.isNotEmpty) {
       diagnostics.add('Matched rule: $matchedRuleId');
+    }
+
+    if (details['manifestCacheExpired'] == true ||
+        details['entryScreenCacheExpired'] == true) {
+      diagnostics.add(
+        'Cached offline copy is older than the allowed stale window.',
+      );
     }
 
     final missingCapabilities = details['missingCapabilities'];

@@ -14,6 +14,8 @@ First-party Flutter host app for the portable mini-program platform.
 - opens a host-owned native screen through `openNativeScreen`
 - can switch between bundled asset delivery and local backend HTTP delivery
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
+- shows an offline notice when stale cached content is rendered
+- persists standard Stac network image assets to local files when entry-screen caching is allowed
 
 ## Current local flow
 

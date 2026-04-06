@@ -156,6 +156,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
                 MiniProgramCacheBundle(
                   manifestCache: InMemoryManifestCache.shared,
                   screenCache: InMemoryScreenCache.shared,
+                  assetCache: NoOpAssetCache.shared,
                 ),
           );
         },

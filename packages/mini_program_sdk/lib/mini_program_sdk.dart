@@ -1,3 +1,4 @@
+export 'cache/asset_cache.dart';
 export 'capability_registry.dart';
 export 'cache/manifest_cache.dart';
 export 'cache/mini_program_cache_bundle.dart';
@@ -7,6 +8,7 @@ export 'host_bridge.dart';
 export 'manifest_loader.dart';
 export 'mini_program_failure.dart';
 export 'mini_program_host.dart';
+export 'network/asset_resolver.dart';
 export 'network/http_mini_program_source.dart';
 export 'network/mini_program_source.dart';
 export 'network/mini_program_source_exception.dart';
@@ -16,3 +18,4 @@ export 'sdk_context.dart';
 export 'version_validator.dart';
 export 'widgets/sdk_error_view.dart';
 export 'widgets/sdk_loading_view.dart';
+export 'widgets/sdk_offline_notice.dart';

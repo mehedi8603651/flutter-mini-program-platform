@@ -13,6 +13,8 @@ Reference Flutter host app for portable mini-program partner integration.
 - maps portable route aliases such as `profile_editor` and `feedback_follow_up` to its own native Flutter pages
 - keeps `secure_api` host-owned and allowlisted through host-side services behind its bridge
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
+- shows an offline notice when stale cached content is rendered
+- persists standard Stac network image assets to local files when entry-screen caching is allowed
 
 ## Current flow
 

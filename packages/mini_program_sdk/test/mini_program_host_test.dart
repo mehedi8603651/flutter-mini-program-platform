@@ -165,6 +165,63 @@ void main() {
       expect(find.text('Error code: backend_unreachable'), findsOneWidget);
     });
 
+    testWidgets('shows an offline notice when stale cached content is rendered', (
+      tester,
+    ) async {
+      final manifest = _buildManifest();
+      final manifestCache = InMemoryManifestCache();
+      final screenCache = InMemoryScreenCache();
+
+      await manifestCache.write(
+        CachedManifestEntry(
+          miniProgramId: 'profile_center',
+          manifest: manifest,
+          cachedAt: DateTime.now(),
+        ),
+      );
+      await screenCache.write(
+        CachedScreenEntry(
+          miniProgramId: 'profile_center',
+          version: manifest.version,
+          screenId: manifest.entry,
+          screenJson: _helloScreenJson,
+          cachedAt: DateTime.now(),
+        ),
+      );
+
+      const source = _FailingManifestSource(
+        exception: MiniProgramSourceException(
+          message:
+              'Failed to reach the mini-program backend while loading manifest.',
+          errorCode: 'backend_unreachable',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: manifestCache,
+            screenCache: screenCache,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hello from profile center'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Showing cached content while the backend is unavailable.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('shows fallback error when feature flags are disabled', (
       tester,
     ) async {
@@ -331,9 +388,7 @@ class _FailingManifestSource implements MiniProgramSource {
     required String miniProgramId,
     required String version,
     required String screenId,
-  }) async {
-    return const <String, dynamic>{};
-  }
+  }) => Future<Map<String, dynamic>>.error(exception);
 }
 
 class _FakeHostBridge implements HostBridge {
