@@ -174,6 +174,35 @@ This is meant for local operability work only. It helps explain why a request
 matched a rollout rule, fell back to default, or was rejected before the host
 tries to render the mini-program.
 
+You can call it directly with the repo wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\inspect_delivery.ps1 `
+  -MiniProgramId profile_center `
+  -HostApp super_app_host `
+  -SdkVersion 1.0.0 `
+  -HostVersion 1.0.0 `
+  -Platform android `
+  -Locale en-US `
+  -Capabilities analytics,native_navigation,auth
+```
+
+Or with the pure Dart CLI:
+
+```powershell
+cd D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart run bin\inspect_delivery.dart `
+  --mini-program profile_center `
+  --host-app super_app_host `
+  --sdk-version 1.0.0 `
+  --host-version 1.0.0 `
+  --platform android `
+  --locale en-US `
+  --capabilities analytics,native_navigation,auth
+```
+
+Use `--output json` when you want to inspect the raw response body.
+
 `super_app_host` can already consume these URLs through
 `HttpMiniProgramSource` by launching with:
 

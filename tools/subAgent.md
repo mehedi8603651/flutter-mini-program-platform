@@ -34,3 +34,8 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
   - Publishes `mini_programs/<id>/manifest.json` and built screen JSON into
     `backend/api/` as static sample endpoints.
   - Keeps backend sample files derived from authored mini-program output.
+- `inspect_delivery.ps1`
+  - Wraps the Dart CLI in `packages/mini_program_tooling`.
+  - Calls the local backend decision inspection route with host delivery
+    context and prints human-readable or JSON output.
+  - Intended for local operability debugging and CI smoke checks.

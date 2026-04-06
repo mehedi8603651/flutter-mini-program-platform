@@ -21,7 +21,22 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
 - Recreate contract logic separately when it can be shared from packages.
 - Assume one backend environment or one host app forever.
 
-## First Focus
+## Current Tool
+- `bin/inspect_delivery.dart`
+  - Calls the local backend debug inspection route:
+    `/api/debug/manifests/:miniProgramId/decision`
+  - Accepts host delivery context such as `hostApp`, `sdkVersion`,
+    `hostVersion`, `platform`, `locale`, `tenantId`, `pinnedVersion`, and
+    `capabilities`.
+  - Supports `text` and `json` output for local debugging and CI.
+
+## Current Focus
+- `inspect_delivery`
 - `build_mini_programs`
 - `validate_manifests`
 - `smoke_test_host`
+
+## Next Tooling Priorities
+- manifest validation CLI
+- rollout policy validation
+- host smoke-test wrappers
