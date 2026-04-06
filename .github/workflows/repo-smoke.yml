@@ -34,4 +34,4 @@ jobs:
 
       - name: Run repo smoke suite
         run: |
-          powershell -ExecutionPolicy Bypass -File .\tools\smoke_repo.ps1
+          .\tools\smoke_repo.ps1

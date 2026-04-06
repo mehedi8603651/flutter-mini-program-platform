@@ -10,6 +10,17 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$powerShellExecutable =
+    if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+        "pwsh"
+    }
+    elseif (Get-Command powershell -ErrorAction SilentlyContinue) {
+        "powershell"
+    }
+    else {
+        throw "Neither 'pwsh' nor 'powershell' is available on PATH."
+    }
+
 function Invoke-SmokeStep {
     param(
         [Parameter(Mandatory = $true)]
@@ -28,9 +39,25 @@ function Invoke-SmokeStep {
     Push-Location $Workdir
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     try {
-        & $Command[0] $Command[1..($Command.Length - 1)]
-        if ($LASTEXITCODE -ne 0) {
-            throw "Step failed with exit code $LASTEXITCODE."
+        $commandName = $Command[0]
+        $commandArguments =
+            if ($Command.Length -gt 1) {
+                @($Command[1..($Command.Length - 1)])
+            }
+            else {
+                @()
+            }
+
+        $process = Start-Process `
+            -FilePath $commandName `
+            -ArgumentList $commandArguments `
+            -WorkingDirectory $Workdir `
+            -NoNewWindow `
+            -Wait `
+            -PassThru
+
+        if ($process.ExitCode -ne 0) {
+            throw "Step failed with exit code $($process.ExitCode)."
         }
 
         $stopwatch.Stop()
@@ -49,8 +76,8 @@ if (-not $SkipDeliveryValidation) {
         Name = "Delivery validation"
         Workdir = $RepoRoot
         Command = @(
-            "powershell",
-            "-ExecutionPolicy", "Bypass",
+            $powerShellExecutable,
+            "-NoLogo", "-NoProfile",
             "-File", (Join-Path $RepoRoot "tools\validate_delivery.ps1"),
             "-RepoRoot", $RepoRoot
         )
