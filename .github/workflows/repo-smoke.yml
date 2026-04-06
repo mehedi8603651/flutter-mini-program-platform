@@ -35,8 +35,9 @@ jobs:
           dart --version
 
       - name: Delivery validation
+        working-directory: .\packages\mini_program_tooling
         run: |
-          dart run .\packages\mini_program_tooling\bin\validate_delivery.dart --repo-root . --output text
+          dart run bin\validate_delivery.dart --repo-root ..\.. --output text
 
       - name: Backend analyze
         working-directory: .\backend\local_backend_service
