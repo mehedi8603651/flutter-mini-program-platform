@@ -88,6 +88,12 @@ dart run bin\server.dart
 flutter run --dart-define=SUPER_APP_SOURCE_MODE=local_backend --dart-define=SUPER_APP_BACKEND_BASE_URL=http://127.0.0.1:8080/api/
 ```
 
+For Android emulator or real-device testing, start the backend with:
+
+```powershell
+dart run bin\server.dart --host=0.0.0.0 --port=8080
+```
+
 If you start the backend on another port, update
 `SUPER_APP_BACKEND_BASE_URL` to match it.
 

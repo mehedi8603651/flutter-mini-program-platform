@@ -84,6 +84,13 @@ dart pub get
 dart run bin\server.dart
 ```
 
+For Android emulator or real-device local backend testing, bind the backend to
+all interfaces instead of loopback only:
+
+```powershell
+dart run bin\server.dart --host=0.0.0.0 --port=8080
+```
+
 If `8080` is already in use, run for example:
 
 ```powershell
@@ -230,6 +237,13 @@ Use `--output json` when you want to inspect the raw response body.
 ```powershell
 flutter run --dart-define=SUPER_APP_SOURCE_MODE=local_backend --dart-define=SUPER_APP_BACKEND_BASE_URL=http://127.0.0.1:8080/api/
 ```
+
+Use `127.0.0.1` only when the host app is running on the same machine as the
+backend service. For Android emulator or phone testing, keep the backend
+bound to `0.0.0.0` and use:
+
+- Android emulator: `http://10.0.2.2:8080/api/`
+- real device on LAN: `http://<YOUR_PC_LAN_IP>:8080/api/`
 
 ## Secure API sample
 

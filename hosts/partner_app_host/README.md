@@ -52,7 +52,7 @@ The local auth model now supports seeded states for testing:
 ```powershell
 cd D:\flutter-mini-program-platform\backend\local_backend_service
 dart pub get
-dart run bin\server.dart
+dart run bin\server.dart --host=0.0.0.0 --port=8080
 cd D:\flutter-mini-program-platform\hosts\partner_app_host
 flutter run
 ```
