@@ -47,3 +47,8 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
   - Runs the repo-level smoke suite in a stable order.
   - Covers delivery validation plus backend, SDK, and host analyze/test steps.
   - Intended to be the single local and CI-friendly pre-push command.
+
+## CI Rule
+- Root GitHub Actions workflows should call `tools/smoke_repo.ps1` instead of
+  duplicating repo smoke commands inline.
+- Keep local and CI verification aligned around the same script entrypoint.

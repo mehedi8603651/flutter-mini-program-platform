@@ -26,3 +26,18 @@ Useful options:
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1 -SkipAnalyze
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1 -SkipHosts
 ```
+
+## GitHub Actions
+
+Pushes and pull requests now run the same smoke entrypoint through:
+
+- `.github/workflows/repo-smoke.yml`
+
+The workflow uses `windows-latest`, installs Flutter, and calls:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\smoke_repo.ps1
+```
+
+This keeps local verification and CI verification aligned instead of
+duplicating command lists in multiple places.
