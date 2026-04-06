@@ -18,6 +18,14 @@ const Set<String> _knownContextParameters = <String>{
   'capabilities',
 };
 
+const Set<String> _knownHttpMethods = <String>{
+  'DELETE',
+  'GET',
+  'PATCH',
+  'POST',
+  'PUT',
+};
+
 class DeliveryRepositoryValidator {
   const DeliveryRepositoryValidator();
 
@@ -88,6 +96,14 @@ class DeliveryRepositoryValidator {
     );
 
     await _validateCapabilityPolicies(
+      repoRootPath: normalizedRepoRoot,
+      backendApiRootPath: backendApiRoot.path,
+      authoredManifests: authoredManifests,
+      miniProgramId: miniProgramId,
+      messages: messages,
+    );
+
+    await _validateSecureApiPolicies(
       repoRootPath: normalizedRepoRoot,
       backendApiRootPath: backendApiRoot.path,
       authoredManifests: authoredManifests,
@@ -814,6 +830,166 @@ class DeliveryRepositoryValidator {
     }
   }
 
+  Future<void> _validateSecureApiPolicies({
+    required String repoRootPath,
+    required String backendApiRootPath,
+    required Map<String, MiniProgramManifest> authoredManifests,
+    required String? miniProgramId,
+    required List<DeliveryValidationMessage> messages,
+  }) async {
+    final policiesRoot = Directory(
+      path.join(backendApiRootPath, 'secure-api-policies'),
+    );
+    if (!await policiesRoot.exists()) {
+      return;
+    }
+
+    final files = await policiesRoot
+        .list()
+        .where((entity) => entity is File)
+        .cast<File>()
+        .where((file) => path.extension(file.path) == '.json')
+        .toList();
+    files.sort((a, b) => a.path.compareTo(b.path));
+
+    final knownMiniProgramIds = authoredManifests.keys.toSet();
+
+    for (final file in files) {
+      final filePolicyId = path.basenameWithoutExtension(file.path);
+      final json = await _readJsonMap(
+        file,
+        repoRootPath: repoRootPath,
+        messages: messages,
+      );
+      if (json == null) {
+        continue;
+      }
+
+      final endpoint = _trimmed(json['endpoint']);
+      if (endpoint == null) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: 'secure_api_policy_missing_endpoint',
+            path: _relative(repoRootPath, file.path),
+            message: 'Secure API policy must declare endpoint.',
+          ),
+        );
+      } else {
+        if (!_isSafeEndpointPath(endpoint)) {
+          messages.add(
+            DeliveryValidationMessage(
+              severity: ValidationSeverity.error,
+              code: 'secure_api_policy_invalid_endpoint',
+              path: _relative(repoRootPath, file.path),
+              message:
+                  'Endpoint "$endpoint" must use safe path segments without leading or trailing slashes.',
+            ),
+          );
+        }
+
+        final expectedFilePolicyId = endpoint.replaceAll('/', '_');
+        if (expectedFilePolicyId != filePolicyId) {
+          messages.add(
+            DeliveryValidationMessage(
+              severity: ValidationSeverity.error,
+              code: 'secure_api_policy_filename_mismatch',
+              path: _relative(repoRootPath, file.path),
+              message:
+                  'Secure API policy file name "$filePolicyId.json" must match endpoint "$endpoint" as "$expectedFilePolicyId.json".',
+            ),
+          );
+        }
+      }
+
+      _validateStringListField(
+        json: json,
+        fieldName: 'allowedMethods',
+        filePath: file.path,
+        repoRootPath: repoRootPath,
+        messages: messages,
+        required: true,
+        transform: (value) => value.toUpperCase(),
+        validator: (value) => _knownHttpMethods.contains(value),
+        invalidValueMessage: (value) => '"$value" is not a supported HTTP method.',
+      );
+
+      _validateStringListField(
+        json: json,
+        fieldName: 'allowedHosts',
+        filePath: file.path,
+        repoRootPath: repoRootPath,
+        messages: messages,
+        required: true,
+      );
+
+      _validateStringListField(
+        json: json,
+        fieldName: 'blockedUserIds',
+        filePath: file.path,
+        repoRootPath: repoRootPath,
+        messages: messages,
+        required: false,
+      );
+
+      _validateStringListField(
+        json: json,
+        fieldName: 'expiredAccessTokenPrefixes',
+        filePath: file.path,
+        repoRootPath: repoRootPath,
+        messages: messages,
+        required: false,
+      );
+
+      final allowedSources = _validateStringListField(
+        json: json,
+        fieldName: 'allowedSources',
+        filePath: file.path,
+        repoRootPath: repoRootPath,
+        messages: messages,
+        required: true,
+      );
+
+      for (final source in allowedSources) {
+        if (miniProgramId != null && source != miniProgramId) {
+          continue;
+        }
+        if (!knownMiniProgramIds.contains(source)) {
+          messages.add(
+            DeliveryValidationMessage(
+              severity: ValidationSeverity.error,
+              code: 'secure_api_policy_unknown_source',
+              path: _relative(repoRootPath, file.path),
+              message:
+                  'allowedSources contains "$source", but no authored mini-program manifest was found for it.',
+            ),
+          );
+        }
+      }
+
+      final minimumMessageLength = json['minimumMessageLength'];
+      if (minimumMessageLength == null) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: 'secure_api_policy_missing_minimum_message_length',
+            path: _relative(repoRootPath, file.path),
+            message: 'Secure API policy must declare minimumMessageLength.',
+          ),
+        );
+      } else if (minimumMessageLength is! int || minimumMessageLength <= 0) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: 'secure_api_policy_invalid_minimum_message_length',
+            path: _relative(repoRootPath, file.path),
+            message: 'minimumMessageLength must be a positive integer.',
+          ),
+        );
+      }
+    }
+  }
+
   void _validateManifestSemantics({
     required MiniProgramManifest manifest,
     required String manifestPath,
@@ -987,6 +1163,131 @@ class DeliveryRepositoryValidator {
     }
     return versions.contains(version);
   }
+
+  List<String> _validateStringListField({
+    required Map<String, dynamic> json,
+    required String fieldName,
+    required String filePath,
+    required String repoRootPath,
+    required List<DeliveryValidationMessage> messages,
+    required bool required,
+    String Function(String value)? transform,
+    bool Function(String value)? validator,
+    String Function(String value)? invalidValueMessage,
+  }) {
+    final rawValue = json[fieldName];
+    final relativeFilePath = _relative(repoRootPath, filePath);
+    if (rawValue == null) {
+      if (required) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: '${fieldName}_missing',
+            path: relativeFilePath,
+            message: '$fieldName must be present.',
+          ),
+        );
+      }
+      return const <String>[];
+    }
+
+    if (rawValue is! List) {
+      messages.add(
+        DeliveryValidationMessage(
+          severity: ValidationSeverity.error,
+          code: '${fieldName}_not_list',
+          path: relativeFilePath,
+          message: '$fieldName must be a JSON list.',
+        ),
+      );
+      return const <String>[];
+    }
+
+    final values = <String>[];
+    final seenValues = <String>{};
+    for (var index = 0; index < rawValue.length; index++) {
+      final normalizedValue = _trimmed(rawValue[index]);
+      final itemPath = '$relativeFilePath#$fieldName[$index]';
+      if (normalizedValue == null) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: '${fieldName}_blank',
+            path: itemPath,
+            message: '$fieldName values must not be blank.',
+          ),
+        );
+        continue;
+      }
+
+      final transformedValue =
+          transform == null ? normalizedValue : transform(normalizedValue);
+      values.add(transformedValue);
+
+      if (!seenValues.add(transformedValue)) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: '${fieldName}_duplicate',
+            path: itemPath,
+            message: '$fieldName contains duplicate "$transformedValue".',
+          ),
+        );
+      }
+
+      if (validator != null && !validator(transformedValue)) {
+        messages.add(
+          DeliveryValidationMessage(
+            severity: ValidationSeverity.error,
+            code: '${fieldName}_invalid_value',
+            path: itemPath,
+            message:
+                invalidValueMessage?.call(transformedValue) ??
+                '$fieldName contains invalid value "$transformedValue".',
+          ),
+        );
+      }
+    }
+
+    if (required && values.isEmpty) {
+      messages.add(
+        DeliveryValidationMessage(
+          severity: ValidationSeverity.error,
+          code: '${fieldName}_empty',
+          path: relativeFilePath,
+          message: '$fieldName must contain at least one value.',
+        ),
+      );
+    }
+
+    return values;
+  }
+
+  bool _isSafeEndpointPath(String value) {
+    if (value.startsWith('/') || value.endsWith('/')) {
+      return false;
+    }
+
+    final segments = value.split('/');
+    if (segments.isEmpty) {
+      return false;
+    }
+
+    for (final segment in segments) {
+      final normalizedSegment = segment.trim();
+      if (normalizedSegment.isEmpty ||
+          normalizedSegment == '.' ||
+          normalizedSegment == '..' ||
+          !_isSafePathToken(normalizedSegment)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool _isSafePathToken(String value) =>
+      RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(value);
 
   String _relative(String repoRootPath, String targetPath) =>
       path.relative(targetPath, from: repoRootPath).replaceAll('\\', '/');

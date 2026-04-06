@@ -134,6 +134,59 @@ void main() {
         );
       },
     );
+
+    test('fails when secure API policy is malformed', () async {
+      await _writeValidFixture(
+        tempDir.path,
+        secureApiPolicyJson: '''
+{
+  "endpoint": "/feedback/submit",
+  "allowedMethods": ["TRACE", "POST"],
+  "allowedHosts": ["super_app_host", "super_app_host"],
+  "allowedSources": ["missing_program"],
+  "minimumMessageLength": 0
+}
+''',
+      );
+
+      final report = await const DeliveryRepositoryValidator().validate(
+        repoRootPath: tempDir.path,
+      );
+
+      expect(report.hasErrors, isTrue);
+      expect(
+        report.messages.any(
+          (message) => message.code == 'secure_api_policy_invalid_endpoint',
+        ),
+        isTrue,
+      );
+      expect(
+        report.messages.any(
+          (message) => message.code == 'allowedMethods_invalid_value',
+        ),
+        isTrue,
+      );
+      expect(
+        report.messages.any(
+          (message) => message.code == 'allowedHosts_duplicate',
+        ),
+        isTrue,
+      );
+      expect(
+        report.messages.any(
+          (message) => message.code == 'secure_api_policy_unknown_source',
+        ),
+        isTrue,
+      );
+      expect(
+        report.messages.any(
+          (message) =>
+              message.code ==
+              'secure_api_policy_invalid_minimum_message_length',
+        ),
+        isTrue,
+      );
+    });
   });
 }
 
@@ -143,6 +196,7 @@ Future<void> _writeValidFixture(
   String? authoredManifestJson,
   String? rolloutJson,
   String? capabilityPolicyJson,
+  String? secureApiPolicyJson,
 }) async {
   final manifestJson =
       authoredManifestJson ??
@@ -219,6 +273,22 @@ Future<void> _writeValidFixture(
     "locale",
     "capabilities"
   ]
+}
+''',
+  );
+  await _writeFile(
+    repoRootPath,
+    'backend/api/secure-api-policies/feedback_submit.json',
+    secureApiPolicyJson ??
+        '''
+{
+  "endpoint": "feedback/submit",
+  "allowedMethods": ["POST"],
+  "allowedHosts": ["super_app_host", "partner_app_host"],
+  "allowedSources": ["$miniProgramId"],
+  "blockedUserIds": ["blocked_super_demo_user", "blocked_partner_demo_user"],
+  "expiredAccessTokenPrefixes": ["expired-"],
+  "minimumMessageLength": 12
 }
 ''',
   );

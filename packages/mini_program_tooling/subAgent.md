@@ -26,6 +26,8 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
   - Validates authored manifests and backend delivery files before runtime.
   - Checks published manifest/screen linkage, rollout rule versions, and
     capability-policy query requirements.
+  - Also validates secure API policy files such as endpoint naming, allowlists,
+    and minimum payload rules.
 - `bin/inspect_delivery.dart`
   - Calls the local backend debug inspection route:
     `/api/debug/manifests/:miniProgramId/decision`
@@ -43,4 +45,4 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
 
 ## Next Tooling Priorities
 - host smoke-test wrappers
-- secure API policy validation
+- publish pipeline integration

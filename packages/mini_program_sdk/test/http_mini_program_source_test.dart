@@ -63,7 +63,7 @@ void main() {
           apiBaseUri: Uri.parse('http://localhost:8080/api/'),
           client: MockClient(
             (request) async => http.Response(
-              '{"errorCode":"missing_capabilities","message":"Host app is missing required capabilities.","traceId":"lb_trace_001","details":{"matchedRuleId":"partner-default","decisionReason":"matched_disabled_rule"}}',
+              '{"responseType":"manifest_delivery_error","statusCode":412,"errorCode":"missing_capabilities","message":"Host app is missing required capabilities.","traceId":"lb_trace_001","error":{"code":"missing_capabilities","message":"Host app is missing required capabilities.","details":{"matchedRuleId":"partner-default","decisionReason":"matched_disabled_rule"}}}',
               412,
               headers: <String, String>{
                 'x-backend-trace-id': 'lb_trace_001',
@@ -93,6 +93,11 @@ void main() {
                   (error) => error.details['traceId'],
                   'details.traceId',
                   'lb_trace_001',
+                )
+                .having(
+                  (error) => error.details['responseType'],
+                  'details.responseType',
+                  'manifest_delivery_error',
                 )
                 .having(
                   (error) => error.details['matchedRuleId'],

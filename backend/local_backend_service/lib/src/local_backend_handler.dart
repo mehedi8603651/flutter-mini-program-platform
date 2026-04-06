@@ -5,10 +5,9 @@ import 'package:path/path.dart' as path;
 import 'package:shelf/shelf.dart';
 
 import 'backend_observability.dart';
+import 'backend_response_contracts.dart';
 import 'manifest_delivery_selection.dart';
 import 'secure_feedback_handler.dart';
-
-const String _jsonContentType = 'application/json; charset=utf-8';
 
 /// Creates a handler for serving published mini-program artifacts from disk.
 Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
@@ -53,13 +52,15 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
     }
 
     if (request.method != 'GET') {
-      response = _jsonResponse(
+      response = buildJsonResponse(
         statusCode: HttpStatus.methodNotAllowed,
-        body: <String, Object?>{
-          'errorCode': 'method_not_allowed',
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'backend_route_error',
+          statusCode: HttpStatus.methodNotAllowed,
+          errorCode: 'method_not_allowed',
+          message:
               'Only GET requests and documented secure POST routes are supported.',
-        },
+        ),
         traceId: traceId,
       );
       _logRequestCompletion(
@@ -73,11 +74,8 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
     }
 
     if (_matchesSegments(segments, const ['health'])) {
-      response = _jsonResponse(
-        body: <String, Object?>{
-          'status': 'ok',
-          'service': 'local_backend_service',
-        },
+      response = buildJsonResponse(
+        body: buildHealthBody(),
         traceId: traceId,
       );
       _logRequestCompletion(
@@ -199,12 +197,14 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
       return response;
     }
 
-    response = _jsonResponse(
+    response = buildJsonResponse(
       statusCode: HttpStatus.notFound,
-      body: <String, Object?>{
-        'errorCode': 'not_found',
-        'message': 'No backend route matches "${request.url.path}".',
-      },
+      body: buildBackendErrorBody(
+        responseType: 'backend_route_error',
+        statusCode: HttpStatus.notFound,
+        errorCode: 'not_found',
+        message: 'No backend route matches "${request.url.path}".',
+      ),
       traceId: traceId,
     );
     _logRequestCompletion(
@@ -249,12 +249,14 @@ class _PublishedArtifactRepository {
         context: context,
       );
       final responseBody = Map<String, Object?>.from(selection.manifestJson)
-        ..['deliveryMetadata'] = <String, Object?>{
-          ...selection.decision.toJson(),
-          'traceId': traceId,
-        };
+        ..['deliveryMetadata'] = buildManifestDeliveryMetadata(
+          metadata: <String, Object?>{
+            ...selection.decision.toJson(),
+            'traceId': traceId,
+          },
+      );
       final headers = <String, String>{
-        HttpHeaders.contentTypeHeader: _jsonContentType,
+        HttpHeaders.contentTypeHeader: backendJsonContentType,
         'x-mini-program-id': miniProgramId,
         'x-mini-program-version': selection.version,
         'x-mini-program-selection-mode': selection.decision.selectionMode,
@@ -297,13 +299,15 @@ class _PublishedArtifactRepository {
         },
       );
 
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: error.statusCode,
-        body: <String, Object?>{
-          'errorCode': error.errorCode,
-          'message': error.message,
-          if (error.details.isNotEmpty) 'details': error.details,
-        },
+        body: buildBackendErrorBody(
+          responseType: 'manifest_delivery_error',
+          statusCode: error.statusCode,
+          errorCode: error.errorCode,
+          message: error.message,
+          details: error.details.isNotEmpty ? error.details : null,
+        ),
         traceId: traceId,
       );
     }
@@ -384,8 +388,11 @@ class _PublishedArtifactRepository {
       },
     );
 
-    return _jsonResponse(
-      body: report.toJson(),
+    return buildJsonResponse(
+      body: buildInspectionBody(
+        body: report.toJson()
+          ..['traceId'] = traceId,
+      ),
       traceId: traceId,
       extraHeaders: <String, String>{
         'x-debug-route': 'manifest_decision_inspect',
@@ -458,12 +465,14 @@ class _PublishedArtifactRepository {
 
     final file = File(normalizedPath);
     if (!await file.exists()) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.notFound,
-        body: <String, Object?>{
-          'errorCode': 'artifact_not_found',
-          'message': notFoundMessage,
-        },
+        body: buildBackendErrorBody(
+          responseType: 'artifact_error',
+          statusCode: HttpStatus.notFound,
+          errorCode: 'artifact_not_found',
+          message: notFoundMessage,
+        ),
         traceId: traceId,
       );
     }
@@ -475,18 +484,20 @@ class _PublishedArtifactRepository {
       return Response.ok(
         rawJson,
         headers: withTraceHeaders(<String, String>{
-          HttpHeaders.contentTypeHeader: _jsonContentType,
+          HttpHeaders.contentTypeHeader: backendJsonContentType,
           ...extraHeaders,
         }, traceId: traceId),
       );
     } on FormatException catch (error) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.internalServerError,
-        body: <String, Object?>{
-          'errorCode': 'invalid_backend_json',
-          'message': 'Stored backend JSON is malformed.',
-          'details': error.message,
-        },
+        body: buildBackendErrorBody(
+          responseType: 'artifact_error',
+          statusCode: HttpStatus.internalServerError,
+          errorCode: 'invalid_backend_json',
+          message: 'Stored backend JSON is malformed.',
+          details: <String, Object?>{'reason': error.message},
+        ),
         traceId: traceId,
       );
     }
@@ -676,25 +687,14 @@ void _logRequestCompletion({
 }
 
 Response _badRequest(String message, String traceId) {
-  return _jsonResponse(
+  return buildJsonResponse(
     statusCode: HttpStatus.badRequest,
-    body: <String, Object?>{'errorCode': 'invalid_request', 'message': message},
+    body: buildBackendErrorBody(
+      responseType: 'request_error',
+      statusCode: HttpStatus.badRequest,
+      errorCode: 'invalid_request',
+      message: message,
+    ),
     traceId: traceId,
-  );
-}
-
-Response _jsonResponse({
-  int statusCode = HttpStatus.ok,
-  required Map<String, Object?> body,
-  required String traceId,
-  Map<String, String> extraHeaders = const <String, String>{},
-}) {
-  return Response(
-    statusCode,
-    body: jsonEncode(withTraceId(body, traceId: traceId)),
-    headers: withTraceHeaders(<String, String>{
-      HttpHeaders.contentTypeHeader: _jsonContentType,
-      ...extraHeaders,
-    }, traceId: traceId),
   );
 }

@@ -138,6 +138,8 @@ void main() {
 
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'health');
+    expect(body['statusCode'], HttpStatus.ok);
     expect(body['status'], 'ok');
     expect(body['service'], 'local_backend_service');
   });
@@ -231,6 +233,8 @@ void main() {
 
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'manifest_decision_inspection');
+    expect(body['statusCode'], HttpStatus.ok);
     expect(body['outcome'], 'resolved');
     expect(body['simulatedStatusCode'], HttpStatus.ok);
     expect(
@@ -350,6 +354,8 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['traceId'], response.headers['x-backend-trace-id']);
+    expect(body['responseType'], 'secure_api_result');
+    expect(body['statusCode'], HttpStatus.created);
     expect(body['status'], 'accepted');
     expect(body['endpoint'], 'feedback/submit');
     expect(body['hostApp'], 'super_app_host');
@@ -357,6 +363,11 @@ void main() {
     expect(body['tenantId'], 'internal-demo');
     expect(body['flow'], 'portable_feedback');
     expect(body['submissionId'], startsWith('super_app_host_'));
+    expect(body['result'], isA<Map<String, dynamic>>());
+    expect(
+      (body['result'] as Map<String, dynamic>)['submissionId'],
+      body['submissionId'],
+    );
   });
 
   test('returns 401 when secure feedback headers are missing', () async {
@@ -380,8 +391,11 @@ void main() {
     expect(response.statusCode, HttpStatus.unauthorized);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'secure_api_error');
+    expect(body['statusCode'], HttpStatus.unauthorized);
     expect(body['errorCode'], MiniProgramErrorCodes.secureApiUnauthorized);
     expect(body['traceId'], response.headers['x-backend-trace-id']);
+    expect((body['error'] as Map<String, dynamic>)['code'], body['errorCode']);
     expect(
       (body['details'] as Map<String, dynamic>)['missingHeaders'],
       containsAll(<String>[
@@ -416,6 +430,7 @@ void main() {
     expect(response.statusCode, HttpStatus.forbidden);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'secure_api_error');
     expect(body['errorCode'], MiniProgramErrorCodes.secureApiForbidden);
     expect(
       (body['details'] as Map<String, dynamic>)['hostApp'],
@@ -480,6 +495,7 @@ void main() {
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['errorCode'], MiniProgramErrorCodes.secureApiForbidden);
     expect((body['details'] as Map<String, dynamic>)['reason'], 'user_blocked');
+    expect((body['error'] as Map<String, dynamic>)['code'], body['errorCode']);
   });
 
   test('returns 400 when secure feedback message is too short', () async {
@@ -594,8 +610,11 @@ void main() {
     expect(response.statusCode, HttpStatus.preconditionFailed);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'manifest_delivery_error');
+    expect(body['statusCode'], HttpStatus.preconditionFailed);
     expect(body['errorCode'], 'host_not_enabled');
     expect(body['traceId'], response.headers['x-backend-trace-id']);
+    expect((body['error'] as Map<String, dynamic>)['code'], body['errorCode']);
   });
 
   test('returns 412 when a matching rollout rule is disabled', () async {
@@ -713,6 +732,8 @@ void main() {
 
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'manifest_decision_inspection');
+    expect(body['statusCode'], HttpStatus.ok);
     expect(body['outcome'], 'rejected');
     expect(body['simulatedStatusCode'], HttpStatus.preconditionFailed);
     expect(
@@ -774,6 +795,8 @@ void main() {
     expect(response.statusCode, HttpStatus.notFound);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'manifest_delivery_error');
+    expect(body['statusCode'], HttpStatus.notFound);
     expect(body['errorCode'], 'artifact_not_found');
   });
 
@@ -790,6 +813,8 @@ void main() {
     expect(response.statusCode, HttpStatus.badRequest);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'request_error');
+    expect(body['statusCode'], HttpStatus.badRequest);
     expect(body['errorCode'], 'invalid_request');
   });
 }

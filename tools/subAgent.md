@@ -42,4 +42,4 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
 - `validate_delivery.ps1`
   - Wraps the Dart delivery validator in `packages/mini_program_tooling`.
   - Validates authored manifests, published backend manifests/screens, rollout
-    rules, and capability policies before runtime.
+    rules, capability policies, and secure API policies before runtime.

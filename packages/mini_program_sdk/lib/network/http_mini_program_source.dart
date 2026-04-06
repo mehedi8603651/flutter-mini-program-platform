@@ -105,9 +105,13 @@ class HttpMiniProgramSource implements MiniProgramSource {
     required http.Response response,
   }) {
     final decodedBody = _tryDecodeJsonObject(response.body);
-    final errorCode = decodedBody?['errorCode']?.toString();
+    final nestedError = _tryReadNestedError(decodedBody);
+    final errorCode =
+        decodedBody?['errorCode']?.toString() ??
+        nestedError?['code']?.toString();
     final message =
         decodedBody?['message']?.toString() ??
+        nestedError?['message']?.toString() ??
         'Failed to load $resourceLabel from "$uri" (HTTP ${response.statusCode}).';
 
     return MiniProgramSourceException(
@@ -142,6 +146,11 @@ class HttpMiniProgramSource implements MiniProgramSource {
     Map<String, String> responseHeaders,
   ) {
     final details = <String, dynamic>{};
+
+    final responseType = decodedBody?['responseType']?.toString();
+    if (responseType != null && responseType.isNotEmpty) {
+      details['responseType'] = responseType;
+    }
 
     final traceId =
         decodedBody?['traceId']?.toString() ??
@@ -182,7 +191,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
       return details;
     }
 
-    final rawDetails = decodedBody['details'];
+    final rawDetails = decodedBody['details'] ?? _tryReadNestedError(decodedBody)?['details'];
     if (rawDetails is Map<String, dynamic>) {
       details.addAll(rawDetails);
       return details;
@@ -200,5 +209,21 @@ class HttpMiniProgramSource implements MiniProgramSource {
     }
 
     return details;
+  }
+
+  Map<String, dynamic>? _tryReadNestedError(Map<String, dynamic>? decodedBody) {
+    if (decodedBody == null) {
+      return null;
+    }
+
+    final rawError = decodedBody['error'];
+    if (rawError is Map<String, dynamic>) {
+      return rawError;
+    }
+    if (rawError is Map) {
+      return rawError.map((key, value) => MapEntry(key.toString(), value));
+    }
+
+    return null;
   }
 }

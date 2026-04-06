@@ -13,6 +13,7 @@ Validates authored manifests plus backend delivery files before runtime:
 - `backend/api/screens/...`
 - `backend/api/rollout-rules/...`
 - `backend/api/capability-policies/...`
+- `backend/api/secure-api-policies/...`
 
 Example:
 

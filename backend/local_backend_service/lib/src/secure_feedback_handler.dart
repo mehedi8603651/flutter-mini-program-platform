@@ -6,8 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:shelf/shelf.dart';
 
 import 'backend_observability.dart';
-
-const String _jsonContentType = 'application/json; charset=utf-8';
+import 'backend_response_contracts.dart';
 
 class SecureFeedbackHandler {
   const SecureFeedbackHandler({required this.apiRootPath});
@@ -21,13 +20,16 @@ class SecureFeedbackHandler {
     final policy = await _loadPolicy();
 
     if (!policy.allowedMethods.contains(request.method.toUpperCase())) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.methodNotAllowed,
-        body: <String, Object?>{
-          'errorCode': 'method_not_allowed',
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.methodNotAllowed,
+          errorCode: 'method_not_allowed',
+          message:
               'Secure feedback submission only supports ${policy.allowedMethods.join(', ')}.',
-        },
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
@@ -46,87 +48,105 @@ class SecureFeedbackHandler {
     ];
 
     if (missingHeaders.isNotEmpty) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.unauthorized,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.unauthorized,
+          errorCode: MiniProgramErrorCodes.secureApiUnauthorized,
+          message:
               'Missing required secure API headers: ${missingHeaders.join(', ')}.',
-          'details': <String, Object?>{'missingHeaders': missingHeaders},
-        },
+          details: <String, Object?>{'missingHeaders': missingHeaders},
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     if (!authorization!.startsWith('Bearer ')) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.unauthorized,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
-          'message': 'Authorization header must use the Bearer scheme.',
-        },
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.unauthorized,
+          errorCode: MiniProgramErrorCodes.secureApiUnauthorized,
+          message: 'Authorization header must use the Bearer scheme.',
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     final accessToken = authorization.substring('Bearer '.length).trim();
     if (accessToken.isEmpty) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.unauthorized,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
-          'message': 'Authorization header must include a bearer token.',
-        },
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.unauthorized,
+          errorCode: MiniProgramErrorCodes.secureApiUnauthorized,
+          message: 'Authorization header must include a bearer token.',
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     if (_isExpiredToken(accessToken, policy)) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.unauthorized,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiSessionExpired,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.unauthorized,
+          errorCode: MiniProgramErrorCodes.secureApiSessionExpired,
+          message:
               'The host session has expired for secure feedback submission.',
-          'details': <String, Object?>{
+          details: <String, Object?>{
             'hostApp': hostApp,
             'hostUserId': hostUserId,
           },
-        },
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     if (!policy.allowedHosts.contains(hostApp)) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.forbidden,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiForbidden,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.forbidden,
+          errorCode: MiniProgramErrorCodes.secureApiForbidden,
+          message:
               'Host "$hostApp" is not allowlisted for secure feedback submission.',
-          'details': <String, Object?>{
+          details: <String, Object?>{
             'hostApp': hostApp,
             'reason': 'host_not_allowlisted',
             'allowedHosts': policy.allowedHosts,
           },
-        },
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     if (policy.blockedUserIds.contains(hostUserId)) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.forbidden,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiForbidden,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.forbidden,
+          errorCode: MiniProgramErrorCodes.secureApiForbidden,
+          message:
               'User "$hostUserId" is not allowed to submit secure feedback.',
-          'details': <String, Object?>{
+          details: <String, Object?>{
             'hostApp': hostApp,
             'hostUserId': hostUserId,
             'reason': 'user_blocked',
           },
-        },
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
@@ -134,6 +154,7 @@ class SecureFeedbackHandler {
     final requestBodyOrResponse = await _readJsonObject(
       request,
       traceId: traceId,
+      endpoint: policy.endpoint,
     );
     if (requestBodyOrResponse is Response) {
       return requestBodyOrResponse;
@@ -149,47 +170,56 @@ class SecureFeedbackHandler {
       if (message == null) 'message',
     ];
     if (missingFields.isNotEmpty) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.badRequest,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.badRequest,
+          errorCode: MiniProgramErrorCodes.secureApiInvalidPayload,
+          message:
               'Secure feedback submission requires: ${missingFields.join(', ')}.',
-          'details': <String, Object?>{'missingFields': missingFields},
-        },
+          details: <String, Object?>{'missingFields': missingFields},
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     if (!policy.allowedSources.contains(source)) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.forbidden,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiForbidden,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.forbidden,
+          errorCode: MiniProgramErrorCodes.secureApiForbidden,
+          message:
               'Source "$source" is not allowlisted for secure feedback submission.',
-          'details': <String, Object?>{
+          details: <String, Object?>{
             'source': source,
             'reason': 'source_not_allowlisted',
             'allowedSources': policy.allowedSources,
           },
-        },
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
 
     if (message!.length < policy.minimumMessageLength) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.badRequest,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiValidationFailed,
-          'message':
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.badRequest,
+          errorCode: MiniProgramErrorCodes.secureApiValidationFailed,
+          message:
               'Feedback message must be at least ${policy.minimumMessageLength} characters.',
-          'details': <String, Object?>{
+          details: <String, Object?>{
             'field': 'message',
             'minimumLength': policy.minimumMessageLength,
           },
-        },
+          extra: <String, Object?>{'endpoint': policy.endpoint},
+        ),
         traceId: traceId,
       );
     }
@@ -214,24 +244,27 @@ class SecureFeedbackHandler {
       },
     );
 
-    return _jsonResponse(
+    return buildJsonResponse(
       statusCode: HttpStatus.created,
-      body: <String, Object?>{
-        'message': 'Secure feedback submission recorded.',
-        'submissionId': submissionId,
-        'status': status,
-        'endpoint': policy.endpoint,
-        'hostApp': hostApp,
-        'hostVersion': hostVersion,
-        'userId': hostUserId,
-        if (tenantId != null) 'tenantId': tenantId,
-        'source': source,
-        if (flow != null) 'flow': flow,
-        'messagePreview': message.substring(
-          0,
-          message.length > 80 ? 80 : message.length,
-        ),
-      },
+      body: buildSecureApiSuccessBody(
+        statusCode: HttpStatus.created,
+        endpoint: policy.endpoint,
+        message: 'Secure feedback submission recorded.',
+        result: <String, Object?>{
+          'submissionId': submissionId,
+          'status': status,
+          'hostApp': hostApp,
+          'hostVersion': hostVersion,
+          'userId': hostUserId,
+          if (tenantId != null) 'tenantId': tenantId,
+          'source': source,
+          if (flow != null) 'flow': flow,
+          'messagePreview': message.substring(
+            0,
+            message.length > 80 ? 80 : message.length,
+          ),
+        },
+      ),
       traceId: traceId,
       extraHeaders: <String, String>{'x-secure-endpoint': policy.endpoint},
     );
@@ -260,6 +293,7 @@ class SecureFeedbackHandler {
   Future<Object> _readJsonObject(
     Request request, {
     required String traceId,
+    required String endpoint,
   }) async {
     try {
       final decoded = jsonDecode(await request.readAsString());
@@ -269,22 +303,28 @@ class SecureFeedbackHandler {
       if (decoded is Map) {
         return decoded.map((key, value) => MapEntry(key.toString(), value));
       }
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.badRequest,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
-          'message': 'Secure feedback submission body must be a JSON object.',
-        },
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.badRequest,
+          errorCode: MiniProgramErrorCodes.secureApiInvalidPayload,
+          message: 'Secure feedback submission body must be a JSON object.',
+          extra: <String, Object?>{'endpoint': endpoint},
+        ),
         traceId: traceId,
       );
     } on FormatException catch (error) {
-      return _jsonResponse(
+      return buildJsonResponse(
         statusCode: HttpStatus.badRequest,
-        body: <String, Object?>{
-          'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
-          'message': 'Secure feedback submission body is not valid JSON.',
-          'details': <String, Object?>{'reason': error.message},
-        },
+        body: buildBackendErrorBody(
+          responseType: 'secure_api_error',
+          statusCode: HttpStatus.badRequest,
+          errorCode: MiniProgramErrorCodes.secureApiInvalidPayload,
+          message: 'Secure feedback submission body is not valid JSON.',
+          details: <String, Object?>{'reason': error.message},
+          extra: <String, Object?>{'endpoint': endpoint},
+        ),
         traceId: traceId,
       );
     }
@@ -363,20 +403,4 @@ String? _stringField(Map<String, dynamic> json, String key) {
 
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
-}
-
-Response _jsonResponse({
-  required Map<String, Object?> body,
-  int statusCode = HttpStatus.ok,
-  required String traceId,
-  Map<String, String> extraHeaders = const <String, String>{},
-}) {
-  return Response(
-    statusCode,
-    body: jsonEncode(withTraceId(body, traceId: traceId)),
-    headers: withTraceHeaders(<String, String>{
-      HttpHeaders.contentTypeHeader: _jsonContentType,
-      ...extraHeaders,
-    }, traceId: traceId),
-  );
 }

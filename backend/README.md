@@ -45,6 +45,7 @@ The current rollout sample uses two lanes:
 - `feedback_form` now proves capability-aware delivery for `secure_api`
 - latest-manifest responses now include request trace and decision metadata for local operability debugging
 - the local backend service now logs request completion and decision context to stdout with a per-request trace ID
+- secure API and backend error responses now use stable local response envelopes with `responseType`, `statusCode`, `message`, `traceId`, and nested `error` or `result` payloads where applicable
 
 ## Refresh sample files
 
@@ -67,6 +68,13 @@ Validate one mini-program only:
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1 -MiniProgramId profile_center
 ```
+
+The validator now also checks:
+
+- secure API policy file shape
+- endpoint-to-file-name consistency
+- allowlisted source mini-program IDs
+- minimum secure payload requirements
 
 ## Run the real local backend service
 
@@ -262,8 +270,13 @@ The current local auth/failure sample also supports:
 
 Secure endpoint responses also include:
 
+- `responseType`
+- `statusCode`
+- `endpoint`
 - `traceId` in the JSON body
 - `x-backend-trace-id` in response headers
+- nested `result` on success
+- nested `error` on failure
 
 This makes it easier to correlate host fallback diagnostics with local backend
 logs while you are still running the platform entirely on your machine.

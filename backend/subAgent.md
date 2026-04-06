@@ -44,6 +44,7 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
 - `feedback_form` delivery now proves capability-aware `secure_api` rollout checks
 - `POST /api/secure/feedback/submit` now provides a real local secure endpoint backed by `api/secure-api-policies/feedback_submit.json`
 - the secure endpoint now enforces local auth failure paths such as expired bearer tokens and blocked demo users
+- secure API and backend error responses now expose stable envelope fields such as `responseType`, `statusCode`, `traceId`, and nested `error`/`result`
 - latest-manifest responses now include traceable delivery metadata such as `decisionReason`, `declaredDefaultVersion`, and `evaluatedRuleIds`
 - the local backend now emits per-request stdout logs with a trace ID and route/result summary
 - `/api/debug/manifests/:id/decision` now exposes local inspection output for rule matching, policy summary, and rejection reasons
