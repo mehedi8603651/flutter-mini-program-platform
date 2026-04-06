@@ -12,6 +12,7 @@ Generates a buildable starter mini-program under `mini_programs/<id>/` with:
 - `README.md`
 - `pubspec.yaml`
 - `lib/default_stac_options.dart`
+- `lib/host_action_helpers.dart`
 - `stac/screens/<id>_home.dart`
 - `stac/components/`
 - `stac/theme/`
@@ -21,6 +22,7 @@ Starter behavior:
 
 - analytics starter button is log-only by design
 - native starter button uses the shared demo route alias `profile_editor`
+- starter screens call generated helper functions instead of hand-writing raw `jsonData` action maps
 - authors should replace that demo route alias before shipping a real mini-program
 
 Example:

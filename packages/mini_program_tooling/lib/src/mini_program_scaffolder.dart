@@ -146,6 +146,11 @@ class MiniProgramScaffolder {
       ),
       p.join(
         miniProgramRootPath,
+        'lib',
+        'host_action_helpers.dart',
+      ): _buildHostActionHelpers(),
+      p.join(
+        miniProgramRootPath,
         'stac',
         'screens',
         '$entryScreenId.dart',
@@ -155,6 +160,7 @@ class MiniProgramScaffolder {
         capabilities: orderedCapabilities,
         entryScreenId: entryScreenId,
         screenFunctionName: screenFunctionName,
+        packageName: packageName,
       ),
       p.join(miniProgramRootPath, 'stac', 'components', '.gitkeep'): '',
       p.join(miniProgramRootPath, 'stac', 'theme', '.gitkeep'): '',
@@ -359,6 +365,7 @@ StacOptions get defaultStacOptions => const StacOptions(
     final notes = <String>[
       '- edit `manifest.json` before publish',
       '- replace the starter copy in `stac/screens/$entryScreenId.dart`',
+      '- use `lib/host_action_helpers.dart` for readable host action helpers instead of hand-writing raw `jsonData` maps',
       '- add reusable UI blocks under `stac/components/` as the flow grows',
     ];
 
@@ -396,6 +403,7 @@ ${notes.join('\n')}
 
 - `assets/`
 - `lib/default_stac_options.dart`
+- `lib/host_action_helpers.dart`
 - `manifest.json`
 - `pubspec.yaml`
 - `stac/screens/$entryScreenId.dart`
@@ -451,6 +459,7 @@ For a local proof, add the mini-program to a host catalog and then run one of:
     required List<String> capabilities,
     required String entryScreenId,
     required String screenFunctionName,
+    required String packageName,
   }) {
     final widgets = <String>[
       '''
@@ -520,6 +529,7 @@ For a local proof, add the mini-program to a host catalog and then run one of:
 
     return '''
 import 'package:stac_core/stac_core.dart';
+import 'package:$packageName/host_action_helpers.dart';
 
 @StacScreen(screenName: '$entryScreenId')
 StacWidget $screenFunctionName() {
@@ -541,20 +551,77 @@ ${widgets.join()}
 ''';
   }
 
+  String _buildHostActionHelpers() => '''
+import 'package:stac_core/stac_core.dart';
+
+/// Author-friendly wrappers around serializable host action payloads.
+StacAction hostTrackEventAction({
+  required String requestId,
+  required String name,
+  Map<String, dynamic> properties = const <String, dynamic>{},
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'hostAction',
+      'requestId': requestId,
+      'action': 'trackEvent',
+      'payload': <String, dynamic>{
+        'name': name,
+        'properties': properties,
+      },
+    },
+  );
+}
+
+StacAction hostOpenNativeScreenAction({
+  required String requestId,
+  required String route,
+  Map<String, dynamic> args = const <String, dynamic>{},
+  bool expectResult = false,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'hostAction',
+      'requestId': requestId,
+      'action': 'openNativeScreen',
+      'payload': <String, dynamic>{
+        'route': route,
+        'args': args,
+        'expectResult': expectResult,
+      },
+    },
+  );
+}
+
+StacAction hostCallSecureApiAction({
+  required String requestId,
+  required String endpoint,
+  String method = 'POST',
+  Map<String, dynamic> body = const <String, dynamic>{},
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'hostAction',
+      'requestId': requestId,
+      'action': 'callSecureApi',
+      'payload': <String, dynamic>{
+        'endpoint': endpoint,
+        'method': method,
+        'body': body,
+      },
+    },
+  );
+}
+''';
+
   String _buildTrackEventButton(String miniProgramId) => '''
             StacFilledButton(
-              onPressed: const StacAction(
-                jsonData: {
-                  'actionType': 'hostAction',
-                  'requestId': '$miniProgramId-track-open',
-                  'action': 'trackEvent',
-                  'payload': {
-                    'name': '${miniProgramId}_opened',
-                    'properties': {
-                      'source': '$miniProgramId',
-                      'surface': '$miniProgramId',
-                    },
-                  },
+              onPressed: hostTrackEventAction(
+                requestId: '$miniProgramId-track-open',
+                name: '${miniProgramId}_opened',
+                properties: const <String, dynamic>{
+                  'source': '$miniProgramId',
+                  'surface': '$miniProgramId',
                 },
               ),
               child: StacText(data: 'Track starter event (logs only)'),
@@ -570,20 +637,14 @@ ${widgets.join()}
   String _buildOpenNativeScreenButton(String miniProgramId) => '''
             StacSizedBox(height: 12),
             StacOutlinedButton(
-              onPressed: const StacAction(
-                jsonData: {
-                  'actionType': 'hostAction',
-                  'requestId': '$miniProgramId-open-follow-up',
-                  'action': 'openNativeScreen',
-                  'payload': {
-                    'route': 'profile_editor',
-                    'args': {
-                      'source': '$miniProgramId',
-                      'userId': 'starter_demo_user',
-                    },
-                    'expectResult': true,
-                  },
+              onPressed: hostOpenNativeScreenAction(
+                requestId: '$miniProgramId-open-follow-up',
+                route: 'profile_editor',
+                args: const <String, dynamic>{
+                  'source': '$miniProgramId',
+                  'userId': 'starter_demo_user',
                 },
+                expectResult: true,
               ),
               child: StacText(data: 'Open sample native screen'),
             ),
@@ -592,19 +653,12 @@ ${widgets.join()}
   String _buildSecureApiButton(String miniProgramId) => '''
             StacSizedBox(height: 12),
             StacOutlinedButton(
-              onPressed: const StacAction(
-                jsonData: {
-                  'actionType': 'hostAction',
-                  'requestId': '$miniProgramId-secure-api',
-                  'action': 'callSecureApi',
-                  'payload': {
-                    'endpoint': '$miniProgramId/submit',
-                    'method': 'POST',
-                    'body': {
-                      'source': '$miniProgramId',
-                      'message': 'Starter secure payload from $miniProgramId.',
-                    },
-                  },
+              onPressed: hostCallSecureApiAction(
+                requestId: '$miniProgramId-secure-api',
+                endpoint: '$miniProgramId/submit',
+                body: const <String, dynamic>{
+                  'source': '$miniProgramId',
+                  'message': 'Starter secure payload from $miniProgramId.',
                 },
               ),
               child: StacText(data: 'Call secure API'),

@@ -39,6 +39,9 @@ void main() {
       final screenFile = File(
         p.join(miniProgramRoot, 'stac', 'screens', 'coupon_center_home.dart'),
       );
+      final helperFile = File(
+        p.join(miniProgramRoot, 'lib', 'host_action_helpers.dart'),
+      );
 
       expect(result.miniProgramId, 'coupon_center');
       expect(manifest['entry'], 'coupon_center_home');
@@ -53,13 +56,27 @@ void main() {
       );
 
       final screenSource = await screenFile.readAsString();
+      final helperSource = await helperFile.readAsString();
       expect(screenSource, contains("@StacScreen(screenName: 'coupon_center_home')"));
-      expect(screenSource, contains("'action': 'trackEvent'"));
+      expect(
+        screenSource,
+        contains(
+          "import 'package:coupon_center_mini_program/host_action_helpers.dart';",
+        ),
+      );
+      expect(screenSource, contains('hostTrackEventAction('));
       expect(screenSource, contains('Track starter event (logs only)'));
-      expect(screenSource, contains("'action': 'openNativeScreen'"));
-      expect(screenSource, contains("'route': 'profile_editor'"));
+      expect(screenSource, contains('hostOpenNativeScreenAction('));
       expect(screenSource, contains('Open sample native screen'));
-      expect(screenSource, isNot(contains("'action': 'callSecureApi'")));
+      expect(screenSource, isNot(contains('jsonData:')));
+      expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
+      expect(helperSource, contains('StacAction hostTrackEventAction('));
+      expect(helperSource, contains("'action': 'trackEvent'"));
+      expect(helperSource, contains('StacAction hostOpenNativeScreenAction('));
+      expect(helperSource, contains("'action': 'openNativeScreen'"));
+      expect(helperSource, contains("'route': route"));
+      expect(helperSource, contains('StacAction hostCallSecureApiAction('));
+      expect(helperSource, contains("'action': 'callSecureApi'"));
 
       expect(
         await File(p.join(miniProgramRoot, 'pubspec.yaml')).exists(),
@@ -71,6 +88,7 @@ void main() {
         ).exists(),
         isTrue,
       );
+      expect(await helperFile.exists(), isTrue);
       expect(result.createdPaths, isNotEmpty);
     });
 
@@ -91,6 +109,9 @@ void main() {
       final screenSource = await File(
         p.join(result.miniProgramRootPath, 'stac', 'screens', 'claim_center_home.dart'),
       ).readAsString();
+      final helperSource = await File(
+        p.join(result.miniProgramRootPath, 'lib', 'host_action_helpers.dart'),
+      ).readAsString();
 
       expect(
         manifest['requiredCapabilities'],
@@ -101,8 +122,9 @@ void main() {
             as Map<String, dynamic>,
         containsPair('mode', 'noCache'),
       );
-      expect(screenSource, contains("'action': 'callSecureApi'"));
-      expect(screenSource, isNot(contains("'action': 'openNativeScreen'")));
+      expect(screenSource, contains('hostCallSecureApiAction('));
+      expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
+      expect(helperSource, contains("'action': 'callSecureApi'"));
     });
 
     test('supports standalone output root outside repo mini_programs', () async {

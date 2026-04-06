@@ -39,6 +39,7 @@ The scaffold creates:
 - `mini_programs/<id>/README.md`
 - `mini_programs/<id>/pubspec.yaml`
 - `mini_programs/<id>/lib/default_stac_options.dart`
+- `mini_programs/<id>/lib/host_action_helpers.dart`
 - `mini_programs/<id>/stac/screens/<id>_home.dart`
 - `mini_programs/<id>/stac/components/`
 - `mini_programs/<id>/stac/theme/`
@@ -48,6 +49,7 @@ The scaffold creates:
 
 - Write portable UI in `stac/screens/` and `stac/components/`.
 - Do not author normal host Flutter pages for mini-program UI.
+- Use the generated `lib/host_action_helpers.dart` wrappers instead of hand-writing raw `StacAction(jsonData: ...)` maps when possible.
 - Keep native work behind approved `hostAction` payloads.
 - Only use declared manifest capabilities.
 - Replace starter demo route aliases and secure endpoints before shipping.
@@ -57,6 +59,7 @@ Current scaffold behavior:
 - `Track starter event (logs only)` writes to the host analytics log only
 - `Open sample native screen` uses the shared demo route alias `profile_editor`
 - the sample native route works in both current hosts, but it is only a starter demo and should be replaced in real flows
+- the generated helper wrappers still serialize the same JSON shape for backend delivery; authors just no longer need to hand-write it
 
 ## Current supported capability values
 
@@ -66,6 +69,28 @@ Current scaffold behavior:
 - `native_navigation`
 
 The scaffold only accepts these current contract wire values.
+
+## Starter action helper style
+
+The scaffolded screen now uses helper functions instead of raw action maps:
+
+```dart
+StacOutlinedButton(
+  onPressed: hostOpenNativeScreenAction(
+    requestId: 'coupon_center-open-follow-up',
+    route: 'profile_editor',
+    args: const <String, dynamic>{
+      'source': 'coupon_center',
+      'userId': 'starter_demo_user',
+    },
+    expectResult: true,
+  ),
+  child: StacText(data: 'Open sample native screen'),
+)
+```
+
+Those helpers still compile down to serializable `hostAction` JSON when you run
+the Stac build step.
 
 ## Build
 

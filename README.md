@@ -21,9 +21,9 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -OutputRoot D:\first-miniprogram
 ```
 
-The command generates the manifest, starter Stac screen, build config, README,
-and the expected `stac/components`, `stac/theme`, and `assets` folders under
-`mini_programs/<id>/`.
+The command generates the manifest, starter Stac screen, readable host action
+helpers, build config, README, and the expected `stac/components`,
+`stac/theme`, and `assets` folders under `mini_programs/<id>/`.
 
 Authoring guide:
 
