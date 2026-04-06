@@ -14,12 +14,14 @@ Future<void> main(List<String> arguments) async {
     )
     ..addOption(
       'repo-root',
-      defaultsTo: Directory.current.path,
       help: 'Repository root containing mini_programs/.',
     )
     ..addOption(
+      'mini-program-root',
+      help: 'Exact mini-program root path for standalone authoring.',
+    )
+    ..addOption(
       'id',
-      mandatory: true,
       help: 'Mini-program ID to build.',
     )
     ..addOption(
@@ -56,8 +58,9 @@ Future<void> main(List<String> arguments) async {
   try {
     final result = await const MiniProgramBuilder().build(
       MiniProgramBuildRequest(
-        repoRootPath: results.option('repo-root')!,
-        miniProgramId: results.option('id')!,
+        repoRootPath: results.option('repo-root'),
+        miniProgramId: results.option('id'),
+        miniProgramRootPath: results.option('mini-program-root'),
         stacCliScriptPath: results.option('stac-cli-script'),
         skipPubGet: results.flag('skip-pub-get'),
       ),
@@ -78,6 +81,7 @@ String _formatResult(MiniProgramBuildResult result) {
   final lines = <String>[
     'Built mini-program: ${result.miniProgramId}',
     'Root: ${result.miniProgramRootPath}',
+    if (result.repoRootPath != null) 'Repo root: ${result.repoRootPath}',
     'CLI source: ${result.cliSource}',
     'Command: ${result.invocation.join(' ')}',
     'Output directory: ${result.outputDirectoryPath}',

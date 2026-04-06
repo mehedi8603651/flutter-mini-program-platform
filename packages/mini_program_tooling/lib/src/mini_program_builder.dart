@@ -12,14 +12,16 @@ typedef ProcessRunner = Future<ProcessResult> Function(
 
 class MiniProgramBuildRequest {
   const MiniProgramBuildRequest({
-    required this.repoRootPath,
-    required this.miniProgramId,
+    this.repoRootPath,
+    this.miniProgramId,
+    this.miniProgramRootPath,
     this.stacCliScriptPath,
     this.skipPubGet = false,
   });
 
-  final String repoRootPath;
-  final String miniProgramId;
+  final String? repoRootPath;
+  final String? miniProgramId;
+  final String? miniProgramRootPath;
   final String? stacCliScriptPath;
   final bool skipPubGet;
 }
@@ -37,7 +39,7 @@ class MiniProgramBuildResult {
     required this.pubGetRan,
   });
 
-  final String repoRootPath;
+  final String? repoRootPath;
   final String miniProgramRootPath;
   final String miniProgramId;
   final String outputDirectoryPath;
@@ -77,11 +79,13 @@ class MiniProgramBuilder {
   final ProcessRunner _processRunner;
 
   Future<MiniProgramBuildResult> build(MiniProgramBuildRequest request) async {
-    final repoRootPath = p.normalize(p.absolute(request.repoRootPath));
-    final miniProgramRootPath = p.join(
-      repoRootPath,
-      'mini_programs',
-      request.miniProgramId,
+    final repoRootPath = request.repoRootPath == null
+        ? null
+        : p.normalize(p.absolute(request.repoRootPath!));
+    final miniProgramRootPath = _resolveMiniProgramRootPath(
+      repoRootPath: repoRootPath,
+      miniProgramId: request.miniProgramId,
+      miniProgramRootPath: request.miniProgramRootPath,
     );
     final miniProgramRootDir = Directory(miniProgramRootPath);
 
@@ -108,6 +112,21 @@ class MiniProgramBuilder {
     final manifest = jsonDecode(
       await File(manifestPath).readAsString(),
     ) as Map<String, dynamic>;
+    final resolvedMiniProgramId = '${manifest['id'] ?? ''}'.trim();
+    if (resolvedMiniProgramId.isEmpty) {
+      throw MiniProgramBuildException(
+        'Manifest is missing a usable id: $manifestPath',
+      );
+    }
+    if (request.miniProgramId != null &&
+        request.miniProgramId!.trim().isNotEmpty &&
+        request.miniProgramId != resolvedMiniProgramId) {
+      throw MiniProgramBuildException(
+        'Manifest id "$resolvedMiniProgramId" does not match requested id '
+        '"${request.miniProgramId}".',
+      );
+    }
+
     final entryScreenId = manifest['entry'] as String?;
     if (entryScreenId == null || entryScreenId.trim().isEmpty) {
       throw MiniProgramBuildException(
@@ -136,7 +155,8 @@ class MiniProgramBuilder {
         executable: 'dart',
         arguments: const <String>['pub', 'get'],
         workingDirectory: miniProgramRootPath,
-        failureLabel: 'dart pub get failed for ${request.miniProgramId}',
+        failureLabel:
+            'dart pub get failed for ${request.miniProgramId ?? miniProgramRootPath}',
       );
     }
 
@@ -145,7 +165,7 @@ class MiniProgramBuilder {
       arguments: command.arguments,
       workingDirectory: command.workingDirectory,
       environment: command.environment,
-      failureLabel: 'Stac build failed for ${request.miniProgramId}',
+      failureLabel: 'Stac build failed for $resolvedMiniProgramId',
     );
 
     if (!await File(entryScreenJsonPath).exists()) {
@@ -158,7 +178,7 @@ class MiniProgramBuilder {
     return MiniProgramBuildResult(
       repoRootPath: repoRootPath,
       miniProgramRootPath: miniProgramRootPath,
-      miniProgramId: request.miniProgramId,
+      miniProgramId: resolvedMiniProgramId,
       outputDirectoryPath: outputDirectoryPath,
       screensDirectoryPath: screensDirectoryPath,
       entryScreenJsonPath: entryScreenJsonPath,
@@ -192,7 +212,7 @@ class MiniProgramBuilder {
   }
 
   Future<_BuildCommand> _resolveBuildCommand({
-    required String repoRootPath,
+    required String? repoRootPath,
     required String miniProgramRootPath,
     required String? stacCliScriptPath,
   }) async {
@@ -214,46 +234,48 @@ class MiniProgramBuilder {
           '--project',
           miniProgramRootPath,
         ],
-        workingDirectory: repoRootPath,
+        workingDirectory: repoRootPath ?? miniProgramRootPath,
         environment: _stacCliEnvironment(),
       );
     }
 
-    final vendoredScriptPath = p.join(
-      repoRootPath,
-      'stac-dev',
-      'packages',
-      'stac_cli',
-      'bin',
-      'stac_cli.dart',
-    );
-    if (await File(vendoredScriptPath).exists()) {
-      return _BuildCommand(
-        source: 'vendored_script',
-        executable: 'dart',
-        arguments: <String>[
-          'run',
-          vendoredScriptPath,
-          'build',
-          '--project',
-          miniProgramRootPath,
-        ],
-        workingDirectory: repoRootPath,
-        environment: _stacCliEnvironment(),
+    if (repoRootPath != null) {
+      final vendoredScriptPath = p.join(
+        repoRootPath,
+        'stac-dev',
+        'packages',
+        'stac_cli',
+        'bin',
+        'stac_cli.dart',
       );
+      if (await File(vendoredScriptPath).exists()) {
+        return _BuildCommand(
+          source: 'vendored_script',
+          executable: 'dart',
+          arguments: <String>[
+            'run',
+            vendoredScriptPath,
+            'build',
+            '--project',
+            miniProgramRootPath,
+          ],
+          workingDirectory: repoRootPath,
+          environment: _stacCliEnvironment(),
+        );
+      }
     }
 
     final globalStacResult = await _processRunner(
       'stac',
       const <String>['--version'],
-      workingDirectory: repoRootPath,
+      workingDirectory: repoRootPath ?? miniProgramRootPath,
     );
     if (globalStacResult.exitCode == 0) {
       return _BuildCommand(
         source: 'global_stac',
         executable: 'stac',
         arguments: <String>['build', '--project', miniProgramRootPath],
-        workingDirectory: repoRootPath,
+        workingDirectory: repoRootPath ?? miniProgramRootPath,
         environment: _stacCliEnvironment(),
       );
     }
@@ -324,6 +346,24 @@ class MiniProgramBuilder {
     }
 
     return environment;
+  }
+
+  String _resolveMiniProgramRootPath({
+    required String? repoRootPath,
+    required String? miniProgramId,
+    required String? miniProgramRootPath,
+  }) {
+    if (miniProgramRootPath != null && miniProgramRootPath.trim().isNotEmpty) {
+      return p.normalize(p.absolute(miniProgramRootPath.trim()));
+    }
+
+    if (repoRootPath == null || miniProgramId == null || miniProgramId.trim().isEmpty) {
+      throw const MiniProgramBuildException(
+        'Provide either --mini-program-root or both --repo-root and --id.',
+      );
+    }
+
+    return p.join(repoRootPath, 'mini_programs', miniProgramId);
   }
 }
 

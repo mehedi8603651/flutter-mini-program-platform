@@ -1,6 +1,7 @@
 param(
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
     [string]$MiniProgramId,
+    [string]$MiniProgramRoot,
     [ValidateSet("text", "json")]
     [string]$Output = "text"
 )
@@ -16,6 +17,9 @@ $arguments = @(
 
 if ($MiniProgramId) {
     $arguments += @("--mini-program", $MiniProgramId)
+}
+if ($MiniProgramRoot) {
+    $arguments += @("--mini-program-root", $MiniProgramRoot)
 }
 
 Push-Location $RepoRoot

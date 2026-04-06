@@ -29,7 +29,7 @@ void main() {
 
     test('builds, validates, and publishes a mini-program', () async {
       final miniProgramId = 'coupon_center';
-      final miniProgramRoot = p.join(tempDir.path, 'mini_programs', miniProgramId);
+      final miniProgramRoot = p.join(tempDir.path, 'standalone_coupon_center');
       await _writeMiniProgramFixture(
         miniProgramRoot,
         miniProgramId: miniProgramId,
@@ -42,7 +42,7 @@ void main() {
       final result = await const MiniProgramPublisher().publish(
         MiniProgramPublishRequest(
           repoRootPath: tempDir.path,
-          miniProgramId: miniProgramId,
+          miniProgramRootPath: miniProgramRoot,
           stacCliScriptPath: fakeCliPath,
           skipBuildPubGet: true,
         ),
@@ -72,7 +72,7 @@ void main() {
 
     test('stops before publish when pre-publish validation has errors', () async {
       final miniProgramId = 'coupon_center';
-      final miniProgramRoot = p.join(tempDir.path, 'mini_programs', miniProgramId);
+      final miniProgramRoot = p.join(tempDir.path, 'standalone_coupon_center');
       await _writeMiniProgramFixture(
         miniProgramRoot,
         miniProgramId: miniProgramId,
@@ -98,7 +98,7 @@ void main() {
         () => const MiniProgramPublisher().publish(
           MiniProgramPublishRequest(
             repoRootPath: tempDir.path,
-            miniProgramId: miniProgramId,
+            miniProgramRootPath: miniProgramRoot,
             stacCliScriptPath: fakeCliPath,
             skipBuildPubGet: true,
           ),

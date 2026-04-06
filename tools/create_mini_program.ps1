@@ -3,6 +3,7 @@ param(
     [string]$MiniProgramId,
 
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
+    [string]$OutputRoot,
     [string]$Title,
     [string]$Description,
     [string]$Capabilities = "analytics,native_navigation",
@@ -16,12 +17,16 @@ $toolPath = Join-Path $RepoRoot "packages\mini_program_tooling\bin\create_mini_p
 $arguments = @(
     "run",
     $toolPath,
-    "--repo-root", $RepoRoot,
     "--id", $MiniProgramId,
     "--capabilities", $Capabilities,
     "--output", $Output
 )
 
+if ($OutputRoot) {
+    $arguments += @("--output-root", $OutputRoot)
+} else {
+    $arguments += @("--repo-root", $RepoRoot)
+}
 if ($Title) { $arguments += @("--title", $Title) }
 if ($Description) { $arguments += @("--description", $Description) }
 if ($Force) { $arguments += "--force" }

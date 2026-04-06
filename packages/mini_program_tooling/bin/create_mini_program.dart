@@ -14,8 +14,12 @@ Future<void> main(List<String> arguments) async {
     )
     ..addOption(
       'repo-root',
-      defaultsTo: Directory.current.path,
       help: 'Repository root containing mini_programs/.',
+    )
+    ..addOption(
+      'output-root',
+      help:
+          'Optional exact output directory for standalone creation, for example D:\\first-miniprogram.',
     )
     ..addOption(
       'id',
@@ -63,7 +67,8 @@ Future<void> main(List<String> arguments) async {
   }
 
   final request = MiniProgramScaffoldRequest(
-    repoRootPath: results.option('repo-root')!,
+    repoRootPath: results.option('repo-root'),
+    outputRootPath: results.option('output-root'),
     miniProgramId: results.option('id')!,
     title: results.option('title'),
     description: results.option('description'),
@@ -95,6 +100,7 @@ String _formatResult(MiniProgramScaffoldResult result) {
   final lines = <String>[
     'Created mini-program scaffold: ${result.miniProgramId}',
     'Root: ${result.miniProgramRootPath}',
+    if (result.repoRootPath != null) 'Repo root: ${result.repoRootPath}',
     'Capabilities: ${result.capabilities.join(', ')}',
     'Files:',
     ...result.createdPaths.map((path) => '- $path'),

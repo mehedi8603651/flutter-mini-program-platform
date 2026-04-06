@@ -102,6 +102,24 @@ void main() {
       expect(screenSource, isNot(contains("'action': 'openNativeScreen'")));
     });
 
+    test('supports standalone output root outside repo mini_programs', () async {
+      final standaloneRoot = p.join(tempDir.path, 'standalone_coupon_center');
+
+      final result = await const MiniProgramScaffolder().scaffold(
+        MiniProgramScaffoldRequest(
+          miniProgramId: 'coupon_center',
+          outputRootPath: standaloneRoot,
+        ),
+      );
+
+      expect(result.repoRootPath, isNull);
+      expect(result.miniProgramRootPath, standaloneRoot);
+      expect(await File(p.join(standaloneRoot, 'manifest.json')).exists(), isTrue);
+
+      final readme = await File(p.join(standaloneRoot, 'README.md')).readAsString();
+      expect(readme, contains('-MiniProgramRoot <mini-program-root> -RepoRoot <repo-root>'));
+    });
+
     test('fails on unknown capability values', () async {
       expect(
         () => const MiniProgramScaffolder().scaffold(

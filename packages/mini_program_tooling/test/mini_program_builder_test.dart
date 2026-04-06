@@ -75,6 +75,39 @@ void main() {
       expect(await File(result.entryScreenJsonPath).exists(), isTrue);
     });
 
+    test('supports a standalone mini-program root with repo-root vendored CLI resolution', () async {
+      final repoRoot = tempDir.path;
+      final standaloneRoot = p.join(tempDir.path, 'standalone_claim_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'claim_center',
+      );
+
+      final vendoredCliPath = p.join(
+        repoRoot,
+        'stac-dev',
+        'packages',
+        'stac_cli',
+        'bin',
+        'stac_cli.dart',
+      );
+      await Directory(p.dirname(vendoredCliPath)).create(recursive: true);
+      await File(vendoredCliPath).writeAsString(_fakeStacCliSource);
+
+      final result = await const MiniProgramBuilder().build(
+        MiniProgramBuildRequest(
+          repoRootPath: repoRoot,
+          miniProgramRootPath: standaloneRoot,
+          skipPubGet: true,
+        ),
+      );
+
+      expect(result.cliSource, 'vendored_script');
+      expect(result.miniProgramRootPath, standaloneRoot);
+      expect(result.miniProgramId, 'claim_center');
+      expect(await File(result.entryScreenJsonPath).exists(), isTrue);
+    });
+
     test('fails when no Stac CLI can be resolved', () async {
       final repoRoot = tempDir.path;
       final miniProgramRoot = p.join(repoRoot, 'mini_programs', 'claim_center');

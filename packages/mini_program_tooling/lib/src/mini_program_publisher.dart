@@ -10,13 +10,15 @@ import 'mini_program_builder.dart';
 class MiniProgramPublishRequest {
   const MiniProgramPublishRequest({
     required this.repoRootPath,
-    required this.miniProgramId,
+    this.miniProgramId,
+    this.miniProgramRootPath,
     this.stacCliScriptPath,
     this.skipBuildPubGet = false,
   });
 
   final String repoRootPath;
-  final String miniProgramId;
+  final String? miniProgramId;
+  final String? miniProgramRootPath;
   final String? stacCliScriptPath;
   final bool skipBuildPubGet;
 }
@@ -87,6 +89,7 @@ class MiniProgramPublisher {
       MiniProgramBuildRequest(
         repoRootPath: repoRootPath,
         miniProgramId: request.miniProgramId,
+        miniProgramRootPath: request.miniProgramRootPath,
         stacCliScriptPath: request.stacCliScriptPath,
         skipPubGet: request.skipBuildPubGet,
       ),
@@ -94,12 +97,13 @@ class MiniProgramPublisher {
 
     final preValidation = await _validator.validate(
       repoRootPath: repoRootPath,
-      miniProgramId: request.miniProgramId,
+      miniProgramId: buildResult.miniProgramId,
+      externalMiniProgramRootPath: request.miniProgramRootPath,
     );
     if (preValidation.hasErrors) {
       throw MiniProgramPublishException(
         'Delivery validation failed before publish for '
-        '${request.miniProgramId}.\n'
+        '${buildResult.miniProgramId}.\n'
         '${formatDeliveryValidationReport(preValidation)}',
       );
     }
@@ -117,7 +121,7 @@ class MiniProgramPublisher {
 
     final publishResult = await _publishLocalBackendArtifacts(
       repoRootPath: repoRootPath,
-      miniProgramId: request.miniProgramId,
+      miniProgramId: buildResult.miniProgramId,
       version: version,
       manifestPath: manifestPath,
       screensDirectoryPath: buildResult.screensDirectoryPath,
@@ -125,19 +129,20 @@ class MiniProgramPublisher {
 
     final postValidation = await _validator.validate(
       repoRootPath: repoRootPath,
-      miniProgramId: request.miniProgramId,
+      miniProgramId: buildResult.miniProgramId,
+      externalMiniProgramRootPath: request.miniProgramRootPath,
     );
     if (postValidation.hasErrors) {
       throw MiniProgramPublishException(
         'Delivery validation failed after publish for '
-        '${request.miniProgramId}.\n'
+        '${buildResult.miniProgramId}.\n'
         '${formatDeliveryValidationReport(postValidation)}',
       );
     }
 
     return MiniProgramPublishResult(
       repoRootPath: repoRootPath,
-      miniProgramId: request.miniProgramId,
+      miniProgramId: buildResult.miniProgramId,
       version: version,
       buildResult: buildResult,
       prePublishValidation: preValidation,

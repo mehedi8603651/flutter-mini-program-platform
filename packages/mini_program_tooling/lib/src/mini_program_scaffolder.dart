@@ -6,8 +6,9 @@ import 'package:path/path.dart' as p;
 
 class MiniProgramScaffoldRequest {
   const MiniProgramScaffoldRequest({
-    required this.repoRootPath,
     required this.miniProgramId,
+    this.repoRootPath,
+    this.outputRootPath,
     this.title,
     this.description,
     this.capabilities = const <String>{
@@ -17,8 +18,9 @@ class MiniProgramScaffoldRequest {
     this.force = false,
   });
 
-  final String repoRootPath;
   final String miniProgramId;
+  final String? repoRootPath;
+  final String? outputRootPath;
   final String? title;
   final String? description;
   final Set<String> capabilities;
@@ -36,7 +38,7 @@ class MiniProgramScaffoldResult {
     required this.createdPaths,
   });
 
-  final String repoRootPath;
+  final String? repoRootPath;
   final String miniProgramRootPath;
   final String miniProgramId;
   final String title;
@@ -79,21 +81,9 @@ class MiniProgramScaffolder {
   Future<MiniProgramScaffoldResult> scaffold(
     MiniProgramScaffoldRequest request,
   ) async {
-    final repoRootPath = p.normalize(p.absolute(request.repoRootPath));
-    final repoRootDir = Directory(repoRootPath);
-    if (!await repoRootDir.exists()) {
-      throw MiniProgramScaffoldException(
-        'Repo root does not exist: $repoRootPath',
-      );
-    }
-
-    final miniProgramsRootPath = p.join(repoRootPath, 'mini_programs');
-    final miniProgramsRootDir = Directory(miniProgramsRootPath);
-    if (!await miniProgramsRootDir.exists()) {
-      throw MiniProgramScaffoldException(
-        'Repo root is missing mini_programs/: $repoRootPath',
-      );
-    }
+    final repoRootPath = request.repoRootPath == null
+        ? null
+        : p.normalize(p.absolute(request.repoRootPath!));
 
     final miniProgramId = request.miniProgramId.trim();
     if (!_miniProgramIdPattern.hasMatch(miniProgramId)) {
@@ -105,8 +95,11 @@ class MiniProgramScaffolder {
     final orderedCapabilities = _normalizeCapabilities(request.capabilities);
     final title = _normalizeTitle(request.title, miniProgramId);
     final description = _normalizeDescription(request.description, title);
-
-    final miniProgramRootPath = p.join(miniProgramsRootPath, miniProgramId);
+    final miniProgramRootPath = await _resolveMiniProgramRootPath(
+      repoRootPath: repoRootPath,
+      outputRootPath: request.outputRootPath,
+      miniProgramId: miniProgramId,
+    );
     final miniProgramRootDir = Directory(miniProgramRootPath);
 
     if (await miniProgramRootDir.exists() &&
@@ -137,6 +130,7 @@ class MiniProgramScaffolder {
         description: description,
         capabilities: orderedCapabilities,
         entryScreenId: entryScreenId,
+        isStandalone: request.outputRootPath != null,
       ),
       p.join(miniProgramRootPath, 'pubspec.yaml'): _buildPubspec(
         packageName: packageName,
@@ -184,6 +178,40 @@ class MiniProgramScaffolder {
       capabilities: orderedCapabilities,
       createdPaths: createdPaths,
     );
+  }
+
+  Future<String> _resolveMiniProgramRootPath({
+    required String? repoRootPath,
+    required String? outputRootPath,
+    required String miniProgramId,
+  }) async {
+    if (outputRootPath != null && outputRootPath.trim().isNotEmpty) {
+      return p.normalize(p.absolute(outputRootPath.trim()));
+    }
+
+    if (repoRootPath == null || repoRootPath.trim().isEmpty) {
+      throw const MiniProgramScaffoldException(
+        'Provide either --repo-root or --output-root.',
+      );
+    }
+
+    final normalizedRepoRoot = p.normalize(p.absolute(repoRootPath));
+    final repoRootDir = Directory(normalizedRepoRoot);
+    if (!await repoRootDir.exists()) {
+      throw MiniProgramScaffoldException(
+        'Repo root does not exist: $normalizedRepoRoot',
+      );
+    }
+
+    final miniProgramsRootPath = p.join(normalizedRepoRoot, 'mini_programs');
+    final miniProgramsRootDir = Directory(miniProgramsRootPath);
+    if (!await miniProgramsRootDir.exists()) {
+      throw MiniProgramScaffoldException(
+        'Repo root is missing mini_programs/: $normalizedRepoRoot',
+      );
+    }
+
+    return p.join(miniProgramsRootPath, miniProgramId);
   }
 
   List<String> _normalizeCapabilities(Set<String> rawCapabilities) {
@@ -326,6 +354,7 @@ StacOptions get defaultStacOptions => const StacOptions(
     required String description,
     required List<String> capabilities,
     required String entryScreenId,
+    required bool isStandalone,
   }) {
     final notes = <String>[
       '- edit `manifest.json` before publish',
@@ -377,7 +406,7 @@ ${notes.join('\n')}
 Use the repo helper:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\build_mini_program.ps1 -MiniProgramId $miniProgramId
+powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\build_mini_program.ps1 ${isStandalone ? '-MiniProgramRoot <mini-program-root> -RepoRoot <repo-root>' : '-MiniProgramId $miniProgramId'}
 ```
 
 Expected output:
@@ -390,7 +419,7 @@ If `stac-dev` is not present locally, pass an explicit CLI script path:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\build_mini_program.ps1 `
-  -MiniProgramId $miniProgramId `
+  ${isStandalone ? '-MiniProgramRoot <mini-program-root> `' : '-MiniProgramId $miniProgramId `'}
   -StacCliScript D:\\path\\to\\bin\\stac_cli.dart
 ```
 
@@ -403,7 +432,7 @@ powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\validate_delivery.p
 ## Publish local backend sample
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\publish_local_backend.ps1 -MiniProgramId $miniProgramId
+powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\publish_mini_program.ps1 ${isStandalone ? '-MiniProgramRoot <mini-program-root> -RepoRoot <repo-root>' : '-MiniProgramId $miniProgramId'}
 ```
 
 ## Test in a host

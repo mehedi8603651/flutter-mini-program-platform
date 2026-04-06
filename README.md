@@ -13,6 +13,14 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -MiniProgramId coupon_center
 ```
 
+Or generate a standalone mini-program anywhere:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
+  -MiniProgramId first_miniprogram `
+  -OutputRoot D:\first-miniprogram
+```
+
 The command generates the manifest, starter Stac screen, build config, README,
 and the expected `stac/components`, `stac/theme`, and `assets` folders under
 `mini_programs/<id>/`.
@@ -28,11 +36,27 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -MiniProgramId profile_center
 ```
 
+Or build a standalone mini-program against this repo’s tooling:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
+  -MiniProgramRoot D:\first-miniprogram `
+  -RepoRoot D:\flutter-mini-program-platform
+```
+
 Publish it into the local backend sample with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
   -MiniProgramId profile_center
+```
+
+Standalone authoring root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
+  -MiniProgramRoot D:\first-miniprogram `
+  -RepoRoot D:\flutter-mini-program-platform
 ```
 
 ## Repo Smoke Command

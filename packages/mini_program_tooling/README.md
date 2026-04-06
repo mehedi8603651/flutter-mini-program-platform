@@ -24,6 +24,14 @@ cd D:\flutter-mini-program-platform\packages\mini_program_tooling
 dart run bin\create_mini_program.dart --repo-root D:\flutter-mini-program-platform --id coupon_center
 ```
 
+Standalone output:
+
+```powershell
+dart run bin\create_mini_program.dart `
+  --id first_miniprogram `
+  --output-root D:\first-miniprogram
+```
+
 Custom capabilities:
 
 ```powershell
@@ -39,6 +47,14 @@ Repo-level PowerShell wrapper:
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
   -MiniProgramId coupon_center
+```
+
+Standalone wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
+  -MiniProgramId first_miniprogram `
+  -OutputRoot D:\first-miniprogram
 ```
 
 ### `build_mini_program`
@@ -59,6 +75,14 @@ cd D:\flutter-mini-program-platform\packages\mini_program_tooling
 dart run bin\build_mini_program.dart --repo-root D:\flutter-mini-program-platform --id profile_center
 ```
 
+Standalone mini-program root with vendored repo CLI:
+
+```powershell
+dart run bin\build_mini_program.dart `
+  --repo-root D:\flutter-mini-program-platform `
+  --mini-program-root D:\first-miniprogram
+```
+
 Explicit script path:
 
 ```powershell
@@ -75,6 +99,14 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -MiniProgramId profile_center
 ```
 
+Standalone wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
+  -MiniProgramRoot D:\first-miniprogram `
+  -RepoRoot D:\flutter-mini-program-platform
+```
+
 ### `publish_mini_program`
 
 Builds a mini-program, runs a pre-publish validation gate, copies the built
@@ -87,11 +119,27 @@ cd D:\flutter-mini-program-platform\packages\mini_program_tooling
 dart run bin\publish_mini_program.dart --repo-root D:\flutter-mini-program-platform --id profile_center
 ```
 
+Standalone mini-program root:
+
+```powershell
+dart run bin\publish_mini_program.dart `
+  --repo-root D:\flutter-mini-program-platform `
+  --mini-program-root D:\first-miniprogram
+```
+
 Repo-level PowerShell wrapper:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
   -MiniProgramId profile_center
+```
+
+Standalone wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
+  -MiniProgramRoot D:\first-miniprogram `
+  -RepoRoot D:\flutter-mini-program-platform
 ```
 
 Explicit CLI path:
@@ -132,6 +180,14 @@ Repo-level PowerShell wrapper:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1
+```
+
+Standalone validation:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1 `
+  -RepoRoot D:\flutter-mini-program-platform `
+  -MiniProgramRoot D:\first-miniprogram
 ```
 
 ### `inspect_delivery`

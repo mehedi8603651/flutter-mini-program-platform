@@ -14,12 +14,14 @@ Future<void> main(List<String> arguments) async {
     )
     ..addOption(
       'repo-root',
-      defaultsTo: Directory.current.path,
       help: 'Repository root containing mini_programs/ and backend/api/.',
     )
     ..addOption(
+      'mini-program-root',
+      help: 'Exact mini-program root path for standalone authoring.',
+    )
+    ..addOption(
       'id',
-      mandatory: true,
       help: 'Mini-program ID to build, validate, and publish.',
     )
     ..addOption(
@@ -56,8 +58,9 @@ Future<void> main(List<String> arguments) async {
   try {
     final result = await const MiniProgramPublisher().publish(
       MiniProgramPublishRequest(
-        repoRootPath: results.option('repo-root')!,
-        miniProgramId: results.option('id')!,
+        repoRootPath: results.option('repo-root') ?? Directory.current.path,
+        miniProgramId: results.option('id'),
+        miniProgramRootPath: results.option('mini-program-root'),
         stacCliScriptPath: results.option('stac-cli-script'),
         skipBuildPubGet: results.flag('skip-build-pub-get'),
       ),

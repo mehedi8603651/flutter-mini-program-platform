@@ -32,6 +32,7 @@ class DeliveryRepositoryValidator {
   Future<DeliveryValidationReport> validate({
     required String repoRootPath,
     String? miniProgramId,
+    String? externalMiniProgramRootPath,
   }) async {
     final normalizedRepoRoot = path.normalize(path.absolute(repoRootPath));
     final messages = <DeliveryValidationMessage>[];
@@ -78,6 +79,19 @@ class DeliveryRepositoryValidator {
       miniProgramId: miniProgramId,
       messages: messages,
     );
+
+    if (externalMiniProgramRootPath != null &&
+        externalMiniProgramRootPath.trim().isNotEmpty) {
+      final externalManifest = await _loadExternalAuthoredManifest(
+        repoRootPath: normalizedRepoRoot,
+        miniProgramRootPath: externalMiniProgramRootPath,
+        miniProgramId: miniProgramId,
+        messages: messages,
+      );
+      if (externalManifest != null) {
+        authoredManifests[externalManifest.id] = externalManifest;
+      }
+    }
 
     final publishedVersionsByMiniProgram = await _validatePublishedManifests(
       repoRootPath: normalizedRepoRoot,
@@ -220,6 +234,72 @@ class DeliveryRepositoryValidator {
     }
 
     return manifests;
+  }
+
+  Future<MiniProgramManifest?> _loadExternalAuthoredManifest({
+    required String repoRootPath,
+    required String miniProgramRootPath,
+    required String? miniProgramId,
+    required List<DeliveryValidationMessage> messages,
+  }) async {
+    final normalizedRootPath = path.normalize(path.absolute(miniProgramRootPath));
+    final rootDirectory = Directory(normalizedRootPath);
+    if (!await rootDirectory.exists()) {
+      messages.add(
+        DeliveryValidationMessage(
+          severity: ValidationSeverity.error,
+          code: 'external_mini_program_root_missing',
+          path: normalizedRootPath,
+          message: 'Standalone mini-program root was not found.',
+        ),
+      );
+      return null;
+    }
+
+    final manifestFile = File(path.join(normalizedRootPath, 'manifest.json'));
+    if (!await manifestFile.exists()) {
+      messages.add(
+        DeliveryValidationMessage(
+          severity: ValidationSeverity.error,
+          code: 'external_manifest_missing',
+          path: normalizedRootPath,
+          message: 'Standalone mini-program root does not contain manifest.json.',
+        ),
+      );
+      return null;
+    }
+
+    final manifestJson = await _readJsonMap(
+      manifestFile,
+      repoRootPath: repoRootPath,
+      messages: messages,
+    );
+    if (manifestJson == null) {
+      return null;
+    }
+
+    final manifest = _parseManifest(
+      manifestJson,
+      manifestFile.path,
+      repoRootPath: repoRootPath,
+      messages: messages,
+    );
+    if (manifest == null) {
+      return null;
+    }
+
+    if (miniProgramId != null && manifest.id != miniProgramId) {
+      return null;
+    }
+
+    _validateManifestSemantics(
+      manifest: manifest,
+      manifestPath: manifestFile.path,
+      repoRootPath: repoRootPath,
+      messages: messages,
+    );
+
+    return manifest;
   }
 
   Future<Map<String, Set<String>>> _validatePublishedManifests({

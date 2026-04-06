@@ -14,6 +14,14 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -MiniProgramId coupon_center
 ```
 
+Generate a standalone mini-program anywhere:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
+  -MiniProgramId first_miniprogram `
+  -OutputRoot D:\first-miniprogram
+```
+
 Optional inputs:
 
 ```powershell
@@ -62,6 +70,14 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -MiniProgramId <id>
 ```
 
+Standalone mini-program root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
+  -MiniProgramRoot D:\first-miniprogram `
+  -RepoRoot D:\flutter-mini-program-platform
+```
+
 Expected screen output:
 
 ```text
@@ -98,6 +114,14 @@ Preferred command:
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
   -MiniProgramId <id>
+```
+
+Standalone mini-program root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
+  -MiniProgramRoot D:\first-miniprogram `
+  -RepoRoot D:\flutter-mini-program-platform
 ```
 
 This command:

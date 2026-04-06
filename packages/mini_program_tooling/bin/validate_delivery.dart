@@ -22,6 +22,10 @@ Future<void> main(List<String> arguments) async {
       help: 'Optional mini-program ID to validate in isolation.',
     )
     ..addOption(
+      'mini-program-root',
+      help: 'Optional standalone mini-program root to validate alongside the repo.',
+    )
+    ..addOption(
       'output',
       allowed: <String>['text', 'json'],
       defaultsTo: 'text',
@@ -47,6 +51,7 @@ Future<void> main(List<String> arguments) async {
   final report = await validator.validate(
     repoRootPath: results.option('repo-root')!,
     miniProgramId: results.option('mini-program'),
+    externalMiniProgramRootPath: results.option('mini-program-root'),
   );
 
   if (results.option('output') == 'json') {
