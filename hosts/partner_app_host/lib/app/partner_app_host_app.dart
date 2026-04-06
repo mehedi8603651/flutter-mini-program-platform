@@ -28,6 +28,7 @@ class PartnerAppHostApp extends StatefulWidget {
     this.capabilityRegistry,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.cacheBundle,
+    this.discoverySourceKind,
   });
 
   final MiniProgramSource? source;
@@ -37,6 +38,7 @@ class PartnerAppHostApp extends StatefulWidget {
   final CapabilityRegistry? capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle? cacheBundle;
+  final MiniProgramDiscoverySourceKind? discoverySourceKind;
 
   @override
   State<PartnerAppHostApp> createState() => _PartnerAppHostAppState();
@@ -49,6 +51,7 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
   late final CapabilityRegistry _capabilityRegistry;
   late final HostBridge _hostBridge;
   late final Future<MiniProgramCacheBundle> _cacheBundleFuture;
+  late final MiniProgramDiscoverySourceKind _discoverySourceKind;
 
   @override
   void initState() {
@@ -73,6 +76,8 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
         (widget.source != null
             ? 'Injected source'
             : sourceConfiguration.description);
+    _discoverySourceKind =
+        widget.discoverySourceKind ?? MiniProgramDiscoverySourceKind.remote;
     final authSessionService =
         widget.authSessionService ??
         _buildAuthSessionService(sourceConfiguration);
@@ -148,6 +153,7 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
             sdkVersion: partnerAppHostSdkVersion,
             source: _source,
             sourceDescription: _sourceDescription,
+            discoverySourceKind: _discoverySourceKind,
             hostBridge: _hostBridge,
             capabilityRegistry: _capabilityRegistry,
             featureFlagEvaluator: widget.featureFlagEvaluator,

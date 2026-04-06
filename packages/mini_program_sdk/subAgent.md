@@ -20,6 +20,7 @@ Build the portable runtime that validates, loads, renders, and safely bridges mi
 - persistent offline reuse when hosts provide a file-backed cache bundle
 - file-backed asset persistence for standard Stac `image` widgets
 - user-visible offline notice when stale cached content is rendered
+- discovery-time offline availability resolution for host mini-program lists
 
 This package is the current shared runtime from the root `AGENTS.md`.
 It now includes contract-driven cache rules, file-backed cache storage, and
@@ -76,6 +77,7 @@ bounded stale reuse for offline-safe recovery paths.
 - `lib/cache/screen_cache.dart` provides async entry-screen cache abstractions plus in-memory and file-backed implementations.
 - `lib/cache/asset_cache.dart` provides file-backed asset persistence for standard network images resolved by the SDK.
 - `lib/cache/mini_program_cache_bundle.dart` groups manifest, screen, and asset cache stores for host injection.
+- `lib/mini_program_discovery.dart` resolves `Live`, `Cached`, `Offline`, and `Unavailable` states before a host opens a mini-program.
 - `lib/network/asset_resolver.dart` rewrites cacheable Stac image widgets to local file paths when persisted assets are available.
 - `lib/rendering/stac_initializer.dart` owns the current parser/action initialization path.
 - `lib/observability/sdk_logger.dart` provides logging only. Error reporting and tracing are future additions, not current guarantees.
@@ -112,6 +114,7 @@ bounded stale reuse for offline-safe recovery paths.
 - Treat persisted cache as a host runtime concern. Tests may inject in-memory caches, but mobile hosts should prefer file-backed cache bundles.
 - Keep asset persistence focused on verified standard Stac image widgets. Do not rewrite arbitrary JSON fields as file paths.
 - Show user-visible offline state when stale cached content is rendered instead of relying on logs alone.
+- Surface list-level availability state before open so hosts can disable unavailable flows instead of discovering failure only after tap.
 
 ## Deferred Until Later Phases
 - Non-image asset caching beyond standard Stac image widgets
@@ -128,10 +131,10 @@ These are valid future additions, but they should not be added until the current
 - `flutter analyze`
 
 ## Next Step
-The next implementation phase is stronger offline freshness policy and
-production backend work on top of the current capability surface.
+The next implementation phase is backend and operability hardening on top of
+the current offline-aware runtime.
 
 That phase should keep using this SDK while adding:
-- persistent cache storage beyond manifest and entry-screen JSON
-- richer stale-cache diagnostics and user-visible offline state where needed
-- cache metadata for more than manifest and entry-screen payloads
+- richer backend release controls and diagnostics
+- stronger observability and error reporting
+- broader asset handling only where real mini-programs require it

@@ -15,6 +15,7 @@ Reference Flutter host app for portable mini-program partner integration.
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 - shows an offline notice when stale cached content is rendered
 - persists standard Stac network image assets to local files when entry-screen caching is allowed
+- shows list-level delivery badges before open: `Live`, `Offline`, or `Unavailable`
 
 ## Current flow
 
@@ -26,6 +27,12 @@ Reference Flutter host app for portable mini-program partner integration.
    - `profile_center` -> `1.0.0`
    - `feedback_form` -> `1.1.0`
 6. The mini-program renders and can still call `callSecureApi`, `trackEvent`, and `openNativeScreen`.
+
+The host list now resolves discovery state before opening a flow:
+
+- `Live` when the backend is reachable
+- `Offline` when a valid cached release can still open
+- `Unavailable` when no valid offline copy exists
 
 `callSecureApi` currently flows through:
 

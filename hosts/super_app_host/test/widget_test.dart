@@ -10,7 +10,6 @@ import 'package:super_app_host/bridge/host_bridge_impl.dart';
 import 'package:super_app_host/capabilities/supported_capabilities.dart';
 import 'package:super_app_host/mini_programs/local_mini_program_catalog.dart';
 import 'package:super_app_host/mini_programs/mini_program_entry_page.dart';
-import 'package:super_app_host/mini_programs/local_mini_program_source.dart';
 import 'package:super_app_host/mini_programs/native_feedback_inbox_page.dart';
 import 'package:super_app_host/mini_programs/native_profile_editor_page.dart';
 import 'package:super_app_host/mini_programs/source_configuration.dart';
@@ -43,8 +42,11 @@ void main() {
     expect(find.text('Super App Host'), findsOneWidget);
     expect(find.text('Profile Center'), findsOneWidget);
     expect(find.text('Delivery: Bundled assets'), findsOneWidget);
+    expect(find.text('Cached'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
+    await tester.pumpAndSettle();
     expect(find.text('Feedback Form'), findsOneWidget);
+    expect(find.text('Cached'), findsWidgets);
     expect(find.text('Open mini-program'), findsWidgets);
   });
 
@@ -57,13 +59,14 @@ void main() {
         home: MiniProgramEntryPage(
           program: LocalMiniProgramCatalog.profileCenter,
           sdkVersion: superAppHostSdkVersion,
-          source: const LocalMiniProgramSource(),
+          source: const _SuperLaneMiniProgramSource(),
           hostBridge: HostBridgeImpl(
             navigatorKey: navigatorKey,
             secureApiService: _RecordingSecureApiService(),
           ),
           capabilityRegistry: superAppCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
       ),
     );
@@ -84,13 +87,14 @@ void main() {
         home: MiniProgramEntryPage(
           program: LocalMiniProgramCatalog.feedbackForm,
           sdkVersion: superAppHostSdkVersion,
-          source: const LocalMiniProgramSource(),
+          source: const _SuperLaneMiniProgramSource(),
           hostBridge: HostBridgeImpl(
             navigatorKey: navigatorKey,
             secureApiService: _RecordingSecureApiService(),
           ),
           capabilityRegistry: superAppCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
       ),
     );
@@ -120,10 +124,11 @@ void main() {
           ),
           capabilityRegistry: superAppMissingNavigationCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await _pumpUntilFound(tester, find.text('Host capability mismatch'));
 
     expect(find.text('Host capability mismatch'), findsOneWidget);
@@ -474,6 +479,192 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
         },
       },
     };
+  }
+}
+
+class _SuperLaneMiniProgramSource implements MiniProgramSource {
+  const _SuperLaneMiniProgramSource();
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    switch (miniProgramId) {
+      case 'profile_center':
+        return const MiniProgramManifest(
+          id: 'profile_center',
+          version: '1.1.0',
+          entry: 'profile_center_home',
+          contractVersion: '1.0.0',
+          sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+          requiredCapabilities: <Capability>[
+            Capability.analytics,
+            Capability.nativeNavigation,
+          ],
+          fallback: MiniProgramFallback(
+            strategy: MiniProgramFallbackStrategy.errorView,
+            message:
+                'Profile Center is temporarily unavailable in this host app.',
+          ),
+        );
+      case 'feedback_form':
+        return const MiniProgramManifest(
+          id: 'feedback_form',
+          version: '1.1.0',
+          entry: 'feedback_form_home',
+          contractVersion: '1.0.0',
+          sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+          requiredCapabilities: <Capability>[
+            Capability.analytics,
+            Capability.secureApi,
+            Capability.nativeNavigation,
+          ],
+          fallback: MiniProgramFallback(
+            strategy: MiniProgramFallbackStrategy.errorView,
+            message:
+                'Feedback Form is temporarily unavailable in this host app.',
+          ),
+        );
+      default:
+        throw StateError(
+          'Unsupported super-host mini-program "$miniProgramId".',
+        );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    switch (miniProgramId) {
+      case 'profile_center':
+        return const <String, dynamic>{
+          'type': 'scaffold',
+          'appBar': <String, dynamic>{
+            'type': 'appBar',
+            'title': <String, dynamic>{
+              'type': 'text',
+              'data': 'Profile Center',
+            },
+          },
+          'body': <String, dynamic>{
+            'type': 'safeArea',
+            'child': <String, dynamic>{
+              'type': 'singleChildScrollView',
+              'padding': <String, dynamic>{
+                'left': 24.0,
+                'top': 24.0,
+                'right': 24.0,
+                'bottom': 24.0,
+              },
+              'child': <String, dynamic>{
+                'type': 'column',
+                'crossAxisAlignment': 'start',
+                'children': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'type': 'text',
+                    'data': 'Portable account module',
+                  },
+                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
+                  <String, dynamic>{
+                    'type': 'text',
+                    'data': 'Active release: Profile Center v1.1.0',
+                  },
+                  <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
+                  <String, dynamic>{
+                    'type': 'filledButton',
+                    'child': <String, dynamic>{
+                      'type': 'text',
+                      'data': 'Open Native Edit Screen',
+                    },
+                    'onPressed': <String, dynamic>{
+                      'actionType': 'hostAction',
+                      'requestId': 'profile-open-native-editor',
+                      'action': 'openNativeScreen',
+                      'payload': <String, dynamic>{
+                        'route': 'profile_editor',
+                        'args': <String, dynamic>{
+                          'userId': 'guest_001',
+                          'source': 'profile_center',
+                        },
+                        'expectResult': true,
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        };
+      case 'feedback_form':
+        return const <String, dynamic>{
+          'type': 'scaffold',
+          'appBar': <String, dynamic>{
+            'type': 'appBar',
+            'title': <String, dynamic>{'type': 'text', 'data': 'Feedback Form'},
+          },
+          'body': <String, dynamic>{
+            'type': 'safeArea',
+            'child': <String, dynamic>{
+              'type': 'singleChildScrollView',
+              'padding': <String, dynamic>{
+                'left': 24.0,
+                'top': 24.0,
+                'right': 24.0,
+                'bottom': 24.0,
+              },
+              'child': <String, dynamic>{
+                'type': 'column',
+                'crossAxisAlignment': 'start',
+                'children': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'type': 'text',
+                    'data': 'Portable feedback lane',
+                  },
+                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
+                  <String, dynamic>{
+                    'type': 'text',
+                    'data': 'Release lane: Feedback Form v1.1.0',
+                  },
+                  <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
+                  <String, dynamic>{
+                    'type': 'filledButton',
+                    'child': <String, dynamic>{
+                      'type': 'text',
+                      'data': 'Validate and continue',
+                    },
+                    'onPressed': <String, dynamic>{
+                      'actionType': 'hostAction',
+                      'requestId': 'feedback-open-follow-up',
+                      'action': 'openNativeScreen',
+                      'payload': <String, dynamic>{
+                        'route': 'feedback_follow_up',
+                        'args': <String, dynamic>{
+                          'source': 'feedback_form',
+                          'channel': 'mini_program',
+                        },
+                        'expectResult': true,
+                      },
+                    },
+                  },
+                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
+                  <String, dynamic>{
+                    'type': 'outlinedButton',
+                    'child': <String, dynamic>{
+                      'type': 'text',
+                      'data': 'Track feedback view',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        };
+      default:
+        throw StateError(
+          'Unsupported super-host mini-program "$miniProgramId".',
+        );
+    }
   }
 }
 

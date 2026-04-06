@@ -28,7 +28,7 @@ abstract final class PartnerMiniProgramCatalog {
           Capability.analytics,
           Capability.nativeNavigation,
         ],
-        expectedLaneVersion: '1.1.0',
+        expectedLaneVersion: '1.0.0',
       );
 
   static const PartnerMiniProgramDefinition feedbackForm =
@@ -44,7 +44,7 @@ abstract final class PartnerMiniProgramCatalog {
           Capability.secureApi,
           Capability.nativeNavigation,
         ],
-        expectedLaneVersion: '1.0.0',
+        expectedLaneVersion: '1.1.0',
       );
 
   static const List<PartnerMiniProgramDefinition> availablePrograms =

@@ -45,10 +45,94 @@ void main() {
 
     expect(find.text('Partner App Host'), findsOneWidget);
     expect(find.text('Profile Center'), findsOneWidget);
+    expect(find.text('Live'), findsOneWidget);
+    expect(find.text('Resolved v1.0.0'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
+    await tester.pumpAndSettle();
     expect(find.text('Feedback Form'), findsOneWidget);
+    expect(find.text('Live'), findsWidgets);
+    expect(find.text('Resolved v1.1.0'), findsOneWidget);
     expect(find.text('Open mini-program'), findsWidgets);
   });
+
+  testWidgets(
+    'shows offline and unavailable discovery states before opening mini-programs',
+    (tester) async {
+      final cacheBundle = MiniProgramCacheBundle.inMemory();
+      final now = DateTime.now();
+      await cacheBundle.manifestCache.write(
+        CachedManifestEntry(
+          miniProgramId: 'profile_center',
+          manifest: const MiniProgramManifest(
+            id: 'profile_center',
+            version: '1.0.0',
+            entry: 'profile_center_home',
+            contractVersion: '1.0.0',
+            sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+            requiredCapabilities: <Capability>[
+              Capability.analytics,
+              Capability.nativeNavigation,
+            ],
+          ),
+          cachedAt: now,
+        ),
+      );
+      await cacheBundle.screenCache.write(
+        CachedScreenEntry(
+          miniProgramId: 'profile_center',
+          version: '1.0.0',
+          screenId: 'profile_center_home',
+          screenJson: const <String, dynamic>{
+            'type': 'text',
+            'data': 'Cached partner profile center screen',
+          },
+          cachedAt: now,
+        ),
+      );
+
+      await tester.pumpWidget(
+        PartnerAppHostApp(
+          source: const _BackendOfflineMiniProgramSource(),
+          sourceDescription: 'Local backend (offline test)',
+          cacheBundle: cacheBundle,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Offline'), findsOneWidget);
+      expect(
+        find.text('Cached release available while the backend is offline.'),
+        findsOneWidget,
+      );
+      final profileCard = find.ancestor(
+        of: find.text('Profile Center'),
+        matching: find.byType(Card),
+      );
+      final profileOpenButton = tester.widget<FilledButton>(
+        find.descendant(
+          of: profileCard,
+          matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+        ),
+      );
+      expect(profileOpenButton.onPressed, isNotNull);
+
+      await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
+      await tester.pumpAndSettle();
+      expect(find.text('Unavailable'), findsOneWidget);
+      expect(find.text('No valid offline copy is available.'), findsOneWidget);
+      final feedbackCard = find.ancestor(
+        of: find.text('Feedback Form'),
+        matching: find.byType(Card),
+      );
+      final feedbackOpenButton = tester.widget<FilledButton>(
+        find.descendant(
+          of: feedbackCard,
+          matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+        ),
+      );
+      expect(feedbackOpenButton.onPressed, isNull);
+    },
+  );
 
   testWidgets('opens profile center in the partner 1.0.0 lane', (tester) async {
     final navigatorKey = GlobalKey<NavigatorState>();
@@ -66,10 +150,11 @@ void main() {
           ),
           capabilityRegistry: partnerAppCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await _pumpUntilFound(tester, find.text('Open Native Edit Screen'));
 
     expect(find.text('Portable account module'), findsOneWidget);
@@ -99,10 +184,11 @@ void main() {
           ),
           capabilityRegistry: partnerAppCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await _pumpUntilFound(tester, find.text('Validate and continue'));
 
     expect(find.text('Portable feedback lane'), findsOneWidget);
@@ -128,10 +214,11 @@ void main() {
           ),
           capabilityRegistry: partnerAppMissingNavigationCapabilityRegistry,
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await _pumpUntilFound(tester, find.text('Host capability mismatch'));
 
     expect(find.text('Host capability mismatch'), findsOneWidget);
@@ -683,6 +770,30 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
         },
       },
     };
+  }
+}
+
+class _BackendOfflineMiniProgramSource implements MiniProgramSource {
+  const _BackendOfflineMiniProgramSource();
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    throw const MiniProgramSourceException(
+      message: 'Partner backend is offline.',
+      errorCode: MiniProgramErrorCodes.backendUnreachable,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    throw const MiniProgramSourceException(
+      message: 'Partner backend is offline.',
+      errorCode: MiniProgramErrorCodes.backendUnreachable,
+    );
   }
 }
 

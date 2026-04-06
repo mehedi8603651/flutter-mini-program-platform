@@ -6,6 +6,7 @@ export 'cache/screen_cache.dart';
 export 'feature_flag_evaluator.dart';
 export 'host_bridge.dart';
 export 'manifest_loader.dart';
+export 'mini_program_discovery.dart';
 export 'mini_program_failure.dart';
 export 'mini_program_host.dart';
 export 'network/asset_resolver.dart';

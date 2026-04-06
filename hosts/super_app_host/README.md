@@ -16,6 +16,7 @@ First-party Flutter host app for the portable mini-program platform.
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 - shows an offline notice when stale cached content is rendered
 - persists standard Stac network image assets to local files when entry-screen caching is allowed
+- shows list-level delivery badges before open: `Cached`, `Live`, `Offline`, or `Unavailable`
 
 ## Current local flow
 
@@ -24,6 +25,12 @@ First-party Flutter host app for the portable mini-program platform.
 3. Render the portable screen through `MiniProgramHost`.
 4. Trigger `callSecureApi`, `trackEvent`, or `openNativeScreen` from the mini-program.
 5. Use `Preview capability failure` to confirm the SDK rejects unsupported capability sets with controlled fallback UI.
+
+The host list now resolves availability before open:
+
+- `Cached` for bundled releases
+- `Offline` when a valid cached release can still open while backend delivery is down
+- `Unavailable` when no valid offline copy exists
 
 `callSecureApi` now goes through:
 

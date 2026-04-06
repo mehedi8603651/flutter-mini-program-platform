@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../bridge/host_bridge_impl.dart';
 import '../capabilities/supported_capabilities.dart';
 import '../mini_programs/native_feedback_inbox_page.dart';
+import '../mini_programs/local_mini_program_source.dart';
 import '../mini_programs/mini_program_list_page.dart';
 import '../mini_programs/native_profile_editor_page.dart';
 import '../mini_programs/source_configuration.dart';
@@ -28,6 +29,7 @@ class SuperAppHostApp extends StatefulWidget {
     this.capabilityRegistry,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.cacheBundle,
+    this.discoverySourceKind,
   });
 
   final MiniProgramSource? source;
@@ -37,6 +39,7 @@ class SuperAppHostApp extends StatefulWidget {
   final CapabilityRegistry? capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle? cacheBundle;
+  final MiniProgramDiscoverySourceKind? discoverySourceKind;
 
   @override
   State<SuperAppHostApp> createState() => _SuperAppHostAppState();
@@ -49,6 +52,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
   late final CapabilityRegistry _capabilityRegistry;
   late final HostBridge _hostBridge;
   late final Future<MiniProgramCacheBundle> _cacheBundleFuture;
+  late final MiniProgramDiscoverySourceKind _discoverySourceKind;
 
   @override
   void initState() {
@@ -73,6 +77,11 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
         (widget.source != null
             ? 'Injected source'
             : sourceConfiguration.description);
+    _discoverySourceKind =
+        widget.discoverySourceKind ??
+        (widget.source != null
+            ? _inferDiscoverySourceKind(widget.source!)
+            : _sourceKindForMode(sourceConfiguration.mode));
     final authSessionService =
         widget.authSessionService ??
         _buildAuthSessionService(sourceConfiguration);
@@ -148,6 +157,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
             sdkVersion: superAppHostSdkVersion,
             source: _source,
             sourceDescription: _sourceDescription,
+            discoverySourceKind: _discoverySourceKind,
             hostBridge: _hostBridge,
             capabilityRegistry: _capabilityRegistry,
             featureFlagEvaluator: widget.featureFlagEvaluator,
@@ -162,6 +172,27 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
         },
       ),
     );
+  }
+
+  MiniProgramDiscoverySourceKind _inferDiscoverySourceKind(
+    MiniProgramSource source,
+  ) {
+    if (source is LocalMiniProgramSource) {
+      return MiniProgramDiscoverySourceKind.bundled;
+    }
+
+    return MiniProgramDiscoverySourceKind.remote;
+  }
+
+  MiniProgramDiscoverySourceKind _sourceKindForMode(
+    SuperAppHostSourceMode mode,
+  ) {
+    switch (mode) {
+      case SuperAppHostSourceMode.assets:
+        return MiniProgramDiscoverySourceKind.bundled;
+      case SuperAppHostSourceMode.localBackend:
+        return MiniProgramDiscoverySourceKind.remote;
+    }
   }
 
   Future<MiniProgramCacheBundle> _resolveCacheBundle() async {
