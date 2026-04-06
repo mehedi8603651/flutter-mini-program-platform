@@ -72,37 +72,53 @@ class DeliveryContext {
 class DeliveryDecision {
   const DeliveryDecision({
     required this.selectionMode,
+    required this.decisionReason,
     required this.resolvedVersion,
     required this.deliveryContext,
+    this.declaredDefaultVersion,
     this.requestedPinnedVersion,
     this.matchedRuleId,
     this.matchedRule,
+    this.evaluatedRuleIds = const <String>[],
   });
 
   final String selectionMode;
+  final String decisionReason;
   final String resolvedVersion;
   final Map<String, dynamic> deliveryContext;
+  final String? declaredDefaultVersion;
   final String? requestedPinnedVersion;
   final String? matchedRuleId;
   final Map<String, dynamic>? matchedRule;
+  final List<String> evaluatedRuleIds;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'selectionMode': selectionMode,
+    'decisionReason': decisionReason,
     'resolvedVersion': resolvedVersion,
+    if (declaredDefaultVersion != null)
+      'declaredDefaultVersion': declaredDefaultVersion,
     if (requestedPinnedVersion != null)
       'requestedPinnedVersion': requestedPinnedVersion,
     if (matchedRuleId != null) 'matchedRuleId': matchedRuleId,
     if (matchedRule != null) 'matchedRule': matchedRule,
+    'evaluatedRuleCount': evaluatedRuleIds.length,
+    if (evaluatedRuleIds.isNotEmpty) 'evaluatedRuleIds': evaluatedRuleIds,
     'deliveryContext': deliveryContext,
   };
 
   Map<String, dynamic> toErrorDetails() => <String, dynamic>{
     'selectionMode': selectionMode,
+    'decisionReason': decisionReason,
     'resolvedVersion': resolvedVersion,
+    if (declaredDefaultVersion != null)
+      'declaredDefaultVersion': declaredDefaultVersion,
     if (requestedPinnedVersion != null)
       'requestedPinnedVersion': requestedPinnedVersion,
     if (matchedRuleId != null) 'matchedRuleId': matchedRuleId,
     if (matchedRule != null) 'matchedRule': matchedRule,
+    'evaluatedRuleCount': evaluatedRuleIds.length,
+    if (evaluatedRuleIds.isNotEmpty) 'evaluatedRuleIds': evaluatedRuleIds,
     if (deliveryContext.isNotEmpty) 'deliveryContext': deliveryContext,
   };
 }
@@ -144,12 +160,14 @@ class ManifestDeliverySelector {
   }) async {
     final rolloutRules = await _loadRolloutRules(miniProgramId);
     final capabilityPolicy = await _loadCapabilityPolicy(miniProgramId);
+    final rolloutRuleIds = rolloutRules?.ruleIds ?? const <String>[];
 
     if (capabilityPolicy?.requireContextForLatest == true) {
       _requireContext(
         miniProgramId: miniProgramId,
         context: context,
         capabilityPolicy: capabilityPolicy!,
+        rolloutRuleIds: rolloutRuleIds,
       );
     }
 
@@ -239,6 +257,7 @@ class ManifestDeliverySelector {
     required String miniProgramId,
     required DeliveryContext context,
     required _CapabilityPolicy capabilityPolicy,
+    required List<String> rolloutRuleIds,
   }) {
     final missingQueryParameters = capabilityPolicy.requiredQueryParameters
         .where((parameter) => !_hasRequiredParameter(parameter, context))
@@ -256,6 +275,7 @@ class ManifestDeliverySelector {
       details: <String, dynamic>{
         'miniProgramId': miniProgramId,
         'missingQueryParameters': missingQueryParameters,
+        if (rolloutRuleIds.isNotEmpty) 'evaluatedRuleIds': rolloutRuleIds,
       },
     );
   }
@@ -266,11 +286,15 @@ class ManifestDeliverySelector {
     required _RolloutRules? rolloutRules,
   }) {
     final requestedPinnedVersion = context.pinnedVersion;
+    final evaluatedRuleIds = rolloutRules?.ruleIds ?? const <String>[];
     if (requestedPinnedVersion != null) {
       return DeliveryDecision(
         selectionMode: 'pinned_version',
+        decisionReason: 'requested_pinned_version',
         resolvedVersion: requestedPinnedVersion,
+        declaredDefaultVersion: rolloutRules?.defaultVersion,
         requestedPinnedVersion: requestedPinnedVersion,
+        evaluatedRuleIds: evaluatedRuleIds,
         deliveryContext: context.toJson(),
       );
     }
@@ -278,6 +302,7 @@ class ManifestDeliverySelector {
     if (rolloutRules == null) {
       return DeliveryDecision(
         selectionMode: 'static_latest',
+        decisionReason: 'no_rollout_rules',
         resolvedVersion: _readStaticLatestVersion(miniProgramId),
         deliveryContext: context.toJson(),
       );
@@ -301,8 +326,13 @@ class ManifestDeliverySelector {
           details: <String, dynamic>{
             'miniProgramId': miniProgramId,
             'selectionMode': 'matched_rule',
+            'decisionReason': 'matched_disabled_rule',
             'resolvedVersion': rule.version,
+            'declaredDefaultVersion': rolloutRules.defaultVersion,
             if (rule.id != null) 'matchedRuleId': rule.id,
+            'evaluatedRuleCount': evaluatedRuleIds.length,
+            if (evaluatedRuleIds.isNotEmpty)
+              'evaluatedRuleIds': evaluatedRuleIds,
             'deliveryContext': context.toJson(),
             'matchedRule': rule.toJson(),
           },
@@ -311,9 +341,12 @@ class ManifestDeliverySelector {
 
       return DeliveryDecision(
         selectionMode: 'matched_rule',
+        decisionReason: 'matched_enabled_rule',
         resolvedVersion: rule.version,
+        declaredDefaultVersion: rolloutRules.defaultVersion,
         matchedRuleId: rule.id,
         matchedRule: rule.toJson(),
+        evaluatedRuleIds: evaluatedRuleIds,
         deliveryContext: context.toJson(),
       );
     }
@@ -329,6 +362,11 @@ class ManifestDeliverySelector {
         details: <String, dynamic>{
           'miniProgramId': miniProgramId,
           'hostApp': hostApp,
+          'decisionReason': 'host_not_declared',
+          'declaredDefaultVersion': rolloutRules.defaultVersion,
+          'evaluatedRuleCount': evaluatedRuleIds.length,
+          if (evaluatedRuleIds.isNotEmpty) 'evaluatedRuleIds': evaluatedRuleIds,
+          'declaredHostApps': rolloutRules.declaredHostApps,
           'deliveryContext': context.toJson(),
         },
       );
@@ -336,7 +374,10 @@ class ManifestDeliverySelector {
 
     return DeliveryDecision(
       selectionMode: 'default_version',
+      decisionReason: 'no_rule_matched',
       resolvedVersion: rolloutRules.defaultVersion,
+      declaredDefaultVersion: rolloutRules.defaultVersion,
+      evaluatedRuleIds: evaluatedRuleIds,
       deliveryContext: context.toJson(),
     );
   }
@@ -524,6 +565,13 @@ class _RolloutRules {
 
   final String defaultVersion;
   final List<_DeliveryRule> rules;
+
+  List<String> get ruleIds =>
+      rules.map((rule) => rule.id).whereType<String>().toList(growable: false);
+
+  List<String> get declaredHostApps =>
+      rules.map((rule) => rule.hostApp).whereType<String>().toSet().toList()
+        ..sort();
 
   bool get hasHostRestrictedRules => rules.any((rule) => rule.hostApp != null);
 

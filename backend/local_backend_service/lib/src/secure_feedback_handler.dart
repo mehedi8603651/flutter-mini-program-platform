@@ -5,6 +5,8 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:path/path.dart' as path;
 import 'package:shelf/shelf.dart';
 
+import 'backend_observability.dart';
+
 const String _jsonContentType = 'application/json; charset=utf-8';
 
 class SecureFeedbackHandler {
@@ -12,7 +14,10 @@ class SecureFeedbackHandler {
 
   final String apiRootPath;
 
-  Future<Response> handleSubmit(Request request) async {
+  Future<Response> handleSubmit(
+    Request request, {
+    required String traceId,
+  }) async {
     final policy = await _loadPolicy();
 
     if (!policy.allowedMethods.contains(request.method.toUpperCase())) {
@@ -23,6 +28,7 @@ class SecureFeedbackHandler {
           'message':
               'Secure feedback submission only supports ${policy.allowedMethods.join(', ')}.',
         },
+        traceId: traceId,
       );
     }
 
@@ -48,6 +54,7 @@ class SecureFeedbackHandler {
               'Missing required secure API headers: ${missingHeaders.join(', ')}.',
           'details': <String, Object?>{'missingHeaders': missingHeaders},
         },
+        traceId: traceId,
       );
     }
 
@@ -58,6 +65,7 @@ class SecureFeedbackHandler {
           'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
           'message': 'Authorization header must use the Bearer scheme.',
         },
+        traceId: traceId,
       );
     }
 
@@ -69,6 +77,7 @@ class SecureFeedbackHandler {
           'errorCode': MiniProgramErrorCodes.secureApiUnauthorized,
           'message': 'Authorization header must include a bearer token.',
         },
+        traceId: traceId,
       );
     }
 
@@ -84,6 +93,7 @@ class SecureFeedbackHandler {
             'hostUserId': hostUserId,
           },
         },
+        traceId: traceId,
       );
     }
 
@@ -100,6 +110,7 @@ class SecureFeedbackHandler {
             'allowedHosts': policy.allowedHosts,
           },
         },
+        traceId: traceId,
       );
     }
 
@@ -116,10 +127,14 @@ class SecureFeedbackHandler {
             'reason': 'user_blocked',
           },
         },
+        traceId: traceId,
       );
     }
 
-    final requestBodyOrResponse = await _readJsonObject(request);
+    final requestBodyOrResponse = await _readJsonObject(
+      request,
+      traceId: traceId,
+    );
     if (requestBodyOrResponse is Response) {
       return requestBodyOrResponse;
     }
@@ -142,6 +157,7 @@ class SecureFeedbackHandler {
               'Secure feedback submission requires: ${missingFields.join(', ')}.',
           'details': <String, Object?>{'missingFields': missingFields},
         },
+        traceId: traceId,
       );
     }
 
@@ -158,6 +174,7 @@ class SecureFeedbackHandler {
             'allowedSources': policy.allowedSources,
           },
         },
+        traceId: traceId,
       );
     }
 
@@ -173,12 +190,29 @@ class SecureFeedbackHandler {
             'minimumLength': policy.minimumMessageLength,
           },
         },
+        traceId: traceId,
       );
     }
 
     final status = hostApp == 'super_app_host' ? 'accepted' : 'queued';
     final submissionId =
         '${hostApp}_${DateTime.now().millisecondsSinceEpoch.toString()}';
+
+    logBackendEvent(
+      'INFO',
+      'Accepted secure feedback submission.',
+      context: <String, Object?>{
+        'traceId': traceId,
+        'hostApp': hostApp,
+        'hostVersion': hostVersion,
+        'hostUserId': hostUserId,
+        if (tenantId != null) 'tenantId': tenantId,
+        'source': source,
+        if (flow != null) 'flow': flow,
+        'submissionId': submissionId,
+        'status': status,
+      },
+    );
 
     return _jsonResponse(
       statusCode: HttpStatus.created,
@@ -198,6 +232,8 @@ class SecureFeedbackHandler {
           message.length > 80 ? 80 : message.length,
         ),
       },
+      traceId: traceId,
+      extraHeaders: <String, String>{'x-secure-endpoint': policy.endpoint},
     );
   }
 
@@ -221,7 +257,10 @@ class SecureFeedbackHandler {
     return _SecureFeedbackPolicy.fromJson(decoded);
   }
 
-  Future<Object> _readJsonObject(Request request) async {
+  Future<Object> _readJsonObject(
+    Request request, {
+    required String traceId,
+  }) async {
     try {
       final decoded = jsonDecode(await request.readAsString());
       if (decoded is Map<String, dynamic>) {
@@ -236,6 +275,7 @@ class SecureFeedbackHandler {
           'errorCode': MiniProgramErrorCodes.secureApiInvalidPayload,
           'message': 'Secure feedback submission body must be a JSON object.',
         },
+        traceId: traceId,
       );
     } on FormatException catch (error) {
       return _jsonResponse(
@@ -245,6 +285,7 @@ class SecureFeedbackHandler {
           'message': 'Secure feedback submission body is not valid JSON.',
           'details': <String, Object?>{'reason': error.message},
         },
+        traceId: traceId,
       );
     }
   }
@@ -327,10 +368,15 @@ String? _stringField(Map<String, dynamic> json, String key) {
 Response _jsonResponse({
   required Map<String, Object?> body,
   int statusCode = HttpStatus.ok,
+  required String traceId,
+  Map<String, String> extraHeaders = const <String, String>{},
 }) {
   return Response(
     statusCode,
-    body: jsonEncode(body),
-    headers: <String, String>{HttpHeaders.contentTypeHeader: _jsonContentType},
+    body: jsonEncode(withTraceId(body, traceId: traceId)),
+    headers: withTraceHeaders(<String, String>{
+      HttpHeaders.contentTypeHeader: _jsonContentType,
+      ...extraHeaders,
+    }, traceId: traceId),
   );
 }

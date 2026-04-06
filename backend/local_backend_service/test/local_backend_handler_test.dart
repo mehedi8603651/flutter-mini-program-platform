@@ -159,6 +159,11 @@ void main() {
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['id'], 'profile_center');
     expect(body['version'], '1.1.0');
+    expect(response.headers['x-backend-trace-id'], isNotNull);
+    expect(
+      response.headers['x-mini-program-decision-reason'],
+      'matched_enabled_rule',
+    );
     expect(
       body['deliveryMetadata'],
       isA<Map<String, dynamic>>()
@@ -166,6 +171,11 @@ void main() {
             (metadata) => metadata['selectionMode'],
             'selectionMode',
             'matched_rule',
+          )
+          .having(
+            (metadata) => metadata['decisionReason'],
+            'decisionReason',
+            'matched_enabled_rule',
           )
           .having(
             (metadata) => metadata['matchedRuleId'],
@@ -176,6 +186,11 @@ void main() {
             (metadata) => metadata['resolvedVersion'],
             'resolvedVersion',
             '1.1.0',
+          )
+          .having(
+            (metadata) => metadata['traceId'],
+            'traceId',
+            response.headers['x-backend-trace-id'],
           ),
     );
   });
@@ -299,6 +314,7 @@ void main() {
     expect(response.statusCode, HttpStatus.created);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['traceId'], response.headers['x-backend-trace-id']);
     expect(body['status'], 'accepted');
     expect(body['endpoint'], 'feedback/submit');
     expect(body['hostApp'], 'super_app_host');
@@ -330,6 +346,7 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['errorCode'], MiniProgramErrorCodes.secureApiUnauthorized);
+    expect(body['traceId'], response.headers['x-backend-trace-id']);
     expect(
       (body['details'] as Map<String, dynamic>)['missingHeaders'],
       containsAll(<String>[
@@ -543,6 +560,7 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['errorCode'], 'host_not_enabled');
+    expect(body['traceId'], response.headers['x-backend-trace-id']);
   });
 
   test('returns 412 when a matching rollout rule is disabled', () async {
@@ -564,6 +582,7 @@ void main() {
     final details = body['details'] as Map<String, dynamic>;
     expect(details['matchedRuleId'], 'partner-feedback-disabled-lab');
     expect(details['resolvedVersion'], '1.1.0');
+    expect(details['decisionReason'], 'matched_disabled_rule');
   });
 
   test(

@@ -118,7 +118,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
         'uri': uri.toString(),
         'resourceLabel': resourceLabel,
         'statusCode': response.statusCode,
-        if (decodedBody != null) ..._extractBackendDetails(decodedBody),
+        ..._extractBackendDetails(decodedBody, response.headers),
       },
     );
   }
@@ -138,21 +138,67 @@ class HttpMiniProgramSource implements MiniProgramSource {
   }
 
   Map<String, dynamic> _extractBackendDetails(
-    Map<String, dynamic> decodedBody,
+    Map<String, dynamic>? decodedBody,
+    Map<String, String> responseHeaders,
   ) {
+    final details = <String, dynamic>{};
+
+    final traceId =
+        decodedBody?['traceId']?.toString() ??
+        responseHeaders['x-backend-trace-id'];
+    if (traceId != null && traceId.isNotEmpty) {
+      details['traceId'] = traceId;
+    }
+
+    final selectionMode =
+        decodedBody?['selectionMode']?.toString() ??
+        responseHeaders['x-mini-program-selection-mode'];
+    if (selectionMode != null && selectionMode.isNotEmpty) {
+      details['selectionMode'] = selectionMode;
+    }
+
+    final decisionReason =
+        decodedBody?['decisionReason']?.toString() ??
+        responseHeaders['x-mini-program-decision-reason'];
+    if (decisionReason != null && decisionReason.isNotEmpty) {
+      details['decisionReason'] = decisionReason;
+    }
+
+    final matchedRuleId =
+        decodedBody?['matchedRuleId']?.toString() ??
+        responseHeaders['x-mini-program-matched-rule-id'];
+    if (matchedRuleId != null && matchedRuleId.isNotEmpty) {
+      details['matchedRuleId'] = matchedRuleId;
+    }
+
+    final resolvedVersion =
+        decodedBody?['resolvedVersion']?.toString() ??
+        responseHeaders['x-mini-program-version'];
+    if (resolvedVersion != null && resolvedVersion.isNotEmpty) {
+      details['resolvedVersion'] = resolvedVersion;
+    }
+
+    if (decodedBody == null) {
+      return details;
+    }
+
     final rawDetails = decodedBody['details'];
     if (rawDetails is Map<String, dynamic>) {
-      return rawDetails;
+      details.addAll(rawDetails);
+      return details;
     }
 
     if (rawDetails is Map) {
-      return rawDetails.map((key, value) => MapEntry(key.toString(), value));
+      details.addAll(
+        rawDetails.map((key, value) => MapEntry(key.toString(), value)),
+      );
+      return details;
     }
 
     if (rawDetails != null) {
-      return <String, dynamic>{'backendDetails': rawDetails};
+      details['backendDetails'] = rawDetails;
     }
 
-    return const <String, dynamic>{};
+    return details;
   }
 }

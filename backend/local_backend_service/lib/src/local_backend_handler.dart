@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:shelf/shelf.dart';
 
+import 'backend_observability.dart';
 import 'manifest_delivery_selection.dart';
 import 'secure_feedback_handler.dart';
 
@@ -25,7 +26,11 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
   );
 
   return (Request request) async {
+    final traceId = resolveBackendTraceId(request);
+    final stopwatch = Stopwatch()..start();
     final segments = request.url.pathSegments;
+    late final Response response;
+
     if (request.method == 'POST' &&
         _matchesSegments(segments, const [
           'api',
@@ -33,40 +38,78 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
           'feedback',
           'submit',
         ])) {
-      return secureFeedbackHandler.handleSubmit(request);
+      response = await secureFeedbackHandler.handleSubmit(
+        request,
+        traceId: traceId,
+      );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'secure_feedback_submit',
+      );
+      return response;
     }
 
     if (request.method != 'GET') {
-      return _jsonResponse(
+      response = _jsonResponse(
         statusCode: HttpStatus.methodNotAllowed,
         body: <String, Object?>{
           'errorCode': 'method_not_allowed',
           'message':
               'Only GET requests and documented secure POST routes are supported.',
         },
+        traceId: traceId,
       );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'unsupported_method',
+      );
+      return response;
     }
 
     if (_matchesSegments(segments, const ['health'])) {
-      return _jsonResponse(
+      response = _jsonResponse(
         body: <String, Object?>{
           'status': 'ok',
           'service': 'local_backend_service',
         },
+        traceId: traceId,
       );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'health',
+      );
+      return response;
     }
 
     if (segments.length == 4 &&
         segments[0] == 'api' &&
         segments[1] == 'manifests' &&
         _isLatestSegment(segments[3])) {
-      return repository.readLatestManifest(
+      response = await repository.readLatestManifest(
         miniProgramId: segments[2],
         context: DeliveryContext.fromQueryParameters(
           request.url.queryParameters,
         ),
         selector: manifestSelector,
+        traceId: traceId,
       );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'manifest_latest',
+      );
+      return response;
     }
 
     if (segments.length == 5 &&
@@ -75,13 +118,30 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         segments[3] == 'versions') {
       final version = _stripJsonSuffix(segments[4]);
       if (version == null) {
-        return _badRequest('Manifest version path is invalid.');
+        response = _badRequest('Manifest version path is invalid.', traceId);
+        _logRequestCompletion(
+          traceId: traceId,
+          request: request,
+          response: response,
+          stopwatch: stopwatch,
+          routeKind: 'manifest_versioned_invalid',
+        );
+        return response;
       }
 
-      return repository.readVersionedManifest(
+      response = await repository.readVersionedManifest(
         miniProgramId: segments[2],
         version: version,
+        traceId: traceId,
       );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'manifest_versioned',
+      );
+      return response;
     }
 
     if (segments.length == 5 &&
@@ -89,23 +149,49 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         segments[1] == 'screens') {
       final screenId = _stripJsonSuffix(segments[4]);
       if (screenId == null) {
-        return _badRequest('Screen path is invalid.');
+        response = _badRequest('Screen path is invalid.', traceId);
+        _logRequestCompletion(
+          traceId: traceId,
+          request: request,
+          response: response,
+          stopwatch: stopwatch,
+          routeKind: 'screen_invalid',
+        );
+        return response;
       }
 
-      return repository.readScreen(
+      response = await repository.readScreen(
         miniProgramId: segments[2],
         version: segments[3],
         screenId: screenId,
+        traceId: traceId,
       );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'screen_versioned',
+      );
+      return response;
     }
 
-    return _jsonResponse(
+    response = _jsonResponse(
       statusCode: HttpStatus.notFound,
       body: <String, Object?>{
         'errorCode': 'not_found',
         'message': 'No backend route matches "${request.url.path}".',
       },
+      traceId: traceId,
     );
+    _logRequestCompletion(
+      traceId: traceId,
+      request: request,
+      response: response,
+      stopwatch: stopwatch,
+      routeKind: 'not_found',
+    );
+    return response;
   };
 }
 
@@ -118,16 +204,18 @@ class _PublishedArtifactRepository {
     required String miniProgramId,
     required DeliveryContext context,
     required ManifestDeliverySelector selector,
+    required String traceId,
   }) async {
     final validationError = _validateSegment(
       miniProgramId,
       label: 'miniProgramId',
+      traceId: traceId,
     );
     if (validationError != null) {
       return validationError;
     }
 
-    final contextValidationError = _validateContext(context);
+    final contextValidationError = _validateContext(context, traceId: traceId);
     if (contextValidationError != null) {
       return contextValidationError;
     }
@@ -138,19 +226,54 @@ class _PublishedArtifactRepository {
         context: context,
       );
       final responseBody = Map<String, Object?>.from(selection.manifestJson)
-        ..['deliveryMetadata'] = selection.decision.toJson();
+        ..['deliveryMetadata'] = <String, Object?>{
+          ...selection.decision.toJson(),
+          'traceId': traceId,
+        };
       final headers = <String, String>{
         HttpHeaders.contentTypeHeader: _jsonContentType,
+        'x-mini-program-id': miniProgramId,
         'x-mini-program-version': selection.version,
         'x-mini-program-selection-mode': selection.decision.selectionMode,
+        'x-mini-program-decision-reason': selection.decision.decisionReason,
       };
       final matchedRuleId = selection.decision.matchedRuleId;
       if (matchedRuleId != null) {
         headers['x-mini-program-matched-rule-id'] = matchedRuleId;
       }
 
-      return Response.ok(jsonEncode(responseBody), headers: headers);
+      logBackendEvent(
+        'INFO',
+        'Resolved latest manifest request.',
+        context: <String, Object?>{
+          'traceId': traceId,
+          'miniProgramId': miniProgramId,
+          'resolvedVersion': selection.version,
+          'selectionMode': selection.decision.selectionMode,
+          'decisionReason': selection.decision.decisionReason,
+          if (matchedRuleId != null) 'matchedRuleId': matchedRuleId,
+          'deliveryContext': context.toJson(),
+        },
+      );
+
+      return Response.ok(
+        jsonEncode(responseBody),
+        headers: withTraceHeaders(headers, traceId: traceId),
+      );
     } on ManifestSelectionException catch (error) {
+      logBackendEvent(
+        'WARN',
+        'Rejected latest manifest request.',
+        context: <String, Object?>{
+          'traceId': traceId,
+          'miniProgramId': miniProgramId,
+          'statusCode': error.statusCode,
+          'errorCode': error.errorCode,
+          'deliveryContext': context.toJson(),
+          if (error.details.isNotEmpty) 'details': error.details,
+        },
+      );
+
       return _jsonResponse(
         statusCode: error.statusCode,
         body: <String, Object?>{
@@ -158,6 +281,7 @@ class _PublishedArtifactRepository {
           'message': error.message,
           if (error.details.isNotEmpty) 'details': error.details,
         },
+        traceId: traceId,
       );
     }
   }
@@ -165,16 +289,22 @@ class _PublishedArtifactRepository {
   Future<Response> readVersionedManifest({
     required String miniProgramId,
     required String version,
+    required String traceId,
   }) async {
     final miniProgramError = _validateSegment(
       miniProgramId,
       label: 'miniProgramId',
+      traceId: traceId,
     );
     if (miniProgramError != null) {
       return miniProgramError;
     }
 
-    final versionError = _validateSegment(version, label: 'version');
+    final versionError = _validateSegment(
+      version,
+      label: 'version',
+      traceId: traceId,
+    );
     if (versionError != null) {
       return versionError;
     }
@@ -189,6 +319,8 @@ class _PublishedArtifactRepository {
       ),
       notFoundMessage:
           'Manifest version "$version" for mini-program "$miniProgramId" was not found.',
+      traceId: traceId,
+      extraHeaders: <String, String>{'x-mini-program-id': miniProgramId},
     );
   }
 
@@ -196,21 +328,31 @@ class _PublishedArtifactRepository {
     required String miniProgramId,
     required String version,
     required String screenId,
+    required String traceId,
   }) async {
     final miniProgramError = _validateSegment(
       miniProgramId,
       label: 'miniProgramId',
+      traceId: traceId,
     );
     if (miniProgramError != null) {
       return miniProgramError;
     }
 
-    final versionError = _validateSegment(version, label: 'version');
+    final versionError = _validateSegment(
+      version,
+      label: 'version',
+      traceId: traceId,
+    );
     if (versionError != null) {
       return versionError;
     }
 
-    final screenError = _validateSegment(screenId, label: 'screenId');
+    final screenError = _validateSegment(
+      screenId,
+      label: 'screenId',
+      traceId: traceId,
+    );
     if (screenError != null) {
       return screenError;
     }
@@ -225,16 +367,23 @@ class _PublishedArtifactRepository {
       ),
       notFoundMessage:
           'Screen "$screenId" for mini-program "$miniProgramId" version "$version" was not found.',
+      traceId: traceId,
+      extraHeaders: <String, String>{'x-mini-program-id': miniProgramId},
     );
   }
 
   Future<Response> _readJsonFile(
     String filePath, {
     required String notFoundMessage,
+    required String traceId,
+    Map<String, String> extraHeaders = const <String, String>{},
   }) async {
     final normalizedPath = path.normalize(path.absolute(filePath));
     if (!_isWithinApiRoot(normalizedPath)) {
-      return _badRequest('Resolved file path escapes the backend API root.');
+      return _badRequest(
+        'Resolved file path escapes the backend API root.',
+        traceId,
+      );
     }
 
     final file = File(normalizedPath);
@@ -245,6 +394,7 @@ class _PublishedArtifactRepository {
           'errorCode': 'artifact_not_found',
           'message': notFoundMessage,
         },
+        traceId: traceId,
       );
     }
 
@@ -254,9 +404,10 @@ class _PublishedArtifactRepository {
 
       return Response.ok(
         rawJson,
-        headers: <String, String>{
+        headers: withTraceHeaders(<String, String>{
           HttpHeaders.contentTypeHeader: _jsonContentType,
-        },
+          ...extraHeaders,
+        }, traceId: traceId),
       );
     } on FormatException catch (error) {
       return _jsonResponse(
@@ -266,21 +417,33 @@ class _PublishedArtifactRepository {
           'message': 'Stored backend JSON is malformed.',
           'details': error.message,
         },
+        traceId: traceId,
       );
     }
   }
 
-  Response? _validateSegment(String value, {required String label}) {
+  Response? _validateSegment(
+    String value, {
+    required String label,
+    required String traceId,
+  }) {
     if (!_isSafePathSegment(value)) {
-      return _badRequest('Path segment "$label" is invalid.');
+      return _badRequest('Path segment "$label" is invalid.', traceId);
     }
     return null;
   }
 
-  Response? _validateContext(DeliveryContext context) {
+  Response? _validateContext(
+    DeliveryContext context, {
+    required String traceId,
+  }) {
     final hostApp = context.hostApp;
     if (hostApp != null) {
-      final hostAppError = _validateSegment(hostApp, label: 'hostApp');
+      final hostAppError = _validateSegment(
+        hostApp,
+        label: 'hostApp',
+        traceId: traceId,
+      );
       if (hostAppError != null) {
         return hostAppError;
       }
@@ -288,7 +451,11 @@ class _PublishedArtifactRepository {
 
     final sdkVersion = context.sdkVersion;
     if (sdkVersion != null) {
-      final sdkVersionError = _validateSegment(sdkVersion, label: 'sdkVersion');
+      final sdkVersionError = _validateSegment(
+        sdkVersion,
+        label: 'sdkVersion',
+        traceId: traceId,
+      );
       if (sdkVersionError != null) {
         return sdkVersionError;
       }
@@ -299,6 +466,7 @@ class _PublishedArtifactRepository {
       final hostVersionError = _validateSegment(
         hostVersion,
         label: 'hostVersion',
+        traceId: traceId,
       );
       if (hostVersionError != null) {
         return hostVersionError;
@@ -307,7 +475,11 @@ class _PublishedArtifactRepository {
 
     final platform = context.platform;
     if (platform != null) {
-      final platformError = _validateSegment(platform, label: 'platform');
+      final platformError = _validateSegment(
+        platform,
+        label: 'platform',
+        traceId: traceId,
+      );
       if (platformError != null) {
         return platformError;
       }
@@ -315,7 +487,11 @@ class _PublishedArtifactRepository {
 
     final locale = context.locale;
     if (locale != null) {
-      final localeError = _validateSegment(locale, label: 'locale');
+      final localeError = _validateSegment(
+        locale,
+        label: 'locale',
+        traceId: traceId,
+      );
       if (localeError != null) {
         return localeError;
       }
@@ -323,7 +499,11 @@ class _PublishedArtifactRepository {
 
     final tenantId = context.tenantId;
     if (tenantId != null) {
-      final tenantIdError = _validateSegment(tenantId, label: 'tenantId');
+      final tenantIdError = _validateSegment(
+        tenantId,
+        label: 'tenantId',
+        traceId: traceId,
+      );
       if (tenantIdError != null) {
         return tenantIdError;
       }
@@ -334,6 +514,7 @@ class _PublishedArtifactRepository {
       final pinnedVersionError = _validateSegment(
         pinnedVersion,
         label: 'pinnedVersion',
+        traceId: traceId,
       );
       if (pinnedVersionError != null) {
         return pinnedVersionError;
@@ -344,6 +525,7 @@ class _PublishedArtifactRepository {
       final capabilityError = _validateSegment(
         capability,
         label: 'capabilities',
+        traceId: traceId,
       );
       if (capabilityError != null) {
         return capabilityError;
@@ -399,20 +581,47 @@ bool _isSafePathSegment(String value) {
   return RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(normalized);
 }
 
-Response _badRequest(String message) {
+void _logRequestCompletion({
+  required String traceId,
+  required Request request,
+  required Response response,
+  required Stopwatch stopwatch,
+  required String routeKind,
+}) {
+  logBackendEvent(
+    response.statusCode >= HttpStatus.badRequest ? 'WARN' : 'INFO',
+    'Completed backend request.',
+    context: <String, Object?>{
+      'traceId': traceId,
+      'routeKind': routeKind,
+      'method': request.method,
+      'path': request.url.path,
+      'statusCode': response.statusCode,
+      'durationMs': stopwatch.elapsedMilliseconds,
+    },
+  );
+}
+
+Response _badRequest(String message, String traceId) {
   return _jsonResponse(
     statusCode: HttpStatus.badRequest,
     body: <String, Object?>{'errorCode': 'invalid_request', 'message': message},
+    traceId: traceId,
   );
 }
 
 Response _jsonResponse({
   int statusCode = HttpStatus.ok,
   required Map<String, Object?> body,
+  required String traceId,
+  Map<String, String> extraHeaders = const <String, String>{},
 }) {
   return Response(
     statusCode,
-    body: jsonEncode(body),
-    headers: <String, String>{HttpHeaders.contentTypeHeader: _jsonContentType},
+    body: jsonEncode(withTraceId(body, traceId: traceId)),
+    headers: withTraceHeaders(<String, String>{
+      HttpHeaders.contentTypeHeader: _jsonContentType,
+      ...extraHeaders,
+    }, traceId: traceId),
   );
 }

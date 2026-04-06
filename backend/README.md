@@ -43,6 +43,8 @@ The current rollout sample uses two lanes:
 - rollout rules are now ordered and can match on `hostApp`, `hostVersionRange`, `platform`, `locale`, and optional `tenantId`
 - `latest` can also honor an optional `pinnedVersion` query parameter for debug and release-control testing
 - `feedback_form` now proves capability-aware delivery for `secure_api`
+- latest-manifest responses now include request trace and decision metadata for local operability debugging
+- the local backend service now logs request completion and decision context to stdout with a per-request trace ID
 
 ## Refresh sample files
 
@@ -127,10 +129,21 @@ That request resolves `latest` to the pinned `1.0.0` artifact and returns
 `deliveryMetadata` with:
 
 - `selectionMode`
+- `decisionReason`
 - `resolvedVersion`
+- optional `declaredDefaultVersion`
 - optional `requestedPinnedVersion`
 - optional `matchedRuleId`
+- optional `evaluatedRuleIds`
+- `traceId`
 - `deliveryContext`
+
+The response headers also now include:
+
+- `x-backend-trace-id`
+- `x-mini-program-selection-mode`
+- `x-mini-program-decision-reason`
+- optional `x-mini-program-matched-rule-id`
 
 `super_app_host` can already consume these URLs through
 `HttpMiniProgramSource` by launching with:
@@ -175,6 +188,14 @@ The current local auth/failure sample also supports:
 
 - `expired-` bearer tokens -> `401 secure_api_session_expired`
 - blocked demo users from `blockedUserIds` -> `403 secure_api_forbidden`
+
+Secure endpoint responses also include:
+
+- `traceId` in the JSON body
+- `x-backend-trace-id` in response headers
+
+This makes it easier to correlate host fallback diagnostics with local backend
+logs while you are still running the platform entirely on your machine.
 
 ## Package verification
 

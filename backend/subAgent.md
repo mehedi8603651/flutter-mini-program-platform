@@ -44,6 +44,11 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
 - `feedback_form` delivery now proves capability-aware `secure_api` rollout checks
 - `POST /api/secure/feedback/submit` now provides a real local secure endpoint backed by `api/secure-api-policies/feedback_submit.json`
 - the secure endpoint now enforces local auth failure paths such as expired bearer tokens and blocked demo users
+- latest-manifest responses now include traceable delivery metadata such as `decisionReason`, `declaredDefaultVersion`, and `evaluatedRuleIds`
+- the local backend now emits per-request stdout logs with a trace ID and route/result summary
 
 ## Next Step
-- Move from local sample release control to a production backend service with persistent rollout storage, admin-managed pinning, and stronger observability.
+- Keep the current local backend and strengthen admin/debug operability on top of it:
+  - decision-inspection endpoints or debug views when needed
+  - richer release-control tooling
+  - production deployment only after local behavior is stable

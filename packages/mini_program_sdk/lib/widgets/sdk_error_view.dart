@@ -126,6 +126,11 @@ class SdkErrorView extends StatelessWidget {
       diagnostics.add('Matched rule: $matchedRuleId');
     }
 
+    final decisionReason = details['decisionReason'];
+    if (decisionReason is String && decisionReason.isNotEmpty) {
+      diagnostics.add('Decision reason: $decisionReason');
+    }
+
     if (details['manifestCacheExpired'] == true ||
         details['entryScreenCacheExpired'] == true) {
       diagnostics.add(
@@ -155,6 +160,11 @@ class SdkErrorView extends StatelessWidget {
       if (hostApp is String && hostApp.isNotEmpty) {
         diagnostics.add('Host app: $hostApp');
       }
+    }
+
+    final traceId = details['traceId'] ?? details['backendTraceId'];
+    if (traceId is String && traceId.isNotEmpty) {
+      diagnostics.add('Trace ID: $traceId');
     }
 
     return diagnostics;
