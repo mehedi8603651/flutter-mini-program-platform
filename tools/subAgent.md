@@ -47,6 +47,22 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
   - Runs the repo-level smoke suite in a stable order.
   - Covers delivery validation plus backend, SDK, and host analyze/test steps.
   - Intended to be the single local and CI-friendly pre-push command.
+- `create_mini_program.ps1`
+  - Wraps the Dart scaffolder in `packages/mini_program_tooling`.
+  - Generates a starter mini-program with the current repo structure and
+    capability-aware defaults.
+  - Intended to reduce copy-paste mistakes when a developer or partner team
+    starts a new portable flow.
+- `build_mini_program.ps1`
+  - Wraps the Dart build helper in `packages/mini_program_tooling`.
+  - Resolves the available Stac CLI path and verifies the expected entry screen
+    JSON after the build.
+  - Intended to keep local authoring and CI-friendly build commands consistent.
+- `publish_mini_program.ps1`
+  - Wraps the Dart publish helper in `packages/mini_program_tooling`.
+  - Runs build plus validation and then publishes the result into the local
+    backend sample.
+  - Intended to give authors one safe command for the local backend flow.
 
 ## CI Rule
 - Use `smoke_repo.ps1` as the local pre-push command.

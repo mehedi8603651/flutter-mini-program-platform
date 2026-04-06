@@ -35,8 +35,27 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
     `hostVersion`, `platform`, `locale`, `tenantId`, `pinnedVersion`, and
     `capabilities`.
   - Supports `text` and `json` output for local debugging and CI.
+- `bin/create_mini_program.dart`
+  - Generates a buildable starter mini-program under `mini_programs/<id>/`.
+  - Emits the starter manifest, pubspec, default Stac options, starter screen,
+    README, and placeholder folders for assets/components/theme.
+  - Validates mini-program IDs and current capability wire values before
+    writing files.
+- `bin/build_mini_program.dart`
+  - Builds a mini-program through the available Stac CLI path.
+  - Prefers an explicit script path, then vendored `stac-dev`, then a global
+    `stac` command.
+  - Runs `dart pub get` in the mini-program package by default and verifies the
+    expected entry screen JSON after the build.
+- `bin/publish_mini_program.dart`
+  - Chains build, validation, and local backend publish into one safe command.
+  - Stops before publish if validation has errors.
+  - Re-validates after copying artifacts into `backend/api/`.
 
 ## Current Focus
+- `create_mini_program`
+- `build_mini_program`
+- `publish_mini_program`
 - `validate_delivery`
 - `inspect_delivery`
 - `build_mini_programs`

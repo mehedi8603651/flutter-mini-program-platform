@@ -4,6 +4,104 @@ Local developer and CI tooling for the Flutter mini-program platform.
 
 ## Current CLI
 
+### `create_mini_program`
+
+Generates a buildable starter mini-program under `mini_programs/<id>/` with:
+
+- `manifest.json`
+- `README.md`
+- `pubspec.yaml`
+- `lib/default_stac_options.dart`
+- `stac/screens/<id>_home.dart`
+- `stac/components/`
+- `stac/theme/`
+- `assets/`
+
+Example:
+
+```powershell
+cd D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart run bin\create_mini_program.dart --repo-root D:\flutter-mini-program-platform --id coupon_center
+```
+
+Custom capabilities:
+
+```powershell
+dart run bin\create_mini_program.dart `
+  --repo-root D:\flutter-mini-program-platform `
+  --id claim_center `
+  --title "Claim Center" `
+  --capabilities analytics,secure_api
+```
+
+Repo-level PowerShell wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
+  -MiniProgramId coupon_center
+```
+
+### `build_mini_program`
+
+Builds a mini-program through the current Stac CLI path and verifies that the
+entry screen JSON was produced.
+
+Resolution order:
+
+1. explicit `--stac-cli-script`
+2. vendored `stac-dev/packages/stac_cli/bin/stac_cli.dart`
+3. global `stac` command
+
+Example:
+
+```powershell
+cd D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart run bin\build_mini_program.dart --repo-root D:\flutter-mini-program-platform --id profile_center
+```
+
+Explicit script path:
+
+```powershell
+dart run bin\build_mini_program.dart `
+  --repo-root D:\flutter-mini-program-platform `
+  --id coupon_center `
+  --stac-cli-script D:\path\to\bin\stac_cli.dart
+```
+
+Repo-level PowerShell wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
+  -MiniProgramId profile_center
+```
+
+### `publish_mini_program`
+
+Builds a mini-program, runs a pre-publish validation gate, copies the built
+manifest/screens into `backend/api/`, then runs a post-publish validation.
+
+Example:
+
+```powershell
+cd D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart run bin\publish_mini_program.dart --repo-root D:\flutter-mini-program-platform --id profile_center
+```
+
+Repo-level PowerShell wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
+  -MiniProgramId profile_center
+```
+
+Explicit CLI path:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
+  -MiniProgramId coupon_center `
+  -StacCliScript D:\path\to\bin\stac_cli.dart
+```
+
 ### `validate_delivery`
 
 Validates authored manifests plus backend delivery files before runtime:
@@ -81,3 +179,9 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -Locale en-US `
   -Capabilities analytics,native_navigation,secure_api
 ```
+
+## Authoring guide
+
+See:
+
+- `docs/mini_program_authoring.md`

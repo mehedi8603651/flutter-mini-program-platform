@@ -1,0 +1,89 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:args/args.dart';
+import 'package:mini_program_tooling/mini_program_tooling.dart';
+
+Future<void> main(List<String> arguments) async {
+  final parser = ArgParser()
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      negatable: false,
+      help: 'Show usage information.',
+    )
+    ..addOption(
+      'repo-root',
+      defaultsTo: Directory.current.path,
+      help: 'Repository root containing mini_programs/.',
+    )
+    ..addOption(
+      'id',
+      mandatory: true,
+      help: 'Mini-program ID to build.',
+    )
+    ..addOption(
+      'stac-cli-script',
+      help: 'Optional explicit path to bin/stac_cli.dart.',
+    )
+    ..addFlag(
+      'skip-pub-get',
+      negatable: false,
+      help: 'Skip dart pub get inside the mini-program package.',
+    )
+    ..addOption(
+      'output',
+      allowed: <String>['text', 'json'],
+      defaultsTo: 'text',
+      help: 'Output format.',
+    );
+
+  late final ArgResults results;
+  try {
+    results = parser.parse(arguments);
+  } on FormatException catch (error) {
+    stderr.writeln(error.message);
+    stderr.writeln(parser.usage);
+    exitCode = 64;
+    return;
+  }
+
+  if (results.flag('help')) {
+    stdout.writeln(parser.usage);
+    return;
+  }
+
+  try {
+    final result = await const MiniProgramBuilder().build(
+      MiniProgramBuildRequest(
+        repoRootPath: results.option('repo-root')!,
+        miniProgramId: results.option('id')!,
+        stacCliScriptPath: results.option('stac-cli-script'),
+        skipPubGet: results.flag('skip-pub-get'),
+      ),
+    );
+
+    if (results.option('output') == 'json') {
+      stdout.writeln(const JsonEncoder.withIndent('  ').convert(result.toJson()));
+    } else {
+      stdout.writeln(_formatResult(result));
+    }
+  } on MiniProgramBuildException catch (error) {
+    stderr.writeln(error.message);
+    exitCode = 1;
+  }
+}
+
+String _formatResult(MiniProgramBuildResult result) {
+  final lines = <String>[
+    'Built mini-program: ${result.miniProgramId}',
+    'Root: ${result.miniProgramRootPath}',
+    'CLI source: ${result.cliSource}',
+    'Command: ${result.invocation.join(' ')}',
+    'Output directory: ${result.outputDirectoryPath}',
+    'Entry screen JSON: ${result.entryScreenJsonPath}',
+    'Ran pub get: ${result.pubGetRan}',
+  ];
+
+  return lines.join('\n');
+}

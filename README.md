@@ -4,6 +4,37 @@ Portable Flutter mini-program platform built around shared contracts, a shared
 SDK/runtime, portable Stac-authored mini-programs, multiple Flutter host apps,
 and local backend delivery.
 
+## Create A Mini-Program
+
+Generate a starter mini-program from the repo root with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
+  -MiniProgramId coupon_center
+```
+
+The command generates the manifest, starter Stac screen, build config, README,
+and the expected `stac/components`, `stac/theme`, and `assets` folders under
+`mini_programs/<id>/`.
+
+Authoring guide:
+
+- [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
+
+Build a mini-program with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
+  -MiniProgramId profile_center
+```
+
+Publish it into the local backend sample with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
+  -MiniProgramId profile_center
+```
+
 ## Repo Smoke Command
 
 Run the repo-level local/CI smoke suite with:
