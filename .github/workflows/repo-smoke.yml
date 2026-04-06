@@ -39,6 +39,11 @@ jobs:
         run: |
           dart run bin\validate_delivery.dart --repo-root ..\.. --output text
 
+      - name: Backend pub get
+        working-directory: .\backend\local_backend_service
+        run: |
+          dart pub get
+
       - name: Backend analyze
         working-directory: .\backend\local_backend_service
         run: |
@@ -48,6 +53,11 @@ jobs:
         working-directory: .\backend\local_backend_service
         run: |
           dart test
+
+      - name: SDK pub get
+        working-directory: .\packages\mini_program_sdk
+        run: |
+          flutter pub get
 
       - name: SDK analyze
         working-directory: .\packages\mini_program_sdk
@@ -59,6 +69,11 @@ jobs:
         run: |
           flutter test
 
+      - name: Super host pub get
+        working-directory: .\hosts\super_app_host
+        run: |
+          flutter pub get
+
       - name: Super host analyze
         working-directory: .\hosts\super_app_host
         run: |
@@ -68,6 +83,11 @@ jobs:
         working-directory: .\hosts\super_app_host
         run: |
           flutter test
+
+      - name: Partner host pub get
+        working-directory: .\hosts\partner_app_host
+        run: |
+          flutter pub get
 
       - name: Partner host analyze
         working-directory: .\hosts\partner_app_host
