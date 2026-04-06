@@ -36,7 +36,7 @@ jobs:
 
       - name: Delivery validation
         run: |
-          powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\tools\validate_delivery.ps1
+          dart run .\packages\mini_program_tooling\bin\validate_delivery.dart --repo-root . --output text
 
       - name: Backend analyze
         working-directory: .\backend\local_backend_service
