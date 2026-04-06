@@ -55,7 +55,10 @@ void main() {
       final screenSource = await screenFile.readAsString();
       expect(screenSource, contains("@StacScreen(screenName: 'coupon_center_home')"));
       expect(screenSource, contains("'action': 'trackEvent'"));
+      expect(screenSource, contains('Track starter event (logs only)'));
       expect(screenSource, contains("'action': 'openNativeScreen'"));
+      expect(screenSource, contains("'route': 'profile_editor'"));
+      expect(screenSource, contains('Open sample native screen'));
       expect(screenSource, isNot(contains("'action': 'callSecureApi'")));
 
       expect(

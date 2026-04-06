@@ -17,6 +17,12 @@ Generates a buildable starter mini-program under `mini_programs/<id>/` with:
 - `stac/theme/`
 - `assets/`
 
+Starter behavior:
+
+- analytics starter button is log-only by design
+- native starter button uses the shared demo route alias `profile_editor`
+- authors should replace that demo route alias before shipping a real mini-program
+
 Example:
 
 ```powershell

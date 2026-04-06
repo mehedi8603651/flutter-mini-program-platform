@@ -50,7 +50,13 @@ The scaffold creates:
 - Do not author normal host Flutter pages for mini-program UI.
 - Keep native work behind approved `hostAction` payloads.
 - Only use declared manifest capabilities.
-- Replace placeholder route aliases and secure endpoints before shipping.
+- Replace starter demo route aliases and secure endpoints before shipping.
+
+Current scaffold behavior:
+
+- `Track starter event (logs only)` writes to the host analytics log only
+- `Open sample native screen` uses the shared demo route alias `profile_editor`
+- the sample native route works in both current hosts, but it is only a starter demo and should be replaced in real flows
 
 ## Current supported capability values
 

@@ -364,8 +364,9 @@ StacOptions get defaultStacOptions => const StacOptions(
 
     if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
       notes.add(
-        '- replace the placeholder route alias `$miniProgramId'
-        '_follow_up` with a real host-owned route alias',
+        '- the starter native button uses the shared demo route alias '
+        '`profile_editor`; replace it with a real host-owned route alias '
+        'before shipping',
       );
     }
 
@@ -556,7 +557,13 @@ ${widgets.join()}
                   },
                 },
               ),
-              child: StacText(data: 'Track starter event'),
+              child: StacText(data: 'Track starter event (logs only)'),
+            ),
+            StacSizedBox(height: 8),
+            StacText(
+              data:
+                  'This starter analytics action only writes to the host log. '
+                  'It does not change the UI.',
             ),
 ''';
 
@@ -569,13 +576,16 @@ ${widgets.join()}
                   'requestId': '$miniProgramId-open-follow-up',
                   'action': 'openNativeScreen',
                   'payload': {
-                    'route': '${miniProgramId}_follow_up',
-                    'args': {'source': '$miniProgramId'},
+                    'route': 'profile_editor',
+                    'args': {
+                      'source': '$miniProgramId',
+                      'userId': 'starter_demo_user',
+                    },
                     'expectResult': true,
                   },
                 },
               ),
-              child: StacText(data: 'Open host follow-up'),
+              child: StacText(data: 'Open sample native screen'),
             ),
 ''';
 
