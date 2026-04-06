@@ -43,3 +43,7 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
   - Wraps the Dart delivery validator in `packages/mini_program_tooling`.
   - Validates authored manifests, published backend manifests/screens, rollout
     rules, capability policies, and secure API policies before runtime.
+- `smoke_repo.ps1`
+  - Runs the repo-level smoke suite in a stable order.
+  - Covers delivery validation plus backend, SDK, and host analyze/test steps.
+  - Intended to be the single local and CI-friendly pre-push command.
