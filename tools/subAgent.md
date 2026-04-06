@@ -49,6 +49,6 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
   - Intended to be the single local and CI-friendly pre-push command.
 
 ## CI Rule
-- Root GitHub Actions workflows should call `tools/smoke_repo.ps1` instead of
-  duplicating repo smoke commands inline.
-- Keep local and CI verification aligned around the same script entrypoint.
+- Use `smoke_repo.ps1` as the local pre-push command.
+- In GitHub Actions, prefer explicit smoke steps when clearer failure
+  diagnostics are more important than reusing the wrapper script directly.

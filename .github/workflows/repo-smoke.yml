@@ -13,6 +13,8 @@ jobs:
   smoke:
     runs-on: windows-latest
     timeout-minutes: 45
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     defaults:
       run:
         shell: pwsh
@@ -32,6 +34,46 @@ jobs:
           flutter --version
           dart --version
 
-      - name: Run repo smoke suite
+      - name: Delivery validation
         run: |
-          powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\tools\smoke_repo.ps1
+          powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\tools\validate_delivery.ps1
+
+      - name: Backend analyze
+        working-directory: .\backend\local_backend_service
+        run: |
+          dart analyze
+
+      - name: Backend test
+        working-directory: .\backend\local_backend_service
+        run: |
+          dart test
+
+      - name: SDK analyze
+        working-directory: .\packages\mini_program_sdk
+        run: |
+          flutter analyze
+
+      - name: SDK test
+        working-directory: .\packages\mini_program_sdk
+        run: |
+          flutter test
+
+      - name: Super host analyze
+        working-directory: .\hosts\super_app_host
+        run: |
+          flutter analyze
+
+      - name: Super host test
+        working-directory: .\hosts\super_app_host
+        run: |
+          flutter test
+
+      - name: Partner host analyze
+        working-directory: .\hosts\partner_app_host
+        run: |
+          flutter analyze
+
+      - name: Partner host test
+        working-directory: .\hosts\partner_app_host
+        run: |
+          flutter test
