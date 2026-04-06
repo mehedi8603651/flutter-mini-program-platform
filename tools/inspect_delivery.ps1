@@ -16,7 +16,21 @@ param(
     [string]$Output = "text"
 )
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$scriptRoot =
+    if ($PSScriptRoot) {
+        $PSScriptRoot
+    }
+    elseif ($MyInvocation.MyCommand.Path) {
+        Split-Path -Parent $MyInvocation.MyCommand.Path
+    }
+    else {
+        throw "Unable to resolve the script root for inspect_delivery.ps1."
+    }
+
+$repoRoot = Resolve-Path (Join-Path $scriptRoot "..")
 $toolPath = Join-Path $repoRoot "packages\mini_program_tooling\bin\inspect_delivery.dart"
 
 $arguments = @(

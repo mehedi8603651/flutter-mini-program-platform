@@ -1,5 +1,5 @@
 param(
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
+    [string]$RepoRoot,
     [switch]$SkipAnalyze,
     [switch]$SkipHosts,
     [switch]$SkipBackend,
@@ -9,6 +9,21 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$scriptRoot =
+    if ($PSScriptRoot) {
+        $PSScriptRoot
+    }
+    elseif ($MyInvocation.MyCommand.Path) {
+        Split-Path -Parent $MyInvocation.MyCommand.Path
+    }
+    else {
+        throw "Unable to resolve the script root for smoke_repo.ps1."
+    }
+
+if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
+    $RepoRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
+}
 
 $powerShellExecutable =
     if (Get-Command pwsh -ErrorAction SilentlyContinue) {

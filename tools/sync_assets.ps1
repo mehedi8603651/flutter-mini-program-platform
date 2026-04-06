@@ -3,7 +3,21 @@ param(
   [string]$HostId = 'super_app_host'
 )
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$scriptRoot =
+  if ($PSScriptRoot) {
+    $PSScriptRoot
+  }
+  elseif ($MyInvocation.MyCommand.Path) {
+    Split-Path -Parent $MyInvocation.MyCommand.Path
+  }
+  else {
+    throw "Unable to resolve the script root for sync_assets.ps1."
+  }
+
+$repoRoot = (Resolve-Path (Join-Path $scriptRoot '..')).Path
 $miniProgramRoot = Join-Path $repoRoot "mini_programs\$MiniProgramId"
 $hostRoot = Join-Path $repoRoot "hosts\$HostId"
 $manifestSource = Join-Path $miniProgramRoot 'manifest.json'
