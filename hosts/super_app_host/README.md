@@ -98,7 +98,7 @@ If you start the backend on another port, update
 `SUPER_APP_BACKEND_BASE_URL` to match it.
 
 In local backend mode, this host automatically sends its delivery context to
-the backend `latest` manifest route:
+the backend discovery and `latest` manifest routes:
 
 - `hostApp=super_app_host`
 - `sdkVersion=1.0.0`
@@ -113,6 +113,10 @@ With the current rollout sample, that context resolves:
 
 - `profile_center` `latest` -> `1.1.0`
 - `feedback_form` `latest` -> `1.1.0`
+
+In remote mode, the host list now discovers compatible published mini-programs
+through `/api/discovery/mini-programs.json`, so newly published backend
+entries can show up without editing the host catalog for backend delivery.
 
 If you test on an Android emulator instead of Windows desktop, use
 `http://10.0.2.2:8080/api/` for `SUPER_APP_BACKEND_BASE_URL`.

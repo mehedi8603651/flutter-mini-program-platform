@@ -1,4 +1,5 @@
 import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 class LocalMiniProgramDefinition {
   const LocalMiniProgramDefinition({
@@ -6,12 +7,29 @@ class LocalMiniProgramDefinition {
     required this.title,
     required this.description,
     required this.requiredCapabilities,
+    this.isBackendDiscovered = false,
+    this.resolvedVersion,
   });
+
+  factory LocalMiniProgramDefinition.fromPublishedSummary(
+    PublishedMiniProgramSummary summary,
+  ) {
+    return LocalMiniProgramDefinition(
+      id: summary.id,
+      title: summary.title,
+      description: summary.description,
+      requiredCapabilities: summary.requiredCapabilities,
+      isBackendDiscovered: true,
+      resolvedVersion: summary.resolvedVersion,
+    );
+  }
 
   final String id;
   final String title;
   final String description;
   final List<Capability> requiredCapabilities;
+  final bool isBackendDiscovered;
+  final String? resolvedVersion;
 }
 
 abstract final class LocalMiniProgramCatalog {

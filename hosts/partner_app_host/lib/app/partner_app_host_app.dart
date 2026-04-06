@@ -22,6 +22,7 @@ class PartnerAppHostApp extends StatefulWidget {
   const PartnerAppHostApp({
     super.key,
     this.source,
+    this.catalogClient,
     this.sourceDescription,
     this.sourceConfiguration,
     this.authSessionService,
@@ -32,6 +33,7 @@ class PartnerAppHostApp extends StatefulWidget {
   });
 
   final MiniProgramSource? source;
+  final PublishedMiniProgramCatalogClient? catalogClient;
   final String? sourceDescription;
   final PartnerAppHostSourceConfiguration? sourceConfiguration;
   final AuthSessionService? authSessionService;
@@ -52,6 +54,7 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
   late final HostBridge _hostBridge;
   late final Future<MiniProgramCacheBundle> _cacheBundleFuture;
   late final MiniProgramDiscoverySourceKind _discoverySourceKind;
+  late final PublishedMiniProgramCatalogClient? _catalogClient;
 
   @override
   void initState() {
@@ -76,6 +79,16 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
         (widget.source != null
             ? 'Injected source'
             : sourceConfiguration.description);
+    _catalogClient =
+        widget.catalogClient ??
+        (widget.source != null
+            ? null
+            : sourceConfiguration.buildCatalogClient(
+                hostAppId: partnerAppHostId,
+                sdkVersion: partnerAppHostSdkVersion,
+                hostVersion: partnerAppHostVersion,
+                capabilityRegistry: _capabilityRegistry,
+              ));
     _discoverySourceKind =
         widget.discoverySourceKind ?? MiniProgramDiscoverySourceKind.remote;
     final authSessionService =
@@ -152,6 +165,7 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
           return MiniProgramListPage(
             sdkVersion: partnerAppHostSdkVersion,
             source: _source,
+            catalogClient: _catalogClient,
             sourceDescription: _sourceDescription,
             discoverySourceKind: _discoverySourceKind,
             hostBridge: _hostBridge,

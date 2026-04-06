@@ -1,4 +1,5 @@
 import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 class PartnerMiniProgramDefinition {
   const PartnerMiniProgramDefinition({
@@ -7,13 +8,28 @@ class PartnerMiniProgramDefinition {
     required this.description,
     required this.requiredCapabilities,
     required this.expectedLaneVersion,
+    this.isBackendDiscovered = false,
   });
+
+  factory PartnerMiniProgramDefinition.fromPublishedSummary(
+    PublishedMiniProgramSummary summary,
+  ) {
+    return PartnerMiniProgramDefinition(
+      id: summary.id,
+      title: summary.title,
+      description: summary.description,
+      requiredCapabilities: summary.requiredCapabilities,
+      expectedLaneVersion: summary.resolvedVersion,
+      isBackendDiscovered: true,
+    );
+  }
 
   final String id;
   final String title;
   final String description;
   final List<Capability> requiredCapabilities;
   final String expectedLaneVersion;
+  final bool isBackendDiscovered;
 }
 
 abstract final class PartnerMiniProgramCatalog {

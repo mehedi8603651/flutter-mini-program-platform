@@ -7,6 +7,7 @@ Reference Flutter host app for portable mini-program partner integration.
 - installs `mini_program_sdk` outside the first-party host
 - declares a smaller capability surface than `super_app_host`
 - loads multiple mini-programs from backend delivery
+- discovers compatible published mini-programs from the backend catalog at runtime
 - sends backend delivery context including `hostApp`, `hostVersion`, `platform`, `locale`, and capabilities
 - can add debug release-control overrides such as `tenantId` and `pinnedVersion`
 - receives the backend-selected `profile_center` `1.0.0` lane while `super_app_host` receives `1.1.0`
@@ -23,6 +24,7 @@ Reference Flutter host app for portable mini-program partner integration.
 2. Launch `partner_app_host`.
 3. Open `Profile Center` or `Feedback Form`.
 4. The SDK loads `latest` from the backend with partner delivery context.
+   The list itself is also discovered from `/api/discovery/mini-programs.json`.
 5. The backend resolves that request to the partner lane for each mini-program:
    - `profile_center` -> `1.0.0`
    - `feedback_form` -> `1.1.0`

@@ -81,6 +81,24 @@ class PartnerAppHostSourceConfiguration {
     );
   }
 
+  PublishedMiniProgramCatalogClient buildCatalogClient({
+    required String hostAppId,
+    required String sdkVersion,
+    required String hostVersion,
+    required CapabilityRegistry capabilityRegistry,
+  }) {
+    return PublishedMiniProgramCatalogClient(
+      apiBaseUri: backendApiBaseUri,
+      client: client,
+      queryParameters: _buildManifestContext(
+        hostAppId: hostAppId,
+        sdkVersion: sdkVersion,
+        hostVersion: hostVersionOverride ?? hostVersion,
+        capabilityRegistry: capabilityRegistry,
+      ),
+    );
+  }
+
   SecureApiService buildSecureApiService({
     required String hostAppId,
     required String hostVersion,

@@ -99,6 +99,7 @@ dart run bin\server.dart --port=9135
 
 Then the local backend serves:
 
+- `http://localhost:8080/api/discovery/mini-programs.json`
 - `http://localhost:8080/api/manifests/profile_center/latest.json`
 - `http://localhost:8080/api/manifests/profile_center/versions/1.1.0.json`
 - `http://localhost:8080/api/manifests/profile_center/versions/1.0.0.json`
@@ -110,6 +111,33 @@ Then the local backend serves:
 - `http://localhost:8080/api/screens/feedback_form/1.1.0/feedback_form_home.json`
 - `http://localhost:8080/api/screens/feedback_form/1.0.0/feedback_form_home.json`
 - `http://localhost:8080/api/secure/feedback/submit`
+
+## Discovery catalog route
+
+The local backend now also exposes a host-aware catalog route:
+
+```text
+GET /api/discovery/mini-programs.json
+```
+
+Use the same delivery-context query parameters you would send to the `latest`
+manifest route. The backend resolves each published mini-program against:
+
+- rollout rules
+- capability policy
+- SDK compatibility
+- host capability context
+
+and returns only compatible entries for that host context.
+
+Example:
+
+```text
+GET /api/discovery/mini-programs.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,secure_api
+```
+
+This is what the remote host list pages now use to render published
+mini-program cards without hardcoded backend catalog edits.
 
 For `profile_center`, the `latest` manifest route is context-aware. In local
 backend mode the host sends:

@@ -13,6 +13,7 @@ export 'network/asset_resolver.dart';
 export 'network/http_mini_program_source.dart';
 export 'network/mini_program_source.dart';
 export 'network/mini_program_source_exception.dart';
+export 'network/published_mini_program_catalog_client.dart';
 export 'observability/sdk_logger.dart';
 export 'rendering/stac_initializer.dart';
 export 'sdk_context.dart';

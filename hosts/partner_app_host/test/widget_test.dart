@@ -33,6 +33,57 @@ Future<void> _pumpUntilFound(
 }
 
 void main() {
+  testWidgets('renders backend-discovered mini-program cards in remote mode', (
+    tester,
+  ) async {
+    late Uri requestUri;
+    final catalogClient = PublishedMiniProgramCatalogClient(
+      apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      queryParameters: const <String, String>{
+        'hostApp': partnerAppHostId,
+        'sdkVersion': partnerAppHostSdkVersion,
+      },
+      client: MockClient((request) async {
+        requestUri = request.url;
+        return http.Response(
+          '''
+          {
+            "responseType":"mini_program_catalog",
+            "statusCode":200,
+            "entries":[
+              {
+                "id":"coupon_center",
+                "title":"Coupon Center",
+                "description":"A backend-discovered portable coupon flow.",
+                "entry":"coupon_center_home",
+                "resolvedVersion":"1.0.0",
+                "requiredCapabilities":["analytics","native_navigation"]
+              }
+            ]
+          }
+          ''',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await tester.pumpWidget(
+      PartnerAppHostApp(
+        source: const _CatalogDiscoveryMiniProgramSource(),
+        catalogClient: catalogClient,
+        sourceDescription: 'Local backend (test)',
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requestUri.path, '/api/discovery/mini-programs.json');
+    expect(find.text('Coupon Center'), findsOneWidget);
+    expect(find.text('Resolved lane: 1.0.0'), findsOneWidget);
+    expect(find.text('Live'), findsOneWidget);
+  });
+
   testWidgets('shows the partner mini-program list', (tester) async {
     await tester.pumpWidget(
       PartnerAppHostApp(
@@ -794,6 +845,38 @@ class _BackendOfflineMiniProgramSource implements MiniProgramSource {
       message: 'Partner backend is offline.',
       errorCode: MiniProgramErrorCodes.backendUnreachable,
     );
+  }
+}
+
+class _CatalogDiscoveryMiniProgramSource implements MiniProgramSource {
+  const _CatalogDiscoveryMiniProgramSource();
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    return MiniProgramManifest(
+      id: miniProgramId,
+      version: '1.0.0',
+      entry: '${miniProgramId}_home',
+      contractVersion: '1.0.0',
+      sdkVersionRange: const SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+      requiredCapabilities: const <Capability>[
+        Capability.analytics,
+        Capability.nativeNavigation,
+      ],
+      fallback: MiniProgramFallback(
+        strategy: MiniProgramFallbackStrategy.errorView,
+        message: '$miniProgramId is temporarily unavailable in this host app.',
+      ),
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    return const <String, dynamic>{'type': 'text', 'data': 'unused'};
   }
 }
 

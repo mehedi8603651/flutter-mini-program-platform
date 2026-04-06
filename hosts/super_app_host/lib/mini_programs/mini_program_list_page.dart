@@ -11,6 +11,7 @@ class MiniProgramListPage extends StatefulWidget {
     super.key,
     required this.sdkVersion,
     required this.source,
+    required this.catalogClient,
     required this.sourceDescription,
     required this.discoverySourceKind,
     required this.hostBridge,
@@ -21,6 +22,7 @@ class MiniProgramListPage extends StatefulWidget {
 
   final String sdkVersion;
   final MiniProgramSource source;
+  final PublishedMiniProgramCatalogClient? catalogClient;
   final String sourceDescription;
   final MiniProgramDiscoverySourceKind discoverySourceKind;
   final HostBridge hostBridge;
@@ -37,11 +39,12 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
       MiniProgramDiscoveryResolver();
 
   late Map<String, Future<MiniProgramDiscoveryState>> _discoveryFutures;
+  Future<List<LocalMiniProgramDefinition>>? _remoteProgramsFuture;
 
   @override
   void initState() {
     super.initState();
-    _refreshDiscoveryFutures();
+    _refreshProgramState();
   }
 
   @override
@@ -49,8 +52,9 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source ||
         oldWidget.cacheBundle != widget.cacheBundle ||
-        oldWidget.discoverySourceKind != widget.discoverySourceKind) {
-      _refreshDiscoveryFutures();
+        oldWidget.discoverySourceKind != widget.discoverySourceKind ||
+        oldWidget.catalogClient != widget.catalogClient) {
+      _refreshProgramState();
     }
   }
 
@@ -115,63 +119,144 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
               ),
             ),
             const SizedBox(height: 20),
-            ...LocalMiniProgramCatalog.availablePrograms.map(
-              (program) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _MiniProgramCard(
-                  program: program,
-                  discoveryFuture: _discoveryFutures[program.id]!,
-                  onOpen: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => MiniProgramEntryPage(
-                          program: program,
-                          sdkVersion: widget.sdkVersion,
-                          source: widget.source,
-                          hostBridge: widget.hostBridge,
-                          capabilityRegistry: widget.capabilityRegistry,
-                          featureFlagEvaluator: widget.featureFlagEvaluator,
-                          cacheBundle: widget.cacheBundle,
-                        ),
-                      ),
-                    );
-                  },
-                  onPreviewCapabilityFailure: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => MiniProgramEntryPage(
-                          program: program,
-                          sdkVersion: widget.sdkVersion,
-                          source: widget.source,
-                          hostBridge: widget.hostBridge,
-                          capabilityRegistry:
-                              superAppMissingNavigationCapabilityRegistry,
-                          featureFlagEvaluator: widget.featureFlagEvaluator,
-                          cacheBundle: widget.cacheBundle,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
+            ..._buildProgramSection(),
           ],
         ),
       ),
     );
   }
 
-  void _refreshDiscoveryFutures() {
-    _discoveryFutures = <String, Future<MiniProgramDiscoveryState>>{
-      for (final program in LocalMiniProgramCatalog.availablePrograms)
-        program.id: _discoveryResolver.resolve(
+  List<Widget> _buildProgramSection() {
+    if (widget.catalogClient == null) {
+      return _buildProgramCards(LocalMiniProgramCatalog.availablePrograms);
+    }
+
+    return <Widget>[
+      FutureBuilder<List<LocalMiniProgramDefinition>>(
+        future: _remoteProgramsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _CatalogNotice(
+                  message:
+                      'Remote catalog discovery failed. Falling back to the bundled list.',
+                  tone: _DiscoveryTone.warning,
+                ),
+                const SizedBox(height: 16),
+                ..._buildProgramCards(LocalMiniProgramCatalog.availablePrograms),
+              ],
+            );
+          }
+
+          final programs = snapshot.data ?? const <LocalMiniProgramDefinition>[];
+          if (programs.isEmpty) {
+            return const _CatalogNotice(
+              message:
+                  'No compatible backend-delivered mini-programs are currently available.',
+              tone: _DiscoveryTone.neutral,
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildProgramCards(programs),
+          );
+        },
+      ),
+    ];
+  }
+
+  List<Widget> _buildProgramCards(List<LocalMiniProgramDefinition> programs) {
+    return programs
+        .map(
+          (program) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _MiniProgramCard(
+              program: program,
+              discoveryFuture: _discoveryFutures[program.id]!,
+              onOpen: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => MiniProgramEntryPage(
+                      program: program,
+                      sdkVersion: widget.sdkVersion,
+                      source: widget.source,
+                      hostBridge: widget.hostBridge,
+                      capabilityRegistry: widget.capabilityRegistry,
+                      featureFlagEvaluator: widget.featureFlagEvaluator,
+                      cacheBundle: widget.cacheBundle,
+                    ),
+                  ),
+                );
+              },
+              onPreviewCapabilityFailure: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => MiniProgramEntryPage(
+                      program: program,
+                      sdkVersion: widget.sdkVersion,
+                      source: widget.source,
+                      hostBridge: widget.hostBridge,
+                      capabilityRegistry:
+                          superAppMissingNavigationCapabilityRegistry,
+                      featureFlagEvaluator: widget.featureFlagEvaluator,
+                      cacheBundle: widget.cacheBundle,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  void _refreshProgramState() {
+    _discoveryFutures = <String, Future<MiniProgramDiscoveryState>>{};
+    _registerDiscoveryFutures(LocalMiniProgramCatalog.availablePrograms);
+
+    final remoteCatalogClient = widget.catalogClient;
+    if (remoteCatalogClient == null) {
+      _remoteProgramsFuture = null;
+      return;
+    }
+
+    _remoteProgramsFuture = _loadRemotePrograms(remoteCatalogClient);
+  }
+
+  Future<List<LocalMiniProgramDefinition>> _loadRemotePrograms(
+    PublishedMiniProgramCatalogClient catalogClient,
+  ) async {
+    final catalog = await catalogClient.listAvailableMiniPrograms();
+    final programs = catalog.entries
+        .map(LocalMiniProgramDefinition.fromPublishedSummary)
+        .toList(growable: false);
+    _registerDiscoveryFutures(programs);
+    return programs;
+  }
+
+  void _registerDiscoveryFutures(Iterable<LocalMiniProgramDefinition> programs) {
+    for (final program in programs) {
+      _discoveryFutures.putIfAbsent(
+        program.id,
+        () => _discoveryResolver.resolve(
           miniProgramId: program.id,
           source: widget.source,
           manifestCache: widget.cacheBundle.manifestCache,
           screenCache: widget.cacheBundle.screenCache,
           sourceKind: widget.discoverySourceKind,
         ),
-    };
+      );
+    }
   }
 }
 
@@ -219,15 +304,23 @@ class _MiniProgramCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(program.description, style: theme.textTheme.bodyLarge),
+                if (program.isBackendDiscovered && program.resolvedVersion != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Discovered release: v${program.resolvedVersion}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     _DiscoveryBadge(
-                      label: isChecking
-                          ? 'Checking'
-                          : discoveryState.badgeLabel,
+                      label: isChecking ? 'Checking' : discoveryState.badgeLabel,
                       tone: isChecking
                           ? _DiscoveryTone.neutral
                           : _toneFor(discoveryState.status),
@@ -381,6 +474,40 @@ class _DiscoveryBadge extends StatelessWidget {
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: colors.foreground,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogNotice extends StatelessWidget {
+  const _CatalogNotice({required this.message, required this.tone});
+
+  final String message;
+  final _DiscoveryTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              tone == _DiscoveryTone.warning
+                  ? Icons.wifi_off_rounded
+                  : Icons.info_outline_rounded,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -103,6 +103,36 @@ class SuperAppHostSourceConfiguration {
     }
   }
 
+  PublishedMiniProgramCatalogClient? buildCatalogClient({
+    required String hostAppId,
+    required String sdkVersion,
+    required String hostVersion,
+    required CapabilityRegistry capabilityRegistry,
+  }) {
+    switch (mode) {
+      case SuperAppHostSourceMode.assets:
+        return null;
+      case SuperAppHostSourceMode.localBackend:
+        final apiBaseUri = backendApiBaseUri;
+        if (apiBaseUri == null) {
+          throw StateError(
+            'A backend API base URI is required for local backend source mode.',
+          );
+        }
+
+        return PublishedMiniProgramCatalogClient(
+          apiBaseUri: apiBaseUri,
+          client: client,
+          queryParameters: _buildManifestContext(
+            hostAppId: hostAppId,
+            sdkVersion: sdkVersion,
+            hostVersion: hostVersionOverride ?? hostVersion,
+            capabilityRegistry: capabilityRegistry,
+          ),
+        );
+    }
+  }
+
   SecureApiService buildSecureApiService({
     required String hostAppId,
     required String hostVersion,

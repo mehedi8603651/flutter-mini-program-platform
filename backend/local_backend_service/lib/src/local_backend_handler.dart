@@ -88,6 +88,27 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
       return response;
     }
 
+    if (segments.length == 3 &&
+        segments[0] == 'api' &&
+        segments[1] == 'discovery' &&
+        _isCatalogSegment(segments[2])) {
+      response = await repository.listAvailableMiniPrograms(
+        context: DeliveryContext.fromQueryParameters(
+          request.url.queryParameters,
+        ),
+        selector: manifestSelector,
+        traceId: traceId,
+      );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'mini_program_catalog',
+      );
+      return response;
+    }
+
     if (segments.length == 4 &&
         segments[0] == 'api' &&
         segments[1] == 'manifests' &&
@@ -222,6 +243,84 @@ class _PublishedArtifactRepository {
   const _PublishedArtifactRepository({required this.apiRootPath});
 
   final String apiRootPath;
+
+  Future<Response> listAvailableMiniPrograms({
+    required DeliveryContext context,
+    required ManifestDeliverySelector selector,
+    required String traceId,
+  }) async {
+    final contextValidationError = _validateContext(context, traceId: traceId);
+    if (contextValidationError != null) {
+      return contextValidationError;
+    }
+
+    final manifestsDirectory = Directory(path.join(apiRootPath, 'manifests'));
+    if (!await manifestsDirectory.exists()) {
+      return buildJsonResponse(
+        body: buildMiniProgramCatalogBody(entries: const <Map<String, Object?>>[]),
+        traceId: traceId,
+      );
+    }
+
+    final miniProgramIds = await _listPublishedMiniProgramIds(manifestsDirectory);
+    final entries = <Map<String, Object?>>[];
+
+    for (final miniProgramId in miniProgramIds) {
+      try {
+        final selection = await selector.selectLatestManifest(
+          miniProgramId: miniProgramId,
+          context: context,
+        );
+        entries.add(_buildCatalogEntry(selection));
+      } on ManifestSelectionException catch (error) {
+        if (_shouldSkipCatalogEntry(error)) {
+          logBackendEvent(
+            'INFO',
+            'Skipped mini-program from discovery catalog.',
+            context: <String, Object?>{
+              'traceId': traceId,
+              'miniProgramId': miniProgramId,
+              'errorCode': error.errorCode,
+              'statusCode': error.statusCode,
+            },
+          );
+          continue;
+        }
+
+        return buildJsonResponse(
+          statusCode: error.statusCode,
+          body: buildBackendErrorBody(
+            responseType: 'mini_program_catalog_error',
+            statusCode: error.statusCode,
+            errorCode: error.errorCode,
+            message: error.message,
+            details: error.details.isNotEmpty ? error.details : null,
+          ),
+          traceId: traceId,
+        );
+      }
+    }
+
+    entries.sort(
+      (left, right) => (left['title'] as String).compareTo(right['title'] as String),
+    );
+
+    logBackendEvent(
+      'INFO',
+      'Resolved mini-program discovery catalog.',
+      context: <String, Object?>{
+        'traceId': traceId,
+        'entryCount': entries.length,
+        'deliveryContext': context.toJson(),
+      },
+    );
+
+    return buildJsonResponse(
+      body: buildMiniProgramCatalogBody(entries: entries),
+      traceId: traceId,
+      extraHeaders: <String, String>{'x-mini-program-catalog-count': '${entries.length}'},
+    );
+  }
 
   Future<Response> readLatestManifest({
     required String miniProgramId,
@@ -620,6 +719,60 @@ class _PublishedArtifactRepository {
     return normalizedPath == apiRootPath ||
         normalizedPath.startsWith('$apiRootPath${path.separator}');
   }
+
+  Future<List<String>> _listPublishedMiniProgramIds(
+    Directory manifestsDirectory,
+  ) async {
+    final ids = <String>[];
+    await for (final entity in manifestsDirectory.list(followLinks: false)) {
+      if (entity is! Directory) {
+        continue;
+      }
+
+      final miniProgramId = path.basename(entity.path);
+      if (!_isSafePathSegment(miniProgramId)) {
+        continue;
+      }
+
+      ids.add(miniProgramId);
+    }
+
+    ids.sort();
+    return ids;
+  }
+
+  Map<String, Object?> _buildCatalogEntry(ManifestSelectionResult selection) {
+    final manifestJson = selection.manifestJson;
+    final miniProgramId = manifestJson['id']?.toString() ?? '';
+    final title = _humanizeMiniProgramId(miniProgramId);
+    final rawRequiredCapabilities =
+        manifestJson['requiredCapabilities'] as List<dynamic>? ?? const [];
+
+    return <String, Object?>{
+      'id': miniProgramId,
+      'title': title,
+      'description':
+          '$title is a backend-discovered portable mini-program delivered through the shared SDK.',
+      'entry': manifestJson['entry']?.toString() ?? '',
+      'resolvedVersion': selection.version,
+      'requiredCapabilities': rawRequiredCapabilities
+          .map((value) => value.toString())
+          .toList(),
+      'selectionMode': selection.decision.selectionMode,
+      'decisionReason': selection.decision.decisionReason,
+      if (selection.decision.matchedRuleId != null)
+        'matchedRuleId': selection.decision.matchedRuleId,
+    };
+  }
+
+  bool _shouldSkipCatalogEntry(ManifestSelectionException error) {
+    if (error.statusCode == HttpStatus.preconditionFailed ||
+        error.statusCode == HttpStatus.notFound) {
+      return true;
+    }
+
+    return false;
+  }
 }
 
 bool _matchesSegments(List<String> actual, List<String> expected) {
@@ -638,6 +791,9 @@ bool _matchesSegments(List<String> actual, List<String> expected) {
 
 bool _isLatestSegment(String value) =>
     value == 'latest' || value == 'latest.json';
+
+bool _isCatalogSegment(String value) =>
+    value == 'mini-programs' || value == 'mini-programs.json';
 
 bool _isDecisionSegment(String value) =>
     value == 'decision' || value == 'decision.json';
@@ -663,6 +819,17 @@ bool _isSafePathSegment(String value) {
   }
 
   return RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(normalized);
+}
+
+String _humanizeMiniProgramId(String miniProgramId) {
+  return miniProgramId
+      .split(RegExp(r'[_-]+'))
+      .where((segment) => segment.isNotEmpty)
+      .map(
+        (segment) =>
+            '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}',
+      )
+      .join(' ');
 }
 
 void _logRequestCompletion({

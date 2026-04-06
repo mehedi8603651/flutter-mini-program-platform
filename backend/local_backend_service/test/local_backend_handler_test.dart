@@ -144,6 +144,54 @@ void main() {
     expect(body['service'], 'local_backend_service');
   });
 
+  test('lists compatible mini-programs in the discovery catalog', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/discovery/mini-programs.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth,secure_api',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(response.headers['x-mini-program-catalog-count'], '2');
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['responseType'], 'mini_program_catalog');
+    expect(body['entryCount'], 2);
+    final entries = body['entries'] as List<dynamic>;
+    expect(
+      entries.map((value) => (value as Map<String, dynamic>)['id']),
+      containsAll(<String>['profile_center', 'feedback_form']),
+    );
+  });
+
+  test('filters incompatible mini-programs from the discovery catalog', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/discovery/mini-programs.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    final entries =
+        (body['entries'] as List<dynamic>).cast<Map<String, dynamic>>();
+    expect(entries, hasLength(1));
+    expect(entries.single['id'], 'profile_center');
+  });
+
   test('serves the latest manifest from a .json endpoint', () async {
     await _writeProfileCenterPolicies(tempDirectory);
 

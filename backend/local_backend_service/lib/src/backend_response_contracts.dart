@@ -73,6 +73,17 @@ Map<String, Object?> buildManifestDeliveryMetadata({
   };
 }
 
+Map<String, Object?> buildMiniProgramCatalogBody({
+  required List<Map<String, Object?>> entries,
+}) {
+  return <String, Object?>{
+    'responseType': 'mini_program_catalog',
+    'statusCode': HttpStatus.ok,
+    'entryCount': entries.length,
+    'entries': entries,
+  };
+}
+
 Response buildJsonResponse({
   required Map<String, Object?> body,
   required String traceId,
