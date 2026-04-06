@@ -10,8 +10,12 @@
     "native_navigation"
   ],
   "cachePolicy": {
-    "manifest": "noCache",
-    "entryScreen": "noCache"
+    "manifest": {
+      "mode": "noCache"
+    },
+    "entryScreen": {
+      "mode": "noCache"
+    }
   },
   "fallback": {
     "strategy": "errorView",

@@ -13,9 +13,275 @@ part of 'manifest.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$MiniProgramCacheRule {
+
+ MiniProgramCacheMode get mode;@JsonKey(includeIfNull: false) int? get maxStaleSeconds;
+/// Create a copy of MiniProgramCacheRule
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$MiniProgramCacheRuleCopyWith<MiniProgramCacheRule> get copyWith => _$MiniProgramCacheRuleCopyWithImpl<MiniProgramCacheRule>(this as MiniProgramCacheRule, _$identity);
+
+  /// Serializes this MiniProgramCacheRule to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MiniProgramCacheRule&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.maxStaleSeconds, maxStaleSeconds) || other.maxStaleSeconds == maxStaleSeconds));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,mode,maxStaleSeconds);
+
+@override
+String toString() {
+  return 'MiniProgramCacheRule(mode: $mode, maxStaleSeconds: $maxStaleSeconds)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $MiniProgramCacheRuleCopyWith<$Res>  {
+  factory $MiniProgramCacheRuleCopyWith(MiniProgramCacheRule value, $Res Function(MiniProgramCacheRule) _then) = _$MiniProgramCacheRuleCopyWithImpl;
+@useResult
+$Res call({
+ MiniProgramCacheMode mode,@JsonKey(includeIfNull: false) int? maxStaleSeconds
+});
+
+
+
+
+}
+/// @nodoc
+class _$MiniProgramCacheRuleCopyWithImpl<$Res>
+    implements $MiniProgramCacheRuleCopyWith<$Res> {
+  _$MiniProgramCacheRuleCopyWithImpl(this._self, this._then);
+
+  final MiniProgramCacheRule _self;
+  final $Res Function(MiniProgramCacheRule) _then;
+
+/// Create a copy of MiniProgramCacheRule
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? mode = null,Object? maxStaleSeconds = freezed,}) {
+  return _then(_self.copyWith(
+mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheMode,maxStaleSeconds: freezed == maxStaleSeconds ? _self.maxStaleSeconds : maxStaleSeconds // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [MiniProgramCacheRule].
+extension MiniProgramCacheRulePatterns on MiniProgramCacheRule {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MiniProgramCacheRule value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _MiniProgramCacheRule() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MiniProgramCacheRule value)  $default,){
+final _that = this;
+switch (_that) {
+case _MiniProgramCacheRule():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MiniProgramCacheRule value)?  $default,){
+final _that = this;
+switch (_that) {
+case _MiniProgramCacheRule() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( MiniProgramCacheMode mode, @JsonKey(includeIfNull: false)  int? maxStaleSeconds)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _MiniProgramCacheRule() when $default != null:
+return $default(_that.mode,_that.maxStaleSeconds);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( MiniProgramCacheMode mode, @JsonKey(includeIfNull: false)  int? maxStaleSeconds)  $default,) {final _that = this;
+switch (_that) {
+case _MiniProgramCacheRule():
+return $default(_that.mode,_that.maxStaleSeconds);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( MiniProgramCacheMode mode, @JsonKey(includeIfNull: false)  int? maxStaleSeconds)?  $default,) {final _that = this;
+switch (_that) {
+case _MiniProgramCacheRule() when $default != null:
+return $default(_that.mode,_that.maxStaleSeconds);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+@JsonSerializable(checked: true, explicitToJson: true)
+class _MiniProgramCacheRule implements MiniProgramCacheRule {
+  const _MiniProgramCacheRule({this.mode = MiniProgramCacheMode.staleWhileError, @JsonKey(includeIfNull: false) this.maxStaleSeconds}): assert(maxStaleSeconds == null || maxStaleSeconds > 0, 'maxStaleSeconds must be greater than zero when provided.');
+  factory _MiniProgramCacheRule.fromJson(Map<String, dynamic> json) => _$MiniProgramCacheRuleFromJson(json);
+
+@override@JsonKey() final  MiniProgramCacheMode mode;
+@override@JsonKey(includeIfNull: false) final  int? maxStaleSeconds;
+
+/// Create a copy of MiniProgramCacheRule
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$MiniProgramCacheRuleCopyWith<_MiniProgramCacheRule> get copyWith => __$MiniProgramCacheRuleCopyWithImpl<_MiniProgramCacheRule>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$MiniProgramCacheRuleToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MiniProgramCacheRule&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.maxStaleSeconds, maxStaleSeconds) || other.maxStaleSeconds == maxStaleSeconds));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,mode,maxStaleSeconds);
+
+@override
+String toString() {
+  return 'MiniProgramCacheRule(mode: $mode, maxStaleSeconds: $maxStaleSeconds)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$MiniProgramCacheRuleCopyWith<$Res> implements $MiniProgramCacheRuleCopyWith<$Res> {
+  factory _$MiniProgramCacheRuleCopyWith(_MiniProgramCacheRule value, $Res Function(_MiniProgramCacheRule) _then) = __$MiniProgramCacheRuleCopyWithImpl;
+@override @useResult
+$Res call({
+ MiniProgramCacheMode mode,@JsonKey(includeIfNull: false) int? maxStaleSeconds
+});
+
+
+
+
+}
+/// @nodoc
+class __$MiniProgramCacheRuleCopyWithImpl<$Res>
+    implements _$MiniProgramCacheRuleCopyWith<$Res> {
+  __$MiniProgramCacheRuleCopyWithImpl(this._self, this._then);
+
+  final _MiniProgramCacheRule _self;
+  final $Res Function(_MiniProgramCacheRule) _then;
+
+/// Create a copy of MiniProgramCacheRule
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? mode = null,Object? maxStaleSeconds = freezed,}) {
+  return _then(_MiniProgramCacheRule(
+mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheMode,maxStaleSeconds: freezed == maxStaleSeconds ? _self.maxStaleSeconds : maxStaleSeconds // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$MiniProgramCachePolicy {
 
- MiniProgramCacheMode get manifest; MiniProgramCacheMode get entryScreen;
+@MiniProgramCacheRuleConverter() MiniProgramCacheRule get manifest;@MiniProgramCacheRuleConverter() MiniProgramCacheRule get entryScreen;
 /// Create a copy of MiniProgramCachePolicy
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,11 +314,11 @@ abstract mixin class $MiniProgramCachePolicyCopyWith<$Res>  {
   factory $MiniProgramCachePolicyCopyWith(MiniProgramCachePolicy value, $Res Function(MiniProgramCachePolicy) _then) = _$MiniProgramCachePolicyCopyWithImpl;
 @useResult
 $Res call({
- MiniProgramCacheMode manifest, MiniProgramCacheMode entryScreen
+@MiniProgramCacheRuleConverter() MiniProgramCacheRule manifest,@MiniProgramCacheRuleConverter() MiniProgramCacheRule entryScreen
 });
 
 
-
+$MiniProgramCacheRuleCopyWith<$Res> get manifest;$MiniProgramCacheRuleCopyWith<$Res> get entryScreen;
 
 }
 /// @nodoc
@@ -68,11 +334,29 @@ class _$MiniProgramCachePolicyCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? manifest = null,Object? entryScreen = null,}) {
   return _then(_self.copyWith(
 manifest: null == manifest ? _self.manifest : manifest // ignore: cast_nullable_to_non_nullable
-as MiniProgramCacheMode,entryScreen: null == entryScreen ? _self.entryScreen : entryScreen // ignore: cast_nullable_to_non_nullable
-as MiniProgramCacheMode,
+as MiniProgramCacheRule,entryScreen: null == entryScreen ? _self.entryScreen : entryScreen // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheRule,
   ));
 }
-
+/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MiniProgramCacheRuleCopyWith<$Res> get manifest {
+  
+  return $MiniProgramCacheRuleCopyWith<$Res>(_self.manifest, (value) {
+    return _then(_self.copyWith(manifest: value));
+  });
+}/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MiniProgramCacheRuleCopyWith<$Res> get entryScreen {
+  
+  return $MiniProgramCacheRuleCopyWith<$Res>(_self.entryScreen, (value) {
+    return _then(_self.copyWith(entryScreen: value));
+  });
+}
 }
 
 
@@ -154,7 +438,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( MiniProgramCacheMode manifest,  MiniProgramCacheMode entryScreen)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@MiniProgramCacheRuleConverter()  MiniProgramCacheRule manifest, @MiniProgramCacheRuleConverter()  MiniProgramCacheRule entryScreen)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MiniProgramCachePolicy() when $default != null:
 return $default(_that.manifest,_that.entryScreen);case _:
@@ -175,7 +459,7 @@ return $default(_that.manifest,_that.entryScreen);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( MiniProgramCacheMode manifest,  MiniProgramCacheMode entryScreen)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@MiniProgramCacheRuleConverter()  MiniProgramCacheRule manifest, @MiniProgramCacheRuleConverter()  MiniProgramCacheRule entryScreen)  $default,) {final _that = this;
 switch (_that) {
 case _MiniProgramCachePolicy():
 return $default(_that.manifest,_that.entryScreen);case _:
@@ -195,7 +479,7 @@ return $default(_that.manifest,_that.entryScreen);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( MiniProgramCacheMode manifest,  MiniProgramCacheMode entryScreen)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@MiniProgramCacheRuleConverter()  MiniProgramCacheRule manifest, @MiniProgramCacheRuleConverter()  MiniProgramCacheRule entryScreen)?  $default,) {final _that = this;
 switch (_that) {
 case _MiniProgramCachePolicy() when $default != null:
 return $default(_that.manifest,_that.entryScreen);case _:
@@ -210,11 +494,11 @@ return $default(_that.manifest,_that.entryScreen);case _:
 
 @JsonSerializable(checked: true, explicitToJson: true)
 class _MiniProgramCachePolicy implements MiniProgramCachePolicy {
-  const _MiniProgramCachePolicy({this.manifest = MiniProgramCacheMode.staleWhileError, this.entryScreen = MiniProgramCacheMode.staleWhileError});
+  const _MiniProgramCachePolicy({@MiniProgramCacheRuleConverter() this.manifest = const MiniProgramCacheRule(), @MiniProgramCacheRuleConverter() this.entryScreen = const MiniProgramCacheRule()});
   factory _MiniProgramCachePolicy.fromJson(Map<String, dynamic> json) => _$MiniProgramCachePolicyFromJson(json);
 
-@override@JsonKey() final  MiniProgramCacheMode manifest;
-@override@JsonKey() final  MiniProgramCacheMode entryScreen;
+@override@JsonKey()@MiniProgramCacheRuleConverter() final  MiniProgramCacheRule manifest;
+@override@JsonKey()@MiniProgramCacheRuleConverter() final  MiniProgramCacheRule entryScreen;
 
 /// Create a copy of MiniProgramCachePolicy
 /// with the given fields replaced by the non-null parameter values.
@@ -249,11 +533,11 @@ abstract mixin class _$MiniProgramCachePolicyCopyWith<$Res> implements $MiniProg
   factory _$MiniProgramCachePolicyCopyWith(_MiniProgramCachePolicy value, $Res Function(_MiniProgramCachePolicy) _then) = __$MiniProgramCachePolicyCopyWithImpl;
 @override @useResult
 $Res call({
- MiniProgramCacheMode manifest, MiniProgramCacheMode entryScreen
+@MiniProgramCacheRuleConverter() MiniProgramCacheRule manifest,@MiniProgramCacheRuleConverter() MiniProgramCacheRule entryScreen
 });
 
 
-
+@override $MiniProgramCacheRuleCopyWith<$Res> get manifest;@override $MiniProgramCacheRuleCopyWith<$Res> get entryScreen;
 
 }
 /// @nodoc
@@ -269,12 +553,30 @@ class __$MiniProgramCachePolicyCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? manifest = null,Object? entryScreen = null,}) {
   return _then(_MiniProgramCachePolicy(
 manifest: null == manifest ? _self.manifest : manifest // ignore: cast_nullable_to_non_nullable
-as MiniProgramCacheMode,entryScreen: null == entryScreen ? _self.entryScreen : entryScreen // ignore: cast_nullable_to_non_nullable
-as MiniProgramCacheMode,
+as MiniProgramCacheRule,entryScreen: null == entryScreen ? _self.entryScreen : entryScreen // ignore: cast_nullable_to_non_nullable
+as MiniProgramCacheRule,
   ));
 }
 
-
+/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MiniProgramCacheRuleCopyWith<$Res> get manifest {
+  
+  return $MiniProgramCacheRuleCopyWith<$Res>(_self.manifest, (value) {
+    return _then(_self.copyWith(manifest: value));
+  });
+}/// Create a copy of MiniProgramCachePolicy
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$MiniProgramCacheRuleCopyWith<$Res> get entryScreen {
+  
+  return $MiniProgramCacheRuleCopyWith<$Res>(_self.entryScreen, (value) {
+    return _then(_self.copyWith(entryScreen: value));
+  });
+}
 }
 
 

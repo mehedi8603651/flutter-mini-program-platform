@@ -35,7 +35,9 @@ Future<void> _pumpUntilFound(
 
 void main() {
   testWidgets('shows the local mini-program list', (tester) async {
-    await tester.pumpWidget(const SuperAppHostApp());
+    await tester.pumpWidget(
+      SuperAppHostApp(cacheBundle: MiniProgramCacheBundle.inMemory()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Super App Host'), findsOneWidget);

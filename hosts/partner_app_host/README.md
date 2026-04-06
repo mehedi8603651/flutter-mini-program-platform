@@ -12,6 +12,7 @@ Reference Flutter host app for portable mini-program partner integration.
 - receives the backend-selected `profile_center` `1.0.0` lane while `super_app_host` receives `1.1.0`
 - maps portable route aliases such as `profile_editor` and `feedback_follow_up` to its own native Flutter pages
 - keeps `secure_api` host-owned and allowlisted through host-side services behind its bridge
+- uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 
 ## Current flow
 

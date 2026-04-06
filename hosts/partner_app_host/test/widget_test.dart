@@ -35,9 +35,10 @@ Future<void> _pumpUntilFound(
 void main() {
   testWidgets('shows the partner mini-program list', (tester) async {
     await tester.pumpWidget(
-      const PartnerAppHostApp(
+      PartnerAppHostApp(
         source: _PartnerLaneMiniProgramSource(),
         sourceDescription: 'Local backend (test)',
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
       ),
     );
     await tester.pumpAndSettle();

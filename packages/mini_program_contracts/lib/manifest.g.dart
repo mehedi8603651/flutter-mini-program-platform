@@ -6,21 +6,51 @@ part of 'manifest.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_MiniProgramCacheRule _$MiniProgramCacheRuleFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('_MiniProgramCacheRule', json, ($checkedConvert) {
+  final val = _MiniProgramCacheRule(
+    mode: $checkedConvert(
+      'mode',
+      (v) =>
+          $enumDecodeNullable(_$MiniProgramCacheModeEnumMap, v) ??
+          MiniProgramCacheMode.staleWhileError,
+    ),
+    maxStaleSeconds: $checkedConvert(
+      'maxStaleSeconds',
+      (v) => (v as num?)?.toInt(),
+    ),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$MiniProgramCacheRuleToJson(
+  _MiniProgramCacheRule instance,
+) => <String, dynamic>{
+  'mode': _$MiniProgramCacheModeEnumMap[instance.mode]!,
+  'maxStaleSeconds': ?instance.maxStaleSeconds,
+};
+
+const _$MiniProgramCacheModeEnumMap = {
+  MiniProgramCacheMode.staleWhileError: 'staleWhileError',
+  MiniProgramCacheMode.noCache: 'noCache',
+};
+
 _MiniProgramCachePolicy _$MiniProgramCachePolicyFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('_MiniProgramCachePolicy', json, ($checkedConvert) {
   final val = _MiniProgramCachePolicy(
     manifest: $checkedConvert(
       'manifest',
-      (v) =>
-          $enumDecodeNullable(_$MiniProgramCacheModeEnumMap, v) ??
-          MiniProgramCacheMode.staleWhileError,
+      (v) => v == null
+          ? const MiniProgramCacheRule()
+          : const MiniProgramCacheRuleConverter().fromJson(v),
     ),
     entryScreen: $checkedConvert(
       'entryScreen',
-      (v) =>
-          $enumDecodeNullable(_$MiniProgramCacheModeEnumMap, v) ??
-          MiniProgramCacheMode.staleWhileError,
+      (v) => v == null
+          ? const MiniProgramCacheRule()
+          : const MiniProgramCacheRuleConverter().fromJson(v),
     ),
   );
   return val;
@@ -29,13 +59,10 @@ _MiniProgramCachePolicy _$MiniProgramCachePolicyFromJson(
 Map<String, dynamic> _$MiniProgramCachePolicyToJson(
   _MiniProgramCachePolicy instance,
 ) => <String, dynamic>{
-  'manifest': _$MiniProgramCacheModeEnumMap[instance.manifest]!,
-  'entryScreen': _$MiniProgramCacheModeEnumMap[instance.entryScreen]!,
-};
-
-const _$MiniProgramCacheModeEnumMap = {
-  MiniProgramCacheMode.staleWhileError: 'staleWhileError',
-  MiniProgramCacheMode.noCache: 'noCache',
+  'manifest': const MiniProgramCacheRuleConverter().toJson(instance.manifest),
+  'entryScreen': const MiniProgramCacheRuleConverter().toJson(
+    instance.entryScreen,
+  ),
 };
 
 _MiniProgramFallback _$MiniProgramFallbackFromJson(Map<String, dynamic> json) =>

@@ -12,6 +12,7 @@ class MiniProgramEntryPage extends StatelessWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     required this.featureFlagEvaluator,
+    this.cacheBundle,
   });
 
   final LocalMiniProgramDefinition program;
@@ -20,6 +21,7 @@ class MiniProgramEntryPage extends StatelessWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
+  final MiniProgramCacheBundle? cacheBundle;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +32,8 @@ class MiniProgramEntryPage extends StatelessWidget {
       hostBridge: hostBridge,
       capabilityRegistry: capabilityRegistry,
       featureFlagEvaluator: featureFlagEvaluator,
+      manifestCache: cacheBundle?.manifestCache,
+      screenCache: cacheBundle?.screenCache,
       errorBuilder: (context, failure) {
         return Scaffold(
           appBar: AppBar(title: Text(program.title)),

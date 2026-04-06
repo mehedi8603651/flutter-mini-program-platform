@@ -10,6 +10,7 @@ Portable profile mini-program authored with Stac DSL.
 - stays portable by using the route alias `profile_editor` instead of a host route constant
 - current authored manifest version is `1.1.0`
 - manifest cache policy is `staleWhileError` for both manifest and entry screen
+- manifest stale reuse is bounded to `86400` seconds and entry-screen stale reuse is bounded to `21600` seconds
 - backend rollout currently sends `1.1.0` to `super_app_host` while keeping `partner_app_host` on `1.0.0`
 
 ## Structure

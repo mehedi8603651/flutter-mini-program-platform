@@ -13,6 +13,7 @@ First-party Flutter host app for the portable mini-program platform.
 - executes allowlisted `secure_api` calls through host-side services and the host bridge
 - opens a host-owned native screen through `openNativeScreen`
 - can switch between bundled asset delivery and local backend HTTP delivery
+- uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 
 ## Current local flow
 

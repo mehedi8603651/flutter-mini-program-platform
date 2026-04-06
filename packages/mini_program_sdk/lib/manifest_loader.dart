@@ -145,12 +145,12 @@ class ManifestLoader {
     required ManifestCache manifestCache,
     required SdkLogger logger,
   }) async {
-    final cachedManifest = manifestCache.read(miniProgramId);
+    final cachedManifest = await manifestCache.read(miniProgramId);
 
     try {
       final manifest = await source.loadManifest(miniProgramId);
       if (manifest.allowsManifestStaleCache) {
-        manifestCache.write(
+        await manifestCache.write(
           CachedManifestEntry(
             miniProgramId: miniProgramId,
             manifest: manifest,
@@ -158,7 +158,7 @@ class ManifestLoader {
           ),
         );
       } else {
-        manifestCache.remove(miniProgramId);
+        await manifestCache.remove(miniProgramId);
       }
 
       return _ManifestLoadResult(manifest: manifest);
@@ -168,12 +168,18 @@ class ManifestLoader {
           : null;
       if (cachedManifest != null &&
           cachedManifest.manifest.allowsManifestStaleCache &&
+          _isWithinMaxStaleAge(
+            cachedAt: cachedManifest.cachedAt,
+            maxStaleAge: cachedManifest.manifest.manifestMaxStaleAge,
+          ) &&
           _canUseStaleCache(sourceException)) {
         logger.warn(
           'Using stale cached manifest after backend load failure.',
           context: <String, Object?>{
             'miniProgramId': miniProgramId,
             'cachedAt': cachedManifest.cachedAt.toIso8601String(),
+            'maxStaleSeconds':
+                cachedManifest.manifest.manifestMaxStaleAge.inSeconds,
             'errorCode': sourceException?.errorCode ?? 'unknown',
           },
         );
@@ -201,6 +207,15 @@ class ManifestLoader {
           stackTrace: stackTrace,
           details: <String, dynamic>{
             'miniProgramId': miniProgramId,
+            if (cachedManifest != null) ...<String, dynamic>{
+              'cachedManifestAt': cachedManifest.cachedAt.toIso8601String(),
+              'manifestMaxStaleSeconds':
+                  cachedManifest.manifest.manifestMaxStaleAge.inSeconds,
+              'manifestCacheExpired': !_isWithinMaxStaleAge(
+                cachedAt: cachedManifest.cachedAt,
+                maxStaleAge: cachedManifest.manifest.manifestMaxStaleAge,
+              ),
+            },
             if (sourceException != null) ...sourceException.details,
           },
         ),
@@ -215,7 +230,7 @@ class ManifestLoader {
     required ScreenCache screenCache,
     required SdkLogger logger,
   }) async {
-    final cachedScreen = screenCache.read(
+    final cachedScreen = await screenCache.read(
       miniProgramId: miniProgramId,
       version: manifest.version,
       screenId: manifest.entry,
@@ -233,7 +248,7 @@ class ManifestLoader {
       }
 
       if (manifest.allowsEntryScreenStaleCache) {
-        screenCache.write(
+        await screenCache.write(
           CachedScreenEntry(
             miniProgramId: miniProgramId,
             version: manifest.version,
@@ -243,7 +258,7 @@ class ManifestLoader {
           ),
         );
       } else {
-        screenCache.remove(
+        await screenCache.remove(
           miniProgramId: miniProgramId,
           version: manifest.version,
           screenId: manifest.entry,
@@ -257,6 +272,10 @@ class ManifestLoader {
           : null;
       if (cachedScreen != null &&
           manifest.allowsEntryScreenStaleCache &&
+          _isWithinMaxStaleAge(
+            cachedAt: cachedScreen.cachedAt,
+            maxStaleAge: manifest.entryScreenMaxStaleAge,
+          ) &&
           _canUseStaleCache(sourceException)) {
         logger.warn(
           'Using stale cached entry screen after backend load failure.',
@@ -264,6 +283,7 @@ class ManifestLoader {
             'miniProgramId': miniProgramId,
             'entryScreen': manifest.entry,
             'cachedAt': cachedScreen.cachedAt.toIso8601String(),
+            'maxStaleSeconds': manifest.entryScreenMaxStaleAge.inSeconds,
             'errorCode': sourceException?.errorCode ?? 'unknown',
           },
         );
@@ -296,6 +316,15 @@ class ManifestLoader {
           details: <String, dynamic>{
             'miniProgramId': miniProgramId,
             'entryScreen': manifest.entry,
+            if (cachedScreen != null) ...<String, dynamic>{
+              'cachedEntryScreenAt': cachedScreen.cachedAt.toIso8601String(),
+              'entryScreenMaxStaleSeconds':
+                  manifest.entryScreenMaxStaleAge.inSeconds,
+              'entryScreenCacheExpired': !_isWithinMaxStaleAge(
+                cachedAt: cachedScreen.cachedAt,
+                maxStaleAge: manifest.entryScreenMaxStaleAge,
+              ),
+            },
             if (sourceException != null) ...sourceException.details,
           },
         ),
@@ -307,6 +336,13 @@ class ManifestLoader {
     final errorCode = sourceException?.errorCode;
     return errorCode == MiniProgramErrorCodes.backendUnreachable ||
         errorCode == MiniProgramErrorCodes.backendTimeout;
+  }
+
+  bool _isWithinMaxStaleAge({
+    required DateTime cachedAt,
+    required Duration maxStaleAge,
+  }) {
+    return DateTime.now().difference(cachedAt) <= maxStaleAge;
   }
 }
 

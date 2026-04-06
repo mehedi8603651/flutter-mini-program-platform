@@ -9,6 +9,7 @@ Portable feedback mini-program authored with Stac DSL.
 - stays portable by using the route alias `feedback_follow_up`
 - current authored manifest version is `1.1.0`
 - manifest cache policy is `noCache` for both manifest and entry screen because this is the current sensitive secure flow
+- persistent offline reuse is intentionally disabled for this mini-program
 - current backend rollout sends `1.1.0` to both `super_app_host` and `partner_app_host`
 
 ## Structure

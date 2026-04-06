@@ -18,8 +18,11 @@ void main() {
         ],
         featureFlags: const ['profile_center_v2'],
         cachePolicy: const MiniProgramCachePolicy(
-          manifest: MiniProgramCacheMode.staleWhileError,
-          entryScreen: MiniProgramCacheMode.noCache,
+          manifest: MiniProgramCacheRule(
+            mode: MiniProgramCacheMode.staleWhileError,
+            maxStaleSeconds: 86400,
+          ),
+          entryScreen: MiniProgramCacheRule(mode: MiniProgramCacheMode.noCache),
         ),
         fallback: const MiniProgramFallback(
           strategy: MiniProgramFallbackStrategy.hostRoute,
@@ -38,8 +41,8 @@ void main() {
       ]);
       expect(json['featureFlags'], ['profile_center_v2']);
       expect(json['cachePolicy'], {
-        'manifest': 'staleWhileError',
-        'entryScreen': 'noCache',
+        'manifest': {'mode': 'staleWhileError', 'maxStaleSeconds': 86400},
+        'entryScreen': {'mode': 'noCache'},
       });
       expect(json['fallback'], {
         'strategy': 'hostRoute',
@@ -55,6 +58,8 @@ void main() {
       expect(decoded.requiresCapability(Capability.analytics), isFalse);
       expect(decoded.allowsManifestStaleCache, isTrue);
       expect(decoded.allowsEntryScreenStaleCache, isFalse);
+      expect(decoded.manifestMaxStaleAge, const Duration(days: 1));
+      expect(decoded.entryScreenMaxStaleAge, const Duration(hours: 1));
     });
 
     test('rejects unknown capability values during decode', () {
@@ -101,15 +106,42 @@ void main() {
         });
 
         expect(
-          manifest.cachePolicy.manifest,
+          manifest.cachePolicy.manifest.mode,
           MiniProgramCacheMode.staleWhileError,
         );
         expect(
-          manifest.cachePolicy.entryScreen,
+          manifest.cachePolicy.entryScreen.mode,
           MiniProgramCacheMode.staleWhileError,
         );
+        expect(manifest.manifestMaxStaleAge, const Duration(hours: 1));
+        expect(manifest.entryScreenMaxStaleAge, const Duration(hours: 1));
       },
     );
+
+    test('decodes legacy string cache policy values compatibly', () {
+      final manifest = MiniProgramManifest.fromJson({
+        'id': 'profile_center',
+        'version': '1.2.3',
+        'entry': 'screens/profile_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': ['auth'],
+        'cachePolicy': {
+          'manifest': 'staleWhileError',
+          'entryScreen': 'noCache',
+        },
+      });
+
+      expect(
+        manifest.cachePolicy.manifest.mode,
+        MiniProgramCacheMode.staleWhileError,
+      );
+      expect(
+        manifest.cachePolicy.entryScreen.mode,
+        MiniProgramCacheMode.noCache,
+      );
+      expect(manifest.manifestMaxStaleAge, const Duration(hours: 1));
+    });
   });
 
   group('payload models', () {

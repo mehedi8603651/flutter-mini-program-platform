@@ -16,11 +16,12 @@ Build the portable runtime that validates, loads, renders, and safely bridges mi
 - approved host action dispatch for `openNativeScreen`, `callSecureApi`, and `trackEvent`
 - controlled loading and fallback error UI
 - basic SDK logging
-- in-memory manifest and screen caching with stale-on-error fallback
+- in-memory and file-backed manifest and screen caching with stale-on-error fallback
+- persistent offline reuse when hosts provide a file-backed cache bundle
 
 This package is the current shared runtime from the root `AGENTS.md`.
-It now includes contract-driven in-memory caching for manifests and entry
-screens, but it is still not the full persistent/offline runtime.
+It now includes contract-driven cache rules, file-backed cache storage, and
+bounded stale reuse for offline-safe recovery paths.
 
 ## Owns
 - `HostBridge`
@@ -33,6 +34,7 @@ screens, but it is still not the full persistent/offline runtime.
 - Fallback UI
 - Basic SDK logging
 - Contract-driven manifest and entry-screen caching
+- Persistent cache bundle support for host apps
 
 ## Must Do
 - Fail early on incompatible SDK or capability requirements.
@@ -68,8 +70,9 @@ screens, but it is still not the full persistent/offline runtime.
 - `lib/network/mini_program_source.dart` defines the source contract for both asset and HTTP loaders.
 - `lib/network/http_mini_program_source.dart` provides the current backend-facing sample loader for static or server-hosted JSON delivery.
 - `lib/network/mini_program_source_exception.dart` carries backend rejection details and transport failures into SDK fallback UI.
-- `lib/cache/manifest_cache.dart` provides the current manifest cache abstraction and in-memory implementation.
-- `lib/cache/screen_cache.dart` provides the current entry-screen cache abstraction and in-memory implementation.
+- `lib/cache/manifest_cache.dart` provides async manifest cache abstractions plus in-memory and file-backed implementations.
+- `lib/cache/screen_cache.dart` provides async entry-screen cache abstractions plus in-memory and file-backed implementations.
+- `lib/cache/mini_program_cache_bundle.dart` groups manifest and screen cache stores for host injection.
 - `lib/rendering/stac_initializer.dart` owns the current parser/action initialization path.
 - `lib/observability/sdk_logger.dart` provides logging only. Error reporting and tracing are future additions, not current guarantees.
 
@@ -101,9 +104,11 @@ screens, but it is still not the full persistent/offline runtime.
 - Keep auth passive in v1. `Capability.auth` may be validated, but auth bridge APIs are not part of this package yet.
 - Cache only when the manifest allows it. `noCache` manifests and entry screens must never reuse stale cached content.
 - Only use stale cache on retryable backend failures such as unreachable or timeout conditions.
+- Enforce `maxStaleSeconds` when reusing persisted manifest or screen payloads.
+- Treat persisted cache as a host runtime concern. Tests may inject in-memory caches, but mobile hosts should prefer file-backed cache bundles.
 
 ## Deferred Until Later Phases
-- Persistent manifest, screen, and asset caching
+- Asset caching
 - Backend client helpers such as `mini_program_api.dart`
 - Auth header injection and asset resolution helpers
 - Broader parser and widget fallback registries
@@ -117,10 +122,10 @@ These are valid future additions, but they should not be added until the current
 - `flutter analyze`
 
 ## Next Step
-The next implementation phase is stronger persistent cache/offline behavior and
+The next implementation phase is stronger offline freshness policy and
 production backend work on top of the current capability surface.
 
 That phase should keep using this SDK while adding:
-- persistent cache storage beyond in-memory session scope
-- richer stale-cache diagnostics where needed
+- persistent cache storage beyond manifest and entry-screen JSON
+- richer stale-cache diagnostics and user-visible offline state where needed
 - cache metadata for more than manifest and entry-screen payloads

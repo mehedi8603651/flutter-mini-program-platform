@@ -14,6 +14,7 @@ dependencies:
   json_annotation: ^4.11.0
   mini_program_contracts:
     path: ../mini_program_contracts
+  path: ^1.9.1
   stac: ^1.4.0
 
 dev_dependencies:

@@ -1,5 +1,6 @@
 export 'capability_registry.dart';
 export 'cache/manifest_cache.dart';
+export 'cache/mini_program_cache_bundle.dart';
 export 'cache/screen_cache.dart';
 export 'feature_flag_evaluator.dart';
 export 'host_bridge.dart';

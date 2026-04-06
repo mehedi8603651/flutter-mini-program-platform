@@ -15,6 +15,7 @@ class MiniProgramListPage extends StatelessWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     required this.featureFlagEvaluator,
+    required this.cacheBundle,
   });
 
   final String sdkVersion;
@@ -23,6 +24,7 @@ class MiniProgramListPage extends StatelessWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
+  final MiniProgramCacheBundle cacheBundle;
 
   @override
   Widget build(BuildContext context) {
@@ -100,6 +102,7 @@ class MiniProgramListPage extends StatelessWidget {
                           hostBridge: hostBridge,
                           capabilityRegistry: capabilityRegistry,
                           featureFlagEvaluator: featureFlagEvaluator,
+                          cacheBundle: cacheBundle,
                         ),
                       ),
                     );
@@ -115,6 +118,7 @@ class MiniProgramListPage extends StatelessWidget {
                           capabilityRegistry:
                               superAppMissingNavigationCapabilityRegistry,
                           featureFlagEvaluator: featureFlagEvaluator,
+                          cacheBundle: cacheBundle,
                         ),
                       ),
                     );

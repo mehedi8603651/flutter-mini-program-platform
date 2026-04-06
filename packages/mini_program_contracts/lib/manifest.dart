@@ -31,6 +31,76 @@ enum MiniProgramCacheMode {
   noCache,
 }
 
+const int _defaultMiniProgramCacheMaxStaleSeconds = 3600;
+
+/// Backward-compatible cache-rule converter for manifest cache policy fields.
+///
+/// Older manifests may still serialize cache policy values as simple strings,
+/// for example `"staleWhileError"`. Newer manifests may use the object form
+/// with a mode plus an explicit `maxStaleSeconds` limit.
+class MiniProgramCacheRuleConverter
+    implements JsonConverter<MiniProgramCacheRule, Object?> {
+  const MiniProgramCacheRuleConverter();
+
+  @override
+  MiniProgramCacheRule fromJson(Object? json) {
+    if (json == null) {
+      return const MiniProgramCacheRule();
+    }
+
+    if (json is String) {
+      return MiniProgramCacheRule(mode: _cacheModeFromWireValue(json));
+    }
+
+    if (json is Map<String, dynamic>) {
+      return MiniProgramCacheRule.fromJson(json);
+    }
+
+    if (json is Map) {
+      return MiniProgramCacheRule.fromJson(
+        json.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+
+    throw const FormatException('Expected a cache rule string or object.');
+  }
+
+  @override
+  Object toJson(MiniProgramCacheRule object) => object.toJson();
+
+  MiniProgramCacheMode _cacheModeFromWireValue(String value) {
+    switch (value) {
+      case 'staleWhileError':
+        return MiniProgramCacheMode.staleWhileError;
+      case 'noCache':
+        return MiniProgramCacheMode.noCache;
+      default:
+        throw FormatException('Unsupported cache mode "$value".');
+    }
+  }
+}
+
+/// Cache rules declared by a mini-program manifest for one payload class.
+///
+/// `maxStaleSeconds` bounds how long a stale cached copy may be reused after a
+/// retryable backend failure. When omitted, the SDK falls back to the default
+/// contract value of 3600 seconds.
+@freezed
+abstract class MiniProgramCacheRule with _$MiniProgramCacheRule {
+  @JsonSerializable(checked: true, explicitToJson: true)
+  @Assert(
+    'maxStaleSeconds == null || maxStaleSeconds > 0',
+    'maxStaleSeconds must be greater than zero when provided.',
+  )
+  const factory MiniProgramCacheRule({
+    @Default(MiniProgramCacheMode.staleWhileError) MiniProgramCacheMode mode,
+    @JsonKey(includeIfNull: false) int? maxStaleSeconds,
+  }) = _MiniProgramCacheRule;
+
+  factory MiniProgramCacheRule.fromJson(Map<String, dynamic> json) =>
+      _$MiniProgramCacheRuleFromJson(json);
+}
+
 /// Cache rules declared by a mini-program manifest.
 ///
 /// These rules let the SDK cache low-risk content while keeping sensitive
@@ -39,10 +109,12 @@ enum MiniProgramCacheMode {
 abstract class MiniProgramCachePolicy with _$MiniProgramCachePolicy {
   @JsonSerializable(checked: true, explicitToJson: true)
   const factory MiniProgramCachePolicy({
-    @Default(MiniProgramCacheMode.staleWhileError)
-    MiniProgramCacheMode manifest,
-    @Default(MiniProgramCacheMode.staleWhileError)
-    MiniProgramCacheMode entryScreen,
+    @MiniProgramCacheRuleConverter()
+    @Default(MiniProgramCacheRule())
+    MiniProgramCacheRule manifest,
+    @MiniProgramCacheRuleConverter()
+    @Default(MiniProgramCacheRule())
+    MiniProgramCacheRule entryScreen,
   }) = _MiniProgramCachePolicy;
 
   factory MiniProgramCachePolicy.fromJson(Map<String, dynamic> json) =>
@@ -93,10 +165,26 @@ extension MiniProgramManifestX on MiniProgramManifest {
 
   /// Whether the manifest itself may be reused from stale cache on backend
   /// errors.
-  bool get allowsManifestStaleCache =>
-      cachePolicy.manifest == MiniProgramCacheMode.staleWhileError;
+  bool get allowsManifestStaleCache => cachePolicy.manifest.allowsStaleCache;
 
   /// Whether the entry screen may be reused from stale cache on backend errors.
   bool get allowsEntryScreenStaleCache =>
-      cachePolicy.entryScreen == MiniProgramCacheMode.staleWhileError;
+      cachePolicy.entryScreen.allowsStaleCache;
+
+  /// Maximum allowed stale age for manifest reuse after retryable failures.
+  Duration get manifestMaxStaleAge => cachePolicy.manifest.effectiveMaxStaleAge;
+
+  /// Maximum allowed stale age for entry-screen reuse after retryable failures.
+  Duration get entryScreenMaxStaleAge =>
+      cachePolicy.entryScreen.effectiveMaxStaleAge;
+}
+
+extension MiniProgramCacheRuleX on MiniProgramCacheRule {
+  /// Whether stale cached content may be reused for this payload.
+  bool get allowsStaleCache => mode == MiniProgramCacheMode.staleWhileError;
+
+  /// Contract-defined maximum stale age for retryable offline fallback.
+  Duration get effectiveMaxStaleAge => Duration(
+    seconds: maxStaleSeconds ?? _defaultMiniProgramCacheMaxStaleSeconds,
+  );
 }

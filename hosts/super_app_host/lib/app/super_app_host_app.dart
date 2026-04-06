@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../bridge/host_bridge_impl.dart';
 import '../capabilities/supported_capabilities.dart';
@@ -23,6 +27,7 @@ class SuperAppHostApp extends StatefulWidget {
     this.authSessionService,
     this.capabilityRegistry,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
+    this.cacheBundle,
   });
 
   final MiniProgramSource? source;
@@ -31,6 +36,7 @@ class SuperAppHostApp extends StatefulWidget {
   final AuthSessionService? authSessionService;
   final CapabilityRegistry? capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
+  final MiniProgramCacheBundle? cacheBundle;
 
   @override
   State<SuperAppHostApp> createState() => _SuperAppHostAppState();
@@ -42,11 +48,13 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
   late final String _sourceDescription;
   late final CapabilityRegistry _capabilityRegistry;
   late final HostBridge _hostBridge;
+  late final Future<MiniProgramCacheBundle> _cacheBundleFuture;
 
   @override
   void initState() {
     super.initState();
     _navigatorKey = GlobalKey<NavigatorState>();
+    _cacheBundleFuture = _resolveCacheBundle();
     _capabilityRegistry =
         widget.capabilityRegistry ?? superAppCapabilityRegistry;
     final sourceConfiguration =
@@ -127,15 +135,51 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
             return null;
         }
       },
-      home: MiniProgramListPage(
-        sdkVersion: superAppHostSdkVersion,
-        source: _source,
-        sourceDescription: _sourceDescription,
-        hostBridge: _hostBridge,
-        capabilityRegistry: _capabilityRegistry,
-        featureFlagEvaluator: widget.featureFlagEvaluator,
+      home: FutureBuilder<MiniProgramCacheBundle>(
+        future: _cacheBundleFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              body: Center(child: Text('Initializing host runtime...')),
+            );
+          }
+
+          return MiniProgramListPage(
+            sdkVersion: superAppHostSdkVersion,
+            source: _source,
+            sourceDescription: _sourceDescription,
+            hostBridge: _hostBridge,
+            capabilityRegistry: _capabilityRegistry,
+            featureFlagEvaluator: widget.featureFlagEvaluator,
+            cacheBundle:
+                snapshot.data ??
+                MiniProgramCacheBundle(
+                  manifestCache: InMemoryManifestCache.shared,
+                  screenCache: InMemoryScreenCache.shared,
+                ),
+          );
+        },
       ),
     );
+  }
+
+  Future<MiniProgramCacheBundle> _resolveCacheBundle() async {
+    if (widget.cacheBundle != null) {
+      return widget.cacheBundle!;
+    }
+
+    try {
+      final appSupportDirectory = await getApplicationSupportDirectory();
+      return MiniProgramCacheBundle.fileBacked(
+        rootDirectory: Directory(
+          '${appSupportDirectory.path}${Platform.pathSeparator}mini_program_sdk_cache',
+        ),
+      );
+    } on MissingPluginException {
+      return MiniProgramCacheBundle.inMemory();
+    } on UnsupportedError {
+      return MiniProgramCacheBundle.inMemory();
+    }
   }
 
   AuthSessionService _buildAuthSessionService(
