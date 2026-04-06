@@ -55,6 +55,19 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1 -MiniProgramId feedback_form
 ```
 
+Validate authored manifests and backend delivery files before running the local
+service:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1
+```
+
+Validate one mini-program only:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1 -MiniProgramId profile_center
+```
+
 ## Run the real local backend service
 
 ```powershell

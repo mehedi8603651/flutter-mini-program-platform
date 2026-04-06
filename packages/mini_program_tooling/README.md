@@ -4,6 +4,37 @@ Local developer and CI tooling for the Flutter mini-program platform.
 
 ## Current CLI
 
+### `validate_delivery`
+
+Validates authored manifests plus backend delivery files before runtime:
+
+- `mini_programs/<id>/manifest.json`
+- `backend/api/manifests/...`
+- `backend/api/screens/...`
+- `backend/api/rollout-rules/...`
+- `backend/api/capability-policies/...`
+
+Example:
+
+```powershell
+cd D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart run bin\validate_delivery.dart --repo-root D:\flutter-mini-program-platform
+```
+
+Validate one mini-program only:
+
+```powershell
+dart run bin\validate_delivery.dart `
+  --repo-root D:\flutter-mini-program-platform `
+  --mini-program feedback_form
+```
+
+Repo-level PowerShell wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1
+```
+
 ### `inspect_delivery`
 
 Calls the local backend debug inspection route and prints the manifest delivery

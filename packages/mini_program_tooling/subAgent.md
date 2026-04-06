@@ -22,6 +22,10 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
 - Assume one backend environment or one host app forever.
 
 ## Current Tool
+- `bin/validate_delivery.dart`
+  - Validates authored manifests and backend delivery files before runtime.
+  - Checks published manifest/screen linkage, rollout rule versions, and
+    capability-policy query requirements.
 - `bin/inspect_delivery.dart`
   - Calls the local backend debug inspection route:
     `/api/debug/manifests/:miniProgramId/decision`
@@ -31,12 +35,12 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
   - Supports `text` and `json` output for local debugging and CI.
 
 ## Current Focus
+- `validate_delivery`
 - `inspect_delivery`
 - `build_mini_programs`
 - `validate_manifests`
 - `smoke_test_host`
 
 ## Next Tooling Priorities
-- manifest validation CLI
-- rollout policy validation
 - host smoke-test wrappers
+- secure API policy validation

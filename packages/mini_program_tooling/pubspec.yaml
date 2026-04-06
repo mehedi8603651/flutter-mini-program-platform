@@ -9,6 +9,10 @@ environment:
 dependencies:
   args: ^2.7.0
   http: ^1.5.0
+  mini_program_contracts:
+    path: ../mini_program_contracts
+  path: ^1.9.1
+  pub_semver: ^2.2.0
 
 dev_dependencies:
   lints: ^5.1.1

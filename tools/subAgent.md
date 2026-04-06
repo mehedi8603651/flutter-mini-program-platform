@@ -39,3 +39,7 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
   - Calls the local backend decision inspection route with host delivery
     context and prints human-readable or JSON output.
   - Intended for local operability debugging and CI smoke checks.
+- `validate_delivery.ps1`
+  - Wraps the Dart delivery validator in `packages/mini_program_tooling`.
+  - Validates authored manifests, published backend manifests/screens, rollout
+    rules, and capability policies before runtime.
