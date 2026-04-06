@@ -213,6 +213,41 @@ void main() {
     expect(body['version'], '1.0.0');
   });
 
+  test('inspects a resolved manifest delivery decision', () async {
+    await _writeProfileCenterPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/debug/manifests/profile_center/decision?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(response.headers['x-debug-route'], 'manifest_decision_inspect');
+    expect(response.headers['x-debug-outcome'], 'resolved');
+
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['outcome'], 'resolved');
+    expect(body['simulatedStatusCode'], HttpStatus.ok);
+    expect(
+      (body['decision'] as Map<String, dynamic>)['matchedRuleId'],
+      'super-app-android-v1',
+    );
+    expect(
+      (body['decision'] as Map<String, dynamic>)['decisionReason'],
+      'matched_enabled_rule',
+    );
+    expect(
+      (body['manifestSummary'] as Map<String, dynamic>)['version'],
+      '1.1.0',
+    );
+    expect((body['rollout'] as Map<String, dynamic>)['type'], 'rule_based');
+  });
+
   test(
     'falls back to default version when hostVersion misses rollout rule',
     () async {
@@ -658,6 +693,40 @@ void main() {
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
     expect(body['version'], '1.0.0');
+  });
+
+  test('inspects a rejected manifest delivery decision', () async {
+    await _writeFeedbackFormPolicies(tempDirectory);
+
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse(
+          'http://localhost/api/debug/manifests/feedback_form/decision?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+        ),
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(response.headers['x-debug-route'], 'manifest_decision_inspect');
+    expect(response.headers['x-debug-outcome'], 'rejected');
+
+    final body =
+        jsonDecode(await response.readAsString()) as Map<String, dynamic>;
+    expect(body['outcome'], 'rejected');
+    expect(body['simulatedStatusCode'], HttpStatus.preconditionFailed);
+    expect(
+      (body['rejection'] as Map<String, dynamic>)['errorCode'],
+      'missing_capabilities',
+    );
+    expect(
+      (body['decision'] as Map<String, dynamic>)['matchedRuleId'],
+      'partner-feedback-default',
+    );
+    expect(
+      (body['decision'] as Map<String, dynamic>)['resolvedVersion'],
+      '1.1.0',
+    );
   });
 
   test('serves a versioned screen from a .json endpoint', () async {

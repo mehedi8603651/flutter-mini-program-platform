@@ -114,6 +114,29 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
 
     if (segments.length == 5 &&
         segments[0] == 'api' &&
+        segments[1] == 'debug' &&
+        segments[2] == 'manifests' &&
+        _isDecisionSegment(segments[4])) {
+      response = await repository.inspectLatestManifestDecision(
+        miniProgramId: segments[3],
+        context: DeliveryContext.fromQueryParameters(
+          request.url.queryParameters,
+        ),
+        selector: manifestSelector,
+        traceId: traceId,
+      );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: 'manifest_decision_inspect',
+      );
+      return response;
+    }
+
+    if (segments.length == 5 &&
+        segments[0] == 'api' &&
         segments[1] == 'manifests' &&
         segments[3] == 'versions') {
       final version = _stripJsonSuffix(segments[4]);
@@ -321,6 +344,53 @@ class _PublishedArtifactRepository {
           'Manifest version "$version" for mini-program "$miniProgramId" was not found.',
       traceId: traceId,
       extraHeaders: <String, String>{'x-mini-program-id': miniProgramId},
+    );
+  }
+
+  Future<Response> inspectLatestManifestDecision({
+    required String miniProgramId,
+    required DeliveryContext context,
+    required ManifestDeliverySelector selector,
+    required String traceId,
+  }) async {
+    final miniProgramError = _validateSegment(
+      miniProgramId,
+      label: 'miniProgramId',
+      traceId: traceId,
+    );
+    if (miniProgramError != null) {
+      return miniProgramError;
+    }
+
+    final contextValidationError = _validateContext(context, traceId: traceId);
+    if (contextValidationError != null) {
+      return contextValidationError;
+    }
+
+    final report = await selector.inspectLatestManifestDecision(
+      miniProgramId: miniProgramId,
+      context: context,
+    );
+
+    logBackendEvent(
+      'INFO',
+      'Inspected manifest delivery decision.',
+      context: <String, Object?>{
+        'traceId': traceId,
+        'miniProgramId': miniProgramId,
+        'outcome': report.outcome,
+        'simulatedStatusCode': report.simulatedStatusCode,
+        'deliveryContext': context.toJson(),
+      },
+    );
+
+    return _jsonResponse(
+      body: report.toJson(),
+      traceId: traceId,
+      extraHeaders: <String, String>{
+        'x-debug-route': 'manifest_decision_inspect',
+        'x-debug-outcome': report.outcome,
+      },
     );
   }
 
@@ -557,6 +627,9 @@ bool _matchesSegments(List<String> actual, List<String> expected) {
 
 bool _isLatestSegment(String value) =>
     value == 'latest' || value == 'latest.json';
+
+bool _isDecisionSegment(String value) =>
+    value == 'decision' || value == 'decision.json';
 
 String? _stripJsonSuffix(String value) {
   final normalized = value.trim();

@@ -145,6 +145,35 @@ The response headers also now include:
 - `x-mini-program-decision-reason`
 - optional `x-mini-program-matched-rule-id`
 
+## Decision inspection route
+
+The local backend now also exposes a debug-only inspection route:
+
+```text
+GET /api/debug/manifests/:miniProgramId/decision
+```
+
+Use the same query parameters you would send to `latest.json`. The response
+always returns a structured inspection report with:
+
+- `outcome`: `resolved` or `rejected`
+- `simulatedStatusCode`: the status `latest.json` would have returned
+- `decision`: selected version and rule metadata when available
+- `rollout`: default version plus per-rule match/mismatch inspection
+- `capabilityPolicy`: current latest-manifest policy summary
+- `manifestSummary` or `rejection`
+- `traceId`
+
+Example:
+
+```text
+GET /api/debug/manifests/profile_center/decision?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth
+```
+
+This is meant for local operability work only. It helps explain why a request
+matched a rollout rule, fell back to default, or was rejected before the host
+tries to render the mini-program.
+
 `super_app_host` can already consume these URLs through
 `HttpMiniProgramSource` by launching with:
 

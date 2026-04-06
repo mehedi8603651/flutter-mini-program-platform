@@ -46,6 +46,7 @@ Deliver versioned mini-program artifacts safely to host apps and the shared SDK.
 - the secure endpoint now enforces local auth failure paths such as expired bearer tokens and blocked demo users
 - latest-manifest responses now include traceable delivery metadata such as `decisionReason`, `declaredDefaultVersion`, and `evaluatedRuleIds`
 - the local backend now emits per-request stdout logs with a trace ID and route/result summary
+- `/api/debug/manifests/:id/decision` now exposes local inspection output for rule matching, policy summary, and rejection reasons
 
 ## Next Step
 - Keep the current local backend and strengthen admin/debug operability on top of it:

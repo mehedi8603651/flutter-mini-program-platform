@@ -135,6 +135,42 @@ class ManifestSelectionResult {
   final DeliveryDecision decision;
 }
 
+class ManifestInspectionReport {
+  const ManifestInspectionReport({
+    required this.miniProgramId,
+    required this.outcome,
+    required this.simulatedStatusCode,
+    required this.deliveryContext,
+    required this.rollout,
+    this.capabilityPolicy,
+    this.decision,
+    this.manifestSummary,
+    this.rejection,
+  });
+
+  final String miniProgramId;
+  final String outcome;
+  final int simulatedStatusCode;
+  final Map<String, dynamic> deliveryContext;
+  final Map<String, dynamic> rollout;
+  final Map<String, dynamic>? capabilityPolicy;
+  final Map<String, dynamic>? decision;
+  final Map<String, dynamic>? manifestSummary;
+  final Map<String, dynamic>? rejection;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'miniProgramId': miniProgramId,
+    'outcome': outcome,
+    'simulatedStatusCode': simulatedStatusCode,
+    'deliveryContext': deliveryContext,
+    'rollout': rollout,
+    if (capabilityPolicy != null) 'capabilityPolicy': capabilityPolicy,
+    if (decision != null) 'decision': decision,
+    if (manifestSummary != null) 'manifestSummary': manifestSummary,
+    if (rejection != null) 'rejection': rejection,
+  };
+}
+
 class ManifestSelectionException implements Exception {
   const ManifestSelectionException({
     required this.errorCode,
@@ -221,6 +257,88 @@ class ManifestDeliverySelector {
       version: decision.resolvedVersion,
       decision: decision,
     );
+  }
+
+  Future<ManifestInspectionReport> inspectLatestManifestDecision({
+    required String miniProgramId,
+    required DeliveryContext context,
+  }) async {
+    final rolloutRules = await _loadRolloutRules(miniProgramId);
+    final capabilityPolicy = await _loadCapabilityPolicy(miniProgramId);
+    final rolloutRuleIds = rolloutRules?.ruleIds ?? const <String>[];
+    final rolloutSummary = _buildRolloutSummary(
+      miniProgramId: miniProgramId,
+      context: context,
+      rolloutRules: rolloutRules,
+    );
+    final capabilityPolicySummary = _buildCapabilityPolicySummary(
+      capabilityPolicy,
+    );
+
+    DeliveryDecision? decision;
+    try {
+      if (capabilityPolicy?.requireContextForLatest == true) {
+        _requireContext(
+          miniProgramId: miniProgramId,
+          context: context,
+          capabilityPolicy: capabilityPolicy!,
+          rolloutRuleIds: rolloutRuleIds,
+        );
+      }
+
+      decision = _selectVersion(
+        miniProgramId: miniProgramId,
+        context: context,
+        rolloutRules: rolloutRules,
+      );
+      final manifestJson = await _readJsonMap(
+        path.join(
+          apiRootPath,
+          'manifests',
+          miniProgramId,
+          'versions',
+          '${decision.resolvedVersion}.json',
+        ),
+        notFoundMessage:
+            'Manifest version "${decision.resolvedVersion}" for mini-program "$miniProgramId" was not found.',
+      );
+
+      _validateSdkVersion(
+        miniProgramId: miniProgramId,
+        context: context,
+        manifestJson: manifestJson,
+        decision: decision,
+      );
+      _validateCapabilities(
+        miniProgramId: miniProgramId,
+        context: context,
+        capabilityPolicy: capabilityPolicy,
+        manifestJson: manifestJson,
+        decision: decision,
+      );
+
+      return ManifestInspectionReport(
+        miniProgramId: miniProgramId,
+        outcome: 'resolved',
+        simulatedStatusCode: HttpStatus.ok,
+        deliveryContext: context.toJson(),
+        rollout: rolloutSummary,
+        capabilityPolicy: capabilityPolicySummary,
+        decision: decision.toJson(),
+        manifestSummary: _buildManifestSummary(manifestJson),
+      );
+    } on ManifestSelectionException catch (error) {
+      return ManifestInspectionReport(
+        miniProgramId: miniProgramId,
+        outcome: 'rejected',
+        simulatedStatusCode: error.statusCode,
+        deliveryContext: context.toJson(),
+        rollout: rolloutSummary,
+        capabilityPolicy: capabilityPolicySummary,
+        decision: decision?.toJson(),
+        rejection: _buildRejectionSummary(error),
+      );
+    }
   }
 
   Future<_RolloutRules?> _loadRolloutRules(String miniProgramId) async {
@@ -545,6 +663,83 @@ class ManifestDeliverySelector {
 
     return decoded;
   }
+
+  Map<String, dynamic> _buildRolloutSummary({
+    required String miniProgramId,
+    required DeliveryContext context,
+    required _RolloutRules? rolloutRules,
+  }) {
+    if (rolloutRules == null) {
+      try {
+        return <String, dynamic>{
+          'type': 'static_latest',
+          'staticLatestVersion': _readStaticLatestVersion(miniProgramId),
+          'rules': const <Object>[],
+        };
+      } on ManifestSelectionException catch (error) {
+        return <String, dynamic>{
+          'type': 'static_latest',
+          'rules': const <Object>[],
+          'staticLatestError': _buildRejectionSummary(error),
+        };
+      }
+    }
+
+    return <String, dynamic>{
+      'type': 'rule_based',
+      'defaultVersion': rolloutRules.defaultVersion,
+      'declaredHostApps': rolloutRules.declaredHostApps,
+      'ruleCount': rolloutRules.rules.length,
+      'rules': rolloutRules
+          .inspect(context)
+          .map((rule) => rule.toJson())
+          .toList(),
+    };
+  }
+
+  Map<String, dynamic>? _buildCapabilityPolicySummary(
+    _CapabilityPolicy? capabilityPolicy,
+  ) {
+    if (capabilityPolicy == null) {
+      return null;
+    }
+
+    return <String, dynamic>{
+      'requireContextForLatest': capabilityPolicy.requireContextForLatest,
+      'enforceManifestCapabilities':
+          capabilityPolicy.enforceManifestCapabilities,
+      'requiredQueryParameters': capabilityPolicy.requiredQueryParameters,
+    };
+  }
+
+  Map<String, dynamic> _buildManifestSummary(
+    Map<String, dynamic> manifestJson,
+  ) {
+    final rawRequiredCapabilities =
+        manifestJson['requiredCapabilities'] as List<dynamic>? ?? const [];
+
+    return <String, dynamic>{
+      'id': manifestJson['id'],
+      'version': manifestJson['version'],
+      'entry': manifestJson['entry'],
+      'contractVersion': manifestJson['contractVersion'],
+      'sdkVersionRange': manifestJson['sdkVersionRange'],
+      'requiredCapabilities': rawRequiredCapabilities
+          .map((value) => value.toString())
+          .toList(),
+    };
+  }
+
+  Map<String, dynamic> _buildRejectionSummary(
+    ManifestSelectionException error,
+  ) {
+    return <String, dynamic>{
+      'statusCode': error.statusCode,
+      'errorCode': error.errorCode,
+      'message': error.message,
+      if (error.details.isNotEmpty) 'details': error.details,
+    };
+  }
 }
 
 class _RolloutRules {
@@ -577,6 +772,9 @@ class _RolloutRules {
 
   bool hasDeclaredRuleForHost(String hostApp) =>
       rules.any((rule) => rule.hostApp == hostApp);
+
+  List<_RuleInspection> inspect(DeliveryContext context) =>
+      rules.map((rule) => rule.inspect(context)).toList(growable: false);
 }
 
 class _DeliveryRule {
@@ -653,6 +851,58 @@ class _DeliveryRule {
     return true;
   }
 
+  _RuleInspection inspect(DeliveryContext context) {
+    final mismatchReasons = <String>[];
+    Map<String, dynamic>? evaluationError;
+
+    if (hostApp != null && context.hostApp != hostApp) {
+      mismatchReasons.add('hostApp_mismatch');
+    }
+
+    if (platform != null && context.platform != platform) {
+      mismatchReasons.add('platform_mismatch');
+    }
+
+    if (locale != null && !_localeMatches(context.locale, locale!)) {
+      mismatchReasons.add('locale_mismatch');
+    }
+
+    if (tenantId != null && context.tenantId != tenantId) {
+      mismatchReasons.add('tenantId_mismatch');
+    }
+
+    final rawHostVersionRange = hostVersionRange;
+    if (rawHostVersionRange != null) {
+      final requestedHostVersion = context.hostVersion;
+      if (requestedHostVersion == null) {
+        mismatchReasons.add('hostVersion_missing');
+      } else {
+        try {
+          final parsedRequestedHostVersion = _parseRequestedHostVersion(
+            requestedHostVersion,
+          );
+          final parsedRange = _parseHostVersionRange(rawHostVersionRange);
+          if (!parsedRange.allows(parsedRequestedHostVersion)) {
+            mismatchReasons.add('hostVersion_out_of_range');
+          }
+        } on ManifestSelectionException catch (error) {
+          mismatchReasons.add('hostVersion_invalid');
+          evaluationError = <String, dynamic>{
+            'errorCode': error.errorCode,
+            'message': error.message,
+          };
+        }
+      }
+    }
+
+    return _RuleInspection(
+      rule: toJson(),
+      matches: mismatchReasons.isEmpty,
+      mismatchReasons: mismatchReasons,
+      evaluationError: evaluationError,
+    );
+  }
+
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'hostApp': hostApp,
@@ -662,6 +912,27 @@ class _DeliveryRule {
     'tenantId': tenantId,
     'version': version,
     'enabled': enabled,
+  };
+}
+
+class _RuleInspection {
+  const _RuleInspection({
+    required this.rule,
+    required this.matches,
+    required this.mismatchReasons,
+    this.evaluationError,
+  });
+
+  final Map<String, dynamic> rule;
+  final bool matches;
+  final List<String> mismatchReasons;
+  final Map<String, dynamic>? evaluationError;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    ...rule,
+    'matches': matches,
+    if (mismatchReasons.isNotEmpty) 'mismatchReasons': mismatchReasons,
+    if (evaluationError != null) 'evaluationError': evaluationError,
   };
 }
 
