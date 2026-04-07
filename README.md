@@ -30,6 +30,26 @@ Authoring guide:
 - [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
 - [embed_existing_flutter_app.md](D:/flutter-mini-program-platform/docs/embed_existing_flutter_app.md)
 
+## Embed Into An Existing Flutter App
+
+Generate the app-owned embedding adapter for an existing Flutter app with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\init_mini_program_embedding.ps1 `
+  -ProjectRoot D:\myflutterproject
+```
+
+The command generates:
+
+- `lib/mini_program/app_host_bridge.dart`
+- `lib/mini_program/mini_program_runtime_setup.dart`
+- `lib/mini_program/native_profile_editor_page.dart`
+- `lib/mini_program/README.md`
+
+It intentionally leaves `main.dart` and the rest of your app shell under
+developer control, so existing apps can adopt the shared SDK without copying a
+full sample host.
+
 Build a mini-program with:
 
 ```powershell

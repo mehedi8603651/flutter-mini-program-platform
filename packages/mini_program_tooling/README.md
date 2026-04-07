@@ -4,6 +4,50 @@ Local developer and CI tooling for the Flutter mini-program platform.
 
 ## Current CLI
 
+### `init_mini_program_embedding`
+
+Generates the app-owned embedding adapter for an existing Flutter app under
+`lib/mini_program/` with:
+
+- `app_host_bridge.dart`
+- `mini_program_runtime_setup.dart`
+- `native_profile_editor_page.dart`
+- `README.md`
+
+Design:
+
+- leaves `main.dart` and your existing app shell under developer control
+- defaults to lean capabilities: `analytics`, `native_navigation`
+- uses `profile_editor -> /native/profile-editor` as the sample native route alias
+- keeps the generated adapter small enough for old apps to adopt without copying a full demo host
+
+Example:
+
+```powershell
+cd D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart run bin\init_mini_program_embedding.dart `
+  --project-root D:\myflutterproject `
+  --repo-root D:\flutter-mini-program-platform
+```
+
+Custom host metadata:
+
+```powershell
+dart run bin\init_mini_program_embedding.dart `
+  --project-root D:\myflutterproject `
+  --repo-root D:\flutter-mini-program-platform `
+  --host-app-id campus_super_app `
+  --host-version 3.2.0 `
+  --native-route-path /routes/native/profile-review
+```
+
+Repo-level PowerShell wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\init_mini_program_embedding.ps1 `
+  -ProjectRoot D:\myflutterproject
+```
+
 ### `create_mini_program`
 
 Generates a buildable starter mini-program under `mini_programs/<id>/` with:
@@ -249,3 +293,4 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 See:
 
 - `docs/mini_program_authoring.md`
+- `docs/embed_existing_flutter_app.md`

@@ -61,8 +61,12 @@ Keep repo-level scripts focused on build, validation, publish, sync, and smoke-t
 - `publish_mini_program.ps1`
   - Wraps the Dart publish helper in `packages/mini_program_tooling`.
   - Runs build plus validation and then publishes the result into the local
-    backend sample.
+  backend sample.
   - Intended to give authors one safe command for the local backend flow.
+- `init_mini_program_embedding.ps1`
+  - Wraps the Dart embedding initializer in `packages/mini_program_tooling`.
+  - Generates `lib/mini_program/` starter files for an existing Flutter app.
+  - Intended to make old-app embedding adoption repeatable without copying a sample host.
 
 ## CI Rule
 - Use `smoke_repo.ps1` as the local pre-push command.

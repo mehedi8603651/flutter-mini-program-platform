@@ -51,11 +51,16 @@ Provide repeatable developer and CI tooling for build, validation, publishing, a
   - Chains build, validation, and local backend publish into one safe command.
   - Stops before publish if validation has errors.
   - Re-validates after copying artifacts into `backend/api/`.
+- `bin/init_mini_program_embedding.dart`
+  - Generates the app-owned embedding adapter for an existing Flutter app.
+  - Emits `lib/mini_program/` starter files without rewriting the app shell.
+  - Intended to make old-app SDK adoption easier than copying a whole sample host.
 
 ## Current Focus
 - `create_mini_program`
 - `build_mini_program`
 - `publish_mini_program`
+- `init_mini_program_embedding`
 - `validate_delivery`
 - `inspect_delivery`
 - `build_mini_programs`

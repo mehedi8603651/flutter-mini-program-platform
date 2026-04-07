@@ -5,12 +5,30 @@ more portable mini-programs inside it.
 
 The intended v1 flow is:
 
-1. add `mini_program_sdk` and `mini_program_contracts`
-2. implement an app-owned `HostBridge`
-3. declare supported capabilities
+1. run `init_mini_program_embedding`
+2. add `mini_program_sdk` and `mini_program_contracts`
+3. review the generated app-owned `HostBridge`
 4. create one shared `MiniProgramRuntime`
 5. wrap your app or feature root with `MiniProgramRuntimeScope`
 6. push `MiniProgramPage(miniProgramId: '...')` from any normal button
+
+## Quick start with the initializer
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\init_mini_program_embedding.ps1 `
+  -ProjectRoot D:\myflutterproject
+```
+
+This generates:
+
+- `lib/mini_program/app_host_bridge.dart`
+- `lib/mini_program/mini_program_runtime_setup.dart`
+- `lib/mini_program/native_profile_editor_page.dart`
+- `lib/mini_program/README.md`
+
+The tool intentionally does **not** rewrite `main.dart` or your app shell. It
+generates the adapter layer and leaves final integration with your existing app
+routes and widget tree under developer control.
 
 ## Recommended v1 capability set
 
@@ -32,10 +50,11 @@ dependencies:
     path: D:/flutter-mini-program-platform/packages/mini_program_contracts
 ```
 
-## 2. Implement an app-owned HostBridge
+## 2. Review the generated HostBridge
 
 Keep this app-specific. The shared SDK should not know your route names,
-analytics stack, or native flows.
+analytics stack, or native flows. The generated file is a starting point, not a
+final production bridge.
 
 ```dart
 class AppHostBridge implements HostBridge {
@@ -164,6 +183,8 @@ other Flutter page widget.
 
 - `MiniProgramPage` is the ergonomic embedded API for existing apps.
 - `MiniProgramHost` remains the low-level primitive for advanced integrations.
+- `init_mini_program_embedding` is the quickest way to generate the adapter
+  layer for an old Flutter app.
 - Mini-program internal page-to-page routing is intentionally deferred for a
   later milestone; v1 embedding only standardizes how an existing app opens a
   mini-program by `miniProgramId`.

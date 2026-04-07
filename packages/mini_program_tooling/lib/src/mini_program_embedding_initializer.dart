@@ -1,0 +1,548 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+
+class MiniProgramEmbeddingInitRequest {
+  const MiniProgramEmbeddingInitRequest({
+    required this.projectRootPath,
+    this.repoRootPath,
+    this.hostAppId,
+    this.hostVersion,
+    this.nativeRoutePath = '/native/profile-editor',
+    this.force = false,
+  });
+
+  final String projectRootPath;
+  final String? repoRootPath;
+  final String? hostAppId;
+  final String? hostVersion;
+  final String nativeRoutePath;
+  final bool force;
+}
+
+class MiniProgramEmbeddingInitResult {
+  const MiniProgramEmbeddingInitResult({
+    required this.projectRootPath,
+    required this.repoRootPath,
+    required this.packageName,
+    required this.hostAppId,
+    required this.hostVersion,
+    required this.nativeRoutePath,
+    required this.createdPaths,
+  });
+
+  final String projectRootPath;
+  final String? repoRootPath;
+  final String packageName;
+  final String hostAppId;
+  final String hostVersion;
+  final String nativeRoutePath;
+  final List<String> createdPaths;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'projectRootPath': projectRootPath,
+    'repoRootPath': repoRootPath,
+    'packageName': packageName,
+    'hostAppId': hostAppId,
+    'hostVersion': hostVersion,
+    'nativeRoutePath': nativeRoutePath,
+    'createdPaths': createdPaths,
+  };
+}
+
+class MiniProgramEmbeddingInitException implements Exception {
+  const MiniProgramEmbeddingInitException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+class MiniProgramEmbeddingInitializer {
+  const MiniProgramEmbeddingInitializer();
+
+  Future<MiniProgramEmbeddingInitResult> initialize(
+    MiniProgramEmbeddingInitRequest request,
+  ) async {
+    final projectRootPath = p.normalize(p.absolute(request.projectRootPath));
+    final repoRootPath = request.repoRootPath == null
+        ? null
+        : p.normalize(p.absolute(request.repoRootPath!));
+
+    final projectRootDir = Directory(projectRootPath);
+    if (!await projectRootDir.exists()) {
+      throw MiniProgramEmbeddingInitException(
+        'Project root does not exist: $projectRootPath',
+      );
+    }
+
+    final pubspecPath = p.join(projectRootPath, 'pubspec.yaml');
+    final libDirPath = p.join(projectRootPath, 'lib');
+    final pubspecFile = File(pubspecPath);
+    if (!await pubspecFile.exists()) {
+      throw MiniProgramEmbeddingInitException(
+        'Flutter project is missing pubspec.yaml: $projectRootPath',
+      );
+    }
+    if (!await Directory(libDirPath).exists()) {
+      throw MiniProgramEmbeddingInitException(
+        'Flutter project is missing lib/: $projectRootPath',
+      );
+    }
+
+    final pubspecSource = await pubspecFile.readAsString();
+    final packageName = _extractPubspecField(
+      pubspecSource,
+      'name',
+      fallbackValue: p.basename(projectRootPath),
+    );
+    final resolvedHostAppId = request.hostAppId?.trim().isNotEmpty == true
+        ? request.hostAppId!.trim()
+        : packageName;
+    final resolvedHostVersion = request.hostVersion?.trim().isNotEmpty == true
+        ? request.hostVersion!.trim()
+        : _extractVersion(pubspecSource);
+    final normalizedRoutePath = _normalizeRoutePath(request.nativeRoutePath);
+
+    final integrationRootPath = p.join(projectRootPath, 'lib', 'mini_program');
+    final integrationRootDir = Directory(integrationRootPath);
+
+    final managedFiles = <String, String>{
+      p.join(integrationRootPath, 'app_host_bridge.dart'): _buildHostBridge(
+        nativeRoutePath: normalizedRoutePath,
+        logPrefix: resolvedHostAppId,
+      ),
+      p.join(
+        integrationRootPath,
+        'mini_program_runtime_setup.dart',
+      ): _buildRuntimeSetup(
+        hostAppId: resolvedHostAppId,
+        hostVersion: resolvedHostVersion,
+      ),
+      p.join(
+        integrationRootPath,
+        'native_profile_editor_page.dart',
+      ): _buildNativeProfileEditorPage(),
+      p.join(integrationRootPath, 'README.md'): _buildReadme(
+        packageName: packageName,
+        repoRootPath: repoRootPath,
+        hostAppId: resolvedHostAppId,
+        hostVersion: resolvedHostVersion,
+        nativeRoutePath: normalizedRoutePath,
+      ),
+    };
+
+    if (await integrationRootDir.exists() &&
+        !request.force &&
+        await _directoryHasEntries(integrationRootDir)) {
+      throw MiniProgramEmbeddingInitException(
+        'Embedding adapter already exists: $integrationRootPath '
+        '(use --force to overwrite scaffold-managed files)',
+      );
+    }
+
+    await integrationRootDir.create(recursive: true);
+
+    final createdPaths = <String>[];
+    for (final entry in managedFiles.entries) {
+      final file = File(entry.key);
+      await file.parent.create(recursive: true);
+      await file.writeAsString(entry.value);
+      createdPaths.add(file.path);
+    }
+
+    return MiniProgramEmbeddingInitResult(
+      projectRootPath: projectRootPath,
+      repoRootPath: repoRootPath,
+      packageName: packageName,
+      hostAppId: resolvedHostAppId,
+      hostVersion: resolvedHostVersion,
+      nativeRoutePath: normalizedRoutePath,
+      createdPaths: createdPaths,
+    );
+  }
+
+  Future<bool> _directoryHasEntries(Directory directory) async {
+    await for (final _ in directory.list(followLinks: false)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  String _extractPubspecField(
+    String source,
+    String fieldName, {
+    required String fallbackValue,
+  }) {
+    final match = RegExp(
+      '^\\s*$fieldName\\s*:\\s*([^\\r\\n#]+)',
+      multiLine: true,
+    ).firstMatch(source);
+    if (match == null) {
+      return fallbackValue;
+    }
+
+    return match.group(1)?.trim().replaceAll("'", '') ?? fallbackValue;
+  }
+
+  String _extractVersion(String source) {
+    final rawVersion = _extractPubspecField(
+      source,
+      'version',
+      fallbackValue: '1.0.0',
+    );
+    return rawVersion.split('+').first.trim();
+  }
+
+  String _normalizeRoutePath(String rawRoutePath) {
+    final trimmed = rawRoutePath.trim();
+    if (trimmed.isEmpty) {
+      throw const MiniProgramEmbeddingInitException(
+        'Native route path must not be blank.',
+      );
+    }
+
+    return trimmed.startsWith('/') ? trimmed : '/$trimmed';
+  }
+
+  String _buildHostBridge({
+    required String nativeRoutePath,
+    required String logPrefix,
+  }) {
+    return '''
+import 'package:flutter/material.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+class AppHostBridge implements HostBridge {
+  AppHostBridge({required this.navigatorKey});
+
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  static const Map<String, String> _routeAliases = <String, String>{
+    'profile_editor': '$nativeRoutePath',
+  };
+
+  @override
+  Future<HostActionResult> trackEvent(TrackEventActionPayload payload) async {
+    debugPrint(
+      '[$logPrefix][analytics] \${payload.name} \${payload.properties}',
+    );
+    return HostActionResult.success(
+      actionName: ActionNames.trackEvent,
+      message: 'Tracked event "\${payload.name}".',
+      data: payload.properties,
+    );
+  }
+
+  @override
+  Future<HostActionResult> openNativeScreen(
+    OpenNativeScreenActionPayload payload,
+  ) async {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      return HostActionResult.failed(
+        actionName: ActionNames.openNativeScreen,
+        message: 'Navigator not available.',
+      );
+    }
+
+    try {
+      final routeName = _routeAliases[payload.route] ?? payload.route;
+      final result = await navigator.pushNamed<Object?>(
+        routeName,
+        arguments: payload.args,
+      );
+
+      if (payload.expectResult && result == null) {
+        return HostActionResult.cancelled(
+          actionName: ActionNames.openNativeScreen,
+          message: 'Native screen closed without returning a result.',
+        );
+      }
+
+      return HostActionResult.success(
+        actionName: ActionNames.openNativeScreen,
+        message: 'Opened native screen "\$routeName".',
+        data: result is Map<String, dynamic>
+            ? result
+            : <String, dynamic>{'route': routeName},
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        '[$logPrefix][ERROR] Failed to open native route "\${payload.route}". '
+        'error=\$error\\n\$stackTrace',
+      );
+      return HostActionResult.failed(
+        actionName: ActionNames.openNativeScreen,
+        message: 'Failed to open native screen "\${payload.route}".',
+      );
+    }
+  }
+
+  @override
+  Future<HostActionResult> callSecureApi(
+    CallSecureApiActionPayload payload,
+  ) async {
+    return HostActionResult.failed(
+      actionName: ActionNames.callSecureApi,
+      message: 'secure_api is not enabled in this lean embedding setup.',
+    );
+  }
+}
+''';
+  }
+
+  String _buildRuntimeSetup({
+    required String hostAppId,
+    required String hostVersion,
+  }) {
+    return '''
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+import 'app_host_bridge.dart';
+
+const String _hostAppId = '$hostAppId';
+const String _sdkVersion = '1.0.0';
+const String _hostVersion = '$hostVersion';
+
+const Set<Capability> _supportedCapabilities = <Capability>{
+  Capability.analytics,
+  Capability.nativeNavigation,
+};
+
+MiniProgramRuntime buildMiniProgramRuntime(
+  GlobalKey<NavigatorState> navigatorKey,
+) {
+  final locale = WidgetsBinding.instance.platformDispatcher.locale;
+
+  return MiniProgramRuntime(
+    sdkVersion: _sdkVersion,
+    source: HttpMiniProgramSource.fromDeliveryContext(
+      apiBaseUri: Uri.parse(_resolveBackendBaseUrl()),
+      deliveryContext: MiniProgramDeliveryContext(
+        hostApp: _hostAppId,
+        sdkVersion: _sdkVersion,
+        hostVersion: _hostVersion,
+        capabilities: _supportedCapabilities,
+        platform: _platformName(),
+        locale: locale.toLanguageTag(),
+      ),
+    ),
+    hostBridge: AppHostBridge(navigatorKey: navigatorKey),
+    capabilityRegistry: CapabilityRegistry(_supportedCapabilities),
+    cacheBundle: MiniProgramCacheBundle.inMemory(),
+  );
+}
+
+String _resolveBackendBaseUrl() {
+  const configured = String.fromEnvironment(
+    'MINI_PROGRAM_BACKEND_BASE_URL',
+    defaultValue: '',
+  );
+  if (configured.isNotEmpty) {
+    return configured;
+  }
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return 'http://10.0.2.2:8080/api/';
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+    case TargetPlatform.windows:
+    case TargetPlatform.linux:
+    case TargetPlatform.fuchsia:
+      return 'http://127.0.0.1:8080/api/';
+  }
+}
+
+String _platformName() {
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return 'android';
+    case TargetPlatform.iOS:
+      return 'ios';
+    case TargetPlatform.macOS:
+      return 'macos';
+    case TargetPlatform.windows:
+      return 'windows';
+    case TargetPlatform.linux:
+      return 'linux';
+    case TargetPlatform.fuchsia:
+      return 'fuchsia';
+  }
+}
+''';
+  }
+
+  String _buildNativeProfileEditorPage() {
+    return '''
+import 'package:flutter/material.dart';
+
+class NativeProfileEditorPage extends StatelessWidget {
+  const NativeProfileEditorPage({super.key, required this.initialArgs});
+
+  final Map<String, dynamic> initialArgs;
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = initialArgs['userId']?.toString() ?? 'starter_demo_user';
+    final source = initialArgs['source']?.toString() ?? 'mini_program';
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Native Profile Editor')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This is a host-owned Flutter page opened through HostBridge.',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              Text('User ID: \$userId'),
+              Text('Requested by: \$source'),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop(<String, dynamic>{
+                    'saved': true,
+                    'userId': userId,
+                    'source': source,
+                  });
+                },
+                child: const Text('Return result'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+''';
+  }
+
+  String _buildReadme({
+    required String packageName,
+    required String? repoRootPath,
+    required String hostAppId,
+    required String hostVersion,
+    required String nativeRoutePath,
+  }) {
+    final sdkPath = _toPosixPath(
+      repoRootPath == null
+          ? '<repo-root>/packages/mini_program_sdk'
+          : p.join(repoRootPath, 'packages', 'mini_program_sdk'),
+    );
+    final contractsPath = _toPosixPath(
+      repoRootPath == null
+          ? '<repo-root>/packages/mini_program_contracts'
+          : p.join(repoRootPath, 'packages', 'mini_program_contracts'),
+    );
+
+    return '''
+# Embedded Mini-Program Adapter
+
+This folder was generated by `init_mini_program_embedding`.
+
+Generated files:
+
+- `app_host_bridge.dart`
+- `mini_program_runtime_setup.dart`
+- `native_profile_editor_page.dart`
+
+## 1. Ensure package dependencies exist in pubspec.yaml
+
+```yaml
+dependencies:
+  mini_program_sdk:
+    path: $sdkPath
+  mini_program_contracts:
+    path: $contractsPath
+```
+
+## 2. Keep main.dart small
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+import 'mini_program/mini_program_runtime_setup.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  final navigatorKey = GlobalKey<NavigatorState>();
+
+  runApp(
+    MiniProgramRuntimeScope(
+      runtime: buildMiniProgramRuntime(navigatorKey),
+      child: MyApp(navigatorKey: navigatorKey),
+    ),
+  );
+}
+```
+
+## 3. Register the generated native sample route in your app shell
+
+```dart
+onGenerateRoute: (settings) {
+  if (settings.name == '$nativeRoutePath') {
+    final args =
+        (settings.arguments as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+    return MaterialPageRoute<void>(
+      builder: (_) => NativeProfileEditorPage(initialArgs: args),
+      settings: settings,
+    );
+  }
+
+  return null;
+}
+```
+
+## 4. Open any mini-program from an ordinary app button
+
+```dart
+Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (_) => const MiniProgramPage(
+      miniProgramId: 'my_data',
+      title: 'My Data',
+    ),
+  ),
+);
+```
+
+## Generated defaults
+
+- package name: `$packageName`
+- host app id: `$hostAppId`
+- host version: `$hostVersion`
+- lean capabilities: `analytics`, `native_navigation`
+- native route alias: `profile_editor -> $nativeRoutePath`
+
+## Notes
+
+- `app_host_bridge.dart` is app-owned. Replace route aliases, analytics, and
+  secure API behavior with your real implementation.
+- `mini_program_runtime_setup.dart` defaults to:
+  - Android emulator: `http://10.0.2.2:8080/api/`
+  - desktop/iOS simulators: `http://127.0.0.1:8080/api/`
+- Override the backend base URL with:
+
+```text
+--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://host:8080/api/
+```
+''';
+  }
+
+  String _toPosixPath(String pathValue) => pathValue.replaceAll(r'\', '/');
+}
