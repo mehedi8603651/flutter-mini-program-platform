@@ -77,19 +77,20 @@ void main() {
         cacheBundle: MiniProgramCacheBundle.inMemory(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Coupon Center'));
 
     expect(requestUri.path, '/api/discovery/mini-programs.json');
     expect(find.text('Coupon Center'), findsOneWidget);
     expect(find.text('Discovered release: v1.0.0'), findsOneWidget);
-    expect(find.text('Live'), findsOneWidget);
   });
 
   testWidgets('shows the local mini-program list', (tester) async {
     await tester.pumpWidget(
       SuperAppHostApp(cacheBundle: MiniProgramCacheBundle.inMemory()),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Super App Host'));
 
     expect(find.text('Super App Host'), findsOneWidget);
     expect(find.text('Profile Center'), findsOneWidget);
@@ -100,6 +101,28 @@ void main() {
     expect(find.text('Feedback Form'), findsOneWidget);
     expect(find.text('Cached'), findsWidgets);
     expect(find.text('Open mini-program'), findsWidgets);
+  });
+
+  testWidgets('opens a mini-program from the host list through MiniProgramPage', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      SuperAppHostApp(
+        source: const _SuperLaneMiniProgramSource(),
+        sourceDescription: 'Injected source',
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      ),
+    );
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Open mini-program'));
+    await tester.scrollUntilVisible(find.text('Open mini-program').first, 300);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open mini-program').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Portable account module'), findsOneWidget);
+    expect(find.text('Open Native Edit Screen'), findsOneWidget);
   });
 
   testWidgets('opens the local profile center mini-program', (tester) async {

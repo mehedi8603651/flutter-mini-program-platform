@@ -1,0 +1,95 @@
+import 'package:flutter/widgets.dart';
+
+import 'cache/mini_program_cache_bundle.dart';
+import 'capability_registry.dart';
+import 'feature_flag_evaluator.dart';
+import 'host_bridge.dart';
+import 'network/mini_program_source.dart';
+import 'observability/sdk_logger.dart';
+
+/// Shared embedded runtime that existing apps configure once, then reuse to
+/// open many mini-programs by ID.
+@immutable
+class MiniProgramRuntime {
+  const MiniProgramRuntime({
+    required this.sdkVersion,
+    required this.source,
+    required this.hostBridge,
+    required this.capabilityRegistry,
+    required this.cacheBundle,
+    this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
+    this.logger = const DebugPrintSdkLogger(),
+  });
+
+  final String sdkVersion;
+  final MiniProgramSource source;
+  final HostBridge hostBridge;
+  final CapabilityRegistry capabilityRegistry;
+  final FeatureFlagEvaluator featureFlagEvaluator;
+  final MiniProgramCacheBundle cacheBundle;
+  final SdkLogger logger;
+
+  MiniProgramRuntime copyWith({
+    String? sdkVersion,
+    MiniProgramSource? source,
+    HostBridge? hostBridge,
+    CapabilityRegistry? capabilityRegistry,
+    FeatureFlagEvaluator? featureFlagEvaluator,
+    MiniProgramCacheBundle? cacheBundle,
+    SdkLogger? logger,
+  }) {
+    return MiniProgramRuntime(
+      sdkVersion: sdkVersion ?? this.sdkVersion,
+      source: source ?? this.source,
+      hostBridge: hostBridge ?? this.hostBridge,
+      capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
+      featureFlagEvaluator:
+          featureFlagEvaluator ?? this.featureFlagEvaluator,
+      cacheBundle: cacheBundle ?? this.cacheBundle,
+      logger: logger ?? this.logger,
+    );
+  }
+}
+
+/// Inherited scope that exposes a configured [MiniProgramRuntime] to embedded
+/// mini-program pages in an existing app.
+class MiniProgramRuntimeScope extends InheritedWidget {
+  const MiniProgramRuntimeScope({
+    super.key,
+    required this.runtime,
+    required super.child,
+  });
+
+  final MiniProgramRuntime runtime;
+
+  static MiniProgramRuntime of(BuildContext context) {
+    final scope = maybeOf(context);
+    if (scope == null) {
+      throw FlutterError.fromParts(<DiagnosticsNode>[
+        ErrorSummary('MiniProgramRuntimeScope not found in context.'),
+        ErrorDescription(
+          'MiniProgramPage requires either an explicit MiniProgramRuntime or '
+          'a MiniProgramRuntimeScope ancestor.',
+        ),
+      ]);
+    }
+
+    return scope.runtime;
+  }
+
+  static MiniProgramRuntimeScope? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<MiniProgramRuntimeScope>();
+  }
+
+  @override
+  bool updateShouldNotify(MiniProgramRuntimeScope oldWidget) {
+    return runtime.sdkVersion != oldWidget.runtime.sdkVersion ||
+        runtime.source != oldWidget.runtime.source ||
+        runtime.hostBridge != oldWidget.runtime.hostBridge ||
+        runtime.capabilityRegistry != oldWidget.runtime.capabilityRegistry ||
+        runtime.featureFlagEvaluator !=
+            oldWidget.runtime.featureFlagEvaluator ||
+        runtime.cacheBundle != oldWidget.runtime.cacheBundle ||
+        runtime.logger != oldWidget.runtime.logger;
+  }
+}

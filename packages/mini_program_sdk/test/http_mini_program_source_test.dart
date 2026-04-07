@@ -1,10 +1,54 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
   group('HttpMiniProgramSource', () {
+    test(
+      'builds manifest query parameters from MiniProgramDeliveryContext',
+      () async {
+        final client = MockClient((request) async {
+          expect(request.url.path, '/api/manifests/profile_center/latest.json');
+          expect(request.url.queryParameters['hostApp'], 'embedded_app');
+          expect(request.url.queryParameters['sdkVersion'], '1.0.0');
+          expect(request.url.queryParameters['hostVersion'], '2.4.0');
+          expect(request.url.queryParameters['platform'], 'android');
+          expect(request.url.queryParameters['locale'], 'en-US');
+          expect(request.url.queryParameters['tenantId'], 'campus-demo');
+          expect(request.url.queryParameters['pinnedVersion'], '1.1.0');
+          expect(
+            request.url.queryParameters['capabilities'],
+            'analytics,native_navigation',
+          );
+          return http.Response(_manifestJson, 200);
+        });
+
+        final source = HttpMiniProgramSource.fromDeliveryContext(
+          apiBaseUri: Uri.parse('http://localhost:8080/api'),
+          deliveryContext: const MiniProgramDeliveryContext(
+            hostApp: 'embedded_app',
+            sdkVersion: '1.0.0',
+            hostVersion: '2.4.0',
+            capabilities: <Capability>{
+              Capability.nativeNavigation,
+              Capability.analytics,
+            },
+            platform: 'android',
+            locale: 'en-US',
+            tenantId: 'campus-demo',
+            pinnedVersion: '1.1.0',
+          ),
+          client: client,
+        );
+
+        final manifest = await source.loadManifest('profile_center');
+
+        expect(manifest.id, 'profile_center');
+      },
+    );
+
     test('loads the latest manifest from the backend endpoint', () async {
       final client = MockClient((request) async {
         expect(request.url.path, '/api/manifests/profile_center/latest.json');

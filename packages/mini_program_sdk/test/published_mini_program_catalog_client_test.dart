@@ -5,6 +5,51 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
+  test('builds discovery query parameters from MiniProgramDeliveryContext', () async {
+    late Uri requestUri;
+    final client = MockClient((request) async {
+      requestUri = request.url;
+      return http.Response(
+        '''
+        {
+          "responseType":"mini_program_catalog",
+          "statusCode":200,
+          "entries":[]
+        }
+        ''',
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+    final catalogClient = PublishedMiniProgramCatalogClient.fromDeliveryContext(
+      apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      deliveryContext: const MiniProgramDeliveryContext(
+        hostApp: 'embedded_app',
+        sdkVersion: '1.0.0',
+        hostVersion: '2.4.0',
+        capabilities: <Capability>{
+          Capability.secureApi,
+          Capability.analytics,
+          Capability.nativeNavigation,
+        },
+        platform: 'android',
+        locale: 'en-US',
+      ),
+      client: client,
+    );
+
+    final catalog = await catalogClient.listAvailableMiniPrograms();
+
+    expect(catalog.entries, isEmpty);
+    expect(requestUri.path, '/api/discovery/mini-programs.json');
+    expect(requestUri.queryParameters['hostApp'], 'embedded_app');
+    expect(requestUri.queryParameters['hostVersion'], '2.4.0');
+    expect(
+      requestUri.queryParameters['capabilities'],
+      'analytics,native_navigation,secure_api',
+    );
+  });
+
   test('loads and parses the published mini-program catalog', () async {
     late Uri requestUri;
     final client = MockClient((request) async {

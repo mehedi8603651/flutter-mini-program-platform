@@ -25,22 +25,17 @@ class MiniProgramEntryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MiniProgramHost(
+    return MiniProgramPage(
       miniProgramId: program.id,
-      sdkVersion: sdkVersion,
-      source: source,
-      hostBridge: hostBridge,
-      capabilityRegistry: capabilityRegistry,
-      featureFlagEvaluator: featureFlagEvaluator,
-      assetCache: cacheBundle?.assetCache,
-      manifestCache: cacheBundle?.manifestCache,
-      screenCache: cacheBundle?.screenCache,
-      errorBuilder: (context, failure) {
-        return Scaffold(
-          appBar: AppBar(title: Text(program.title)),
-          body: SdkErrorView(failure: failure),
-        );
-      },
+      title: program.title,
+      runtime: MiniProgramRuntime(
+        sdkVersion: sdkVersion,
+        source: source,
+        hostBridge: hostBridge,
+        capabilityRegistry: capabilityRegistry,
+        featureFlagEvaluator: featureFlagEvaluator,
+        cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
+      ),
     );
   }
 }

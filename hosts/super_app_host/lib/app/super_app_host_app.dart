@@ -110,6 +110,57 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.cacheBundle != null) {
+      return _buildAppWithRuntime(widget.cacheBundle!);
+    }
+
+    return FutureBuilder<MiniProgramCacheBundle>(
+      future: _cacheBundleFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _buildMaterialApp(
+            home: const Scaffold(
+              body: Center(child: Text('Initializing host runtime...')),
+            ),
+          );
+        }
+
+        return _buildAppWithRuntime(
+          snapshot.data ??
+              MiniProgramCacheBundle(
+                manifestCache: InMemoryManifestCache.shared,
+                screenCache: InMemoryScreenCache.shared,
+                assetCache: NoOpAssetCache.shared,
+              ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppWithRuntime(MiniProgramCacheBundle cacheBundle) {
+    final runtime = MiniProgramRuntime(
+      sdkVersion: superAppHostSdkVersion,
+      source: _source,
+      hostBridge: _hostBridge,
+      capabilityRegistry: _capabilityRegistry,
+      featureFlagEvaluator: widget.featureFlagEvaluator,
+      cacheBundle: cacheBundle,
+    );
+
+    return MiniProgramRuntimeScope(
+      runtime: runtime,
+      child: _buildMaterialApp(
+        home: MiniProgramListPage(
+          runtime: runtime,
+          catalogClient: _catalogClient,
+          sourceDescription: _sourceDescription,
+          discoverySourceKind: _discoverySourceKind,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMaterialApp({required Widget home}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF0F6D67),
       brightness: Brightness.light,
@@ -157,34 +208,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
             return null;
         }
       },
-      home: FutureBuilder<MiniProgramCacheBundle>(
-        future: _cacheBundleFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: Center(child: Text('Initializing host runtime...')),
-            );
-          }
-
-          return MiniProgramListPage(
-            sdkVersion: superAppHostSdkVersion,
-            source: _source,
-            catalogClient: _catalogClient,
-            sourceDescription: _sourceDescription,
-            discoverySourceKind: _discoverySourceKind,
-            hostBridge: _hostBridge,
-            capabilityRegistry: _capabilityRegistry,
-            featureFlagEvaluator: widget.featureFlagEvaluator,
-            cacheBundle:
-                snapshot.data ??
-                MiniProgramCacheBundle(
-                  manifestCache: InMemoryManifestCache.shared,
-                  screenCache: InMemoryScreenCache.shared,
-                  assetCache: NoOpAssetCache.shared,
-                ),
-          );
-        },
-      ),
+      home: home,
     );
   }
 

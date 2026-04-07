@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../services/auth_session_service.dart';
@@ -90,10 +89,10 @@ class SuperAppHostSourceConfiguration {
           );
         }
 
-        return HttpMiniProgramSource(
+        return HttpMiniProgramSource.fromDeliveryContext(
           apiBaseUri: apiBaseUri,
           client: client,
-          manifestRequestQueryParametersBuilder: (_) => _buildManifestContext(
+          deliveryContext: _buildDeliveryContext(
             hostAppId: hostAppId,
             sdkVersion: sdkVersion,
             hostVersion: hostVersionOverride ?? hostVersion,
@@ -120,10 +119,10 @@ class SuperAppHostSourceConfiguration {
           );
         }
 
-        return PublishedMiniProgramCatalogClient(
+        return PublishedMiniProgramCatalogClient.fromDeliveryContext(
           apiBaseUri: apiBaseUri,
           client: client,
-          queryParameters: _buildManifestContext(
+          deliveryContext: _buildDeliveryContext(
             hostAppId: hostAppId,
             sdkVersion: sdkVersion,
             hostVersion: hostVersionOverride ?? hostVersion,
@@ -181,42 +180,22 @@ class SuperAppHostSourceConfiguration {
     }
   }
 
-  Map<String, String> _buildManifestContext({
+  MiniProgramDeliveryContext _buildDeliveryContext({
     required String hostAppId,
     required String sdkVersion,
     required String hostVersion,
     required CapabilityRegistry capabilityRegistry,
   }) {
-    final queryParameters = <String, String>{
-      'hostApp': hostAppId,
-      'sdkVersion': sdkVersion,
-      'hostVersion': hostVersion,
-      'capabilities': _serializeCapabilities(
-        capabilityRegistry.supportedCapabilities,
-      ),
-    };
-
-    final platformValue = platform;
-    if (platformValue != null) {
-      queryParameters['platform'] = platformValue;
-    }
-
-    final localeValue = locale;
-    if (localeValue != null) {
-      queryParameters['locale'] = localeValue;
-    }
-
-    final tenantIdValue = tenantId;
-    if (tenantIdValue != null) {
-      queryParameters['tenantId'] = tenantIdValue;
-    }
-
-    final pinnedVersionValue = pinnedVersion;
-    if (pinnedVersionValue != null) {
-      queryParameters['pinnedVersion'] = pinnedVersionValue;
-    }
-
-    return queryParameters;
+    return MiniProgramDeliveryContext(
+      hostApp: hostAppId,
+      sdkVersion: sdkVersion,
+      hostVersion: hostVersion,
+      capabilities: capabilityRegistry.supportedCapabilities,
+      platform: platform,
+      locale: locale,
+      tenantId: tenantId,
+      pinnedVersion: pinnedVersion,
+    );
   }
 
   static String _defaultPlatform() {
@@ -253,11 +232,5 @@ class SuperAppHostSourceConfiguration {
 
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
-  }
-
-  static String _serializeCapabilities(Set<Capability> capabilities) {
-    final wireValues =
-        capabilities.map((capability) => capability.wireValue).toList()..sort();
-    return wireValues.join(',');
   }
 }

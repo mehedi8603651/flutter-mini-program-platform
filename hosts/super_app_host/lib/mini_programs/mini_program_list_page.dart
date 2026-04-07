@@ -4,31 +4,20 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../capabilities/supported_capabilities.dart';
 import 'local_mini_program_catalog.dart';
-import 'mini_program_entry_page.dart';
 
 class MiniProgramListPage extends StatefulWidget {
   const MiniProgramListPage({
     super.key,
-    required this.sdkVersion,
-    required this.source,
+    required this.runtime,
     required this.catalogClient,
     required this.sourceDescription,
     required this.discoverySourceKind,
-    required this.hostBridge,
-    required this.capabilityRegistry,
-    required this.featureFlagEvaluator,
-    required this.cacheBundle,
   });
 
-  final String sdkVersion;
-  final MiniProgramSource source;
+  final MiniProgramRuntime runtime;
   final PublishedMiniProgramCatalogClient? catalogClient;
   final String sourceDescription;
   final MiniProgramDiscoverySourceKind discoverySourceKind;
-  final HostBridge hostBridge;
-  final CapabilityRegistry capabilityRegistry;
-  final FeatureFlagEvaluator featureFlagEvaluator;
-  final MiniProgramCacheBundle cacheBundle;
 
   @override
   State<MiniProgramListPage> createState() => _MiniProgramListPageState();
@@ -50,8 +39,8 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
   @override
   void didUpdateWidget(covariant MiniProgramListPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.source != widget.source ||
-        oldWidget.cacheBundle != widget.cacheBundle ||
+    if (oldWidget.runtime.source != widget.runtime.source ||
+        oldWidget.runtime.cacheBundle != widget.runtime.cacheBundle ||
         oldWidget.discoverySourceKind != widget.discoverySourceKind ||
         oldWidget.catalogClient != widget.catalogClient) {
       _refreshProgramState();
@@ -186,30 +175,24 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
               onOpen: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => MiniProgramEntryPage(
-                      program: program,
-                      sdkVersion: widget.sdkVersion,
-                      source: widget.source,
-                      hostBridge: widget.hostBridge,
-                      capabilityRegistry: widget.capabilityRegistry,
-                      featureFlagEvaluator: widget.featureFlagEvaluator,
-                      cacheBundle: widget.cacheBundle,
+                    builder: (_) => MiniProgramPage(
+                      miniProgramId: program.id,
+                      title: program.title,
                     ),
                   ),
                 );
               },
               onPreviewCapabilityFailure: () {
+                final previewRuntime = widget.runtime.copyWith(
+                  capabilityRegistry:
+                      superAppMissingNavigationCapabilityRegistry,
+                );
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => MiniProgramEntryPage(
-                      program: program,
-                      sdkVersion: widget.sdkVersion,
-                      source: widget.source,
-                      hostBridge: widget.hostBridge,
-                      capabilityRegistry:
-                          superAppMissingNavigationCapabilityRegistry,
-                      featureFlagEvaluator: widget.featureFlagEvaluator,
-                      cacheBundle: widget.cacheBundle,
+                    builder: (_) => MiniProgramPage(
+                      miniProgramId: program.id,
+                      title: program.title,
+                      runtime: previewRuntime,
                     ),
                   ),
                 );
@@ -250,9 +233,9 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
         program.id,
         () => _discoveryResolver.resolve(
           miniProgramId: program.id,
-          source: widget.source,
-          manifestCache: widget.cacheBundle.manifestCache,
-          screenCache: widget.cacheBundle.screenCache,
+          source: widget.runtime.source,
+          manifestCache: widget.runtime.cacheBundle.manifestCache,
+          screenCache: widget.runtime.cacheBundle.screenCache,
           sourceKind: widget.discoverySourceKind,
         ),
       );

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 
+import 'mini_program_delivery_context.dart';
 import 'mini_program_source.dart';
 import 'mini_program_source_exception.dart';
 
@@ -16,6 +17,19 @@ class HttpMiniProgramSource implements MiniProgramSource {
     this.manifestRequestQueryParametersBuilder,
     http.Client? client,
   }) : _client = client ?? http.Client();
+
+  factory HttpMiniProgramSource.fromDeliveryContext({
+    required Uri apiBaseUri,
+    required MiniProgramDeliveryContext deliveryContext,
+    http.Client? client,
+  }) {
+    return HttpMiniProgramSource(
+      apiBaseUri: apiBaseUri,
+      manifestRequestQueryParametersBuilder: (_) =>
+          deliveryContext.toQueryParameters(),
+      client: client,
+    );
+  }
 
   final Uri apiBaseUri;
   final ManifestRequestQueryParametersBuilder?

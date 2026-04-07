@@ -28,6 +28,7 @@ helpers, build config, README, and the expected `stac/components`,
 Authoring guide:
 
 - [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
+- [embed_existing_flutter_app.md](D:/flutter-mini-program-platform/docs/embed_existing_flutter_app.md)
 
 Build a mini-program with:
 

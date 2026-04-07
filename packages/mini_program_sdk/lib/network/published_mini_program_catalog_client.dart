@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 
+import 'mini_program_delivery_context.dart';
 import 'mini_program_source_exception.dart';
 
 /// Lightweight catalog of published mini-programs exposed by backend discovery.
@@ -67,6 +68,18 @@ class PublishedMiniProgramCatalogClient {
     this.queryParameters = const <String, String>{},
     http.Client? client,
   }) : _client = client ?? http.Client();
+
+  factory PublishedMiniProgramCatalogClient.fromDeliveryContext({
+    required Uri apiBaseUri,
+    required MiniProgramDeliveryContext deliveryContext,
+    http.Client? client,
+  }) {
+    return PublishedMiniProgramCatalogClient(
+      apiBaseUri: apiBaseUri,
+      queryParameters: deliveryContext.toQueryParameters(),
+      client: client,
+    );
+  }
 
   final Uri apiBaseUri;
   final Map<String, String> queryParameters;

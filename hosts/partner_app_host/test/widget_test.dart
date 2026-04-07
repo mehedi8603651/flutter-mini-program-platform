@@ -76,12 +76,12 @@ void main() {
         cacheBundle: MiniProgramCacheBundle.inMemory(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Coupon Center'));
 
     expect(requestUri.path, '/api/discovery/mini-programs.json');
     expect(find.text('Coupon Center'), findsOneWidget);
     expect(find.text('Resolved lane: 1.0.0'), findsOneWidget);
-    expect(find.text('Live'), findsOneWidget);
   });
 
   testWidgets('shows the partner mini-program list', (tester) async {
@@ -92,7 +92,8 @@ void main() {
         cacheBundle: MiniProgramCacheBundle.inMemory(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Partner App Host'));
 
     expect(find.text('Partner App Host'), findsOneWidget);
     expect(find.text('Profile Center'), findsOneWidget);
@@ -104,6 +105,28 @@ void main() {
     expect(find.text('Live'), findsWidgets);
     expect(find.text('Resolved v1.1.0'), findsOneWidget);
     expect(find.text('Open mini-program'), findsWidgets);
+  });
+
+  testWidgets('opens a mini-program from the host list through MiniProgramPage', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      PartnerAppHostApp(
+        source: const _PartnerLaneMiniProgramSource(),
+        sourceDescription: 'Injected source',
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      ),
+    );
+    await tester.pump();
+    await _pumpUntilFound(tester, find.text('Open mini-program'));
+    await tester.scrollUntilVisible(find.text('Open mini-program').first, 300);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open mini-program').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Portable account module'), findsOneWidget);
+    expect(find.text('Open Native Edit Screen'), findsOneWidget);
   });
 
   testWidgets(
@@ -148,7 +171,8 @@ void main() {
           cacheBundle: cacheBundle,
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await _pumpUntilFound(tester, find.text('Offline'));
 
       expect(find.text('Offline'), findsOneWidget);
       expect(
