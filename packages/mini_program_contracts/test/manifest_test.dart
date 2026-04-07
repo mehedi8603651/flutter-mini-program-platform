@@ -161,6 +161,18 @@ void main() {
           endpoint: 'feedback/submit',
           body: const {'source': 'feedback_form'},
         );
+        const openMiniProgramScreenPayload =
+            OpenMiniProgramScreenActionPayload(screenId: 'recharge_plan');
+        const resetMiniProgramStackPayload =
+            ResetMiniProgramStackActionPayload(screenId: 'recharge_summary');
+        const replaceMiniProgramScreenPayload =
+            ReplaceMiniProgramScreenActionPayload(screenId: 'recharge_confirm');
+        const popMiniProgramScreenPayload =
+            PopMiniProgramScreenActionPayload();
+        const popToMiniProgramRootPayload =
+            PopToMiniProgramRootActionPayload();
+        const popToMiniProgramScreenPayload =
+            PopToMiniProgramScreenActionPayload(screenId: 'recharge_plan');
         final openNativeScreenRequest = HostActionRequest.openNativeScreen(
           requestId: 'req-001',
           payload: openNativeScreenPayload,
@@ -189,6 +201,42 @@ void main() {
           trackEventPayload,
         );
         expect(
+          OpenMiniProgramScreenActionPayload.fromJson(
+            openMiniProgramScreenPayload.toJson(),
+          ),
+          openMiniProgramScreenPayload,
+        );
+        expect(
+          ResetMiniProgramStackActionPayload.fromJson(
+            resetMiniProgramStackPayload.toJson(),
+          ),
+          resetMiniProgramStackPayload,
+        );
+        expect(
+          ReplaceMiniProgramScreenActionPayload.fromJson(
+            replaceMiniProgramScreenPayload.toJson(),
+          ),
+          replaceMiniProgramScreenPayload,
+        );
+        expect(
+          PopMiniProgramScreenActionPayload.fromJson(
+            popMiniProgramScreenPayload.toJson(),
+          ),
+          popMiniProgramScreenPayload,
+        );
+        expect(
+          PopToMiniProgramRootActionPayload.fromJson(
+            popToMiniProgramRootPayload.toJson(),
+          ),
+          popToMiniProgramRootPayload,
+        );
+        expect(
+          PopToMiniProgramScreenActionPayload.fromJson(
+            popToMiniProgramScreenPayload.toJson(),
+          ),
+          popToMiniProgramScreenPayload,
+        );
+        expect(
           HostActionRequest.fromJson(openNativeScreenRequest.toJson()),
           openNativeScreenRequest,
         );
@@ -206,6 +254,21 @@ void main() {
         );
         expect(callSecureApiRequest.actionName, ActionNames.callSecureApi);
         expect(trackEventRequest.actionName, ActionNames.trackEvent);
+        expect(
+          ActionNames.openMiniProgramScreen,
+          'openMiniProgramScreen',
+        );
+        expect(
+          ActionNames.replaceMiniProgramScreen,
+          'replaceMiniProgramScreen',
+        );
+        expect(ActionNames.popMiniProgramScreen, 'popMiniProgramScreen');
+        expect(ActionNames.resetMiniProgramStack, 'resetMiniProgramStack');
+        expect(ActionNames.popToMiniProgramRoot, 'popToMiniProgramRoot');
+        expect(
+          ActionNames.popToMiniProgramScreen,
+          'popToMiniProgramScreen',
+        );
       },
     );
 

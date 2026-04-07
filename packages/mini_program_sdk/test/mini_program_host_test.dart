@@ -278,10 +278,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Mini-program unavailable'), findsOneWidget);
-      expect(
-        find.textContaining('Failed to render entry screen'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Failed to render screen'), findsOneWidget);
     });
 
     testWidgets('dispatches hostAction through the registered parser', (
@@ -349,14 +346,268 @@ void main() {
       expect(bridge.callSecureApiCalls, hasLength(1));
       expect(bridge.callSecureApiCalls.single.endpoint, 'feedback/submit');
     });
+
+    testWidgets('opens a second mini-program screen and pops back by screenId', (
+      tester,
+    ) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _openDetailsScreenJson,
+          'profile/details': _detailsScreenJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Open details'), findsOneWidget);
+
+      await tester.tap(find.text('Open details'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Portable details screen'), findsOneWidget);
+      expect(find.text('Open details'), findsNothing);
+
+      await tester.tap(find.text('Back to first screen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open details'), findsOneWidget);
+      expect(find.text('Portable details screen'), findsNothing);
+    });
+
+    testWidgets('replaces the current mini-program screen by screenId', (
+      tester,
+    ) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _replaceDetailsScreenJson,
+          'profile/details': _detailsScreenJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Replace with details'), findsOneWidget);
+
+      await tester.tap(find.text('Replace with details'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Portable details screen'), findsOneWidget);
+      expect(find.text('Replace with details'), findsNothing);
+    });
+
+    testWidgets('shows fallback error when a routed screen cannot be loaded', (
+      tester,
+    ) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _missingScreenActionJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open missing screen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mini-program unavailable'), findsOneWidget);
+      expect(find.textContaining('profile/missing'), findsOneWidget);
+    });
+
+    testWidgets('resets the mini-program stack to a target screen', (
+      tester,
+    ) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _resetToDetailsScreenJson,
+          'profile/details': _detailsScreenJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reset to details'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Portable details screen'), findsOneWidget);
+      expect(find.text('Reset to details'), findsNothing);
+    });
+
+    testWidgets('pops to the root mini-program screen', (tester) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _openDetailsScreenJson,
+          'profile/details': _openConfirmScreenJson,
+          'profile/confirm': _popToRootScreenJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open details'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open confirm screen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pop to root'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open details'), findsOneWidget);
+      expect(find.text('Portable confirm screen'), findsNothing);
+      expect(find.text('Open confirm screen'), findsNothing);
+    });
+
+    testWidgets('pops to an existing mini-program screen in the stack', (
+      tester,
+    ) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _openDetailsScreenJson,
+          'profile/details': _openConfirmScreenJson,
+          'profile/confirm': _popToDetailsScreenJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open details'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open confirm screen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pop to details'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open confirm screen'), findsOneWidget);
+      expect(find.text('Portable confirm screen'), findsNothing);
+      expect(find.text('Open details'), findsNothing);
+    });
+
+    testWidgets('fails cleanly when popToScreen target is not in the stack', (
+      tester,
+    ) async {
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJsonById: const <String, Map<String, dynamic>>{
+          'profile/home': _popToMissingStackScreenJson,
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pop to missing stack screen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pop to missing stack screen'), findsOneWidget);
+      expect(find.text('Mini-program unavailable'), findsNothing);
+    });
   });
 }
 
 class _FakeMiniProgramSource implements MiniProgramSource {
-  _FakeMiniProgramSource({required this.manifest, required this.screenJson});
+  _FakeMiniProgramSource({
+    required this.manifest,
+    this.screenJson = const <String, dynamic>{},
+    Map<String, Map<String, dynamic>>? screenJsonById,
+  }) : screenJsonById = screenJsonById ?? <String, Map<String, dynamic>>{};
 
   final MiniProgramManifest manifest;
   final Map<String, dynamic> screenJson;
+  final Map<String, Map<String, dynamic>> screenJsonById;
 
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
@@ -369,7 +620,20 @@ class _FakeMiniProgramSource implements MiniProgramSource {
     required String version,
     required String screenId,
   }) async {
-    return screenJson;
+    final routedScreen = screenJsonById[screenId];
+    if (routedScreen != null) {
+      return routedScreen;
+    }
+    if (screenJson.isNotEmpty) {
+      return screenJson;
+    }
+
+    throw MiniProgramSourceException(
+      message:
+          'Mini-program screen "$screenId" is not available for "$miniProgramId".',
+      errorCode: MiniProgramErrorCodes.screenNotFound,
+      details: <String, dynamic>{'screenId': screenId},
+    );
   }
 }
 
@@ -498,6 +762,210 @@ const Map<String, dynamic> _secureApiScreenJson = <String, dynamic>{
         },
       },
       'child': <String, dynamic>{'type': 'text', 'data': 'Submit Securely'},
+    },
+  },
+};
+
+const Map<String, dynamic> _openDetailsScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramNavigation',
+        'requestId': 'req-nav-open-1',
+        'action': 'openMiniProgramScreen',
+        'payload': <String, dynamic>{'screenId': 'profile/details'},
+      },
+      'child': <String, dynamic>{'type': 'text', 'data': 'Open details'},
+    },
+  },
+};
+
+const Map<String, dynamic> _replaceDetailsScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramNavigation',
+        'requestId': 'req-nav-replace-1',
+        'action': 'replaceMiniProgramScreen',
+        'payload': <String, dynamic>{'screenId': 'profile/details'},
+      },
+      'child': <String, dynamic>{
+        'type': 'text',
+        'data': 'Replace with details',
+      },
+    },
+  },
+};
+
+const Map<String, dynamic> _resetToDetailsScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramNavigation',
+        'requestId': 'req-nav-reset-1',
+        'action': 'resetMiniProgramStack',
+        'payload': <String, dynamic>{'screenId': 'profile/details'},
+      },
+      'child': <String, dynamic>{'type': 'text', 'data': 'Reset to details'},
+    },
+  },
+};
+
+const Map<String, dynamic> _missingScreenActionJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramNavigation',
+        'requestId': 'req-nav-missing-1',
+        'action': 'openMiniProgramScreen',
+        'payload': <String, dynamic>{'screenId': 'profile/missing'},
+      },
+      'child': <String, dynamic>{
+        'type': 'text',
+        'data': 'Open missing screen',
+      },
+    },
+  },
+};
+
+const Map<String, dynamic> _detailsScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'column',
+      'mainAxisAlignment': 'center',
+      'children': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'type': 'text',
+          'data': 'Portable details screen',
+        },
+        <String, dynamic>{
+          'type': 'elevatedButton',
+          'onPressed': <String, dynamic>{
+            'actionType': 'miniProgramNavigation',
+            'requestId': 'req-nav-pop-1',
+            'action': 'popMiniProgramScreen',
+            'payload': <String, dynamic>{},
+          },
+          'child': <String, dynamic>{
+            'type': 'text',
+            'data': 'Back to first screen',
+          },
+        },
+      ],
+    },
+  },
+};
+
+const Map<String, dynamic> _openConfirmScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramNavigation',
+        'requestId': 'req-nav-open-confirm-1',
+        'action': 'openMiniProgramScreen',
+        'payload': <String, dynamic>{'screenId': 'profile/confirm'},
+      },
+      'child': <String, dynamic>{
+        'type': 'text',
+        'data': 'Open confirm screen',
+      },
+    },
+  },
+};
+
+const Map<String, dynamic> _popToRootScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'column',
+      'mainAxisAlignment': 'center',
+      'children': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'type': 'text',
+          'data': 'Portable confirm screen',
+        },
+        <String, dynamic>{
+          'type': 'elevatedButton',
+          'onPressed': <String, dynamic>{
+            'actionType': 'miniProgramNavigation',
+            'requestId': 'req-nav-pop-root-1',
+            'action': 'popToMiniProgramRoot',
+            'payload': <String, dynamic>{},
+          },
+          'child': <String, dynamic>{
+            'type': 'text',
+            'data': 'Pop to root',
+          },
+        },
+      ],
+    },
+  },
+};
+
+const Map<String, dynamic> _popToDetailsScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'column',
+      'mainAxisAlignment': 'center',
+      'children': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'type': 'text',
+          'data': 'Portable confirm screen',
+        },
+        <String, dynamic>{
+          'type': 'elevatedButton',
+          'onPressed': <String, dynamic>{
+            'actionType': 'miniProgramNavigation',
+            'requestId': 'req-nav-pop-details-1',
+            'action': 'popToMiniProgramScreen',
+            'payload': <String, dynamic>{'screenId': 'profile/details'},
+          },
+          'child': <String, dynamic>{
+            'type': 'text',
+            'data': 'Pop to details',
+          },
+        },
+      ],
+    },
+  },
+};
+
+const Map<String, dynamic> _popToMissingStackScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramNavigation',
+        'requestId': 'req-nav-pop-missing-stack-1',
+        'action': 'popToMiniProgramScreen',
+        'payload': <String, dynamic>{'screenId': 'profile/confirm'},
+      },
+      'child': <String, dynamic>{
+        'type': 'text',
+        'data': 'Pop to missing stack screen',
+      },
     },
   },
 };

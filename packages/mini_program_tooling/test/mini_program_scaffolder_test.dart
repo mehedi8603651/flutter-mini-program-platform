@@ -39,6 +39,14 @@ void main() {
       final screenFile = File(
         p.join(miniProgramRoot, 'stac', 'screens', 'coupon_center_home.dart'),
       );
+      final detailsScreenFile = File(
+        p.join(
+          miniProgramRoot,
+          'stac',
+          'screens',
+          'coupon_center_details.dart',
+        ),
+      );
       final helperFile = File(
         p.join(miniProgramRoot, 'lib', 'host_action_helpers.dart'),
       );
@@ -56,6 +64,7 @@ void main() {
       );
 
       final screenSource = await screenFile.readAsString();
+      final detailsScreenSource = await detailsScreenFile.readAsString();
       final helperSource = await helperFile.readAsString();
       expect(screenSource, contains("@StacScreen(screenName: 'coupon_center_home')"));
       expect(
@@ -64,14 +73,41 @@ void main() {
           "import 'package:coupon_center_mini_program/host_action_helpers.dart';",
         ),
       );
+      expect(screenSource, contains('openMiniProgramScreenAction('));
+      expect(screenSource, contains('Continue to second screen'));
       expect(screenSource, contains('hostTrackEventAction('));
       expect(screenSource, contains('Track starter event (logs only)'));
-      expect(screenSource, contains('hostOpenNativeScreenAction('));
-      expect(screenSource, contains('Open sample native screen'));
+      expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
       expect(screenSource, isNot(contains('jsonData:')));
       expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
+      expect(
+        detailsScreenSource,
+        contains("@StacScreen(screenName: 'coupon_center_details')"),
+      );
+      expect(detailsScreenSource, contains('popMiniProgramScreenAction('));
+      expect(detailsScreenSource, contains('Back to first screen'));
+      expect(detailsScreenSource, contains('hostOpenNativeScreenAction('));
+      expect(detailsScreenSource, contains('Open sample native screen'));
       expect(helperSource, contains('StacAction hostTrackEventAction('));
       expect(helperSource, contains("'action': 'trackEvent'"));
+      expect(helperSource, contains('StacAction openMiniProgramScreenAction('));
+      expect(helperSource, contains("'action': 'openMiniProgramScreen'"));
+      expect(helperSource, contains('StacAction resetMiniProgramStackAction('));
+      expect(helperSource, contains("'action': 'resetMiniProgramStack'"));
+      expect(
+        helperSource,
+        contains('StacAction replaceMiniProgramScreenAction('),
+      );
+      expect(helperSource, contains("'action': 'replaceMiniProgramScreen'"));
+      expect(helperSource, contains('StacAction popMiniProgramScreenAction('));
+      expect(helperSource, contains("'action': 'popMiniProgramScreen'"));
+      expect(helperSource, contains('StacAction popToMiniProgramRootAction('));
+      expect(helperSource, contains("'action': 'popToMiniProgramRoot'"));
+      expect(
+        helperSource,
+        contains('StacAction popToMiniProgramScreenAction('),
+      );
+      expect(helperSource, contains("'action': 'popToMiniProgramScreen'"));
       expect(helperSource, contains('StacAction hostOpenNativeScreenAction('));
       expect(helperSource, contains("'action': 'openNativeScreen'"));
       expect(helperSource, contains("'route': route"));
@@ -109,6 +145,14 @@ void main() {
       final screenSource = await File(
         p.join(result.miniProgramRootPath, 'stac', 'screens', 'claim_center_home.dart'),
       ).readAsString();
+      final detailsScreenSource = await File(
+        p.join(
+          result.miniProgramRootPath,
+          'stac',
+          'screens',
+          'claim_center_details.dart',
+        ),
+      ).readAsString();
       final helperSource = await File(
         p.join(result.miniProgramRootPath, 'lib', 'host_action_helpers.dart'),
       ).readAsString();
@@ -122,8 +166,10 @@ void main() {
             as Map<String, dynamic>,
         containsPair('mode', 'noCache'),
       );
-      expect(screenSource, contains('hostCallSecureApiAction('));
+      expect(screenSource, contains('openMiniProgramScreenAction('));
       expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
+      expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
+      expect(detailsScreenSource, contains('hostCallSecureApiAction('));
       expect(helperSource, contains("'action': 'callSecureApi'"));
     });
 

@@ -35,6 +35,22 @@ class AssetResolver {
     required AssetCache assetCache,
     required SdkLogger logger,
   }) async {
+    return resolveScreenAssets(
+      manifest: manifest,
+      screenId: manifest.entry,
+      screenJson: screenJson,
+      assetCache: assetCache,
+      logger: logger,
+    );
+  }
+
+  Future<AssetResolutionResult> resolveScreenAssets({
+    required MiniProgramManifest manifest,
+    required String screenId,
+    required Map<String, dynamic> screenJson,
+    required AssetCache assetCache,
+    required SdkLogger logger,
+  }) async {
     if (!manifest.allowsEntryScreenStaleCache) {
       return AssetResolutionResult(
         screenJson: Map<String, dynamic>.from(screenJson),
@@ -45,6 +61,7 @@ class AssetResolver {
     final resolved = await _resolveValue(
       value: screenJson,
       manifest: manifest,
+      screenId: screenId,
       assetCache: assetCache,
       logger: logger,
       stats: stats,
@@ -61,6 +78,7 @@ class AssetResolver {
   Future<Object?> _resolveValue({
     required Object? value,
     required MiniProgramManifest manifest,
+    required String screenId,
     required AssetCache assetCache,
     required SdkLogger logger,
     required _AssetResolutionStats stats,
@@ -72,6 +90,7 @@ class AssetResolver {
           await _resolveValue(
             value: item,
             manifest: manifest,
+            screenId: screenId,
             assetCache: assetCache,
             logger: logger,
             stats: stats,
@@ -89,6 +108,7 @@ class AssetResolver {
         return _resolveImageWidget(
           json: json,
           manifest: manifest,
+          screenId: screenId,
           assetCache: assetCache,
           logger: logger,
           stats: stats,
@@ -100,6 +120,7 @@ class AssetResolver {
         resolved[entry.key] = await _resolveValue(
           value: entry.value,
           manifest: manifest,
+          screenId: screenId,
           assetCache: assetCache,
           logger: logger,
           stats: stats,
@@ -114,6 +135,7 @@ class AssetResolver {
   Future<Map<String, dynamic>> _resolveImageWidget({
     required Map<String, dynamic> json,
     required MiniProgramManifest manifest,
+    required String screenId,
     required AssetCache assetCache,
     required SdkLogger logger,
     required _AssetResolutionStats stats,
@@ -145,6 +167,7 @@ class AssetResolver {
         'Timed out while resolving image asset for mini-program screen.',
         context: <String, Object?>{
           'miniProgramId': manifest.id,
+          'screenId': screenId,
           'assetUrl': sourceUri,
         },
       );
@@ -158,6 +181,7 @@ class AssetResolver {
         'Failed to download image asset for mini-program screen.',
         context: <String, Object?>{
           'miniProgramId': manifest.id,
+          'screenId': screenId,
           'assetUrl': sourceUri,
         },
       );

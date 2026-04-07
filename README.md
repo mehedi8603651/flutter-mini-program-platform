@@ -21,14 +21,19 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -OutputRoot D:\first-miniprogram
 ```
 
-The command generates the manifest, starter Stac screen, readable host action
-helpers, build config, README, and the expected `stac/components`,
-`stac/theme`, and `assets` folders under `mini_programs/<id>/`.
+The command generates the manifest, two starter Stac screens, readable action
+helpers for host and internal mini-program routing, build config, README, and
+the expected `stac/components`, `stac/theme`, and `assets` folders under
+`mini_programs/<id>/`.
 
 Authoring guide:
 
 - [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
 - [embed_existing_flutter_app.md](D:/flutter-mini-program-platform/docs/embed_existing_flutter_app.md)
+
+Portable flows now support internal page-to-page routing by `screenId`, so a
+generated mini-program can move from its first screen to a second portable
+screen without leaving the mini-program container.
 
 ## Embed Into An Existing Flutter App
 

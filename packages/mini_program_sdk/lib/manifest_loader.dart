@@ -36,6 +36,19 @@ class LoadedMiniProgram {
   int get resolvedAssetCount => cachedAssetCount + downloadedAssetCount;
 }
 
+/// Resolved screen JSON ready for rendering within an already-loaded mini-program.
+class LoadedMiniProgramScreen {
+  const LoadedMiniProgramScreen({
+    required this.screenId,
+    required this.screenJson,
+    this.usedStaleCache = false,
+  });
+
+  final String screenId;
+  final Map<String, dynamic> screenJson;
+  final bool usedStaleCache;
+}
+
 /// Loads, validates, and resolves the entry screen for a mini-program.
 class ManifestLoader {
   const ManifestLoader({this.versionValidator = const VersionValidator()});
@@ -131,9 +144,10 @@ class ManifestLoader {
       );
     }
 
-    final screenResult = await _loadEntryScreenWithCache(
+    final screenResult = await loadScreen(
       miniProgramId: miniProgramId,
       manifest: manifest,
+      screenId: manifest.entry,
       source: source,
       screenCache: screenCache,
       logger: logger,
@@ -144,6 +158,30 @@ class ManifestLoader {
       entryScreenJson: screenResult.screenJson,
       usedStaleManifestCache: manifestResult.usedStaleCache,
       usedStaleEntryScreenCache: screenResult.usedStaleCache,
+    );
+  }
+
+  Future<LoadedMiniProgramScreen> loadScreen({
+    required String miniProgramId,
+    required MiniProgramManifest manifest,
+    required String screenId,
+    required MiniProgramSource source,
+    required ScreenCache screenCache,
+    required SdkLogger logger,
+  }) async {
+    final screenResult = await _loadScreenWithCache(
+      miniProgramId: miniProgramId,
+      manifest: manifest,
+      screenId: screenId,
+      source: source,
+      screenCache: screenCache,
+      logger: logger,
+    );
+
+    return LoadedMiniProgramScreen(
+      screenId: screenId,
+      screenJson: screenResult.screenJson,
+      usedStaleCache: screenResult.usedStaleCache,
     );
   }
 
@@ -231,9 +269,10 @@ class ManifestLoader {
     }
   }
 
-  Future<_ScreenLoadResult> _loadEntryScreenWithCache({
+  Future<_ScreenLoadResult> _loadScreenWithCache({
     required String miniProgramId,
     required MiniProgramManifest manifest,
+    required String screenId,
     required MiniProgramSource source,
     required ScreenCache screenCache,
     required SdkLogger logger,
@@ -241,18 +280,18 @@ class ManifestLoader {
     final cachedScreen = await screenCache.read(
       miniProgramId: miniProgramId,
       version: manifest.version,
-      screenId: manifest.entry,
+      screenId: screenId,
     );
 
     try {
-      final entryScreenJson = await source.loadScreen(
+      final screenJson = await source.loadScreen(
         miniProgramId: miniProgramId,
         version: manifest.version,
-        screenId: manifest.entry,
+        screenId: screenId,
       );
 
-      if (entryScreenJson.isEmpty) {
-        throw const FormatException('Entry screen JSON is empty.');
+      if (screenJson.isEmpty) {
+        throw FormatException('Screen JSON is empty for "$screenId".');
       }
 
       if (manifest.allowsEntryScreenStaleCache) {
@@ -260,8 +299,8 @@ class ManifestLoader {
           CachedScreenEntry(
             miniProgramId: miniProgramId,
             version: manifest.version,
-            screenId: manifest.entry,
-            screenJson: Map<String, dynamic>.from(entryScreenJson),
+            screenId: screenId,
+            screenJson: Map<String, dynamic>.from(screenJson),
             cachedAt: DateTime.now(),
           ),
         );
@@ -269,11 +308,11 @@ class ManifestLoader {
         await screenCache.remove(
           miniProgramId: miniProgramId,
           version: manifest.version,
-          screenId: manifest.entry,
+          screenId: screenId,
         );
       }
 
-      return _ScreenLoadResult(screenJson: entryScreenJson);
+      return _ScreenLoadResult(screenJson: screenJson);
     } catch (error, stackTrace) {
       final sourceException = error is MiniProgramSourceException
           ? error
@@ -286,10 +325,10 @@ class ManifestLoader {
           ) &&
           _canUseStaleCache(sourceException)) {
         logger.warn(
-          'Using stale cached entry screen after backend load failure.',
+          'Using stale cached mini-program screen after backend load failure.',
           context: <String, Object?>{
             'miniProgramId': miniProgramId,
-            'entryScreen': manifest.entry,
+            'screenId': screenId,
             'cachedAt': cachedScreen.cachedAt.toIso8601String(),
             'maxStaleSeconds': manifest.entryScreenMaxStaleAge.inSeconds,
             'errorCode': sourceException?.errorCode ?? 'unknown',
@@ -302,12 +341,12 @@ class ManifestLoader {
       }
 
       logger.error(
-        'Failed to load entry screen JSON.',
+        'Failed to load mini-program screen JSON.',
         error: error,
         stackTrace: stackTrace,
         context: <String, Object?>{
           'miniProgramId': miniProgramId,
-          'entryScreen': manifest.entry,
+          'screenId': screenId,
         },
       );
       throw MiniProgramLoadException(
@@ -317,18 +356,18 @@ class ManifestLoader {
               MiniProgramErrorCodes.manifestParseFailure,
           message:
               sourceException?.message ??
-              'Failed to load entry screen "${manifest.entry}" for mini-program "${manifest.id}".',
+              'Failed to load screen "$screenId" for mini-program "${manifest.id}".',
           fallback: manifest.fallback,
           cause: error,
           stackTrace: stackTrace,
           details: <String, dynamic>{
             'miniProgramId': miniProgramId,
-            'entryScreen': manifest.entry,
+            'screenId': screenId,
             if (cachedScreen != null) ...<String, dynamic>{
-              'cachedEntryScreenAt': cachedScreen.cachedAt.toIso8601String(),
-              'entryScreenMaxStaleSeconds':
+              'cachedScreenAt': cachedScreen.cachedAt.toIso8601String(),
+              'screenMaxStaleSeconds':
                   manifest.entryScreenMaxStaleAge.inSeconds,
-              'entryScreenCacheExpired': !_isWithinMaxStaleAge(
+              'screenCacheExpired': !_isWithinMaxStaleAge(
                 cachedAt: cachedScreen.cachedAt,
                 maxStaleAge: manifest.entryScreenMaxStaleAge,
               ),

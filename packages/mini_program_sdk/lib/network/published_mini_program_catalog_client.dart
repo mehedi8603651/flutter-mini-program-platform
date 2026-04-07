@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -66,23 +67,27 @@ class PublishedMiniProgramCatalogClient {
   PublishedMiniProgramCatalogClient({
     required this.apiBaseUri,
     this.queryParameters = const <String, String>{},
+    this.requestTimeout = const Duration(seconds: 5),
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   factory PublishedMiniProgramCatalogClient.fromDeliveryContext({
     required Uri apiBaseUri,
     required MiniProgramDeliveryContext deliveryContext,
+    Duration requestTimeout = const Duration(seconds: 5),
     http.Client? client,
   }) {
     return PublishedMiniProgramCatalogClient(
       apiBaseUri: apiBaseUri,
       queryParameters: deliveryContext.toQueryParameters(),
+      requestTimeout: requestTimeout,
       client: client,
     );
   }
 
   final Uri apiBaseUri;
   final Map<String, String> queryParameters;
+  final Duration requestTimeout;
   final http.Client _client;
 
   Future<PublishedMiniProgramCatalog> listAvailableMiniPrograms() async {
@@ -93,7 +98,19 @@ class PublishedMiniProgramCatalogClient {
 
     late final http.Response response;
     try {
-      response = await _client.get(uri);
+      response = await _client.get(uri).timeout(requestTimeout);
+    } on TimeoutException {
+      throw MiniProgramSourceException(
+        message:
+            'Timed out while loading the mini-program discovery catalog from the backend.',
+        errorCode: MiniProgramErrorCodes.backendUnreachable,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': 'mini_program_catalog',
+          'requestTimeoutMs': requestTimeout.inMilliseconds,
+          'transportError': 'timeout',
+        },
+      );
     } catch (error) {
       throw MiniProgramSourceException(
         message:

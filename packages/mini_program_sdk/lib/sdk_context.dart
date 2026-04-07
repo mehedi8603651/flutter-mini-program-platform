@@ -4,6 +4,38 @@ import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
 import 'observability/sdk_logger.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
+
+typedef MiniProgramOpenScreenHandler =
+    Future<HostActionResult> Function(
+      OpenMiniProgramScreenActionPayload payload,
+      String? requestId,
+    );
+typedef MiniProgramResetStackHandler =
+    Future<HostActionResult> Function(
+      ResetMiniProgramStackActionPayload payload,
+      String? requestId,
+    );
+typedef MiniProgramReplaceScreenHandler =
+    Future<HostActionResult> Function(
+      ReplaceMiniProgramScreenActionPayload payload,
+      String? requestId,
+    );
+typedef MiniProgramPopScreenHandler =
+    Future<HostActionResult> Function(
+      PopMiniProgramScreenActionPayload payload,
+      String? requestId,
+    );
+typedef MiniProgramPopToRootHandler =
+    Future<HostActionResult> Function(
+      PopToMiniProgramRootActionPayload payload,
+      String? requestId,
+    );
+typedef MiniProgramPopToScreenHandler =
+    Future<HostActionResult> Function(
+      PopToMiniProgramScreenActionPayload payload,
+      String? requestId,
+    );
 
 /// Inherited runtime context used by SDK actions while a mini-program is active.
 class MiniProgramSdkScope extends InheritedWidget {
@@ -15,6 +47,12 @@ class MiniProgramSdkScope extends InheritedWidget {
     required this.capabilityRegistry,
     required this.featureFlagEvaluator,
     required this.logger,
+    required this.openMiniProgramScreen,
+    required this.resetMiniProgramStack,
+    required this.replaceMiniProgramScreen,
+    required this.popMiniProgramScreen,
+    required this.popToMiniProgramRoot,
+    required this.popToMiniProgramScreen,
   });
 
   final String miniProgramId;
@@ -22,6 +60,12 @@ class MiniProgramSdkScope extends InheritedWidget {
   final CapabilityRegistry capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
+  final MiniProgramOpenScreenHandler openMiniProgramScreen;
+  final MiniProgramResetStackHandler resetMiniProgramStack;
+  final MiniProgramReplaceScreenHandler replaceMiniProgramScreen;
+  final MiniProgramPopScreenHandler popMiniProgramScreen;
+  final MiniProgramPopToRootHandler popToMiniProgramRoot;
+  final MiniProgramPopToScreenHandler popToMiniProgramScreen;
 
   static MiniProgramSdkScope of(BuildContext context) {
     final scope = maybeOf(context);
@@ -39,6 +83,12 @@ class MiniProgramSdkScope extends InheritedWidget {
         hostBridge != oldWidget.hostBridge ||
         capabilityRegistry != oldWidget.capabilityRegistry ||
         featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
-        logger != oldWidget.logger;
+        logger != oldWidget.logger ||
+        openMiniProgramScreen != oldWidget.openMiniProgramScreen ||
+        resetMiniProgramStack != oldWidget.resetMiniProgramStack ||
+        replaceMiniProgramScreen != oldWidget.replaceMiniProgramScreen ||
+        popMiniProgramScreen != oldWidget.popMiniProgramScreen ||
+        popToMiniProgramRoot != oldWidget.popToMiniProgramRoot ||
+        popToMiniProgramScreen != oldWidget.popToMiniProgramScreen;
   }
 }

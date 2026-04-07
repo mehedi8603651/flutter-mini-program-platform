@@ -184,6 +184,39 @@ void main() {
       );
     });
 
+    test('times out manifest requests and surfaces backend_unreachable', () {
+      final source = HttpMiniProgramSource(
+        apiBaseUri: Uri.parse('http://localhost:8080/api/'),
+        requestTimeout: const Duration(milliseconds: 10),
+        client: MockClient((request) async {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          return http.Response(_manifestJson, 200);
+        }),
+      );
+
+      expect(
+        () => source.loadManifest('profile_center'),
+        throwsA(
+          isA<MiniProgramSourceException>()
+              .having(
+                (error) => error.errorCode,
+                'errorCode',
+                MiniProgramErrorCodes.backendUnreachable,
+              )
+              .having(
+                (error) => error.message,
+                'message',
+                'Timed out while loading manifest from the mini-program backend.',
+              )
+              .having(
+                (error) => error.details['requestTimeoutMs'],
+                'details.requestTimeoutMs',
+                10,
+              ),
+        ),
+      );
+    });
+
     test('falls back to a generic message for non-JSON backend errors', () {
       final source = HttpMiniProgramSource(
         apiBaseUri: Uri.parse('http://localhost:8080/api/'),

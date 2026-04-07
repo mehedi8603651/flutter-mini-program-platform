@@ -41,6 +41,7 @@ The scaffold creates:
 - `mini_programs/<id>/lib/default_stac_options.dart`
 - `mini_programs/<id>/lib/host_action_helpers.dart`
 - `mini_programs/<id>/stac/screens/<id>_home.dart`
+- `mini_programs/<id>/stac/screens/<id>_details.dart`
 - `mini_programs/<id>/stac/components/`
 - `mini_programs/<id>/stac/theme/`
 - `mini_programs/<id>/assets/`
@@ -53,11 +54,14 @@ The scaffold creates:
 - Keep native work behind approved `hostAction` payloads.
 - Only use declared manifest capabilities.
 - Replace starter demo route aliases and secure endpoints before shipping.
+- Prefer internal mini-program routing by `screenId` for portable page-to-page flows.
 
 Current scaffold behavior:
 
+- `Continue to second screen` uses internal mini-program routing through `openMiniProgramScreenAction(...)`
 - `Track starter event (logs only)` writes to the host analytics log only
-- `Open sample native screen` uses the shared demo route alias `profile_editor`
+- `Back to first screen` uses internal mini-program routing through `popMiniProgramScreenAction(...)`
+- `Open sample native screen` stays available for real host-owned pages and uses the shared demo route alias `profile_editor`
 - the sample native route works in both current hosts, but it is only a starter demo and should be replaced in real flows
 - the generated helper wrappers still serialize the same JSON shape for backend delivery; authors just no longer need to hand-write it
 
@@ -75,22 +79,32 @@ The scaffold only accepts these current contract wire values.
 The scaffolded screen now uses helper functions instead of raw action maps:
 
 ```dart
-StacOutlinedButton(
-  onPressed: hostOpenNativeScreenAction(
-    requestId: 'coupon_center-open-follow-up',
-    route: 'profile_editor',
-    args: const <String, dynamic>{
-      'source': 'coupon_center',
-      'userId': 'starter_demo_user',
-    },
-    expectResult: true,
+StacFilledButton(
+  onPressed: openMiniProgramScreenAction(
+    requestId: 'coupon_center-open-details',
+    screenId: 'coupon_center_details',
   ),
-  child: StacText(data: 'Open sample native screen'),
+  child: StacText(data: 'Continue to second screen'),
 )
 ```
 
-Those helpers still compile down to serializable `hostAction` JSON when you run
-the Stac build step.
+The second generated screen includes:
+
+- `popMiniProgramScreenAction(...)` for portable back navigation
+- `hostOpenNativeScreenAction(...)` only when the scaffold requested `native_navigation`
+- `hostCallSecureApiAction(...)` only when the scaffold requested `secure_api`
+
+Current internal routing helper set:
+
+- `openMiniProgramScreenAction(...)`
+- `replaceMiniProgramScreenAction(...)`
+- `popMiniProgramScreenAction(...)`
+- `resetMiniProgramStackAction(...)`
+- `popToMiniProgramRootAction(...)`
+- `popToMiniProgramScreenAction(...)`
+
+Those helpers still compile down to serializable JSON actions when you run the
+Stac build step.
 
 ## Build
 
@@ -173,14 +187,19 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 
 For a local proof:
 
-1. Add the new mini-program to a host catalog.
+1. Publish the new mini-program into `backend/api/`.
 2. Run `hosts/super_app_host` or `hosts/partner_app_host`.
-3. Open the generated entry screen and verify the declared capability path.
+3. Open the generated entry screen and verify:
+   - first screen -> second screen internal routing
+   - back to first screen internal routing
+   - any declared host capability path such as analytics or native navigation
 
 ## Practical guidance
 
 - Use `analytics,native_navigation` for a low-risk starter flow.
 - Use `secure_api` only when the flow truly needs a host-owned secure endpoint.
 - If the mini-program depends on `secure_api`, keep caching conservative.
-- Prefer one small portable flow first, then add components after the entry
-  screen and backend publish path are working.
+- Prefer page-to-page portable routing first, and only leave the mini-program
+  through `openNativeScreen` when the flow genuinely needs a host-owned page.
+- Add reusable components after the entry screen, second screen, and backend
+  publish path are working.

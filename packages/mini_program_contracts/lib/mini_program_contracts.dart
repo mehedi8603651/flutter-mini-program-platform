@@ -16,6 +16,9 @@ export 'feature_flags.dart';
 // Standard host action request and result envelopes.
 export 'host_actions.dart';
 
+// Typed payload models for internal mini-program screen navigation.
+export 'mini_program_navigation_actions.dart';
+
 // Manifest contract models for portable mini-program delivery.
 export 'manifest.dart';
 

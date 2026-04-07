@@ -5,6 +5,8 @@ abstract final class MiniProgramErrorCodes {
       'unsupported_contract_version';
   static const String unsupportedSdkVersion = 'unsupported_sdk_version';
   static const String unsupportedCapability = 'unsupported_capability';
+  static const String screenNotFound = 'screen_not_found';
+  static const String screenNotInStack = 'screen_not_in_stack';
   static const String unknownAction = 'unknown_action';
   static const String invalidResultPayload = 'invalid_result_payload';
   static const String backendUnreachable = 'backend_unreachable';

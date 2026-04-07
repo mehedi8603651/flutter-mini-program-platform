@@ -1,9 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../bridge/host_bridge_impl.dart';
 import '../capabilities/supported_capabilities.dart';
@@ -53,7 +49,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
   late final String _sourceDescription;
   late final CapabilityRegistry _capabilityRegistry;
   late final HostBridge _hostBridge;
-  late final Future<MiniProgramCacheBundle> _cacheBundleFuture;
+  late final MiniProgramCacheBundle _cacheBundle;
   late final MiniProgramDiscoverySourceKind _discoverySourceKind;
   late final PublishedMiniProgramCatalogClient? _catalogClient;
 
@@ -61,7 +57,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
   void initState() {
     super.initState();
     _navigatorKey = GlobalKey<NavigatorState>();
-    _cacheBundleFuture = _resolveCacheBundle();
+    _cacheBundle = widget.cacheBundle ?? MiniProgramCacheBundle.inMemory();
     _capabilityRegistry =
         widget.capabilityRegistry ?? superAppCapabilityRegistry;
     final sourceConfiguration =
@@ -110,31 +106,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.cacheBundle != null) {
-      return _buildAppWithRuntime(widget.cacheBundle!);
-    }
-
-    return FutureBuilder<MiniProgramCacheBundle>(
-      future: _cacheBundleFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _buildMaterialApp(
-            home: const Scaffold(
-              body: Center(child: Text('Initializing host runtime...')),
-            ),
-          );
-        }
-
-        return _buildAppWithRuntime(
-          snapshot.data ??
-              MiniProgramCacheBundle(
-                manifestCache: InMemoryManifestCache.shared,
-                screenCache: InMemoryScreenCache.shared,
-                assetCache: NoOpAssetCache.shared,
-              ),
-        );
-      },
-    );
+    return _buildAppWithRuntime(_cacheBundle);
   }
 
   Widget _buildAppWithRuntime(MiniProgramCacheBundle cacheBundle) {
@@ -230,25 +202,6 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
         return MiniProgramDiscoverySourceKind.bundled;
       case SuperAppHostSourceMode.localBackend:
         return MiniProgramDiscoverySourceKind.remote;
-    }
-  }
-
-  Future<MiniProgramCacheBundle> _resolveCacheBundle() async {
-    if (widget.cacheBundle != null) {
-      return widget.cacheBundle!;
-    }
-
-    try {
-      final appSupportDirectory = await getApplicationSupportDirectory();
-      return MiniProgramCacheBundle.fileBacked(
-        rootDirectory: Directory(
-          '${appSupportDirectory.path}${Platform.pathSeparator}mini_program_sdk_cache',
-        ),
-      );
-    } on MissingPluginException {
-      return MiniProgramCacheBundle.inMemory();
-    } on UnsupportedError {
-      return MiniProgramCacheBundle.inMemory();
     }
   }
 

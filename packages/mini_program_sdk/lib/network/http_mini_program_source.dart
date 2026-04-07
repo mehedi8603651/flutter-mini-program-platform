@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -15,18 +16,21 @@ class HttpMiniProgramSource implements MiniProgramSource {
   HttpMiniProgramSource({
     required this.apiBaseUri,
     this.manifestRequestQueryParametersBuilder,
+    this.requestTimeout = const Duration(seconds: 5),
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   factory HttpMiniProgramSource.fromDeliveryContext({
     required Uri apiBaseUri,
     required MiniProgramDeliveryContext deliveryContext,
+    Duration requestTimeout = const Duration(seconds: 5),
     http.Client? client,
   }) {
     return HttpMiniProgramSource(
       apiBaseUri: apiBaseUri,
       manifestRequestQueryParametersBuilder: (_) =>
           deliveryContext.toQueryParameters(),
+      requestTimeout: requestTimeout,
       client: client,
     );
   }
@@ -34,6 +38,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
   final Uri apiBaseUri;
   final ManifestRequestQueryParametersBuilder?
   manifestRequestQueryParametersBuilder;
+  final Duration requestTimeout;
   final http.Client _client;
 
   @override
@@ -80,7 +85,19 @@ class HttpMiniProgramSource implements MiniProgramSource {
   }) async {
     late final http.Response response;
     try {
-      response = await _client.get(uri);
+      response = await _client.get(uri).timeout(requestTimeout);
+    } on TimeoutException {
+      throw MiniProgramSourceException(
+        message:
+            'Timed out while loading $resourceLabel from the mini-program backend.',
+        errorCode: MiniProgramErrorCodes.backendUnreachable,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': resourceLabel,
+          'requestTimeoutMs': requestTimeout.inMilliseconds,
+          'transportError': 'timeout',
+        },
+      );
     } catch (error) {
       throw MiniProgramSourceException(
         message:

@@ -14,6 +14,7 @@ Build the portable runtime that validates, loads, renders, and safely bridges mi
 - feature-flag gating
 - Stac initialization and entry-screen rendering
 - approved host action dispatch for `openNativeScreen`, `callSecureApi`, and `trackEvent`
+- internal mini-program page-to-page routing by `screenId`, including push, replace, pop, stack reset, and pop-until helpers
 - controlled loading and fallback error UI
 - basic SDK logging
 - in-memory and file-backed manifest and screen caching with stale-on-error fallback
@@ -34,6 +35,7 @@ bounded stale reuse for offline-safe recovery paths.
 - Capability checks
 - Stac initialization
 - Safe action dispatch
+- Internal screen stack management for portable routing
 - Fallback UI
 - Basic SDK logging
 - Contract-driven manifest and entry-screen caching
@@ -80,6 +82,7 @@ bounded stale reuse for offline-safe recovery paths.
 - `lib/mini_program_discovery.dart` resolves `Live`, `Cached`, `Offline`, and `Unavailable` states before a host opens a mini-program.
 - `lib/network/asset_resolver.dart` rewrites cacheable Stac image widgets to local file paths when persisted assets are available.
 - `lib/rendering/stac_initializer.dart` owns the current parser/action initialization path.
+- `lib/actions/sdk_mini_program_navigation_parser.dart` owns the current internal routing action parser for `openMiniProgramScreen`, `replaceMiniProgramScreen`, `popMiniProgramScreen`, `resetMiniProgramStack`, `popToMiniProgramRoot`, and `popToMiniProgramScreen`.
 - `lib/observability/sdk_logger.dart` provides logging only. Error reporting and tracing are future additions, not current guarantees.
 
 ## v1 Runtime Surface
@@ -90,6 +93,7 @@ bounded stale reuse for offline-safe recovery paths.
 - Validation helpers: `VersionValidator`, `CapabilityRegistry`
 - Runtime scope: `MiniProgramSdkScope`
 - Stac bridge action: `hostAction`
+- Stac bridge action: `miniProgramNavigation`
 - Host action dispatcher: `HostActionDispatcher`
 - Default UI: `SdkLoadingView`, `SdkErrorView`
 - Logging: `SdkLogger`
@@ -99,6 +103,7 @@ bounded stale reuse for offline-safe recovery paths.
 - Always validate required capabilities before rendering.
 - Treat manifest feature flags as hard gates when an evaluator is provided.
 - Only dispatch approved contract actions through `HostBridge`.
+- Keep portable next-page flow inside the mini-program through `screenId` routing when the target page is still part of the portable experience.
 - Use `HostActionRequest` and `HostActionResult` for bridge handoff.
 - Keep `callSecureApi` allowlisted at the host layer. The SDK may dispatch it, but it must not invent endpoint policy.
 - Keep Stac custom action support inside the SDK, not in host apps.
@@ -131,10 +136,7 @@ These are valid future additions, but they should not be added until the current
 - `flutter analyze`
 
 ## Next Step
-The next implementation phase is backend and operability hardening on top of
-the current offline-aware runtime.
-
-That phase should keep using this SDK while adding:
-- richer backend release controls and diagnostics
-- stronger observability and error reporting
-- broader asset handling only where real mini-programs require it
+The next implementation phase should build on the current runtime with:
+- authoring and tooling polish for multi-screen portable flows
+- stronger diagnostics around routed-screen failures
+- richer backend release controls and observability

@@ -162,6 +162,18 @@ class MiniProgramScaffolder {
         screenFunctionName: screenFunctionName,
         packageName: packageName,
       ),
+      p.join(
+        miniProgramRootPath,
+        'stac',
+        'screens',
+        '${miniProgramId}_details.dart',
+      ): _buildDetailsScreen(
+        miniProgramId: miniProgramId,
+        title: title,
+        capabilities: orderedCapabilities,
+        screenFunctionName: '${_toLowerCamelCase(miniProgramId)}Details',
+        packageName: packageName,
+      ),
       p.join(miniProgramRootPath, 'stac', 'components', '.gitkeep'): '',
       p.join(miniProgramRootPath, 'stac', 'theme', '.gitkeep'): '',
       p.join(miniProgramRootPath, 'assets', '.gitkeep'): '',
@@ -365,13 +377,14 @@ StacOptions get defaultStacOptions => const StacOptions(
     final notes = <String>[
       '- edit `manifest.json` before publish',
       '- replace the starter copy in `stac/screens/$entryScreenId.dart`',
-      '- use `lib/host_action_helpers.dart` for readable host action helpers instead of hand-writing raw `jsonData` maps',
+      '- use `lib/host_action_helpers.dart` for readable host and mini-program action helpers instead of hand-writing raw `jsonData` maps',
+      '- the scaffold now includes a second screen so you can edit a page-to-page portable flow by `screenId`',
       '- add reusable UI blocks under `stac/components/` as the flow grows',
     ];
 
     if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
       notes.add(
-        '- the starter native button uses the shared demo route alias '
+        '- the second starter screen uses the shared demo route alias '
         '`profile_editor`; replace it with a real host-owned route alias '
         'before shipping',
       );
@@ -407,6 +420,7 @@ ${notes.join('\n')}
 - `manifest.json`
 - `pubspec.yaml`
 - `stac/screens/$entryScreenId.dart`
+- `stac/screens/${miniProgramId}_details.dart`
 - `stac/components/`
 - `stac/theme/`
 
@@ -495,19 +509,25 @@ For a local proof, add the mini-program to a host catalog and then run one of:
               ),
             ),
             StacSizedBox(height: 24),
+            StacFilledButton(
+              onPressed: openMiniProgramScreenAction(
+                requestId: '$miniProgramId-open-details',
+                screenId: '${miniProgramId}_details',
+              ),
+              child: StacText(data: 'Continue to second screen'),
+            ),
+            StacSizedBox(height: 8),
+            StacText(
+              data:
+                  'This starter button uses internal mini-program routing by screenId, '
+                  'so you can build page-to-page portable flows without leaving the mini-program.',
+            ),
+            StacSizedBox(height: 16),
 ''',
     ];
 
     if (capabilities.contains(Capability.analytics.wireValue)) {
       widgets.add(_buildTrackEventButton(miniProgramId));
-    }
-
-    if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
-      widgets.add(_buildOpenNativeScreenButton(miniProgramId));
-    }
-
-    if (capabilities.contains(Capability.secureApi.wireValue)) {
-      widgets.add(_buildSecureApiButton(miniProgramId));
     }
 
     if (widgets.length == 1) {
@@ -520,8 +540,9 @@ For a local proof, add the mini-program to a host catalog and then run one of:
               ),
               child: StacText(
                 data:
-                    'No starter host actions were generated for this scaffold. '
-                    'Add your portable UI and approved actions next.',
+                    'No extra starter actions were generated on the first screen. '
+                    'Use the second screen for host-native or secure follow-up work, '
+                    'or replace both screens with your own portable flow.',
               ),
             ),
 ''');
@@ -551,10 +572,157 @@ ${widgets.join()}
 ''';
   }
 
+  String _buildDetailsScreen({
+    required String miniProgramId,
+    required String title,
+    required List<String> capabilities,
+    required String screenFunctionName,
+    required String packageName,
+  }) {
+    final widgets = <String>[
+      '''
+            StacText(
+              data: '$title second screen',
+              style: StacCustomTextStyle(
+                fontSize: 26,
+                fontWeight: StacFontWeight.w700,
+                color: '#1A202C',
+              ),
+            ),
+            StacSizedBox(height: 12),
+            StacText(
+              data:
+                  'This page was opened through internal mini-program routing. '
+                  'Use it as the place to continue your portable multi-step flow.',
+            ),
+            StacSizedBox(height: 20),
+            StacOutlinedButton(
+              onPressed: popMiniProgramScreenAction(
+                requestId: '$miniProgramId-pop-root',
+              ),
+              child: StacText(data: 'Back to first screen'),
+            ),
+''',
+    ];
+
+    if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
+      widgets.add(_buildOpenNativeScreenButton(miniProgramId));
+    }
+
+    if (capabilities.contains(Capability.secureApi.wireValue)) {
+      widgets.add(_buildSecureApiButton(miniProgramId));
+    }
+
+    return '''
+import 'package:stac_core/stac_core.dart';
+import 'package:$packageName/host_action_helpers.dart';
+
+@StacScreen(screenName: '${miniProgramId}_details')
+StacWidget $screenFunctionName() {
+  return StacScaffold(
+    appBar: StacAppBar(title: StacText(data: '$title details')),
+    body: StacSafeArea(
+      child: StacSingleChildScrollView(
+        padding: StacEdgeInsets.all(24),
+        child: StacColumn(
+          crossAxisAlignment: StacCrossAxisAlignment.start,
+          children: [
+${widgets.join()}
+          ],
+        ),
+      ),
+    ),
+  );
+}
+''';
+  }
+
   String _buildHostActionHelpers() => '''
 import 'package:stac_core/stac_core.dart';
 
-/// Author-friendly wrappers around serializable host action payloads.
+/// Author-friendly wrappers around serializable host and mini-program actions.
+StacAction openMiniProgramScreenAction({
+  required String requestId,
+  required String screenId,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramNavigation',
+      'requestId': requestId,
+      'action': 'openMiniProgramScreen',
+      'payload': <String, dynamic>{'screenId': screenId},
+    },
+  );
+}
+
+StacAction resetMiniProgramStackAction({
+  required String requestId,
+  required String screenId,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramNavigation',
+      'requestId': requestId,
+      'action': 'resetMiniProgramStack',
+      'payload': <String, dynamic>{'screenId': screenId},
+    },
+  );
+}
+
+StacAction replaceMiniProgramScreenAction({
+  required String requestId,
+  required String screenId,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramNavigation',
+      'requestId': requestId,
+      'action': 'replaceMiniProgramScreen',
+      'payload': <String, dynamic>{'screenId': screenId},
+    },
+  );
+}
+
+StacAction popMiniProgramScreenAction({
+  required String requestId,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramNavigation',
+      'requestId': requestId,
+      'action': 'popMiniProgramScreen',
+      'payload': const <String, dynamic>{},
+    },
+  );
+}
+
+StacAction popToMiniProgramRootAction({
+  required String requestId,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramNavigation',
+      'requestId': requestId,
+      'action': 'popToMiniProgramRoot',
+      'payload': const <String, dynamic>{},
+    },
+  );
+}
+
+StacAction popToMiniProgramScreenAction({
+  required String requestId,
+  required String screenId,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramNavigation',
+      'requestId': requestId,
+      'action': 'popToMiniProgramScreen',
+      'payload': <String, dynamic>{'screenId': screenId},
+    },
+  );
+}
+
 StacAction hostTrackEventAction({
   required String requestId,
   required String name,

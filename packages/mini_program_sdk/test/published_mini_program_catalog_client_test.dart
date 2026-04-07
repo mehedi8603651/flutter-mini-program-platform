@@ -151,4 +151,41 @@ void main() {
       ),
     );
   });
+
+  test('times out catalog requests and surfaces backend_unreachable', () async {
+    final client = MockClient((request) async {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return http.Response(
+        '{"responseType":"mini_program_catalog","statusCode":200,"entries":[]}',
+        200,
+      );
+    });
+    final catalogClient = PublishedMiniProgramCatalogClient(
+      apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+      requestTimeout: const Duration(milliseconds: 10),
+      client: client,
+    );
+
+    expect(
+      () => catalogClient.listAvailableMiniPrograms(),
+      throwsA(
+        isA<MiniProgramSourceException>()
+            .having(
+              (error) => error.errorCode,
+              'errorCode',
+              MiniProgramErrorCodes.backendUnreachable,
+            )
+            .having(
+              (error) => error.message,
+              'message',
+              'Timed out while loading the mini-program discovery catalog from the backend.',
+            )
+            .having(
+              (error) => error.details['requestTimeoutMs'],
+              'details.requestTimeoutMs',
+              10,
+            ),
+      ),
+    );
+  });
 }

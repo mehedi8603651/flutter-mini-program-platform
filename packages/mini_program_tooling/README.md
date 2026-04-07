@@ -58,16 +58,28 @@ Generates a buildable starter mini-program under `mini_programs/<id>/` with:
 - `lib/default_stac_options.dart`
 - `lib/host_action_helpers.dart`
 - `stac/screens/<id>_home.dart`
+- `stac/screens/<id>_details.dart`
 - `stac/components/`
 - `stac/theme/`
 - `assets/`
 
 Starter behavior:
 
+- first screen routes to a second portable screen through `openMiniProgramScreen`
+- second screen routes back through `popMiniProgramScreen`
 - analytics starter button is log-only by design
-- native starter button uses the shared demo route alias `profile_editor`
+- native starter button stays on the second screen and uses the shared demo route alias `profile_editor`
 - starter screens call generated helper functions instead of hand-writing raw `jsonData` action maps
 - authors should replace that demo route alias before shipping a real mini-program
+
+Generated routing helpers now include:
+
+- `openMiniProgramScreenAction`
+- `replaceMiniProgramScreenAction`
+- `popMiniProgramScreenAction`
+- `resetMiniProgramStackAction`
+- `popToMiniProgramRootAction`
+- `popToMiniProgramScreenAction`
 
 Example:
 

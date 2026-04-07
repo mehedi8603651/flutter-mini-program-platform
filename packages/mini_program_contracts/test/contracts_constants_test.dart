@@ -14,6 +14,12 @@ void main() {
       expect(ActionNames.openNativeScreen, 'openNativeScreen');
       expect(ActionNames.callSecureApi, 'callSecureApi');
       expect(ActionNames.trackEvent, 'trackEvent');
+      expect(ActionNames.openMiniProgramScreen, 'openMiniProgramScreen');
+      expect(ActionNames.replaceMiniProgramScreen, 'replaceMiniProgramScreen');
+      expect(ActionNames.popMiniProgramScreen, 'popMiniProgramScreen');
+      expect(ActionNames.resetMiniProgramStack, 'resetMiniProgramStack');
+      expect(ActionNames.popToMiniProgramRoot, 'popToMiniProgramRoot');
+      expect(ActionNames.popToMiniProgramScreen, 'popToMiniProgramScreen');
     });
 
     test('error codes stay stable', () {
@@ -33,6 +39,8 @@ void main() {
         MiniProgramErrorCodes.unsupportedCapability,
         'unsupported_capability',
       );
+      expect(MiniProgramErrorCodes.screenNotFound, 'screen_not_found');
+      expect(MiniProgramErrorCodes.screenNotInStack, 'screen_not_in_stack');
       expect(MiniProgramErrorCodes.unknownAction, 'unknown_action');
       expect(
         MiniProgramErrorCodes.invalidResultPayload,

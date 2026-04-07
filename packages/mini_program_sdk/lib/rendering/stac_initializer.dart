@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:stac/stac.dart';
 
+import '../actions/sdk_mini_program_navigation_parser.dart';
 import '../actions/sdk_host_action_parser.dart';
 import '../observability/sdk_logger.dart';
 
@@ -20,7 +21,10 @@ abstract final class StacInitializer {
   static Future<void> _initialize(SdkLogger logger) async {
     try {
       await Stac.initialize(
-        actionParsers: const [SdkHostActionParser()],
+        actionParsers: const [
+          SdkHostActionParser(),
+          SdkMiniProgramNavigationParser(),
+        ],
         showErrorWidgets: false,
         logStackTraces: true,
       );

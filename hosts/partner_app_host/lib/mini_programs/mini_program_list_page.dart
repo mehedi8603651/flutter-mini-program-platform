@@ -52,7 +52,16 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Partner App Host')),
+      appBar: AppBar(
+        title: const Text('Partner App Host'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh mini-programs',
+            onPressed: _refreshPrograms,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -129,10 +138,12 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _CatalogNotice(
+                _CatalogNotice(
                   message:
                       'Remote catalog discovery failed. Falling back to the local partner list.',
                   tone: _DiscoveryTone.warning,
+                  actionLabel: 'Retry discovery',
+                  onAction: _refreshPrograms,
                 ),
                 const SizedBox(height: 16),
                 ..._buildProgramCards(PartnerMiniProgramCatalog.availablePrograms),
@@ -209,6 +220,10 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
     }
 
     _remoteProgramsFuture = _loadRemotePrograms(remoteCatalogClient);
+  }
+
+  void _refreshPrograms() {
+    setState(_refreshProgramState);
   }
 
   Future<List<PartnerMiniProgramDefinition>> _loadRemotePrograms(
@@ -485,10 +500,17 @@ class _DiscoveryBadge extends StatelessWidget {
 }
 
 class _CatalogNotice extends StatelessWidget {
-  const _CatalogNotice({required this.message, required this.tone});
+  const _CatalogNotice({
+    required this.message,
+    required this.tone,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String message;
   final _DiscoveryTone tone;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -506,9 +528,22 @@ class _CatalogNotice extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyLarge,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  if (actionLabel != null && onAction != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: onAction,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: Text(actionLabel!),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

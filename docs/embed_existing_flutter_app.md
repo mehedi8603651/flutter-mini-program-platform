@@ -185,6 +185,8 @@ other Flutter page widget.
 - `MiniProgramHost` remains the low-level primitive for advanced integrations.
 - `init_mini_program_embedding` is the quickest way to generate the adapter
   layer for an old Flutter app.
-- Mini-program internal page-to-page routing is intentionally deferred for a
-  later milestone; v1 embedding only standardizes how an existing app opens a
-  mini-program by `miniProgramId`.
+- Internal mini-program page-to-page routing now happens inside the shared SDK
+  by `screenId`. Existing apps still open a mini-program the same way:
+  `MiniProgramPage(miniProgramId: '...')`.
+- Keep `openNativeScreen` for true host-owned pages only. Portable next-page
+  flow should stay inside the mini-program whenever possible.
