@@ -9,9 +9,11 @@ Local developer and CI tooling for the Flutter mini-program platform.
 Generates the app-owned embedding adapter for an existing Flutter app under
 `lib/mini_program/` with:
 
+- `mini_program_routes.dart`
 - `app_host_bridge.dart`
 - `mini_program_runtime_setup.dart`
 - `native_profile_editor_page.dart`
+- `mini_program_launcher.dart`
 - `README.md`
 
 Design:
@@ -19,6 +21,7 @@ Design:
 - leaves `main.dart` and your existing app shell under developer control
 - defaults to lean capabilities: `analytics`, `native_navigation`
 - uses `profile_editor -> /native/profile-editor` as the sample native route alias
+- adds a generated launcher helper so feature pages can open mini-programs by ID
 - keeps the generated adapter small enough for old apps to adopt without copying a full demo host
 
 Example:

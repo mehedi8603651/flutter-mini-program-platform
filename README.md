@@ -46,14 +46,17 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 
 The command generates:
 
+- `lib/mini_program/mini_program_routes.dart`
 - `lib/mini_program/app_host_bridge.dart`
 - `lib/mini_program/mini_program_runtime_setup.dart`
 - `lib/mini_program/native_profile_editor_page.dart`
+- `lib/mini_program/mini_program_launcher.dart`
 - `lib/mini_program/README.md`
 
 It intentionally leaves `main.dart` and the rest of your app shell under
 developer control, so existing apps can adopt the shared SDK without copying a
-full sample host.
+full sample host. Feature pages can then open mini-programs through the
+generated `openAppMiniProgram(...)` helper or `AppMiniProgramLauncherButton`.
 
 Build a mini-program with:
 

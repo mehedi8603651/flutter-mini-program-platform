@@ -10,7 +10,7 @@ The intended v1 flow is:
 3. review the generated app-owned `HostBridge`
 4. create one shared `MiniProgramRuntime`
 5. wrap your app or feature root with `MiniProgramRuntimeScope`
-6. push `MiniProgramPage(miniProgramId: '...')` from any normal button
+6. call `openAppMiniProgram(...)` or use `AppMiniProgramLauncherButton`
 
 ## Quick start with the initializer
 
@@ -21,9 +21,11 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 
 This generates:
 
+- `lib/mini_program/mini_program_routes.dart`
 - `lib/mini_program/app_host_bridge.dart`
 - `lib/mini_program/mini_program_runtime_setup.dart`
 - `lib/mini_program/native_profile_editor_page.dart`
+- `lib/mini_program/mini_program_launcher.dart`
 - `lib/mini_program/README.md`
 
 The tool intentionally does **not** rewrite `main.dart` or your app shell. It
@@ -147,29 +149,34 @@ MiniProgramRuntimeScope(
 
 ## 5. Open mini-programs from ordinary app buttons
 
-Plain `Navigator` example:
+Recommended helper-based example:
 
 ```dart
-ElevatedButton(
-  onPressed: () {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const MiniProgramPage(
-          miniProgramId: 'coupon_center',
-          title: 'Coupon Center',
-        ),
-      ),
-    );
-  },
-  child: const Text('Open Mini Program'),
-)
+openAppMiniProgram(
+  context,
+  miniProgramId: 'coupon_center',
+  title: 'Coupon Center',
+);
 ```
 
 The same app can open many mini-programs:
 
-- `MiniProgramPage(miniProgramId: 'coupon_center')`
-- `MiniProgramPage(miniProgramId: 'feedback_form')`
-- `MiniProgramPage(miniProgramId: 'profile_center')`
+- `openAppMiniProgram(context, miniProgramId: 'coupon_center')`
+- `openAppMiniProgram(context, miniProgramId: 'feedback_form')`
+- `openAppMiniProgram(context, miniProgramId: 'profile_center')`
+
+Or use the generated launcher widget:
+
+```dart
+const AppMiniProgramLauncherButton(
+  miniProgramId: 'coupon_center',
+  title: 'Coupon Center',
+  child: Text('Open Mini Program'),
+)
+```
+
+If you prefer to keep control over route construction, the shared SDK still
+supports pushing `MiniProgramPage(miniProgramId: '...')` directly.
 
 ## 6. Apps using go_router or custom routing
 

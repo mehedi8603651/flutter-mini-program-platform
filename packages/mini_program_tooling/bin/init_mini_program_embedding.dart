@@ -101,7 +101,7 @@ String _formatResult(MiniProgramEmbeddingInitResult result) {
     '- Add mini_program_sdk and mini_program_contracts to pubspec.yaml if they are missing.',
     '- Keep main.dart small by calling buildMiniProgramRuntime(navigatorKey).',
     '- Register the generated NativeProfileEditorPage route in your app shell.',
-    "- Open MiniProgramPage(miniProgramId: 'my_data') from your existing UI.",
+    "- Call openAppMiniProgram(context, miniProgramId: 'my_data') from your existing UI.",
   ];
 
   return lines.join('\n');

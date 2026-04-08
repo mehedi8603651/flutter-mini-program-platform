@@ -9,6 +9,7 @@ export 'manifest_loader.dart';
 export 'mini_program_discovery.dart';
 export 'mini_program_failure.dart';
 export 'mini_program_host.dart';
+export 'mini_program_launcher.dart';
 export 'mini_program_page.dart';
 export 'mini_program_runtime.dart';
 export 'network/asset_resolver.dart';

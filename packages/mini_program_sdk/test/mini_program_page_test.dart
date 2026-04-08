@@ -130,6 +130,111 @@ void main() {
     expect(find.text('Profile Center'), findsOneWidget);
     expect(find.text('Backend unavailable'), findsOneWidget);
   });
+
+  testWidgets('openMiniProgram pushes a MiniProgramPage with the scoped runtime', (
+    tester,
+  ) async {
+    final runtime = MiniProgramRuntime(
+      sdkVersion: '1.0.0',
+      source: _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: const <String, dynamic>{
+          'type': 'scaffold',
+          'body': <String, dynamic>{
+            'type': 'center',
+            'child': <String, dynamic>{
+              'type': 'text',
+              'data': 'Launcher helper screen',
+            },
+          },
+        },
+      ),
+      hostBridge: _FakeHostBridge(),
+      capabilityRegistry: CapabilityRegistry(const <Capability>[
+        Capability.analytics,
+      ]),
+      cacheBundle: MiniProgramCacheBundle.inMemory(),
+    );
+
+    await tester.pumpWidget(
+      MiniProgramRuntimeScope(
+        runtime: runtime,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) {
+              return Scaffold(
+                body: Center(
+                  child: FilledButton(
+                    onPressed: () {
+                      openMiniProgram<void>(
+                        context,
+                        miniProgramId: 'profile_center',
+                        title: 'Profile Center',
+                      );
+                    },
+                    child: const Text('Launch mini-program'),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Launch mini-program'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Launcher helper screen'), findsOneWidget);
+  });
+
+  testWidgets('MiniProgramLauncherButton opens a mini-program by id', (
+    tester,
+  ) async {
+    final runtime = MiniProgramRuntime(
+      sdkVersion: '1.0.0',
+      source: _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: const <String, dynamic>{
+          'type': 'scaffold',
+          'body': <String, dynamic>{
+            'type': 'center',
+            'child': <String, dynamic>{
+              'type': 'text',
+              'data': 'Launcher button screen',
+            },
+          },
+        },
+      ),
+      hostBridge: _FakeHostBridge(),
+      capabilityRegistry: CapabilityRegistry(const <Capability>[
+        Capability.analytics,
+      ]),
+      cacheBundle: MiniProgramCacheBundle.inMemory(),
+    );
+
+    await tester.pumpWidget(
+      MiniProgramRuntimeScope(
+        runtime: runtime,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: MiniProgramLauncherButton(
+                miniProgramId: 'profile_center',
+                title: 'Profile Center',
+                child: Text('Open with launcher button'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open with launcher button'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Launcher button screen'), findsOneWidget);
+  });
 }
 
 class _FakeMiniProgramSource implements MiniProgramSource {

@@ -39,6 +39,12 @@ void main() {
       final runtimeSetup = await File(
         p.join(integrationRootPath, 'mini_program_runtime_setup.dart'),
       ).readAsString();
+      final routes = await File(
+        p.join(integrationRootPath, 'mini_program_routes.dart'),
+      ).readAsString();
+      final launcher = await File(
+        p.join(integrationRootPath, 'mini_program_launcher.dart'),
+      ).readAsString();
       final hostBridge = await File(
         p.join(integrationRootPath, 'app_host_bridge.dart'),
       ).readAsString();
@@ -50,10 +56,13 @@ void main() {
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
-      expect(result.createdPaths, hasLength(4));
+      expect(result.createdPaths, hasLength(6));
       expect(runtimeSetup, contains("const String _hostAppId = 'my_existing_app';"));
       expect(runtimeSetup, contains("const String _hostVersion = '3.2.0';"));
-      expect(hostBridge, contains("'profile_editor': '/native/profile-editor'"));
+      expect(routes, contains("static const String nativeProfileEditor = '/native/profile-editor';"));
+      expect(hostBridge, contains('MiniProgramRoutes.profileEditorAlias'));
+      expect(launcher, contains('Future<T?> openAppMiniProgram<T>('));
+      expect(launcher, contains('class AppMiniProgramLauncherButton extends StatelessWidget'));
       expect(
         readme,
         contains(
@@ -75,6 +84,9 @@ void main() {
       final hostBridge = await File(
         p.join(tempDir.path, 'lib', 'mini_program', 'app_host_bridge.dart'),
       ).readAsString();
+      final routes = await File(
+        p.join(tempDir.path, 'lib', 'mini_program', 'mini_program_routes.dart'),
+      ).readAsString();
       final runtimeSetup = await File(
         p.join(tempDir.path, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),
       ).readAsString();
@@ -82,7 +94,8 @@ void main() {
       expect(result.hostAppId, 'campus_super_app');
       expect(result.hostVersion, '9.4.1');
       expect(result.nativeRoutePath, '/routes/native/profile-review');
-      expect(hostBridge, contains("'profile_editor': '/routes/native/profile-review'"));
+      expect(routes, contains("static const String nativeProfileEditor = '/routes/native/profile-review';"));
+      expect(hostBridge, contains('MiniProgramRoutes.nativeProfileEditor'));
       expect(runtimeSetup, contains("const String _hostAppId = 'campus_super_app';"));
       expect(runtimeSetup, contains("const String _hostVersion = '9.4.1';"));
     });
