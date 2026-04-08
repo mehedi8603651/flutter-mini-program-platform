@@ -45,6 +45,12 @@ void main() {
       final launcher = await File(
         p.join(integrationRootPath, 'mini_program_launcher.dart'),
       ).readAsString();
+      final appShell = await File(
+        p.join(integrationRootPath, 'mini_program_app_shell.dart'),
+      ).readAsString();
+      final barrel = await File(
+        p.join(integrationRootPath, 'mini_program.dart'),
+      ).readAsString();
       final hostBridge = await File(
         p.join(integrationRootPath, 'app_host_bridge.dart'),
       ).readAsString();
@@ -56,17 +62,23 @@ void main() {
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
-      expect(result.createdPaths, hasLength(6));
+      expect(result.createdPaths, hasLength(8));
       expect(runtimeSetup, contains("const String _hostAppId = 'my_existing_app';"));
       expect(runtimeSetup, contains("const String _hostVersion = '3.2.0';"));
       expect(routes, contains("static const String nativeProfileEditor = '/native/profile-editor';"));
       expect(hostBridge, contains('MiniProgramRoutes.profileEditorAlias'));
       expect(launcher, contains('Future<T?> openAppMiniProgram<T>('));
       expect(launcher, contains('class AppMiniProgramLauncherButton extends StatelessWidget'));
+      expect(appShell, contains('class MiniProgramAppShell extends StatefulWidget'));
+      expect(appShell, contains('MiniProgramRuntimeScope('));
+      expect(barrel, contains("export 'mini_program_app_shell.dart';"));
       expect(
         readme,
-        contains(
-          'path: ${repoRootPath.replaceAll('\\', '/')}/packages/mini_program_sdk',
+        allOf(
+          contains(
+            'path: ${repoRootPath.replaceAll('\\', '/')}/packages/mini_program_sdk',
+          ),
+          contains('MiniProgramAppShell('),
         ),
       );
     });
@@ -87,6 +99,9 @@ void main() {
       final routes = await File(
         p.join(tempDir.path, 'lib', 'mini_program', 'mini_program_routes.dart'),
       ).readAsString();
+      final appShell = await File(
+        p.join(tempDir.path, 'lib', 'mini_program', 'mini_program_app_shell.dart'),
+      ).readAsString();
       final runtimeSetup = await File(
         p.join(tempDir.path, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),
       ).readAsString();
@@ -96,6 +111,7 @@ void main() {
       expect(result.nativeRoutePath, '/routes/native/profile-review');
       expect(routes, contains("static const String nativeProfileEditor = '/routes/native/profile-review';"));
       expect(hostBridge, contains('MiniProgramRoutes.nativeProfileEditor'));
+      expect(appShell, contains('MiniProgramRoutes.nativeProfileEditor'));
       expect(runtimeSetup, contains("const String _hostAppId = 'campus_super_app';"));
       expect(runtimeSetup, contains("const String _hostVersion = '9.4.1';"));
     });

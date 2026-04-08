@@ -99,8 +99,8 @@ String _formatResult(MiniProgramEmbeddingInitResult result) {
     ...result.createdPaths.map((path) => '- $path'),
     'Next steps:',
     '- Add mini_program_sdk and mini_program_contracts to pubspec.yaml if they are missing.',
-    '- Keep main.dart small by calling buildMiniProgramRuntime(navigatorKey).',
-    '- Register the generated NativeProfileEditorPage route in your app shell.',
+    "- Import 'mini_program/mini_program.dart' from your app entrypoint.",
+    '- Wrap your app home with MiniProgramAppShell(...) instead of wiring the runtime by hand.',
     "- Call openAppMiniProgram(context, miniProgramId: 'my_data') from your existing UI.",
   ];
 

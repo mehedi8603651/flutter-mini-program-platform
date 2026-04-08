@@ -7,9 +7,9 @@ The intended v1 flow is:
 
 1. run `init_mini_program_embedding`
 2. add `mini_program_sdk` and `mini_program_contracts`
-3. review the generated app-owned `HostBridge`
-4. create one shared `MiniProgramRuntime`
-5. wrap your app or feature root with `MiniProgramRuntimeScope`
+3. use the generated `MiniProgramAppShell`
+4. review the generated app-owned `HostBridge`
+5. adjust backend/runtime config only if needed
 6. call `openAppMiniProgram(...)` or use `AppMiniProgramLauncherButton`
 
 ## Quick start with the initializer
@@ -21,6 +21,8 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 
 This generates:
 
+- `lib/mini_program/mini_program.dart`
+- `lib/mini_program/mini_program_app_shell.dart`
 - `lib/mini_program/mini_program_routes.dart`
 - `lib/mini_program/app_host_bridge.dart`
 - `lib/mini_program/mini_program_runtime_setup.dart`
@@ -28,9 +30,9 @@ This generates:
 - `lib/mini_program/mini_program_launcher.dart`
 - `lib/mini_program/README.md`
 
-The tool intentionally does **not** rewrite `main.dart` or your app shell. It
-generates the adapter layer and leaves final integration with your existing app
-routes and widget tree under developer control.
+The tool intentionally does **not** rewrite `main.dart` for you, but it now
+generates a local `MiniProgramAppShell` so your own app entry can stay very
+small.
 
 ## Recommended v1 capability set
 
@@ -52,7 +54,33 @@ dependencies:
     path: D:/flutter-mini-program-platform/packages/mini_program_contracts
 ```
 
-## 2. Review the generated HostBridge
+## 2. Keep `main.dart` small
+
+```dart
+import 'package:flutter/material.dart';
+import 'mini_program/mini_program.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MiniProgramAppShell(
+      debugShowCheckedModeBanner: false,
+      home: const MyHomePage(),
+    );
+  }
+}
+```
+
+`MiniProgramAppShell` creates the runtime, wraps the app with
+`MiniProgramRuntimeScope`, and wires the generated sample native route.
+
+## 3. Review the generated HostBridge
 
 Keep this app-specific. The shared SDK should not know your route names,
 analytics stack, or native flows. The generated file is a starting point, not a
@@ -101,7 +129,7 @@ class AppHostBridge implements HostBridge {
 }
 ```
 
-## 3. Build one shared runtime
+## 4. Review the generated runtime setup when needed
 
 ```dart
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -133,19 +161,8 @@ final runtime = MiniProgramRuntime(
 );
 ```
 
-## 4. Scope the runtime once
-
-Put the runtime above the part of your app that needs mini-program access.
-
-```dart
-MiniProgramRuntimeScope(
-  runtime: runtime,
-  child: MaterialApp(
-    navigatorKey: navigatorKey,
-    home: const MyHomePage(),
-  ),
-)
-```
+Most apps do not need to touch this immediately. The generated
+`MiniProgramAppShell` already calls it for you.
 
 ## 5. Open mini-programs from ordinary app buttons
 
@@ -192,6 +209,8 @@ other Flutter page widget.
 - `MiniProgramHost` remains the low-level primitive for advanced integrations.
 - `init_mini_program_embedding` is the quickest way to generate the adapter
   layer for an old Flutter app.
+- `MiniProgramAppShell` is the lowest-friction app entrypoint. It keeps
+  `main.dart` small and hides the runtime-scope boilerplate.
 - Internal mini-program page-to-page routing now happens inside the shared SDK
   by `screenId`. Existing apps still open a mini-program the same way:
   `MiniProgramPage(miniProgramId: '...')`.
