@@ -75,6 +75,7 @@ function Invoke-Step {
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("miniprogram_cli_verify_" + [System.Guid]::NewGuid().ToString("N"))
 $pubCache = Join-Path $tempRoot "pub_cache"
+$homeRoot = Join-Path $tempRoot "home"
 $workspaceRoot = Join-Path $tempRoot "workspace"
 $miniProgramRoot = Join-Path $workspaceRoot "coupon_center"
 $hostRoot = Join-Path $workspaceRoot "host_app"
@@ -84,10 +85,15 @@ $backendStarted = $false
 $sourceSnapshotDirectory = Join-Path $RepoRoot "packages\mini_program_tooling\.dart_tool\pub\bin\mini_program_tooling"
 
 New-Item -ItemType Directory -Path $pubCache -Force | Out-Null
+New-Item -ItemType Directory -Path $homeRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $workspaceRoot -Force | Out-Null
 
 $previousPubCache = $env:PUB_CACHE
+$previousHome = $env:HOME
+$previousUserProfile = $env:USERPROFILE
 $env:PUB_CACHE = $pubCache
+$env:HOME = $homeRoot
+$env:USERPROFILE = $homeRoot
 
 try {
     if (Test-Path $sourceSnapshotDirectory) {
@@ -210,20 +216,18 @@ version: 1.0.0+1
 
     Invoke-Step `
         -Name "Generate embedded app adapter" `
-        -Workdir $workspaceRoot `
+        -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
             "embed",
             "init",
             "--project-root",
-            $hostRoot,
-            "--repo-root",
-            $RepoRoot
+            $hostRoot
         )
 
     Invoke-Step `
         -Name "Start local backend through the installed CLI" `
-        -Workdir $miniProgramRoot `
+        -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
             "backend",
@@ -235,13 +239,13 @@ version: 1.0.0+1
 
     Invoke-Step `
         -Name "Check backend status through the installed CLI" `
-        -Workdir $miniProgramRoot `
+        -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @("backend", "status")
 
     Invoke-Step `
         -Name "Stop local backend through the installed CLI" `
-        -Workdir $miniProgramRoot `
+        -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @("backend", "stop")
     $backendStarted = $false
@@ -291,6 +295,8 @@ finally {
     }
     finally {
         $env:PUB_CACHE = $previousPubCache
+        $env:HOME = $previousHome
+        $env:USERPROFILE = $previousUserProfile
         if (-not $KeepTemp -and (Test-Path $workspaceRoot)) {
             Remove-Item -LiteralPath $workspaceRoot -Recurse -Force
         }

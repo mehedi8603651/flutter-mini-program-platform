@@ -53,6 +53,10 @@ cd <workspace>/coupon_center
 miniprogram env init --repo-root <repo-root>
 ```
 
+That writes both a workspace-local `.mini_program/env.json` and a user-level
+fallback repo-root, so later commands can run from this workspace or from
+unrelated directories without repeating `--repo-root`.
+
 Then build, validate, and publish without repeating `--repo-root`:
 
 ```bash
@@ -64,7 +68,7 @@ miniprogram publish coupon_center
 Initialize the embedding adapter for an existing Flutter app:
 
 ```bash
-miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
+miniprogram embed init --project-root <existing-flutter-app>
 ```
 
 Start and inspect the local backend:
@@ -82,6 +86,10 @@ The CLI keeps repo-local state in:
 - `.mini_program/env.json`
 - `.mini_program/backend.local.json`
 - `.mini_program/published_local_artifacts.json`
+
+It also keeps a user-level fallback file in:
+
+- `~/.mini_program/global_env.json`
 
 `backend reset-local --yes` only removes tracked local publish outputs. It does
 not wipe all of `backend/api/` or remove rollout, capability, or secure API

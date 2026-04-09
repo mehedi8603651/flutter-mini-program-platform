@@ -6,6 +6,9 @@
   `miniprogram env status`
 - add `.mini_program/env.json` as saved CLI environment state for standalone
   mini-program workspaces
+- add a user-level fallback config in `~/.mini_program/global_env.json` so
+  `embed init` and backend commands can reuse the saved repo root from
+  unrelated working directories
 - let `build`, `validate`, `publish`, and `backend ...` reuse saved repo-root
   configuration instead of requiring repeated `--repo-root`
 - update the installed CLI smoke flow and docs around the new env workflow

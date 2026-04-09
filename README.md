@@ -26,7 +26,7 @@ miniprogram env init --repo-root <repo-root>
 miniprogram build coupon_center
 miniprogram validate coupon_center
 miniprogram publish coupon_center
-miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
+miniprogram embed init --project-root <existing-flutter-app>
 miniprogram backend start --port 8080
 miniprogram backend status
 ```
@@ -71,9 +71,9 @@ screen without leaving the mini-program container.
 
 For standalone mini-program workspaces outside this repo, run `miniprogram env
 init --repo-root <repo-root>` once from the mini-program root. That writes
-`.mini_program/env.json` so later `build`, `validate`, `publish`, and
-`backend ...` commands can reuse the saved repo context without repeating
-`--repo-root`.
+`.mini_program/env.json` and refreshes a user-level fallback repo config, so
+later `build`, `validate`, `publish`, `embed init`, and `backend ...` commands
+can reuse the saved repo context without repeating `--repo-root`.
 
 ## Embed Into An Existing Flutter App
 

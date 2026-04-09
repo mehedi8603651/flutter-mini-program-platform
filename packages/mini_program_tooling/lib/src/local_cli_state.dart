@@ -229,15 +229,20 @@ class ResolvedLocalCliEnvironmentState {
     required this.rootPath,
     required this.filePath,
     required this.state,
+    required this.scope,
   });
 
   final String rootPath;
   final String filePath;
   final LocalCliEnvironmentState state;
+  final String scope;
 }
 
 class LocalCliStateStore {
-  const LocalCliStateStore();
+  const LocalCliStateStore({String? homeDirectoryPath})
+    : _homeDirectoryPath = homeDirectoryPath;
+
+  final String? _homeDirectoryPath;
 
   String stateDirectoryPath(String rootPath) =>
       p.join(_normalizeRoot(rootPath), '.mini_program');
@@ -252,6 +257,12 @@ class LocalCliStateStore {
 
   String environmentStatePath(String rootPath) =>
       p.join(stateDirectoryPath(rootPath), 'env.json');
+
+  String globalStateDirectoryPath() =>
+      p.join(_normalizeHomeDirectoryPath(), '.mini_program');
+
+  String globalEnvironmentStatePath() =>
+      p.join(globalStateDirectoryPath(), 'global_env.json');
 
   Future<Directory> ensureStateDirectory(String rootPath) async {
     final directory = Directory(stateDirectoryPath(rootPath));
@@ -370,9 +381,31 @@ class LocalCliStateStore {
     );
   }
 
+  Future<LocalCliEnvironmentState?> readGlobalEnvironmentState() async {
+    final file = File(globalEnvironmentStatePath());
+    if (!await file.exists()) {
+      return null;
+    }
+
+    final json = await _readJsonObject(file);
+    return LocalCliEnvironmentState.fromJson(json);
+  }
+
+  Future<void> writeGlobalEnvironmentState(
+    LocalCliEnvironmentState state,
+  ) async {
+    final directory = Directory(globalStateDirectoryPath());
+    await directory.create(recursive: true);
+    final file = File(globalEnvironmentStatePath());
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
   Future<ResolvedLocalCliEnvironmentState?> discoverEnvironmentState({
     String? currentWorkingDirectory,
     Iterable<String> additionalSearchRoots = const <String>[],
+    bool includeGlobalFallback = true,
   }) async {
     final startDirectories = <String>{
       p.normalize(
@@ -394,8 +427,21 @@ class LocalCliStateStore {
             rootPath: rootPath,
             filePath: environmentStatePath(rootPath),
             state: state,
+            scope: 'local',
           );
         }
+      }
+    }
+
+    if (includeGlobalFallback) {
+      final globalState = await readGlobalEnvironmentState();
+      if (globalState != null) {
+        return ResolvedLocalCliEnvironmentState(
+          rootPath: _normalizeHomeDirectoryPath(),
+          filePath: globalEnvironmentStatePath(),
+          state: globalState,
+          scope: 'global',
+        );
       }
     }
 
@@ -426,6 +472,10 @@ class LocalCliStateStore {
   String _normalizeRoot(String repoRootPath) =>
       p.normalize(p.absolute(repoRootPath));
 
+  String _normalizeHomeDirectoryPath() => p.normalize(
+    p.absolute(_homeDirectoryPath ?? _resolveHomeDirectoryPath()),
+  );
+
   Future<String?> _discoverEnvironmentRoot({
     required String startDirectory,
   }) async {
@@ -442,5 +492,28 @@ class LocalCliStateStore {
       }
       cursor = parent;
     }
+  }
+
+  String _resolveHomeDirectoryPath() {
+    final home = Platform.environment['HOME'];
+    if (home != null && home.trim().isNotEmpty) {
+      return home;
+    }
+
+    final userProfile = Platform.environment['USERPROFILE'];
+    if (userProfile != null && userProfile.trim().isNotEmpty) {
+      return userProfile;
+    }
+
+    final homeDrive = Platform.environment['HOMEDRIVE'];
+    final homePath = Platform.environment['HOMEPATH'];
+    if (homeDrive != null &&
+        homeDrive.trim().isNotEmpty &&
+        homePath != null &&
+        homePath.trim().isNotEmpty) {
+      return '$homeDrive$homePath';
+    }
+
+    return Directory.current.path;
   }
 }

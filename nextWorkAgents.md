@@ -130,6 +130,10 @@ local publish bookkeeping.
 standalone mini-program workspace outside the platform repo to remember its
 `repoRootPath` after one `miniprogram env init --repo-root <path>` call.
 
+That local env flow now also refreshes a user-level fallback config, so
+commands such as `embed init` can resolve the same repo root even when they are
+run from unrelated directories.
+
 ## Local Backend Lifecycle
 
 ### `miniprogram backend start --port 8080`

@@ -219,7 +219,11 @@ class MiniprogramCli {
     final cwd = _currentWorkingDirectory();
     final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      explicitMiniProgramRootPath: results.option('mini-program-root'),
+      additionalSearchRoots: <String>[
+        if (results.option('mini-program-root') case final miniProgramRoot?
+            when miniProgramRoot.trim().isNotEmpty)
+          miniProgramRoot,
+      ],
     );
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
@@ -276,7 +280,11 @@ class MiniprogramCli {
     final miniProgramId = results.rest.single;
     final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      explicitMiniProgramRootPath: results.option('mini-program-root'),
+      additionalSearchRoots: <String>[
+        if (results.option('mini-program-root') case final miniProgramRoot?
+            when miniProgramRoot.trim().isNotEmpty)
+          miniProgramRoot,
+      ],
       required: true,
     );
     final resolved = await _pathResolver.resolve(
@@ -341,8 +349,11 @@ class MiniprogramCli {
       );
     }
     final activeEnvironment = await _discoverEnvironmentState(
-      explicitRepoRootPath: results.option('repo-root'),
-      explicitMiniProgramRootPath: results.option('mini-program-root'),
+      additionalSearchRoots: <String>[
+        if (results.option('mini-program-root') case final miniProgramRoot?
+            when miniProgramRoot.trim().isNotEmpty)
+          miniProgramRoot,
+      ],
     );
     final target =
         results.option('target') ??
@@ -358,7 +369,11 @@ class MiniprogramCli {
     final miniProgramId = results.rest.single;
     final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      explicitMiniProgramRootPath: results.option('mini-program-root'),
+      additionalSearchRoots: <String>[
+        if (results.option('mini-program-root') case final miniProgramRoot?
+            when miniProgramRoot.trim().isNotEmpty)
+          miniProgramRoot,
+      ],
       required: true,
     );
     final resolved = await _pathResolver.resolve(
@@ -466,7 +481,10 @@ class MiniprogramCli {
     final result = await _embeddingInitializer.initialize(
       MiniProgramEmbeddingInitRequest(
         projectRootPath: results.option('project-root')!,
-        repoRootPath: results.option('repo-root'),
+        repoRootPath: await _resolveRepoRootPath(
+          explicitRepoRootPath: results.option('repo-root'),
+          additionalSearchRoots: <String>[results.option('project-root')!],
+        ),
         hostAppId: results.option('host-app-id'),
         hostVersion: results.option('host-version'),
         nativeRoutePath: results.option('native-route-path')!,
@@ -558,12 +576,14 @@ class MiniprogramCli {
       updatedAtUtc: now,
     );
     await _stateStore.writeEnvironmentState(configRootPath, state);
+    await _stateStore.writeGlobalEnvironmentState(state);
     _stdout.writeln(
       _formatEnvStatusResult(
         ResolvedLocalCliEnvironmentState(
           rootPath: configRootPath,
           filePath: _stateStore.environmentStatePath(configRootPath),
           state: state,
+          scope: 'local',
         ),
         initialized: true,
       ),
@@ -610,13 +630,19 @@ class MiniprogramCli {
       initializedAtUtc: resolved.state.initializedAtUtc,
       updatedAtUtc: DateTime.now().toUtc().toIso8601String(),
     );
-    await _stateStore.writeEnvironmentState(resolved.rootPath, updatedState);
+    if (resolved.scope == 'global') {
+      await _stateStore.writeGlobalEnvironmentState(updatedState);
+    } else {
+      await _stateStore.writeEnvironmentState(resolved.rootPath, updatedState);
+      await _stateStore.writeGlobalEnvironmentState(updatedState);
+    }
     _stdout.writeln(
       _formatEnvStatusResult(
         ResolvedLocalCliEnvironmentState(
           rootPath: resolved.rootPath,
           filePath: resolved.filePath,
           state: updatedState,
+          scope: resolved.scope,
         ),
         switched: true,
       ),
@@ -936,6 +962,7 @@ Commands:
         'Updated active miniprogram environment.'
       else
         'Miniprogram env configuration found.',
+      'Config scope: ${resolved.scope}',
       'Config root: ${resolved.rootPath}',
       'Config file: ${resolved.filePath}',
       'Repo root: ${resolved.state.repoRootPath}',
@@ -1006,15 +1033,47 @@ Commands:
   }
 
   Future<ResolvedLocalCliEnvironmentState?> _discoverEnvironmentState({
-    String? explicitRepoRootPath,
-    String? explicitMiniProgramRootPath,
+    Iterable<String> additionalSearchRoots = const <String>[],
   }) {
     return _stateStore.discoverEnvironmentState(
       currentWorkingDirectory: _currentWorkingDirectory(),
+      additionalSearchRoots: additionalSearchRoots,
+    );
+  }
+
+  Future<ResolvedLocalCliEnvironmentState?> _resolveEnvironmentState({
+    String? explicitRootPath,
+    String? explicitRepoRootPath,
+    Iterable<String> additionalSearchRoots = const <String>[],
+  }) async {
+    if (explicitRootPath != null && explicitRootPath.trim().isNotEmpty) {
+      final rootPath = p.normalize(p.absolute(explicitRootPath));
+      final state = await _stateStore.readEnvironmentState(rootPath);
+      if (state == null) {
+        final globalState = await _stateStore.readGlobalEnvironmentState();
+        if (globalState == null) {
+          return null;
+        }
+        return ResolvedLocalCliEnvironmentState(
+          rootPath: Directory(
+            _stateStore.globalStateDirectoryPath(),
+          ).parent.path,
+          filePath: _stateStore.globalEnvironmentStatePath(),
+          state: globalState,
+          scope: 'global',
+        );
+      }
+      return ResolvedLocalCliEnvironmentState(
+        rootPath: rootPath,
+        filePath: _stateStore.environmentStatePath(rootPath),
+        state: state,
+        scope: 'local',
+      );
+    }
+
+    return _discoverEnvironmentState(
       additionalSearchRoots: <String>[
-        if (explicitMiniProgramRootPath != null &&
-            explicitMiniProgramRootPath.trim().isNotEmpty)
-          explicitMiniProgramRootPath,
+        ...additionalSearchRoots,
         if (explicitRepoRootPath != null &&
             explicitRepoRootPath.trim().isNotEmpty)
           explicitRepoRootPath,
@@ -1022,35 +1081,15 @@ Commands:
     );
   }
 
-  Future<ResolvedLocalCliEnvironmentState?> _resolveEnvironmentState({
-    String? explicitRootPath,
-    String? explicitRepoRootPath,
-  }) async {
-    if (explicitRootPath != null && explicitRootPath.trim().isNotEmpty) {
-      final rootPath = p.normalize(p.absolute(explicitRootPath));
-      final state = await _stateStore.readEnvironmentState(rootPath);
-      if (state == null) {
-        return null;
-      }
-      return ResolvedLocalCliEnvironmentState(
-        rootPath: rootPath,
-        filePath: _stateStore.environmentStatePath(rootPath),
-        state: state,
-      );
-    }
-
-    return _discoverEnvironmentState(
-      explicitRepoRootPath: explicitRepoRootPath,
-    );
-  }
-
   Future<ResolvedLocalCliEnvironmentState> _requireEnvironmentState({
     String? explicitRootPath,
     String? explicitRepoRootPath,
+    Iterable<String> additionalSearchRoots = const <String>[],
   }) async {
     final resolved = await _resolveEnvironmentState(
       explicitRootPath: explicitRootPath,
       explicitRepoRootPath: explicitRepoRootPath,
+      additionalSearchRoots: additionalSearchRoots,
     );
     if (resolved == null) {
       throw const FormatException(
@@ -1063,19 +1102,22 @@ Commands:
 
   Future<String?> _resolveRepoRootPath({
     String? explicitRepoRootPath,
-    String? explicitMiniProgramRootPath,
+    Iterable<String> additionalSearchRoots = const <String>[],
     bool required = false,
   }) async {
     final envState = await _discoverEnvironmentState(
-      explicitRepoRootPath: explicitRepoRootPath,
-      explicitMiniProgramRootPath: explicitMiniProgramRootPath,
+      additionalSearchRoots: <String>[
+        ...additionalSearchRoots,
+        if (explicitRepoRootPath != null &&
+            explicitRepoRootPath.trim().isNotEmpty)
+          explicitRepoRootPath,
+      ],
     );
     return _pathResolver.resolveRepoRoot(
       explicitRepoRootPath:
           explicitRepoRootPath ?? envState?.state.repoRootPath,
       currentWorkingDirectory: _currentWorkingDirectory(),
-      additionalSearchPath:
-          explicitMiniProgramRootPath ?? envState?.state.repoRootPath,
+      additionalSearchPath: envState?.state.repoRootPath,
       required: required,
     );
   }

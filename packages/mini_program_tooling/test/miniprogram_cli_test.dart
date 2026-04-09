@@ -8,6 +8,7 @@ void main() {
   group('MiniprogramCli', () {
     late Directory tempDir;
     late Directory repoRoot;
+    late LocalCliStateStore stateStore;
 
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp(
@@ -31,6 +32,9 @@ void main() {
           'pubspec.yaml',
         ),
       ).writeAsString('name: mini_program_tooling');
+      stateStore = LocalCliStateStore(
+        homeDirectoryPath: p.join(tempDir.path, 'fake_home'),
+      );
     });
 
     tearDown(() async {
@@ -43,6 +47,7 @@ void main() {
       final stdoutBuffer = StringBuffer();
       final stderrBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: stderrBuffer,
         workingDirectory: tempDir.path,
@@ -80,6 +85,7 @@ void main() {
 
       final stdoutBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
         workingDirectory: repoRoot.path,
@@ -119,6 +125,7 @@ void main() {
       final stdoutBuffer = StringBuffer();
       final stderrBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: stderrBuffer,
         workingDirectory: workspaceRoot.path,
@@ -134,17 +141,23 @@ void main() {
         ).exists(),
         isTrue,
       );
+      expect(
+        await File(stateStore.globalEnvironmentStatePath()).exists(),
+        isTrue,
+      );
 
       expect(await cli.run(<String>['env', 'use', 'cloud']), 0);
 
       final statusBuffer = StringBuffer();
       final statusCli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: statusBuffer,
         stderrSink: StringBuffer(),
         workingDirectory: workspaceRoot.path,
       );
       expect(await statusCli.run(<String>['env', 'status']), 0);
       expect(statusBuffer.toString(), contains('Active environment: cloud'));
+      expect(statusBuffer.toString(), contains('Config scope: local'));
       expect(stderrBuffer.toString(), isEmpty);
     });
 
@@ -154,6 +167,7 @@ void main() {
         final stdoutBuffer = StringBuffer();
         final stderrBuffer = StringBuffer();
         final cli = MiniprogramCli(
+          stateStore: stateStore,
           stdoutSink: stdoutBuffer,
           stderrSink: stderrBuffer,
           workingDirectory: tempDir.path,
@@ -191,6 +205,7 @@ void main() {
 
       final stdoutBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
         workingDirectory: repoRoot.path,
@@ -218,6 +233,7 @@ void main() {
 
       final stdoutBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
         workingDirectory: repoRoot.path,
@@ -261,6 +277,7 @@ void main() {
         await File(fakeCliPath).writeAsString(_fakeStacCliSource);
 
         final cli = MiniprogramCli(
+          stateStore: stateStore,
           stdoutSink: StringBuffer(),
           stderrSink: StringBuffer(),
           workingDirectory: standaloneRoot,
@@ -273,6 +290,7 @@ void main() {
 
         final publishBuffer = StringBuffer();
         final publishCli = MiniprogramCli(
+          stateStore: stateStore,
           stdoutSink: publishBuffer,
           stderrSink: StringBuffer(),
           workingDirectory: standaloneRoot,
@@ -326,6 +344,7 @@ version: 1.0.0+1
 
       final stdoutBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
         workingDirectory: repoRoot.path,
@@ -353,10 +372,68 @@ version: 1.0.0+1
       );
     });
 
+    test(
+      'embed init uses saved global repo root when run from an unrelated host app directory',
+      () async {
+        final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
+        await workspaceRoot.create(recursive: true);
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await Directory(p.join(hostRoot, 'lib')).create(recursive: true);
+        await File(p.join(hostRoot, 'pubspec.yaml')).writeAsString('''
+name: host_app
+version: 1.0.0+1
+''');
+
+        final envCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: workspaceRoot.path,
+        );
+        expect(
+          await envCli.run(<String>[
+            'env',
+            'init',
+            '--repo-root',
+            repoRoot.path,
+          ]),
+          0,
+        );
+
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: hostRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'embed',
+          'init',
+          '--project-root',
+          hostRoot,
+        ]);
+
+        expect(exitCode, 0);
+        expect(
+          stdoutBuffer.toString(),
+          contains('Repo root: ${repoRoot.path}'),
+        );
+        expect(
+          await File(
+            p.join(hostRoot, 'lib', 'mini_program', 'mini_program.dart'),
+          ).exists(),
+          isTrue,
+        );
+      },
+    );
+
     test('backend subcommands dispatch to the controller', () async {
       final controller = _FakeLocalBackendController();
       final stdoutBuffer = StringBuffer();
       final cli = MiniprogramCli(
+        stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
         backendController: controller,
@@ -385,6 +462,7 @@ version: 1.0.0+1
         await workspaceRoot.create(recursive: true);
 
         final cli = MiniprogramCli(
+          stateStore: stateStore,
           stdoutSink: StringBuffer(),
           stderrSink: StringBuffer(),
           workingDirectory: workspaceRoot.path,
@@ -396,10 +474,51 @@ version: 1.0.0+1
 
         final controller = _FakeLocalBackendController();
         final backendCli = MiniprogramCli(
+          stateStore: stateStore,
           stdoutSink: StringBuffer(),
           stderrSink: StringBuffer(),
           backendController: controller,
           workingDirectory: workspaceRoot.path,
+        );
+
+        expect(await backendCli.run(<String>['backend', 'start']), 0);
+        expect(await backendCli.run(<String>['backend', 'status']), 0);
+        expect(await backendCli.run(<String>['backend', 'stop']), 0);
+        expect(controller.repoRootPaths, everyElement(repoRoot.path));
+      },
+    );
+
+    test(
+      'backend commands use saved global repo root from an unrelated working directory',
+      () async {
+        final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
+        await workspaceRoot.create(recursive: true);
+        final otherRoot = Directory(p.join(tempDir.path, 'other_workdir'));
+        await otherRoot.create(recursive: true);
+
+        final envCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: workspaceRoot.path,
+        );
+        expect(
+          await envCli.run(<String>[
+            'env',
+            'init',
+            '--repo-root',
+            repoRoot.path,
+          ]),
+          0,
+        );
+
+        final controller = _FakeLocalBackendController();
+        final backendCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          backendController: controller,
+          workingDirectory: otherRoot.path,
         );
 
         expect(await backendCli.run(<String>['backend', 'start']), 0);
