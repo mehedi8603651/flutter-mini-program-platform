@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- refresh the pub.dev release metadata for the current env-based workflow
+- ship the saved global repo-root fallback used by `embed init` and backend
+  commands when running from unrelated working directories
+
 ## 0.2.0
 
 - add `miniprogram env init`, `miniprogram env use`, and
