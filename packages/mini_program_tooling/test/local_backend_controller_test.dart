@@ -18,11 +18,20 @@ void main() {
       );
       repoRoot = Directory(p.join(tempDir.path, 'repo'));
       await Directory(
-        p.join(repoRoot.path, 'backend', 'local_backend_service'),
+        p.join(repoRoot.path, 'backend', 'local_backend_service', 'bin'),
       ).create(recursive: true);
       await Directory(
         p.join(repoRoot.path, 'backend', 'api', 'rollout-rules'),
       ).create(recursive: true);
+      await File(
+        p.join(
+          repoRoot.path,
+          'backend',
+          'local_backend_service',
+          'bin',
+          'server.dart',
+        ),
+      ).writeAsString('void main() {}');
       alivePids = <int>{};
     });
 
@@ -53,6 +62,12 @@ void main() {
           String? workingDirectory,
           Map<String, String>? environment,
         }) async {
+          if (executable == Platform.resolvedExecutable &&
+              arguments.length == 2 &&
+              arguments.first == 'pub' &&
+              arguments.last == 'get') {
+            return ProcessResult(0, 0, '', '');
+          }
           if (executable == 'tasklist' || executable == 'ps') {
             final pid = executable == 'tasklist'
                 ? int.parse(arguments[1].split(' ').last)
@@ -62,10 +77,15 @@ void main() {
                   ? ProcessResult(
                       0,
                       0,
-                      '"dart.exe","$pid","Console","1","10,000 K"',
+                      '"cmd.exe","$pid","Console","1","10,000 K"',
                       '',
                     )
-                  : ProcessResult(0, 0, '  PID TTY          TIME CMD\n $pid ?        00:00:00 dart', '');
+                  : ProcessResult(
+                      0,
+                      0,
+                      '  PID TTY          TIME CMD\n $pid ?        00:00:00 sh',
+                      '',
+                    );
             }
             return executable == 'tasklist'
                 ? ProcessResult(0, 0, 'INFO: No tasks are running', '')
@@ -113,6 +133,56 @@ void main() {
         ).exists(),
         isFalse,
       );
+    });
+
+    test('real launcher writes backend state and can stop cleanly', () async {
+      await File(
+        p.join(
+          repoRoot.path,
+          'backend',
+          'local_backend_service',
+          'bin',
+          'server.dart',
+        ),
+      ).writeAsString(_fakeHttpBackendServerSource);
+
+      final controller = LocalBackendController();
+      final port = await _findFreePort();
+
+      try {
+        final startResult = await controller.start(
+          repoRootPath: repoRoot.path,
+          port: port,
+        );
+        expect(startResult.alreadyRunning, isFalse);
+        expect(
+          await File(
+            p.join(repoRoot.path, '.mini_program', 'backend.local.json'),
+          ).exists(),
+          isTrue,
+        );
+
+        final statusResult = await controller.status(repoRootPath: repoRoot.path);
+        expect(statusResult.hasState, isTrue);
+        expect(statusResult.processAlive, isTrue);
+        expect(statusResult.healthy, isTrue);
+        expect(statusResult.healthStatusCode, 200);
+
+        final stopResult = await controller.stop(repoRootPath: repoRoot.path);
+        expect(stopResult.stopped, isTrue);
+        expect(
+          await File(
+            p.join(repoRoot.path, '.mini_program', 'backend.local.json'),
+          ).exists(),
+          isFalse,
+        );
+      } finally {
+        try {
+          await controller.stop(repoRootPath: repoRoot.path);
+        } on LocalBackendControlException {
+          // Best-effort cleanup for the integration-style launcher test.
+        }
+      }
     });
 
     test('resetLocal only removes tracked publish outputs', () async {
@@ -202,3 +272,45 @@ void main() {
     });
   });
 }
+
+Future<int> _findFreePort() async {
+  final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+  final port = socket.port;
+  await socket.close();
+  return port;
+}
+
+const String _fakeHttpBackendServerSource = r'''
+import 'dart:async';
+import 'dart:io';
+
+Future<void> main(List<String> arguments) async {
+  var bindAddress = InternetAddress.loopbackIPv4;
+  var port = 8080;
+
+  for (final argument in arguments) {
+    if (argument.startsWith('--host=')) {
+      final host = argument.substring('--host='.length);
+      bindAddress = host == '0.0.0.0'
+          ? InternetAddress.anyIPv4
+          : InternetAddress(host);
+    } else if (argument.startsWith('--port=')) {
+      port = int.parse(argument.substring('--port='.length));
+    }
+  }
+
+  final server = await HttpServer.bind(bindAddress, port);
+  server.listen((request) async {
+    if (request.uri.path == '/health') {
+      request.response.statusCode = 200;
+      request.response.write('ok');
+    } else {
+      request.response.statusCode = 404;
+      request.response.write('not found');
+    }
+    await request.response.close();
+  });
+
+  await Completer<void>().future;
+}
+''';

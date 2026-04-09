@@ -6,8 +6,8 @@ more portable mini-programs inside it.
 Preferred command surface:
 
 ```powershell
-dart pub global activate --source path D:\flutter-mini-program-platform\packages\mini_program_tooling
-miniprogram embed init --project-root D:\myflutterproject --repo-root D:\flutter-mini-program-platform
+dart pub global activate --source path <repo-root>\packages\mini_program_tooling
+miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
 ```
 
 The intended v1 flow is:
@@ -22,8 +22,8 @@ The intended v1 flow is:
 ## Quick start with the initializer
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\init_mini_program_embedding.ps1 `
-  -ProjectRoot D:\myflutterproject
+powershell -ExecutionPolicy Bypass -File <repo-root>\tools\init_mini_program_embedding.ps1 `
+  -ProjectRoot <existing-flutter-app>
 ```
 
 This generates:
@@ -56,9 +56,9 @@ old app already has a clear host-owned secure flow ready to integrate.
 ```yaml
 dependencies:
   mini_program_sdk:
-    path: D:/flutter-mini-program-platform/packages/mini_program_sdk
+    path: <repo-root>/packages/mini_program_sdk
   mini_program_contracts:
-    path: D:/flutter-mini-program-platform/packages/mini_program_contracts
+    path: <repo-root>/packages/mini_program_contracts
 ```
 
 ## 2. Keep `main.dart` small

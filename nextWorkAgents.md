@@ -14,9 +14,9 @@ embedding feel like one coherent CLI instead of a collection of wrappers.
 
 ### Global install shape
 - Package remains `mini_program_tooling` for the first CLI wave.
-- Current repo-local activation command is:
+- Current pre-release activation command is:
   - `dart pub global activate --source path <repo-root>/packages/mini_program_tooling`
-- Future published install target is:
+- Release install target is:
   - `dart pub global activate mini_program_tooling`
 - Global executable is:
   - `miniprogram`

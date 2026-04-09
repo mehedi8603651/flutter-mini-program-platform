@@ -6,30 +6,32 @@ and local backend delivery.
 
 ## Preferred CLI
 
-Install the tooling once:
+For repo-local contributor work, install the tooling once:
 
 ```powershell
-dart pub global activate --source path D:\flutter-mini-program-platform\packages\mini_program_tooling
+dart pub global activate --source path <repo-root>\packages\mini_program_tooling
 ```
 
 Then use the shared `miniprogram` command:
 
 ```powershell
 miniprogram create coupon_center
-miniprogram build coupon_center --repo-root D:\flutter-mini-program-platform
-miniprogram validate coupon_center --repo-root D:\flutter-mini-program-platform
-miniprogram publish coupon_center --repo-root D:\flutter-mini-program-platform
-miniprogram embed init --project-root D:\myflutterproject --repo-root D:\flutter-mini-program-platform
-miniprogram backend start --port 8080
-miniprogram backend status
+miniprogram build coupon_center --repo-root <repo-root>
+miniprogram validate coupon_center --repo-root <repo-root>
+miniprogram publish coupon_center --repo-root <repo-root>
+miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
+miniprogram backend start --repo-root <repo-root> --port 8080
+miniprogram backend status --repo-root <repo-root>
 ```
 
 The older PowerShell wrappers still work, but `miniprogram ...` is now the
 preferred developer entrypoint.
 
-Note: the package is still repo-local (`publish_to: none`), so plain
-`dart pub global activate mini_program_tooling` will not work until the
-tooling package is published somewhere.
+Once `mini_program_tooling` is released publicly, the install command becomes:
+
+```powershell
+dart pub global activate mini_program_tooling
+```
 
 ## Create A Mini-Program
 
@@ -95,7 +97,7 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
   -MiniProgramId profile_center
 ```
 
-Or build a standalone mini-program against this repo’s tooling:
+Or build a standalone mini-program against this repo's tooling:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
@@ -139,6 +141,12 @@ Useful options:
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1 -SkipAnalyze
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1 -SkipHosts
+```
+
+Verify the installed global CLI from a fresh temporary `PUB_CACHE` with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\verify_global_cli.ps1
 ```
 
 ## GitHub Actions

@@ -111,22 +111,45 @@ class LocalBackendController {
       'backend',
       'local_backend_service',
     );
-    if (!await Directory(serviceDirectoryPath).exists()) {
-      throw LocalBackendControlException(
-        'Local backend service was not found: $serviceDirectoryPath',
-      );
-    }
+    final apiRootPath = p.join(normalizedRepoRoot, 'backend', 'api');
+    final serverScriptPath = p.join(serviceDirectoryPath, 'bin', 'server.dart');
 
+    await _assertBackendPaths(
+      serviceDirectoryPath: serviceDirectoryPath,
+      apiRootPath: apiRootPath,
+      serverScriptPath: serverScriptPath,
+    );
+    await _ensurePackageConfig(serviceDirectoryPath);
+
+    final healthCheckUri = Uri.parse('http://127.0.0.1:$port/health');
     final previousState = await _stateStore.readBackendState(normalizedRepoRoot);
     if (previousState != null) {
       final previousStatus = await status(repoRootPath: normalizedRepoRoot);
-      if (previousStatus.processAlive) {
+      if (previousStatus.processAlive && previousStatus.healthy) {
         return LocalBackendStartResult(
           state: previousState,
           alreadyRunning: true,
         );
       }
+
+      if (previousStatus.processAlive) {
+        throw LocalBackendControlException(
+          'A recorded backend process is still alive but not healthy. '
+          'Stop it or inspect the logs before starting again.\n'
+          '${previousStatus.healthError ?? 'Health URL: ${previousState.healthCheckUrl}'}',
+        );
+      }
+
       await _stateStore.clearBackendState(normalizedRepoRoot);
+    }
+
+    final preExistingHealth = await _probeHealth(healthCheckUri);
+    if (preExistingHealth.healthy) {
+      throw LocalBackendControlException(
+        'A backend is already responding at ${healthCheckUri.toString()}, '
+        'but no tracked local backend state was found. Stop the existing '
+        'server or use a different --port.',
+      );
     }
 
     final stateDirectory = await _stateStore.ensureStateDirectory(
@@ -134,39 +157,55 @@ class LocalBackendController {
     );
     final stdoutLogPath = p.join(stateDirectory.path, 'backend.local.out.log');
     final stderrLogPath = p.join(stateDirectory.path, 'backend.local.err.log');
+    final launcherScriptPath = p.join(
+      stateDirectory.path,
+      Platform.isWindows
+          ? 'backend.local.runner.cmd'
+          : 'backend.local.runner.sh',
+    );
+
     await File(stdoutLogPath).writeAsString('');
     await File(stderrLogPath).writeAsString('');
+    await _writeLauncherScript(
+      launcherScriptPath: launcherScriptPath,
+      serviceDirectoryPath: serviceDirectoryPath,
+      serverScriptPath: serverScriptPath,
+      apiRootPath: apiRootPath,
+      stdoutLogPath: stdoutLogPath,
+      stderrLogPath: stderrLogPath,
+      port: port,
+    );
 
     final startedProcess = await _processStarter(
-      executable: Platform.resolvedExecutable,
-      arguments: <String>[
-        'run',
-        'bin/server.dart',
-        '--host=0.0.0.0',
-        '--port=$port',
-      ],
-      workingDirectory: serviceDirectoryPath,
+      executable: _launcherExecutable(),
+      arguments: _launcherArguments(launcherScriptPath),
+      workingDirectory: stateDirectory.path,
     );
     final state = LocalBackendState(
       pid: startedProcess.pid,
       port: port,
       bindHost: '0.0.0.0',
-      healthCheckUrl: 'http://127.0.0.1:$port/health',
+      healthCheckUrl: healthCheckUri.toString(),
       stdoutLogPath: stdoutLogPath,
       stderrLogPath: stderrLogPath,
       startedAtUtc: _clock().toUtc().toIso8601String(),
     );
 
-    final startupHealthy = await _waitForHealthCheck(
-      Uri.parse(state.healthCheckUrl),
-      timeout: const Duration(seconds: 5),
+    final startupHealth = await _waitForHealthCheck(
+      healthCheckUri,
+      timeout: const Duration(seconds: 20),
     );
-    if (!startupHealthy) {
+    if (!startupHealth.healthy) {
       await _terminateProcess(startedProcess.pid);
-      throw LocalBackendControlException(
-        'Failed to confirm local backend health at ${state.healthCheckUrl} '
-        'within 5 seconds.',
-      );
+      final stderrTail = await _readLogTail(stderrLogPath);
+      final details = <String>[
+        'Failed to confirm local backend health at ${state.healthCheckUrl} within 20 seconds.',
+        if (startupHealth.statusCode != null)
+          'Last health status code: ${startupHealth.statusCode}',
+        if (startupHealth.error != null) 'Last health detail: ${startupHealth.error}',
+        if (stderrTail.isNotEmpty) 'stderr tail:\n$stderrTail',
+      ];
+      throw LocalBackendControlException(details.join('\n'));
     }
 
     await _stateStore.writeBackendState(normalizedRepoRoot, state);
@@ -192,47 +231,25 @@ class LocalBackendController {
     }
 
     final processAlive = await _isProcessAlive(state.pid);
-    if (!processAlive) {
-      return LocalBackendStatusResult(
-        state: state,
-        hasState: true,
-        processAlive: false,
-        healthy: false,
-        healthError: 'Recorded backend PID is no longer running.',
-      );
+    final health = await _probeHealth(Uri.parse(state.healthCheckUrl));
+
+    String? healthError = health.error;
+    if (!processAlive && health.healthy) {
+      healthError =
+          'Recorded backend PID is stale, but a backend is still responding at '
+          '${state.healthCheckUrl}.';
+    } else if (!processAlive && !health.healthy && healthError == null) {
+      healthError = 'Recorded backend PID is no longer running.';
     }
 
-    try {
-      final response = await _healthGetter(
-        Uri.parse(state.healthCheckUrl),
-      ).timeout(const Duration(seconds: 2));
-      return LocalBackendStatusResult(
-        state: state,
-        hasState: true,
-        processAlive: true,
-        healthy: response.statusCode == 200,
-        healthStatusCode: response.statusCode,
-        healthError: response.statusCode == 200
-            ? null
-            : 'Health endpoint returned ${response.statusCode}.',
-      );
-    } on TimeoutException {
-      return LocalBackendStatusResult(
-        state: state,
-        hasState: true,
-        processAlive: true,
-        healthy: false,
-        healthError: 'Health check timed out.',
-      );
-    } catch (error) {
-      return LocalBackendStatusResult(
-        state: state,
-        hasState: true,
-        processAlive: true,
-        healthy: false,
-        healthError: '$error',
-      );
-    }
+    return LocalBackendStatusResult(
+      state: state,
+      hasState: true,
+      processAlive: processAlive,
+      healthy: health.healthy,
+      healthStatusCode: health.statusCode,
+      healthError: healthError,
+    );
   }
 
   Future<LocalBackendStopResult> stop({
@@ -262,11 +279,25 @@ class LocalBackendController {
 
     final stopResult = await _terminateProcess(state.pid);
     if (stopResult.exitCode != 0) {
-      final stderrText = '${stopResult.stderr}'.trim();
+      final stillAlive = await _isProcessAlive(state.pid);
+      if (stillAlive) {
+        final stderrText = '${stopResult.stderr}'.trim();
+        throw LocalBackendControlException(
+          stderrText.isEmpty
+              ? 'Failed to stop backend PID ${state.pid}.'
+              : 'Failed to stop backend PID ${state.pid}.\n$stderrText',
+        );
+      }
+    }
+
+    final stopped = await _waitForBackendUnavailable(
+      Uri.parse(state.healthCheckUrl),
+      timeout: const Duration(seconds: 5),
+    );
+    if (!stopped) {
       throw LocalBackendControlException(
-        stderrText.isEmpty
-            ? 'Failed to stop backend PID ${state.pid}.'
-            : 'Failed to stop backend PID ${state.pid}.\n$stderrText',
+        'Backend PID ${state.pid} was signaled to stop, but '
+        '${state.healthCheckUrl} is still serving after 5 seconds.',
       );
     }
 
@@ -350,6 +381,158 @@ class LocalBackendController {
     return LocalBackendResetResult(removedPaths: removedPaths);
   }
 
+  Future<void> _assertBackendPaths({
+    required String serviceDirectoryPath,
+    required String apiRootPath,
+    required String serverScriptPath,
+  }) async {
+    if (!await Directory(serviceDirectoryPath).exists()) {
+      throw LocalBackendControlException(
+        'Local backend service was not found: $serviceDirectoryPath',
+      );
+    }
+    if (!await Directory(apiRootPath).exists()) {
+      throw LocalBackendControlException(
+        'Local backend api root was not found: $apiRootPath',
+      );
+    }
+    if (!await File(serverScriptPath).exists()) {
+      throw LocalBackendControlException(
+        'Local backend entrypoint was not found: $serverScriptPath',
+      );
+    }
+  }
+
+  Future<void> _ensurePackageConfig(String serviceDirectoryPath) async {
+    final pubspecPath = p.join(serviceDirectoryPath, 'pubspec.yaml');
+    final packageConfigPath = p.join(
+      serviceDirectoryPath,
+      '.dart_tool',
+      'package_config.json',
+    );
+    if (!await File(pubspecPath).exists() || await File(packageConfigPath).exists()) {
+      return;
+    }
+
+    final result = await _shellRunner(
+      Platform.resolvedExecutable,
+      const <String>['pub', 'get'],
+      workingDirectory: serviceDirectoryPath,
+    );
+    if (result.exitCode == 0) {
+      return;
+    }
+
+    final stdoutText = '${result.stdout}'.trim();
+    final stderrText = '${result.stderr}'.trim();
+    throw LocalBackendControlException(
+      [
+        'Failed to prepare backend/local_backend_service before launch.',
+        'Command: ${Platform.resolvedExecutable} pub get',
+        if (stdoutText.isNotEmpty) 'stdout:\n$stdoutText',
+        if (stderrText.isNotEmpty) 'stderr:\n$stderrText',
+      ].join('\n'),
+    );
+  }
+
+  Future<void> _writeLauncherScript({
+    required String launcherScriptPath,
+    required String serviceDirectoryPath,
+    required String serverScriptPath,
+    required String apiRootPath,
+    required String stdoutLogPath,
+    required String stderrLogPath,
+    required int port,
+  }) async {
+    final content = Platform.isWindows
+        ? _buildWindowsLauncherScript(
+            serviceDirectoryPath: serviceDirectoryPath,
+            serverScriptPath: serverScriptPath,
+            apiRootPath: apiRootPath,
+            stdoutLogPath: stdoutLogPath,
+            stderrLogPath: stderrLogPath,
+            port: port,
+          )
+        : _buildUnixLauncherScript(
+            serviceDirectoryPath: serviceDirectoryPath,
+            serverScriptPath: serverScriptPath,
+            apiRootPath: apiRootPath,
+            stdoutLogPath: stdoutLogPath,
+            stderrLogPath: stderrLogPath,
+            port: port,
+          );
+    await File(launcherScriptPath).writeAsString(content);
+  }
+
+  String _buildWindowsLauncherScript({
+    required String serviceDirectoryPath,
+    required String serverScriptPath,
+    required String apiRootPath,
+    required String stdoutLogPath,
+    required String stderrLogPath,
+    required int port,
+  }) {
+    final quotedDart = _quoteForCmd(Platform.resolvedExecutable);
+    final quotedServiceDirectory = _quoteForCmd(serviceDirectoryPath);
+    final quotedServerScript = _quoteForCmd(serverScriptPath);
+    final quotedHostArg = _quoteForCmd('--host=0.0.0.0');
+    final quotedPortArg = _quoteForCmd('--port=$port');
+    final quotedApiRootArg = _quoteForCmd('--api-root=$apiRootPath');
+    final quotedStdoutLog = _quoteForCmd(stdoutLogPath);
+    final quotedStderrLog = _quoteForCmd(stderrLogPath);
+
+    return [
+      '@echo off',
+      'setlocal',
+      'cd /d $quotedServiceDirectory',
+      '$quotedDart $quotedServerScript $quotedHostArg $quotedPortArg '
+          '$quotedApiRootArg 1>>$quotedStdoutLog 2>>$quotedStderrLog',
+    ].join('\r\n');
+  }
+
+  String _buildUnixLauncherScript({
+    required String serviceDirectoryPath,
+    required String serverScriptPath,
+    required String apiRootPath,
+    required String stdoutLogPath,
+    required String stderrLogPath,
+    required int port,
+  }) {
+    final quotedDart = _quoteForSh(Platform.resolvedExecutable);
+    final quotedServiceDirectory = _quoteForSh(serviceDirectoryPath);
+    final quotedServerScript = _quoteForSh(serverScriptPath);
+    final quotedHostArg = _quoteForSh('--host=0.0.0.0');
+    final quotedPortArg = _quoteForSh('--port=$port');
+    final quotedApiRootArg = _quoteForSh('--api-root=$apiRootPath');
+    final quotedStdoutLog = _quoteForSh(stdoutLogPath);
+    final quotedStderrLog = _quoteForSh(stderrLogPath);
+
+    return [
+      '#!/usr/bin/env sh',
+      'set -eu',
+      'cd $quotedServiceDirectory',
+      'exec $quotedDart $quotedServerScript $quotedHostArg $quotedPortArg '
+          '$quotedApiRootArg >>$quotedStdoutLog 2>>$quotedStderrLog',
+      '',
+    ].join('\n');
+  }
+
+  String _launcherExecutable() => Platform.isWindows ? 'cmd.exe' : 'sh';
+
+  List<String> _launcherArguments(String launcherScriptPath) => Platform.isWindows
+      ? <String>['/c', launcherScriptPath]
+      : <String>[launcherScriptPath];
+
+  String _quoteForCmd(String value) {
+    final escaped = value.replaceAll('"', '""');
+    return '"$escaped"';
+  }
+
+  String _quoteForSh(String value) {
+    final escaped = value.replaceAll("'", r"'\''");
+    return "'$escaped'";
+  }
+
   Future<bool> _isProcessAlive(int pid) async {
     if (Platform.isWindows) {
       final result = await _shellRunner(
@@ -384,26 +567,91 @@ class LocalBackendController {
     return _shellRunner('kill', <String>['$pid']);
   }
 
-  Future<bool> _waitForHealthCheck(
+  Future<_BackendHealthCheckResult> _probeHealth(
+    Uri uri, {
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
+    try {
+      final response = await _healthGetter(uri).timeout(timeout);
+      return _BackendHealthCheckResult(
+        healthy: response.statusCode == 200,
+        statusCode: response.statusCode,
+        error: response.statusCode == 200
+            ? null
+            : 'Health endpoint returned ${response.statusCode}.',
+      );
+    } on TimeoutException {
+      return const _BackendHealthCheckResult(
+        healthy: false,
+        error: 'Health check timed out.',
+      );
+    } catch (error) {
+      return _BackendHealthCheckResult(
+        healthy: false,
+        error: '$error',
+      );
+    }
+  }
+
+  Future<_BackendHealthCheckResult> _waitForHealthCheck(
+    Uri uri, {
+    required Duration timeout,
+  }) async {
+    final deadline = _clock().add(timeout);
+    _BackendHealthCheckResult lastResult = const _BackendHealthCheckResult(
+      healthy: false,
+      error: 'Health check did not start responding yet.',
+    );
+
+    while (_clock().isBefore(deadline)) {
+      lastResult = await _probeHealth(
+        uri,
+        timeout: const Duration(seconds: 1),
+      );
+      if (lastResult.healthy) {
+        return lastResult;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+
+    return lastResult;
+  }
+
+  Future<bool> _waitForBackendUnavailable(
     Uri uri, {
     required Duration timeout,
   }) async {
     final deadline = _clock().add(timeout);
     while (_clock().isBefore(deadline)) {
-      try {
-        final response = await _healthGetter(uri).timeout(
-          const Duration(seconds: 1),
-        );
-        if (response.statusCode == 200) {
-          return true;
-        }
-      } catch (_) {
-        // Keep retrying until timeout.
+      final result = await _probeHealth(
+        uri,
+        timeout: const Duration(milliseconds: 750),
+      );
+      if (!result.healthy) {
+        return true;
       }
       await Future<void>.delayed(const Duration(milliseconds: 250));
     }
 
-    return false;
+    final finalProbe = await _probeHealth(
+      uri,
+      timeout: const Duration(milliseconds: 750),
+    );
+    return !finalProbe.healthy;
+  }
+
+  Future<String> _readLogTail(String filePath, {int lineCount = 20}) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      return '';
+    }
+
+    final lines = await file.readAsLines();
+    if (lines.isEmpty) {
+      return '';
+    }
+    final startIndex = lines.length > lineCount ? lines.length - lineCount : 0;
+    return lines.sublist(startIndex).join('\n').trim();
   }
 
   Future<void> _pruneEmptyParents({
@@ -495,4 +743,16 @@ class StartedBackendProcess {
   final Stream<List<int>> stdout;
   final Stream<List<int>> stderr;
   final Future<int> exitCode;
+}
+
+class _BackendHealthCheckResult {
+  const _BackendHealthCheckResult({
+    required this.healthy,
+    this.statusCode,
+    this.error,
+  });
+
+  final bool healthy;
+  final int? statusCode;
+  final String? error;
 }
