@@ -3,6 +3,9 @@ description: Local developer and CI tooling for the Flutter mini-program platfor
 publish_to: none
 version: 0.1.0
 
+executables:
+  miniprogram: miniprogram
+
 environment:
   sdk: ^3.10.0
 

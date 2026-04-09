@@ -4,6 +4,33 @@ Portable Flutter mini-program platform built around shared contracts, a shared
 SDK/runtime, portable Stac-authored mini-programs, multiple Flutter host apps,
 and local backend delivery.
 
+## Preferred CLI
+
+Install the tooling once:
+
+```powershell
+dart pub global activate --source path D:\flutter-mini-program-platform\packages\mini_program_tooling
+```
+
+Then use the shared `miniprogram` command:
+
+```powershell
+miniprogram create coupon_center
+miniprogram build coupon_center --repo-root D:\flutter-mini-program-platform
+miniprogram validate coupon_center --repo-root D:\flutter-mini-program-platform
+miniprogram publish coupon_center --repo-root D:\flutter-mini-program-platform
+miniprogram embed init --project-root D:\myflutterproject --repo-root D:\flutter-mini-program-platform
+miniprogram backend start --port 8080
+miniprogram backend status
+```
+
+The older PowerShell wrappers still work, but `miniprogram ...` is now the
+preferred developer entrypoint.
+
+Note: the package is still repo-local (`publish_to: none`), so plain
+`dart pub global activate mini_program_tooling` will not work until the
+tooling package is published somewhere.
+
 ## Create A Mini-Program
 
 Generate a starter mini-program from the repo root with:

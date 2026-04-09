@@ -19,6 +19,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.mini_program/
 
 # Dart and Flutter generated state
 **/.dart_tool/
@@ -54,4 +55,3 @@ Thumbs.db
 **/key.properties
 **/*.jks
 **/*.keystore
-

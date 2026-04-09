@@ -3,6 +3,13 @@
 This guide is for teams that already have a Flutter app and want to open one or
 more portable mini-programs inside it.
 
+Preferred command surface:
+
+```powershell
+dart pub global activate --source path D:\flutter-mini-program-platform\packages\mini_program_tooling
+miniprogram embed init --project-root D:\myflutterproject --repo-root D:\flutter-mini-program-platform
+```
+
 The intended v1 flow is:
 
 1. run `init_mini_program_embedding`

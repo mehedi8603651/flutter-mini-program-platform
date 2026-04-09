@@ -2,7 +2,60 @@
 
 Local developer and CI tooling for the Flutter mini-program platform.
 
-## Current CLI
+## Preferred Global CLI
+
+Install the tooling package globally:
+
+```powershell
+dart pub global activate --source path D:\flutter-mini-program-platform\packages\mini_program_tooling
+```
+
+Then use the shared executable:
+
+```powershell
+miniprogram create my_coupon_app
+miniprogram build my_coupon_app
+miniprogram validate my_coupon_app
+miniprogram publish my_coupon_app
+miniprogram embed init --project-root D:\myflutterproject
+miniprogram backend start --port 8080
+miniprogram backend status
+miniprogram backend stop
+miniprogram backend reset-local --yes
+```
+
+The package is still local to this repo (`publish_to: none`), so the
+`--source path` form is the correct activation flow for now.
+
+### Local CLI state
+
+The global CLI now keeps repo-local state in:
+
+- `.mini_program/backend.local.json`
+- `.mini_program/published_local_artifacts.json`
+
+`backend reset-local --yes` only removes tracked local publish outputs. It does
+not wipe all of `backend/api/` or touch repo-seeded rollout/capability/secure
+API policy files.
+
+### Local backend lifecycle
+
+`miniprogram backend start --port 8080` starts:
+
+- `backend/local_backend_service`
+
+and records:
+
+- PID
+- port
+- health URL
+- stdout log path
+- stderr log path
+
+Use `miniprogram backend status` to check the recorded PID and local health
+endpoint.
+
+## Legacy Low-Level Dart CLIs
 
 ### `init_mini_program_embedding`
 
