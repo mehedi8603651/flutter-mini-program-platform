@@ -9,6 +9,8 @@ This document is the handoff for the next implementation wave only. It does
 not redefine the whole platform roadmap. The goal is to make mini-program
 creation, local backend lifecycle, local publish flow, and existing-app
 embedding feel like one coherent CLI instead of a collection of wrappers.
+The env/config layer is now part of that shipped workflow, so the next phase
+should build on it instead of rethinking local CLI state from scratch.
 
 ## Locked Outcomes
 
@@ -26,6 +28,9 @@ These commands are part of the first implementation wave and should be treated
 as the public CLI surface:
 
 - `miniprogram create <mini-program-id>`
+- `miniprogram env init`
+- `miniprogram env use <local|cloud>`
+- `miniprogram env status`
 - `miniprogram build <mini-program-id>`
 - `miniprogram validate <mini-program-id>`
 - `miniprogram publish <mini-program-id>`
@@ -39,12 +44,9 @@ as the public CLI surface:
 These are intentionally deferred and must not be implemented as part of v1:
 
 - `miniprogram publish <mini-program-id> --target cloud`
-- `miniprogram env use local`
-- `miniprogram env use cloud`
 
 The first implementation wave only supports **local** backend publishing. Cloud
-publishing and environment switching are the next phase after the local CLI is
-stable.
+publishing is the next phase after the local CLI is stable.
 
 ## Implementation Strategy
 
@@ -68,6 +70,8 @@ stable.
 ### Command ownership map
 - `create`
   - wraps the existing scaffolder logic
+- `env init|use|status`
+  - own CLI environment config and default repo-root selection
 - `build`
   - wraps the existing builder logic
 - `validate`
@@ -110,6 +114,8 @@ checked.
 ### State files
 Use these files for the first implementation wave:
 
+- `.mini_program/env.json`
+  - stores the default repo root and active local CLI environment
 - `.mini_program/backend.local.json`
   - stores backend PID, configured port, log file paths, and last start time
 - `.mini_program/published_local_artifacts.json`
@@ -117,6 +123,12 @@ Use these files for the first implementation wave:
 
 The CLI must treat these files as the source of truth for local backend and
 local publish bookkeeping.
+
+### Environment fallback
+`build`, `validate`, `publish`, and `backend ...` should consult
+`.mini_program/env.json` before falling back to repo discovery. This allows a
+standalone mini-program workspace outside the platform repo to remember its
+`repoRootPath` after one `miniprogram env init --repo-root <path>` call.
 
 ## Local Backend Lifecycle
 

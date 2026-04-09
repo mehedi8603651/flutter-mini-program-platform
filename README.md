@@ -22,12 +22,13 @@ Then use the shared `miniprogram` command:
 
 ```powershell
 miniprogram create coupon_center
-miniprogram build coupon_center --repo-root <repo-root>
-miniprogram validate coupon_center --repo-root <repo-root>
-miniprogram publish coupon_center --repo-root <repo-root>
+miniprogram env init --repo-root <repo-root>
+miniprogram build coupon_center
+miniprogram validate coupon_center
+miniprogram publish coupon_center
 miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
-miniprogram backend start --repo-root <repo-root> --port 8080
-miniprogram backend status --repo-root <repo-root>
+miniprogram backend start --port 8080
+miniprogram backend status
 ```
 
 The older PowerShell wrappers still work, but `miniprogram ...` is now the
@@ -67,6 +68,12 @@ Authoring guide:
 Portable flows now support internal page-to-page routing by `screenId`, so a
 generated mini-program can move from its first screen to a second portable
 screen without leaving the mini-program container.
+
+For standalone mini-program workspaces outside this repo, run `miniprogram env
+init --repo-root <repo-root>` once from the mini-program root. That writes
+`.mini_program/env.json` so later `build`, `validate`, `publish`, and
+`backend ...` commands can reuse the saved repo context without repeating
+`--repo-root`.
 
 ## Embed Into An Existing Flutter App
 

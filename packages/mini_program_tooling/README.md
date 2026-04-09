@@ -25,6 +25,9 @@ dart pub global activate --source path <repo-root>/packages/mini_program_tooling
 
 ```text
 miniprogram create <mini-program-id>
+miniprogram env init
+miniprogram env use <local|cloud>
+miniprogram env status
 miniprogram build <mini-program-id>
 miniprogram validate <mini-program-id>
 miniprogram publish <mini-program-id>
@@ -43,12 +46,19 @@ Create a standalone mini-program in the current directory:
 miniprogram create coupon_center
 ```
 
-Build, validate, and publish a standalone mini-program against a platform repo:
+Initialize local CLI env once from a standalone mini-program workspace:
 
 ```bash
-miniprogram build coupon_center --mini-program-root <workspace>/coupon_center --repo-root <repo-root>
-miniprogram validate coupon_center --mini-program-root <workspace>/coupon_center --repo-root <repo-root>
-miniprogram publish coupon_center --mini-program-root <workspace>/coupon_center --repo-root <repo-root>
+cd <workspace>/coupon_center
+miniprogram env init --repo-root <repo-root>
+```
+
+Then build, validate, and publish without repeating `--repo-root`:
+
+```bash
+miniprogram build coupon_center
+miniprogram validate coupon_center
+miniprogram publish coupon_center
 ```
 
 Initialize the embedding adapter for an existing Flutter app:
@@ -60,15 +70,16 @@ miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-r
 Start and inspect the local backend:
 
 ```bash
-miniprogram backend start --repo-root <repo-root> --port 8080
-miniprogram backend status --repo-root <repo-root>
-miniprogram backend stop --repo-root <repo-root>
+miniprogram backend start --port 8080
+miniprogram backend status
+miniprogram backend stop
 ```
 
 ## Local CLI state
 
 The CLI keeps repo-local state in:
 
+- `.mini_program/env.json`
 - `.mini_program/backend.local.json`
 - `.mini_program/published_local_artifacts.json`
 
@@ -79,6 +90,8 @@ policy files that were not created by the CLI publish flow.
 ## Notes
 
 - `publish --target cloud` is intentionally reserved for a later CLI phase.
+- `env use local|cloud` only switches saved CLI context in this phase. Cloud
+  publish and cloud backend operations are still follow-up work.
 - Local backend lifecycle commands expect the platform repo layout with
   `backend/local_backend_service/` and `backend/api/`.
 - Existing low-level Dart bins remain in the repo for compatibility.

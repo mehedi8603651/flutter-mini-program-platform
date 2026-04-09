@@ -17,13 +17,11 @@ class MiniprogramCli {
   MiniprogramCli({
     MiniProgramScaffolder scaffolder = const MiniProgramScaffolder(),
     MiniProgramBuilder builder = const MiniProgramBuilder(),
-    DeliveryRepositoryValidator validator =
-        const DeliveryRepositoryValidator(),
+    DeliveryRepositoryValidator validator = const DeliveryRepositoryValidator(),
     MiniProgramPublisher publisher = const MiniProgramPublisher(),
     MiniProgramEmbeddingInitializer embeddingInitializer =
         const MiniProgramEmbeddingInitializer(),
-    LocalBackendController backendController =
-        const LocalBackendController(),
+    LocalBackendController backendController = const LocalBackendController(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
     StringSink? stdoutSink,
@@ -66,6 +64,8 @@ class MiniprogramCli {
       switch (arguments.first) {
         case 'create':
           return await _runCreate(arguments.sublist(1));
+        case 'env':
+          return await _runEnv(arguments.sublist(1));
         case 'build':
           return await _runBuild(arguments.sublist(1));
         case 'validate':
@@ -122,7 +122,8 @@ class MiniprogramCli {
       )
       ..addOption(
         'output-root',
-        help: 'Optional exact output directory. Defaults to ./<mini-program-id>.',
+        help:
+            'Optional exact output directory. Defaults to ./<mini-program-id>.',
       )
       ..addOption('title', help: 'Optional human-readable title.')
       ..addOption(
@@ -216,9 +217,9 @@ class MiniprogramCli {
 
     final miniProgramId = results.rest.single;
     final cwd = _currentWorkingDirectory();
-    final repoRootHint = await _pathResolver.resolveRepoRoot(
+    final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: cwd,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
@@ -273,17 +274,16 @@ class MiniprogramCli {
     }
 
     final miniProgramId = results.rest.single;
-    final cwd = _currentWorkingDirectory();
-    final repoRootHint = await _pathResolver.resolveRepoRoot(
+    final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: cwd,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
       required: true,
     );
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
-      currentWorkingDirectory: cwd,
+      currentWorkingDirectory: _currentWorkingDirectory(),
       requireRepoRoot: true,
     );
 
@@ -325,9 +325,8 @@ class MiniprogramCli {
       )
       ..addOption(
         'target',
-        allowed: <String>['local', 'cloud'],
-        defaultsTo: 'local',
-        help: 'Publish target. Only local is implemented in v1.',
+        allowed: LocalCliEnvironmentState.supportedEnvironments,
+        help: 'Publish target. Defaults to the active env or local.',
       );
 
     final results = parser.parse(arguments);
@@ -341,7 +340,15 @@ class MiniprogramCli {
         'publish expects exactly one <mini-program-id> positional argument.',
       );
     }
-    if (results.option('target') == 'cloud') {
+    final activeEnvironment = await _discoverEnvironmentState(
+      explicitRepoRootPath: results.option('repo-root'),
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final target =
+        results.option('target') ??
+        activeEnvironment?.state.activeEnvironment ??
+        'local';
+    if (target == 'cloud') {
       throw const MiniProgramPublishException(
         'Cloud publish is reserved for a later CLI phase. Use --target local '
         'or omit the flag.',
@@ -349,17 +356,16 @@ class MiniprogramCli {
     }
 
     final miniProgramId = results.rest.single;
-    final cwd = _currentWorkingDirectory();
-    final repoRootHint = await _pathResolver.resolveRepoRoot(
+    final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: cwd,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
       required: true,
     );
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
-      currentWorkingDirectory: cwd,
+      currentWorkingDirectory: _currentWorkingDirectory(),
       requireRepoRoot: true,
     );
 
@@ -434,7 +440,8 @@ class MiniprogramCli {
       )
       ..addOption(
         'host-version',
-        help: 'Optional host version. Defaults to pubspec version without +build.',
+        help:
+            'Optional host version. Defaults to pubspec version without +build.',
       )
       ..addOption(
         'native-route-path',
@@ -469,6 +476,180 @@ class MiniprogramCli {
 
     _stdout.writeln(_formatEmbeddingInitResult(result));
     return 0;
+  }
+
+  Future<int> _runEnv(List<String> arguments) async {
+    if (arguments.isEmpty) {
+      _stderr.writeln(_envUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'init':
+        return _runEnvInit(arguments.sublist(1));
+      case 'use':
+        return _runEnvUse(arguments.sublist(1));
+      case 'status':
+        return _runEnvStatus(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown env command: ${arguments.first}');
+        _stderr.writeln(_envUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runEnvInit(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'repo-root',
+        help: 'Platform repo root to remember in env.json.',
+      )
+      ..addOption(
+        'root',
+        help: 'Directory that should own .mini_program/env.json.',
+      )
+      ..addOption(
+        'use',
+        allowed: LocalCliEnvironmentState.supportedEnvironments,
+        help: 'Active environment to save. Defaults to local.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram env init [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final cwd = _currentWorkingDirectory();
+    final inferredRootFromCwd = await _pathResolver.resolveRepoRoot(
+      currentWorkingDirectory: cwd,
+    );
+    final configRootPath = p.normalize(
+      p.absolute(results.option('root') ?? inferredRootFromCwd ?? cwd),
+    );
+    final existingState = await _stateStore.readEnvironmentState(
+      configRootPath,
+    );
+    final repoRootPath = await _pathResolver.resolveRepoRoot(
+      explicitRepoRootPath:
+          results.option('repo-root') ?? existingState?.repoRootPath,
+      currentWorkingDirectory: configRootPath,
+    );
+    if (repoRootPath == null) {
+      throw FormatException(
+        'env init could not infer a platform repo root from $configRootPath. '
+        'Pass --repo-root <path>.',
+      );
+    }
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    final state = LocalCliEnvironmentState(
+      schemaVersion: 1,
+      repoRootPath: repoRootPath,
+      activeEnvironment:
+          results.option('use') ?? existingState?.activeEnvironment ?? 'local',
+      initializedAtUtc: existingState?.initializedAtUtc ?? now,
+      updatedAtUtc: now,
+    );
+    await _stateStore.writeEnvironmentState(configRootPath, state);
+    _stdout.writeln(
+      _formatEnvStatusResult(
+        ResolvedLocalCliEnvironmentState(
+          rootPath: configRootPath,
+          filePath: _stateStore.environmentStatePath(configRootPath),
+          state: state,
+        ),
+        initialized: true,
+      ),
+    );
+    return 0;
+  }
+
+  Future<int> _runEnvUse(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram env use <local|cloud> [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1 ||
+        !LocalCliEnvironmentState.supportedEnvironments.contains(
+          results.rest.single,
+        )) {
+      throw const FormatException(
+        'env use expects exactly one environment: local or cloud.',
+      );
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final updatedState = LocalCliEnvironmentState(
+      schemaVersion: resolved.state.schemaVersion,
+      repoRootPath: resolved.state.repoRootPath,
+      activeEnvironment: results.rest.single,
+      initializedAtUtc: resolved.state.initializedAtUtc,
+      updatedAtUtc: DateTime.now().toUtc().toIso8601String(),
+    );
+    await _stateStore.writeEnvironmentState(resolved.rootPath, updatedState);
+    _stdout.writeln(
+      _formatEnvStatusResult(
+        ResolvedLocalCliEnvironmentState(
+          rootPath: resolved.rootPath,
+          filePath: resolved.filePath,
+          state: updatedState,
+        ),
+        switched: true,
+      ),
+    );
+    return 0;
+  }
+
+  Future<int> _runEnvStatus(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram env status [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _resolveEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    _stdout.writeln(_formatEnvStatusResult(resolved));
+    return resolved == null ? 1 : 0;
   }
 
   Future<int> _runBackend(List<String> arguments) async {
@@ -521,9 +702,8 @@ class MiniprogramCli {
       throw const FormatException('backend start --port must be 1-65535.');
     }
 
-    final repoRootPath = await _pathResolver.resolveRepoRoot(
+    final repoRootPath = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
       required: true,
     );
     final result = await _backendController.start(
@@ -553,9 +733,8 @@ class MiniprogramCli {
       return 0;
     }
 
-    final repoRootPath = await _pathResolver.resolveRepoRoot(
+    final repoRootPath = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
       required: true,
     );
     final result = await _backendController.stop(repoRootPath: repoRootPath!);
@@ -582,9 +761,8 @@ class MiniprogramCli {
       return 0;
     }
 
-    final repoRootPath = await _pathResolver.resolveRepoRoot(
+    final repoRootPath = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
       required: true,
     );
     final result = await _backendController.status(repoRootPath: repoRootPath!);
@@ -621,9 +799,8 @@ class MiniprogramCli {
       );
     }
 
-    final repoRootPath = await _pathResolver.resolveRepoRoot(
+    final repoRootPath = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
       required: true,
     );
     final result = await _backendController.resetLocal(
@@ -647,6 +824,9 @@ Usage: miniprogram <command> [arguments]
 
 Commands:
   create <mini-program-id>
+  env init
+  env use <local|cloud>
+  env status
   build <mini-program-id>
   validate <mini-program-id>
   publish <mini-program-id>
@@ -662,6 +842,15 @@ Usage: miniprogram embed <command> [arguments]
 
 Commands:
   init --project-root <path>
+''';
+
+  String _envUsage() => '''
+Usage: miniprogram env <command> [arguments]
+
+Commands:
+  init
+  use <local|cloud>
+  status
 ''';
 
   String _backendUsage() => '''
@@ -729,6 +918,34 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatEnvStatusResult(
+    ResolvedLocalCliEnvironmentState? resolved, {
+    bool initialized = false,
+    bool switched = false,
+  }) {
+    if (resolved == null) {
+      return 'No miniprogram env configuration was found. Run '
+          '"miniprogram env init" from your mini-program workspace or repo '
+          'root first.';
+    }
+
+    final lines = <String>[
+      if (initialized)
+        'Initialized miniprogram env.'
+      else if (switched)
+        'Updated active miniprogram environment.'
+      else
+        'Miniprogram env configuration found.',
+      'Config root: ${resolved.rootPath}',
+      'Config file: ${resolved.filePath}',
+      'Repo root: ${resolved.state.repoRootPath}',
+      'Active environment: ${resolved.state.activeEnvironment}',
+      'Initialized at UTC: ${resolved.state.initializedAtUtc}',
+      'Updated at UTC: ${resolved.state.updatedAtUtc}',
+    ];
+    return lines.join('\n');
+  }
+
   String _formatBackendStartResult(LocalBackendStartResult result) {
     final state = result.state;
     final lines = <String>[
@@ -786,5 +1003,80 @@ Commands:
       lines.addAll(result.removedPaths.map((path) => '- $path'));
     }
     return lines.join('\n');
+  }
+
+  Future<ResolvedLocalCliEnvironmentState?> _discoverEnvironmentState({
+    String? explicitRepoRootPath,
+    String? explicitMiniProgramRootPath,
+  }) {
+    return _stateStore.discoverEnvironmentState(
+      currentWorkingDirectory: _currentWorkingDirectory(),
+      additionalSearchRoots: <String>[
+        if (explicitMiniProgramRootPath != null &&
+            explicitMiniProgramRootPath.trim().isNotEmpty)
+          explicitMiniProgramRootPath,
+        if (explicitRepoRootPath != null &&
+            explicitRepoRootPath.trim().isNotEmpty)
+          explicitRepoRootPath,
+      ],
+    );
+  }
+
+  Future<ResolvedLocalCliEnvironmentState?> _resolveEnvironmentState({
+    String? explicitRootPath,
+    String? explicitRepoRootPath,
+  }) async {
+    if (explicitRootPath != null && explicitRootPath.trim().isNotEmpty) {
+      final rootPath = p.normalize(p.absolute(explicitRootPath));
+      final state = await _stateStore.readEnvironmentState(rootPath);
+      if (state == null) {
+        return null;
+      }
+      return ResolvedLocalCliEnvironmentState(
+        rootPath: rootPath,
+        filePath: _stateStore.environmentStatePath(rootPath),
+        state: state,
+      );
+    }
+
+    return _discoverEnvironmentState(
+      explicitRepoRootPath: explicitRepoRootPath,
+    );
+  }
+
+  Future<ResolvedLocalCliEnvironmentState> _requireEnvironmentState({
+    String? explicitRootPath,
+    String? explicitRepoRootPath,
+  }) async {
+    final resolved = await _resolveEnvironmentState(
+      explicitRootPath: explicitRootPath,
+      explicitRepoRootPath: explicitRepoRootPath,
+    );
+    if (resolved == null) {
+      throw const FormatException(
+        'No miniprogram env configuration was found. Run '
+        '"miniprogram env init" first.',
+      );
+    }
+    return resolved;
+  }
+
+  Future<String?> _resolveRepoRootPath({
+    String? explicitRepoRootPath,
+    String? explicitMiniProgramRootPath,
+    bool required = false,
+  }) async {
+    final envState = await _discoverEnvironmentState(
+      explicitRepoRootPath: explicitRepoRootPath,
+      explicitMiniProgramRootPath: explicitMiniProgramRootPath,
+    );
+    return _pathResolver.resolveRepoRoot(
+      explicitRepoRootPath:
+          explicitRepoRootPath ?? envState?.state.repoRootPath,
+      currentWorkingDirectory: _currentWorkingDirectory(),
+      additionalSearchPath:
+          explicitMiniProgramRootPath ?? envState?.state.repoRootPath,
+      required: required,
+    );
   }
 }

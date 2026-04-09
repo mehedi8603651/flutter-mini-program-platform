@@ -156,16 +156,29 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
         -Arguments @("create", "coupon_center")
 
     Invoke-Step `
+        -Name "Initialize standalone env config" `
+        -Workdir $miniProgramRoot `
+        -FilePath $miniprogramExecutable `
+        -Arguments @(
+            "env",
+            "init",
+            "--repo-root",
+            $RepoRoot
+        )
+
+    Invoke-Step `
+        -Name "Check standalone env status" `
+        -Workdir $miniProgramRoot `
+        -FilePath $miniprogramExecutable `
+        -Arguments @("env", "status")
+
+    Invoke-Step `
         -Name "Build standalone mini-program" `
-        -Workdir $workspaceRoot `
+        -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
             "build",
             "coupon_center",
-            "--mini-program-root",
-            $miniProgramRoot,
-            "--repo-root",
-            $RepoRoot,
             "--stac-cli-script",
             $fakeStacCliPath,
             "--skip-pub-get"
@@ -173,28 +186,17 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
 
     Invoke-Step `
         -Name "Validate standalone mini-program" `
-        -Workdir $workspaceRoot `
+        -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "validate",
-            "coupon_center",
-            "--mini-program-root",
-            $miniProgramRoot,
-            "--repo-root",
-            $RepoRoot
-        )
+        -Arguments @("validate", "coupon_center")
 
     Invoke-Step `
         -Name "Publish standalone mini-program to the local backend" `
-        -Workdir $workspaceRoot `
+        -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
             "publish",
             "coupon_center",
-            "--mini-program-root",
-            $miniProgramRoot,
-            "--repo-root",
-            $RepoRoot,
             "--stac-cli-script",
             $fakeStacCliPath,
             "--skip-build-pub-get"
@@ -221,13 +223,11 @@ version: 1.0.0+1
 
     Invoke-Step `
         -Name "Start local backend through the installed CLI" `
-        -Workdir $RepoRoot `
+        -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
             "backend",
             "start",
-            "--repo-root",
-            $RepoRoot,
             "--port",
             "$port"
         )
@@ -235,25 +235,15 @@ version: 1.0.0+1
 
     Invoke-Step `
         -Name "Check backend status through the installed CLI" `
-        -Workdir $RepoRoot `
+        -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "backend",
-            "status",
-            "--repo-root",
-            $RepoRoot
-        )
+        -Arguments @("backend", "status")
 
     Invoke-Step `
         -Name "Stop local backend through the installed CLI" `
-        -Workdir $RepoRoot `
+        -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "backend",
-            "stop",
-            "--repo-root",
-            $RepoRoot
-        )
+        -Arguments @("backend", "stop")
     $backendStarted = $false
 
     Write-Host ""

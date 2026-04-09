@@ -131,9 +131,7 @@ class PublishedLocalArtifactRecord {
 }
 
 class PublishedLocalArtifactsState {
-  const PublishedLocalArtifactsState({
-    required this.records,
-  });
+  const PublishedLocalArtifactsState({required this.records});
 
   final List<PublishedLocalArtifactRecord> records;
 
@@ -168,26 +166,95 @@ class PublishedLocalArtifactsState {
   }
 }
 
+class LocalCliEnvironmentState {
+  const LocalCliEnvironmentState({
+    required this.schemaVersion,
+    required this.repoRootPath,
+    required this.activeEnvironment,
+    required this.initializedAtUtc,
+    required this.updatedAtUtc,
+  });
+
+  static const List<String> supportedEnvironments = <String>['local', 'cloud'];
+
+  final int schemaVersion;
+  final String repoRootPath;
+  final String activeEnvironment;
+  final String initializedAtUtc;
+  final String updatedAtUtc;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'schemaVersion': schemaVersion,
+    'repoRootPath': repoRootPath,
+    'activeEnvironment': activeEnvironment,
+    'initializedAtUtc': initializedAtUtc,
+    'updatedAtUtc': updatedAtUtc,
+  };
+
+  factory LocalCliEnvironmentState.fromJson(Map<String, dynamic> json) {
+    final schemaVersion = json['schemaVersion'];
+    final repoRootPath = json['repoRootPath'];
+    final activeEnvironment = json['activeEnvironment'];
+    final initializedAtUtc = json['initializedAtUtc'];
+    final updatedAtUtc = json['updatedAtUtc'];
+
+    if (schemaVersion is! int ||
+        repoRootPath is! String ||
+        activeEnvironment is! String ||
+        initializedAtUtc is! String ||
+        updatedAtUtc is! String) {
+      throw const LocalCliStateException(
+        'env.json is missing required fields.',
+      );
+    }
+    if (!supportedEnvironments.contains(activeEnvironment)) {
+      throw LocalCliStateException(
+        'env.json contains an unsupported activeEnvironment: '
+        '$activeEnvironment',
+      );
+    }
+
+    return LocalCliEnvironmentState(
+      schemaVersion: schemaVersion,
+      repoRootPath: p.normalize(p.absolute(repoRootPath)),
+      activeEnvironment: activeEnvironment,
+      initializedAtUtc: initializedAtUtc,
+      updatedAtUtc: updatedAtUtc,
+    );
+  }
+}
+
+class ResolvedLocalCliEnvironmentState {
+  const ResolvedLocalCliEnvironmentState({
+    required this.rootPath,
+    required this.filePath,
+    required this.state,
+  });
+
+  final String rootPath;
+  final String filePath;
+  final LocalCliEnvironmentState state;
+}
+
 class LocalCliStateStore {
   const LocalCliStateStore();
 
-  String stateDirectoryPath(String repoRootPath) => p.join(
-    _normalizeRoot(repoRootPath),
-    '.mini_program',
-  );
+  String stateDirectoryPath(String rootPath) =>
+      p.join(_normalizeRoot(rootPath), '.mini_program');
 
-  String backendStatePath(String repoRootPath) => p.join(
-    stateDirectoryPath(repoRootPath),
-    'backend.local.json',
-  );
+  String backendStatePath(String repoRootPath) =>
+      p.join(stateDirectoryPath(repoRootPath), 'backend.local.json');
 
   String publishedArtifactsPath(String repoRootPath) => p.join(
     stateDirectoryPath(repoRootPath),
     'published_local_artifacts.json',
   );
 
-  Future<Directory> ensureStateDirectory(String repoRootPath) async {
-    final directory = Directory(stateDirectoryPath(repoRootPath));
+  String environmentStatePath(String rootPath) =>
+      p.join(stateDirectoryPath(rootPath), 'env.json');
+
+  Future<Directory> ensureStateDirectory(String rootPath) async {
+    final directory = Directory(stateDirectoryPath(rootPath));
     await directory.create(recursive: true);
     return directory;
   }
@@ -225,7 +292,9 @@ class LocalCliStateStore {
   ) async {
     final file = File(publishedArtifactsPath(repoRootPath));
     if (!await file.exists()) {
-      return const PublishedLocalArtifactsState(records: <PublishedLocalArtifactRecord>[]);
+      return const PublishedLocalArtifactsState(
+        records: <PublishedLocalArtifactRecord>[],
+      );
     }
 
     final json = await _readJsonObject(file);
@@ -248,14 +317,15 @@ class LocalCliStateStore {
     PublishedLocalArtifactRecord record,
   ) async {
     final state = await readPublishedArtifactsState(repoRootPath);
-    final updatedRecords = state.records
-        .where(
-          (existing) =>
-              existing.miniProgramId != record.miniProgramId ||
-              existing.version != record.version,
-        )
-        .toList()
-      ..add(record);
+    final updatedRecords =
+        state.records
+            .where(
+              (existing) =>
+                  existing.miniProgramId != record.miniProgramId ||
+                  existing.version != record.version,
+            )
+            .toList()
+          ..add(record);
     updatedRecords.sort((a, b) {
       final idComparison = a.miniProgramId.compareTo(b.miniProgramId);
       if (idComparison != 0) {
@@ -275,6 +345,61 @@ class LocalCliStateStore {
     if (await file.exists()) {
       await file.delete();
     }
+  }
+
+  Future<LocalCliEnvironmentState?> readEnvironmentState(
+    String rootPath,
+  ) async {
+    final file = File(environmentStatePath(rootPath));
+    if (!await file.exists()) {
+      return null;
+    }
+
+    final json = await _readJsonObject(file);
+    return LocalCliEnvironmentState.fromJson(json);
+  }
+
+  Future<void> writeEnvironmentState(
+    String rootPath,
+    LocalCliEnvironmentState state,
+  ) async {
+    await ensureStateDirectory(rootPath);
+    final file = File(environmentStatePath(rootPath));
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
+  Future<ResolvedLocalCliEnvironmentState?> discoverEnvironmentState({
+    String? currentWorkingDirectory,
+    Iterable<String> additionalSearchRoots = const <String>[],
+  }) async {
+    final startDirectories = <String>{
+      p.normalize(
+        p.absolute(currentWorkingDirectory ?? Directory.current.path),
+      ),
+      ...additionalSearchRoots
+          .where((path) => path.trim().isNotEmpty)
+          .map((path) => p.normalize(p.absolute(path))),
+    };
+
+    for (final startDirectory in startDirectories) {
+      final rootPath = await _discoverEnvironmentRoot(
+        startDirectory: startDirectory,
+      );
+      if (rootPath != null) {
+        final state = await readEnvironmentState(rootPath);
+        if (state != null) {
+          return ResolvedLocalCliEnvironmentState(
+            rootPath: rootPath,
+            filePath: environmentStatePath(rootPath),
+            state: state,
+          );
+        }
+      }
+    }
+
+    return null;
   }
 
   Future<Map<String, dynamic>> _readJsonObject(File file) async {
@@ -300,4 +425,22 @@ class LocalCliStateStore {
 
   String _normalizeRoot(String repoRootPath) =>
       p.normalize(p.absolute(repoRootPath));
+
+  Future<String?> _discoverEnvironmentRoot({
+    required String startDirectory,
+  }) async {
+    var cursor = p.normalize(p.absolute(startDirectory));
+    while (true) {
+      final file = File(environmentStatePath(cursor));
+      if (await file.exists()) {
+        return cursor;
+      }
+
+      final parent = p.dirname(cursor);
+      if (parent == cursor) {
+        return null;
+      }
+      cursor = parent;
+    }
+  }
 }
