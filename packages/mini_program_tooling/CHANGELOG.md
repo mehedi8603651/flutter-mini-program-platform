@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- add `miniprogram env init`, `miniprogram env use`, and
+  `miniprogram env status`
+- add `.mini_program/env.json` as saved CLI environment state for standalone
+  mini-program workspaces
+- let `build`, `validate`, `publish`, and `backend ...` reuse saved repo-root
+  configuration instead of requiring repeated `--repo-root`
+- update the installed CLI smoke flow and docs around the new env workflow
+
 ## 0.1.0
 
 - add the global `miniprogram` executable
