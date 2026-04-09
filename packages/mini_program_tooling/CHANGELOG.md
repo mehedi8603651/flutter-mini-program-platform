@@ -1,11 +1,14 @@
 # Changelog
 
+## 0.2.2
+
+- add `miniprogram doctor` for machine, env, repo, and backend diagnostics
+
 ## 0.2.1
 
 - refresh the pub.dev release metadata for the current env-based workflow
 - ship the saved global repo-root fallback used by `embed init` and backend
   commands when running from unrelated working directories
-- add `miniprogram doctor` for machine, env, repo, and backend diagnostics
 
 ## 0.2.0
 
