@@ -69,6 +69,23 @@ void main() {
       );
     });
 
+    test('doctor dispatches to the diagnostics helper', () async {
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        doctor: const _FakeMiniprogramDoctor(),
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['doctor']);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('Miniprogram doctor report:'));
+      expect(stdoutBuffer.toString(), contains('[ok] Fake check: all good'));
+    });
+
     test('build resolves a repo-managed mini-program from repo root', () async {
       final miniProgramRoot = p.join(
         repoRoot.path,
@@ -599,6 +616,25 @@ class _FakeLocalBackendController extends LocalBackendController {
     calls.add('reset-local');
     repoRootPaths.add(repoRootPath);
     return const LocalBackendResetResult(removedPaths: <String>[]);
+  }
+}
+
+class _FakeMiniprogramDoctor extends MiniprogramDoctor {
+  const _FakeMiniprogramDoctor();
+
+  @override
+  Future<MiniprogramDoctorResult> diagnose({
+    String? explicitRepoRootPath,
+  }) async {
+    return const MiniprogramDoctorResult(
+      checks: <MiniprogramDoctorCheck>[
+        MiniprogramDoctorCheck(
+          label: 'Fake check',
+          status: MiniprogramDoctorCheckStatus.ok,
+          summary: 'all good',
+        ),
+      ],
+    );
   }
 }
 

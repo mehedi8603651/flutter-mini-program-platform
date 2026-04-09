@@ -179,6 +179,12 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
         -Arguments @("env", "status")
 
     Invoke-Step `
+        -Name "Run doctor against the standalone workspace" `
+        -Workdir $miniProgramRoot `
+        -FilePath $miniprogramExecutable `
+        -Arguments @("doctor")
+
+    Invoke-Step `
         -Name "Build standalone mini-program" `
         -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
@@ -242,6 +248,12 @@ version: 1.0.0+1
         -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @("backend", "status")
+
+    Invoke-Step `
+        -Name "Run doctor with a healthy backend" `
+        -Workdir $hostRoot `
+        -FilePath $miniprogramExecutable `
+        -Arguments @("doctor")
 
     Invoke-Step `
         -Name "Stop local backend through the installed CLI" `

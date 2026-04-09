@@ -25,6 +25,7 @@ dart pub global activate --source path <repo-root>/packages/mini_program_tooling
 
 ```text
 miniprogram create <mini-program-id>
+miniprogram doctor
 miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
@@ -39,6 +40,12 @@ miniprogram backend reset-local --yes
 ```
 
 ## Examples
+
+Check your machine and saved CLI state first:
+
+```bash
+miniprogram doctor
+```
 
 Create a standalone mini-program in the current directory:
 
@@ -78,6 +85,16 @@ miniprogram backend start --port 8080
 miniprogram backend status
 miniprogram backend stop
 ```
+
+`miniprogram doctor` reports:
+
+- Dart runtime availability
+- `flutter` on PATH
+- `stac` on PATH
+- saved env configuration
+- resolved platform repo root
+- local backend workspace layout
+- current backend health/state
 
 ## Local CLI state
 

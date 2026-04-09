@@ -8,6 +8,7 @@ import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
 import 'local_cli_state.dart';
 import 'mini_program_builder.dart';
+import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
 import 'mini_program_path_resolver.dart';
 import 'mini_program_publisher.dart';
@@ -22,6 +23,7 @@ class MiniprogramCli {
     MiniProgramEmbeddingInitializer embeddingInitializer =
         const MiniProgramEmbeddingInitializer(),
     LocalBackendController backendController = const LocalBackendController(),
+    MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
     StringSink? stdoutSink,
@@ -33,6 +35,7 @@ class MiniprogramCli {
        _publisher = publisher,
        _embeddingInitializer = embeddingInitializer,
        _backendController = backendController,
+       _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
        _stdout = stdoutSink ?? stdout,
@@ -45,6 +48,7 @@ class MiniprogramCli {
   final MiniProgramPublisher _publisher;
   final MiniProgramEmbeddingInitializer _embeddingInitializer;
   final LocalBackendController _backendController;
+  final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
   final StringSink _stdout;
@@ -64,6 +68,8 @@ class MiniprogramCli {
       switch (arguments.first) {
         case 'create':
           return await _runCreate(arguments.sublist(1));
+        case 'doctor':
+          return await _runDoctor(arguments.sublist(1));
         case 'env':
           return await _runEnv(arguments.sublist(1));
         case 'build':
@@ -175,6 +181,38 @@ class MiniprogramCli {
 
     _stdout.writeln(_formatCreateResult(result));
     return 0;
+  }
+
+  Future<int> _runDoctor(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'repo-root',
+        help: 'Optional explicit platform repo root to verify.',
+      );
+
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram doctor [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'doctor does not accept positional arguments.',
+      );
+    }
+
+    final result = await _doctor.diagnose(
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    _stdout.writeln(_formatDoctorResult(result));
+    return result.hasErrors ? 1 : 0;
   }
 
   Future<int> _runBuild(List<String> arguments) async {
@@ -850,6 +888,7 @@ Usage: miniprogram <command> [arguments]
 
 Commands:
   create <mini-program-id>
+  doctor
   env init
   env use <local|cloud>
   env status
@@ -898,6 +937,39 @@ Commands:
       'Files:',
       ...result.createdPaths.map((path) => '- $path'),
     ];
+    return lines.join('\n');
+  }
+
+  String _formatDoctorResult(MiniprogramDoctorResult result) {
+    final lines = <String>['Miniprogram doctor report:'];
+    var okCount = 0;
+    var warningCount = 0;
+    var errorCount = 0;
+    var skippedCount = 0;
+
+    for (final check in result.checks) {
+      switch (check.status) {
+        case MiniprogramDoctorCheckStatus.ok:
+          okCount++;
+        case MiniprogramDoctorCheckStatus.warning:
+          warningCount++;
+        case MiniprogramDoctorCheckStatus.error:
+          errorCount++;
+        case MiniprogramDoctorCheckStatus.skipped:
+          skippedCount++;
+      }
+      lines.add(
+        '[${check.status.name}] ${check.label}: ${check.summary}',
+      );
+      if (check.detail case final detail? when detail.trim().isNotEmpty) {
+        lines.add('  $detail');
+      }
+    }
+
+    lines.add(
+      'Summary: $okCount ok, $warningCount warning, '
+      '$errorCount error, $skippedCount skipped',
+    );
     return lines.join('\n');
   }
 

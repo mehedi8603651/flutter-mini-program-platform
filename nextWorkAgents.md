@@ -28,6 +28,7 @@ These commands are part of the first implementation wave and should be treated
 as the public CLI surface:
 
 - `miniprogram create <mini-program-id>`
+- `miniprogram doctor`
 - `miniprogram env init`
 - `miniprogram env use <local|cloud>`
 - `miniprogram env status`
@@ -72,6 +73,9 @@ publishing is the next phase after the local CLI is stable.
   - wraps the existing scaffolder logic
 - `env init|use|status`
   - own CLI environment config and default repo-root selection
+- `doctor`
+  - reports machine prerequisites, env config, repo-root resolution, and
+    backend health before troubleshooting
 - `build`
   - wraps the existing builder logic
 - `validate`
@@ -203,6 +207,7 @@ developer-local and cloud environments.
 The implementation that follows this handoff must include:
 
 - CLI parser tests for all listed commands and flags
+- `doctor` output coverage for ok/warn/error/skip cases
 - `create` flow test for standalone `./<id>` output
 - `build`, `validate`, and `publish` path-resolution tests
 - local backend `start` / `status` / `stop` lifecycle tests

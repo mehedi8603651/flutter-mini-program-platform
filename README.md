@@ -22,6 +22,7 @@ Then use the shared `miniprogram` command:
 
 ```powershell
 miniprogram create coupon_center
+miniprogram doctor
 miniprogram env init --repo-root <repo-root>
 miniprogram build coupon_center
 miniprogram validate coupon_center
@@ -33,6 +34,9 @@ miniprogram backend status
 
 The older PowerShell wrappers still work, but `miniprogram ...` is now the
 preferred developer entrypoint.
+
+Use `miniprogram doctor` to verify the local machine, saved env config, repo
+resolution, and backend state before troubleshooting build or embed issues.
 
 ## Create A Mini-Program
 

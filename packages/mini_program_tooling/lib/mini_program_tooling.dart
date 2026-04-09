@@ -2,6 +2,7 @@ export 'src/mini_program_builder.dart';
 export 'src/delivery_inspector.dart';
 export 'src/local_backend_controller.dart';
 export 'src/local_cli_state.dart';
+export 'src/miniprogram_doctor.dart';
 export 'src/delivery_validation.dart';
 export 'src/delivery_validator.dart';
 export 'src/mini_program_embedding_initializer.dart';
