@@ -6,8 +6,14 @@ more portable mini-programs inside it.
 Preferred command surface:
 
 ```powershell
-dart pub global activate --source path <repo-root>\packages\mini_program_tooling
+dart pub global activate mini_program_tooling
 miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
+```
+
+Repo-local contributor install:
+
+```powershell
+dart pub global activate --source path <repo-root>\packages\mini_program_tooling
 ```
 
 The intended v1 flow is:

@@ -29,15 +29,61 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
 }
 
-$toolPath = Join-Path $RepoRoot "packages\mini_program_tooling\bin\init_mini_program_embedding.dart"
+function Resolve-MiniprogramExecutable {
+    $command = Get-Command miniprogram -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
 
+    throw @'
+The global `miniprogram` command was not found.
+
+Install the published CLI:
+  dart pub global activate mini_program_tooling
+
+For repo-local contributor work:
+  dart pub global activate --source path <repo-root>\packages\mini_program_tooling
+'@
+}
+
+function Invoke-LegacyEmbeddingTool {
+    $toolPath = Join-Path $RepoRoot "packages\mini_program_tooling\bin\init_mini_program_embedding.dart"
+    $arguments = @(
+        "run",
+        $toolPath,
+        "--project-root", $ProjectRoot,
+        "--repo-root", $RepoRoot,
+        "--native-route-path", $NativeRoutePath,
+        "--output", $Output
+    )
+
+    if ($HostAppId) { $arguments += @("--host-app-id", $HostAppId) }
+    if ($HostVersion) { $arguments += @("--host-version", $HostVersion) }
+    if ($Force) { $arguments += "--force" }
+
+    Push-Location $RepoRoot
+    try {
+        & dart @arguments
+        exit $LASTEXITCODE
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+if ($Output -eq "json") {
+    Write-Warning "init_mini_program_embedding.ps1 is falling back to the legacy Dart entrypoint because -Output json is not part of the public miniprogram CLI surface."
+    Invoke-LegacyEmbeddingTool
+    return
+}
+
+$miniprogramExecutable = Resolve-MiniprogramExecutable
 $arguments = @(
-    "run",
-    $toolPath,
+    "embed",
+    "init",
     "--project-root", $ProjectRoot,
     "--repo-root", $RepoRoot,
-    "--native-route-path", $NativeRoutePath,
-    "--output", $Output
+    "--native-route-path", $NativeRoutePath
 )
 
 if ($HostAppId) { $arguments += @("--host-app-id", $HostAppId) }
@@ -46,7 +92,7 @@ if ($Force) { $arguments += "--force" }
 
 Push-Location $RepoRoot
 try {
-    & dart @arguments
+    & $miniprogramExecutable @arguments
     exit $LASTEXITCODE
 }
 finally {

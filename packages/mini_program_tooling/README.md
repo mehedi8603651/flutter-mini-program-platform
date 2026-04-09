@@ -81,5 +81,8 @@ policy files that were not created by the CLI publish flow.
 - `publish --target cloud` is intentionally reserved for a later CLI phase.
 - Local backend lifecycle commands expect the platform repo layout with
   `backend/local_backend_service/` and `backend/api/`.
-- Existing low-level Dart bins and PowerShell wrappers remain in the repo for
-  compatibility, but `miniprogram ...` is the preferred workflow.
+- Existing low-level Dart bins remain in the repo for compatibility.
+- The repo PowerShell wrappers now delegate to the installed `miniprogram`
+  command for the standard text workflow and only fall back to legacy Dart
+  entrypoints for compatibility-only modes such as `-Output json`.
+- `miniprogram ...` is the preferred workflow.

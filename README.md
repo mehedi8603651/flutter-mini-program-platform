@@ -6,7 +6,13 @@ and local backend delivery.
 
 ## Preferred CLI
 
-For repo-local contributor work, install the tooling once:
+Install the published tooling once:
+
+```powershell
+dart pub global activate mini_program_tooling
+```
+
+For repo-local contributor work, use:
 
 ```powershell
 dart pub global activate --source path <repo-root>\packages\mini_program_tooling
@@ -26,12 +32,6 @@ miniprogram backend status --repo-root <repo-root>
 
 The older PowerShell wrappers still work, but `miniprogram ...` is now the
 preferred developer entrypoint.
-
-Once `mini_program_tooling` is released publicly, the install command becomes:
-
-```powershell
-dart pub global activate mini_program_tooling
-```
 
 ## Create A Mini-Program
 
@@ -54,6 +54,10 @@ The command generates the manifest, two starter Stac screens, readable action
 helpers for host and internal mini-program routing, build config, README, and
 the expected `stac/components`, `stac/theme`, and `assets` folders under
 `mini_programs/<id>/`.
+
+The PowerShell wrapper now delegates to the installed `miniprogram` CLI for the
+normal text workflow. `-Output json` still uses the legacy Dart entrypoint for
+compatibility.
 
 Authoring guide:
 
@@ -89,6 +93,10 @@ developer control, so existing apps can adopt the shared SDK without copying a
 full sample host. Feature pages can then open mini-programs through the
 generated `openAppMiniProgram(...)` helper or `AppMiniProgramLauncherButton`,
 while `MiniProgramAppShell` keeps app entry code small.
+
+The PowerShell wrapper delegates to the installed `miniprogram` CLI for the
+normal text workflow and falls back to the legacy Dart entrypoint only when a
+compatibility-only mode such as `-Output json` is requested.
 
 Build a mini-program with:
 
