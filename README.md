@@ -35,8 +35,9 @@ miniprogram backend status
 The older PowerShell wrappers still work, but `miniprogram ...` is now the
 preferred developer entrypoint.
 
-Use `miniprogram doctor` to verify the local machine, saved env config, `stac`
-availability, and backend state before troubleshooting build or embed issues.
+Use `miniprogram doctor` to verify the local machine, saved env config, managed
+Stac builder state, and backend state before troubleshooting build or embed
+issues.
 
 ## Create A Mini-Program
 
@@ -79,12 +80,15 @@ pinned Stac builder bundled inside `mini_program_tooling`. Keep
 different Stac CLI.
 
 If you want a developer-owned local backend outside the platform repo, run
-`miniprogram backend init` once from the directory that should own the backend
-workspace. That scaffolds `backend/local_backend_service`, `backend/api`, and
-the tracked `.mini_program/backend_workspace.json` state used by
-`backend start`, `backend status`, `backend stop`, and `backend reset-local`.
-When that backend workspace exists, `miniprogram publish ...` now writes local
-artifacts there instead of the platform repo backend.
+`miniprogram backend init` once from anywhere. On Windows, the default backend
+workspace is `%LOCALAPPDATA%\mini_program\backend\`. That scaffolds
+`backend/local_backend_service`, `backend/api`, and the tracked
+`.mini_program/backend_workspace.json` state used by `backend start`,
+`backend status`, `backend stop`, and `backend reset-local`. Use
+`miniprogram backend init --root D:\custom_backend` only when you intentionally
+want a custom workspace path. When that backend workspace exists,
+`miniprogram publish ...` now writes local artifacts there instead of the
+platform repo backend.
 
 ## Embed Into An Existing Flutter App
 

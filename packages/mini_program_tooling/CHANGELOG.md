@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- make `miniprogram backend init` default to the per-user global backend
+  workspace on Windows at `%LOCALAPPDATA%\mini_program\backend\`
+- keep `miniprogram backend init --root <path>` as the explicit override for a
+  custom backend workspace
+
 ## 0.2.8
 
 - let `miniprogram embed init` default to the current working directory when

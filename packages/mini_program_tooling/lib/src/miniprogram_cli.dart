@@ -774,7 +774,7 @@ class MiniprogramCli {
       ..addOption(
         'root',
         help:
-            'Directory that should own backend/ and .mini_program/backend_workspace.json.',
+            'Directory that should own backend/ and .mini_program/backend_workspace.json. Defaults to the per-user global backend workspace.',
       )
       ..addFlag(
         'force',

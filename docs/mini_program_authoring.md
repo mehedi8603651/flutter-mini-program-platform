@@ -108,6 +108,10 @@ miniprogram env init
 miniprogram build <id>
 ```
 
+On Windows, `miniprogram backend init` defaults to
+`%LOCALAPPDATA%\mini_program\backend\`. Use `--root` only when you intentionally
+want a custom backend workspace path.
+
 Expected screen output:
 
 ```text

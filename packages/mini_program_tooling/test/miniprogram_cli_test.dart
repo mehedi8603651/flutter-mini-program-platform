@@ -772,6 +772,30 @@ dependencies:
       );
     });
 
+    test('backend init defaults to the global backend workspace when root is omitted', () async {
+      final defaultBackendRoot = p.join(tempDir.path, 'global_backend');
+      final initializer = _FakeLocalBackendInitializer(
+        defaultBackendRootPath: defaultBackendRoot,
+      );
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        backendInitializer: initializer,
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['backend', 'init']);
+
+      expect(exitCode, 0);
+      expect(initializer.initializedRootPath, isNull);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Backend root: $defaultBackendRoot'),
+      );
+    });
+
     test('backend subcommands dispatch to the controller', () async {
       final controller = _FakeLocalBackendController();
       final stdoutBuffer = StringBuffer();
@@ -1016,7 +1040,10 @@ class _FakeMiniprogramDoctor extends MiniprogramDoctor {
 }
 
 class _FakeLocalBackendInitializer extends LocalBackendInitializer {
+  _FakeLocalBackendInitializer({this.defaultBackendRootPath});
+
   String? initializedRootPath;
+  final String? defaultBackendRootPath;
 
   @override
   Future<LocalBackendInitResult> initialize(
@@ -1024,7 +1051,9 @@ class _FakeLocalBackendInitializer extends LocalBackendInitializer {
   ) async {
     initializedRootPath = request.backendRootPath;
     final backendRootPath = p.normalize(
-      p.absolute(request.backendRootPath ?? 'backend_workspace'),
+      p.absolute(
+        request.backendRootPath ?? defaultBackendRootPath ?? 'backend_workspace',
+      ),
     );
     return LocalBackendInitResult(
       backendRootPath: backendRootPath,

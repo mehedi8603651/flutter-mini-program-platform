@@ -54,7 +54,10 @@ class LocalBackendInitializer {
     LocalBackendInitRequest request,
   ) async {
     final backendRootPath = p.normalize(
-      p.absolute(request.backendRootPath ?? Directory.current.path),
+      p.absolute(
+        request.backendRootPath ??
+            _stateStore.defaultBackendWorkspaceRootPath(),
+      ),
     );
     final templateRootPath = await _resolveTemplateRootPath();
     final templateDirectory = Directory(templateRootPath);

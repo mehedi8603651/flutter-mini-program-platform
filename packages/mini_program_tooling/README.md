@@ -60,6 +60,10 @@ Initialize a standalone backend workspace once:
 miniprogram backend init
 ```
 
+On Windows, this defaults to `%LOCALAPPDATA%\mini_program\backend\`. Use
+`miniprogram backend init --root <custom-path>` only when you intentionally
+want a different workspace location.
+
 Initialize local CLI env once from a standalone mini-program workspace:
 
 ```bash
@@ -146,7 +150,7 @@ policy files that were not created by the CLI publish flow.
 - `--stac-cli-script` remains the escape hatch when you intentionally need to
   override that managed builder.
 - Local backend lifecycle commands can work from either:
-  - a `miniprogram backend init` workspace
+  - the default per-user `miniprogram backend init` workspace
   - the platform repo layout with `backend/local_backend_service/` and
     `backend/api/`
 - `publish` follows the same backend workspace resolution, so local publish

@@ -320,10 +320,14 @@ class ResolvedLocalBackendWorkspaceState {
 }
 
 class LocalCliStateStore {
-  const LocalCliStateStore({String? homeDirectoryPath})
-    : _homeDirectoryPath = homeDirectoryPath;
+  const LocalCliStateStore({
+    String? homeDirectoryPath,
+    String? localAppDataDirectoryPath,
+  }) : _homeDirectoryPath = homeDirectoryPath,
+       _localAppDataDirectoryPath = localAppDataDirectoryPath;
 
   final String? _homeDirectoryPath;
+  final String? _localAppDataDirectoryPath;
 
   String stateDirectoryPath(String rootPath) =>
       p.join(_normalizeRoot(rootPath), '.mini_program');
@@ -350,6 +354,18 @@ class LocalCliStateStore {
 
   String globalBackendWorkspaceStatePath() =>
       p.join(globalStateDirectoryPath(), 'global_backend_workspace.json');
+
+  String defaultBackendWorkspaceRootPath() {
+    if (Platform.isWindows) {
+      return p.join(
+        _normalizeLocalAppDataDirectoryPath(),
+        'mini_program',
+        'backend',
+      );
+    }
+
+    return p.join(globalStateDirectoryPath(), 'backend');
+  }
 
   Future<Directory> ensureStateDirectory(String rootPath) async {
     final directory = Directory(stateDirectoryPath(rootPath));
@@ -653,6 +669,12 @@ class LocalCliStateStore {
     p.absolute(_homeDirectoryPath ?? _resolveHomeDirectoryPath()),
   );
 
+  String _normalizeLocalAppDataDirectoryPath() => p.normalize(
+    p.absolute(
+      _localAppDataDirectoryPath ?? _resolveLocalAppDataDirectoryPath(),
+    ),
+  );
+
   Future<String?> _discoverEnvironmentRoot({
     required String startDirectory,
   }) async {
@@ -710,5 +732,24 @@ class LocalCliStateStore {
     }
 
     return Directory.current.path;
+  }
+
+  String _resolveLocalAppDataDirectoryPath() {
+    final localAppData = Platform.environment['LOCALAPPDATA'];
+    if (localAppData != null && localAppData.trim().isNotEmpty) {
+      return localAppData;
+    }
+
+    final userProfile = Platform.environment['USERPROFILE'];
+    if (userProfile != null && userProfile.trim().isNotEmpty) {
+      return p.join(userProfile, 'AppData', 'Local');
+    }
+
+    final home = Platform.environment['HOME'];
+    if (home != null && home.trim().isNotEmpty) {
+      return p.join(home, 'AppData', 'Local');
+    }
+
+    return p.join(_resolveHomeDirectoryPath(), 'AppData', 'Local');
   }
 }
