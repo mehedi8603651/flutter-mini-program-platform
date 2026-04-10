@@ -73,9 +73,9 @@ publishing is the next phase after the local CLI is stable.
 - `create`
   - wraps the existing scaffolder logic
 - `env init|use|status`
-  - own CLI environment config and default repo-root selection
+  - own CLI environment config and default standalone/local-cloud selection
 - `doctor`
-  - reports machine prerequisites, env config, repo-root resolution, and
+  - reports machine prerequisites, env config, optional repo-root resolution, and
     backend health before troubleshooting
 - `build`
   - wraps the existing builder logic
@@ -123,7 +123,7 @@ checked.
 Use these files for the first implementation wave:
 
 - `.mini_program/env.json`
-  - stores the default repo root and active local CLI environment
+  - stores the optional default repo root and active local CLI environment
 - `.mini_program/backend.local.json`
   - stores backend PID, configured port, log file paths, and last start time
 - `.mini_program/backend_workspace.json`
@@ -137,9 +137,9 @@ local publish bookkeeping.
 
 ### Environment fallback
 `build`, `validate`, `publish`, and `backend ...` should consult
-`.mini_program/env.json` before falling back to repo discovery. This allows a
-standalone mini-program workspace outside the platform repo to remember its
-`repoRootPath` after one `miniprogram env init --repo-root <path>` call.
+`.mini_program/env.json` before falling back to repo discovery. The standalone
+workflow must still work when no repo root is saved, while repo-managed flows
+can continue using `--repo-root` or a remembered `repoRootPath`.
 
 That local env flow now also refreshes a user-level fallback config, so
 commands such as `embed init` can resolve the same repo root even when they are

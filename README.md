@@ -24,7 +24,7 @@ Then use the shared `miniprogram` command:
 miniprogram create coupon_center
 miniprogram doctor
 miniprogram backend init
-miniprogram env init --repo-root <repo-root>
+miniprogram env init
 miniprogram build coupon_center
 miniprogram validate coupon_center
 miniprogram publish coupon_center
@@ -36,34 +36,21 @@ miniprogram backend status
 The older PowerShell wrappers still work, but `miniprogram ...` is now the
 preferred developer entrypoint.
 
-Use `miniprogram doctor` to verify the local machine, saved env config, repo
-resolution, and backend state before troubleshooting build or embed issues.
+Use `miniprogram doctor` to verify the local machine, saved env config, `stac`
+availability, and backend state before troubleshooting build or embed issues.
 
 ## Create A Mini-Program
 
-Generate a starter mini-program from the repo root with:
+Generate a starter mini-program anywhere with:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
-  -MiniProgramId coupon_center
-```
-
-Or generate a standalone mini-program anywhere:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
-  -MiniProgramId first_miniprogram `
-  -OutputRoot D:\first-miniprogram
+cd D:\
+miniprogram create first_miniprogram
 ```
 
 The command generates the manifest, two starter Stac screens, readable action
 helpers for host and internal mini-program routing, build config, README, and
-the expected `stac/components`, `stac/theme`, and `assets` folders under
-`mini_programs/<id>/`.
-
-The PowerShell wrapper now delegates to the installed `miniprogram` CLI for the
-normal text workflow. `-Output json` still uses the legacy Dart entrypoint for
-compatibility.
+the expected `stac/components`, `stac/theme`, and `assets` folders.
 
 Authoring guide:
 
@@ -74,11 +61,21 @@ Portable flows now support internal page-to-page routing by `screenId`, so a
 generated mini-program can move from its first screen to a second portable
 screen without leaving the mini-program container.
 
-For standalone mini-program workspaces outside this repo, run `miniprogram env
-init --repo-root <repo-root>` once from the mini-program root. That writes
-`.mini_program/env.json` and refreshes a user-level fallback repo config, so
-later `build`, `validate`, `publish`, `embed init`, and `backend ...` commands
-can reuse the saved repo context without repeating `--repo-root`.
+For a standalone local workflow:
+
+```powershell
+cd D:\first_miniprogram
+miniprogram doctor
+miniprogram backend init
+miniprogram env init
+miniprogram build first_miniprogram
+miniprogram validate first_miniprogram
+miniprogram publish first_miniprogram
+miniprogram backend start --port 8080
+```
+
+`env init` now works without a platform repo path. `build` uses either an
+explicit `--stac-cli-script` or a real `stac` executable on PATH.
 
 If you want a developer-owned local backend outside the platform repo, run
 `miniprogram backend init` once from the directory that should own the backend
@@ -93,8 +90,7 @@ artifacts there instead of the platform repo backend.
 Generate the app-owned embedding adapter for an existing Flutter app with:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\init_mini_program_embedding.ps1 `
-  -ProjectRoot D:\myflutterproject
+miniprogram embed init --project-root D:\myflutterproject
 ```
 
 The command generates:
@@ -114,39 +110,9 @@ full sample host. Feature pages can then open mini-programs through the
 generated `openAppMiniProgram(...)` helper or `AppMiniProgramLauncherButton`,
 while `MiniProgramAppShell` keeps app entry code small.
 
-The PowerShell wrapper delegates to the installed `miniprogram` CLI for the
-normal text workflow and falls back to the legacy Dart entrypoint only when a
-compatibility-only mode such as `-Output json` is requested.
-
-Build a mini-program with:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
-  -MiniProgramId profile_center
-```
-
-Or build a standalone mini-program against this repo's tooling:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
-  -MiniProgramRoot D:\first-miniprogram `
-  -RepoRoot D:\flutter-mini-program-platform
-```
-
-Publish it into the local backend sample with:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
-  -MiniProgramId profile_center
-```
-
-Standalone authoring root:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
-  -MiniProgramRoot D:\first-miniprogram `
-  -RepoRoot D:\flutter-mini-program-platform
-```
+`embed init` now updates the host app `pubspec.yaml` to use the published
+`mini_program_sdk` and `mini_program_contracts` packages instead of local
+`path:` dependencies.
 
 ## Repo Smoke Command
 

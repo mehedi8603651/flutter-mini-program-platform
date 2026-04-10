@@ -178,33 +178,42 @@ class LocalCliEnvironmentState {
   static const List<String> supportedEnvironments = <String>['local', 'cloud'];
 
   final int schemaVersion;
-  final String repoRootPath;
+  final String? repoRootPath;
   final String activeEnvironment;
   final String initializedAtUtc;
   final String updatedAtUtc;
 
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'schemaVersion': schemaVersion,
-    'repoRootPath': repoRootPath,
-    'activeEnvironment': activeEnvironment,
-    'initializedAtUtc': initializedAtUtc,
-    'updatedAtUtc': updatedAtUtc,
-  };
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'schemaVersion': schemaVersion,
+      'activeEnvironment': activeEnvironment,
+      'initializedAtUtc': initializedAtUtc,
+      'updatedAtUtc': updatedAtUtc,
+    };
+    if (repoRootPath != null) {
+      json['repoRootPath'] = repoRootPath;
+    }
+    return json;
+  }
 
   factory LocalCliEnvironmentState.fromJson(Map<String, dynamic> json) {
     final schemaVersion = json['schemaVersion'];
-    final repoRootPath = json['repoRootPath'];
+    final rawRepoRootPath = json['repoRootPath'];
     final activeEnvironment = json['activeEnvironment'];
     final initializedAtUtc = json['initializedAtUtc'];
     final updatedAtUtc = json['updatedAtUtc'];
 
     if (schemaVersion is! int ||
-        repoRootPath is! String ||
         activeEnvironment is! String ||
         initializedAtUtc is! String ||
         updatedAtUtc is! String) {
       throw const LocalCliStateException(
         'env.json is missing required fields.',
+      );
+    }
+    if (rawRepoRootPath != null && rawRepoRootPath is! String) {
+      throw const LocalCliStateException(
+        'env.json contains an invalid repoRootPath value.',
       );
     }
     if (!supportedEnvironments.contains(activeEnvironment)) {
@@ -216,7 +225,9 @@ class LocalCliEnvironmentState {
 
     return LocalCliEnvironmentState(
       schemaVersion: schemaVersion,
-      repoRootPath: p.normalize(p.absolute(repoRootPath)),
+      repoRootPath: rawRepoRootPath == null || rawRepoRootPath.trim().isEmpty
+          ? null
+          : p.normalize(p.absolute(rawRepoRootPath)),
       activeEnvironment: activeEnvironment,
       initializedAtUtc: initializedAtUtc,
       updatedAtUtc: updatedAtUtc,

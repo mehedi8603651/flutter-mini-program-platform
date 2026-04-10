@@ -124,7 +124,7 @@ void main() {
         result.checks.any(
           (check) =>
               check.label == 'Platform repo' &&
-              check.status == MiniprogramDoctorCheckStatus.warning,
+              check.status == MiniprogramDoctorCheckStatus.skipped,
         ),
         isTrue,
       );

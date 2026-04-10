@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.6
+
+- let `miniprogram env init` succeed without a saved platform repo root for the
+  standalone workflow
+- let standalone `validate` and `publish` run against `backend init`
+  workspaces without any platform repo path
+- update `embed init` to patch host app `pubspec.yaml` with hosted
+  `mini_program_sdk` and `mini_program_contracts` dependencies
+- refresh docs and the installed-CLI smoke flow around the fully standalone
+  local workflow
+
 ## 0.2.5
 
 - add `miniprogram backend init` to scaffold a standalone backend workspace

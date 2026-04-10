@@ -426,44 +426,54 @@ ${notes.join('\n')}
 
 ## Build
 
-Use the repo helper:
+Before your first local build, verify prerequisites and initialize the local
+tooling state:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\build_mini_program.ps1 ${isStandalone ? '-MiniProgramRoot <mini-program-root> -RepoRoot <repo-root>' : '-MiniProgramId $miniProgramId'}
+miniprogram doctor
+miniprogram backend init
+miniprogram env init
+```
+
+Then build with the global CLI:
+
+```powershell
+miniprogram build $miniProgramId
 ```
 
 Expected output:
 
 ```text
-mini_programs/$miniProgramId/stac/.build/screens/$entryScreenId.json
-```
-
-If `stac-dev` is not present locally, pass an explicit CLI script path:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\build_mini_program.ps1 `
-  ${isStandalone ? '-MiniProgramRoot <mini-program-root> `' : '-MiniProgramId $miniProgramId `'}
-  -StacCliScript D:\\path\\to\\bin\\stac_cli.dart
+stac/.build/screens/$entryScreenId.json
 ```
 
 ## Validate
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\validate_delivery.ps1 -MiniProgramId $miniProgramId
+miniprogram validate $miniProgramId
 ```
 
 ## Publish local backend sample
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\\tools\\publish_mini_program.ps1 ${isStandalone ? '-MiniProgramRoot <mini-program-root> -RepoRoot <repo-root>' : '-MiniProgramId $miniProgramId'}
+miniprogram publish $miniProgramId
 ```
 
 ## Test in a host
 
-For a local proof, add the mini-program to a host catalog and then run one of:
+For a local proof:
 
-- `hosts/super_app_host`
-- `hosts/partner_app_host`
+1. start the backend:
+
+```powershell
+miniprogram backend start --port 8080
+```
+
+2. initialize a host app:
+
+```powershell
+miniprogram embed init --project-root <existing-flutter-app>
+```
 ''';
   }
 

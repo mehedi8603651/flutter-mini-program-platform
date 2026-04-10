@@ -333,18 +333,25 @@ class MiniprogramCli {
             when miniProgramRoot.trim().isNotEmpty)
           miniProgramRoot,
       ],
-      required: true,
+      required: false,
     );
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
       currentWorkingDirectory: _currentWorkingDirectory(),
-      requireRepoRoot: true,
+      requireRepoRoot: false,
     );
-
+    final backendRootPath = await _resolveBackendRootPath(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+      additionalSearchRoots: <String>[resolved.miniProgramRootPath],
+      required: true,
+    );
     final report = await _validator.validate(
-      repoRootPath: resolved.repoRootPath!,
+      repoRootPath: backendRootPath!,
+      authoredRepoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
+      backendRootPath: backendRootPath,
       miniProgramId: miniProgramId,
       externalMiniProgramRootPath: resolved.isRepoManaged
           ? null
@@ -427,14 +434,14 @@ class MiniprogramCli {
             when miniProgramRoot.trim().isNotEmpty)
           miniProgramRoot,
       ],
-      required: true,
+      required: false,
     );
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
       currentWorkingDirectory: _currentWorkingDirectory(),
-      requireRepoRoot: true,
+      requireRepoRoot: false,
     );
     final backendRootPath = await _resolveBackendRootPath(
       explicitRootPath: results.option('root'),
@@ -445,7 +452,7 @@ class MiniprogramCli {
 
     final result = await _publisher.publish(
       MiniProgramPublishRequest(
-        repoRootPath: resolved.repoRootPath!,
+        repoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
         backendRootPath: backendRootPath!,
         miniProgramId: miniProgramId,
         miniProgramRootPath: resolved.isRepoManaged
@@ -619,12 +626,6 @@ class MiniprogramCli {
           results.option('repo-root') ?? existingState?.repoRootPath,
       currentWorkingDirectory: configRootPath,
     );
-    if (repoRootPath == null) {
-      throw FormatException(
-        'env init could not infer a platform repo root from $configRootPath. '
-        'Pass --repo-root <path>.',
-      );
-    }
 
     final now = DateTime.now().toUtc().toIso8601String();
     final state = LocalCliEnvironmentState(
@@ -1118,7 +1119,7 @@ Commands:
       'Config scope: ${resolved.scope}',
       'Config root: ${resolved.rootPath}',
       'Config file: ${resolved.filePath}',
-      'Repo root: ${resolved.state.repoRootPath}',
+      'Repo root: ${resolved.state.repoRootPath ?? 'not configured'}',
       'Active environment: ${resolved.state.activeEnvironment}',
       'Initialized at UTC: ${resolved.state.initializedAtUtc}',
       'Updated at UTC: ${resolved.state.updatedAtUtc}',

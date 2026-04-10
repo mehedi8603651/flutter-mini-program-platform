@@ -166,12 +166,7 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
         -Name "Initialize standalone env config" `
         -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "env",
-            "init",
-            "--repo-root",
-            $RepoRoot
-        )
+        -Arguments @("env", "init")
 
     Invoke-Step `
         -Name "Check standalone env status" `
@@ -230,6 +225,10 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
     @'
 name: smoke_host_app
 version: 1.0.0+1
+
+dependencies:
+  flutter:
+    sdk: flutter
 '@ | Set-Content -Path (Join-Path $hostRoot "pubspec.yaml") -NoNewline
 
     Invoke-Step `

@@ -7,7 +7,7 @@ Preferred command surface:
 
 ```powershell
 dart pub global activate mini_program_tooling
-miniprogram embed init --project-root <existing-flutter-app> --repo-root <repo-root>
+miniprogram embed init --project-root <existing-flutter-app>
 ```
 
 Repo-local contributor install:
@@ -18,8 +18,8 @@ dart pub global activate --source path <repo-root>\packages\mini_program_tooling
 
 The intended v1 flow is:
 
-1. run `init_mini_program_embedding`
-2. add `mini_program_sdk` and `mini_program_contracts`
+1. run `miniprogram embed init`
+2. run `flutter pub get`
 3. use the generated `MiniProgramAppShell`
 4. review the generated app-owned `HostBridge`
 5. adjust backend/runtime config only if needed
@@ -28,8 +28,7 @@ The intended v1 flow is:
 ## Quick start with the initializer
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File <repo-root>\tools\init_mini_program_embedding.ps1 `
-  -ProjectRoot <existing-flutter-app>
+miniprogram embed init --project-root <existing-flutter-app>
 ```
 
 This generates:
@@ -57,14 +56,19 @@ Start lean:
 Keep `secure_api` and richer auth/session wiring for a later step unless the
 old app already has a clear host-owned secure flow ready to integrate.
 
-## 1. Add dependencies
+## 1. Hosted dependencies
 
 ```yaml
 dependencies:
-  mini_program_sdk:
-    path: <repo-root>/packages/mini_program_sdk
-  mini_program_contracts:
-    path: <repo-root>/packages/mini_program_contracts
+  mini_program_sdk: ^0.1.0
+  mini_program_contracts: ^0.1.0
+```
+
+`embed init` now patches `pubspec.yaml` to add or replace these dependencies for
+you. Run:
+
+```powershell
+flutter pub get
 ```
 
 ## 2. Keep `main.dart` small
@@ -220,8 +224,8 @@ other Flutter page widget.
 
 - `MiniProgramPage` is the ergonomic embedded API for existing apps.
 - `MiniProgramHost` remains the low-level primitive for advanced integrations.
-- `init_mini_program_embedding` is the quickest way to generate the adapter
-  layer for an old Flutter app.
+- `miniprogram embed init` is the quickest way to generate the adapter layer
+  for an old Flutter app.
 - `MiniProgramAppShell` is the lowest-friction app entrypoint. It keeps
   `main.dart` small and hides the runtime-scope boilerplate.
 - Internal mini-program page-to-page routing now happens inside the shared SDK

@@ -111,8 +111,7 @@ class MiniprogramDoctor {
             status: MiniprogramDoctorCheckStatus.warning,
             summary: 'No miniprogram env configuration was found.',
             detail:
-                'Run `miniprogram env init --repo-root <platform-repo-root>` '
-                'from your mini-program workspace.',
+                'Run `miniprogram env init` from your mini-program workspace.',
           ),
         );
       } else {
@@ -123,7 +122,8 @@ class MiniprogramDoctor {
             summary:
                 '${environmentState.scope} config at ${environmentState.filePath}',
             detail:
-                'Active environment: ${environmentState.state.activeEnvironment}',
+                'Active environment: ${environmentState.state.activeEnvironment}; '
+                'repo root: ${environmentState.state.repoRootPath ?? 'not configured'}',
           ),
         );
       }
@@ -150,11 +150,12 @@ class MiniprogramDoctor {
         checks.add(
           const MiniprogramDoctorCheck(
             label: 'Platform repo',
-            status: MiniprogramDoctorCheckStatus.warning,
-            summary: 'Platform repo root could not be resolved.',
+            status: MiniprogramDoctorCheckStatus.skipped,
+            summary: 'Platform repo root is not configured.',
             detail:
-                'Repo-dependent commands still need `--repo-root` or a saved '
-                '`miniprogram env init` configuration.',
+                'Standalone CLI workflows can continue without it. Older '
+                'repo-managed commands can still pass `--repo-root` when '
+                'needed.',
           ),
         );
       } else {
@@ -183,7 +184,8 @@ class MiniprogramDoctor {
         currentWorkingDirectory: cwd,
         additionalSearchRoots: <String>[
           if (repoRootPath != null) repoRootPath,
-          if (environmentState != null) environmentState.state.repoRootPath,
+          if (environmentState?.state.repoRootPath case final repoRoot?)
+            repoRoot,
         ],
       );
     } on LocalCliStateException catch (error) {

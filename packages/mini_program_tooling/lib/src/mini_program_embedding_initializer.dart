@@ -62,6 +62,9 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
+  static const String _miniProgramSdkConstraint = '^0.1.0';
+  static const String _miniProgramContractsConstraint = '^0.1.0';
+
   Future<MiniProgramEmbeddingInitResult> initialize(
     MiniProgramEmbeddingInitRequest request,
   ) async {
@@ -104,6 +107,7 @@ class MiniProgramEmbeddingInitializer {
         ? request.hostVersion!.trim()
         : _extractVersion(pubspecSource);
     final normalizedRoutePath = _normalizeRoutePath(request.nativeRoutePath);
+    final updatedPubspecSource = _ensureHostedDependencies(pubspecSource);
 
     final integrationRootPath = p.join(projectRootPath, 'lib', 'mini_program');
     final integrationRootDir = Directory(integrationRootPath);
@@ -156,6 +160,10 @@ class MiniProgramEmbeddingInitializer {
     await integrationRootDir.create(recursive: true);
 
     final createdPaths = <String>[];
+    if (updatedPubspecSource != pubspecSource) {
+      await pubspecFile.writeAsString(updatedPubspecSource);
+      createdPaths.add(pubspecFile.path);
+    }
     for (final entry in managedFiles.entries) {
       final file = File(entry.key);
       await file.parent.create(recursive: true);
@@ -216,6 +224,90 @@ class MiniProgramEmbeddingInitializer {
     }
 
     return trimmed.startsWith('/') ? trimmed : '/$trimmed';
+  }
+
+  String _ensureHostedDependencies(String source) {
+    final normalizedSource = source.replaceAll('\r\n', '\n');
+    final lines = normalizedSource.split('\n');
+    final dependenciesHeaderIndex = lines.indexWhere(
+      (line) => line.trim() == 'dependencies:',
+    );
+
+    if (dependenciesHeaderIndex == -1) {
+      final suffix = normalizedSource.endsWith('\n') || normalizedSource.isEmpty
+          ? ''
+          : '\n';
+      return '$normalizedSource${suffix}dependencies:\n'
+          '  mini_program_sdk: $_miniProgramSdkConstraint\n'
+          '  mini_program_contracts: $_miniProgramContractsConstraint\n';
+    }
+
+    var dependenciesEndIndex = dependenciesHeaderIndex + 1;
+    while (dependenciesEndIndex < lines.length) {
+      final line = lines[dependenciesEndIndex];
+      if (RegExp(r'^[A-Za-z_][A-Za-z0-9_]*:\s*$').hasMatch(line)) {
+        break;
+      }
+      dependenciesEndIndex += 1;
+    }
+
+    final sectionLines = lines.sublist(
+      dependenciesHeaderIndex + 1,
+      dependenciesEndIndex,
+    );
+    final rebuiltSectionLines = <String>[];
+    final preservedPackages = <String>{};
+
+    for (var index = 0; index < sectionLines.length; index++) {
+      final line = sectionLines[index];
+      final packageMatch = RegExp(r'^  ([A-Za-z0-9_]+):').firstMatch(line);
+      if (packageMatch == null) {
+        rebuiltSectionLines.add(line);
+        continue;
+      }
+
+      final packageName = packageMatch.group(1)!;
+      final shouldReplace =
+          packageName == 'mini_program_sdk' ||
+          packageName == 'mini_program_contracts';
+
+      final blockLines = <String>[line];
+      while (index + 1 < sectionLines.length &&
+          !RegExp(r'^  [A-Za-z0-9_]+:').hasMatch(sectionLines[index + 1])) {
+        index += 1;
+        blockLines.add(sectionLines[index]);
+      }
+
+      if (!shouldReplace) {
+        rebuiltSectionLines.addAll(blockLines);
+        continue;
+      }
+
+      preservedPackages.add(packageName);
+      rebuiltSectionLines.add(
+        packageName == 'mini_program_sdk'
+            ? '  mini_program_sdk: $_miniProgramSdkConstraint'
+            : '  mini_program_contracts: $_miniProgramContractsConstraint',
+      );
+    }
+
+    if (!preservedPackages.contains('mini_program_sdk')) {
+      rebuiltSectionLines.add(
+        '  mini_program_sdk: $_miniProgramSdkConstraint',
+      );
+    }
+    if (!preservedPackages.contains('mini_program_contracts')) {
+      rebuiltSectionLines.add(
+        '  mini_program_contracts: $_miniProgramContractsConstraint',
+      );
+    }
+
+    final rebuiltLines = <String>[
+      ...lines.sublist(0, dependenciesHeaderIndex + 1),
+      ...rebuiltSectionLines,
+      ...lines.sublist(dependenciesEndIndex),
+    ];
+    return rebuiltLines.join('\n');
   }
 
   String _buildRoutes({required String nativeRoutePath}) {
@@ -627,17 +719,6 @@ class NativeProfileEditorPage extends StatelessWidget {
     required String hostVersion,
     required String nativeRoutePath,
   }) {
-    final sdkPath = _toPosixPath(
-      repoRootPath == null
-          ? '<repo-root>/packages/mini_program_sdk'
-          : p.join(repoRootPath, 'packages', 'mini_program_sdk'),
-    );
-    final contractsPath = _toPosixPath(
-      repoRootPath == null
-          ? '<repo-root>/packages/mini_program_contracts'
-          : p.join(repoRootPath, 'packages', 'mini_program_contracts'),
-    );
-
     return '''
 # Embedded Mini-Program Adapter
 
@@ -653,15 +734,17 @@ Generated files:
 - `native_profile_editor_page.dart`
 - `mini_program_launcher.dart`
 
-## 1. Ensure package dependencies exist in pubspec.yaml
+## 1. Hosted package dependencies
 
 ```yaml
 dependencies:
-  mini_program_sdk:
-    path: $sdkPath
-  mini_program_contracts:
-    path: $contractsPath
+  mini_program_sdk: $_miniProgramSdkConstraint
+  mini_program_contracts: $_miniProgramContractsConstraint
 ```
+
+`embed init` updates `pubspec.yaml` to add these hosted packages if they are
+missing or still using local `path:` entries. Run `flutter pub get` after the
+scaffold is generated.
 
 ## 2. Keep main.dart small
 
@@ -740,6 +823,4 @@ flowing through your app-owned route factory.
 ```
 ''';
   }
-
-  String _toPosixPath(String pathValue) => pathValue.replaceAll(r'\', '/');
 }

@@ -64,14 +64,14 @@ Initialize local CLI env once from a standalone mini-program workspace:
 
 ```bash
 cd <workspace>/coupon_center
-miniprogram env init --repo-root <repo-root>
+miniprogram env init
 ```
 
 That writes both a workspace-local `.mini_program/env.json` and a user-level
-fallback repo-root, so later commands can run from this workspace or from
-unrelated directories without repeating `--repo-root`.
+fallback env file, so later commands can run from this workspace or from
+unrelated directories without repeating setup.
 
-Then build, validate, and publish without repeating `--repo-root`:
+Then build, validate, and publish without any platform repo path:
 
 ```bash
 miniprogram build coupon_center
@@ -89,6 +89,9 @@ Initialize the embedding adapter for an existing Flutter app:
 miniprogram embed init --project-root <existing-flutter-app>
 ```
 
+`embed init` updates the host app `pubspec.yaml` to use the published
+`mini_program_sdk` and `mini_program_contracts` packages.
+
 Start and inspect the local backend:
 
 ```bash
@@ -103,7 +106,7 @@ miniprogram backend stop
 - `flutter` on PATH
 - `stac` on PATH
 - saved env configuration
-- resolved platform repo root
+- optional platform repo root
 - local backend workspace layout
 - current backend health/state
 
@@ -130,6 +133,8 @@ policy files that were not created by the CLI publish flow.
 - `publish --target cloud` is intentionally reserved for a later CLI phase.
 - `env use local|cloud` only switches saved CLI context in this phase. Cloud
   publish and cloud backend operations are still follow-up work.
+- Standalone build/publish/validate no longer require a platform repo root.
+  When `stac` is not on PATH, use `--stac-cli-script` explicitly.
 - Local backend lifecycle commands can work from either:
   - a `miniprogram backend init` workspace
   - the platform repo layout with `backend/local_backend_service/` and

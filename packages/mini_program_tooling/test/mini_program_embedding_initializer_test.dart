@@ -57,12 +57,15 @@ void main() {
       final readme = await File(
         p.join(integrationRootPath, 'README.md'),
       ).readAsString();
+      final updatedPubspec = await File(
+        p.join(tempDir.path, 'pubspec.yaml'),
+      ).readAsString();
 
       expect(result.packageName, 'my_existing_app');
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
-      expect(result.createdPaths, hasLength(8));
+      expect(result.createdPaths, hasLength(9));
       expect(runtimeSetup, contains("const String _hostAppId = 'my_existing_app';"));
       expect(runtimeSetup, contains("const String _hostVersion = '3.2.0';"));
       expect(routes, contains("static const String nativeProfileEditor = '/native/profile-editor';"));
@@ -72,12 +75,13 @@ void main() {
       expect(appShell, contains('class MiniProgramAppShell extends StatefulWidget'));
       expect(appShell, contains('MiniProgramRuntimeScope('));
       expect(barrel, contains("export 'mini_program_app_shell.dart';"));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.1.0'));
+      expect(updatedPubspec, contains('mini_program_contracts: ^0.1.0'));
       expect(
         readme,
         allOf(
-          contains(
-            'path: ${repoRootPath.replaceAll('\\', '/')}/packages/mini_program_sdk',
-          ),
+          contains('mini_program_sdk: ^0.1.0'),
+          contains('mini_program_contracts: ^0.1.0'),
           contains('MiniProgramAppShell('),
         ),
       );

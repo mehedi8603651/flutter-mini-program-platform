@@ -188,7 +188,8 @@ void main() {
       expect(await File(p.join(standaloneRoot, 'manifest.json')).exists(), isTrue);
 
       final readme = await File(p.join(standaloneRoot, 'README.md')).readAsString();
-      expect(readme, contains('-MiniProgramRoot <mini-program-root> -RepoRoot <repo-root>'));
+      expect(readme, contains('miniprogram doctor'));
+      expect(readme, contains('miniprogram build coupon_center'));
     });
 
     test('fails on unknown capability values', () async {

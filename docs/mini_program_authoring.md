@@ -7,30 +7,21 @@ into the local backend sample.
 
 ## Quick start
 
-Generate a new scaffold from the repo root:
+Generate a new scaffold anywhere:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
-  -MiniProgramId coupon_center
+cd D:\
+miniprogram create first_miniprogram
 ```
 
-Generate a standalone mini-program anywhere:
+Optional scaffold inputs:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
-  -MiniProgramId first_miniprogram `
-  -OutputRoot D:\first-miniprogram
-```
-
-Optional inputs:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\create_mini_program.ps1 `
-  -MiniProgramId claim_center `
-  -Title "Claim Center" `
-  -Description "Portable claim intake starter flow." `
-  -Capabilities analytics,secure_api `
-  -Force
+miniprogram create claim_center `
+  --title "Claim Center" `
+  --description "Portable claim intake starter flow." `
+  --capabilities analytics,secure_api `
+  --force
 ```
 
 The scaffold creates:
@@ -108,25 +99,19 @@ Stac build step.
 
 ## Build
 
-Preferred local command:
+Preferred standalone local flow:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
-  -MiniProgramId <id>
-```
-
-Standalone mini-program root:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
-  -MiniProgramRoot D:\first-miniprogram `
-  -RepoRoot D:\flutter-mini-program-platform
+miniprogram doctor
+miniprogram backend init
+miniprogram env init
+miniprogram build <id>
 ```
 
 Expected screen output:
 
 ```text
-mini_programs/<id>/stac/.build/screens/<id>_home.json
+stac/.build/screens/<id>_home.json
 ```
 
 Build resolution order:
@@ -135,12 +120,11 @@ Build resolution order:
 2. vendored `stac-dev/packages/stac_cli/bin/stac_cli.dart`
 3. global `stac` command
 
-If `stac-dev` is not present locally:
+Standalone external-developer flow should normally rely on the real `stac`
+command on PATH. If you need to point at a specific CLI script:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\build_mini_program.ps1 `
-  -MiniProgramId <id> `
-  -StacCliScript D:\path\to\bin\stac_cli.dart
+miniprogram build <id> --stac-cli-script D:\path\to\bin\stac_cli.dart
 ```
 
 ## Validate
@@ -148,8 +132,7 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 Run validation before publish:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1 `
-  -MiniProgramId <id>
+miniprogram validate <id>
 ```
 
 ## Publish the local backend sample
@@ -157,38 +140,23 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 Preferred command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
-  -MiniProgramId <id>
-```
-
-Standalone mini-program root:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_mini_program.ps1 `
-  -MiniProgramRoot D:\first-miniprogram `
-  -RepoRoot D:\flutter-mini-program-platform
+miniprogram publish <id>
 ```
 
 This command:
 
 1. builds the mini-program
 2. runs pre-publish validation
-3. copies manifest and screens into `backend/api/`
+3. copies manifest and screens into the initialized local backend workspace
 4. runs post-publish validation
-
-Low-level copy-only command:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1 `
-  -MiniProgramId <id>
-```
 
 ## Test in a host
 
 For a local proof:
 
-1. Publish the new mini-program into `backend/api/`.
-2. Run `hosts/super_app_host` or `hosts/partner_app_host`.
+1. Publish the new mini-program into the initialized local backend workspace.
+2. Run `miniprogram backend start --port 8080`.
+3. Run a Flutter host app.
 3. Open the generated entry screen and verify:
    - first screen -> second screen internal routing
    - back to first screen internal routing
