@@ -72,6 +72,7 @@ void main() {
 
       final doctor = MiniprogramDoctor(
         stateStore: stateStore,
+        managedStacBuilder: const _ReadyManagedStacBuilder(),
         backendController: _HealthyBackendController(repoRoot.path),
         shellRunner: _okShellRunner,
         workingDirectory: workspaceRoot.path,
@@ -84,6 +85,14 @@ void main() {
         result.checks.any(
           (check) =>
               check.label == 'Env config' &&
+              check.status == MiniprogramDoctorCheckStatus.ok,
+        ),
+        isTrue,
+      );
+      expect(
+        result.checks.any(
+          (check) =>
+              check.label == 'Pinned Stac builder' &&
               check.status == MiniprogramDoctorCheckStatus.ok,
         ),
         isTrue,
@@ -104,6 +113,7 @@ void main() {
 
       final doctor = MiniprogramDoctor(
         stateStore: stateStore,
+        managedStacBuilder: const _ReadyManagedStacBuilder(),
         backendController: const LocalBackendController(),
         shellRunner: _missingShellRunner,
         workingDirectory: workspaceRoot.path,
@@ -173,12 +183,13 @@ void main() {
           ),
         ).writeAsString('void main() {}');
 
-        final doctor = MiniprogramDoctor(
-          stateStore: stateStore,
-          backendController: _HealthyBackendController(backendRoot),
-          shellRunner: _okShellRunner,
-          workingDirectory: workspaceRoot.path,
-        );
+      final doctor = MiniprogramDoctor(
+        stateStore: stateStore,
+        managedStacBuilder: const _ReadyManagedStacBuilder(),
+        backendController: _HealthyBackendController(backendRoot),
+        shellRunner: _okShellRunner,
+        workingDirectory: workspaceRoot.path,
+      );
 
         final result = await doctor.diagnose();
 
@@ -212,7 +223,6 @@ Future<ProcessResult> _okShellRunner(
 }) async {
   final versionLine = switch (executable) {
     'flutter' => 'Flutter 3.35.0',
-    'stac' => 'stac 1.0.0',
     _ => '$executable ok',
   };
   return ProcessResult(1, 0, versionLine, '');
@@ -250,6 +260,22 @@ class _HealthyBackendController extends LocalBackendController {
       processAlive: true,
       healthy: true,
       healthStatusCode: 200,
+    );
+  }
+}
+
+class _ReadyManagedStacBuilder extends ManagedStacBuilder {
+  const _ReadyManagedStacBuilder();
+
+  @override
+  Future<ManagedStacBuilderStatus> inspect() async {
+    return const ManagedStacBuilderStatus(
+      pinnedVersion: ManagedStacBuilder.pinnedVersion,
+      templateRootPath: 'template',
+      cacheRootPath: 'cache',
+      bundledTemplateAvailable: true,
+      cachePrepared: true,
+      dependenciesResolved: true,
     );
   }
 }

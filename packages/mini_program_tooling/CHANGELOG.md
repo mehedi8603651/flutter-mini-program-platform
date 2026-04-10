@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.7
+
+- manage a pinned Stac builder internally inside `mini_program_tooling`
+- expose the managed pinned Stac builder status and version through
+  `miniprogram doctor`
+- keep `--stac-cli-script` as the escape hatch while removing the normal need
+  for a separate visible `stac` install
+
 ## 0.2.6
 
 - let `miniprogram env init` succeed without a saved platform repo root for the

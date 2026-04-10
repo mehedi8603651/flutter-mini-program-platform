@@ -104,7 +104,7 @@ miniprogram backend stop
 
 - Dart runtime availability
 - `flutter` on PATH
-- `stac` on PATH
+- managed pinned Stac builder status and pinned version
 - saved env configuration
 - optional platform repo root
 - local backend workspace layout
@@ -134,7 +134,10 @@ policy files that were not created by the CLI publish flow.
 - `env use local|cloud` only switches saved CLI context in this phase. Cloud
   publish and cloud backend operations are still follow-up work.
 - Standalone build/publish/validate no longer require a platform repo root.
-  When `stac` is not on PATH, use `--stac-cli-script` explicitly.
+- Normal builds use the managed pinned Stac builder bundled inside
+  `mini_program_tooling`.
+- `--stac-cli-script` remains the escape hatch when you intentionally need to
+  override that managed builder.
 - Local backend lifecycle commands can work from either:
   - a `miniprogram backend init` workspace
   - the platform repo layout with `backend/local_backend_service/` and

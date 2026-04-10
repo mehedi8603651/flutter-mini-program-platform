@@ -441,6 +441,10 @@ Then build with the global CLI:
 miniprogram build $miniProgramId
 ```
 
+Normal builds use the managed pinned Stac builder bundled inside
+`mini_program_tooling`. Keep `--stac-cli-script` only when you intentionally
+need to override that builder.
+
 Expected output:
 
 ```text

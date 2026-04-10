@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'managed_stac_builder.dart';
+
 typedef ProcessRunner = Future<ProcessResult> Function(
   String executable,
   List<String> arguments, {
@@ -74,9 +76,12 @@ class MiniProgramBuildException implements Exception {
 class MiniProgramBuilder {
   const MiniProgramBuilder({
     ProcessRunner processRunner = _defaultProcessRunner,
-  }) : _processRunner = processRunner;
+    ManagedStacBuilder managedStacBuilder = const ManagedStacBuilder(),
+  }) : _processRunner = processRunner,
+       _managedStacBuilder = managedStacBuilder;
 
   final ProcessRunner _processRunner;
+  final ManagedStacBuilder _managedStacBuilder;
 
   Future<MiniProgramBuildResult> build(MiniProgramBuildRequest request) async {
     final repoRootPath = request.repoRootPath == null
@@ -239,6 +244,29 @@ class MiniProgramBuilder {
       );
     }
 
+    ManagedStacBuilderException? managedBuilderError;
+    final managedStatus = await _managedStacBuilder.inspect();
+    if (managedStatus.bundledTemplateAvailable) {
+      try {
+        final managedResolution = await _managedStacBuilder.ensureReady();
+        return _BuildCommand(
+          source: 'managed_pinned_stac',
+          executable: 'dart',
+          arguments: <String>[
+            'run',
+            managedResolution.entrypointPath,
+            'build',
+            '--project',
+            miniProgramRootPath,
+          ],
+          workingDirectory: managedResolution.packageRootPath,
+          environment: _stacCliEnvironment(),
+        );
+      } on ManagedStacBuilderException catch (error) {
+        managedBuilderError = error;
+      }
+    }
+
     if (repoRootPath != null) {
       final vendoredScriptPath = p.join(
         repoRootPath,
@@ -280,10 +308,19 @@ class MiniProgramBuilder {
       );
     }
 
+    if (managedBuilderError != null) {
+      throw MiniProgramBuildException(
+        '${managedBuilderError.message}\n'
+        'Fallbacks: provide --stac-cli-script, restore '
+        'stac-dev/packages/stac_cli/bin/stac_cli.dart, or install a global '
+        '`stac` command.',
+      );
+    }
+
     throw const MiniProgramBuildException(
-      'No Stac CLI was found. Provide --stac-cli-script, restore '
-      'stac-dev/packages/stac_cli/bin/stac_cli.dart, or install a global '
-      '`stac` command.',
+      'No Stac builder was found. The managed pinned builder template is '
+      'missing, and no explicit script, vendored stac-dev CLI, or global '
+      '`stac` command was available.',
     );
   }
 

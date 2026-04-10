@@ -74,8 +74,10 @@ miniprogram publish first_miniprogram
 miniprogram backend start --port 8080
 ```
 
-`env init` now works without a platform repo path. `build` uses either an
-explicit `--stac-cli-script` or a real `stac` executable on PATH.
+`env init` now works without a platform repo path. `build` uses the managed
+pinned Stac builder bundled inside `mini_program_tooling`. Keep
+`--stac-cli-script` only as the expert override when you intentionally need a
+different Stac CLI.
 
 If you want a developer-owned local backend outside the platform repo, run
 `miniprogram backend init` once from the directory that should own the backend

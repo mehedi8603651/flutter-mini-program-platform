@@ -117,11 +117,12 @@ stac/.build/screens/<id>_home.json
 Build resolution order:
 
 1. explicit `-StacCliScript`
-2. vendored `stac-dev/packages/stac_cli/bin/stac_cli.dart`
-3. global `stac` command
+2. managed pinned Stac builder bundled inside `mini_program_tooling`
+3. vendored `stac-dev/packages/stac_cli/bin/stac_cli.dart`
+4. global `stac` command
 
-Standalone external-developer flow should normally rely on the real `stac`
-command on PATH. If you need to point at a specific CLI script:
+Standalone external-developer flow should normally rely on the managed pinned
+Stac builder. If you need to point at a specific CLI script:
 
 ```powershell
 miniprogram build <id> --stac-cli-script D:\path\to\bin\stac_cli.dart

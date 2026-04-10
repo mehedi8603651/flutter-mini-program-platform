@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import 'local_backend_controller.dart';
 import 'local_cli_state.dart';
+import 'managed_stac_builder.dart';
 import 'mini_program_path_resolver.dart';
 
 typedef DoctorShellRunner =
@@ -44,17 +45,20 @@ class MiniprogramDoctor {
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
     LocalBackendController backendController = const LocalBackendController(),
+    ManagedStacBuilder managedStacBuilder = const ManagedStacBuilder(),
     DoctorShellRunner shellRunner = _defaultShellRunner,
     String? workingDirectory,
   }) : _stateStore = stateStore,
        _pathResolver = pathResolver,
        _backendController = backendController,
+       _managedStacBuilder = managedStacBuilder,
        _shellRunner = shellRunner,
        _workingDirectory = workingDirectory;
 
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
   final LocalBackendController _backendController;
+  final ManagedStacBuilder _managedStacBuilder;
   final DoctorShellRunner _shellRunner;
   final String? _workingDirectory;
 
@@ -88,15 +92,7 @@ class MiniprogramDoctor {
     );
 
     checks.add(
-      await _probeCommand(
-        label: 'Stac CLI',
-        executable: 'stac',
-        arguments: const <String>['--version'],
-        missingSummary: 'Stac was not found on PATH.',
-        missingDetail:
-            'Install the `stac` executable or keep using '
-            '`--stac-cli-script` while working against a platform repo.',
-      ),
+      await _describeManagedStacBuilder(),
     );
 
     ResolvedLocalCliEnvironmentState? environmentState;
@@ -345,6 +341,43 @@ class MiniprogramDoctor {
         status: MiniprogramDoctorCheckStatus.warning,
         summary: missingSummary,
         detail: error.message.isEmpty ? missingDetail : error.message,
+      );
+    }
+  }
+
+  Future<MiniprogramDoctorCheck> _describeManagedStacBuilder() async {
+    try {
+      final status = await _managedStacBuilder.inspect();
+      if (!status.bundledTemplateAvailable) {
+        return const MiniprogramDoctorCheck(
+          label: 'Pinned Stac builder',
+          status: MiniprogramDoctorCheckStatus.error,
+          summary: 'The bundled pinned Stac builder template is missing.',
+          detail:
+              'Reinstall mini_program_tooling or use --stac-cli-script as a '
+              'temporary workaround.',
+        );
+      }
+
+      final cacheSummary = status.dependenciesResolved
+          ? 'cache ready'
+          : status.cachePrepared
+          ? 'cache present, bootstrap pending'
+          : 'will bootstrap on first build';
+      return MiniprogramDoctorCheck(
+        label: 'Pinned Stac builder',
+        status: MiniprogramDoctorCheckStatus.ok,
+        summary: 'Bundled Stac CLI ${status.pinnedVersion} ($cacheSummary)',
+        detail:
+            'Cache root: ${status.cacheRootPath}. Use --stac-cli-script only '
+            'when you need to override the managed builder.',
+      );
+    } on ManagedStacBuilderException catch (error) {
+      return MiniprogramDoctorCheck(
+        label: 'Pinned Stac builder',
+        status: MiniprogramDoctorCheckStatus.error,
+        summary: 'Failed to inspect the bundled pinned Stac builder.',
+        detail: error.message,
       );
     }
   }

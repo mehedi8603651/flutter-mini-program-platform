@@ -80,7 +80,6 @@ $workspaceRoot = Join-Path $tempRoot "workspace"
 $miniProgramRoot = Join-Path $workspaceRoot "coupon_center"
 $hostRoot = Join-Path $workspaceRoot "host_app"
 $backendWorkspaceRoot = Join-Path $workspaceRoot "backend_workspace"
-$fakeStacCliPath = Join-Path $workspaceRoot "fake_stac_cli.dart"
 $port = Get-FreeTcpPort
 $backendStarted = $false
 $sourceSnapshotDirectory = Join-Path $RepoRoot "packages\mini_program_tooling\.dart_tool\pub\bin\mini_program_tooling"
@@ -118,43 +117,6 @@ try {
     if (-not (Test-Path $miniprogramExecutable)) {
         throw "Installed miniprogram executable was not found at $miniprogramExecutable"
     }
-
-    @'
-import 'dart:convert';
-import 'dart:io';
-
-Future<void> main(List<String> arguments) async {
-  final projectIndex = arguments.indexOf('--project');
-  if (projectIndex == -1 || projectIndex == arguments.length - 1) {
-    stderr.writeln('missing --project');
-    exitCode = 1;
-    return;
-  }
-
-  final projectRoot = arguments[projectIndex + 1];
-  final manifest = jsonDecode(
-    await File(joinPaths(projectRoot, 'manifest.json')).readAsString(),
-  ) as Map<String, dynamic>;
-  final entry = manifest['entry'] as String;
-  final outputDir = Directory(
-    joinPaths(projectRoot, 'stac', '.build', 'screens'),
-  );
-  await outputDir.create(recursive: true);
-  await File(joinPaths(outputDir.path, '$entry.json')).writeAsString('{}');
-}
-
-String joinPaths(String first, String second, [String? third, String? fourth]) {
-  final values = <String>[first, second];
-  if (third != null) {
-    values.add(third);
-  }
-  if (fourth != null) {
-    values.add(fourth);
-  }
-
-  return values.join(Platform.pathSeparator);
-}
-'@ | Set-Content -Path $fakeStacCliPath -NoNewline
 
     Invoke-Step `
         -Name "Create standalone mini-program" `
@@ -195,13 +157,7 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
         -Name "Build standalone mini-program" `
         -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "build",
-            "coupon_center",
-            "--stac-cli-script",
-            $fakeStacCliPath,
-            "--skip-pub-get"
-        )
+        -Arguments @("build", "coupon_center")
 
     Invoke-Step `
         -Name "Validate standalone mini-program" `
@@ -213,13 +169,7 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
         -Name "Publish standalone mini-program to the local backend" `
         -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "publish",
-            "coupon_center",
-            "--stac-cli-script",
-            $fakeStacCliPath,
-            "--skip-build-pub-get"
-        )
+        -Arguments @("publish", "coupon_center")
 
     New-Item -ItemType Directory -Path (Join-Path $hostRoot "lib") -Force | Out-Null
     @'

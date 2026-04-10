@@ -63,7 +63,10 @@ void main() {
       await Directory(p.dirname(vendoredCliPath)).create(recursive: true);
       await File(vendoredCliPath).writeAsString(_fakeStacCliSource);
 
-      final result = await const MiniProgramBuilder().build(
+      final builder = MiniProgramBuilder(
+        managedStacBuilder: const _MissingManagedStacBuilder(),
+      );
+      final result = await builder.build(
         MiniProgramBuildRequest(
           repoRootPath: repoRoot,
           miniProgramId: 'claim_center',
@@ -94,7 +97,10 @@ void main() {
       await Directory(p.dirname(vendoredCliPath)).create(recursive: true);
       await File(vendoredCliPath).writeAsString(_fakeStacCliSource);
 
-      final result = await const MiniProgramBuilder().build(
+      final builder = MiniProgramBuilder(
+        managedStacBuilder: const _MissingManagedStacBuilder(),
+      );
+      final result = await builder.build(
         MiniProgramBuildRequest(
           repoRootPath: repoRoot,
           miniProgramRootPath: standaloneRoot,
@@ -108,6 +114,29 @@ void main() {
       expect(await File(result.entryScreenJsonPath).exists(), isTrue);
     });
 
+    test('uses the managed pinned Stac builder by default', () async {
+      final standaloneRoot = p.join(tempDir.path, 'standalone_coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+      );
+      final fakeCliPath = p.join(tempDir.path, 'managed_fake_stac_cli.dart');
+      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+
+      final builder = MiniProgramBuilder(
+        managedStacBuilder: _FakeManagedStacBuilder(fakeCliPath),
+      );
+      final result = await builder.build(
+        MiniProgramBuildRequest(
+          miniProgramRootPath: standaloneRoot,
+          skipPubGet: true,
+        ),
+      );
+
+      expect(result.cliSource, 'managed_pinned_stac');
+      expect(await File(result.entryScreenJsonPath).exists(), isTrue);
+    });
+
     test('fails when no Stac CLI can be resolved', () async {
       final repoRoot = tempDir.path;
       final miniProgramRoot = p.join(repoRoot, 'mini_programs', 'claim_center');
@@ -117,6 +146,7 @@ void main() {
       );
 
       final builder = MiniProgramBuilder(
+        managedStacBuilder: const _MissingManagedStacBuilder(),
         processRunner: (
           String executable,
           List<String> arguments, {
@@ -220,3 +250,46 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
   return values.join(Platform.pathSeparator);
 }
 ''';
+
+class _FakeManagedStacBuilder extends ManagedStacBuilder {
+  const _FakeManagedStacBuilder(this.entrypointPath);
+
+  final String entrypointPath;
+
+  @override
+  Future<ManagedStacBuilderStatus> inspect() async {
+    return const ManagedStacBuilderStatus(
+      pinnedVersion: ManagedStacBuilder.pinnedVersion,
+      templateRootPath: 'template',
+      cacheRootPath: 'cache',
+      bundledTemplateAvailable: true,
+      cachePrepared: true,
+      dependenciesResolved: true,
+    );
+  }
+
+  @override
+  Future<ManagedStacBuilderResolution> ensureReady() async {
+    return ManagedStacBuilderResolution(
+      pinnedVersion: ManagedStacBuilder.pinnedVersion,
+      packageRootPath: p.dirname(entrypointPath),
+      entrypointPath: entrypointPath,
+    );
+  }
+}
+
+class _MissingManagedStacBuilder extends ManagedStacBuilder {
+  const _MissingManagedStacBuilder();
+
+  @override
+  Future<ManagedStacBuilderStatus> inspect() async {
+    return const ManagedStacBuilderStatus(
+      pinnedVersion: ManagedStacBuilder.pinnedVersion,
+      templateRootPath: null,
+      cacheRootPath: 'cache',
+      bundledTemplateAvailable: false,
+      cachePrepared: false,
+      dependenciesResolved: false,
+    );
+  }
+}
