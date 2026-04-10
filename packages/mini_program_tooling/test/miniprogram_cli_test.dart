@@ -363,6 +363,124 @@ void main() {
       },
     );
 
+    test(
+      'publish uses a saved backend workspace when one is configured',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.0',
+        );
+        await Directory(
+          p.join(backendRoot, 'backend', 'api'),
+        ).create(recursive: true);
+        await Directory(
+          p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+            'bin',
+            'server.dart',
+          ),
+        ).writeAsString('void main() {}');
+        await stateStore.writeGlobalBackendWorkspaceState(
+          LocalBackendWorkspaceState(
+            schemaVersion: 1,
+            backendRootPath: backendRoot,
+            apiRootPath: p.join(backendRoot, 'backend', 'api'),
+            serviceDirectoryPath: p.join(
+              backendRoot,
+              'backend',
+              'local_backend_service',
+            ),
+            initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+            updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+          ),
+        );
+
+        final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
+        await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+
+        final envCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+        expect(
+          await envCli.run(<String>[
+            'env',
+            'init',
+            '--repo-root',
+            repoRoot.path,
+          ]),
+          0,
+        );
+
+        final publishBuffer = StringBuffer();
+        final publishCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: publishBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+        final exitCode = await publishCli.run(<String>[
+          'publish',
+          'coupon_center',
+          '--stac-cli-script',
+          fakeCliPath,
+          '--skip-build-pub-get',
+        ]);
+
+        expect(exitCode, 0);
+        expect(
+          publishBuffer.toString(),
+          contains('Backend root: $backendRoot'),
+        );
+        expect(
+          await File(
+            p.join(
+              backendRoot,
+              '.mini_program',
+              'published_local_artifacts.json',
+            ),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
+            p.join(
+              backendRoot,
+              'backend',
+              'api',
+              'manifests',
+              'coupon_center',
+              'latest.json',
+            ),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
+            p.join(
+              repoRoot.path,
+              'backend',
+              'api',
+              'manifests',
+              'coupon_center',
+              'latest.json',
+            ),
+          ).exists(),
+          isFalse,
+        );
+      },
+    );
+
     test('embed init generates the embedding adapter', () async {
       final projectRoot = p.join(tempDir.path, 'host_app');
       await Directory(p.join(projectRoot, 'lib')).create(recursive: true);

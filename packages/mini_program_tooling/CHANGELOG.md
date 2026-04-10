@@ -7,6 +7,12 @@
   and `~/.mini_program/global_backend_workspace.json`
 - let backend lifecycle commands resolve either a standalone backend workspace
   or the platform repo layout
+- make `miniprogram publish` write manifests and screens into the initialized
+  standalone backend workspace when `miniprogram backend init` has been used
+- keep tracked local publish state attached to that backend workspace so
+  `backend reset-local --yes` cleans the correct local backend
+- update validation and installed-CLI smoke coverage for the standalone backend
+  publish flow
 
 ## 0.2.2
 

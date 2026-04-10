@@ -79,6 +79,10 @@ miniprogram validate coupon_center
 miniprogram publish coupon_center
 ```
 
+If a standalone backend workspace was initialized earlier with
+`miniprogram backend init`, `publish` writes manifests and screens into that
+workspace instead of the platform repo backend.
+
 Initialize the embedding adapter for an existing Flutter app:
 
 ```bash
@@ -130,6 +134,9 @@ policy files that were not created by the CLI publish flow.
   - a `miniprogram backend init` workspace
   - the platform repo layout with `backend/local_backend_service/` and
     `backend/api/`
+- `publish` follows the same backend workspace resolution, so local publish
+  outputs and `backend reset-local --yes` stay attached to the initialized
+  backend workspace.
 - Existing low-level Dart bins remain in the repo for compatibility.
 - The repo PowerShell wrappers now delegate to the installed `miniprogram`
   command for the standard text workflow and only fall back to legacy Dart

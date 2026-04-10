@@ -302,6 +302,11 @@ class MiniprogramCli {
         help: 'Platform repo root containing backend/api/.',
       )
       ..addOption(
+        'root',
+        help:
+            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+      )
+      ..addOption(
         'mini-program-root',
         help: 'Optional exact mini-program root path.',
       );
@@ -360,6 +365,11 @@ class MiniprogramCli {
       ..addOption(
         'repo-root',
         help: 'Platform repo root containing backend/api/.',
+      )
+      ..addOption(
+        'root',
+        help:
+            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
       )
       ..addOption(
         'mini-program-root',
@@ -426,10 +436,17 @@ class MiniprogramCli {
       currentWorkingDirectory: _currentWorkingDirectory(),
       requireRepoRoot: true,
     );
+    final backendRootPath = await _resolveBackendRootPath(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+      additionalSearchRoots: <String>[resolved.miniProgramRootPath],
+      required: true,
+    );
 
     final result = await _publisher.publish(
       MiniProgramPublishRequest(
         repoRootPath: resolved.repoRootPath!,
+        backendRootPath: backendRootPath!,
         miniProgramId: miniProgramId,
         miniProgramRootPath: resolved.isRepoManaged
             ? null
@@ -440,7 +457,7 @@ class MiniprogramCli {
     );
 
     await _stateStore.recordPublishedArtifact(
-      resolved.repoRootPath!,
+      backendRootPath,
       PublishedLocalArtifactRecord(
         miniProgramId: result.miniProgramId,
         version: result.version,
@@ -454,7 +471,7 @@ class MiniprogramCli {
     _stdout.writeln(_formatPublishResult(result));
     _stdout.writeln(
       'Tracked local publish state: '
-      '${_stateStore.publishedArtifactsPath(resolved.repoRootPath!)}',
+      '${_stateStore.publishedArtifactsPath(backendRootPath)}',
     );
     return 0;
   }
@@ -1054,6 +1071,7 @@ Commands:
     final lines = <String>[
       'Published mini-program: ${result.miniProgramId}',
       'Version: ${result.version}',
+      'Backend root: ${result.backendRootPath}',
       'Build CLI source: ${result.buildResult.cliSource}',
       'Built entry screen: ${result.buildResult.entryScreenJsonPath}',
       'Pre-publish validation: ${result.prePublishValidation.errorCount} error(s), ${result.prePublishValidation.warningCount} warning(s)',

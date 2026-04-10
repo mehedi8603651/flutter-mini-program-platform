@@ -31,19 +31,28 @@ class DeliveryRepositoryValidator {
 
   Future<DeliveryValidationReport> validate({
     required String repoRootPath,
+    String? authoredRepoRootPath,
+    String? backendRootPath,
     String? miniProgramId,
     String? externalMiniProgramRootPath,
   }) async {
     final normalizedRepoRoot = path.normalize(path.absolute(repoRootPath));
+    final normalizedAuthoredRepoRoot = path.normalize(
+      path.absolute(authoredRepoRootPath ?? repoRootPath),
+    );
+    final normalizedBackendRoot = path.normalize(
+      path.absolute(backendRootPath ?? repoRootPath),
+    );
     final messages = <DeliveryValidationMessage>[];
     final miniProgramsRoot = Directory(
-      path.join(normalizedRepoRoot, 'mini_programs'),
+      path.join(normalizedAuthoredRepoRoot, 'mini_programs'),
     );
     final backendApiRoot = Directory(
-      path.join(normalizedRepoRoot, 'backend', 'api'),
+      path.join(normalizedBackendRoot, 'backend', 'api'),
     );
 
-    if (!await miniProgramsRoot.exists()) {
+    if (externalMiniProgramRootPath == null &&
+        !await miniProgramsRoot.exists()) {
       messages.add(
         DeliveryValidationMessage(
           severity: ValidationSeverity.error,
@@ -72,13 +81,18 @@ class DeliveryRepositoryValidator {
       );
     }
 
-    final authoredManifests = await _loadAuthoredManifests(
-      repoRootPath: normalizedRepoRoot,
-      miniProgramsRoot: miniProgramsRoot,
-      backendApiRootPath: backendApiRoot.path,
-      miniProgramId: miniProgramId,
-      messages: messages,
-    );
+    final authoredManifests = <String, MiniProgramManifest>{};
+    if (await miniProgramsRoot.exists()) {
+      authoredManifests.addAll(
+        await _loadAuthoredManifests(
+          repoRootPath: normalizedRepoRoot,
+          miniProgramsRoot: miniProgramsRoot,
+          backendApiRootPath: backendApiRoot.path,
+          miniProgramId: miniProgramId,
+          messages: messages,
+        ),
+      );
+    }
 
     if (externalMiniProgramRootPath != null &&
         externalMiniProgramRootPath.trim().isNotEmpty) {
@@ -242,7 +256,9 @@ class DeliveryRepositoryValidator {
     required String? miniProgramId,
     required List<DeliveryValidationMessage> messages,
   }) async {
-    final normalizedRootPath = path.normalize(path.absolute(miniProgramRootPath));
+    final normalizedRootPath = path.normalize(
+      path.absolute(miniProgramRootPath),
+    );
     final rootDirectory = Directory(normalizedRootPath);
     if (!await rootDirectory.exists()) {
       messages.add(
@@ -263,7 +279,8 @@ class DeliveryRepositoryValidator {
           severity: ValidationSeverity.error,
           code: 'external_manifest_missing',
           path: normalizedRootPath,
-          message: 'Standalone mini-program root does not contain manifest.json.',
+          message:
+              'Standalone mini-program root does not contain manifest.json.',
         ),
       );
       return null;
@@ -330,7 +347,9 @@ class DeliveryRepositoryValidator {
       final publishedVersions = <String>{};
       publishedVersionsByMiniProgram[currentMiniProgramId] = publishedVersions;
 
-      final latestFile = File(path.join(miniProgramDirectory.path, 'latest.json'));
+      final latestFile = File(
+        path.join(miniProgramDirectory.path, 'latest.json'),
+      );
       if (await latestFile.exists()) {
         final latestManifest = await _validatePublishedManifestFile(
           manifestFile: latestFile,
@@ -349,7 +368,8 @@ class DeliveryRepositoryValidator {
             severity: ValidationSeverity.warning,
             code: 'latest_manifest_missing',
             path: _relative(repoRootPath, miniProgramDirectory.path),
-            message: 'Published manifest directory does not contain latest.json.',
+            message:
+                'Published manifest directory does not contain latest.json.',
           ),
         );
       }
@@ -378,7 +398,9 @@ class DeliveryRepositoryValidator {
       versionFiles.sort((a, b) => a.path.compareTo(b.path));
 
       for (final manifestFile in versionFiles) {
-        final expectedVersion = path.basenameWithoutExtension(manifestFile.path);
+        final expectedVersion = path.basenameWithoutExtension(
+          manifestFile.path,
+        );
         final manifest = await _validatePublishedManifestFile(
           manifestFile: manifestFile,
           expectedMiniProgramId: currentMiniProgramId,
@@ -486,7 +508,9 @@ class DeliveryRepositoryValidator {
     required String? miniProgramId,
     required List<DeliveryValidationMessage> messages,
   }) async {
-    final rolloutRoot = Directory(path.join(backendApiRootPath, 'rollout-rules'));
+    final rolloutRoot = Directory(
+      path.join(backendApiRootPath, 'rollout-rules'),
+    );
     if (!await rolloutRoot.exists()) {
       return;
     }
@@ -695,7 +719,12 @@ class DeliveryRepositoryValidator {
           }
         }
 
-        for (final field in const <String>['hostApp', 'platform', 'locale', 'tenantId']) {
+        for (final field in const <String>[
+          'hostApp',
+          'platform',
+          'locale',
+          'tenantId',
+        ]) {
           if (rule.containsKey(field) && _trimmed(rule[field]) == null) {
             messages.add(
               DeliveryValidationMessage(
@@ -991,7 +1020,8 @@ class DeliveryRepositoryValidator {
         required: true,
         transform: (value) => value.toUpperCase(),
         validator: (value) => _knownHttpMethods.contains(value),
-        invalidValueMessage: (value) => '"$value" is not a supported HTTP method.',
+        invalidValueMessage: (value) =>
+            '"$value" is not a supported HTTP method.',
       );
 
       _validateStringListField(
@@ -1300,8 +1330,9 @@ class DeliveryRepositoryValidator {
         continue;
       }
 
-      final transformedValue =
-          transform == null ? normalizedValue : transform(normalizedValue);
+      final transformedValue = transform == null
+          ? normalizedValue
+          : transform(normalizedValue);
       values.add(transformedValue);
 
       if (!seenValues.add(transformedValue)) {

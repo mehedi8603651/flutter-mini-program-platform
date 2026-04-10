@@ -85,6 +85,8 @@ If you want a developer-owned local backend outside the platform repo, run
 workspace. That scaffolds `backend/local_backend_service`, `backend/api`, and
 the tracked `.mini_program/backend_workspace.json` state used by
 `backend start`, `backend status`, `backend stop`, and `backend reset-local`.
+When that backend workspace exists, `miniprogram publish ...` now writes local
+artifacts there instead of the platform repo backend.
 
 ## Embed Into An Existing Flutter App
 

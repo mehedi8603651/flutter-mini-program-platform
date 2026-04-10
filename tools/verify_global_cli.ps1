@@ -290,7 +290,7 @@ finally {
             }
 
             try {
-                & (Join-Path $pubCache "bin\miniprogram.bat") backend reset-local --repo-root $RepoRoot --yes | Out-Null
+                & (Join-Path $pubCache "bin\miniprogram.bat") backend reset-local --root $backendWorkspaceRoot --yes | Out-Null
             }
             catch {
                 Write-Warning "Cleanup reset-local failed: $_"

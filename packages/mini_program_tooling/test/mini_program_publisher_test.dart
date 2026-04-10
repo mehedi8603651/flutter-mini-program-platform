@@ -13,12 +13,12 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp(
         'mini_program_tooling_publisher_',
       );
-      await Directory(p.join(tempDir.path, 'backend', 'api')).create(
-        recursive: true,
-      );
-      await Directory(p.join(tempDir.path, 'mini_programs')).create(
-        recursive: true,
-      );
+      await Directory(
+        p.join(tempDir.path, 'backend', 'api'),
+      ).create(recursive: true);
+      await Directory(
+        p.join(tempDir.path, 'mini_programs'),
+      ).create(recursive: true);
     });
 
     tearDown(() async {
@@ -49,6 +49,7 @@ void main() {
       );
 
       expect(result.version, '1.2.0');
+      expect(result.backendRootPath, tempDir.path);
       expect(result.prePublishValidation.hasErrors, isFalse);
       expect(result.postPublishValidation.hasErrors, isFalse);
       expect(result.copiedScreenCount, 1);
@@ -56,60 +57,78 @@ void main() {
       expect(await File(result.versionedManifestPath).exists(), isTrue);
       expect(
         await File(
-          p.join(
-            result.screensDirectoryPath,
-            '${miniProgramId}_home.json',
-          ),
+          p.join(result.screensDirectoryPath, '${miniProgramId}_home.json'),
         ).exists(),
         isTrue,
       );
 
-      final latestManifest = jsonDecode(
-        await File(result.latestManifestPath).readAsString(),
-      ) as Map<String, dynamic>;
+      final latestManifest =
+          jsonDecode(await File(result.latestManifestPath).readAsString())
+              as Map<String, dynamic>;
       expect(latestManifest['version'], '1.2.0');
     });
 
-    test('stops before publish when pre-publish validation has errors', () async {
+    test('publishes to a standalone backend workspace when provided', () async {
       final miniProgramId = 'coupon_center';
+      final repoRoot = p.join(tempDir.path, 'repo_root');
+      final backendRoot = p.join(tempDir.path, 'backend_workspace');
       final miniProgramRoot = p.join(tempDir.path, 'standalone_coupon_center');
+      await Directory(
+        p.join(repoRoot, 'mini_programs'),
+      ).create(recursive: true);
+      await Directory(
+        p.join(backendRoot, 'backend', 'api'),
+      ).create(recursive: true);
       await _writeMiniProgramFixture(
         miniProgramRoot,
         miniProgramId: miniProgramId,
         version: '1.2.0',
       );
 
-      final rolloutRulesDir = Directory(
-        p.join(tempDir.path, 'backend', 'api', 'rollout-rules'),
-      );
-      await rolloutRulesDir.create(recursive: true);
-      await File(p.join(rolloutRulesDir.path, '$miniProgramId.json')).writeAsString('''
-{
-  "miniProgramId": "$miniProgramId",
-  "defaultVersion": "9.9.9",
-  "rules": []
-}
-''');
-
       final fakeCliPath = p.join(tempDir.path, 'fake_stac_cli.dart');
       await File(fakeCliPath).writeAsString(_fakeStacCliSource);
 
-      expect(
-        () => const MiniProgramPublisher().publish(
-          MiniProgramPublishRequest(
-            repoRootPath: tempDir.path,
-            miniProgramRootPath: miniProgramRoot,
-            stacCliScriptPath: fakeCliPath,
-            skipBuildPubGet: true,
-          ),
+      final result = await const MiniProgramPublisher().publish(
+        MiniProgramPublishRequest(
+          repoRootPath: repoRoot,
+          backendRootPath: backendRoot,
+          miniProgramRootPath: miniProgramRoot,
+          stacCliScriptPath: fakeCliPath,
+          skipBuildPubGet: true,
         ),
-        throwsA(isA<MiniProgramPublishException>()),
       );
 
+      expect(result.backendRootPath, backendRoot);
+      expect(
+        result.latestManifestPath,
+        p.join(
+          backendRoot,
+          'backend',
+          'api',
+          'manifests',
+          miniProgramId,
+          'latest.json',
+        ),
+      );
+      expect(await File(result.latestManifestPath).exists(), isTrue);
       expect(
         await File(
           p.join(
-            tempDir.path,
+            backendRoot,
+            'backend',
+            'api',
+            'screens',
+            miniProgramId,
+            '1.2.0',
+            '${miniProgramId}_home.json',
+          ),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          p.join(
+            repoRoot,
             'backend',
             'api',
             'manifests',
@@ -120,6 +139,65 @@ void main() {
         isFalse,
       );
     });
+
+    test(
+      'stops before publish when pre-publish validation has errors',
+      () async {
+        final miniProgramId = 'coupon_center';
+        final miniProgramRoot = p.join(
+          tempDir.path,
+          'standalone_coupon_center',
+        );
+        await _writeMiniProgramFixture(
+          miniProgramRoot,
+          miniProgramId: miniProgramId,
+          version: '1.2.0',
+        );
+
+        final rolloutRulesDir = Directory(
+          p.join(tempDir.path, 'backend', 'api', 'rollout-rules'),
+        );
+        await rolloutRulesDir.create(recursive: true);
+        await File(
+          p.join(rolloutRulesDir.path, '$miniProgramId.json'),
+        ).writeAsString('''
+{
+  "miniProgramId": "$miniProgramId",
+  "defaultVersion": "9.9.9",
+  "rules": []
+}
+''');
+
+        final fakeCliPath = p.join(tempDir.path, 'fake_stac_cli.dart');
+        await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+
+        expect(
+          () => const MiniProgramPublisher().publish(
+            MiniProgramPublishRequest(
+              repoRootPath: tempDir.path,
+              miniProgramRootPath: miniProgramRoot,
+              stacCliScriptPath: fakeCliPath,
+              skipBuildPubGet: true,
+            ),
+          ),
+          throwsA(isA<MiniProgramPublishException>()),
+        );
+
+        expect(
+          await File(
+            p.join(
+              tempDir.path,
+              'backend',
+              'api',
+              'manifests',
+              miniProgramId,
+              'latest.json',
+            ),
+          ).exists(),
+          isFalse,
+        );
+      },
+    );
   });
 }
 
@@ -128,9 +206,9 @@ Future<void> _writeMiniProgramFixture(
   required String miniProgramId,
   required String version,
 }) async {
-  await Directory(p.join(miniProgramRootPath, 'stac', 'screens')).create(
-    recursive: true,
-  );
+  await Directory(
+    p.join(miniProgramRootPath, 'stac', 'screens'),
+  ).create(recursive: true);
   await Directory(p.join(miniProgramRootPath, 'lib')).create(recursive: true);
 
   await File(p.join(miniProgramRootPath, 'manifest.json')).writeAsString('''
