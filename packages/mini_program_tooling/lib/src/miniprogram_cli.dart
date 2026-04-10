@@ -509,8 +509,8 @@ class MiniprogramCli {
       )
       ..addOption(
         'project-root',
-        mandatory: true,
-        help: 'Existing Flutter app root containing pubspec.yaml and lib/.',
+        help:
+            'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
       )
       ..addOption(
         'repo-root',
@@ -538,19 +538,19 @@ class MiniprogramCli {
 
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln(
-        'Usage: miniprogram embed init --project-root <path> [options]',
-      );
+      _stdout.writeln('Usage: miniprogram embed init [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
 
+    final projectRootPath =
+        results.option('project-root') ?? _currentWorkingDirectory();
     final result = await _embeddingInitializer.initialize(
       MiniProgramEmbeddingInitRequest(
-        projectRootPath: results.option('project-root')!,
+        projectRootPath: projectRootPath,
         repoRootPath: await _resolveRepoRootPath(
           explicitRepoRootPath: results.option('repo-root'),
-          additionalSearchRoots: <String>[results.option('project-root')!],
+          additionalSearchRoots: <String>[projectRootPath],
         ),
         hostAppId: results.option('host-app-id'),
         hostVersion: results.option('host-version'),
@@ -976,7 +976,7 @@ Commands:
   build <mini-program-id>
   validate <mini-program-id>
   publish <mini-program-id>
-  embed init --project-root <path>
+  embed init
   backend init
   backend start --port 8080
   backend stop
@@ -988,7 +988,7 @@ Commands:
 Usage: miniprogram embed <command> [arguments]
 
 Commands:
-  init --project-root <path>
+  init
 ''';
 
   String _envUsage() => '''

@@ -185,12 +185,7 @@ dependencies:
         -Name "Generate embedded app adapter" `
         -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @(
-            "embed",
-            "init",
-            "--project-root",
-            $hostRoot
-        )
+        -Arguments @("embed", "init")
 
     Invoke-Step `
         -Name "Start local backend through the installed CLI" `

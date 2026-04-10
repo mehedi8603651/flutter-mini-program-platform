@@ -28,7 +28,6 @@ miniprogram env init
 miniprogram build coupon_center
 miniprogram validate coupon_center
 miniprogram publish coupon_center
-miniprogram embed init --project-root <existing-flutter-app>
 miniprogram backend start --port 8080
 miniprogram backend status
 ```
@@ -90,6 +89,14 @@ artifacts there instead of the platform repo backend.
 ## Embed Into An Existing Flutter App
 
 Generate the app-owned embedding adapter for an existing Flutter app with:
+
+```powershell
+flutter create coupon_host_app
+cd coupon_host_app
+miniprogram embed init
+```
+
+Or from another directory:
 
 ```powershell
 miniprogram embed init --project-root D:\myflutterproject

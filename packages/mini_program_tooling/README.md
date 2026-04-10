@@ -33,7 +33,7 @@ miniprogram env status
 miniprogram build <mini-program-id>
 miniprogram validate <mini-program-id>
 miniprogram publish <mini-program-id>
-miniprogram embed init --project-root <path>
+miniprogram embed init
 miniprogram backend start --port 8080
 miniprogram backend stop
 miniprogram backend status
@@ -86,11 +86,18 @@ workspace instead of the platform repo backend.
 Initialize the embedding adapter for an existing Flutter app:
 
 ```bash
-miniprogram embed init --project-root <existing-flutter-app>
+cd <existing-flutter-app>
+miniprogram embed init
 ```
 
 `embed init` updates the host app `pubspec.yaml` to use the published
 `mini_program_sdk` and `mini_program_contracts` packages.
+
+If you need to target an app from another directory, use:
+
+```bash
+miniprogram embed init --project-root <existing-flutter-app>
+```
 
 Start and inspect the local backend:
 

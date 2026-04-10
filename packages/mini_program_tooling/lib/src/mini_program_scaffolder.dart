@@ -476,6 +476,13 @@ miniprogram backend start --port 8080
 2. initialize a host app:
 
 ```powershell
+cd <existing-flutter-app>
+miniprogram embed init
+```
+
+Or, from another directory:
+
+```powershell
 miniprogram embed init --project-root <existing-flutter-app>
 ```
 ''';

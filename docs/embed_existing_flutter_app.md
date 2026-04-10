@@ -7,7 +7,8 @@ Preferred command surface:
 
 ```powershell
 dart pub global activate mini_program_tooling
-miniprogram embed init --project-root <existing-flutter-app>
+cd <existing-flutter-app>
+miniprogram embed init
 ```
 
 Repo-local contributor install:
@@ -26,6 +27,13 @@ The intended v1 flow is:
 6. call `openAppMiniProgram(...)` or use `AppMiniProgramLauncherButton`
 
 ## Quick start with the initializer
+
+```powershell
+cd <existing-flutter-app>
+miniprogram embed init
+```
+
+Or, if you are outside the app folder:
 
 ```powershell
 miniprogram embed init --project-root <existing-flutter-app>

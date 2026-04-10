@@ -649,6 +649,41 @@ dependencies:
       );
     });
 
+    test('embed init defaults to the current working directory', () async {
+      final projectRoot = p.join(tempDir.path, 'host_app');
+      await Directory(p.join(projectRoot, 'lib')).create(recursive: true);
+      await File(p.join(projectRoot, 'pubspec.yaml')).writeAsString('''
+name: host_app
+version: 1.0.0+1
+
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: projectRoot,
+      );
+
+      final exitCode = await cli.run(<String>['embed', 'init']);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Project root: $projectRoot'),
+      );
+      expect(
+        await File(
+          p.join(projectRoot, 'lib', 'mini_program', 'mini_program.dart'),
+        ).exists(),
+        isTrue,
+      );
+    });
+
     test(
       'embed init uses saved global repo root when run from an unrelated host app directory',
       () async {

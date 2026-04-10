@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.8
+
+- let `miniprogram embed init` default to the current working directory when
+  `--project-root` is omitted
+- keep `miniprogram embed init --project-root <path>` for explicit and scripted
+  workflows
+- refresh docs, tests, and installed-CLI smoke coverage for the simpler embed
+  flow
+
 ## 0.2.7
 
 - manage a pinned Stac builder internally inside `mini_program_tooling`
