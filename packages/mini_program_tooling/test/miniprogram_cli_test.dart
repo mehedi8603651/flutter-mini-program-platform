@@ -19,8 +19,20 @@ void main() {
         p.join(repoRoot.path, 'backend', 'api'),
       ).create(recursive: true);
       await Directory(
+        p.join(repoRoot.path, 'backend', 'local_backend_service', 'bin'),
+      ).create(recursive: true);
+      await Directory(
         p.join(repoRoot.path, 'mini_programs'),
       ).create(recursive: true);
+      await File(
+        p.join(
+          repoRoot.path,
+          'backend',
+          'local_backend_service',
+          'bin',
+          'server.dart',
+        ),
+      ).writeAsString('void main() {}');
       await Directory(
         p.join(repoRoot.path, 'packages', 'mini_program_tooling'),
       ).create(recursive: true);
@@ -446,6 +458,33 @@ version: 1.0.0+1
       },
     );
 
+    test('backend init scaffolds a standalone backend workspace', () async {
+      final initializer = _FakeLocalBackendInitializer();
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        backendInitializer: initializer,
+        workingDirectory: tempDir.path,
+      );
+
+      final backendRoot = p.join(tempDir.path, 'backend_workspace');
+      final exitCode = await cli.run(<String>[
+        'backend',
+        'init',
+        '--root',
+        backendRoot,
+      ]);
+
+      expect(exitCode, 0);
+      expect(initializer.initializedRootPath, backendRoot);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Initialized local backend workspace.'),
+      );
+    });
+
     test('backend subcommands dispatch to the controller', () async {
       final controller = _FakeLocalBackendController();
       final stdoutBuffer = StringBuffer();
@@ -544,6 +583,57 @@ version: 1.0.0+1
         expect(controller.repoRootPaths, everyElement(repoRoot.path));
       },
     );
+
+    test(
+      'backend commands use a saved backend workspace when no repo root is present',
+      () async {
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        await Directory(
+          p.join(backendRoot, 'backend', 'api'),
+        ).create(recursive: true);
+        await Directory(
+          p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+            'bin',
+            'server.dart',
+          ),
+        ).writeAsString('void main() {}');
+        final backendState = LocalBackendWorkspaceState(
+          schemaVersion: 1,
+          backendRootPath: backendRoot,
+          apiRootPath: p.join(backendRoot, 'backend', 'api'),
+          serviceDirectoryPath: p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+          ),
+          initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+        );
+        await stateStore.writeGlobalBackendWorkspaceState(backendState);
+
+        final otherRoot = Directory(p.join(tempDir.path, 'other_workdir'));
+        await otherRoot.create(recursive: true);
+        final controller = _FakeLocalBackendController();
+        final backendCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          backendController: controller,
+          workingDirectory: otherRoot.path,
+        );
+
+        expect(await backendCli.run(<String>['backend', 'start']), 0);
+        expect(await backendCli.run(<String>['backend', 'status']), 0);
+        expect(await backendCli.run(<String>['backend', 'stop']), 0);
+        expect(controller.repoRootPaths, everyElement(backendRoot));
+      },
+    );
   });
 }
 
@@ -633,6 +723,43 @@ class _FakeMiniprogramDoctor extends MiniprogramDoctor {
           status: MiniprogramDoctorCheckStatus.ok,
           summary: 'all good',
         ),
+      ],
+    );
+  }
+}
+
+class _FakeLocalBackendInitializer extends LocalBackendInitializer {
+  String? initializedRootPath;
+
+  @override
+  Future<LocalBackendInitResult> initialize(
+    LocalBackendInitRequest request,
+  ) async {
+    initializedRootPath = request.backendRootPath;
+    final backendRootPath = p.normalize(
+      p.absolute(request.backendRootPath ?? 'backend_workspace'),
+    );
+    return LocalBackendInitResult(
+      backendRootPath: backendRootPath,
+      apiRootPath: p.join(backendRootPath, 'backend', 'api'),
+      serviceDirectoryPath: p.join(
+        backendRootPath,
+        'backend',
+        'local_backend_service',
+      ),
+      stateFilePath: p.join(
+        backendRootPath,
+        '.mini_program',
+        'backend_workspace.json',
+      ),
+      globalStateFilePath: p.join(
+        backendRootPath,
+        '.mini_program',
+        'global_backend_workspace.json',
+      ),
+      createdPaths: <String>[
+        p.join(backendRootPath, 'backend', 'api'),
+        p.join(backendRootPath, 'backend', 'local_backend_service'),
       ],
     );
   }

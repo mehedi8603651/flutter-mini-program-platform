@@ -1,0 +1,17 @@
+name: local_backend_service
+description: Local Dart backend service for portable mini-program delivery.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  mini_program_contracts: ^0.1.0
+  path: ^1.9.1
+  pub_semver: ^2.2.0
+  shelf: ^1.4.2
+
+dev_dependencies:
+  lints: ^5.1.1
+  test: ^1.25.15

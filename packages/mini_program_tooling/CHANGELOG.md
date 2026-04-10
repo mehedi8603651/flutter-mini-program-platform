@@ -3,6 +3,11 @@
 ## 0.2.2
 
 - add `miniprogram doctor` for machine, env, repo, and backend diagnostics
+- add `miniprogram backend init` to scaffold a standalone backend workspace
+- add tracked backend workspace state in `.mini_program/backend_workspace.json`
+  and `~/.mini_program/global_backend_workspace.json`
+- let backend lifecycle commands resolve either a standalone backend workspace
+  or the platform repo layout
 
 ## 0.2.1
 

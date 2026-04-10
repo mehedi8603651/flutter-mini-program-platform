@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'delivery_validation.dart';
 import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
+import 'local_backend_initializer.dart';
 import 'local_cli_state.dart';
 import 'mini_program_builder.dart';
 import 'miniprogram_doctor.dart';
@@ -23,6 +24,8 @@ class MiniprogramCli {
     MiniProgramEmbeddingInitializer embeddingInitializer =
         const MiniProgramEmbeddingInitializer(),
     LocalBackendController backendController = const LocalBackendController(),
+    LocalBackendInitializer backendInitializer =
+        const LocalBackendInitializer(),
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
@@ -35,6 +38,7 @@ class MiniprogramCli {
        _publisher = publisher,
        _embeddingInitializer = embeddingInitializer,
        _backendController = backendController,
+       _backendInitializer = backendInitializer,
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
@@ -48,6 +52,7 @@ class MiniprogramCli {
   final MiniProgramPublisher _publisher;
   final MiniProgramEmbeddingInitializer _embeddingInitializer;
   final LocalBackendController _backendController;
+  final LocalBackendInitializer _backendInitializer;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
@@ -723,6 +728,8 @@ class MiniprogramCli {
     }
 
     switch (arguments.first) {
+      case 'init':
+        return _runBackendInit(arguments.sublist(1));
       case 'start':
         return _runBackendStart(arguments.sublist(1));
       case 'stop':
@@ -738,6 +745,46 @@ class MiniprogramCli {
     }
   }
 
+  Future<int> _runBackendInit(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'root',
+        help:
+            'Directory that should own backend/ and .mini_program/backend_workspace.json.',
+      )
+      ..addFlag(
+        'force',
+        negatable: false,
+        help: 'Overwrite scaffold-managed backend files if they already exist.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram backend init [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'backend init does not accept positional arguments.',
+      );
+    }
+
+    final result = await _backendInitializer.initialize(
+      LocalBackendInitRequest(
+        backendRootPath: results.option('root'),
+        force: results.flag('force'),
+      ),
+    );
+    _stdout.writeln(_formatBackendInitResult(result));
+    return 0;
+  }
+
   Future<int> _runBackendStart(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -747,9 +794,11 @@ class MiniprogramCli {
         help: 'Show usage information.',
       )
       ..addOption(
-        'repo-root',
-        help: 'Platform repo root. Defaults to the nearest detected repo.',
+        'root',
+        help:
+            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
       )
+      ..addOption('repo-root', help: 'Legacy platform repo root override.')
       ..addOption(
         'port',
         defaultsTo: '8080',
@@ -766,12 +815,13 @@ class MiniprogramCli {
       throw const FormatException('backend start --port must be 1-65535.');
     }
 
-    final repoRootPath = await _resolveRepoRootPath(
+    final backendRootPath = await _resolveBackendRootPath(
+      explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
     );
     final result = await _backendController.start(
-      repoRootPath: repoRootPath!,
+      repoRootPath: backendRootPath!,
       port: port,
     );
     _stdout.writeln(_formatBackendStartResult(result));
@@ -787,9 +837,11 @@ class MiniprogramCli {
         help: 'Show usage information.',
       )
       ..addOption(
-        'repo-root',
-        help: 'Platform repo root. Defaults to the nearest detected repo.',
-      );
+        'root',
+        help:
+            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+      )
+      ..addOption('repo-root', help: 'Legacy platform repo root override.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln('Usage: miniprogram backend stop [options]');
@@ -797,11 +849,14 @@ class MiniprogramCli {
       return 0;
     }
 
-    final repoRootPath = await _resolveRepoRootPath(
+    final backendRootPath = await _resolveBackendRootPath(
+      explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
     );
-    final result = await _backendController.stop(repoRootPath: repoRootPath!);
+    final result = await _backendController.stop(
+      repoRootPath: backendRootPath!,
+    );
     _stdout.writeln(_formatBackendStopResult(result));
     return 0;
   }
@@ -815,9 +870,11 @@ class MiniprogramCli {
         help: 'Show usage information.',
       )
       ..addOption(
-        'repo-root',
-        help: 'Platform repo root. Defaults to the nearest detected repo.',
-      );
+        'root',
+        help:
+            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+      )
+      ..addOption('repo-root', help: 'Legacy platform repo root override.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln('Usage: miniprogram backend status [options]');
@@ -825,11 +882,14 @@ class MiniprogramCli {
       return 0;
     }
 
-    final repoRootPath = await _resolveRepoRootPath(
+    final backendRootPath = await _resolveBackendRootPath(
+      explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
     );
-    final result = await _backendController.status(repoRootPath: repoRootPath!);
+    final result = await _backendController.status(
+      repoRootPath: backendRootPath!,
+    );
     _stdout.writeln(_formatBackendStatusResult(result));
     return result.healthy ? 0 : 1;
   }
@@ -843,9 +903,11 @@ class MiniprogramCli {
         help: 'Show usage information.',
       )
       ..addOption(
-        'repo-root',
-        help: 'Platform repo root. Defaults to the nearest detected repo.',
+        'root',
+        help:
+            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
       )
+      ..addOption('repo-root', help: 'Legacy platform repo root override.')
       ..addFlag(
         'yes',
         negatable: false,
@@ -863,12 +925,13 @@ class MiniprogramCli {
       );
     }
 
-    final repoRootPath = await _resolveRepoRootPath(
+    final backendRootPath = await _resolveBackendRootPath(
+      explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
     );
     final result = await _backendController.resetLocal(
-      repoRootPath: repoRootPath!,
+      repoRootPath: backendRootPath!,
     );
     _stdout.writeln(_formatBackendResetResult(result));
     return 0;
@@ -896,6 +959,7 @@ Commands:
   validate <mini-program-id>
   publish <mini-program-id>
   embed init --project-root <path>
+  backend init
   backend start --port 8080
   backend stop
   backend status
@@ -922,6 +986,7 @@ Commands:
 Usage: miniprogram backend <command> [arguments]
 
 Commands:
+  init
   start --port 8080
   stop
   status
@@ -958,9 +1023,7 @@ Commands:
         case MiniprogramDoctorCheckStatus.skipped:
           skippedCount++;
       }
-      lines.add(
-        '[${check.status.name}] ${check.label}: ${check.summary}',
-      );
+      lines.add('[${check.status.name}] ${check.label}: ${check.summary}');
       if (check.detail case final detail? when detail.trim().isNotEmpty) {
         lines.add('  $detail');
       }
@@ -1060,6 +1123,20 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatBackendInitResult(LocalBackendInitResult result) {
+    final lines = <String>[
+      'Initialized local backend workspace.',
+      'Backend root: ${result.backendRootPath}',
+      'API root: ${result.apiRootPath}',
+      'Service root: ${result.serviceDirectoryPath}',
+      'State file: ${result.stateFilePath}',
+      'Global fallback: ${result.globalStateFilePath}',
+      'Files:',
+      ...result.createdPaths.map((path) => '- $path'),
+    ];
+    return lines.join('\n');
+  }
+
   String _formatBackendStatusResult(LocalBackendStatusResult result) {
     if (!result.hasState) {
       return 'Local backend is not running. No backend.local.json state was found.';
@@ -1108,6 +1185,15 @@ Commands:
     Iterable<String> additionalSearchRoots = const <String>[],
   }) {
     return _stateStore.discoverEnvironmentState(
+      currentWorkingDirectory: _currentWorkingDirectory(),
+      additionalSearchRoots: additionalSearchRoots,
+    );
+  }
+
+  Future<ResolvedLocalBackendWorkspaceState?> _discoverBackendWorkspaceState({
+    Iterable<String> additionalSearchRoots = const <String>[],
+  }) {
+    return _stateStore.discoverBackendWorkspaceState(
       currentWorkingDirectory: _currentWorkingDirectory(),
       additionalSearchRoots: additionalSearchRoots,
     );
@@ -1192,5 +1278,66 @@ Commands:
       additionalSearchPath: envState?.state.repoRootPath,
       required: required,
     );
+  }
+
+  Future<String?> _resolveBackendRootPath({
+    String? explicitRootPath,
+    String? explicitRepoRootPath,
+    Iterable<String> additionalSearchRoots = const <String>[],
+    bool required = false,
+  }) async {
+    if (explicitRootPath != null && explicitRootPath.trim().isNotEmpty) {
+      final normalizedRootPath = p.normalize(p.absolute(explicitRootPath));
+      if (await _looksLikeBackendWorkspaceRoot(normalizedRootPath)) {
+        return normalizedRootPath;
+      }
+      throw MiniProgramPathResolutionException(
+        'Backend root does not contain backend/local_backend_service and '
+        'backend/api: $normalizedRootPath',
+      );
+    }
+
+    final backendWorkspaceState = await _discoverBackendWorkspaceState(
+      additionalSearchRoots: additionalSearchRoots,
+    );
+    if (backendWorkspaceState != null &&
+        await _looksLikeBackendWorkspaceRoot(
+          backendWorkspaceState.state.backendRootPath,
+        )) {
+      return backendWorkspaceState.state.backendRootPath;
+    }
+
+    final repoRootPath = await _resolveRepoRootPath(
+      explicitRepoRootPath: explicitRepoRootPath,
+      additionalSearchRoots: additionalSearchRoots,
+      required: false,
+    );
+    if (repoRootPath != null &&
+        await _looksLikeBackendWorkspaceRoot(repoRootPath)) {
+      return repoRootPath;
+    }
+
+    if (required) {
+      throw const MiniProgramPathResolutionException(
+        'Could not find a backend workspace. Run `miniprogram backend init` '
+        'or provide --root / --repo-root.',
+      );
+    }
+    return null;
+  }
+
+  Future<bool> _looksLikeBackendWorkspaceRoot(String rootPath) async {
+    final normalizedRootPath = p.normalize(p.absolute(rootPath));
+    final apiRoot = Directory(p.join(normalizedRootPath, 'backend', 'api'));
+    final serverEntrypoint = File(
+      p.join(
+        normalizedRootPath,
+        'backend',
+        'local_backend_service',
+        'bin',
+        'server.dart',
+      ),
+    );
+    return await apiRoot.exists() && await serverEntrypoint.exists();
   }
 }

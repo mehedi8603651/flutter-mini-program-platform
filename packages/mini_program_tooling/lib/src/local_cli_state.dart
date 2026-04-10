@@ -224,6 +224,62 @@ class LocalCliEnvironmentState {
   }
 }
 
+class LocalBackendWorkspaceState {
+  const LocalBackendWorkspaceState({
+    required this.schemaVersion,
+    required this.backendRootPath,
+    required this.apiRootPath,
+    required this.serviceDirectoryPath,
+    required this.initializedAtUtc,
+    required this.updatedAtUtc,
+  });
+
+  final int schemaVersion;
+  final String backendRootPath;
+  final String apiRootPath;
+  final String serviceDirectoryPath;
+  final String initializedAtUtc;
+  final String updatedAtUtc;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'schemaVersion': schemaVersion,
+    'backendRootPath': backendRootPath,
+    'apiRootPath': apiRootPath,
+    'serviceDirectoryPath': serviceDirectoryPath,
+    'initializedAtUtc': initializedAtUtc,
+    'updatedAtUtc': updatedAtUtc,
+  };
+
+  factory LocalBackendWorkspaceState.fromJson(Map<String, dynamic> json) {
+    final schemaVersion = json['schemaVersion'];
+    final backendRootPath = json['backendRootPath'];
+    final apiRootPath = json['apiRootPath'];
+    final serviceDirectoryPath = json['serviceDirectoryPath'];
+    final initializedAtUtc = json['initializedAtUtc'];
+    final updatedAtUtc = json['updatedAtUtc'];
+
+    if (schemaVersion is! int ||
+        backendRootPath is! String ||
+        apiRootPath is! String ||
+        serviceDirectoryPath is! String ||
+        initializedAtUtc is! String ||
+        updatedAtUtc is! String) {
+      throw const LocalCliStateException(
+        'backend_workspace.json is missing required fields.',
+      );
+    }
+
+    return LocalBackendWorkspaceState(
+      schemaVersion: schemaVersion,
+      backendRootPath: p.normalize(p.absolute(backendRootPath)),
+      apiRootPath: p.normalize(p.absolute(apiRootPath)),
+      serviceDirectoryPath: p.normalize(p.absolute(serviceDirectoryPath)),
+      initializedAtUtc: initializedAtUtc,
+      updatedAtUtc: updatedAtUtc,
+    );
+  }
+}
+
 class ResolvedLocalCliEnvironmentState {
   const ResolvedLocalCliEnvironmentState({
     required this.rootPath,
@@ -235,6 +291,20 @@ class ResolvedLocalCliEnvironmentState {
   final String rootPath;
   final String filePath;
   final LocalCliEnvironmentState state;
+  final String scope;
+}
+
+class ResolvedLocalBackendWorkspaceState {
+  const ResolvedLocalBackendWorkspaceState({
+    required this.rootPath,
+    required this.filePath,
+    required this.state,
+    required this.scope,
+  });
+
+  final String rootPath;
+  final String filePath;
+  final LocalBackendWorkspaceState state;
   final String scope;
 }
 
@@ -258,11 +328,17 @@ class LocalCliStateStore {
   String environmentStatePath(String rootPath) =>
       p.join(stateDirectoryPath(rootPath), 'env.json');
 
+  String backendWorkspaceStatePath(String rootPath) =>
+      p.join(stateDirectoryPath(rootPath), 'backend_workspace.json');
+
   String globalStateDirectoryPath() =>
       p.join(_normalizeHomeDirectoryPath(), '.mini_program');
 
   String globalEnvironmentStatePath() =>
       p.join(globalStateDirectoryPath(), 'global_env.json');
+
+  String globalBackendWorkspaceStatePath() =>
+      p.join(globalStateDirectoryPath(), 'global_backend_workspace.json');
 
   Future<Directory> ensureStateDirectory(String rootPath) async {
     final directory = Directory(stateDirectoryPath(rootPath));
@@ -448,6 +524,96 @@ class LocalCliStateStore {
     return null;
   }
 
+  Future<LocalBackendWorkspaceState?> readBackendWorkspaceState(
+    String rootPath,
+  ) async {
+    final file = File(backendWorkspaceStatePath(rootPath));
+    if (!await file.exists()) {
+      return null;
+    }
+
+    final json = await _readJsonObject(file);
+    return LocalBackendWorkspaceState.fromJson(json);
+  }
+
+  Future<void> writeBackendWorkspaceState(
+    String rootPath,
+    LocalBackendWorkspaceState state,
+  ) async {
+    await ensureStateDirectory(rootPath);
+    final file = File(backendWorkspaceStatePath(rootPath));
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
+  Future<LocalBackendWorkspaceState?> readGlobalBackendWorkspaceState() async {
+    final file = File(globalBackendWorkspaceStatePath());
+    if (!await file.exists()) {
+      return null;
+    }
+
+    final json = await _readJsonObject(file);
+    return LocalBackendWorkspaceState.fromJson(json);
+  }
+
+  Future<void> writeGlobalBackendWorkspaceState(
+    LocalBackendWorkspaceState state,
+  ) async {
+    final directory = Directory(globalStateDirectoryPath());
+    await directory.create(recursive: true);
+    final file = File(globalBackendWorkspaceStatePath());
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
+  Future<ResolvedLocalBackendWorkspaceState?> discoverBackendWorkspaceState({
+    String? currentWorkingDirectory,
+    Iterable<String> additionalSearchRoots = const <String>[],
+    bool includeGlobalFallback = true,
+  }) async {
+    final startDirectories = <String>{
+      p.normalize(
+        p.absolute(currentWorkingDirectory ?? Directory.current.path),
+      ),
+      ...additionalSearchRoots
+          .where((path) => path.trim().isNotEmpty)
+          .map((path) => p.normalize(p.absolute(path))),
+    };
+
+    for (final startDirectory in startDirectories) {
+      final rootPath = await _discoverBackendWorkspaceRoot(
+        startDirectory: startDirectory,
+      );
+      if (rootPath != null) {
+        final state = await readBackendWorkspaceState(rootPath);
+        if (state != null) {
+          return ResolvedLocalBackendWorkspaceState(
+            rootPath: rootPath,
+            filePath: backendWorkspaceStatePath(rootPath),
+            state: state,
+            scope: 'local',
+          );
+        }
+      }
+    }
+
+    if (includeGlobalFallback) {
+      final globalState = await readGlobalBackendWorkspaceState();
+      if (globalState != null) {
+        return ResolvedLocalBackendWorkspaceState(
+          rootPath: _normalizeHomeDirectoryPath(),
+          filePath: globalBackendWorkspaceStatePath(),
+          state: globalState,
+          scope: 'global',
+        );
+      }
+    }
+
+    return null;
+  }
+
   Future<Map<String, dynamic>> _readJsonObject(File file) async {
     try {
       final decoded = jsonDecode(await file.readAsString());
@@ -482,6 +648,24 @@ class LocalCliStateStore {
     var cursor = p.normalize(p.absolute(startDirectory));
     while (true) {
       final file = File(environmentStatePath(cursor));
+      if (await file.exists()) {
+        return cursor;
+      }
+
+      final parent = p.dirname(cursor);
+      if (parent == cursor) {
+        return null;
+      }
+      cursor = parent;
+    }
+  }
+
+  Future<String?> _discoverBackendWorkspaceRoot({
+    required String startDirectory,
+  }) async {
+    var cursor = p.normalize(p.absolute(startDirectory));
+    while (true) {
+      final file = File(backendWorkspaceStatePath(cursor));
       if (await file.exists()) {
         return cursor;
       }

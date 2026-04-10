@@ -29,6 +29,7 @@ as the public CLI surface:
 
 - `miniprogram create <mini-program-id>`
 - `miniprogram doctor`
+- `miniprogram backend init`
 - `miniprogram env init`
 - `miniprogram env use <local|cloud>`
 - `miniprogram env status`
@@ -85,7 +86,10 @@ publishing is the next phase after the local CLI is stable.
 - `embed init`
   - wraps the existing embedding initializer
 - `backend start|stop|status|reset-local`
-  - are new backend lifecycle commands and require new implementation work
+  - manage a standalone backend workspace or repo-owned backend workspace
+- `backend init`
+  - scaffolds a developer-owned local backend workspace and stores backend
+    workspace state for later lifecycle commands
 
 ## Path Resolution And Local State
 
@@ -122,6 +126,9 @@ Use these files for the first implementation wave:
   - stores the default repo root and active local CLI environment
 - `.mini_program/backend.local.json`
   - stores backend PID, configured port, log file paths, and last start time
+- `.mini_program/backend_workspace.json`
+  - stores the initialized backend workspace root plus backend/api and service
+    directory paths
 - `.mini_program/published_local_artifacts.json`
   - stores the locally published artifact folders created by `publish`
 
@@ -137,6 +144,10 @@ standalone mini-program workspace outside the platform repo to remember its
 That local env flow now also refreshes a user-level fallback config, so
 commands such as `embed init` can resolve the same repo root even when they are
 run from unrelated directories.
+
+Backend workspaces now have a similar fallback file:
+
+- `~/.mini_program/global_backend_workspace.json`
 
 ## Local Backend Lifecycle
 

@@ -26,6 +26,7 @@ dart pub global activate --source path <repo-root>/packages/mini_program_tooling
 ```text
 miniprogram create <mini-program-id>
 miniprogram doctor
+miniprogram backend init
 miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
@@ -51,6 +52,12 @@ Create a standalone mini-program in the current directory:
 
 ```bash
 miniprogram create coupon_center
+```
+
+Initialize a standalone backend workspace once:
+
+```bash
+miniprogram backend init
 ```
 
 Initialize local CLI env once from a standalone mini-program workspace:
@@ -101,12 +108,14 @@ miniprogram backend stop
 The CLI keeps repo-local state in:
 
 - `.mini_program/env.json`
+- `.mini_program/backend_workspace.json`
 - `.mini_program/backend.local.json`
 - `.mini_program/published_local_artifacts.json`
 
 It also keeps a user-level fallback file in:
 
 - `~/.mini_program/global_env.json`
+- `~/.mini_program/global_backend_workspace.json`
 
 `backend reset-local --yes` only removes tracked local publish outputs. It does
 not wipe all of `backend/api/` or remove rollout, capability, or secure API
@@ -117,8 +126,10 @@ policy files that were not created by the CLI publish flow.
 - `publish --target cloud` is intentionally reserved for a later CLI phase.
 - `env use local|cloud` only switches saved CLI context in this phase. Cloud
   publish and cloud backend operations are still follow-up work.
-- Local backend lifecycle commands expect the platform repo layout with
-  `backend/local_backend_service/` and `backend/api/`.
+- Local backend lifecycle commands can work from either:
+  - a `miniprogram backend init` workspace
+  - the platform repo layout with `backend/local_backend_service/` and
+    `backend/api/`
 - Existing low-level Dart bins remain in the repo for compatibility.
 - The repo PowerShell wrappers now delegate to the installed `miniprogram`
   command for the standard text workflow and only fall back to legacy Dart

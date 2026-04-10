@@ -137,6 +137,70 @@ void main() {
         isTrue,
       );
     });
+
+    test(
+      'uses a saved backend workspace even when no repo root is resolved',
+      () async {
+        final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
+        await workspaceRoot.create(recursive: true);
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        final backendState = LocalBackendWorkspaceState(
+          schemaVersion: 1,
+          backendRootPath: backendRoot,
+          apiRootPath: p.join(backendRoot, 'backend', 'api'),
+          serviceDirectoryPath: p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+          ),
+          initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+        );
+        await stateStore.writeGlobalBackendWorkspaceState(backendState);
+        await Directory(
+          p.join(backendRoot, 'backend', 'api'),
+        ).create(recursive: true);
+        await Directory(
+          p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+            'bin',
+            'server.dart',
+          ),
+        ).writeAsString('void main() {}');
+
+        final doctor = MiniprogramDoctor(
+          stateStore: stateStore,
+          backendController: _HealthyBackendController(backendRoot),
+          shellRunner: _okShellRunner,
+          workingDirectory: workspaceRoot.path,
+        );
+
+        final result = await doctor.diagnose();
+
+        expect(result.hasErrors, isFalse);
+        expect(
+          result.checks.any(
+            (check) =>
+                check.label == 'Backend workspace' &&
+                check.status == MiniprogramDoctorCheckStatus.ok,
+          ),
+          isTrue,
+        );
+        expect(
+          result.checks.any(
+            (check) =>
+                check.label == 'Backend status' &&
+                check.status == MiniprogramDoctorCheckStatus.ok,
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }
 
@@ -151,12 +215,7 @@ Future<ProcessResult> _okShellRunner(
     'stac' => 'stac 1.0.0',
     _ => '$executable ok',
   };
-  return ProcessResult(
-    1,
-    0,
-    versionLine,
-    '',
-  );
+  return ProcessResult(1, 0, versionLine, '');
 }
 
 Future<ProcessResult> _missingShellRunner(

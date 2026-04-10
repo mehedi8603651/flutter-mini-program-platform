@@ -23,6 +23,7 @@ Then use the shared `miniprogram` command:
 ```powershell
 miniprogram create coupon_center
 miniprogram doctor
+miniprogram backend init
 miniprogram env init --repo-root <repo-root>
 miniprogram build coupon_center
 miniprogram validate coupon_center
@@ -78,6 +79,12 @@ init --repo-root <repo-root>` once from the mini-program root. That writes
 `.mini_program/env.json` and refreshes a user-level fallback repo config, so
 later `build`, `validate`, `publish`, `embed init`, and `backend ...` commands
 can reuse the saved repo context without repeating `--repo-root`.
+
+If you want a developer-owned local backend outside the platform repo, run
+`miniprogram backend init` once from the directory that should own the backend
+workspace. That scaffolds `backend/local_backend_service`, `backend/api`, and
+the tracked `.mini_program/backend_workspace.json` state used by
+`backend start`, `backend status`, `backend stop`, and `backend reset-local`.
 
 ## Embed Into An Existing Flutter App
 

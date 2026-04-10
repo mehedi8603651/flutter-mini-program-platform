@@ -5,6 +5,7 @@ export 'src/local_cli_state.dart';
 export 'src/miniprogram_doctor.dart';
 export 'src/delivery_validation.dart';
 export 'src/delivery_validator.dart';
+export 'src/local_backend_initializer.dart';
 export 'src/mini_program_embedding_initializer.dart';
 export 'src/mini_program_path_resolver.dart';
 export 'src/mini_program_publisher.dart';

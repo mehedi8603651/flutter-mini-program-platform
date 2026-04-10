@@ -35,9 +35,8 @@ class MiniprogramDoctorResult {
 
   final List<MiniprogramDoctorCheck> checks;
 
-  bool get hasErrors => checks.any(
-    (check) => check.status == MiniprogramDoctorCheckStatus.error,
-  );
+  bool get hasErrors =>
+      checks.any((check) => check.status == MiniprogramDoctorCheckStatus.error);
 }
 
 class MiniprogramDoctor {
@@ -178,30 +177,55 @@ class MiniprogramDoctor {
       );
     }
 
-    if (repoRootPath == null) {
+    ResolvedLocalBackendWorkspaceState? backendWorkspaceState;
+    try {
+      backendWorkspaceState = await _stateStore.discoverBackendWorkspaceState(
+        currentWorkingDirectory: cwd,
+        additionalSearchRoots: <String>[
+          if (repoRootPath != null) repoRootPath,
+          if (environmentState != null) environmentState.state.repoRootPath,
+        ],
+      );
+    } on LocalCliStateException catch (error) {
+      checks.add(
+        MiniprogramDoctorCheck(
+          label: 'Backend workspace',
+          status: MiniprogramDoctorCheckStatus.error,
+          summary: 'Failed to read backend workspace configuration.',
+          detail: error.message,
+        ),
+      );
+    }
+
+    final backendRootPath =
+        backendWorkspaceState?.state.backendRootPath ?? repoRootPath;
+    if (backendRootPath == null) {
       checks.add(
         const MiniprogramDoctorCheck(
           label: 'Backend workspace',
-          status: MiniprogramDoctorCheckStatus.skipped,
-          summary: 'Skipped because no platform repo root was resolved.',
+          status: MiniprogramDoctorCheckStatus.warning,
+          summary: 'No backend workspace was found.',
+          detail:
+              'Run `miniprogram backend init` to scaffold a standalone local '
+              'backend workspace.',
         ),
       );
       checks.add(
         const MiniprogramDoctorCheck(
           label: 'Backend status',
           status: MiniprogramDoctorCheckStatus.skipped,
-          summary: 'Skipped because no platform repo root was resolved.',
+          summary: 'Skipped because no backend workspace was resolved.',
         ),
       );
       return MiniprogramDoctorResult(checks: checks);
     }
 
     final serviceDirectoryPath = p.join(
-      repoRootPath,
+      backendRootPath,
       'backend',
       'local_backend_service',
     );
-    final apiRootPath = p.join(repoRootPath, 'backend', 'api');
+    final apiRootPath = p.join(backendRootPath, 'backend', 'api');
     final serviceExists = await Directory(serviceDirectoryPath).exists();
     final apiExists = await Directory(apiRootPath).exists();
     if (serviceExists && apiExists) {
@@ -210,7 +234,8 @@ class MiniprogramDoctor {
           label: 'Backend workspace',
           status: MiniprogramDoctorCheckStatus.ok,
           summary: 'Found backend/local_backend_service and backend/api.',
-          detail: 'API root: $apiRootPath',
+          detail:
+              '${backendWorkspaceState == null ? 'Repo-owned' : '${backendWorkspaceState.scope} config'} workspace at $backendRootPath',
         ),
       );
     } else {
@@ -219,15 +244,14 @@ class MiniprogramDoctor {
           label: 'Backend workspace',
           status: MiniprogramDoctorCheckStatus.error,
           summary: 'Platform repo is missing local backend directories.',
-          detail:
-              'Expected: $serviceDirectoryPath and $apiRootPath',
+          detail: 'Expected: $serviceDirectoryPath and $apiRootPath',
         ),
       );
     }
 
     try {
       final backendStatus = await _backendController.status(
-        repoRootPath: repoRootPath,
+        repoRootPath: backendRootPath,
       );
       if (!backendStatus.hasState) {
         checks.add(

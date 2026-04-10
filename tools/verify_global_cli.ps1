@@ -79,6 +79,7 @@ $homeRoot = Join-Path $tempRoot "home"
 $workspaceRoot = Join-Path $tempRoot "workspace"
 $miniProgramRoot = Join-Path $workspaceRoot "coupon_center"
 $hostRoot = Join-Path $workspaceRoot "host_app"
+$backendWorkspaceRoot = Join-Path $workspaceRoot "backend_workspace"
 $fakeStacCliPath = Join-Path $workspaceRoot "fake_stac_cli.dart"
 $port = Get-FreeTcpPort
 $backendStarted = $false
@@ -179,6 +180,17 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
         -Arguments @("env", "status")
 
     Invoke-Step `
+        -Name "Initialize a standalone backend workspace" `
+        -Workdir $workspaceRoot `
+        -FilePath $miniprogramExecutable `
+        -Arguments @(
+            "backend",
+            "init",
+            "--root",
+            $backendWorkspaceRoot
+        )
+
+    Invoke-Step `
         -Name "Run doctor against the standalone workspace" `
         -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
@@ -270,7 +282,7 @@ finally {
         if (Test-Path (Join-Path $pubCache "bin\miniprogram.bat")) {
             if ($backendStarted) {
                 try {
-                    & (Join-Path $pubCache "bin\miniprogram.bat") backend stop --repo-root $RepoRoot | Out-Null
+                    & (Join-Path $pubCache "bin\miniprogram.bat") backend stop --root $backendWorkspaceRoot | Out-Null
                 }
                 catch {
                     Write-Warning "Cleanup stop failed: $_"
