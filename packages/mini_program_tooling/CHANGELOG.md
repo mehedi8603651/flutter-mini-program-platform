@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.3
+## 0.2.5
 
 - add `miniprogram backend init` to scaffold a standalone backend workspace
 - add tracked backend workspace state in `.mini_program/backend_workspace.json`
