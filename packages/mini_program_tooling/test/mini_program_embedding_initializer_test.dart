@@ -68,6 +68,9 @@ void main() {
       expect(result.createdPaths, hasLength(9));
       expect(runtimeSetup, contains("const String _hostAppId = 'my_existing_app';"));
       expect(runtimeSetup, contains("const String _hostVersion = '3.2.0';"));
+      expect(runtimeSetup, contains("String.fromEnvironment(\n    'MINI_PROGRAM_BACKEND_BASE_URL',"));
+      expect(runtimeSetup, contains("return 'http://10.0.2.2:8080/api/';"));
+      expect(runtimeSetup, contains("return 'http://127.0.0.1:8080/api/';"));
       expect(routes, contains("static const String nativeProfileEditor = '/native/profile-editor';"));
       expect(hostBridge, contains('MiniProgramRoutes.profileEditorAlias'));
       expect(launcher, contains('Future<T?> openAppMiniProgram<T>('));
@@ -83,6 +86,7 @@ void main() {
           contains('mini_program_sdk: ^0.1.0'),
           contains('mini_program_contracts: ^0.1.0'),
           contains('MiniProgramAppShell('),
+          contains('flutter run -d emulator-5554'),
         ),
       );
     });

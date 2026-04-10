@@ -127,6 +127,17 @@ while `MiniProgramAppShell` keeps app entry code small.
 `mini_program_sdk` and `mini_program_contracts` packages instead of local
 `path:` dependencies.
 
+The generated runtime setup already defaults local backend URLs for common dev
+targets, so once the backend is running on port `8080`, Android emulator work
+should normally be as simple as:
+
+```powershell
+flutter run -d emulator-5554
+```
+
+Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
+override that generated local default.
+
 ## Repo Smoke Command
 
 Run the repo-level local/CI smoke suite with:

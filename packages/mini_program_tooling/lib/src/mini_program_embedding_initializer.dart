@@ -816,6 +816,13 @@ flowing through your app-owned route factory.
 - `mini_program_runtime_setup.dart` defaults to:
   - Android emulator: `http://10.0.2.2:8080/api/`
   - desktop/iOS simulators: `http://127.0.0.1:8080/api/`
+- When your local backend is already running on port `8080`, Android emulator
+  development should usually work with:
+
+```text
+flutter run -d emulator-5554
+```
+
 - Override the backend base URL with:
 
 ```text

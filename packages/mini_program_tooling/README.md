@@ -97,6 +97,16 @@ miniprogram embed init
 `embed init` updates the host app `pubspec.yaml` to use the published
 `mini_program_sdk` and `mini_program_contracts` packages.
 
+When the local backend is already running on port `8080`, the generated
+runtime setup should usually let Android emulator development work with:
+
+```bash
+flutter run -d emulator-5554
+```
+
+Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
+override that generated local default.
+
 If you need to target an app from another directory, use:
 
 ```bash

@@ -162,7 +162,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 final runtime = MiniProgramRuntime(
   sdkVersion: '1.0.0',
   source: HttpMiniProgramSource.fromDeliveryContext(
-    apiBaseUri: Uri.parse('http://10.0.2.2:8080/api/'),
+    apiBaseUri: Uri.parse(_resolveBackendBaseUrl()),
     deliveryContext: const MiniProgramDeliveryContext(
       hostApp: 'my_existing_app',
       sdkVersion: '1.0.0',
@@ -188,6 +188,16 @@ final runtime = MiniProgramRuntime(
 
 Most apps do not need to touch this immediately. The generated
 `MiniProgramAppShell` already calls it for you.
+
+When the local backend is already running on port `8080`, Android emulator
+development should normally work with:
+
+```powershell
+flutter run -d emulator-5554
+```
+
+Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
+override the generated local default.
 
 ## 5. Open mini-programs from ordinary app buttons
 

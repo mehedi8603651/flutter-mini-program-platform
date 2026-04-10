@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.2.9
 
 - make `miniprogram backend init` default to the per-user global backend
   workspace on Windows at `%LOCALAPPDATA%\mini_program\backend\`
 - keep `miniprogram backend init --root <path>` as the explicit override for a
   custom backend workspace
+- document the generated local backend URL defaults so Android emulator
+  workflows can usually run with plain `flutter run -d emulator-5554` when the
+  backend is already running on port `8080`
+- refresh the generated embed README, public docs, and tests around the local
+  backend URL defaults and `MINI_PROGRAM_BACKEND_BASE_URL` override
 
 ## 0.2.8
 
