@@ -248,17 +248,15 @@ class MiniprogramCli {
 
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram build <mini-program-id> [options]');
+      _stdout.writeln('Usage: miniprogram build [mini-program-id] [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
-    if (results.rest.length != 1) {
-      throw const FormatException(
-        'build expects exactly one <mini-program-id> positional argument.',
-      );
-    }
-
-    final miniProgramId = results.rest.single;
+    final miniProgramId = await _resolveMiniProgramId(
+      commandName: 'build',
+      positionalArguments: results.rest,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
     final cwd = _currentWorkingDirectory();
     final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
@@ -314,18 +312,16 @@ class MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram validate <mini-program-id> [options]',
+        'Usage: miniprogram validate [mini-program-id] [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
     }
-    if (results.rest.length != 1) {
-      throw const FormatException(
-        'validate expects exactly one <mini-program-id> positional argument.',
-      );
-    }
-
-    final miniProgramId = results.rest.single;
+    final miniProgramId = await _resolveMiniProgramId(
+      commandName: 'validate',
+      positionalArguments: results.rest,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
     final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[
@@ -399,14 +395,9 @@ class MiniprogramCli {
 
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram publish <mini-program-id> [options]');
+      _stdout.writeln('Usage: miniprogram publish [mini-program-id] [options]');
       _stdout.writeln(parser.usage);
       return 0;
-    }
-    if (results.rest.length != 1) {
-      throw const FormatException(
-        'publish expects exactly one <mini-program-id> positional argument.',
-      );
     }
     final activeEnvironment = await _discoverEnvironmentState(
       additionalSearchRoots: <String>[
@@ -426,7 +417,11 @@ class MiniprogramCli {
       );
     }
 
-    final miniProgramId = results.rest.single;
+    final miniProgramId = await _resolveMiniProgramId(
+      commandName: 'publish',
+      positionalArguments: results.rest,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
     final repoRootHint = await _resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[
@@ -973,9 +968,9 @@ Commands:
   env init
   env use <local|cloud>
   env status
-  build <mini-program-id>
-  validate <mini-program-id>
-  publish <mini-program-id>
+  build [mini-program-id]
+  validate [mini-program-id]
+  publish [mini-program-id]
   embed init
   backend init
   backend start --port 8080
@@ -1343,6 +1338,36 @@ Commands:
       );
     }
     return null;
+  }
+
+  Future<String> _resolveMiniProgramId({
+    required String commandName,
+    required List<String> positionalArguments,
+    String? explicitMiniProgramRootPath,
+  }) async {
+    if (positionalArguments.length > 1) {
+      throw FormatException(
+        '$commandName expects zero or one <mini-program-id> positional argument.',
+      );
+    }
+
+    if (positionalArguments.length == 1) {
+      return positionalArguments.single;
+    }
+
+    final inferredMiniProgramId = await _pathResolver.inferMiniProgramId(
+      miniProgramRootPath: explicitMiniProgramRootPath,
+      currentWorkingDirectory: _currentWorkingDirectory(),
+    );
+    if (inferredMiniProgramId != null) {
+      return inferredMiniProgramId;
+    }
+
+    throw FormatException(
+      'No <mini-program-id> was provided, and the current directory does not '
+      'look like a mini-program root. Run `miniprogram $commandName '
+      '<mini-program-id>` or change into the mini-program folder first.',
+    );
   }
 
   Future<bool> _looksLikeBackendWorkspaceRoot(String rootPath) async {

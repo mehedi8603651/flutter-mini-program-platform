@@ -68,10 +68,18 @@ cd D:\first_miniprogram
 miniprogram doctor
 miniprogram backend init
 miniprogram env init
+miniprogram build
+miniprogram validate
+miniprogram publish
+miniprogram backend start --port 8080
+```
+
+If you are outside the mini-program folder, the explicit form still works:
+
+```powershell
 miniprogram build first_miniprogram
 miniprogram validate first_miniprogram
 miniprogram publish first_miniprogram
-miniprogram backend start --port 8080
 ```
 
 `env init` now works without a platform repo path. `build` uses the managed

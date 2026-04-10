@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.10
+
+- let `miniprogram build`, `miniprogram validate`, and `miniprogram publish`
+  infer the mini-program id from the current working directory when the user is
+  already inside the mini-program root
+- keep the explicit forms such as `miniprogram build <id>` and
+  `miniprogram publish <id>` for scripted and multi-project workflows
+- refresh docs and tests around the simpler in-folder authoring workflow
+
 ## 0.2.9
 
 - make `miniprogram backend init` default to the per-user global backend

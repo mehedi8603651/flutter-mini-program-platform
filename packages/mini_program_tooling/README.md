@@ -78,14 +78,23 @@ unrelated directories without repeating setup.
 Then build, validate, and publish without any platform repo path:
 
 ```bash
-miniprogram build coupon_center
-miniprogram validate coupon_center
-miniprogram publish coupon_center
+cd coupon_center
+miniprogram build
+miniprogram validate
+miniprogram publish
 ```
 
 If a standalone backend workspace was initialized earlier with
 `miniprogram backend init`, `publish` writes manifests and screens into that
 workspace instead of the platform repo backend.
+
+From outside the mini-program folder, the explicit form still works:
+
+```bash
+miniprogram build coupon_center
+miniprogram validate coupon_center
+miniprogram publish coupon_center
+```
 
 Initialize the embedding adapter for an existing Flutter app:
 

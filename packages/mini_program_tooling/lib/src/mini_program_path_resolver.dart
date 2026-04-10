@@ -31,6 +31,30 @@ class ResolvedMiniProgramPaths {
 class MiniProgramPathResolver {
   const MiniProgramPathResolver();
 
+  Future<String?> inferMiniProgramId({
+    String? miniProgramRootPath,
+    String? currentWorkingDirectory,
+  }) async {
+    final cwd = p.normalize(
+      p.absolute(currentWorkingDirectory ?? Directory.current.path),
+    );
+
+    final candidates = <String>[
+      if (miniProgramRootPath != null && miniProgramRootPath.trim().isNotEmpty)
+        p.normalize(p.absolute(miniProgramRootPath)),
+      cwd,
+    ];
+
+    for (final candidate in candidates) {
+      final manifestId = await _readManifestId(candidate);
+      if (manifestId != null && manifestId.isNotEmpty) {
+        return manifestId;
+      }
+    }
+
+    return null;
+  }
+
   Future<ResolvedMiniProgramPaths> resolve({
     required String miniProgramId,
     String? repoRootPath,
@@ -200,6 +224,18 @@ class MiniProgramPathResolver {
     String rootPath, {
     required String expectedMiniProgramId,
   }) async {
+    final manifestId = await _readManifestId(rootPath);
+    if (manifestId == null || manifestId != expectedMiniProgramId) {
+      return null;
+    }
+
+    return _MatchedMiniProgram(
+      miniProgramRootPath: p.normalize(p.absolute(rootPath)),
+      miniProgramId: manifestId,
+    );
+  }
+
+  Future<String?> _readManifestId(String rootPath) async {
     final rootDirectory = Directory(rootPath);
     if (!await rootDirectory.exists()) {
       return null;
@@ -220,14 +256,7 @@ class MiniProgramPathResolver {
         (key, value) => MapEntry(key.toString(), value),
       );
       final manifestId = '${manifest['id'] ?? ''}'.trim();
-      if (manifestId != expectedMiniProgramId) {
-        return null;
-      }
-
-      return _MatchedMiniProgram(
-        miniProgramRootPath: p.normalize(p.absolute(rootPath)),
-        miniProgramId: manifestId,
-      );
+      return manifestId.isEmpty ? null : manifestId;
     } on FormatException {
       return null;
     } on FileSystemException {

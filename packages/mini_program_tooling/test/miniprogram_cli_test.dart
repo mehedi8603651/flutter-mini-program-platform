@@ -147,6 +147,35 @@ void main() {
       );
     });
 
+    test('build infers the mini-program id from the current directory', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.0.0',
+      );
+      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
+      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'build',
+        '--stac-cli-script',
+        fakeCliPath,
+        '--skip-pub-get',
+      ]);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('Built mini-program: coupon_center'));
+    });
+
     test('env init, use, and status manage active environment state', () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await workspaceRoot.create(recursive: true);
@@ -309,6 +338,41 @@ void main() {
       },
     );
 
+    test(
+      'validate infers the mini-program id from the current directory',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        await _initializeBackendWorkspaceState(stateStore, backendRoot);
+
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+        expect(await cli.run(<String>['env', 'init']), 0);
+
+        final stdoutBuffer = StringBuffer();
+        final validateCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await validateCli.run(<String>['validate']);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Repo root: $backendRoot'));
+      },
+    );
+
     test('publish tracks local artifact state', () async {
       final miniProgramRoot = p.join(
         repoRoot.path,
@@ -422,6 +486,52 @@ void main() {
             ),
           ).exists(),
           isTrue,
+        );
+      },
+    );
+
+    test(
+      'publish infers the mini-program id from the current directory',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.0',
+        );
+        final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
+        await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+
+        expect(
+          await cli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
+          0,
+        );
+
+        final publishBuffer = StringBuffer();
+        final publishCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: publishBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+        final exitCode = await publishCli.run(<String>[
+          'publish',
+          '--stac-cli-script',
+          fakeCliPath,
+          '--skip-build-pub-get',
+        ]);
+
+        expect(exitCode, 0);
+        expect(
+          publishBuffer.toString(),
+          contains('Published mini-program: coupon_center'),
         );
       },
     );

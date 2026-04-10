@@ -102,10 +102,11 @@ Stac build step.
 Preferred standalone local flow:
 
 ```powershell
+cd <id>
 miniprogram doctor
 miniprogram backend init
 miniprogram env init
-miniprogram build <id>
+miniprogram build
 ```
 
 On Windows, `miniprogram backend init` defaults to
@@ -137,7 +138,7 @@ miniprogram build <id> --stac-cli-script D:\path\to\bin\stac_cli.dart
 Run validation before publish:
 
 ```powershell
-miniprogram validate <id>
+miniprogram validate
 ```
 
 ## Publish the local backend sample
@@ -145,6 +146,14 @@ miniprogram validate <id>
 Preferred command:
 
 ```powershell
+miniprogram publish
+```
+
+If you are outside the mini-program folder, the explicit form still works:
+
+```powershell
+miniprogram build <id>
+miniprogram validate <id>
 miniprogram publish <id>
 ```
 
