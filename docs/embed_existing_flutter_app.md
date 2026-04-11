@@ -196,6 +196,10 @@ development should normally work with:
 flutter run -d emulator-5554
 ```
 
+`miniprogram embed init` also writes Android debug-only cleartext/network
+configuration so the generated emulator default can reach
+`http://10.0.2.2:8080/api/` without manual manifest edits.
+
 Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
 override the generated local default.
 

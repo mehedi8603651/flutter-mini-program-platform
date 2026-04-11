@@ -126,18 +126,12 @@ class MiniProgramEmbeddingInitializer {
         hostAppId: resolvedHostAppId,
         hostVersion: resolvedHostVersion,
       ),
-      p.join(
-        integrationRootPath,
-        'native_profile_editor_page.dart',
-      ): _buildNativeProfileEditorPage(),
-      p.join(
-        integrationRootPath,
-        'mini_program_launcher.dart',
-      ): _buildLauncher(),
-      p.join(
-        integrationRootPath,
-        'mini_program_app_shell.dart',
-      ): _buildAppShell(),
+      p.join(integrationRootPath, 'native_profile_editor_page.dart'):
+          _buildNativeProfileEditorPage(),
+      p.join(integrationRootPath, 'mini_program_launcher.dart'):
+          _buildLauncher(),
+      p.join(integrationRootPath, 'mini_program_app_shell.dart'):
+          _buildAppShell(),
       p.join(integrationRootPath, 'mini_program.dart'): _buildBarrel(),
       p.join(integrationRootPath, 'README.md'): _buildReadme(
         packageName: packageName,
@@ -147,6 +141,9 @@ class MiniProgramEmbeddingInitializer {
         nativeRoutePath: normalizedRoutePath,
       ),
     };
+    managedFiles.addAll(
+      _buildPlatformIntegrationFiles(projectRootPath: projectRootPath),
+    );
 
     if (await integrationRootDir.exists() &&
         !request.force &&
@@ -292,9 +289,7 @@ class MiniProgramEmbeddingInitializer {
     }
 
     if (!preservedPackages.contains('mini_program_sdk')) {
-      rebuiltSectionLines.add(
-        '  mini_program_sdk: $_miniProgramSdkConstraint',
-      );
+      rebuiltSectionLines.add('  mini_program_sdk: $_miniProgramSdkConstraint');
     }
     if (!preservedPackages.contains('mini_program_contracts')) {
       rebuiltSectionLines.add(
@@ -733,6 +728,10 @@ Generated files:
 - `mini_program_runtime_setup.dart`
 - `native_profile_editor_page.dart`
 - `mini_program_launcher.dart`
+- `android/app/src/debug/AndroidManifest.xml` when the Flutter app has an
+  Android target
+- `android/app/src/debug/res/xml/mini_program_network_security_config.xml`
+  when the Flutter app has an Android target
 
 ## 1. Hosted package dependencies
 
@@ -816,6 +815,9 @@ flowing through your app-owned route factory.
 - `mini_program_runtime_setup.dart` defaults to:
   - Android emulator: `http://10.0.2.2:8080/api/`
   - desktop/iOS simulators: `http://127.0.0.1:8080/api/`
+- `embed init` also adds Android debug-only cleartext config for the local
+  backend so the generated emulator default can reach `http://10.0.2.2:8080`
+  without manual manifest edits
 - When your local backend is already running on port `8080`, Android emulator
   development should usually work with:
 
@@ -828,6 +830,51 @@ flutter run -d emulator-5554
 ```text
 --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://host:8080/api/
 ```
+''';
+  }
+
+  Map<String, String> _buildPlatformIntegrationFiles({
+    required String projectRootPath,
+  }) {
+    final files = <String, String>{};
+    final androidDebugDirectory = Directory(
+      p.join(projectRootPath, 'android', 'app', 'src', 'debug'),
+    );
+    if (androidDebugDirectory.existsSync()) {
+      files[p.join(androidDebugDirectory.path, 'AndroidManifest.xml')] =
+          _buildAndroidDebugManifest();
+      files[p.join(
+            androidDebugDirectory.path,
+            'res',
+            'xml',
+            'mini_program_network_security_config.xml',
+          )] =
+          _buildAndroidDebugNetworkSecurityConfig();
+    }
+    return files;
+  }
+
+  String _buildAndroidDebugManifest() {
+    return '''
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/mini_program_network_security_config" />
+</manifest>
+''';
+  }
+
+  String _buildAndroidDebugNetworkSecurityConfig() {
+    return '''
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>
 ''';
   }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.12
+
+- make `embed init` generate Android debug-only cleartext/network security
+  config so the default local emulator backend URL can work without manual
+  manifest edits
+- refresh the tooling docs around the generated Android local-backend setup and
+  align the public CLI surface with the optional in-folder
+  `build`/`validate`/`publish` flow
+
 ## 0.2.11
 
 - fix backend workspace resolution so `validate`, `publish`, backend commands,

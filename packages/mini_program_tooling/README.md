@@ -4,7 +4,7 @@ Developer tooling for the portable Flutter mini-program platform.
 
 This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, publish to the local backend, initialize
-embedding adapters for existing Flutter apps, and manage the repo-local backend
+embedding adapters for existing Flutter apps, and manage the local backend
 lifecycle.
 
 ## Install
@@ -30,9 +30,9 @@ miniprogram backend init
 miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
-miniprogram build <mini-program-id>
-miniprogram validate <mini-program-id>
-miniprogram publish <mini-program-id>
+miniprogram build [mini-program-id]
+miniprogram validate [mini-program-id]
+miniprogram publish [mini-program-id]
 miniprogram embed init
 miniprogram backend start --port 8080
 miniprogram backend stop
@@ -112,6 +112,10 @@ runtime setup should usually let Android emulator development work with:
 ```bash
 flutter run -d emulator-5554
 ```
+
+`miniprogram embed init` also writes Android debug-only cleartext/network
+configuration so the generated emulator default can reach
+`http://10.0.2.2:8080/api/` without manual manifest edits.
 
 Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
 override that generated local default.
