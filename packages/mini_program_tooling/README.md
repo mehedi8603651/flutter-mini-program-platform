@@ -134,6 +134,11 @@ miniprogram backend status
 miniprogram backend stop
 ```
 
+When `adb` is available, `miniprogram backend start` also tries
+`adb reverse tcp:<port> tcp:<port>` for connected Android emulators and
+devices. That keeps the common local Android flow on plain `flutter run`
+instead of requiring a manual reverse step every time.
+
 `miniprogram doctor` reports:
 
 - Dart runtime availability

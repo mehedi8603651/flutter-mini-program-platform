@@ -21,7 +21,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.1.0
+  mini_program_sdk: ^0.1.1
   mini_program_contracts: ^0.1.0
 ```
 
@@ -34,7 +34,7 @@ uses the local `mini_program_contracts` checkout.
 final runtime = MiniProgramRuntime(
   sdkVersion: '1.0.0',
   source: HttpMiniProgramSource.fromDeliveryContext(
-    apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
+    apiBaseUri: Uri.parse('http://10.0.2.2:8080/api/'),
     deliveryContext: const MiniProgramDeliveryContext(
       hostApp: 'sample_host',
       sdkVersion: '1.0.0',
@@ -66,6 +66,13 @@ runApp(
   ),
 );
 ```
+
+For local backend development:
+
+- Android emulator default: `http://10.0.2.2:8080/api/`
+- Desktop or `adb reverse`: `http://127.0.0.1:8080/api/`
+- local HTTP transport failures retry between those two loopback hosts before
+  surfacing `backend_unreachable`
 
 ## Host responsibilities
 
