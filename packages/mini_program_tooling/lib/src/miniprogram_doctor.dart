@@ -91,9 +91,7 @@ class MiniprogramDoctor {
       ),
     );
 
-    checks.add(
-      await _describeManagedStacBuilder(),
-    );
+    checks.add(await _describeManagedStacBuilder());
 
     ResolvedLocalCliEnvironmentState? environmentState;
     try {
@@ -176,7 +174,7 @@ class MiniprogramDoctor {
 
     ResolvedLocalBackendWorkspaceState? backendWorkspaceState;
     try {
-      backendWorkspaceState = await _stateStore.discoverBackendWorkspaceState(
+      backendWorkspaceState = await _resolveUsableBackendWorkspaceState(
         currentWorkingDirectory: cwd,
         additionalSearchRoots: <String>[
           if (repoRootPath != null) repoRootPath,
@@ -306,6 +304,51 @@ class MiniprogramDoctor {
     }
 
     return MiniprogramDoctorResult(checks: checks);
+  }
+
+  Future<ResolvedLocalBackendWorkspaceState?>
+  _resolveUsableBackendWorkspaceState({
+    required String currentWorkingDirectory,
+    Iterable<String> additionalSearchRoots = const <String>[],
+  }) async {
+    final discovered = await _stateStore.discoverBackendWorkspaceState(
+      currentWorkingDirectory: currentWorkingDirectory,
+      additionalSearchRoots: additionalSearchRoots,
+    );
+    if (discovered != null &&
+        await _looksLikeBackendWorkspaceRoot(
+          discovered.state.backendRootPath,
+        )) {
+      return discovered;
+    }
+
+    final globalState = await _stateStore.readGlobalBackendWorkspaceState();
+    if (globalState != null &&
+        await _looksLikeBackendWorkspaceRoot(globalState.backendRootPath)) {
+      return ResolvedLocalBackendWorkspaceState(
+        rootPath: Directory(_stateStore.globalStateDirectoryPath()).parent.path,
+        filePath: _stateStore.globalBackendWorkspaceStatePath(),
+        state: globalState,
+        scope: 'global',
+      );
+    }
+
+    return null;
+  }
+
+  Future<bool> _looksLikeBackendWorkspaceRoot(String rootPath) async {
+    final normalizedRootPath = p.normalize(p.absolute(rootPath));
+    final apiRoot = Directory(p.join(normalizedRootPath, 'backend', 'api'));
+    final serverEntrypoint = File(
+      p.join(
+        normalizedRootPath,
+        'backend',
+        'local_backend_service',
+        'bin',
+        'server.dart',
+      ),
+    );
+    return await apiRoot.exists() && await serverEntrypoint.exists();
   }
 
   Future<MiniprogramDoctorCheck> _probeCommand({

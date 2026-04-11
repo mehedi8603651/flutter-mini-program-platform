@@ -183,13 +183,13 @@ void main() {
           ),
         ).writeAsString('void main() {}');
 
-      final doctor = MiniprogramDoctor(
-        stateStore: stateStore,
-        managedStacBuilder: const _ReadyManagedStacBuilder(),
-        backendController: _HealthyBackendController(backendRoot),
-        shellRunner: _okShellRunner,
-        workingDirectory: workspaceRoot.path,
-      );
+        final doctor = MiniprogramDoctor(
+          stateStore: stateStore,
+          managedStacBuilder: const _ReadyManagedStacBuilder(),
+          backendController: _HealthyBackendController(backendRoot),
+          shellRunner: _okShellRunner,
+          workingDirectory: workspaceRoot.path,
+        );
 
         final result = await doctor.diagnose();
 
@@ -207,6 +207,82 @@ void main() {
             (check) =>
                 check.label == 'Backend status' &&
                 check.status == MiniprogramDoctorCheckStatus.ok,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'ignores a stale parent backend workspace state when a valid global workspace exists',
+      () async {
+        final workspaceRoot = Directory(
+          p.join(tempDir.path, 'mini_program_demo', 'coupon_center'),
+        );
+        await workspaceRoot.create(recursive: true);
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        final backendState = LocalBackendWorkspaceState(
+          schemaVersion: 1,
+          backendRootPath: backendRoot,
+          apiRootPath: p.join(backendRoot, 'backend', 'api'),
+          serviceDirectoryPath: p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+          ),
+          initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+        );
+        await stateStore.writeGlobalBackendWorkspaceState(backendState);
+        await stateStore.writeBackendWorkspaceState(
+          tempDir.path,
+          LocalBackendWorkspaceState(
+            schemaVersion: 1,
+            backendRootPath: tempDir.path,
+            apiRootPath: p.join(tempDir.path, 'backend', 'api'),
+            serviceDirectoryPath: p.join(
+              tempDir.path,
+              'backend',
+              'local_backend_service',
+            ),
+            initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+            updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+          ),
+        );
+        await Directory(
+          p.join(backendRoot, 'backend', 'api'),
+        ).create(recursive: true);
+        await Directory(
+          p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            backendRoot,
+            'backend',
+            'local_backend_service',
+            'bin',
+            'server.dart',
+          ),
+        ).writeAsString('void main() {}');
+
+        final doctor = MiniprogramDoctor(
+          stateStore: stateStore,
+          managedStacBuilder: const _ReadyManagedStacBuilder(),
+          backendController: _HealthyBackendController(backendRoot),
+          shellRunner: _okShellRunner,
+          workingDirectory: workspaceRoot.path,
+        );
+
+        final result = await doctor.diagnose();
+
+        expect(result.hasErrors, isFalse);
+        expect(
+          result.checks.any(
+            (check) =>
+                check.label == 'Backend workspace' &&
+                check.status == MiniprogramDoctorCheckStatus.ok &&
+                check.detail != null &&
+                check.detail!.contains(backendRoot),
           ),
           isTrue,
         );

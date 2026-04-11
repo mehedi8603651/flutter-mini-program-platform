@@ -147,34 +147,40 @@ void main() {
       );
     });
 
-    test('build infers the mini-program id from the current directory', () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.0.0',
-      );
-      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+    test(
+      'build infers the mini-program id from the current directory',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
+        await File(fakeCliPath).writeAsString(_fakeStacCliSource);
 
-      final stdoutBuffer = StringBuffer();
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
 
-      final exitCode = await cli.run(<String>[
-        'build',
-        '--stac-cli-script',
-        fakeCliPath,
-        '--skip-pub-get',
-      ]);
+        final exitCode = await cli.run(<String>[
+          'build',
+          '--stac-cli-script',
+          fakeCliPath,
+          '--skip-pub-get',
+        ]);
 
-      expect(exitCode, 0);
-      expect(stdoutBuffer.toString(), contains('Built mini-program: coupon_center'));
-    });
+        expect(exitCode, 0);
+        expect(
+          stdoutBuffer.toString(),
+          contains('Built mini-program: coupon_center'),
+        );
+      },
+    );
 
     test('env init, use, and status manage active environment state', () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
@@ -349,6 +355,46 @@ void main() {
           version: '1.0.0',
         );
         await _initializeBackendWorkspaceState(stateStore, backendRoot);
+
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+        expect(await cli.run(<String>['env', 'init']), 0);
+
+        final stdoutBuffer = StringBuffer();
+        final validateCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await validateCli.run(<String>['validate']);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Repo root: $backendRoot'));
+      },
+    );
+
+    test(
+      'validate falls back to the global backend workspace when a parent local state is stale',
+      () async {
+        final standaloneRoot = p.join(
+          tempDir.path,
+          'mini_program_demo',
+          'coupon_center',
+        );
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        await _initializeBackendWorkspaceState(stateStore, backendRoot);
+        await _writeStaleLocalBackendWorkspaceState(stateStore, tempDir.path);
 
         final cli = MiniprogramCli(
           stateStore: stateStore,
@@ -782,10 +828,7 @@ dependencies:
       final exitCode = await cli.run(<String>['embed', 'init']);
 
       expect(exitCode, 0);
-      expect(
-        stdoutBuffer.toString(),
-        contains('Project root: $projectRoot'),
-      );
+      expect(stdoutBuffer.toString(), contains('Project root: $projectRoot'));
       expect(
         await File(
           p.join(projectRoot, 'lib', 'mini_program', 'mini_program.dart'),
@@ -882,29 +925,32 @@ dependencies:
       );
     });
 
-    test('backend init defaults to the global backend workspace when root is omitted', () async {
-      final defaultBackendRoot = p.join(tempDir.path, 'global_backend');
-      final initializer = _FakeLocalBackendInitializer(
-        defaultBackendRootPath: defaultBackendRoot,
-      );
-      final stdoutBuffer = StringBuffer();
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        backendInitializer: initializer,
-        workingDirectory: tempDir.path,
-      );
+    test(
+      'backend init defaults to the global backend workspace when root is omitted',
+      () async {
+        final defaultBackendRoot = p.join(tempDir.path, 'global_backend');
+        final initializer = _FakeLocalBackendInitializer(
+          defaultBackendRootPath: defaultBackendRoot,
+        );
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          backendInitializer: initializer,
+          workingDirectory: tempDir.path,
+        );
 
-      final exitCode = await cli.run(<String>['backend', 'init']);
+        final exitCode = await cli.run(<String>['backend', 'init']);
 
-      expect(exitCode, 0);
-      expect(initializer.initializedRootPath, isNull);
-      expect(
-        stdoutBuffer.toString(),
-        contains('Backend root: $defaultBackendRoot'),
-      );
-    });
+        expect(exitCode, 0);
+        expect(initializer.initializedRootPath, isNull);
+        expect(
+          stdoutBuffer.toString(),
+          contains('Backend root: $defaultBackendRoot'),
+        );
+      },
+    );
 
     test('backend subcommands dispatch to the controller', () async {
       final controller = _FakeLocalBackendController();
@@ -1162,7 +1208,9 @@ class _FakeLocalBackendInitializer extends LocalBackendInitializer {
     initializedRootPath = request.backendRootPath;
     final backendRootPath = p.normalize(
       p.absolute(
-        request.backendRootPath ?? defaultBackendRootPath ?? 'backend_workspace',
+        request.backendRootPath ??
+            defaultBackendRootPath ??
+            'backend_workspace',
       ),
     );
     return LocalBackendInitResult(
@@ -1244,9 +1292,9 @@ Future<void> _initializeBackendWorkspaceState(
   LocalCliStateStore stateStore,
   String backendRoot,
 ) async {
-  await Directory(p.join(backendRoot, 'backend', 'api')).create(
-    recursive: true,
-  );
+  await Directory(
+    p.join(backendRoot, 'backend', 'api'),
+  ).create(recursive: true);
   await Directory(
     p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
   ).create(recursive: true);
@@ -1266,6 +1314,27 @@ Future<void> _initializeBackendWorkspaceState(
       apiRootPath: p.join(backendRoot, 'backend', 'api'),
       serviceDirectoryPath: p.join(
         backendRoot,
+        'backend',
+        'local_backend_service',
+      ),
+      initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+      updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
+    ),
+  );
+}
+
+Future<void> _writeStaleLocalBackendWorkspaceState(
+  LocalCliStateStore stateStore,
+  String rootPath,
+) {
+  return stateStore.writeBackendWorkspaceState(
+    rootPath,
+    LocalBackendWorkspaceState(
+      schemaVersion: 1,
+      backendRootPath: rootPath,
+      apiRootPath: p.join(rootPath, 'backend', 'api'),
+      serviceDirectoryPath: p.join(
+        rootPath,
         'backend',
         'local_backend_service',
       ),

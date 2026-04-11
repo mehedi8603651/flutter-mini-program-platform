@@ -346,7 +346,8 @@ class MiniprogramCli {
     );
     final report = await _validator.validate(
       repoRootPath: backendRootPath!,
-      authoredRepoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
+      authoredRepoRootPath:
+          resolved.repoRootPath ?? resolved.miniProgramRootPath,
       backendRootPath: backendRootPath,
       miniProgramId: miniProgramId,
       externalMiniProgramRootPath: resolved.isRepoManaged
@@ -1311,13 +1312,10 @@ Commands:
       );
     }
 
-    final backendWorkspaceState = await _discoverBackendWorkspaceState(
+    final backendWorkspaceState = await _resolveUsableBackendWorkspaceState(
       additionalSearchRoots: additionalSearchRoots,
     );
-    if (backendWorkspaceState != null &&
-        await _looksLikeBackendWorkspaceRoot(
-          backendWorkspaceState.state.backendRootPath,
-        )) {
+    if (backendWorkspaceState != null) {
       return backendWorkspaceState.state.backendRootPath;
     }
 
@@ -1337,6 +1335,34 @@ Commands:
         'or provide --root / --repo-root.',
       );
     }
+    return null;
+  }
+
+  Future<ResolvedLocalBackendWorkspaceState?>
+  _resolveUsableBackendWorkspaceState({
+    Iterable<String> additionalSearchRoots = const <String>[],
+  }) async {
+    final discovered = await _discoverBackendWorkspaceState(
+      additionalSearchRoots: additionalSearchRoots,
+    );
+    if (discovered != null &&
+        await _looksLikeBackendWorkspaceRoot(
+          discovered.state.backendRootPath,
+        )) {
+      return discovered;
+    }
+
+    final globalState = await _stateStore.readGlobalBackendWorkspaceState();
+    if (globalState != null &&
+        await _looksLikeBackendWorkspaceRoot(globalState.backendRootPath)) {
+      return ResolvedLocalBackendWorkspaceState(
+        rootPath: Directory(_stateStore.globalStateDirectoryPath()).parent.path,
+        filePath: _stateStore.globalBackendWorkspaceStatePath(),
+        state: globalState,
+        scope: 'global',
+      );
+    }
+
     return null;
   }
 

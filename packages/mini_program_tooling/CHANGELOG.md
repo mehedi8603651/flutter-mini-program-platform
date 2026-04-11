@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.11
+
+- fix backend workspace resolution so `validate`, `publish`, backend commands,
+  and `doctor` fall back to the valid global backend workspace when a stale
+  parent `.mini_program/backend_workspace.json` is present
+- add regression coverage for stale local backend workspace state masking the
+  initialized global backend workspace
+
 ## 0.2.10
 
 - let `miniprogram build`, `miniprogram validate`, and `miniprogram publish`
