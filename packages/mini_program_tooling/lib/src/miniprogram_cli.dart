@@ -1135,6 +1135,12 @@ Commands:
       'stdout log: ${state.stdoutLogPath}',
       'stderr log: ${state.stderrLogPath}',
     ];
+    if (result.reversedDeviceIds.isNotEmpty) {
+      lines.add(
+        'ADB reverse: ${result.reversedDeviceIds.join(', ')} '
+        '(tcp:${state.port} -> tcp:${state.port})',
+      );
+    }
     return lines.join('\n');
   }
 

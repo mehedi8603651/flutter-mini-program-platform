@@ -43,63 +43,68 @@ void main() {
 
     test('start, status, and stop use backend state tracking', () async {
       final controller = LocalBackendController(
-        processStarter: ({
-          required String executable,
-          required List<String> arguments,
-          required String workingDirectory,
-        }) async {
-          alivePids.add(4321);
-          return StartedBackendProcess(
-            pid: 4321,
-            stdout: Stream<List<int>>.fromIterable(const <List<int>>[]),
-            stderr: Stream<List<int>>.fromIterable(const <List<int>>[]),
-            exitCode: Completer<int>().future,
-          );
-        },
-        shellRunner: (
-          String executable,
-          List<String> arguments, {
-          String? workingDirectory,
-          Map<String, String>? environment,
-        }) async {
-          if (executable == Platform.resolvedExecutable &&
-              arguments.length == 2 &&
-              arguments.first == 'pub' &&
-              arguments.last == 'get') {
-            return ProcessResult(0, 0, '', '');
-          }
-          if (executable == 'tasklist' || executable == 'ps') {
-            final pid = executable == 'tasklist'
-                ? int.parse(arguments[1].split(' ').last)
-                : int.parse(arguments.last);
-            if (alivePids.contains(pid)) {
-              return executable == 'tasklist'
-                  ? ProcessResult(
-                      0,
-                      0,
-                      '"cmd.exe","$pid","Console","1","10,000 K"',
-                      '',
-                    )
-                  : ProcessResult(
-                      0,
-                      0,
-                      '  PID TTY          TIME CMD\n $pid ?        00:00:00 sh',
-                      '',
-                    );
-            }
-            return executable == 'tasklist'
-                ? ProcessResult(0, 0, 'INFO: No tasks are running', '')
-                : ProcessResult(1, 1, '', '');
-          }
-          if (executable == 'taskkill' || executable == 'kill') {
-            final pid = executable == 'taskkill'
-                ? int.parse(arguments[1])
-                : int.parse(arguments.last);
-            alivePids.remove(pid);
-            return ProcessResult(0, 0, '', '');
-          }
-          throw StateError('Unexpected shell command: $executable $arguments');
-        },
+        enableAdbReverse: false,
+        processStarter:
+            ({
+              required String executable,
+              required List<String> arguments,
+              required String workingDirectory,
+            }) async {
+              alivePids.add(4321);
+              return StartedBackendProcess(
+                pid: 4321,
+                stdout: Stream<List<int>>.fromIterable(const <List<int>>[]),
+                stderr: Stream<List<int>>.fromIterable(const <List<int>>[]),
+                exitCode: Completer<int>().future,
+              );
+            },
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              if (executable == Platform.resolvedExecutable &&
+                  arguments.length == 2 &&
+                  arguments.first == 'pub' &&
+                  arguments.last == 'get') {
+                return ProcessResult(0, 0, '', '');
+              }
+              if (executable == 'tasklist' || executable == 'ps') {
+                final pid = executable == 'tasklist'
+                    ? int.parse(arguments[1].split(' ').last)
+                    : int.parse(arguments.last);
+                if (alivePids.contains(pid)) {
+                  return executable == 'tasklist'
+                      ? ProcessResult(
+                          0,
+                          0,
+                          '"cmd.exe","$pid","Console","1","10,000 K"',
+                          '',
+                        )
+                      : ProcessResult(
+                          0,
+                          0,
+                          '  PID TTY          TIME CMD\n $pid ?        00:00:00 sh',
+                          '',
+                        );
+                }
+                return executable == 'tasklist'
+                    ? ProcessResult(0, 0, 'INFO: No tasks are running', '')
+                    : ProcessResult(1, 1, '', '');
+              }
+              if (executable == 'taskkill' || executable == 'kill') {
+                final pid = executable == 'taskkill'
+                    ? int.parse(arguments[1])
+                    : int.parse(arguments.last);
+                alivePids.remove(pid);
+                return ProcessResult(0, 0, '', '');
+              }
+              throw StateError(
+                'Unexpected shell command: $executable $arguments',
+              );
+            },
         healthGetter: (Uri uri) async {
           if (alivePids.contains(4321)) {
             return http.Response('{"ok":true}', 200);
@@ -146,7 +151,7 @@ void main() {
         ),
       ).writeAsString(_fakeHttpBackendServerSource);
 
-      final controller = LocalBackendController();
+      final controller = LocalBackendController(enableAdbReverse: false);
       final port = await _findFreePort();
 
       try {
@@ -162,7 +167,9 @@ void main() {
           isTrue,
         );
 
-        final statusResult = await controller.status(repoRootPath: repoRoot.path);
+        final statusResult = await controller.status(
+          repoRootPath: repoRoot.path,
+        );
         expect(statusResult.hasState, isTrue);
         expect(statusResult.processAlive, isTrue);
         expect(statusResult.healthy, isTrue);
@@ -188,13 +195,14 @@ void main() {
     test('resetLocal only removes tracked publish outputs', () async {
       final stateStore = const LocalCliStateStore();
       final controller = LocalBackendController(
-        shellRunner: (
-          String executable,
-          List<String> arguments, {
-          String? workingDirectory,
-          Map<String, String>? environment,
-        }) async =>
-            ProcessResult(0, 0, '', ''),
+        enableAdbReverse: false,
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async => ProcessResult(0, 0, '', ''),
       );
 
       final latestManifestPath = p.join(
@@ -234,8 +242,9 @@ void main() {
       await Directory(screensDirectoryPath).create(recursive: true);
       await File(latestManifestPath).writeAsString('{}');
       await File(versionedManifestPath).writeAsString('{}');
-      await File(p.join(screensDirectoryPath, 'coupon_center_home.json'))
-          .writeAsString('{}');
+      await File(
+        p.join(screensDirectoryPath, 'coupon_center_home.json'),
+      ).writeAsString('{}');
       await File(rolloutRulePath).writeAsString('{}');
 
       await stateStore.recordPublishedArtifact(
@@ -270,6 +279,117 @@ void main() {
         isFalse,
       );
     });
+
+    test(
+      'start configures adb reverse for connected devices when available',
+      () async {
+        final invokedCommands = <String>[];
+        final controller = LocalBackendController(
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+              }) async {
+                alivePids.add(4321);
+                return StartedBackendProcess(
+                  pid: 4321,
+                  stdout: Stream<List<int>>.fromIterable(const <List<int>>[]),
+                  stderr: Stream<List<int>>.fromIterable(const <List<int>>[]),
+                  exitCode: Completer<int>().future,
+                );
+              },
+          shellRunner:
+              (
+                String executable,
+                List<String> arguments, {
+                String? workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                invokedCommands.add('$executable ${arguments.join(' ')}');
+                if (executable == Platform.resolvedExecutable &&
+                    arguments.length == 2 &&
+                    arguments.first == 'pub' &&
+                    arguments.last == 'get') {
+                  return ProcessResult(0, 0, '', '');
+                }
+                if (executable.endsWith('adb.exe') || executable == 'adb.exe') {
+                  if (arguments.length == 1 && arguments.first == 'version') {
+                    return ProcessResult(
+                      0,
+                      0,
+                      'Android Debug Bridge version',
+                      '',
+                    );
+                  }
+                  if (arguments.length == 1 && arguments.first == 'devices') {
+                    return ProcessResult(
+                      0,
+                      0,
+                      'List of devices attached\nemulator-5554\tdevice\n',
+                      '',
+                    );
+                  }
+                  if (arguments.length == 5 &&
+                      arguments[0] == '-s' &&
+                      arguments[2] == 'reverse') {
+                    return ProcessResult(0, 0, '', '');
+                  }
+                }
+                if (executable == 'tasklist' || executable == 'ps') {
+                  final pid = executable == 'tasklist'
+                      ? int.parse(arguments[1].split(' ').last)
+                      : int.parse(arguments.last);
+                  if (alivePids.contains(pid)) {
+                    return executable == 'tasklist'
+                        ? ProcessResult(
+                            0,
+                            0,
+                            '"cmd.exe","$pid","Console","1","10,000 K"',
+                            '',
+                          )
+                        : ProcessResult(
+                            0,
+                            0,
+                            '  PID TTY          TIME CMD\n $pid ?        00:00:00 sh',
+                            '',
+                          );
+                  }
+                  return executable == 'tasklist'
+                      ? ProcessResult(0, 0, 'INFO: No tasks are running', '')
+                      : ProcessResult(1, 1, '', '');
+                }
+                if (executable == 'taskkill' || executable == 'kill') {
+                  final pid = executable == 'taskkill'
+                      ? int.parse(arguments[1])
+                      : int.parse(arguments.last);
+                  alivePids.remove(pid);
+                  return ProcessResult(0, 0, '', '');
+                }
+                throw StateError(
+                  'Unexpected shell command: $executable $arguments',
+                );
+              },
+          healthGetter: (Uri uri) async {
+            if (alivePids.contains(4321)) {
+              return http.Response('{"ok":true}', 200);
+            }
+            return http.Response('offline', 503);
+          },
+          clock: () => DateTime.utc(2026, 4, 9, 9, 30),
+        );
+
+        final startResult = await controller.start(repoRootPath: repoRoot.path);
+
+        expect(startResult.reversedDeviceIds, <String>['emulator-5554']);
+        expect(
+          invokedCommands.any(
+            (command) => command.contains('reverse tcp:8080 tcp:8080'),
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }
 

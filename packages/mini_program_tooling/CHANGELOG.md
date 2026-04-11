@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.13
+
+- make local backend start attempt `adb reverse tcp:<port> tcp:<port>` for
+  connected Android devices and emulators so local host apps can keep using
+  `127.0.0.1` when emulator routing to `10.0.2.2` is broken
+- report successful `adb reverse` setup in backend start output
+- add regression coverage for the new local Android reverse-port setup
+
 ## 0.2.12
 
 - make `embed init` generate Android debug-only cleartext/network security

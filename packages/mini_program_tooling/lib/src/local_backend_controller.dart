@@ -36,10 +36,12 @@ class LocalBackendStartResult {
   const LocalBackendStartResult({
     required this.state,
     required this.alreadyRunning,
+    this.reversedDeviceIds = const <String>[],
   });
 
   final LocalBackendState state;
   final bool alreadyRunning;
+  final List<String> reversedDeviceIds;
 }
 
 class LocalBackendStatusResult {
@@ -75,9 +77,7 @@ class LocalBackendStopResult {
 }
 
 class LocalBackendResetResult {
-  const LocalBackendResetResult({
-    required this.removedPaths,
-  });
+  const LocalBackendResetResult({required this.removedPaths});
 
   final List<String> removedPaths;
 }
@@ -89,17 +89,20 @@ class LocalBackendController {
     BackendProcessStarter processStarter = _defaultProcessStarter,
     BackendHealthGetter healthGetter = http.get,
     BackendClock clock = _defaultClock,
+    bool enableAdbReverse = true,
   }) : _stateStore = stateStore,
        _shellRunner = shellRunner,
        _processStarter = processStarter,
        _healthGetter = healthGetter,
-       _clock = clock;
+       _clock = clock,
+       _enableAdbReverse = enableAdbReverse;
 
   final LocalCliStateStore _stateStore;
   final BackendShellRunner _shellRunner;
   final BackendProcessStarter _processStarter;
   final BackendHealthGetter _healthGetter;
   final BackendClock _clock;
+  final bool _enableAdbReverse;
 
   Future<LocalBackendStartResult> start({
     required String repoRootPath,
@@ -122,7 +125,9 @@ class LocalBackendController {
     await _ensurePackageConfig(serviceDirectoryPath);
 
     final healthCheckUri = Uri.parse('http://127.0.0.1:$port/health');
-    final previousState = await _stateStore.readBackendState(normalizedRepoRoot);
+    final previousState = await _stateStore.readBackendState(
+      normalizedRepoRoot,
+    );
     if (previousState != null) {
       final previousStatus = await status(repoRootPath: normalizedRepoRoot);
       if (previousStatus.processAlive && previousStatus.healthy) {
@@ -202,17 +207,20 @@ class LocalBackendController {
         'Failed to confirm local backend health at ${state.healthCheckUrl} within 20 seconds.',
         if (startupHealth.statusCode != null)
           'Last health status code: ${startupHealth.statusCode}',
-        if (startupHealth.error != null) 'Last health detail: ${startupHealth.error}',
+        if (startupHealth.error != null)
+          'Last health detail: ${startupHealth.error}',
         if (stderrTail.isNotEmpty) 'stderr tail:\n$stderrTail',
       ];
       throw LocalBackendControlException(details.join('\n'));
     }
 
     await _stateStore.writeBackendState(normalizedRepoRoot, state);
+    final reversedDeviceIds = await _configureAdbReverse(port: port);
 
     return LocalBackendStartResult(
       state: state,
       alreadyRunning: false,
+      reversedDeviceIds: reversedDeviceIds,
     );
   }
 
@@ -252,9 +260,7 @@ class LocalBackendController {
     );
   }
 
-  Future<LocalBackendStopResult> stop({
-    required String repoRootPath,
-  }) async {
+  Future<LocalBackendStopResult> stop({required String repoRootPath}) async {
     final normalizedRepoRoot = p.normalize(p.absolute(repoRootPath));
     final state = await _stateStore.readBackendState(normalizedRepoRoot);
     if (state == null) {
@@ -322,11 +328,12 @@ class LocalBackendController {
     final manifestRoot = p.join(backendApiRoot, 'manifests');
     final screenRoot = p.join(backendApiRoot, 'screens');
 
-    final latestManifestPaths = artifactsState.records
-        .map((record) => record.latestManifestPath)
-        .toSet()
-        .toList()
-      ..sort();
+    final latestManifestPaths =
+        artifactsState.records
+            .map((record) => record.latestManifestPath)
+            .toSet()
+            .toList()
+          ..sort();
     for (final filePath in latestManifestPaths) {
       final normalizedFilePath = p.normalize(p.absolute(filePath));
       _assertContainedPath(path: normalizedFilePath, root: manifestRoot);
@@ -340,11 +347,12 @@ class LocalBackendController {
       );
     }
 
-    final versionedManifestPaths = artifactsState.records
-        .map((record) => record.versionedManifestPath)
-        .toSet()
-        .toList()
-      ..sort();
+    final versionedManifestPaths =
+        artifactsState.records
+            .map((record) => record.versionedManifestPath)
+            .toSet()
+            .toList()
+          ..sort();
     for (final filePath in versionedManifestPaths) {
       final normalizedFilePath = p.normalize(p.absolute(filePath));
       _assertContainedPath(path: normalizedFilePath, root: manifestRoot);
@@ -358,11 +366,12 @@ class LocalBackendController {
       );
     }
 
-    final screenDirectories = artifactsState.records
-        .map((record) => record.screensDirectoryPath)
-        .toSet()
-        .toList()
-      ..sort();
+    final screenDirectories =
+        artifactsState.records
+            .map((record) => record.screensDirectoryPath)
+            .toSet()
+            .toList()
+          ..sort();
     for (final directoryPath in screenDirectories) {
       final normalizedDirectoryPath = p.normalize(p.absolute(directoryPath));
       _assertContainedPath(path: normalizedDirectoryPath, root: screenRoot);
@@ -410,7 +419,8 @@ class LocalBackendController {
       '.dart_tool',
       'package_config.json',
     );
-    if (!await File(pubspecPath).exists() || await File(packageConfigPath).exists()) {
+    if (!await File(pubspecPath).exists() ||
+        await File(packageConfigPath).exists()) {
       return;
     }
 
@@ -519,7 +529,8 @@ class LocalBackendController {
 
   String _launcherExecutable() => Platform.isWindows ? 'cmd.exe' : 'sh';
 
-  List<String> _launcherArguments(String launcherScriptPath) => Platform.isWindows
+  List<String> _launcherArguments(String launcherScriptPath) =>
+      Platform.isWindows
       ? <String>['/c', launcherScriptPath]
       : <String>[launcherScriptPath];
 
@@ -533,12 +544,120 @@ class LocalBackendController {
     return "'$escaped'";
   }
 
+  Future<List<String>> _configureAdbReverse({required int port}) async {
+    if (!_enableAdbReverse) {
+      return const <String>[];
+    }
+
+    final adbExecutable = await _resolveAdbExecutable();
+    if (adbExecutable == null) {
+      return const <String>[];
+    }
+
+    final devicesResult = await _tryShell(adbExecutable, const <String>[
+      'devices',
+    ]);
+    if (devicesResult == null || devicesResult.exitCode != 0) {
+      return const <String>[];
+    }
+
+    final deviceIds = const LineSplitter()
+        .convert('${devicesResult.stdout}')
+        .map((line) => line.trim())
+        .where(
+          (line) =>
+              line.isNotEmpty && !line.startsWith('List of devices attached'),
+        )
+        .map((line) => line.split(RegExp(r'\s+')))
+        .where((parts) => parts.length >= 2 && parts[1] == 'device')
+        .map((parts) => parts.first)
+        .toList();
+
+    if (deviceIds.isEmpty) {
+      return const <String>[];
+    }
+
+    final reversedDeviceIds = <String>[];
+    for (final deviceId in deviceIds) {
+      final reverseResult = await _tryShell(adbExecutable, <String>[
+        '-s',
+        deviceId,
+        'reverse',
+        'tcp:$port',
+        'tcp:$port',
+      ]);
+      if (reverseResult != null && reverseResult.exitCode == 0) {
+        reversedDeviceIds.add(deviceId);
+      }
+    }
+
+    return reversedDeviceIds;
+  }
+
+  Future<String?> _resolveAdbExecutable() async {
+    final candidates = <String>[
+      if (Platform.isWindows)
+        p.join(
+          _resolveLocalAppDataDirectoryPath(),
+          'Android',
+          'Sdk',
+          'platform-tools',
+          'adb.exe',
+        ),
+      if (Platform.environment['ANDROID_SDK_ROOT'] case final sdkRoot?
+          when sdkRoot.trim().isNotEmpty)
+        p.join(
+          sdkRoot,
+          'platform-tools',
+          Platform.isWindows ? 'adb.exe' : 'adb',
+        ),
+      if (Platform.environment['ANDROID_HOME'] case final androidHome?
+          when androidHome.trim().isNotEmpty)
+        p.join(
+          androidHome,
+          'platform-tools',
+          Platform.isWindows ? 'adb.exe' : 'adb',
+        ),
+      Platform.isWindows ? 'adb.exe' : 'adb',
+    ];
+
+    for (final candidate in candidates.toSet()) {
+      final result = await _tryShell(candidate, const <String>['version']);
+      if (result != null && result.exitCode == 0) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  Future<ProcessResult?> _tryShell(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+  }) async {
+    try {
+      return await _shellRunner(
+        executable,
+        arguments,
+        workingDirectory: workingDirectory,
+        environment: environment,
+      );
+    } on ProcessException {
+      return null;
+    }
+  }
+
   Future<bool> _isProcessAlive(int pid) async {
     if (Platform.isWindows) {
-      final result = await _shellRunner(
-        'tasklist',
-        <String>['/FI', 'PID eq $pid', '/FO', 'CSV', '/NH'],
-      );
+      final result = await _shellRunner('tasklist', <String>[
+        '/FI',
+        'PID eq $pid',
+        '/FO',
+        'CSV',
+        '/NH',
+      ]);
       if (result.exitCode != 0) {
         return false;
       }
@@ -558,10 +677,7 @@ class LocalBackendController {
 
   Future<ProcessResult> _terminateProcess(int pid) {
     if (Platform.isWindows) {
-      return _shellRunner(
-        'taskkill',
-        <String>['/PID', '$pid', '/T', '/F'],
-      );
+      return _shellRunner('taskkill', <String>['/PID', '$pid', '/T', '/F']);
     }
 
     return _shellRunner('kill', <String>['$pid']);
@@ -586,10 +702,7 @@ class LocalBackendController {
         error: 'Health check timed out.',
       );
     } catch (error) {
-      return _BackendHealthCheckResult(
-        healthy: false,
-        error: '$error',
-      );
+      return _BackendHealthCheckResult(healthy: false, error: '$error');
     }
   }
 
@@ -604,10 +717,7 @@ class LocalBackendController {
     );
 
     while (_clock().isBefore(deadline)) {
-      lastResult = await _probeHealth(
-        uri,
-        timeout: const Duration(seconds: 1),
-      );
+      lastResult = await _probeHealth(uri, timeout: const Duration(seconds: 1));
       if (lastResult.healthy) {
         return lastResult;
       }
@@ -679,10 +789,7 @@ class LocalBackendController {
     }
   }
 
-  void _assertContainedPath({
-    required String path,
-    required String root,
-  }) {
+  void _assertContainedPath({required String path, required String root}) {
     final normalizedPath = p.normalize(p.absolute(path));
     final normalizedRoot = p.normalize(p.absolute(root));
     if (!p.isWithin(normalizedRoot, normalizedPath) &&
@@ -709,6 +816,20 @@ class LocalBackendController {
   }
 
   static DateTime _defaultClock() => DateTime.now();
+
+  static String _resolveLocalAppDataDirectoryPath() {
+    final localAppData = Platform.environment['LOCALAPPDATA'];
+    if (localAppData != null && localAppData.trim().isNotEmpty) {
+      return localAppData;
+    }
+
+    final userProfile = Platform.environment['USERPROFILE'];
+    if (userProfile != null && userProfile.trim().isNotEmpty) {
+      return p.join(userProfile, 'AppData', 'Local');
+    }
+
+    return Directory.current.path;
+  }
 
   static Future<StartedBackendProcess> _defaultProcessStarter({
     required String executable,

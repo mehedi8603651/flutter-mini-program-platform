@@ -17,6 +17,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
     required this.apiBaseUri,
     this.manifestRequestQueryParametersBuilder,
     this.requestTimeout = const Duration(seconds: 5),
+    this.enableLocalLoopbackFallback = true,
     http.Client? client,
   }) : _client = client ?? http.Client();
 
@@ -24,6 +25,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
     required Uri apiBaseUri,
     required MiniProgramDeliveryContext deliveryContext,
     Duration requestTimeout = const Duration(seconds: 5),
+    bool enableLocalLoopbackFallback = true,
     http.Client? client,
   }) {
     return HttpMiniProgramSource(
@@ -31,6 +33,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
       manifestRequestQueryParametersBuilder: (_) =>
           deliveryContext.toQueryParameters(),
       requestTimeout: requestTimeout,
+      enableLocalLoopbackFallback: enableLocalLoopbackFallback,
       client: client,
     );
   }
@@ -39,6 +42,7 @@ class HttpMiniProgramSource implements MiniProgramSource {
   final ManifestRequestQueryParametersBuilder?
   manifestRequestQueryParametersBuilder;
   final Duration requestTimeout;
+  final bool enableLocalLoopbackFallback;
   final http.Client _client;
 
   @override
@@ -83,31 +87,77 @@ class HttpMiniProgramSource implements MiniProgramSource {
     Uri uri, {
     required String resourceLabel,
   }) async {
+    final candidateUris = _candidateUris(uri);
+    MiniProgramSourceException? lastTransportException;
+    for (final candidateUri in candidateUris) {
+      try {
+        return await _loadSingleJsonObject(
+          candidateUri,
+          resourceLabel: resourceLabel,
+          attemptedUris: candidateUris,
+        );
+      } on _TransportSourceException catch (error) {
+        lastTransportException = error.sourceException;
+      }
+    }
+
+    if (lastTransportException != null) {
+      throw lastTransportException;
+    }
+
+    throw MiniProgramSourceException(
+      message:
+          'Failed to reach the mini-program backend while loading $resourceLabel.',
+      errorCode: MiniProgramErrorCodes.backendUnreachable,
+      details: <String, dynamic>{
+        'uri': uri.toString(),
+        'resourceLabel': resourceLabel,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _loadSingleJsonObject(
+    Uri uri, {
+    required String resourceLabel,
+    required List<Uri> attemptedUris,
+  }) async {
     late final http.Response response;
     try {
       response = await _client.get(uri).timeout(requestTimeout);
     } on TimeoutException {
-      throw MiniProgramSourceException(
-        message:
-            'Timed out while loading $resourceLabel from the mini-program backend.',
-        errorCode: MiniProgramErrorCodes.backendUnreachable,
-        details: <String, dynamic>{
-          'uri': uri.toString(),
-          'resourceLabel': resourceLabel,
-          'requestTimeoutMs': requestTimeout.inMilliseconds,
-          'transportError': 'timeout',
-        },
+      throw _TransportSourceException(
+        MiniProgramSourceException(
+          message:
+              'Timed out while loading $resourceLabel from the mini-program backend.',
+          errorCode: MiniProgramErrorCodes.backendUnreachable,
+          details: <String, dynamic>{
+            'uri': uri.toString(),
+            'resourceLabel': resourceLabel,
+            'requestTimeoutMs': requestTimeout.inMilliseconds,
+            'transportError': 'timeout',
+            if (attemptedUris.length > 1)
+              'attemptedUris': attemptedUris
+                  .map((candidateUri) => candidateUri.toString())
+                  .toList(),
+          },
+        ),
       );
     } catch (error) {
-      throw MiniProgramSourceException(
-        message:
-            'Failed to reach the mini-program backend while loading $resourceLabel.',
-        errorCode: MiniProgramErrorCodes.backendUnreachable,
-        details: <String, dynamic>{
-          'uri': uri.toString(),
-          'resourceLabel': resourceLabel,
-          'transportError': error.toString(),
-        },
+      throw _TransportSourceException(
+        MiniProgramSourceException(
+          message:
+              'Failed to reach the mini-program backend while loading $resourceLabel.',
+          errorCode: MiniProgramErrorCodes.backendUnreachable,
+          details: <String, dynamic>{
+            'uri': uri.toString(),
+            'resourceLabel': resourceLabel,
+            'transportError': error.toString(),
+            if (attemptedUris.length > 1)
+              'attemptedUris': attemptedUris
+                  .map((candidateUri) => candidateUri.toString())
+                  .toList(),
+          },
+        ),
       );
     }
 
@@ -128,6 +178,29 @@ class HttpMiniProgramSource implements MiniProgramSource {
     }
 
     return decoded;
+  }
+
+  List<Uri> _candidateUris(Uri primaryUri) {
+    if (!enableLocalLoopbackFallback || primaryUri.scheme != 'http') {
+      return <Uri>[primaryUri];
+    }
+
+    final hosts = <String>[primaryUri.host];
+    if (primaryUri.host == '10.0.2.2') {
+      hosts.add('127.0.0.1');
+    } else if (primaryUri.host == '127.0.0.1' ||
+        primaryUri.host == 'localhost') {
+      hosts.add('10.0.2.2');
+    }
+
+    return hosts
+        .toSet()
+        .map(
+          (host) => host == primaryUri.host
+              ? primaryUri
+              : primaryUri.replace(host: host),
+        )
+        .toList();
   }
 
   MiniProgramSourceException _buildSourceException({
@@ -222,7 +295,8 @@ class HttpMiniProgramSource implements MiniProgramSource {
       return details;
     }
 
-    final rawDetails = decodedBody['details'] ?? _tryReadNestedError(decodedBody)?['details'];
+    final rawDetails =
+        decodedBody['details'] ?? _tryReadNestedError(decodedBody)?['details'];
     if (rawDetails is Map<String, dynamic>) {
       details.addAll(rawDetails);
       return details;
@@ -257,4 +331,10 @@ class HttpMiniProgramSource implements MiniProgramSource {
 
     return null;
   }
+}
+
+class _TransportSourceException implements Exception {
+  const _TransportSourceException(this.sourceException);
+
+  final MiniProgramSourceException sourceException;
 }

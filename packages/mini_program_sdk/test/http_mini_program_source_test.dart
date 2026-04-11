@@ -184,6 +184,48 @@ void main() {
       );
     });
 
+    test(
+      'falls back from 10.0.2.2 to 127.0.0.1 on transport failure',
+      () async {
+        final requestedHosts = <String>[];
+        final source = HttpMiniProgramSource(
+          apiBaseUri: Uri.parse('http://10.0.2.2:8080/api/'),
+          client: MockClient((request) async {
+            requestedHosts.add(request.url.host);
+            if (request.url.host == '10.0.2.2') {
+              throw http.ClientException('Network is unreachable', request.url);
+            }
+            return http.Response(_manifestJson, 200);
+          }),
+        );
+
+        final manifest = await source.loadManifest('profile_center');
+
+        expect(manifest.id, 'profile_center');
+        expect(requestedHosts, <String>['10.0.2.2', '127.0.0.1']);
+      },
+    );
+
+    test(
+      'does not fall back to another host after an HTTP backend response',
+      () async {
+        final requestedHosts = <String>[];
+        final source = HttpMiniProgramSource(
+          apiBaseUri: Uri.parse('http://10.0.2.2:8080/api/'),
+          client: MockClient((request) async {
+            requestedHosts.add(request.url.host);
+            return http.Response('Not found', 404);
+          }),
+        );
+
+        await expectLater(
+          () => source.loadManifest('missing_program'),
+          throwsA(isA<MiniProgramSourceException>()),
+        );
+        expect(requestedHosts, <String>['10.0.2.2']);
+      },
+    );
+
     test('times out manifest requests and surfaces backend_unreachable', () {
       final source = HttpMiniProgramSource(
         apiBaseUri: Uri.parse('http://localhost:8080/api/'),
