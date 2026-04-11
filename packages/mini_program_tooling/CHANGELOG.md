@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.14
+
+- fix `miniprogram embed init` so generated host app `pubspec.yaml` files pin
+  `mini_program_sdk: ^0.1.1` instead of the stale `^0.1.0` constraint
+- refresh the embedding docs and regression tests around the generated hosted
+  SDK dependency version
+
 ## 0.2.13
 
 - make local backend start attempt `adb reverse tcp:<port> tcp:<port>` for
