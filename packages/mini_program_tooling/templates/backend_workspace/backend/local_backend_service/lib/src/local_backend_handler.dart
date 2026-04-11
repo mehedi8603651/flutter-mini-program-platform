@@ -28,7 +28,32 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
     final traceId = resolveBackendTraceId(request);
     final stopwatch = Stopwatch()..start();
     final segments = request.url.pathSegments;
+    Response finalize(Response rawResponse, {required String routeKind}) {
+      final response = rawResponse.change(
+        headers: withRequestTraceHeaders(
+          request,
+          Map<String, String>.from(rawResponse.headers),
+          traceId: traceId,
+        ),
+      );
+      _logRequestCompletion(
+        traceId: traceId,
+        request: request,
+        response: response,
+        stopwatch: stopwatch,
+        routeKind: routeKind,
+      );
+      return response;
+    }
+
     late final Response response;
+
+    if (request.method == 'OPTIONS') {
+      return finalize(
+        Response(HttpStatus.noContent),
+        routeKind: 'cors_preflight',
+      );
+    }
 
     if (request.method == 'POST' &&
         _matchesSegments(segments, const [
@@ -41,14 +66,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         request,
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'secure_feedback_submit',
-      );
-      return response;
+      return finalize(response, routeKind: 'secure_feedback_submit');
     }
 
     if (request.method != 'GET') {
@@ -63,14 +81,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         ),
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'unsupported_method',
-      );
-      return response;
+      return finalize(response, routeKind: 'unsupported_method');
     }
 
     if (_matchesSegments(segments, const ['health'])) {
@@ -78,14 +89,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         body: buildHealthBody(),
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'health',
-      );
-      return response;
+      return finalize(response, routeKind: 'health');
     }
 
     if (segments.length == 3 &&
@@ -99,14 +103,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         selector: manifestSelector,
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'mini_program_catalog',
-      );
-      return response;
+      return finalize(response, routeKind: 'mini_program_catalog');
     }
 
     if (segments.length == 4 &&
@@ -121,14 +118,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         selector: manifestSelector,
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'manifest_latest',
-      );
-      return response;
+      return finalize(response, routeKind: 'manifest_latest');
     }
 
     if (segments.length == 5 &&
@@ -144,14 +134,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         selector: manifestSelector,
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'manifest_decision_inspect',
-      );
-      return response;
+      return finalize(response, routeKind: 'manifest_decision_inspect');
     }
 
     if (segments.length == 5 &&
@@ -161,14 +144,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
       final version = _stripJsonSuffix(segments[4]);
       if (version == null) {
         response = _badRequest('Manifest version path is invalid.', traceId);
-        _logRequestCompletion(
-          traceId: traceId,
-          request: request,
-          response: response,
-          stopwatch: stopwatch,
-          routeKind: 'manifest_versioned_invalid',
-        );
-        return response;
+        return finalize(response, routeKind: 'manifest_versioned_invalid');
       }
 
       response = await repository.readVersionedManifest(
@@ -176,14 +152,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         version: version,
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'manifest_versioned',
-      );
-      return response;
+      return finalize(response, routeKind: 'manifest_versioned');
     }
 
     if (segments.length == 5 &&
@@ -192,14 +161,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
       final screenId = _stripJsonSuffix(segments[4]);
       if (screenId == null) {
         response = _badRequest('Screen path is invalid.', traceId);
-        _logRequestCompletion(
-          traceId: traceId,
-          request: request,
-          response: response,
-          stopwatch: stopwatch,
-          routeKind: 'screen_invalid',
-        );
-        return response;
+        return finalize(response, routeKind: 'screen_invalid');
       }
 
       response = await repository.readScreen(
@@ -208,14 +170,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
         screenId: screenId,
         traceId: traceId,
       );
-      _logRequestCompletion(
-        traceId: traceId,
-        request: request,
-        response: response,
-        stopwatch: stopwatch,
-        routeKind: 'screen_versioned',
-      );
-      return response;
+      return finalize(response, routeKind: 'screen_versioned');
     }
 
     response = buildJsonResponse(
@@ -228,14 +183,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
       ),
       traceId: traceId,
     );
-    _logRequestCompletion(
-      traceId: traceId,
-      request: request,
-      response: response,
-      stopwatch: stopwatch,
-      routeKind: 'not_found',
-    );
-    return response;
+    return finalize(response, routeKind: 'not_found');
   };
 }
 

@@ -142,6 +142,57 @@ void main() {
     expect(body['statusCode'], HttpStatus.ok);
     expect(body['status'], 'ok');
     expect(body['service'], 'local_backend_service');
+    expect(response.headers['access-control-allow-origin'], '*');
+    expect(response.headers['access-control-expose-headers'], contains('x-backend-trace-id'));
+  });
+
+  test('returns CORS headers for browser preflight requests', () async {
+    final response = await handler(
+      Request(
+        'OPTIONS',
+        Uri.parse('http://localhost/api/manifests/profile_center/latest.json'),
+        headers: const <String, String>{
+          'origin': 'http://localhost:53000',
+          'access-control-request-method': 'GET',
+          'access-control-request-headers': 'content-type',
+          'access-control-request-private-network': 'true',
+        },
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.noContent);
+    expect(
+      response.headers['access-control-allow-origin'],
+      'http://localhost:53000',
+    );
+    expect(response.headers['access-control-allow-methods'], contains('GET'));
+    expect(response.headers['access-control-allow-methods'], contains('POST'));
+    expect(
+      response.headers['access-control-allow-headers'],
+      contains('Content-Type'),
+    );
+    expect(
+      response.headers['access-control-allow-private-network'],
+      'true',
+    );
+    expect(response.headers['vary'], contains('Origin'));
+  });
+
+  test('echoes origin headers for browser GET requests', () async {
+    final response = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://localhost/health'),
+        headers: const <String, String>{'origin': 'http://localhost:53000'},
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(
+      response.headers['access-control-allow-origin'],
+      'http://localhost:53000',
+    );
+    expect(response.headers['vary'], contains('Origin'));
   });
 
   test('lists compatible mini-programs in the discovery catalog', () async {

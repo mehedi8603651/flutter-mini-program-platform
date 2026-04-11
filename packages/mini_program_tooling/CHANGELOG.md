@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.16
+
+- fix local Chrome and web host-app development by making the generated local
+  backend workspace respond correctly to browser CORS preflights and private
+  network access checks for `127.0.0.1:8080`
+- make `miniprogram backend start` and `miniprogram backend status` print the
+  target-specific local backend URLs for Android emulator, desktop or Chrome,
+  and Android USB `adb reverse` workflows
+- make generated host runtime setup log the resolved backend base URL and its
+  resolution source during startup for faster local debugging
+
 ## 0.2.15
 
 - make generated host adapters use the shared SDK local-backend resolver with

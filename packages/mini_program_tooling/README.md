@@ -163,6 +163,25 @@ When `adb` is available, `miniprogram backend start` also tries
 devices. That keeps the common local Android flow on plain `flutter run`
 instead of requiring a manual reverse step every time.
 
+For local debugging, `miniprogram backend start` and `miniprogram backend
+status` print the target-specific URLs the generated host adapter expects:
+
+- Android emulator: `http://10.0.2.2:<port>/api/`
+- desktop and Chrome on the same machine: `http://127.0.0.1:<port>/api/`
+- Android USB with `adb reverse`: `http://127.0.0.1:<port>/api/`
+
+The generated host runtime also logs the resolved backend base URL and whether
+it came from:
+
+- `MINI_PROGRAM_BACKEND_BASE_URL`
+- `MINI_PROGRAM_BACKEND_HOST` and `MINI_PROGRAM_BACKEND_PORT`
+- target-aware defaults
+
+For Chrome and other web targets, the generated local backend workspace now
+includes browser-friendly CORS and localhost private-network headers, so plain
+local web runs can reach `http://127.0.0.1:8080/api/` without manual backend
+service patching.
+
 `miniprogram doctor` reports:
 
 - Dart runtime availability

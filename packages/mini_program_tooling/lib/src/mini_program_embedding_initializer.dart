@@ -609,15 +609,17 @@ MiniProgramRuntime buildMiniProgramRuntime(
   GlobalKey<NavigatorState> navigatorKey,
 ) {
   final locale = WidgetsBinding.instance.platformDispatcher.locale;
+  final backendApiBaseUri = LocalMiniProgramBackendDefaults.resolveBaseUri(
+    configuredBaseUrl: _configuredBackendBaseUrl,
+    configuredHost: _configuredBackendHost,
+    configuredPort: _configuredBackendPort,
+  );
+  _logResolvedBackendBaseUri(backendApiBaseUri);
 
   return MiniProgramRuntime(
     sdkVersion: _sdkVersion,
     source: HttpMiniProgramSource.fromDeliveryContext(
-      apiBaseUri: LocalMiniProgramBackendDefaults.resolveBaseUri(
-        configuredBaseUrl: _configuredBackendBaseUrl,
-        configuredHost: _configuredBackendHost,
-        configuredPort: _configuredBackendPort,
-      ),
+      apiBaseUri: backendApiBaseUri,
       deliveryContext: MiniProgramDeliveryContext(
         hostApp: _hostAppId,
         sdkVersion: _sdkVersion,
@@ -631,6 +633,35 @@ MiniProgramRuntime buildMiniProgramRuntime(
     capabilityRegistry: CapabilityRegistry(_supportedCapabilities),
     cacheBundle: MiniProgramCacheBundle.inMemory(),
   );
+}
+
+void _logResolvedBackendBaseUri(Uri backendApiBaseUri) {
+  debugPrint(
+    '[mini_program][runtime] Backend base URL: \$backendApiBaseUri '
+    '(source: \${_backendResolutionSource()})',
+  );
+}
+
+String _backendResolutionSource() {
+  if (_configuredBackendBaseUrl.isNotEmpty) {
+    return 'MINI_PROGRAM_BACKEND_BASE_URL';
+  }
+  if (_configuredBackendHost.isNotEmpty ||
+      _configuredBackendPort != LocalMiniProgramBackendDefaults.defaultPort) {
+    return 'MINI_PROGRAM_BACKEND_HOST/PORT';
+  }
+  if (kIsWeb) {
+    return 'target_default:web';
+  }
+
+  return switch (defaultTargetPlatform) {
+    TargetPlatform.android => 'target_default:android',
+    TargetPlatform.iOS => 'target_default:ios',
+    TargetPlatform.macOS => 'target_default:macos',
+    TargetPlatform.windows => 'target_default:windows',
+    TargetPlatform.linux => 'target_default:linux',
+    TargetPlatform.fuchsia => 'target_default:fuchsia',
+  };
 }
 
 String _platformName() {
@@ -812,9 +843,9 @@ flowing through your app-owned route factory.
 - `mini_program_launcher.dart` is the developer-friendly entrypoint for feature
   pages. It keeps widget code from repeating Navigator glue.
 - `mini_program_runtime_setup.dart` defaults to:
-- Android local default: `http://10.0.2.2:8080/api/`
-- desktop, Chrome on the same machine, and iOS simulators:
-  `http://127.0.0.1:8080/api/`
+  - Android local default: `http://10.0.2.2:8080/api/`
+  - desktop, Chrome on the same machine, and iOS simulators:
+    `http://127.0.0.1:8080/api/`
 - the shared SDK retries local loopback between `10.0.2.2` and `127.0.0.1`
   for transport failures, so Android USB `adb reverse` workflows can still use
   the generated local default
@@ -829,6 +860,8 @@ flowing through your app-owned route factory.
     start or reapply `adb reverse`
   - physical devices over Wi-Fi should override `MINI_PROGRAM_BACKEND_HOST`
     with the computer's LAN IP
+- generated runtime logs the resolved backend base URL and resolution source on
+  startup, which helps diagnose host/port mistakes during local development
 - When your local backend is already running on port `8080`, Android emulator
   development should usually work with:
 

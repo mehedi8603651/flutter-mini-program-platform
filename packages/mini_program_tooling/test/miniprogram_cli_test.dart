@@ -976,6 +976,8 @@ dependencies:
         'reset-local',
       ]);
       expect(stdoutBuffer.toString(), contains('Started local backend.'));
+      expect(stdoutBuffer.toString(), contains('Android emulator URL: http://10.0.2.2:9090/api/'));
+      expect(stdoutBuffer.toString(), contains('Desktop/Chrome URL: http://127.0.0.1:9090/api/'));
     });
 
     test(

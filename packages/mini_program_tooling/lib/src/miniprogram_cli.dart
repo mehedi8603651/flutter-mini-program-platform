@@ -1124,17 +1124,18 @@ Commands:
   }
 
   String _formatBackendStartResult(LocalBackendStartResult result) {
-    final state = result.state;
-    final lines = <String>[
-      result.alreadyRunning
-          ? 'Local backend was already running.'
-          : 'Started local backend.',
-      'PID: ${state.pid}',
-      'Port: ${state.port}',
-      'Health URL: ${state.healthCheckUrl}',
-      'stdout log: ${state.stdoutLogPath}',
-      'stderr log: ${state.stderrLogPath}',
-    ];
+      final state = result.state;
+      final lines = <String>[
+        result.alreadyRunning
+            ? 'Local backend was already running.'
+            : 'Started local backend.',
+        'PID: ${state.pid}',
+        'Port: ${state.port}',
+        'Health URL: ${state.healthCheckUrl}',
+        ..._formatBackendTargetUrls(state.port),
+        'stdout log: ${state.stdoutLogPath}',
+        'stderr log: ${state.stderrLogPath}',
+      ];
     if (result.reversedDeviceIds.isNotEmpty) {
       lines.add(
         'ADB reverse: ${result.reversedDeviceIds.join(', ')} '
@@ -1164,20 +1165,29 @@ Commands:
     }
 
     final state = result.state!;
-    final lines = <String>[
-      'Local backend state found.',
-      'PID: ${state.pid}',
-      'Port: ${state.port}',
-      'Process alive: ${result.processAlive}',
-      'Healthy: ${result.healthy}',
-      if (result.healthStatusCode != null)
-        'Health status code: ${result.healthStatusCode}',
-      if (result.healthError != null) 'Health detail: ${result.healthError}',
-      'stdout log: ${state.stdoutLogPath}',
-      'stderr log: ${state.stderrLogPath}',
-    ];
-    return lines.join('\n');
-  }
+      final lines = <String>[
+        'Local backend state found.',
+        'PID: ${state.pid}',
+        'Port: ${state.port}',
+        'Process alive: ${result.processAlive}',
+        'Healthy: ${result.healthy}',
+        if (result.healthStatusCode != null)
+          'Health status code: ${result.healthStatusCode}',
+        if (result.healthError != null) 'Health detail: ${result.healthError}',
+        ..._formatBackendTargetUrls(state.port),
+        'stdout log: ${state.stdoutLogPath}',
+        'stderr log: ${state.stderrLogPath}',
+      ];
+      return lines.join('\n');
+    }
+
+    List<String> _formatBackendTargetUrls(int port) {
+      return <String>[
+        'Android emulator URL: http://10.0.2.2:$port/api/',
+        'Desktop/Chrome URL: http://127.0.0.1:$port/api/',
+        'Android USB via adb reverse: http://127.0.0.1:$port/api/',
+      ];
+    }
 
   String _formatBackendStopResult(LocalBackendStopResult result) {
     if (!result.hadState) {

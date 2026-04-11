@@ -85,6 +85,12 @@ void main() {
       );
       expect(runtimeSetup, contains("if (kIsWeb) {"));
       expect(
+        runtimeSetup,
+        contains(
+          "debugPrint(\n    '[mini_program][runtime] Backend base URL: \$backendApiBaseUri '",
+        ),
+      );
+      expect(
         routes,
         contains(
           "static const String nativeProfileEditor = '/native/profile-editor';",
@@ -113,6 +119,7 @@ void main() {
           contains('flutter run -d emulator-5554'),
           contains('MINI_PROGRAM_BACKEND_HOST'),
           contains('adb reverse'),
+          contains('resolved backend base URL'),
         ),
       );
     });
