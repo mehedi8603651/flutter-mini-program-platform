@@ -1,241 +1,168 @@
 # Next Work Agents
 
 ## Mission
-Design and implement the next developer-facing workflow as a **global Dart CLI**
-named `miniprogram`, built from the existing
-`packages/mini_program_tooling` package.
+This document is the handoff for the **next** implementation wave.
+The local Flutter CLI foundation is already shipped. The next work must build
+on that baseline instead of redesigning it again.
 
-This document is the handoff for the next implementation wave only. It does
-not redefine the whole platform roadmap. The goal is to make mini-program
-creation, local backend lifecycle, local publish flow, and existing-app
-embedding feel like one coherent CLI instead of a collection of wrappers.
-The env/config layer is now part of that shipped workflow, so the next phase
-should build on it instead of rethinking local CLI state from scratch.
+## Current Shipped Baseline
 
-## Locked Outcomes
+These are already done and should be treated as stable unless a bug forces a
+change:
 
-### Global install shape
-- Package remains `mini_program_tooling` for the first CLI wave.
-- Preferred released install command is:
-  - `dart pub global activate mini_program_tooling`
-- Repo-local contributor activation command is:
-  - `dart pub global activate --source path <repo-root>/packages/mini_program_tooling`
-- Global executable is:
-  - `miniprogram`
+- published packages:
+  - `mini_program_contracts`
+  - `mini_program_sdk`
+  - `mini_program_tooling`
+- global CLI:
+  - `miniprogram create`
+  - `miniprogram doctor`
+  - `miniprogram env init|use|status`
+  - `miniprogram build`
+  - `miniprogram validate`
+  - `miniprogram publish`
+  - `miniprogram embed init`
+  - `miniprogram backend init|start|stop|status|reset-local`
+- standalone local backend workspace:
+  - default Windows root at `%LOCALAPPDATA%\mini_program\backend\`
+- target-aware local host behavior:
+  - Android emulator default `10.0.2.2:8080`
+  - desktop and Chrome default `127.0.0.1:8080`
+  - Android USB support through `adb reverse`
+- managed pinned Stac builder inside the tooling package
+- hosted embed dependencies through `mini_program_sdk` and
+  `mini_program_contracts`
 
-### V1 command contract
-These commands are part of the first implementation wave and should be treated
-as the public CLI surface:
+## Locked Direction
 
-- `miniprogram create <mini-program-id>`
-- `miniprogram doctor`
-- `miniprogram backend init`
-- `miniprogram env init`
-- `miniprogram env use <local|cloud>`
-- `miniprogram env status`
-- `miniprogram build <mini-program-id>`
-- `miniprogram validate <mini-program-id>`
-- `miniprogram publish <mini-program-id>`
-- `miniprogram embed init --project-root <path>`
-- `miniprogram backend start --port 8080`
-- `miniprogram backend stop`
-- `miniprogram backend status`
-- `miniprogram backend reset-local --yes`
+### CLI stays the source of truth
+- `miniprogram` remains the primary developer interface.
+- Any future VS Code extension must wrap the CLI instead of duplicating the
+  platform logic.
+- CI/CD and non-VS-Code workflows must keep working from the CLI alone.
 
-### Reserved, but not in the first implementation wave
-These are intentionally deferred and must not be implemented as part of v1:
+### Native power stays behind the bridge
+- portable mini-program UI remains declarative
+- secure and host-sensitive behavior remains native
+- future payment, banking, TV, and secure API scenarios must expand the bridge
+  and contracts, not bypass them
 
-- `miniprogram publish <mini-program-id> --target cloud`
+### Cloud delivery splits static and dynamic work
+- static versioned artifacts belong in:
+  - S3
+  - CloudFront
+- dynamic selection and secure operations belong in:
+  - API Gateway
+  - Lambda
 
-The first implementation wave only supports **local** backend publishing. Cloud
-publishing is the next phase after the local CLI is stable.
+### Native host expansion should reuse Flutter first
+- if Android native hosts are added later, the first strategy should be:
+  - native app + embedded Flutter runtime for mini-programs
+- do not start by building a second full native renderer
 
-## Implementation Strategy
+## Priority Roadmap
 
-### Package and entrypoint
-- Reuse `packages/mini_program_tooling` as the implementation home.
-- Add `packages/mini_program_tooling/bin/miniprogram.dart` as the command
-  router entrypoint.
-- Prefer one shared parser/router with subcommands over separate unrelated CLIs.
+### 1. Managed preview workflow
+The next major developer-facing feature should be:
 
-### Compatibility policy
-- Keep the current low-level Dart bins for compatibility:
-  - `create_mini_program.dart`
-  - `build_mini_program.dart`
-  - `validate_delivery.dart`
-  - `publish_mini_program.dart`
-  - `init_mini_program_embedding.dart`
-- Keep current PowerShell wrappers for compatibility during the transition.
-- Once the global CLI exists, wrappers should delegate to `miniprogram` where
-  practical, but that delegation can happen after the router is stable.
+- `miniprogram run -d chrome`
+- `miniprogram run -d windows`
+- `miniprogram run -d emulator-5554`
+- `miniprogram run -d <physical-device-id>`
 
-### Command ownership map
-- `create`
-  - wraps the existing scaffolder logic
-- `env init|use|status`
-  - own CLI environment config and default standalone/local-cloud selection
-- `doctor`
-  - reports machine prerequisites, env config, optional repo-root resolution, and
-    backend health before troubleshooting
-- `build`
-  - wraps the existing builder logic
-- `validate`
-  - wraps the existing delivery validator logic
-- `publish`
-  - wraps build + validate + local backend publish logic
-- `embed init`
-  - wraps the existing embedding initializer
-- `backend start|stop|status|reset-local`
-  - manage a standalone backend workspace or repo-owned backend workspace
-- `backend init`
-  - scaffolds a developer-owned local backend workspace and stores backend
-    workspace state for later lifecycle commands
+Expected behavior:
 
-## Path Resolution And Local State
+- infer the current mini-program from the working directory
+- start the local backend if needed
+- build and publish to the local backend automatically
+- run a CLI-managed preview host app automatically
+- keep backend URL selection target-aware
 
-### `miniprogram create <id>`
-- Default output root is `./<id>` in the current working directory.
-- Folder name and mini-program id are the same by default.
-- Repo-managed creation remains optional and explicit through future flags.
-- The default behavior must favor standalone mini-program folders, not
-  `mini_programs/<id>/` inside the platform repo.
+Optional advanced form:
 
-### `build`, `validate`, and `publish`
-These commands accept `<mini-program-id>` as the primary positional input and
-must resolve the mini-program root in this order:
+- `miniprogram run -d chrome --host-app <path>`
 
-1. explicit `--mini-program-root`
-2. `--repo-root` + `mini_programs/<id>`
-3. `./<id>`
-4. current directory, but only if it already looks like a mini-program root and
-   the manifest id matches the provided `<id>`
+### 2. Cloud publish and cloud env
+After preview flow is stable, add cloud delivery support:
 
-If nothing resolves, fail with a clear error that explains which paths were
-checked.
+- `miniprogram publish --target cloud`
+- `miniprogram env use cloud`
 
-### Local state directory
-- Store CLI-owned local state in:
-  - `.mini_program/`
-- This directory is repo-local and untracked.
-- The implementation must add `.mini_program/` to `.gitignore`.
+Expected architecture:
 
-### State files
-Use these files for the first implementation wave:
+- S3 versioning for:
+  - manifests
+  - screens
+  - themes
+  - assets
+- CloudFront in front of S3
+- API Gateway + Lambda for:
+  - discovery
+  - rollout and host-aware selection
+  - capability filtering
+  - secure API routes
 
-- `.mini_program/env.json`
-  - stores the optional default repo root and active local CLI environment
-- `.mini_program/backend.local.json`
-  - stores backend PID, configured port, log file paths, and last start time
-- `.mini_program/backend_workspace.json`
-  - stores the initialized backend workspace root plus backend/api and service
-    directory paths
-- `.mini_program/published_local_artifacts.json`
-  - stores the locally published artifact folders created by `publish`
+### 3. Payment and other host-native capabilities
+Add new capabilities only through explicit contracts:
 
-The CLI must treat these files as the source of truth for local backend and
-local publish bookkeeping.
+- `payment`
+- future banking-style secure actions
+- TV-focused navigation and subscription or recharge flows
 
-### Environment fallback
-`build`, `validate`, `publish`, and `backend ...` should consult
-`.mini_program/env.json` before falling back to repo discovery. The standalone
-workflow must still work when no repo root is saved, while repo-managed flows
-can continue using `--repo-root` or a remembered `repoRootPath`.
+Rules:
 
-That local env flow now also refreshes a user-level fallback config, so
-commands such as `embed init` can resolve the same repo root even when they are
-run from unrelated directories.
+- mini-program owns the portable UI flow
+- host-native SDK owns sensitive execution
+- results return in structured payloads
 
-Backend workspaces now have a similar fallback file:
+### 4. Native host expansion
+For future Java/Kotlin or other native hosts:
 
-- `~/.mini_program/global_backend_workspace.json`
+- embed the Flutter runtime first
+- keep mini-program usage bounded to the mini-program surface
+- prewarm and reuse the engine where needed
+- only consider a second renderer if business and performance evidence force it
 
-## Local Backend Lifecycle
+### 5. IDE UX layer on top of the CLI
+After the CLI preview and cloud model are stable, a VS Code extension is a good
+follow-up:
 
-### `miniprogram backend start --port 8080`
-- Starts `backend/local_backend_service`.
-- Records PID, port, log file paths, and startup metadata in
-  `.mini_program/backend.local.json`.
-- Default port is `8080`.
-- Custom port is supplied only through `start --port <n>`.
-- No separate `miniprogram backend port` command should exist.
+- command palette wrappers around CLI flows
+- backend status and logs
+- cloud target UI
+- preview launch UI
+- manifest and publish inspection
 
-### `miniprogram backend status`
-- Reports whether the recorded PID is alive.
-- Reports the configured port from local state.
-- Attempts a backend health check against the running local service.
-- Reports log file paths if they were recorded.
-- If the PID is stale, report that clearly and do not pretend the backend is
-  healthy.
+This remains a wrapper over the CLI, not a replacement for it.
 
-### `miniprogram backend stop`
-- Stops the recorded backend process if it exists.
-- Clears stale backend state if the PID no longer exists.
-- Does not remove published backend artifacts.
+### 6. Authoring quality-of-life
+Smaller future UX improvements that fit the current system:
 
-### `miniprogram backend reset-local --yes`
-- This is destructive and must require `--yes`.
-- Only removes locally published artifact folders tracked in
-  `.mini_program/published_local_artifacts.json`.
-- Must not wipe all of `backend/api/`.
-- Must not remove rollout rules, capability policies, secure API policies, or
-  repo-seeded backend files that were not created by the CLI's local publish
-  flow.
+- make author helper `requestId` optional and auto-generate it when omitted
+- improve generated logs and diagnostics for host/backend resolution
+- keep zero-argument workflows when the current directory already provides
+  enough context
 
-This rule is critical. "Reset local" means "clean local publish outputs," not
-"delete the backend."
+## Deferred Or Explicitly Not Next
 
-## Publish Behavior And Future Cloud Model
+- do not replace the CLI with a VS Code-only workflow
+- do not move the platform to a WebView or WASM runtime as the main host model
+- do not let mini-programs directly own secure payment or banking execution
+- do not build a third-party marketplace before cloud publish and host
+  capabilities are stable
 
-### V1 publish behavior
-`miniprogram publish <id>` means:
+## Near-Term Concrete Task List
 
-- build
-- validate
-- publish to the **local backend only**
-- update `.mini_program/published_local_artifacts.json`
-
-The first implementation wave must not require environment switching to publish.
-
-### Future cloud model
-The intended future environment model is:
-
-- developer works against `local` first
-- later points the same host app + SDK to `cloud`
-- only backend environment/config changes
-- mini-program contracts, host integration, and SDK runtime shape stay the same
-
-Future environment names are locked as:
-
-- `local`
-- `cloud`
-
-This doc does not introduce multi-tenant SaaS or per-company product
-configuration. The model is company-owned backend infrastructure with
-developer-local and cloud environments.
-
-## Required Tests
-
-The implementation that follows this handoff must include:
-
-- CLI parser tests for all listed commands and flags
-- `doctor` output coverage for ok/warn/error/skip cases
-- `create` flow test for standalone `./<id>` output
-- `build`, `validate`, and `publish` path-resolution tests
-- local backend `start` / `status` / `stop` lifecycle tests
-- `backend reset-local --yes` safety tests proving only tracked local publish
-  outputs are removed
-- compatibility tests proving legacy Dart bins and PowerShell wrappers still
-  work or delegate cleanly
-- README/docs updates that make `miniprogram` the preferred command surface for
-  the new workflow
-
-## Defaults And Assumptions
-- `nextWorkAgents.md` lives at the repo root.
-- This handoff is focused on the **CLI roadmap**, not the full platform
-  roadmap.
-- `mini_program_tooling` remains the implementation home for the first global
-  CLI wave.
-- Local backend is the only supported publish target in the first wave.
-- Cloud targeting and environment switching are documented follow-up work.
-- Destructive local cleanup must always be explicit and scoped to CLI-tracked
-  publish artifacts only.
+1. Design the managed preview host for `miniprogram run -d <device>`.
+2. Implement `miniprogram run` so it starts backend, builds, publishes, and
+   launches preview automatically.
+3. Keep target-aware local backend defaults and device overrides inside the
+   generated host runtime.
+4. Add cloud publish support with S3 object layout and versioned keys.
+5. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
+   rollout, and secure routes.
+6. Add first-class payment capability contracts and payload models.
+7. Implement payment host bridge support in Flutter hosts first.
+8. Plan Android native-host embedding around a reused Flutter engine.
+9. Keep the CLI as the single source of truth before adding any IDE wrapper.
+10. Add optional auto-generated `requestId` support in author helpers.

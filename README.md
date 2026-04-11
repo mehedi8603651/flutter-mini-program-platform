@@ -1,201 +1,425 @@
 # flutter-mini-program-platform
 
-Portable Flutter mini-program platform built around shared contracts, a shared
-SDK/runtime, portable Stac-authored mini-programs, multiple Flutter host apps,
-and local backend delivery.
+Portable mini-program platform built around:
 
-## Preferred CLI
+- shared contracts
+- a shared Flutter runtime SDK
+- Stac-authored portable UI
+- local and future cloud delivery
+- controlled host-native bridges
 
-Install the published tooling once:
+The project goal is simple:
+
+> one mini-program should be able to run inside multiple host apps without
+> rewriting the whole business flow for every host
+
+## What This Platform Is
+
+This is a **platform repo**, not a normal single Flutter app.
+
+It has five main layers:
+
+1. `mini_program_contracts`
+2. `mini_program_sdk`
+3. mini-program source
+4. host apps
+5. backend delivery
+
+The key design rule is:
+
+> keep portable UI declarative, keep sensitive and host-specific power behind
+> the host bridge
+
+## Current Shipped System
+
+Already shipped:
+
+- published packages:
+  - `mini_program_contracts`
+  - `mini_program_sdk`
+  - `mini_program_tooling`
+- global `miniprogram` CLI
+- standalone local backend workspace
+- standalone local authoring flow
+- host-app embedding flow for Flutter apps
+- target-aware local runtime defaults for:
+  - Android emulator
+  - Windows desktop
+  - Chrome on the same machine
+  - Android USB with `adb reverse`
+
+The current system is strongest for **local developer workflows** and
+**portable Flutter-hosted mini-programs**.
+
+Future-only roadmap is tracked in:
+
+- [nextWorkAgents.md](D:/flutter-mini-program-platform/nextWorkAgents.md)
+
+## What This Platform Is Good For
+
+This platform is a good fit for:
+
+- forms
+- onboarding
+- profile and settings flows
+- recharge or top-up flows
+- campaign pages
+- dashboards
+- account flows
+- subscription and plan-selection flows
+- feedback and support flows
+- modular business workflows
+- tenant-specific or host-specific presentation differences
+
+It is especially suitable for:
+
+- super-app style products
+- company apps
+- enterprise apps
+- partner-hosted apps
+
+## What Should Stay Native
+
+Do not force everything into a mini-program.
+
+Keep these native:
+
+- payment SDK execution
+- banking-grade secure auth
+- biometric and OTP/PIN flows
+- login bootstrap
+- camera-heavy flows
+- map-heavy real-time flows
+- advanced editors
+- highly custom animation-heavy experiences
+- actual TV/player playback UI core
+- hardware- or device-permission-heavy flows
+
+Use mini-programs for the **portable business UI around those features**, not
+for the sensitive or platform-heavy core execution.
+
+## Current Technical Shape
+
+### Contracts
+`packages/mini_program_contracts`
+
+This package defines the shared wire language:
+
+- manifest shape
+- capability names
+- action names
+- result payloads
+- version rules
+- stable error codes
+
+### Runtime SDK
+`packages/mini_program_sdk`
+
+This package renders portable mini-program UI inside Flutter host apps.
+
+It is responsible for:
+
+- loading manifests and screens
+- validating SDK compatibility
+- enforcing declared capabilities
+- rendering Stac JSON safely
+- dispatching approved actions through the host bridge
+
+### Tooling CLI
+`packages/mini_program_tooling`
+
+This package exposes the global `miniprogram` command used for:
+
+- create
+- doctor
+- env
+- build
+- validate
+- publish
+- embed init
+- backend init/start/stop/status/reset-local
+
+### Mini-Program Authoring
+Mini-programs are authored in Stac DSL and built into JSON.
+
+Safe assumption:
+
+```text
+Stac DSL / StacWidget-style Dart -> stac build -> JSON
+```
+
+Unsafe assumption:
+
+```text
+any arbitrary Flutter widget tree -> automatic portable JSON
+```
+
+That is not the model.
+
+## How The Platform Works
+
+At a high level:
+
+1. developer writes Stac DSL mini-program screens
+2. `miniprogram build` runs the managed Stac builder
+3. JSON screens and manifest artifacts are produced
+4. `miniprogram publish` writes them into the local backend workspace
+5. host app loads manifest and screen JSON through `mini_program_sdk`
+6. host bridge handles approved native operations
+
+High-level flow:
+
+```text
+author -> build -> validate -> publish -> backend delivery -> SDK load ->
+render -> action dispatch -> host-native execution when needed
+```
+
+## Preferred Developer Entry Point
+
+Install the published CLI once:
 
 ```powershell
 dart pub global activate mini_program_tooling
 ```
 
-For repo-local contributor work, use:
+Then use:
 
 ```powershell
-dart pub global activate --source path <repo-root>\packages\mini_program_tooling
+miniprogram --help
 ```
 
-Then use the shared `miniprogram` command:
+The CLI is the source of truth for developers.
+
+Older wrappers may still exist, but `miniprogram ...` is the preferred path.
+
+## Local Developer Workflow
+
+### 1. Create a mini-program
 
 ```powershell
-miniprogram create coupon_center
-miniprogram doctor
+cd D:\
+miniprogram create my_coupon_app
+```
+
+### 2. Initialize local backend workspace
+
+```powershell
 miniprogram backend init
+```
+
+On Windows the default backend workspace is:
+
+```text
+%LOCALAPPDATA%\mini_program\backend\
+```
+
+### 3. Initialize local env inside the mini-program
+
+```powershell
+cd D:\my_coupon_app
 miniprogram env init
-miniprogram build coupon_center
-miniprogram validate coupon_center
-miniprogram publish coupon_center
+```
+
+### 4. Build, validate, publish
+
+Inside the mini-program folder:
+
+```powershell
+miniprogram build
+miniprogram validate
+miniprogram publish
+```
+
+Or from outside:
+
+```powershell
+miniprogram build my_coupon_app
+miniprogram validate my_coupon_app
+miniprogram publish my_coupon_app
+```
+
+### 5. Start backend
+
+```powershell
 miniprogram backend start --port 8080
 miniprogram backend status
 ```
 
-The older PowerShell wrappers still work, but `miniprogram ...` is now the
-preferred developer entrypoint.
+## Embed Into A Flutter Host App
 
-Use `miniprogram doctor` to verify the local machine, saved env config, managed
-Stac builder state, and backend state before troubleshooting build or embed
-issues.
-
-## Create A Mini-Program
-
-Generate a starter mini-program anywhere with:
+Create or open a Flutter app, then run:
 
 ```powershell
-cd D:\
-miniprogram create first_miniprogram
-```
-
-The command generates the manifest, two starter Stac screens, readable action
-helpers for host and internal mini-program routing, build config, README, and
-the expected `stac/components`, `stac/theme`, and `assets` folders.
-
-Authoring guide:
-
-- [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
-- [embed_existing_flutter_app.md](D:/flutter-mini-program-platform/docs/embed_existing_flutter_app.md)
-
-Portable flows now support internal page-to-page routing by `screenId`, so a
-generated mini-program can move from its first screen to a second portable
-screen without leaving the mini-program container.
-
-For a standalone local workflow:
-
-```powershell
-cd D:\first_miniprogram
-miniprogram doctor
-miniprogram backend init
-miniprogram env init
-miniprogram build
-miniprogram validate
-miniprogram publish
-miniprogram backend start --port 8080
-```
-
-If you are outside the mini-program folder, the explicit form still works:
-
-```powershell
-miniprogram build first_miniprogram
-miniprogram validate first_miniprogram
-miniprogram publish first_miniprogram
-```
-
-`env init` now works without a platform repo path. `build` uses the managed
-pinned Stac builder bundled inside `mini_program_tooling`. Keep
-`--stac-cli-script` only as the expert override when you intentionally need a
-different Stac CLI.
-
-If you want a developer-owned local backend outside the platform repo, run
-`miniprogram backend init` once from anywhere. On Windows, the default backend
-workspace is `%LOCALAPPDATA%\mini_program\backend\`. That scaffolds
-`backend/local_backend_service`, `backend/api`, and the tracked
-`.mini_program/backend_workspace.json` state used by `backend start`,
-`backend status`, `backend stop`, and `backend reset-local`. Use
-`miniprogram backend init --root D:\custom_backend` only when you intentionally
-want a custom workspace path. When that backend workspace exists,
-`miniprogram publish ...` now writes local artifacts there instead of the
-platform repo backend.
-
-## Embed Into An Existing Flutter App
-
-Generate the app-owned embedding adapter for an existing Flutter app with:
-
-```powershell
-flutter create coupon_host_app
-cd coupon_host_app
+flutter create my_mini_host
+cd my_mini_host
 miniprogram embed init
+flutter pub get
 ```
 
-Or from another directory:
+The generated embed layer adds:
 
-```powershell
-miniprogram embed init --project-root D:\myflutterproject
-```
+- `mini_program_sdk`
+- `mini_program_contracts`
+- app-owned bridge files under `lib/mini_program/`
+- local backend runtime defaults
 
-The command generates:
+## Local Run Targets
 
-- `lib/mini_program/mini_program.dart`
-- `lib/mini_program/mini_program_app_shell.dart`
-- `lib/mini_program/mini_program_routes.dart`
-- `lib/mini_program/app_host_bridge.dart`
-- `lib/mini_program/mini_program_runtime_setup.dart`
-- `lib/mini_program/native_profile_editor_page.dart`
-- `lib/mini_program/mini_program_launcher.dart`
-- `lib/mini_program/README.md`
+With the local backend running on port `8080`, the generated runtime uses
+target-aware defaults.
 
-It intentionally leaves `main.dart` and the rest of your app shell under
-developer control, so existing apps can adopt the shared SDK without copying a
-full sample host. Feature pages can then open mini-programs through the
-generated `openAppMiniProgram(...)` helper or `AppMiniProgramLauncherButton`,
-while `MiniProgramAppShell` keeps app entry code small.
-
-`embed init` now updates the host app `pubspec.yaml` to use the published
-`mini_program_sdk` and `mini_program_contracts` packages instead of local
-`path:` dependencies.
-
-The generated runtime setup already defaults local backend URLs for common dev
-targets, so once the backend is running on port `8080`, Android emulator work
-should normally be as simple as:
+### Android emulator
 
 ```powershell
 flutter run -d emulator-5554
 ```
 
-`miniprogram embed init` also writes Android debug-only cleartext/network
-configuration so the generated emulator default can reach
-`http://10.0.2.2:8080/api/` without manual manifest edits.
+Default local backend:
 
-Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
-override that generated local default.
+```text
+http://10.0.2.2:8080/api/
+```
 
-## Repo Smoke Command
+### Windows desktop
 
-Run the repo-level local/CI smoke suite with:
+```powershell
+flutter run -d windows
+```
+
+Default local backend:
+
+```text
+http://127.0.0.1:8080/api/
+```
+
+### Chrome
+
+```powershell
+flutter run -d chrome
+```
+
+Default local backend:
+
+```text
+http://127.0.0.1:8080/api/
+```
+
+### Android physical device over USB
+
+Start backend first so `adb reverse` can be applied:
+
+```powershell
+miniprogram backend start --port 8080
+flutter run -d <android-device-id>
+```
+
+### Android or iPhone over Wi-Fi
+
+Override the backend host with your machine LAN IP:
+
+```powershell
+flutter run -d <device-id> --dart-define=MINI_PROGRAM_BACKEND_HOST=<your-lan-ip>
+```
+
+Override the full URL when needed:
+
+```powershell
+flutter run -d <device-id> --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://<host>:8080/api/
+```
+
+## Current Capability Boundary
+
+The platform can support advanced business domains, but only with the right
+bridge boundary.
+
+### Good current direction
+
+- payment flow UI
+- banking workflow UI
+- recharge UI
+- TV business flows
+- account and subscription flows
+
+### Required rule
+
+- portable UI stays in the mini-program
+- sensitive execution stays native
+
+Examples:
+
+- payment SDK execution should stay native
+- secure banking operations should stay native
+- video playback core should stay native
+- mini-program can orchestrate the user flow around them
+
+## Native Host Expansion
+
+Future native Android or other non-Flutter hosts should follow this path first:
+
+- host app remains mostly native
+- mini-program area uses embedded Flutter runtime
+- one embedded runtime can support many mini-programs
+
+This means:
+
+- first integration cost is the main cost
+- mini-program 2 to 100 mostly reuse the same runtime foundation
+- native app size and memory increase
+- but the whole native app does not degrade by a simple fixed percentage
+
+For this platform type, that tradeoff is usually acceptable.
+
+## Cloud Direction
+
+The best future cloud model is:
+
+- `S3 + CloudFront` for versioned artifacts
+  - manifests
+  - screens
+  - themes
+  - assets
+- `API Gateway + Lambda` for dynamic and secure routes
+  - discovery
+  - rollout and host-aware selection
+  - capability filtering
+  - secure operations
+
+Public GitHub JSON URLs are okay for a simple public prototype, but not the
+recommended real cloud delivery model.
+
+## What Is Not The Right Direction
+
+These are intentionally not the main path:
+
+- replacing the CLI with a VS Code-only workflow
+- treating WebView or WASM-in-app as the primary host model
+- letting mini-program JSON execute sensitive native behavior directly
+- assuming any arbitrary Flutter widget tree can become portable JSON
+
+## Repo Smoke And Verification
+
+Run repo smoke checks with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1
 ```
 
-By default it runs:
-
-- delivery validation
-- `backend/local_backend_service` analyze and test
-- `packages/mini_program_sdk` analyze and test
-- `hosts/super_app_host` analyze and test
-- `hosts/partner_app_host` analyze and test
-
-Useful options:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1 -SkipAnalyze
-powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\smoke_repo.ps1 -SkipHosts
-```
-
-Verify the installed global CLI from a fresh temporary `PUB_CACHE` with:
+Verify the installed global CLI with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\verify_global_cli.ps1
 ```
 
-## GitHub Actions
-
-Pushes and pull requests run the repo smoke workflow through:
-
-- `.github/workflows/repo-smoke.yml`
-
-The workflow uses `windows-latest`, installs Flutter, opts into Node 24 for
-JavaScript-based actions, and runs the smoke checks as explicit steps:
+Use `miniprogram doctor` before troubleshooting:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\validate_delivery.ps1
-dart analyze
-dart test
-flutter analyze
-flutter test
+miniprogram doctor
 ```
 
-Local development should still use [smoke_repo.ps1](D:/flutter-mini-program-platform/tools/smoke_repo.ps1).
-CI intentionally runs the same checks inline so GitHub shows the exact failing
-step instead of only reporting a top-level wrapper failure.
+## Additional Docs
+
+- [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
+- [embed_existing_flutter_app.md](D:/flutter-mini-program-platform/docs/embed_existing_flutter_app.md)
+- [packages/mini_program_tooling/README.md](D:/flutter-mini-program-platform/packages/mini_program_tooling/README.md)
+- [packages/mini_program_sdk/README.md](D:/flutter-mini-program-platform/packages/mini_program_sdk/README.md)
+- [nextWorkAgents.md](D:/flutter-mini-program-platform/nextWorkAgents.md)
