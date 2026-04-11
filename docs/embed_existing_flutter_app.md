@@ -68,7 +68,7 @@ old app already has a clear host-owned secure flow ready to integrate.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.1.1
+  mini_program_sdk: ^0.1.2
   mini_program_contracts: ^0.1.0
 ```
 
@@ -200,8 +200,37 @@ flutter run -d emulator-5554
 configuration so the generated emulator default can reach
 `http://10.0.2.2:8080/api/` without manual manifest edits.
 
-Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
-override the generated local default.
+The generated runtime now uses target-aware defaults:
+
+- Android local default: `http://10.0.2.2:8080/api/`
+- desktop, Chrome on the same machine, and iOS simulators:
+  `http://127.0.0.1:8080/api/`
+- Android USB `adb reverse` flows can keep using `127.0.0.1`, and the shared
+  SDK retries local loopback between `10.0.2.2` and `127.0.0.1` on transport
+  failures
+
+Conditions:
+
+- the local backend should already be running on port `8080`
+- Android USB or emulator loopback may still depend on an active `adb reverse`
+  session when the device cannot route to `10.0.2.2`
+- if the Android device or emulator connects after backend start, rerun
+  backend start or reapply `adb reverse`
+- physical devices over Wi-Fi should override `MINI_PROGRAM_BACKEND_HOST` with
+  the computer's LAN IP
+
+Use a full URL override when needed:
+
+```powershell
+flutter run -d windows --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://mini.example.com/api/
+```
+
+Or override only the host/port for physical-device Wi-Fi testing:
+
+```powershell
+flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_HOST=192.168.1.25
+flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_PORT=8080
+```
 
 ## 5. Open mini-programs from ordinary app buttons
 

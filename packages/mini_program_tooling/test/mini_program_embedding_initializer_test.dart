@@ -74,11 +74,16 @@ void main() {
       expect(
         runtimeSetup,
         contains(
-          "String.fromEnvironment(\n    'MINI_PROGRAM_BACKEND_BASE_URL',",
+          "const String _configuredBackendBaseUrl = String.fromEnvironment(",
         ),
       );
-      expect(runtimeSetup, contains("return 'http://10.0.2.2:8080/api/';"));
-      expect(runtimeSetup, contains("return 'http://127.0.0.1:8080/api/';"));
+      expect(runtimeSetup, contains("'MINI_PROGRAM_BACKEND_HOST'"));
+      expect(runtimeSetup, contains("'MINI_PROGRAM_BACKEND_PORT'"));
+      expect(
+        runtimeSetup,
+        contains('LocalMiniProgramBackendDefaults.resolveBaseUri('),
+      );
+      expect(runtimeSetup, contains("if (kIsWeb) {"));
       expect(
         routes,
         contains(
@@ -97,15 +102,17 @@ void main() {
       );
       expect(appShell, contains('MiniProgramRuntimeScope('));
       expect(barrel, contains("export 'mini_program_app_shell.dart';"));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.1.1'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.1.2'));
       expect(updatedPubspec, contains('mini_program_contracts: ^0.1.0'));
       expect(
         readme,
         allOf(
-          contains('mini_program_sdk: ^0.1.1'),
+          contains('mini_program_sdk: ^0.1.2'),
           contains('mini_program_contracts: ^0.1.0'),
           contains('MiniProgramAppShell('),
           contains('flutter run -d emulator-5554'),
+          contains('MINI_PROGRAM_BACKEND_HOST'),
+          contains('adb reverse'),
         ),
       );
     });

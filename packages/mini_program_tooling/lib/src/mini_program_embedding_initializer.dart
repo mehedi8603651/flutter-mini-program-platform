@@ -62,7 +62,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.1.1';
+  static const String _miniProgramSdkConstraint = '^0.1.2';
   static const String _miniProgramContractsConstraint = '^0.1.0';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
@@ -587,6 +587,18 @@ import 'app_host_bridge.dart';
 const String _hostAppId = '$hostAppId';
 const String _sdkVersion = '1.0.0';
 const String _hostVersion = '$hostVersion';
+const String _configuredBackendBaseUrl = String.fromEnvironment(
+  'MINI_PROGRAM_BACKEND_BASE_URL',
+  defaultValue: '',
+);
+const String _configuredBackendHost = String.fromEnvironment(
+  'MINI_PROGRAM_BACKEND_HOST',
+  defaultValue: '',
+);
+const int _configuredBackendPort = int.fromEnvironment(
+  'MINI_PROGRAM_BACKEND_PORT',
+  defaultValue: LocalMiniProgramBackendDefaults.defaultPort,
+);
 
 const Set<Capability> _supportedCapabilities = <Capability>{
   Capability.analytics,
@@ -601,7 +613,11 @@ MiniProgramRuntime buildMiniProgramRuntime(
   return MiniProgramRuntime(
     sdkVersion: _sdkVersion,
     source: HttpMiniProgramSource.fromDeliveryContext(
-      apiBaseUri: Uri.parse(_resolveBackendBaseUrl()),
+      apiBaseUri: LocalMiniProgramBackendDefaults.resolveBaseUri(
+        configuredBaseUrl: _configuredBackendBaseUrl,
+        configuredHost: _configuredBackendHost,
+        configuredPort: _configuredBackendPort,
+      ),
       deliveryContext: MiniProgramDeliveryContext(
         hostApp: _hostAppId,
         sdkVersion: _sdkVersion,
@@ -617,28 +633,11 @@ MiniProgramRuntime buildMiniProgramRuntime(
   );
 }
 
-String _resolveBackendBaseUrl() {
-  const configured = String.fromEnvironment(
-    'MINI_PROGRAM_BACKEND_BASE_URL',
-    defaultValue: '',
-  );
-  if (configured.isNotEmpty) {
-    return configured;
-  }
-
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-      return 'http://10.0.2.2:8080/api/';
-    case TargetPlatform.iOS:
-    case TargetPlatform.macOS:
-    case TargetPlatform.windows:
-    case TargetPlatform.linux:
-    case TargetPlatform.fuchsia:
-      return 'http://127.0.0.1:8080/api/';
-  }
-}
-
 String _platformName() {
+  if (kIsWeb) {
+    return 'web';
+  }
+
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       return 'android';
@@ -813,11 +812,23 @@ flowing through your app-owned route factory.
 - `mini_program_launcher.dart` is the developer-friendly entrypoint for feature
   pages. It keeps widget code from repeating Navigator glue.
 - `mini_program_runtime_setup.dart` defaults to:
-  - Android emulator: `http://10.0.2.2:8080/api/`
-  - desktop/iOS simulators: `http://127.0.0.1:8080/api/`
+- Android local default: `http://10.0.2.2:8080/api/`
+- desktop, Chrome on the same machine, and iOS simulators:
+  `http://127.0.0.1:8080/api/`
+- the shared SDK retries local loopback between `10.0.2.2` and `127.0.0.1`
+  for transport failures, so Android USB `adb reverse` workflows can still use
+  the generated local default
 - `embed init` also adds Android debug-only cleartext config for the local
-  backend so the generated emulator default can reach `http://10.0.2.2:8080`
-  without manual manifest edits
+  backend so the generated Android local defaults can reach local HTTP backend
+  URLs without manual manifest edits
+- local backend conditions:
+  - backend should already be running on port `8080`
+  - Android USB or emulator loopback may still depend on an active
+    `adb reverse` session when the device cannot route to `10.0.2.2`
+  - if the Android device/emulator connects after backend start, rerun backend
+    start or reapply `adb reverse`
+  - physical devices over Wi-Fi should override `MINI_PROGRAM_BACKEND_HOST`
+    with the computer's LAN IP
 - When your local backend is already running on port `8080`, Android emulator
   development should usually work with:
 
@@ -825,10 +836,17 @@ flowing through your app-owned route factory.
 flutter run -d emulator-5554
 ```
 
-- Override the backend base URL with:
+- Override the backend with a full URL when needed:
 
 ```text
 --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://host:8080/api/
+```
+
+- Or override only the host/port for cases like physical-device Wi-Fi testing:
+
+```text
+--dart-define=MINI_PROGRAM_BACKEND_HOST=192.168.1.25
+--dart-define=MINI_PROGRAM_BACKEND_PORT=8080
 ```
 ''';
   }

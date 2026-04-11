@@ -107,7 +107,26 @@ miniprogram embed init
 `mini_program_sdk` and `mini_program_contracts` packages.
 
 When the local backend is already running on port `8080`, the generated
-runtime setup should usually let Android emulator development work with:
+runtime setup uses target-aware defaults:
+
+- Android local default: `http://10.0.2.2:8080/api/`
+- desktop, Chrome on the same machine, and iOS simulators:
+  `http://127.0.0.1:8080/api/`
+- Android USB `adb reverse` flows keep using `127.0.0.1`, and the shared SDK
+  retries local loopback between `10.0.2.2` and `127.0.0.1` on transport
+  failures
+
+Conditions:
+
+- the local backend should already be running on port `8080`
+- Android USB or emulator loopback may still depend on an active `adb reverse`
+  session when the device cannot route to `10.0.2.2`
+- if the Android device or emulator connects after backend start, rerun
+  `miniprogram backend start --port 8080` or reapply `adb reverse`
+- physical devices over Wi-Fi should override
+  `MINI_PROGRAM_BACKEND_HOST=<computer-lan-ip>`
+
+So Android emulator development should usually work with:
 
 ```bash
 flutter run -d emulator-5554
@@ -117,8 +136,13 @@ flutter run -d emulator-5554
 configuration so the generated emulator default can reach
 `http://10.0.2.2:8080/api/` without manual manifest edits.
 
-Use `--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=...` only when you need to
-override that generated local default.
+For physical-device Wi-Fi or cloud testing, override either the full base URL
+or just the host/port:
+
+```bash
+flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_HOST=192.168.1.25
+flutter run -d windows --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://mini.example.com/api/
+```
 
 If you need to target an app from another directory, use:
 

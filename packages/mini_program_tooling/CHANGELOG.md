@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.15
+
+- make generated host adapters use the shared SDK local-backend resolver with
+  target-aware defaults instead of hardcoded per-file backend URL logic
+- add generated support for `MINI_PROGRAM_BACKEND_BASE_URL`,
+  `MINI_PROGRAM_BACKEND_HOST`, and `MINI_PROGRAM_BACKEND_PORT`
+- bump generated host app dependencies to `mini_program_sdk: ^0.1.2`
+- document the local backend conditions for emulator, desktop, Chrome, USB
+  `adb reverse`, and physical-device Wi-Fi workflows
+
 ## 0.2.14
 
 - fix `miniprogram embed init` so generated host app `pubspec.yaml` files pin
