@@ -1,0 +1,5 @@
+dependency_overrides:
+  mini_program_contracts:
+    path: ../../packages/mini_program_contracts
+  mini_program_sdk:
+    path: ../../packages/mini_program_sdk
