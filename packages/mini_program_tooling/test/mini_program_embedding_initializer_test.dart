@@ -97,12 +97,12 @@ void main() {
       );
       expect(appShell, contains('MiniProgramRuntimeScope('));
       expect(barrel, contains("export 'mini_program_app_shell.dart';"));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.1.0'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.1.1'));
       expect(updatedPubspec, contains('mini_program_contracts: ^0.1.0'));
       expect(
         readme,
         allOf(
-          contains('mini_program_sdk: ^0.1.0'),
+          contains('mini_program_sdk: ^0.1.1'),
           contains('mini_program_contracts: ^0.1.0'),
           contains('MiniProgramAppShell('),
           contains('flutter run -d emulator-5554'),
