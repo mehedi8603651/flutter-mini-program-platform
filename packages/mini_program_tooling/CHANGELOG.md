@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.17
+
+- add `miniprogram preview -d <chrome|windows>` as the new developer-first
+  preview loop for standalone mini-program authoring
+- generate and manage a hidden project-local preview host under
+  `.mini_program/preview_host`
+- serve preview manifests, screens, and assets through an internal
+  session-scoped preview server instead of the real local backend workspace
+- watch mini-program source files, rebuild on save, and trigger full preview
+  refresh while keeping the last good UI visible on rebuild failures
+- document the preview flow, its capability limits, and how it differs from
+  the real `publish` plus `backend start` delivery path
+
 ## 0.2.16
 
 - fix local Chrome and web host-app development by making the generated local

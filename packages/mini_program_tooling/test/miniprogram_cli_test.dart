@@ -182,6 +182,113 @@ void main() {
       },
     );
 
+    test('preview requires -d <device>', () async {
+      final stdoutBuffer = StringBuffer();
+      final stderrBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: stderrBuffer,
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['preview']);
+
+      expect(exitCode, 64);
+      expect(stdoutBuffer.toString(), isEmpty);
+      expect(stderrBuffer.toString(), contains('preview requires -d <device>'));
+    });
+
+    test(
+      'preview infers the mini-program id from the current directory',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        final previewController = _FakeMiniProgramPreviewController();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          previewController: previewController,
+          workingDirectory: standaloneRoot,
+        ).run(<String>['preview', '-d', 'chrome']);
+
+        expect(exitCode, 0);
+        expect(previewController.lastRequest, isNotNull);
+        expect(previewController.lastRequest!.miniProgramId, 'coupon_center');
+        expect(
+          previewController.lastRequest!.miniProgramRootPath,
+          p.normalize(p.absolute(standaloneRoot)),
+        );
+        expect(previewController.lastRequest!.deviceId, 'chrome');
+      },
+    );
+
+    test('preview rejects unsupported v1 device ids', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.0.0',
+      );
+      final stderrBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: stderrBuffer,
+        workingDirectory: standaloneRoot,
+      ).run(<String>['preview', '-d', 'android']);
+
+      expect(exitCode, 1);
+      expect(
+        stderrBuffer.toString(),
+        contains('Preview v1 supports only these devices'),
+      );
+    });
+
+    test(
+      'preview forwards repo-root and stac-cli-script without requiring backend state',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
+        await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+        final previewController = _FakeMiniProgramPreviewController();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              previewController: previewController,
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'preview',
+              '-d',
+              'windows',
+              '--repo-root',
+              repoRoot.path,
+              '--stac-cli-script',
+              fakeCliPath,
+            ]);
+
+        expect(exitCode, 0);
+        expect(previewController.lastRequest, isNotNull);
+        expect(previewController.lastRequest!.repoRootPath, repoRoot.path);
+        expect(previewController.lastRequest!.stacCliScriptPath, fakeCliPath);
+      },
+    );
+
     test('env init, use, and status manage active environment state', () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await workspaceRoot.create(recursive: true);
@@ -976,8 +1083,14 @@ dependencies:
         'reset-local',
       ]);
       expect(stdoutBuffer.toString(), contains('Started local backend.'));
-      expect(stdoutBuffer.toString(), contains('Android emulator URL: http://10.0.2.2:9090/api/'));
-      expect(stdoutBuffer.toString(), contains('Desktop/Chrome URL: http://127.0.0.1:9090/api/'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('Android emulator URL: http://10.0.2.2:9090/api/'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('Desktop/Chrome URL: http://127.0.0.1:9090/api/'),
+      );
     });
 
     test(
@@ -1238,6 +1351,22 @@ class _FakeLocalBackendInitializer extends LocalBackendInitializer {
         p.join(backendRootPath, 'backend', 'local_backend_service'),
       ],
     );
+  }
+}
+
+class _FakeMiniProgramPreviewController extends MiniProgramPreviewController {
+  _FakeMiniProgramPreviewController();
+
+  MiniProgramPreviewRequest? lastRequest;
+
+  @override
+  Future<int> preview(
+    MiniProgramPreviewRequest request, {
+    required StringSink stdoutSink,
+    required StringSink stderrSink,
+  }) async {
+    lastRequest = request;
+    return 0;
   }
 }
 

@@ -31,6 +31,7 @@ miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
 miniprogram build [mini-program-id]
+miniprogram preview -d <chrome|windows> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id]
 miniprogram embed init
@@ -53,6 +54,36 @@ Create a standalone mini-program in the current directory:
 ```bash
 miniprogram create coupon_center
 ```
+
+Use managed preview for the fastest authoring loop:
+
+```bash
+cd coupon_center
+miniprogram preview -d chrome
+```
+
+Preview v1 currently supports:
+
+- `chrome`
+- `windows`
+
+`preview` is a developer-only loop. It does not require `backend init` or
+`backend start`, does not publish into `backend/api/`, and keeps a managed
+hidden host app under `.mini_program/preview_host`.
+
+During preview, the CLI:
+
+- builds the mini-program before launch
+- starts a tiny session-scoped localhost preview server when needed
+- watches `manifest.json`, `stac/**`, `assets/**`, and
+  `lib/default_stac_options.dart`
+- rebuilds on save and triggers a full preview refresh
+
+Preview capability behavior in v1:
+
+- `analytics` logs through the preview host and returns success
+- `native_navigation` opens a preview-native placeholder page
+- `secure_api` returns an explicit preview-only failure
 
 Initialize a standalone backend workspace once:
 
@@ -206,6 +237,10 @@ It also keeps a user-level fallback file in:
 - `~/.mini_program/global_env.json`
 - `~/.mini_program/global_backend_workspace.json`
 
+Project-local preview also manages:
+
+- `.mini_program/preview_host/`
+
 `backend reset-local --yes` only removes tracked local publish outputs. It does
 not wipe all of `backend/api/` or remove rollout, capability, or secure API
 policy files that were not created by the CLI publish flow.
@@ -216,6 +251,8 @@ policy files that were not created by the CLI publish flow.
 - `env use local|cloud` only switches saved CLI context in this phase. Cloud
   publish and cloud backend operations are still follow-up work.
 - Standalone build/publish/validate no longer require a platform repo root.
+- `preview` is the fastest local authoring loop; `publish` plus
+  `backend start` remains the real local delivery simulation.
 - Normal builds use the managed pinned Stac builder bundled inside
   `mini_program_tooling`.
 - `--stac-cli-script` remains the escape hatch when you intentionally need to

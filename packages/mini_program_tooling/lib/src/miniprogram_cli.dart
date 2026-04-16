@@ -12,6 +12,8 @@ import 'mini_program_builder.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
 import 'mini_program_path_resolver.dart';
+import 'mini_program_preview_controller.dart';
+import 'mini_program_preview_server.dart';
 import 'mini_program_publisher.dart';
 import 'mini_program_scaffolder.dart';
 
@@ -26,6 +28,8 @@ class MiniprogramCli {
     LocalBackendController backendController = const LocalBackendController(),
     LocalBackendInitializer backendInitializer =
         const LocalBackendInitializer(),
+    MiniProgramPreviewController previewController =
+        const MiniProgramPreviewController(),
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
@@ -39,6 +43,7 @@ class MiniprogramCli {
        _embeddingInitializer = embeddingInitializer,
        _backendController = backendController,
        _backendInitializer = backendInitializer,
+       _previewController = previewController,
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
@@ -53,6 +58,7 @@ class MiniprogramCli {
   final MiniProgramEmbeddingInitializer _embeddingInitializer;
   final LocalBackendController _backendController;
   final LocalBackendInitializer _backendInitializer;
+  final MiniProgramPreviewController _previewController;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
@@ -79,6 +85,8 @@ class MiniprogramCli {
           return await _runEnv(arguments.sublist(1));
         case 'build':
           return await _runBuild(arguments.sublist(1));
+        case 'preview':
+          return await _runPreview(arguments.sublist(1));
         case 'validate':
           return await _runValidate(arguments.sublist(1));
         case 'publish':
@@ -99,6 +107,9 @@ class MiniprogramCli {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramBuildException catch (error) {
+      _stderr.writeln(error.message);
+      return 1;
+    } on MiniProgramPreviewException catch (error) {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramPublishException catch (error) {
@@ -285,6 +296,83 @@ class MiniprogramCli {
 
     _stdout.writeln(_formatBuildResult(result));
     return 0;
+  }
+
+  Future<int> _runPreview(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'device',
+        abbr: 'd',
+        help: 'Preview device id. V1 supports chrome and windows.',
+      )
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used for local preview host dependencies.',
+      )
+      ..addOption(
+        'mini-program-root',
+        help: 'Optional exact mini-program root path.',
+      )
+      ..addOption(
+        'stac-cli-script',
+        help: 'Optional explicit path to bin/stac_cli.dart.',
+      );
+
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram preview -d <chrome|windows> [mini-program-id] [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final deviceId = results.option('device')?.trim() ?? '';
+    if (deviceId.isEmpty) {
+      throw const FormatException(
+        'preview requires -d <device>. V1 supports chrome and windows.',
+      );
+    }
+
+    final miniProgramId = await _resolveMiniProgramId(
+      commandName: 'preview',
+      positionalArguments: results.rest,
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final repoRootHint = await _resolveRepoRootPath(
+      explicitRepoRootPath: results.option('repo-root'),
+      additionalSearchRoots: <String>[
+        if (results.option('mini-program-root') case final miniProgramRoot?
+            when miniProgramRoot.trim().isNotEmpty)
+          miniProgramRoot,
+      ],
+      required: false,
+    );
+    final resolved = await _pathResolver.resolve(
+      miniProgramId: miniProgramId,
+      repoRootPath: repoRootHint,
+      miniProgramRootPath: results.option('mini-program-root'),
+      currentWorkingDirectory: _currentWorkingDirectory(),
+      requireRepoRoot: false,
+    );
+
+    return _previewController.preview(
+      MiniProgramPreviewRequest(
+        miniProgramId: miniProgramId,
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        repoRootPath: resolved.repoRootPath,
+        deviceId: deviceId,
+        stacCliScriptPath: results.option('stac-cli-script'),
+      ),
+      stdoutSink: _stdout,
+      stderrSink: _stderr,
+    );
   }
 
   Future<int> _runValidate(List<String> arguments) async {
@@ -970,6 +1058,7 @@ Commands:
   env use <local|cloud>
   env status
   build [mini-program-id]
+  preview -d <chrome|windows> [mini-program-id]
   validate [mini-program-id]
   publish [mini-program-id]
   embed init
@@ -1124,18 +1213,18 @@ Commands:
   }
 
   String _formatBackendStartResult(LocalBackendStartResult result) {
-      final state = result.state;
-      final lines = <String>[
-        result.alreadyRunning
-            ? 'Local backend was already running.'
-            : 'Started local backend.',
-        'PID: ${state.pid}',
-        'Port: ${state.port}',
-        'Health URL: ${state.healthCheckUrl}',
-        ..._formatBackendTargetUrls(state.port),
-        'stdout log: ${state.stdoutLogPath}',
-        'stderr log: ${state.stderrLogPath}',
-      ];
+    final state = result.state;
+    final lines = <String>[
+      result.alreadyRunning
+          ? 'Local backend was already running.'
+          : 'Started local backend.',
+      'PID: ${state.pid}',
+      'Port: ${state.port}',
+      'Health URL: ${state.healthCheckUrl}',
+      ..._formatBackendTargetUrls(state.port),
+      'stdout log: ${state.stdoutLogPath}',
+      'stderr log: ${state.stderrLogPath}',
+    ];
     if (result.reversedDeviceIds.isNotEmpty) {
       lines.add(
         'ADB reverse: ${result.reversedDeviceIds.join(', ')} '
@@ -1165,29 +1254,29 @@ Commands:
     }
 
     final state = result.state!;
-      final lines = <String>[
-        'Local backend state found.',
-        'PID: ${state.pid}',
-        'Port: ${state.port}',
-        'Process alive: ${result.processAlive}',
-        'Healthy: ${result.healthy}',
-        if (result.healthStatusCode != null)
-          'Health status code: ${result.healthStatusCode}',
-        if (result.healthError != null) 'Health detail: ${result.healthError}',
-        ..._formatBackendTargetUrls(state.port),
-        'stdout log: ${state.stdoutLogPath}',
-        'stderr log: ${state.stderrLogPath}',
-      ];
-      return lines.join('\n');
-    }
+    final lines = <String>[
+      'Local backend state found.',
+      'PID: ${state.pid}',
+      'Port: ${state.port}',
+      'Process alive: ${result.processAlive}',
+      'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status code: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      ..._formatBackendTargetUrls(state.port),
+      'stdout log: ${state.stdoutLogPath}',
+      'stderr log: ${state.stderrLogPath}',
+    ];
+    return lines.join('\n');
+  }
 
-    List<String> _formatBackendTargetUrls(int port) {
-      return <String>[
-        'Android emulator URL: http://10.0.2.2:$port/api/',
-        'Desktop/Chrome URL: http://127.0.0.1:$port/api/',
-        'Android USB via adb reverse: http://127.0.0.1:$port/api/',
-      ];
-    }
+  List<String> _formatBackendTargetUrls(int port) {
+    return <String>[
+      'Android emulator URL: http://10.0.2.2:$port/api/',
+      'Desktop/Chrome URL: http://127.0.0.1:$port/api/',
+      'Android USB via adb reverse: http://127.0.0.1:$port/api/',
+    ];
+  }
 
   String _formatBackendStopResult(LocalBackendStopResult result) {
     if (!result.hadState) {

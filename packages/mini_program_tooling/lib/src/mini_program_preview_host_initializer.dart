@@ -1,0 +1,691 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+
+typedef PreviewHostShellRunner =
+    Future<ProcessResult> Function(
+      String executable,
+      List<String> arguments, {
+      String? workingDirectory,
+      Map<String, String>? environment,
+    });
+
+class MiniProgramPreviewHostInitRequest {
+  const MiniProgramPreviewHostInitRequest({
+    required this.hostRootPath,
+    this.repoRootPath,
+  });
+
+  final String hostRootPath;
+  final String? repoRootPath;
+}
+
+class MiniProgramPreviewHostInitResult {
+  const MiniProgramPreviewHostInitResult({
+    required this.hostRootPath,
+    required this.managedPaths,
+    required this.usedPathDependencies,
+  });
+
+  final String hostRootPath;
+  final List<String> managedPaths;
+  final bool usedPathDependencies;
+}
+
+class MiniProgramPreviewHostInitException implements Exception {
+  const MiniProgramPreviewHostInitException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+class MiniProgramPreviewHostInitializer {
+  const MiniProgramPreviewHostInitializer({
+    PreviewHostShellRunner shellRunner = _defaultShellRunner,
+  }) : _shellRunner = shellRunner;
+
+  static const String _sdkConstraint = '^0.1.2';
+  static const String _contractsConstraint = '^0.1.0';
+  static const String _httpConstraint = '^1.5.0';
+  static const String _projectName = 'mini_program_preview_host';
+
+  final PreviewHostShellRunner _shellRunner;
+
+  Future<MiniProgramPreviewHostInitResult> initialize(
+    MiniProgramPreviewHostInitRequest request,
+  ) async {
+    final hostRootPath = p.normalize(p.absolute(request.hostRootPath));
+    final repoRootPath = request.repoRootPath == null
+        ? null
+        : p.normalize(p.absolute(request.repoRootPath!));
+
+    await Directory(p.dirname(hostRootPath)).create(recursive: true);
+    await _ensureFlutterProject(hostRootPath);
+
+    final managedPaths = <String>[];
+    final pubspecPath = p.join(hostRootPath, 'pubspec.yaml');
+    final mainPath = p.join(hostRootPath, 'lib', 'main.dart');
+
+    await File(pubspecPath).writeAsString(
+      _buildPubspec(hostRootPath: hostRootPath, repoRootPath: repoRootPath),
+    );
+    managedPaths.add(pubspecPath);
+
+    await File(mainPath).create(recursive: true);
+    await File(mainPath).writeAsString(_buildMainDart());
+    managedPaths.add(mainPath);
+
+    return MiniProgramPreviewHostInitResult(
+      hostRootPath: hostRootPath,
+      managedPaths: managedPaths,
+      usedPathDependencies: repoRootPath != null,
+    );
+  }
+
+  Future<void> _ensureFlutterProject(String hostRootPath) async {
+    final pubspecFile = File(p.join(hostRootPath, 'pubspec.yaml'));
+    final webDirectory = Directory(p.join(hostRootPath, 'web'));
+    final windowsDirectory = Directory(p.join(hostRootPath, 'windows'));
+
+    if (!await pubspecFile.exists()) {
+      await _runFlutterCreate(
+        workingDirectory: p.dirname(hostRootPath),
+        targetDirectoryName: p.basename(hostRootPath),
+      );
+      return;
+    }
+
+    if (!await webDirectory.exists() || !await windowsDirectory.exists()) {
+      await _runFlutterCreate(
+        workingDirectory: hostRootPath,
+        targetDirectoryName: '.',
+      );
+    }
+  }
+
+  Future<void> _runFlutterCreate({
+    required String workingDirectory,
+    required String targetDirectoryName,
+  }) async {
+    final result = await _shellRunner('flutter', <String>[
+      'create',
+      '--platforms=web,windows',
+      '--project-name',
+      _projectName,
+      '--org',
+      'dev.miniprogram',
+      '--description',
+      'Managed preview host for mini_program_tooling.',
+      '--no-pub',
+      targetDirectoryName,
+    ], workingDirectory: workingDirectory);
+
+    if (result.exitCode == 0) {
+      return;
+    }
+
+    final stdoutText = '${result.stdout}'.trim();
+    final stderrText = '${result.stderr}'.trim();
+    throw MiniProgramPreviewHostInitException(
+      [
+        'Failed to bootstrap the managed preview host with `flutter create`.',
+        if (stdoutText.isNotEmpty) 'stdout:\n$stdoutText',
+        if (stderrText.isNotEmpty) 'stderr:\n$stderrText',
+      ].join('\n'),
+    );
+  }
+
+  String _buildPubspec({
+    required String hostRootPath,
+    required String? repoRootPath,
+  }) {
+    final dependencies = <String>[
+      'dependencies:',
+      '  flutter:',
+      '    sdk: flutter',
+      '  http: $_httpConstraint',
+      ..._miniProgramDependencyLines(
+        hostRootPath: hostRootPath,
+        repoRootPath: repoRootPath,
+      ),
+    ];
+
+    return [
+      'name: $_projectName',
+      'description: Managed preview host for mini_program_tooling.',
+      "publish_to: 'none'",
+      'version: 0.0.1+1',
+      '',
+      'environment:',
+      '  sdk: ^3.10.0',
+      '',
+      ...dependencies,
+      '',
+      'flutter:',
+      '  uses-material-design: true',
+      '',
+    ].join('\n');
+  }
+
+  List<String> _miniProgramDependencyLines({
+    required String hostRootPath,
+    required String? repoRootPath,
+  }) {
+    if (repoRootPath == null) {
+      return <String>[
+        '  mini_program_sdk: $_sdkConstraint',
+        '  mini_program_contracts: $_contractsConstraint',
+      ];
+    }
+
+    final sdkPath = _yamlRelativePath(
+      p.join(repoRootPath, 'packages', 'mini_program_sdk'),
+      from: hostRootPath,
+    );
+    final contractsPath = _yamlRelativePath(
+      p.join(repoRootPath, 'packages', 'mini_program_contracts'),
+      from: hostRootPath,
+    );
+    return <String>[
+      '  mini_program_sdk:',
+      '    path: $sdkPath',
+      '  mini_program_contracts:',
+      '    path: $contractsPath',
+    ];
+  }
+
+  String _yamlRelativePath(String targetPath, {required String from}) {
+    final relativePath = p.relative(targetPath, from: from);
+    return relativePath.replaceAll('\\', '/');
+  }
+
+  String _buildMainDart() => r'''
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+const String _configuredPreviewBaseUrl = String.fromEnvironment(
+  'MINI_PROGRAM_PREVIEW_BASE_URL',
+);
+const String _configuredMiniProgramId = String.fromEnvironment(
+  'MINI_PROGRAM_PREVIEW_MINI_PROGRAM_ID',
+);
+const String _configuredTitle = String.fromEnvironment(
+  'MINI_PROGRAM_PREVIEW_TITLE',
+  defaultValue: 'Mini Program Preview',
+);
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const PreviewHostApp());
+}
+
+class PreviewHostApp extends StatefulWidget {
+  const PreviewHostApp({super.key});
+
+  @override
+  State<PreviewHostApp> createState() => _PreviewHostAppState();
+}
+
+class _PreviewHostAppState extends State<PreviewHostApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final http.Client _statusClient = http.Client();
+  late final Uri _previewBaseUri;
+  late final PreviewMiniProgramSource _source;
+  late final PreviewHostBridge _hostBridge;
+  late MiniProgramCacheBundle _cacheBundle;
+
+  Timer? _pollTimer;
+  PreviewStatus _status = PreviewStatus.initial();
+
+  @override
+  void initState() {
+    super.initState();
+    _previewBaseUri = Uri.parse(_configuredPreviewBaseUrl);
+    _source = PreviewMiniProgramSource(
+      previewBaseUri: _previewBaseUri,
+      expectedMiniProgramId: _configuredMiniProgramId,
+    );
+    _hostBridge = PreviewHostBridge(navigatorKey: _navigatorKey);
+    _cacheBundle = MiniProgramCacheBundle.inMemory();
+    _refreshStatus();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _refreshStatus(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _statusClient.close();
+    _source.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = (_status.title?.trim().isNotEmpty ?? false)
+        ? _status.title!
+        : _configuredTitle;
+    final runtime = MiniProgramRuntime(
+      sdkVersion: '1.0.0',
+      source: _source,
+      hostBridge: _hostBridge,
+      capabilityRegistry: CapabilityRegistry(
+        const <Capability>[
+          Capability.analytics,
+          Capability.nativeNavigation,
+          Capability.secureApi,
+        ],
+      ),
+      cacheBundle: _cacheBundle,
+    );
+
+    return MaterialApp(
+      title: title,
+      debugShowCheckedModeBanner: false,
+      navigatorKey: _navigatorKey,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF005B4F),
+        ),
+      ),
+      home: Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _PreviewStatusBanner(status: _status),
+              Expanded(
+                child: MiniProgramRuntimeScope(
+                  runtime: runtime,
+                  child: MiniProgramPage(
+                    key: ValueKey<int>(_status.buildVersion),
+                    miniProgramId: _configuredMiniProgramId,
+                    title: title,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _refreshStatus() async {
+    try {
+      final response = await _statusClient
+          .get(_previewBaseUri.resolve('status.json'))
+          .timeout(const Duration(seconds: 2));
+      if (response.statusCode != 200) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _status = _status.copyWith(
+            state: MiniProgramPreviewStates.buildFailed,
+            lastBuildError:
+                'Preview status returned HTTP ${response.statusCode}.',
+          );
+        });
+        return;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('Preview status is not a JSON object.');
+      }
+
+      final nextStatus = PreviewStatus.fromJson(decoded);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        if (nextStatus.buildVersion != _status.buildVersion) {
+          _cacheBundle = MiniProgramCacheBundle.inMemory();
+        }
+        _status = nextStatus;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _status = _status.copyWith(
+          state: MiniProgramPreviewStates.buildFailed,
+          lastBuildError: 'Preview polling failed: $error',
+        );
+      });
+    }
+  }
+}
+
+class PreviewStatus {
+  const PreviewStatus({
+    required this.buildVersion,
+    required this.state,
+    this.title,
+    this.lastBuildError,
+  });
+
+  factory PreviewStatus.initial() {
+    return const PreviewStatus(
+      buildVersion: 0,
+      state: MiniProgramPreviewStates.ready,
+    );
+  }
+
+  factory PreviewStatus.fromJson(Map<String, dynamic> json) {
+    final rawBuildVersion = json['buildVersion'];
+    final rawState = json['state'];
+
+    return PreviewStatus(
+      buildVersion: rawBuildVersion is int ? rawBuildVersion : 0,
+      state: rawState is String && rawState.trim().isNotEmpty
+          ? rawState
+          : MiniProgramPreviewStates.ready,
+      title: json['title']?.toString(),
+      lastBuildError: json['lastBuildError']?.toString(),
+    );
+  }
+
+  final int buildVersion;
+  final String state;
+  final String? title;
+  final String? lastBuildError;
+
+  PreviewStatus copyWith({
+    int? buildVersion,
+    String? state,
+    String? title,
+    String? lastBuildError,
+  }) {
+    return PreviewStatus(
+      buildVersion: buildVersion ?? this.buildVersion,
+      state: state ?? this.state,
+      title: title ?? this.title,
+      lastBuildError: lastBuildError ?? this.lastBuildError,
+    );
+  }
+}
+
+abstract final class MiniProgramPreviewStates {
+  static const String ready = 'ready';
+  static const String building = 'building';
+  static const String buildFailed = 'build_failed';
+}
+
+class PreviewMiniProgramSource implements MiniProgramSource {
+  PreviewMiniProgramSource({
+    required this.previewBaseUri,
+    required this.expectedMiniProgramId,
+    http.Client? client,
+  }) : _client = client ?? http.Client();
+
+  final Uri previewBaseUri;
+  final String expectedMiniProgramId;
+  final http.Client _client;
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    if (miniProgramId != expectedMiniProgramId) {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host only exposes "$expectedMiniProgramId", but the SDK requested "$miniProgramId".',
+        errorCode: MiniProgramErrorCodes.manifestParseFailure,
+      );
+    }
+
+    final json = await _loadJson('manifest.json', resourceLabel: 'manifest');
+    return MiniProgramManifest.fromJson(json);
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) {
+    return _loadJson(
+      'screens/$screenId.json',
+      resourceLabel: 'screen',
+    );
+  }
+
+  void close() {
+    _client.close();
+  }
+
+  Future<Map<String, dynamic>> _loadJson(
+    String relativePath, {
+    required String resourceLabel,
+  }) async {
+    final uri = previewBaseUri.resolve(relativePath);
+    late final http.Response response;
+
+    try {
+      response = await _client.get(uri).timeout(const Duration(seconds: 5));
+    } on TimeoutException {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host timed out while loading $resourceLabel from $uri.',
+        errorCode: MiniProgramErrorCodes.backendTimeout,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': resourceLabel,
+        },
+      );
+    } catch (error) {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host could not load $resourceLabel from $uri.',
+        errorCode: MiniProgramErrorCodes.backendUnreachable,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': resourceLabel,
+          'transportError': '$error',
+        },
+      );
+    }
+
+    if (response.statusCode != 200) {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host returned HTTP ${response.statusCode} while loading $resourceLabel.',
+        errorCode: MiniProgramErrorCodes.backendUnreachable,
+        statusCode: response.statusCode,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': resourceLabel,
+          'responseBody': response.body,
+        },
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw MiniProgramSourceException(
+        message: 'Preview host returned non-object JSON for $resourceLabel.',
+        errorCode: MiniProgramErrorCodes.manifestParseFailure,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'resourceLabel': resourceLabel,
+        },
+      );
+    }
+    return decoded;
+  }
+}
+
+class PreviewHostBridge implements HostBridge {
+  PreviewHostBridge({required this.navigatorKey});
+
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  @override
+  Future<HostActionResult> openNativeScreen(
+    OpenNativeScreenActionPayload payload,
+  ) async {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      return HostActionResult.failed(
+        actionName: ActionNames.openNativeScreen,
+        message: 'Preview navigator is not available.',
+      );
+    }
+
+    await navigator.push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PreviewNativePlaceholderPage(payload: payload),
+      ),
+    );
+    return HostActionResult.success(
+      actionName: ActionNames.openNativeScreen,
+      message: 'Opened a preview-native placeholder screen.',
+      data: <String, dynamic>{
+        'route': payload.route,
+        'args': payload.args,
+      },
+    );
+  }
+
+  @override
+  Future<HostActionResult> callSecureApi(
+    CallSecureApiActionPayload payload,
+  ) async {
+    return HostActionResult.failed(
+      actionName: ActionNames.callSecureApi,
+      errorCode: MiniProgramErrorCodes.secureApiNotAllowlisted,
+      message:
+          'Preview mode does not execute secure_api actions. Use a real host/backend flow for secure integrations.',
+      data: <String, dynamic>{
+        'endpoint': payload.endpoint,
+        'method': payload.method,
+      },
+    );
+  }
+
+  @override
+  Future<HostActionResult> trackEvent(TrackEventActionPayload payload) async {
+    debugPrint('[preview][analytics] ${payload.name} ${payload.properties}');
+    return HostActionResult.success(
+      actionName: ActionNames.trackEvent,
+      message: 'Tracked preview analytics event.',
+      data: payload.properties,
+    );
+  }
+}
+
+class PreviewNativePlaceholderPage extends StatelessWidget {
+  const PreviewNativePlaceholderPage({
+    super.key,
+    required this.payload,
+  });
+
+  final OpenNativeScreenActionPayload payload;
+
+  @override
+  Widget build(BuildContext context) {
+    final prettyArgs = const JsonEncoder.withIndent('  ').convert(payload.args);
+    return Scaffold(
+      appBar: AppBar(title: Text('Preview Native: ${payload.route}')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Preview-only native placeholder',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This action opened a placeholder screen because preview mode does not know your real host-native implementation.',
+            ),
+            const SizedBox(height: 24),
+            Text('Route: ${payload.route}'),
+            const SizedBox(height: 12),
+            Text('expectResult: ${payload.expectResult}'),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: SelectableText(prettyArgs),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewStatusBanner extends StatelessWidget {
+  const _PreviewStatusBanner({required this.status});
+
+  final PreviewStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status.state) {
+      case MiniProgramPreviewStates.building:
+        return const LinearProgressIndicator(minHeight: 3);
+      case MiniProgramPreviewStates.buildFailed:
+        return Material(
+          color: Theme.of(context).colorScheme.errorContainer,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    status.lastBuildError ??
+                        'Preview rebuild failed. Keeping the last successful UI visible.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      case MiniProgramPreviewStates.ready:
+        return const SizedBox.shrink();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+}
+''';
+
+  static Future<ProcessResult> _defaultShellRunner(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+  }) {
+    return Process.run(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      runInShell: Platform.isWindows,
+    );
+  }
+}

@@ -19,6 +19,7 @@ change:
   - `miniprogram doctor`
   - `miniprogram env init|use|status`
   - `miniprogram build`
+  - `miniprogram preview -d <chrome|windows>`
   - `miniprogram validate`
   - `miniprogram publish`
   - `miniprogram embed init`
@@ -30,6 +31,9 @@ change:
   - desktop and Chrome default `127.0.0.1:8080`
   - Android USB support through `adb reverse`
 - managed pinned Stac builder inside the tooling package
+- managed preview host under `.mini_program/preview_host`
+- internal preview server with watch, rebuild, and full preview refresh for
+  Chrome and Windows
 - hosted embed dependencies through `mini_program_sdk` and
   `mini_program_contracts`
 
@@ -62,25 +66,60 @@ change:
 
 ## Priority Roadmap
 
-### 1. Managed preview workflow
-The next major developer-facing feature should be:
+### 1. Preview workflow expansion
+Managed preview is now shipped for:
 
-- `miniprogram run -d chrome`
-- `miniprogram run -d windows`
-- `miniprogram run -d emulator-5554`
-- `miniprogram run -d <physical-device-id>`
+- `miniprogram preview -d chrome`
+- `miniprogram preview -d windows`
 
-Expected behavior:
+Current preferred developer flow:
+
+- `miniprogram create my_coupon_app`
+- `cd my_coupon_app`
+- `miniprogram preview -d chrome`
+
+Already shipped behavior:
 
 - infer the current mini-program from the working directory
-- start the local backend if needed
-- build and publish to the local backend automatically
-- run a CLI-managed preview host app automatically
-- keep backend URL selection target-aware
+- build the current mini-program automatically
+- run a CLI-managed preview host automatically
+- avoid requiring manual `backend init` or `backend start` for normal preview
+- avoid publishing into `backend/api/` for the normal preview loop
+- use current build artifacts directly for preview
+- start or reuse a tiny internal preview transport when the target requires
+  HTTP-style serving
+- keep real backend flow separate for integration and delivery testing
 
-Optional advanced form:
+Current preview-mode rules:
 
-- `miniprogram run -d chrome --host-app <path>`
+- this is a developer preview loop, not a replacement for real delivery
+- Chrome and some device targets may still need an internal local preview
+  server, but the developer should never manage it directly
+- preview transport should be treated as tooling internals, not as a published
+  backend workspace
+
+Current watch and refresh behavior:
+
+- watch `manifest.json`
+- watch `stac/**`
+- watch `assets/**`
+- rebuild mini-program JSON on save
+- keep the last successful preview running if a rebuild fails
+- trigger a full preview refresh after a successful rebuild
+
+Shipped per-target refresh behavior:
+
+- Chrome: reload the browser tab
+- Windows desktop: restart the preview window or recreate the preview route
+
+Next preview work:
+
+- Android emulator preview support
+- Android USB physical-device preview support
+- Android Wi-Fi physical-device preview support
+- optional advanced form:
+  - `miniprogram preview -d chrome --host-app <path>`
+- lower-latency refresh and better preview error overlays where needed
 
 ### 2. Cloud publish and cloud env
 After preview flow is stable, add cloud delivery support:
@@ -153,16 +192,18 @@ Smaller future UX improvements that fit the current system:
 
 ## Near-Term Concrete Task List
 
-1. Design the managed preview host for `miniprogram run -d <device>`.
-2. Implement `miniprogram run` so it starts backend, builds, publishes, and
-   launches preview automatically.
-3. Keep target-aware local backend defaults and device overrides inside the
-   generated host runtime.
-4. Add cloud publish support with S3 object layout and versioned keys.
-5. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
+1. Extend `miniprogram preview` from Chrome and Windows to Android emulator
+   targets on the same preview architecture.
+2. Add physical-device preview support for Android USB and Wi-Fi flows.
+3. Keep preview transport internal to the CLI-managed preview flow instead of
+   publishing into `backend/api/` for the normal authoring loop.
+4. Keep target-aware local backend defaults and device overrides inside the
+   generated host runtime for real backend flows and advanced preview cases.
+5. Add cloud publish support with S3 object layout and versioned keys.
+6. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
    rollout, and secure routes.
-6. Add first-class payment capability contracts and payload models.
-7. Implement payment host bridge support in Flutter hosts first.
-8. Plan Android native-host embedding around a reused Flutter engine.
-9. Keep the CLI as the single source of truth before adding any IDE wrapper.
-10. Add optional auto-generated `requestId` support in author helpers.
+7. Add first-class payment capability contracts and payload models.
+8. Implement payment host bridge support in Flutter hosts first.
+9. Plan Android native-host embedding around a reused Flutter engine.
+10. Keep the CLI as the single source of truth before adding any IDE wrapper.
+11. Add optional auto-generated `requestId` support in author helpers.

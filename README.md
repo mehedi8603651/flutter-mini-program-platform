@@ -134,6 +134,7 @@ This package exposes the global `miniprogram` command used for:
 - doctor
 - env
 - build
+- preview
 - validate
 - publish
 - embed init
@@ -163,13 +164,15 @@ At a high level:
 1. developer writes Stac DSL mini-program screens
 2. `miniprogram build` runs the managed Stac builder
 3. JSON screens and manifest artifacts are produced
-4. `miniprogram publish` writes them into the local backend workspace
+4. developers either preview them directly or publish them into the local backend workspace
 5. host app loads manifest and screen JSON through `mini_program_sdk`
 6. host bridge handles approved native operations
 
 High-level flow:
 
 ```text
+author -> build -> preview
+                    or
 author -> build -> validate -> publish -> backend delivery -> SDK load ->
 render -> action dispatch -> host-native execution when needed
 ```
@@ -201,7 +204,42 @@ cd D:\
 miniprogram create my_coupon_app
 ```
 
-### 2. Initialize local backend workspace
+### 2. Fast preview loop
+
+For the normal authoring loop, use managed preview first:
+
+```powershell
+cd D:\my_coupon_app
+miniprogram preview -d chrome
+```
+
+V1 preview targets:
+
+- `chrome`
+- `windows`
+
+Preview behavior:
+
+- builds the current mini-program
+- generates a hidden managed host under `.mini_program/preview_host`
+- starts a tiny internal localhost preview transport when needed
+- watches `manifest.json`, `stac/**`, `assets/**`, and `lib/default_stac_options.dart`
+- rebuilds and fully refreshes the preview after a successful save
+
+Preview mode rules:
+
+- not the real local backend
+- not `backend/api/`
+- no manual `backend start`
+- keeps the last successful UI visible if a rebuild fails
+
+Preview capability limits in v1:
+
+- `analytics` logs inside the preview host and succeeds
+- `native_navigation` opens a preview-only placeholder screen
+- `secure_api` returns an explicit preview-only failure
+
+### 3. Initialize local backend workspace for real delivery testing
 
 ```powershell
 miniprogram backend init
@@ -213,14 +251,14 @@ On Windows the default backend workspace is:
 %LOCALAPPDATA%\mini_program\backend\
 ```
 
-### 3. Initialize local env inside the mini-program
+### 4. Initialize local env inside the mini-program
 
 ```powershell
 cd D:\my_coupon_app
 miniprogram env init
 ```
 
-### 4. Build, validate, publish
+### 5. Build, validate, publish
 
 Inside the mini-program folder:
 
@@ -238,12 +276,15 @@ miniprogram validate my_coupon_app
 miniprogram publish my_coupon_app
 ```
 
-### 5. Start backend
+### 6. Start backend
 
 ```powershell
 miniprogram backend start --port 8080
 miniprogram backend status
 ```
+
+Use the backend flow when you want to verify the real local delivery shape,
+not for the fastest authoring loop.
 
 ## Embed Into A Flutter Host App
 
