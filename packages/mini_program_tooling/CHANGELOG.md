@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.18
+
+- remove the extra preview-shell app bar so `miniprogram preview` shows the
+  mini-program UI directly instead of wrapping it in a second host header
+- stop the preview status poll from rebuilding the UI every second when
+  nothing changed, which fixes the visible jumping and repeated refresh effect
+- keep the preview status banner overlaid on top of the page instead of
+  shifting layout during preview status changes
+
 ## 0.2.17
 
 - add `miniprogram preview -d <chrome|windows>` as the new developer-first

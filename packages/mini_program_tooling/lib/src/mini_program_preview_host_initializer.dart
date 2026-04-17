@@ -239,6 +239,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
   late final Uri _previewBaseUri;
   late final PreviewMiniProgramSource _source;
   late final PreviewHostBridge _hostBridge;
+  late final CapabilityRegistry _capabilityRegistry;
   late MiniProgramCacheBundle _cacheBundle;
 
   Timer? _pollTimer;
@@ -253,6 +254,13 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       expectedMiniProgramId: _configuredMiniProgramId,
     );
     _hostBridge = PreviewHostBridge(navigatorKey: _navigatorKey);
+    _capabilityRegistry = CapabilityRegistry(
+      const <Capability>[
+        Capability.analytics,
+        Capability.nativeNavigation,
+        Capability.secureApi,
+      ],
+    );
     _cacheBundle = MiniProgramCacheBundle.inMemory();
     _refreshStatus();
     _pollTimer = Timer.periodic(
@@ -278,13 +286,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       sdkVersion: '1.0.0',
       source: _source,
       hostBridge: _hostBridge,
-      capabilityRegistry: CapabilityRegistry(
-        const <Capability>[
-          Capability.analytics,
-          Capability.nativeNavigation,
-          Capability.secureApi,
-        ],
-      ),
+      capabilityRegistry: _capabilityRegistry,
       cacheBundle: _cacheBundle,
     );
 
@@ -299,26 +301,44 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
         ),
       ),
       home: Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _PreviewStatusBanner(status: _status),
-              Expanded(
-                child: MiniProgramRuntimeScope(
-                  runtime: runtime,
-                  child: MiniProgramPage(
-                    key: ValueKey<int>(_status.buildVersion),
-                    miniProgramId: _configuredMiniProgramId,
-                    title: title,
-                  ),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: MiniProgramRuntimeScope(
+                runtime: runtime,
+                child: MiniProgramPage(
+                  key: ValueKey<int>(_status.buildVersion),
+                  miniProgramId: _configuredMiniProgramId,
+                  title: title,
                 ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: _PreviewStatusBanner(status: _status),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  void _applyStatus(PreviewStatus nextStatus) {
+    if (!mounted || nextStatus == _status) {
+      return;
+    }
+
+    setState(() {
+      if (nextStatus.buildVersion != _status.buildVersion) {
+        _cacheBundle = MiniProgramCacheBundle.inMemory();
+      }
+      _status = nextStatus;
+    });
   }
 
   Future<void> _refreshStatus() async {
@@ -327,16 +347,13 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
           .get(_previewBaseUri.resolve('status.json'))
           .timeout(const Duration(seconds: 2));
       if (response.statusCode != 200) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _status = _status.copyWith(
+        _applyStatus(
+          _status.copyWith(
             state: MiniProgramPreviewStates.buildFailed,
             lastBuildError:
                 'Preview status returned HTTP ${response.statusCode}.',
-          );
-        });
+          ),
+        );
         return;
       }
 
@@ -346,26 +363,14 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       }
 
       final nextStatus = PreviewStatus.fromJson(decoded);
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        if (nextStatus.buildVersion != _status.buildVersion) {
-          _cacheBundle = MiniProgramCacheBundle.inMemory();
-        }
-        _status = nextStatus;
-      });
+      _applyStatus(nextStatus);
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _status = _status.copyWith(
+      _applyStatus(
+        _status.copyWith(
           state: MiniProgramPreviewStates.buildFailed,
           lastBuildError: 'Preview polling failed: $error',
-        );
-      });
+        ),
+      );
     }
   }
 }
@@ -417,6 +422,23 @@ class PreviewStatus {
       lastBuildError: lastBuildError ?? this.lastBuildError,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PreviewStatus &&
+        other.buildVersion == buildVersion &&
+        other.state == state &&
+        other.title == title &&
+        other.lastBuildError == lastBuildError;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    buildVersion,
+    state,
+    title,
+    lastBuildError,
+  );
 }
 
 abstract final class MiniProgramPreviewStates {

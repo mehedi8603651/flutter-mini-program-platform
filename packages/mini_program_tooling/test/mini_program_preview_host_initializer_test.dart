@@ -96,6 +96,16 @@ void main() {
         expect(mainDart, contains('PreviewMiniProgramSource'));
         expect(mainDart, contains('PreviewHostBridge'));
         expect(mainDart, contains("status.json"));
+        expect(
+          mainDart,
+          contains('void _applyStatus(PreviewStatus nextStatus)'),
+        );
+        expect(mainDart, contains('if (!mounted || nextStatus == _status) {'));
+        expect(
+          mainDart,
+          contains('late final CapabilityRegistry _capabilityRegistry;'),
+        );
+        expect(mainDart, isNot(contains('appBar: AppBar(title: Text(title))')));
       },
     );
 
