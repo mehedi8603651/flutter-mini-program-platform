@@ -74,7 +74,7 @@ class MiniProgramPreviewWatcher {
     _subscription = Directory(_rootPath!).watch(recursive: true).listen((
       event,
     ) {
-      if (!_isRelevantPath(event.path)) {
+      if (!isRelevantPath(rootPath: _rootPath!, path: event.path)) {
         return;
       }
 
@@ -94,42 +94,42 @@ class MiniProgramPreviewWatcher {
     _queuedRebuild = false;
   }
 
-  bool _isRelevantPath(String path) {
-    final rootPath = _rootPath;
-    if (rootPath == null) {
-      return false;
-    }
-
+  static bool isRelevantPath({required String rootPath, required String path}) {
+    final normalizedRootPath = p.normalize(p.absolute(rootPath));
     final normalizedPath = p.normalize(p.absolute(path));
-    final manifestPath = p.join(rootPath, 'manifest.json');
+    final manifestPath = p.join(normalizedRootPath, 'manifest.json');
     final defaultOptionsPath = p.join(
-      rootPath,
+      normalizedRootPath,
       'lib',
       'default_stac_options.dart',
     );
 
-    if (normalizedPath == manifestPath ||
-        normalizedPath == defaultOptionsPath) {
+    if (p.equals(normalizedPath, manifestPath) ||
+        p.equals(normalizedPath, defaultOptionsPath)) {
       return true;
     }
 
-    if (!p.isWithin(rootPath, normalizedPath)) {
+    if (!p.isWithin(normalizedRootPath, normalizedPath)) {
       return false;
     }
 
-    if (_isIgnoredPath(normalizedPath, rootPath: rootPath)) {
+    if (_isIgnoredPath(normalizedPath, rootPath: normalizedRootPath)) {
       return false;
     }
 
-    return p.isWithin(p.join(rootPath, 'stac'), normalizedPath) ||
-        p.isWithin(p.join(rootPath, 'assets'), normalizedPath);
+    return p.isWithin(p.join(normalizedRootPath, 'stac'), normalizedPath) ||
+        p.isWithin(p.join(normalizedRootPath, 'assets'), normalizedPath);
   }
 
-  bool _isIgnoredPath(String path, {required String rootPath}) {
-    return p.isWithin(p.join(rootPath, '.mini_program'), path) ||
-        p.isWithin(p.join(rootPath, '.dart_tool'), path) ||
-        p.isWithin(p.join(rootPath, 'build'), path) ||
-        p.isWithin(p.join(rootPath, 'stac', '.build'), path);
+  static bool _isIgnoredPath(String path, {required String rootPath}) {
+    return _pathEqualsOrIsWithin(p.join(rootPath, '.mini_program'), path) ||
+        _pathEqualsOrIsWithin(p.join(rootPath, '.dart_tool'), path) ||
+        _pathEqualsOrIsWithin(p.join(rootPath, 'build'), path) ||
+        _pathEqualsOrIsWithin(p.join(rootPath, 'stac', '.build'), path);
+  }
+
+  static bool _pathEqualsOrIsWithin(String rootPath, String path) {
+    return p.equals(rootPath, path) || p.isWithin(rootPath, path);
   }
 
   void _scheduleRebuild() {

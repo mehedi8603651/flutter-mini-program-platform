@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.19
+
+- fix preview watch mode so build output updates under `stac/.build` do not
+  trigger repeated follow-up rebuilds after a single save
+- add regression coverage for exact ignored preview-build directory events in
+  the watcher path filter
+
 ## 0.2.18
 
 - remove the extra preview-shell app bar so `miniprogram preview` shows the

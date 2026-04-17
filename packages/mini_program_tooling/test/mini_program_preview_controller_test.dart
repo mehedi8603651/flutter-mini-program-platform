@@ -211,6 +211,18 @@ void main() {
       );
       expect(rebuildCount, 2);
     });
+
+    test('ignores exact stac/.build directory paths', () {
+      final ignoredPath = p.join(projectRoot, 'stac', '.build');
+
+      expect(
+        MiniProgramPreviewWatcher.isRelevantPath(
+          rootPath: projectRoot,
+          path: ignoredPath,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('MiniProgramPreviewController', () {
