@@ -9,6 +9,20 @@ import 'mini_program_builder.dart';
 import 'mini_program_preview_host_initializer.dart';
 import 'mini_program_preview_server.dart';
 
+class PreviewLaunchTarget {
+  const PreviewLaunchTarget({
+    required this.deviceId,
+    required this.flutterPlatforms,
+    required this.previewServerBindAddress,
+    required this.previewServerPublicHost,
+  });
+
+  final String deviceId;
+  final Set<String> flutterPlatforms;
+  final InternetAddress previewServerBindAddress;
+  final String previewServerPublicHost;
+}
+
 typedef PreviewProcessStarter =
     Future<StartedPreviewProcess> Function({
       required String executable,
@@ -175,6 +189,9 @@ class MiniProgramPreviewController {
        _processStarter = processStarter;
 
   static const Set<String> supportedDeviceIds = <String>{'chrome', 'windows'};
+  static final RegExp _androidEmulatorDeviceIdPattern = RegExp(
+    r'^emulator-\d+$',
+  );
 
   final MiniProgramBuilder _builder;
   final MiniProgramPreviewBundleLoader _bundleLoader;
@@ -188,7 +205,7 @@ class MiniProgramPreviewController {
     required StringSink stderrSink,
   }) async {
     final normalizedDeviceId = request.deviceId.trim().toLowerCase();
-    _validateDeviceId(normalizedDeviceId);
+    final launchTarget = _resolveLaunchTarget(normalizedDeviceId);
 
     final miniProgramRootPath = p.normalize(
       p.absolute(request.miniProgramRootPath),
@@ -208,11 +225,15 @@ class MiniProgramPreviewController {
       MiniProgramPreviewHostInitRequest(
         hostRootPath: previewHostRootPath,
         repoRootPath: request.repoRootPath,
+        requiredPlatforms: launchTarget.flutterPlatforms,
       ),
     );
     await _resetTransientPreviewHostState(previewHostRootPath);
 
-    final previewServer = MiniProgramPreviewServer();
+    final previewServer = MiniProgramPreviewServer(
+      bindAddress: launchTarget.previewServerBindAddress,
+      publicHost: launchTarget.previewServerPublicHost,
+    );
     await previewServer.start(initialBundle: initialBundle);
     StartedPreviewProcess? flutterRunProcess;
     final watcher = MiniProgramPreviewWatcher();
@@ -231,7 +252,7 @@ class MiniProgramPreviewController {
         executable: 'flutter',
         arguments: _flutterRunArguments(
           hostRootPath: previewHostRootPath,
-          deviceId: normalizedDeviceId,
+          deviceId: launchTarget.deviceId,
           previewBaseUrl: previewServer.baseUri.toString(),
           miniProgramId: request.miniProgramId,
           title: initialBundle.title,
@@ -333,16 +354,46 @@ class MiniProgramPreviewController {
     );
   }
 
-  void _validateDeviceId(String deviceId) {
-    if (supportedDeviceIds.contains(deviceId.trim().toLowerCase())) {
-      return;
+  PreviewLaunchTarget _resolveLaunchTarget(String deviceId) {
+    final normalizedDeviceId = deviceId.trim().toLowerCase();
+    if (normalizedDeviceId == 'chrome') {
+      return PreviewLaunchTarget(
+        deviceId: normalizedDeviceId,
+        flutterPlatforms: const <String>{'web'},
+        previewServerBindAddress: InternetAddress.loopbackIPv4,
+        previewServerPublicHost: InternetAddress.loopbackIPv4.address,
+      );
     }
 
-    throw MiniProgramPreviewException(
-      'Preview v1 supports only these devices: '
-      '${(supportedDeviceIds.toList()..sort()).join(', ')}. '
-      'Received: $deviceId',
-    );
+    if (normalizedDeviceId == 'windows') {
+      return PreviewLaunchTarget(
+        deviceId: normalizedDeviceId,
+        flutterPlatforms: const <String>{'windows'},
+        previewServerBindAddress: InternetAddress.loopbackIPv4,
+        previewServerPublicHost: InternetAddress.loopbackIPv4.address,
+      );
+    }
+
+    if (_androidEmulatorDeviceIdPattern.hasMatch(normalizedDeviceId)) {
+      return PreviewLaunchTarget(
+        deviceId: normalizedDeviceId,
+        flutterPlatforms: const <String>{'android'},
+        previewServerBindAddress: InternetAddress.anyIPv4,
+        previewServerPublicHost: '10.0.2.2',
+      );
+    }
+
+    throw MiniProgramPreviewException(_unsupportedDeviceMessage(deviceId));
+  }
+
+  String _unsupportedDeviceMessage(String deviceId) {
+    final supported = <String>[
+      ...supportedDeviceIds.toList()..sort(),
+      'Android emulator ids like emulator-5554',
+    ];
+    return 'Preview currently supports only these devices: '
+        '${supported.join(', ')}. '
+        'Received: $deviceId';
   }
 
   Future<void> _resetTransientPreviewHostState(String hostRootPath) async {

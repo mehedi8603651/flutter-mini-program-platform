@@ -248,7 +248,7 @@ void main() {
       expect(exitCode, 1);
       expect(
         stderrBuffer.toString(),
-        contains('Preview v1 supports only these devices'),
+        contains('Preview currently supports only these devices'),
       );
     });
 
@@ -288,6 +288,28 @@ void main() {
         expect(previewController.lastRequest!.stacCliScriptPath, fakeCliPath);
       },
     );
+
+    test('preview accepts Android emulator device ids', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.0.0',
+      );
+      final previewController = _FakeMiniProgramPreviewController();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: StringBuffer(),
+        previewController: previewController,
+        workingDirectory: standaloneRoot,
+      ).run(<String>['preview', '-d', 'emulator-5554']);
+
+      expect(exitCode, 0);
+      expect(previewController.lastRequest, isNotNull);
+      expect(previewController.lastRequest!.deviceId, 'emulator-5554');
+    });
 
     test('env init, use, and status manage active environment state', () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));

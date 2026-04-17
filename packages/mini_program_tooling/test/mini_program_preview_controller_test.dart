@@ -89,6 +89,30 @@ void main() {
       },
     );
 
+    test('exposes a target-specific public base URL when configured', () async {
+      final server = MiniProgramPreviewServer(
+        bindAddress: InternetAddress.anyIPv4,
+        publicHost: '10.0.2.2',
+      );
+      await server.start(
+        initialBundle: MiniProgramPreviewBundle(
+          miniProgramId: 'coupon_center',
+          title: 'Coupon Center',
+          manifestJson: const <String, dynamic>{
+            'id': 'coupon_center',
+            'version': '1.0.0',
+            'entry': 'coupon_center_home',
+          },
+          screenJsonById: const <String, Map<String, dynamic>>{
+            'coupon_center_home': <String, dynamic>{'type': 'text'},
+          },
+        ),
+      );
+      addTearDown(server.close);
+
+      expect(server.baseUri.toString(), startsWith('http://10.0.2.2:'));
+    });
+
     test('keeps the last successful bundle when a rebuild fails', () async {
       final server = MiniProgramPreviewServer();
       await server.start(
@@ -336,6 +360,74 @@ void main() {
           ),
           isTrue,
         );
+        expect(hostInitializer.lastRequest!.requiredPlatforms, const <String>{
+          'web',
+        });
+      },
+    );
+
+    test(
+      'launches Android emulator preview with android host platform and 10.0.2.2 base URL',
+      () async {
+        final fixture = await _writePreviewBuildFixture(
+          tempDir.path,
+          miniProgramId: 'coupon_center',
+        );
+        final hostInitializer = _FakePreviewHostInitializer();
+        PreviewProcessCall? processCall;
+        final controller = MiniProgramPreviewController(
+          builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+          hostInitializer: hostInitializer,
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                processCall = PreviewProcessCall(
+                  executable: executable,
+                  arguments: arguments,
+                  workingDirectory: workingDirectory,
+                );
+                return StartedPreviewProcess(
+                  pid: 1,
+                  stdout: const Stream<List<int>>.empty(),
+                  stderr: const Stream<List<int>>.empty(),
+                  exitCode: Future<int>.value(0),
+                  kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+                );
+              },
+        );
+
+        final exitCode = await controller.preview(
+          MiniProgramPreviewRequest(
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: fixture.miniProgramRootPath,
+            repoRootPath: fixture.repoRootPath,
+            deviceId: 'emulator-5554',
+          ),
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+        );
+
+        expect(exitCode, 0);
+        expect(processCall, isNotNull);
+        expect(
+          processCall!.arguments,
+          containsAll(<String>['run', '-d', 'emulator-5554']),
+        );
+        expect(
+          processCall!.arguments.any(
+            (argument) => argument.startsWith(
+              '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://10.0.2.2:',
+            ),
+          ),
+          isTrue,
+        );
+        expect(hostInitializer.lastRequest!.requiredPlatforms, const <String>{
+          'android',
+        });
       },
     );
 
@@ -433,12 +525,14 @@ class _FakePreviewHostInitializer extends MiniProgramPreviewHostInitializer {
   _FakePreviewHostInitializer();
 
   var invocationCount = 0;
+  MiniProgramPreviewHostInitRequest? lastRequest;
 
   @override
   Future<MiniProgramPreviewHostInitResult> initialize(
     MiniProgramPreviewHostInitRequest request,
   ) async {
     invocationCount += 1;
+    lastRequest = request;
     await Directory(request.hostRootPath).create(recursive: true);
     return MiniProgramPreviewHostInitResult(
       hostRootPath: request.hostRootPath,

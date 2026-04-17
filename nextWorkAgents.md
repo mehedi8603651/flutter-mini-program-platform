@@ -19,7 +19,7 @@ change:
   - `miniprogram doctor`
   - `miniprogram env init|use|status`
   - `miniprogram build`
-  - `miniprogram preview -d <chrome|windows>`
+  - `miniprogram preview -d <chrome|windows|emulator-5554>`
   - `miniprogram validate`
   - `miniprogram publish`
   - `miniprogram embed init`
@@ -71,6 +71,7 @@ Managed preview is now shipped for:
 
 - `miniprogram preview -d chrome`
 - `miniprogram preview -d windows`
+- `miniprogram preview -d emulator-5554`
 
 Current preferred developer flow:
 
@@ -111,10 +112,11 @@ Shipped per-target refresh behavior:
 
 - Chrome: reload the browser tab
 - Windows desktop: restart the preview window or recreate the preview route
+- Android emulator: recreate the preview route inside the managed Android host
+  while using `10.0.2.2` to reach the preview transport
 
 Next preview work:
 
-- Android emulator preview support
 - Android USB physical-device preview support
 - Android Wi-Fi physical-device preview support
 - optional advanced form:

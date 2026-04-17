@@ -155,9 +155,15 @@ class MiniProgramPreviewBundleLoader {
 class MiniProgramPreviewServer {
   MiniProgramPreviewServer({
     PreviewHttpServerBinder serverBinder = _defaultServerBinder,
-  }) : _serverBinder = serverBinder;
+    InternetAddress? bindAddress,
+    String publicHost = '127.0.0.1',
+  }) : _serverBinder = serverBinder,
+       _bindAddress = bindAddress ?? InternetAddress.loopbackIPv4,
+       _publicHost = publicHost;
 
   final PreviewHttpServerBinder _serverBinder;
+  final InternetAddress _bindAddress;
+  final String _publicHost;
 
   HttpServer? _server;
   MiniProgramPreviewBundle? _bundle;
@@ -177,7 +183,7 @@ class MiniProgramPreviewServer {
 
     return Uri(
       scheme: 'http',
-      host: InternetAddress.loopbackIPv4.address,
+      host: _publicHost,
       port: server.port,
       path: 'preview/',
     );
@@ -190,7 +196,7 @@ class MiniProgramPreviewServer {
       );
     }
 
-    final server = await _serverBinder(InternetAddress.loopbackIPv4, 0);
+    final server = await _serverBinder(_bindAddress, 0);
     _server = server;
     _bundle = initialBundle;
     _buildVersion = 1;

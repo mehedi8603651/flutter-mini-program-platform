@@ -119,6 +119,84 @@ void main() {
       },
     );
 
+    test(
+      'adds Android platform files when emulator preview is requested',
+      () async {
+        final hostRootPath = p.join(
+          tempDir.path,
+          'coupon_center',
+          '.mini_program',
+          'preview_host',
+        );
+
+        final invocations = <List<String>>[];
+        final initializer = MiniProgramPreviewHostInitializer(
+          shellRunner:
+              (
+                String executable,
+                List<String> arguments, {
+                String? workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                invocations.add(<String>[executable, ...arguments]);
+                final resolvedHostRoot = p.join(
+                  workingDirectory!,
+                  arguments.last,
+                );
+                await Directory(
+                  p.join(resolvedHostRoot, 'android', 'app', 'src', 'debug'),
+                ).create(recursive: true);
+                await Directory(
+                  p.join(resolvedHostRoot, 'lib'),
+                ).create(recursive: true);
+                return ProcessResult(0, 0, '', '');
+              },
+        );
+
+        await initializer.initialize(
+          MiniProgramPreviewHostInitRequest(
+            hostRootPath: hostRootPath,
+            requiredPlatforms: const <String>{'android'},
+          ),
+        );
+
+        expect(invocations, hasLength(1));
+        expect(invocations.single, contains('--platforms=android'));
+
+        final androidDebugManifest = await File(
+          p.join(
+            hostRootPath,
+            'android',
+            'app',
+            'src',
+            'debug',
+            'AndroidManifest.xml',
+          ),
+        ).readAsString();
+        expect(
+          androidDebugManifest,
+          contains(
+            'android:networkSecurityConfig="@xml/mini_program_preview_network_security_config"',
+          ),
+        );
+
+        final androidNetworkConfig = await File(
+          p.join(
+            hostRootPath,
+            'android',
+            'app',
+            'src',
+            'debug',
+            'res',
+            'xml',
+            'mini_program_preview_network_security_config.xml',
+          ),
+        ).readAsString();
+        expect(androidNetworkConfig, contains('10.0.2.2'));
+        expect(androidNetworkConfig, contains('127.0.0.1'));
+      },
+    );
+
     test('uses hosted dependencies when no repo root is available', () async {
       final hostRootPath = p.join(
         tempDir.path,

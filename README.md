@@ -217,6 +217,7 @@ V1 preview targets:
 
 - `chrome`
 - `windows`
+- `emulator-5554` and other Android emulator ids
 
 Preview behavior:
 
@@ -232,6 +233,8 @@ Preview mode rules:
 - not `backend/api/`
 - no manual `backend start`
 - keeps the last successful UI visible if a rebuild fails
+- Android emulator preview uses the managed host app plus an internal preview
+  server exposed to the emulator through `http://10.0.2.2:<port>/preview/`
 
 Preview capability limits in v1:
 

@@ -309,7 +309,8 @@ class MiniprogramCli {
       ..addOption(
         'device',
         abbr: 'd',
-        help: 'Preview device id. V1 supports chrome and windows.',
+        help:
+            'Preview device id. Supports chrome, windows, and Android emulator ids like emulator-5554.',
       )
       ..addOption(
         'repo-root',
@@ -327,7 +328,7 @@ class MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram preview -d <chrome|windows> [mini-program-id] [options]',
+        'Usage: miniprogram preview -d <chrome|windows|emulator-5554> [mini-program-id] [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -336,7 +337,7 @@ class MiniprogramCli {
     final deviceId = results.option('device')?.trim() ?? '';
     if (deviceId.isEmpty) {
       throw const FormatException(
-        'preview requires -d <device>. V1 supports chrome and windows.',
+        'preview requires -d <device>. Supported targets include chrome, windows, and Android emulator ids like emulator-5554.',
       );
     }
 
@@ -1058,7 +1059,7 @@ Commands:
   env use <local|cloud>
   env status
   build [mini-program-id]
-  preview -d <chrome|windows> [mini-program-id]
+  preview -d <chrome|windows|emulator-5554> [mini-program-id]
   validate [mini-program-id]
   publish [mini-program-id]
   embed init

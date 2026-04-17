@@ -14,10 +14,12 @@ class MiniProgramPreviewHostInitRequest {
   const MiniProgramPreviewHostInitRequest({
     required this.hostRootPath,
     this.repoRootPath,
+    this.requiredPlatforms = const <String>{'web', 'windows'},
   });
 
   final String hostRootPath;
   final String? repoRootPath;
+  final Set<String> requiredPlatforms;
 }
 
 class MiniProgramPreviewHostInitResult {
@@ -46,6 +48,11 @@ class MiniProgramPreviewHostInitializer {
     PreviewHostShellRunner shellRunner = _defaultShellRunner,
   }) : _shellRunner = shellRunner;
 
+  static const Set<String> _supportedFlutterPlatforms = <String>{
+    'android',
+    'web',
+    'windows',
+  };
   static const String _sdkConstraint = '^0.1.2';
   static const String _contractsConstraint = '^0.1.0';
   static const String _httpConstraint = '^1.5.0';
@@ -60,9 +67,13 @@ class MiniProgramPreviewHostInitializer {
     final repoRootPath = request.repoRootPath == null
         ? null
         : p.normalize(p.absolute(request.repoRootPath!));
+    final requiredPlatforms = _normalizePlatforms(request.requiredPlatforms);
 
     await Directory(p.dirname(hostRootPath)).create(recursive: true);
-    await _ensureFlutterProject(hostRootPath);
+    await _ensureFlutterProject(
+      hostRootPath,
+      requiredPlatforms: requiredPlatforms,
+    );
 
     final managedPaths = <String>[];
     final pubspecPath = p.join(hostRootPath, 'pubspec.yaml');
@@ -77,6 +88,14 @@ class MiniProgramPreviewHostInitializer {
     await File(mainPath).writeAsString(_buildMainDart());
     managedPaths.add(mainPath);
 
+    final platformFiles = _buildPlatformIntegrationFiles(hostRootPath);
+    for (final entry in platformFiles.entries) {
+      final file = File(entry.key);
+      await file.parent.create(recursive: true);
+      await file.writeAsString(entry.value);
+      managedPaths.add(file.path);
+    }
+
     return MiniProgramPreviewHostInitResult(
       hostRootPath: hostRootPath,
       managedPaths: managedPaths,
@@ -84,23 +103,57 @@ class MiniProgramPreviewHostInitializer {
     );
   }
 
-  Future<void> _ensureFlutterProject(String hostRootPath) async {
+  Set<String> _normalizePlatforms(Set<String> rawPlatforms) {
+    final normalized = rawPlatforms
+        .map((platform) => platform.trim().toLowerCase())
+        .where((platform) => platform.isNotEmpty)
+        .toSet();
+
+    if (normalized.isEmpty) {
+      throw const MiniProgramPreviewHostInitException(
+        'Preview host must request at least one Flutter platform.',
+      );
+    }
+
+    final unsupported = normalized.difference(_supportedFlutterPlatforms);
+    if (unsupported.isNotEmpty) {
+      throw MiniProgramPreviewHostInitException(
+        'Unsupported preview host Flutter platforms: '
+        '${(unsupported.toList()..sort()).join(', ')}',
+      );
+    }
+
+    return normalized;
+  }
+
+  Future<void> _ensureFlutterProject(
+    String hostRootPath, {
+    required Set<String> requiredPlatforms,
+  }) async {
     final pubspecFile = File(p.join(hostRootPath, 'pubspec.yaml'));
-    final webDirectory = Directory(p.join(hostRootPath, 'web'));
-    final windowsDirectory = Directory(p.join(hostRootPath, 'windows'));
+    final missingPlatforms =
+        requiredPlatforms
+            .where(
+              (platform) =>
+                  !Directory(p.join(hostRootPath, platform)).existsSync(),
+            )
+            .toList()
+          ..sort();
 
     if (!await pubspecFile.exists()) {
       await _runFlutterCreate(
         workingDirectory: p.dirname(hostRootPath),
         targetDirectoryName: p.basename(hostRootPath),
+        requiredPlatforms: requiredPlatforms,
       );
       return;
     }
 
-    if (!await webDirectory.exists() || !await windowsDirectory.exists()) {
+    if (missingPlatforms.isNotEmpty) {
       await _runFlutterCreate(
         workingDirectory: hostRootPath,
         targetDirectoryName: '.',
+        requiredPlatforms: requiredPlatforms,
       );
     }
   }
@@ -108,10 +161,12 @@ class MiniProgramPreviewHostInitializer {
   Future<void> _runFlutterCreate({
     required String workingDirectory,
     required String targetDirectoryName,
+    required Set<String> requiredPlatforms,
   }) async {
+    final sortedPlatforms = requiredPlatforms.toList()..sort();
     final result = await _shellRunner('flutter', <String>[
       'create',
-      '--platforms=web,windows',
+      '--platforms=${sortedPlatforms.join(',')}',
       '--project-name',
       _projectName,
       '--org',
@@ -135,6 +190,25 @@ class MiniProgramPreviewHostInitializer {
         if (stderrText.isNotEmpty) 'stderr:\n$stderrText',
       ].join('\n'),
     );
+  }
+
+  Map<String, String> _buildPlatformIntegrationFiles(String hostRootPath) {
+    final files = <String, String>{};
+    final androidDebugDirectory = Directory(
+      p.join(hostRootPath, 'android', 'app', 'src', 'debug'),
+    );
+    if (androidDebugDirectory.existsSync()) {
+      files[p.join(androidDebugDirectory.path, 'AndroidManifest.xml')] =
+          _buildAndroidDebugManifest();
+      files[p.join(
+            androidDebugDirectory.path,
+            'res',
+            'xml',
+            'mini_program_preview_network_security_config.xml',
+          )] =
+          _buildAndroidDebugNetworkSecurityConfig();
+    }
+    return files;
   }
 
   String _buildPubspec({
@@ -811,6 +885,30 @@ class _PreviewStatusBanner extends StatelessWidget {
   }
 }
 ''';
+
+  String _buildAndroidDebugManifest() {
+    return '''
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/mini_program_preview_network_security_config" />
+</manifest>
+''';
+  }
+
+  String _buildAndroidDebugNetworkSecurityConfig() {
+    return '''
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>
+''';
+  }
 
   static Future<ProcessResult> _defaultShellRunner(
     String executable,
