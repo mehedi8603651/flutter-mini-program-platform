@@ -367,7 +367,7 @@ void main() {
     );
 
     test(
-      'launches Android emulator preview with android host platform and 10.0.2.2 base URL',
+      'launches Android emulator preview with adb reverse and localhost base URL when available',
       () async {
         final fixture = await _writePreviewBuildFixture(
           tempDir.path,
@@ -375,9 +375,29 @@ void main() {
         );
         final hostInitializer = _FakePreviewHostInitializer();
         PreviewProcessCall? processCall;
+        final shellCalls = <List<String>>[];
         final controller = MiniProgramPreviewController(
           builder: _FakePreviewBuilder((_) async => fixture.buildResult),
           hostInitializer: hostInitializer,
+          shellRunner:
+              (
+                String executable,
+                List<String> arguments, {
+                String? workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                shellCalls.add(<String>[executable, ...arguments]);
+                if (arguments.length == 1 && arguments.single == 'version') {
+                  return ProcessResult(0, 0, 'Android Debug Bridge', '');
+                }
+                if (arguments.length == 5 &&
+                    arguments[0] == '-s' &&
+                    arguments[1] == 'emulator-5554' &&
+                    arguments[2] == 'reverse') {
+                  return ProcessResult(0, 0, '', '');
+                }
+                return ProcessResult(1, 1, '', 'unexpected adb invocation');
+              },
           processStarter:
               ({
                 required String executable,
@@ -400,6 +420,7 @@ void main() {
               },
         );
 
+        final stdoutBuffer = StringBuffer();
         final exitCode = await controller.preview(
           MiniProgramPreviewRequest(
             miniProgramId: 'coupon_center',
@@ -407,7 +428,7 @@ void main() {
             repoRootPath: fixture.repoRootPath,
             deviceId: 'emulator-5554',
           ),
-          stdoutSink: StringBuffer(),
+          stdoutSink: stdoutBuffer,
           stderrSink: StringBuffer(),
         );
 
@@ -420,7 +441,7 @@ void main() {
         expect(
           processCall!.arguments.any(
             (argument) => argument.startsWith(
-              '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://10.0.2.2:',
+              '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://127.0.0.1:',
             ),
           ),
           isTrue,
@@ -428,6 +449,97 @@ void main() {
         expect(hostInitializer.lastRequest!.requiredPlatforms, const <String>{
           'android',
         });
+        expect(
+          shellCalls.any(
+            (call) =>
+                call.length >= 6 &&
+                call[1] == '-s' &&
+                call[2] == 'emulator-5554' &&
+                call[3] == 'reverse',
+          ),
+          isTrue,
+        );
+        expect(stdoutBuffer.toString(), contains('ADB reverse: emulator-5554'));
+      },
+    );
+
+    test(
+      'falls back to 10.0.2.2 for Android emulator preview when adb reverse is unavailable',
+      () async {
+        final fixture = await _writePreviewBuildFixture(
+          tempDir.path,
+          miniProgramId: 'coupon_center',
+        );
+        final hostInitializer = _FakePreviewHostInitializer();
+        PreviewProcessCall? processCall;
+        final shellCalls = <List<String>>[];
+        final controller = MiniProgramPreviewController(
+          builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+          hostInitializer: hostInitializer,
+          shellRunner:
+              (
+                String executable,
+                List<String> arguments, {
+                String? workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                shellCalls.add(<String>[executable, ...arguments]);
+                if (arguments.length == 1 && arguments.single == 'version') {
+                  throw const ProcessException('adb.exe', <String>['version']);
+                }
+                return ProcessResult(1, 1, '', 'unexpected adb invocation');
+              },
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                processCall = PreviewProcessCall(
+                  executable: executable,
+                  arguments: arguments,
+                  workingDirectory: workingDirectory,
+                );
+                return StartedPreviewProcess(
+                  pid: 1,
+                  stdout: const Stream<List<int>>.empty(),
+                  stderr: const Stream<List<int>>.empty(),
+                  exitCode: Future<int>.value(0),
+                  kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+                );
+              },
+        );
+
+        final stdoutBuffer = StringBuffer();
+        final exitCode = await controller.preview(
+          MiniProgramPreviewRequest(
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: fixture.miniProgramRootPath,
+            repoRootPath: fixture.repoRootPath,
+            deviceId: 'emulator-5554',
+          ),
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+        );
+
+        expect(exitCode, 0);
+        expect(processCall, isNotNull);
+        expect(
+          processCall!.arguments.any(
+            (argument) => argument.startsWith(
+              '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://10.0.2.2:',
+            ),
+          ),
+          isTrue,
+        );
+        expect(stdoutBuffer.toString(), contains('Falling back to 10.0.2.2.'));
+        expect(
+          shellCalls
+              .where((call) => call.length >= 2 && call.last == 'version')
+              .isNotEmpty,
+          isTrue,
+        );
       },
     );
 

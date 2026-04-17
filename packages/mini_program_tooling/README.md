@@ -80,8 +80,10 @@ During preview, the CLI:
 - watches `manifest.json`, `stac/**`, `assets/**`, and
   `lib/default_stac_options.dart`
 - rebuilds on save and triggers a full preview refresh
-- uses `http://10.0.2.2:<port>/preview/` automatically for Android emulator
-  preview sessions
+- prefers `adb reverse tcp:<port> tcp:<port>` for Android emulator preview and
+  uses `http://127.0.0.1:<port>/preview/` when reverse is available
+- falls back to `http://10.0.2.2:<port>/preview/` for emulator sessions when
+  reverse is unavailable
 - auto-applies `adb reverse tcp:<port> tcp:<port>` for Android USB preview and
   uses `http://127.0.0.1:<port>/preview/` inside the device session
 

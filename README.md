@@ -234,8 +234,10 @@ Preview mode rules:
 - not `backend/api/`
 - no manual `backend start`
 - keeps the last successful UI visible if a rebuild fails
-- Android emulator preview uses the managed host app plus an internal preview
-  server exposed to the emulator through `http://10.0.2.2:<port>/preview/`
+- Android emulator preview prefers `adb reverse tcp:<port> tcp:<port>` and
+  uses `http://127.0.0.1:<port>/preview/` when reverse is available
+- if emulator reverse cannot be applied, preview falls back to
+  `http://10.0.2.2:<port>/preview/`
 - Android USB preview auto-applies `adb reverse tcp:<port> tcp:<port>` and
   uses `http://127.0.0.1:<port>/preview/` inside the device session
 

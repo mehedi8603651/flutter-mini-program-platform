@@ -22,15 +22,29 @@ class PreviewLaunchTarget {
     required this.deviceId,
     required this.flutterPlatforms,
     required this.previewServerBindAddress,
-    required this.previewServerPublicHost,
-    this.requiresAdbReverse = false,
+    required this.previewServerFallbackPublicHost,
+    this.adbReverseMode = PreviewAdbReverseMode.none,
   });
 
   final String deviceId;
   final Set<String> flutterPlatforms;
   final InternetAddress previewServerBindAddress;
-  final String previewServerPublicHost;
-  final bool requiresAdbReverse;
+  final String previewServerFallbackPublicHost;
+  final PreviewAdbReverseMode adbReverseMode;
+}
+
+enum PreviewAdbReverseMode { none, prefer, require }
+
+class PreparedPreviewTransport {
+  const PreparedPreviewTransport({
+    required this.publicHost,
+    this.usedAdbReverse = false,
+    this.diagnosticMessage,
+  });
+
+  final String publicHost;
+  final bool usedAdbReverse;
+  final String? diagnosticMessage;
 }
 
 typedef PreviewProcessStarter =
@@ -245,7 +259,7 @@ class MiniProgramPreviewController {
 
     final previewServer = MiniProgramPreviewServer(
       bindAddress: launchTarget.previewServerBindAddress,
-      publicHost: launchTarget.previewServerPublicHost,
+      publicHost: launchTarget.previewServerFallbackPublicHost,
     );
     await previewServer.start(initialBundle: initialBundle);
     StartedPreviewProcess? flutterRunProcess;
@@ -258,17 +272,23 @@ class MiniProgramPreviewController {
     var childExitHandled = false;
 
     try {
-      stdoutSink.writeln('Preview server: ${previewServer.baseUri}');
-      stdoutSink.writeln('Managed preview host: $previewHostRootPath');
-      await _configureAdbReverseIfNeeded(
+      final previewTransport = await _preparePreviewTransport(
         launchTarget,
         port: previewServer.baseUri.port,
       );
-      if (launchTarget.requiresAdbReverse) {
+      previewServer.updatePublicHost(previewTransport.publicHost);
+
+      stdoutSink.writeln('Preview server: ${previewServer.baseUri}');
+      stdoutSink.writeln('Managed preview host: $previewHostRootPath');
+      if (previewTransport.usedAdbReverse) {
         stdoutSink.writeln(
           'ADB reverse: ${launchTarget.deviceId} '
           '(tcp:${previewServer.baseUri.port} -> tcp:${previewServer.baseUri.port})',
         );
+      }
+      if (previewTransport.diagnosticMessage case final message?
+          when message.trim().isNotEmpty) {
+        stdoutSink.writeln(message);
       }
 
       flutterRunProcess = await _processStarter(
@@ -385,7 +405,7 @@ class MiniProgramPreviewController {
         deviceId: normalizedDeviceId,
         flutterPlatforms: const <String>{'web'},
         previewServerBindAddress: InternetAddress.loopbackIPv4,
-        previewServerPublicHost: InternetAddress.loopbackIPv4.address,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
       );
     }
 
@@ -394,7 +414,7 @@ class MiniProgramPreviewController {
         deviceId: normalizedDeviceId,
         flutterPlatforms: const <String>{'windows'},
         previewServerBindAddress: InternetAddress.loopbackIPv4,
-        previewServerPublicHost: InternetAddress.loopbackIPv4.address,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
       );
     }
 
@@ -403,7 +423,8 @@ class MiniProgramPreviewController {
         deviceId: normalizedDeviceId,
         flutterPlatforms: const <String>{'android'},
         previewServerBindAddress: InternetAddress.anyIPv4,
-        previewServerPublicHost: '10.0.2.2',
+        previewServerFallbackPublicHost: '10.0.2.2',
+        adbReverseMode: PreviewAdbReverseMode.prefer,
       );
     }
 
@@ -413,8 +434,8 @@ class MiniProgramPreviewController {
         deviceId: adbDeviceId,
         flutterPlatforms: const <String>{'android'},
         previewServerBindAddress: InternetAddress.anyIPv4,
-        previewServerPublicHost: InternetAddress.loopbackIPv4.address,
-        requiresAdbReverse: true,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
+        adbReverseMode: PreviewAdbReverseMode.require,
       );
     }
 
@@ -470,18 +491,29 @@ class MiniProgramPreviewController {
     return null;
   }
 
-  Future<void> _configureAdbReverseIfNeeded(
+  Future<PreparedPreviewTransport> _preparePreviewTransport(
     PreviewLaunchTarget launchTarget, {
     required int port,
   }) async {
-    if (!launchTarget.requiresAdbReverse) {
-      return;
+    if (launchTarget.adbReverseMode == PreviewAdbReverseMode.none) {
+      return PreparedPreviewTransport(
+        publicHost: launchTarget.previewServerFallbackPublicHost,
+      );
     }
 
     final adbExecutable = await _resolveAdbExecutable();
     if (adbExecutable == null) {
-      throw const MiniProgramPreviewException(
-        'Android USB preview requires adb, but no adb executable was found.',
+      if (launchTarget.adbReverseMode == PreviewAdbReverseMode.require) {
+        throw const MiniProgramPreviewException(
+          'Android USB preview requires adb, but no adb executable was found.',
+        );
+      }
+
+      return PreparedPreviewTransport(
+        publicHost: launchTarget.previewServerFallbackPublicHost,
+        diagnosticMessage:
+            'ADB reverse was not available for ${launchTarget.deviceId}. '
+            'Falling back to ${launchTarget.previewServerFallbackPublicHost}.',
       );
     }
 
@@ -493,23 +525,49 @@ class MiniProgramPreviewController {
       'tcp:$port',
     ]);
     if (reverseResult == null) {
-      throw MiniProgramPreviewException(
-        'Android USB preview could not run adb reverse for ${launchTarget.deviceId}.',
+      if (launchTarget.adbReverseMode == PreviewAdbReverseMode.require) {
+        throw MiniProgramPreviewException(
+          'Android USB preview could not run adb reverse for ${launchTarget.deviceId}.',
+        );
+      }
+
+      return PreparedPreviewTransport(
+        publicHost: launchTarget.previewServerFallbackPublicHost,
+        diagnosticMessage:
+            'ADB reverse could not run for ${launchTarget.deviceId}. '
+            'Falling back to ${launchTarget.previewServerFallbackPublicHost}.',
       );
     }
     if (reverseResult.exitCode == 0) {
-      return;
+      return const PreparedPreviewTransport(
+        publicHost: '127.0.0.1',
+        usedAdbReverse: true,
+      );
     }
 
     final stderrText = '${reverseResult.stderr}'.trim();
     final stdoutText = '${reverseResult.stdout}'.trim();
-    throw MiniProgramPreviewException(
-      [
-        'Android USB preview requires adb reverse, but it failed for ${launchTarget.deviceId}.',
-        'Command: adb -s ${launchTarget.deviceId} reverse tcp:$port tcp:$port',
-        if (stdoutText.isNotEmpty) 'stdout:\n$stdoutText',
-        if (stderrText.isNotEmpty) 'stderr:\n$stderrText',
-      ].join('\n'),
+    final details = [
+      'Command: adb -s ${launchTarget.deviceId} reverse tcp:$port tcp:$port',
+      if (stdoutText.isNotEmpty) 'stdout:\n$stdoutText',
+      if (stderrText.isNotEmpty) 'stderr:\n$stderrText',
+    ].join('\n');
+
+    if (launchTarget.adbReverseMode == PreviewAdbReverseMode.require) {
+      throw MiniProgramPreviewException(
+        [
+          'Android USB preview requires adb reverse, but it failed for ${launchTarget.deviceId}.',
+          details,
+        ].join('\n'),
+      );
+    }
+
+    return PreparedPreviewTransport(
+      publicHost: launchTarget.previewServerFallbackPublicHost,
+      diagnosticMessage:
+          'ADB reverse failed for ${launchTarget.deviceId}. '
+          'Falling back to ${launchTarget.previewServerFallbackPublicHost}.\n'
+          '$details',
     );
   }
 

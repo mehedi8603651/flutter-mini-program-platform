@@ -163,7 +163,7 @@ class MiniProgramPreviewServer {
 
   final PreviewHttpServerBinder _serverBinder;
   final InternetAddress _bindAddress;
-  final String _publicHost;
+  String _publicHost;
 
   HttpServer? _server;
   MiniProgramPreviewBundle? _bundle;
@@ -172,6 +172,16 @@ class MiniProgramPreviewServer {
   String? _lastBuildError;
 
   int get buildVersion => _buildVersion;
+
+  void updatePublicHost(String publicHost) {
+    final trimmedPublicHost = publicHost.trim();
+    if (trimmedPublicHost.isEmpty) {
+      throw const MiniProgramPreviewException(
+        'Preview public host must not be blank.',
+      );
+    }
+    _publicHost = trimmedPublicHost;
+  }
 
   Uri get baseUri {
     final server = _server;
