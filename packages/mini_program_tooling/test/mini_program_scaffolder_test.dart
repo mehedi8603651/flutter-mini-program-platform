@@ -92,6 +92,14 @@ void main() {
         expect(screenSource, contains('Track starter event (logs only)'));
         expect(screenSource, contains('body: StacSingleChildScrollView('));
         expect(screenSource, isNot(contains('body: StacSafeArea(')));
+        expect(
+          screenSource,
+          contains('padding: StacEdgeInsets.symmetric(horizontal: 24)'),
+        );
+        expect(
+          screenSource,
+          isNot(contains('padding: StacEdgeInsets.all(24)')),
+        );
         expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
         expect(screenSource, isNot(contains('jsonData:')));
         expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
@@ -104,6 +112,14 @@ void main() {
           contains('body: StacSingleChildScrollView('),
         );
         expect(detailsScreenSource, isNot(contains('body: StacSafeArea(')));
+        expect(
+          detailsScreenSource,
+          contains('padding: StacEdgeInsets.symmetric(horizontal: 24)'),
+        );
+        expect(
+          detailsScreenSource,
+          isNot(contains('padding: StacEdgeInsets.all(24)')),
+        );
         expect(detailsScreenSource, contains('popMiniProgramScreenAction('));
         expect(detailsScreenSource, contains('Back to first screen'));
         expect(detailsScreenSource, contains('hostOpenNativeScreenAction('));

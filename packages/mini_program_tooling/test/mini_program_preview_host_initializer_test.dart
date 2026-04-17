@@ -106,6 +106,16 @@ void main() {
           contains('late final CapabilityRegistry _capabilityRegistry;'),
         );
         expect(mainDart, isNot(contains('appBar: AppBar(title: Text(title))')));
+        expect(mainDart, contains("title: 'Arguments'"));
+        expect(
+          mainDart,
+          contains('class _PreviewArgumentRow extends StatelessWidget'),
+        );
+        expect(
+          mainDart,
+          contains('Preview mode cannot execute your real host-native screen.'),
+        );
+        expect(mainDart, isNot(contains('SelectableText(prettyArgs)')));
       },
     );
 

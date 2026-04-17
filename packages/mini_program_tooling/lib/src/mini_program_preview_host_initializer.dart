@@ -618,10 +618,9 @@ class PreviewNativePlaceholderPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prettyArgs = const JsonEncoder.withIndent('  ').convert(payload.args);
     return Scaffold(
       appBar: AppBar(title: Text('Preview Native: ${payload.route}')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,21 +631,138 @@ class PreviewNativePlaceholderPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'This action opened a placeholder screen because preview mode does not know your real host-native implementation.',
+              'Preview mode cannot execute your real host-native screen. This page shows the action details the host would receive.',
             ),
             const SizedBox(height: 24),
-            Text('Route: ${payload.route}'),
-            const SizedBox(height: 12),
-            Text('expectResult: ${payload.expectResult}'),
-            const SizedBox(height: 12),
-            Expanded(
-              child: SingleChildScrollView(
-                child: SelectableText(prettyArgs),
+            _PreviewDetailCard(
+              title: 'Route',
+              child: Text(
+                payload.route,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
+            ),
+            const SizedBox(height: 16),
+            _PreviewDetailCard(
+              title: 'Expect Result',
+              child: Text(payload.expectResult ? 'Yes' : 'No'),
+            ),
+            const SizedBox(height: 16),
+            _PreviewDetailCard(
+              title: 'Arguments',
+              child: payload.args.isEmpty
+                  ? const Text('No arguments were provided.')
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: payload.args.entries
+                          .map(
+                            (entry) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _PreviewArgumentRow(
+                                label: entry.key,
+                                value: entry.value,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  static String _formatPreviewValue(Object? value) {
+    if (value == null) {
+      return 'null';
+    }
+    if (value is String || value is num || value is bool) {
+      return '$value';
+    }
+    return const JsonEncoder.withIndent('  ').convert(value);
+  }
+}
+
+class _PreviewDetailCard extends StatelessWidget {
+  const _PreviewDetailCard({
+    required this.title,
+    required this.child,
+  });
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD7E3DD)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: const Color(0xFF4B5563),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewArgumentRow extends StatelessWidget {
+  const _PreviewArgumentRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final Object? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedValue = PreviewNativePlaceholderPage._formatPreviewValue(
+      value,
+    );
+    final isStructuredValue = value is Map || value is List;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: const Color(0xFF4B5563),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: isStructuredValue
+              ? SelectableText(
+                  formattedValue,
+                  style: const TextStyle(fontFamily: 'Courier'),
+                )
+              : Text(formattedValue),
+        ),
+      ],
     );
   }
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.21
+
+- reduce the generated starter-screen body top spacing by switching scaffolded
+  body padding from `StacEdgeInsets.all(24)` to horizontal-only padding
+- replace the raw JSON dump in the preview native placeholder with a clearer
+  structured inspector for route, expect-result, and argument details
+- add regression coverage for the updated starter-screen layout and preview
+  placeholder output
+
 ## 0.2.20
 
 - remove the extra scaffolded `StacSafeArea` wrapper from generated starter

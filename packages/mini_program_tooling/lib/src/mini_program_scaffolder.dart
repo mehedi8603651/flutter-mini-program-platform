@@ -566,7 +566,7 @@ StacWidget $screenFunctionName() {
   return StacScaffold(
     appBar: StacAppBar(title: StacText(data: '$title')),
     body: StacSingleChildScrollView(
-      padding: StacEdgeInsets.all(24),
+      padding: StacEdgeInsets.symmetric(horizontal: 24),
       child: StacColumn(
         crossAxisAlignment: StacCrossAxisAlignment.start,
         children: [
@@ -629,7 +629,7 @@ StacWidget $screenFunctionName() {
   return StacScaffold(
     appBar: StacAppBar(title: StacText(data: '$title details')),
     body: StacSingleChildScrollView(
-      padding: StacEdgeInsets.all(24),
+      padding: StacEdgeInsets.symmetric(horizontal: 24),
       child: StacColumn(
         crossAxisAlignment: StacCrossAxisAlignment.start,
         children: [
