@@ -111,6 +111,8 @@ class MiniProgramScaffolder {
     await miniProgramRootDir.create(recursive: true);
 
     final entryScreenId = '${miniProgramId}_home';
+    final detailsScreenId = '${miniProgramId}_details';
+    final routeDemoScreenId = '${miniProgramId}_route_demo';
     final screenFunctionName = '${_toLowerCamelCase(miniProgramId)}Home';
     final packageName = '${miniProgramId}_mini_program';
 
@@ -147,6 +149,8 @@ class MiniProgramScaffolder {
         title: title,
         capabilities: orderedCapabilities,
         entryScreenId: entryScreenId,
+        detailsScreenId: detailsScreenId,
+        routeDemoScreenId: routeDemoScreenId,
         screenFunctionName: screenFunctionName,
         packageName: packageName,
       ),
@@ -154,12 +158,26 @@ class MiniProgramScaffolder {
         miniProgramRootPath,
         'stac',
         'screens',
-        '${miniProgramId}_details.dart',
+        '$detailsScreenId.dart',
       ): _buildDetailsScreen(
         miniProgramId: miniProgramId,
         title: title,
         capabilities: orderedCapabilities,
+        routeDemoScreenId: routeDemoScreenId,
         screenFunctionName: '${_toLowerCamelCase(miniProgramId)}Details',
+        packageName: packageName,
+      ),
+      p.join(
+        miniProgramRootPath,
+        'stac',
+        'screens',
+        '$routeDemoScreenId.dart',
+      ): _buildRouteDemoScreen(
+        miniProgramId: miniProgramId,
+        title: title,
+        detailsScreenId: detailsScreenId,
+        routeDemoScreenId: routeDemoScreenId,
+        screenFunctionName: '${_toLowerCamelCase(miniProgramId)}RouteDemo',
         packageName: packageName,
       ),
       p.join(miniProgramRootPath, 'stac', 'components', '.gitkeep'): '',
@@ -364,24 +382,25 @@ StacOptions get defaultStacOptions => const StacOptions(
   }) {
     final notes = <String>[
       '- edit `manifest.json` before publish',
-      '- replace the starter copy in `stac/screens/$entryScreenId.dart`',
+      '- replace the starter copy under `stac/screens/` with your real portable flow',
       '- use `lib/host_action_helpers.dart` for readable host and mini-program action helpers instead of hand-writing raw `jsonData` maps',
-      '- the scaffold now includes a second screen so you can edit a page-to-page portable flow by `screenId`',
+      '- the scaffold now includes second and third screens so you can edit multi-step portable routing and stack-aware navigation by `screenId`',
       '- add reusable UI blocks under `stac/components/` as the flow grows',
     ];
 
     if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
       notes.add(
-        '- the second starter screen uses the shared demo route alias '
-        '`profile_editor`; replace it with a real host-owned route alias '
-        'before shipping',
+        '- `native_navigation` is enabled, but the scaffold does not call any '
+        'host-owned route by default; add `hostOpenNativeScreenAction(...)` '
+        'only after your real host route alias and payload contract are defined',
       );
     }
 
     if (capabilities.contains(Capability.secureApi.wireValue)) {
       notes.add(
-        '- replace the placeholder secure endpoint `$miniProgramId/submit` '
-        'with a real allowlisted backend endpoint before publish',
+        '- `secure_api` is enabled, but the scaffold does not call a backend '
+        'endpoint by default; add `hostCallSecureApiAction(...)` only after '
+        'your real allowlisted endpoint and payload contract are defined',
       );
     }
 
@@ -409,6 +428,7 @@ ${notes.join('\n')}
 - `pubspec.yaml`
 - `stac/screens/$entryScreenId.dart`
 - `stac/screens/${miniProgramId}_details.dart`
+- `stac/screens/${miniProgramId}_route_demo.dart`
 - `stac/components/`
 - `stac/theme/`
 
@@ -481,6 +501,8 @@ miniprogram embed init --project-root <existing-flutter-app>
     required String title,
     required List<String> capabilities,
     required String entryScreenId,
+    required String detailsScreenId,
+    required String routeDemoScreenId,
     required String screenFunctionName,
     required String packageName,
   }) {
@@ -521,7 +543,7 @@ miniprogram embed init --project-root <existing-flutter-app>
             StacFilledButton(
               onPressed: openMiniProgramScreenAction(
                 requestId: '$miniProgramId-open-details',
-                screenId: '${miniProgramId}_details',
+                screenId: '$detailsScreenId',
               ),
               child: StacText(data: 'Continue to second screen'),
             ),
@@ -530,6 +552,34 @@ miniprogram embed init --project-root <existing-flutter-app>
               data:
                   'This starter button uses internal mini-program routing by screenId, '
                   'so you can build page-to-page portable flows without leaving the mini-program.',
+            ),
+            StacSizedBox(height: 16),
+            StacOutlinedButton(
+              onPressed: replaceMiniProgramScreenAction(
+                requestId: '$miniProgramId-replace-route-demo',
+                screenId: '$routeDemoScreenId',
+              ),
+              child: StacText(data: 'Replace with route demo screen'),
+            ),
+            StacSizedBox(height: 8),
+            StacText(
+              data:
+                  'Use replace when the next step should take over the current '
+                  'screen instead of adding another entry to the mini-program stack.',
+            ),
+            StacSizedBox(height: 16),
+            StacOutlinedButton(
+              onPressed: resetMiniProgramStackAction(
+                requestId: '$miniProgramId-reset-route-demo',
+                screenId: '$routeDemoScreenId',
+              ),
+              child: StacText(data: 'Reset stack to route demo'),
+            ),
+            StacSizedBox(height: 8),
+            StacText(
+              data:
+                  'Use reset when a new step should become the fresh root of the '
+                  'portable flow, such as after onboarding or a completed task.',
             ),
             StacSizedBox(height: 16),
 ''',
@@ -550,8 +600,8 @@ miniprogram embed init --project-root <existing-flutter-app>
               child: StacText(
                 data:
                     'No extra starter actions were generated on the first screen. '
-                    'Use the second screen for host-native or secure follow-up work, '
-                    'or replace both screens with your own portable flow.',
+                    'Use the generated route screens as a portable navigation '
+                    'starting point, or replace them with your own business flow.',
               ),
             ),
 ''');
@@ -583,6 +633,7 @@ ${widgets.join()}
     required String miniProgramId,
     required String title,
     required List<String> capabilities,
+    required String routeDemoScreenId,
     required String screenFunctionName,
     required String packageName,
   }) {
@@ -609,15 +660,31 @@ ${widgets.join()}
               ),
               child: StacText(data: 'Back to first screen'),
             ),
+            StacSizedBox(height: 12),
+            StacOutlinedButton(
+              onPressed: openMiniProgramScreenAction(
+                requestId: '$miniProgramId-open-route-demo',
+                screenId: '$routeDemoScreenId',
+              ),
+              child: StacText(data: 'Open route demo screen'),
+            ),
+            StacSizedBox(height: 12),
+            StacOutlinedButton(
+              onPressed: replaceMiniProgramScreenAction(
+                requestId: '$miniProgramId-replace-route-demo-from-details',
+                screenId: '$routeDemoScreenId',
+              ),
+              child: StacText(data: 'Replace with route demo screen'),
+            ),
 ''',
     ];
 
     if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
-      widgets.add(_buildOpenNativeScreenButton(miniProgramId));
+      widgets.add(_buildNativeNavigationCapabilityNote());
     }
 
     if (capabilities.contains(Capability.secureApi.wireValue)) {
-      widgets.add(_buildSecureApiButton(miniProgramId));
+      widgets.add(_buildSecureApiCapabilityNote());
     }
 
     return '''
@@ -634,6 +701,75 @@ StacWidget $screenFunctionName() {
         crossAxisAlignment: StacCrossAxisAlignment.start,
         children: [
 ${widgets.join()}
+        ],
+      ),
+    ),
+  );
+}
+''';
+  }
+
+  String _buildRouteDemoScreen({
+    required String miniProgramId,
+    required String title,
+    required String detailsScreenId,
+    required String routeDemoScreenId,
+    required String screenFunctionName,
+    required String packageName,
+  }) {
+    return '''
+import 'package:stac_core/stac_core.dart';
+import 'package:$packageName/host_action_helpers.dart';
+
+@StacScreen(screenName: '$routeDemoScreenId')
+StacWidget $screenFunctionName() {
+  return StacScaffold(
+    appBar: StacAppBar(title: StacText(data: '$title route demo')),
+    body: StacSingleChildScrollView(
+      padding: StacEdgeInsets.symmetric(horizontal: 24),
+      child: StacColumn(
+        crossAxisAlignment: StacCrossAxisAlignment.start,
+        children: [
+          StacText(
+            data: '$title route actions',
+            style: StacCustomTextStyle(
+              fontSize: 26,
+              fontWeight: StacFontWeight.w700,
+              color: '#1A202C',
+            ),
+          ),
+          StacSizedBox(height: 12),
+          StacText(
+            data:
+                'This screen demonstrates stack-aware portable navigation helpers. '
+                'Use these patterns when your mini-program needs to move backward '
+                'or jump to a known earlier step.',
+          ),
+          StacSizedBox(height: 20),
+          StacFilledButton(
+            onPressed: popToMiniProgramRootAction(
+              requestId: '$miniProgramId-pop-to-root',
+            ),
+            child: StacText(data: 'Pop to first screen'),
+          ),
+          StacSizedBox(height: 8),
+          StacText(
+            data:
+                'Pop to root returns to the first screen in the current mini-program stack.',
+          ),
+          StacSizedBox(height: 16),
+          StacOutlinedButton(
+            onPressed: popToMiniProgramScreenAction(
+              requestId: '$miniProgramId-pop-to-details',
+              screenId: '$detailsScreenId',
+            ),
+            child: StacText(data: 'Pop to second screen'),
+          ),
+          StacSizedBox(height: 8),
+          StacText(
+            data:
+                'Pop to screen targets a known earlier screenId when the stack already contains it.',
+          ),
         ],
       ),
     ),
@@ -804,40 +940,71 @@ StacAction hostCallSecureApiAction({
             StacText(
               data:
                   'This starter analytics action only writes to the host log. '
-                  'It does not change the UI.',
+              'It does not change the UI.',
             ),
 ''';
 
-  String _buildOpenNativeScreenButton(String miniProgramId) =>
-      '''
+  String _buildNativeNavigationCapabilityNote() => '''
             StacSizedBox(height: 12),
-            StacOutlinedButton(
-              onPressed: hostOpenNativeScreenAction(
-                requestId: '$miniProgramId-open-follow-up',
-                route: 'profile_editor',
-                args: const <String, dynamic>{
-                  'source': '$miniProgramId',
-                  'userId': 'starter_demo_user',
-                },
-                expectResult: true,
+            StacContainer(
+              padding: StacEdgeInsets.all(16),
+              decoration: StacBoxDecoration(
+                color: '#F8FAFC',
+                borderRadius: StacBorderRadius.all(18),
+                border: StacBorder.all(color: '#D7E3DD'),
               ),
-              child: StacText(data: 'Open sample native screen'),
+              child: StacColumn(
+                crossAxisAlignment: StacCrossAxisAlignment.start,
+                children: [
+                  StacText(
+                    data: 'Capability enabled: native_navigation',
+                    style: StacCustomTextStyle(
+                      fontSize: 16,
+                      fontWeight: StacFontWeight.w600,
+                      color: '#0F172A',
+                    ),
+                  ),
+                  StacSizedBox(height: 8),
+                  StacText(
+                    data:
+                        'This scaffold does not call a host route by default. '
+                        'Add hostOpenNativeScreenAction(...) only after your '
+                        'real host route alias and payload contract are defined.',
+                  ),
+                ],
+              ),
             ),
 ''';
 
-  String _buildSecureApiButton(String miniProgramId) =>
-      '''
+  String _buildSecureApiCapabilityNote() => '''
             StacSizedBox(height: 12),
-            StacOutlinedButton(
-              onPressed: hostCallSecureApiAction(
-                requestId: '$miniProgramId-secure-api',
-                endpoint: '$miniProgramId/submit',
-                body: const <String, dynamic>{
-                  'source': '$miniProgramId',
-                  'message': 'Starter secure payload from $miniProgramId.',
-                },
+            StacContainer(
+              padding: StacEdgeInsets.all(16),
+              decoration: StacBoxDecoration(
+                color: '#FFF7ED',
+                borderRadius: StacBorderRadius.all(18),
+                border: StacBorder.all(color: '#FED7AA'),
               ),
-              child: StacText(data: 'Call secure API'),
+              child: StacColumn(
+                crossAxisAlignment: StacCrossAxisAlignment.start,
+                children: [
+                  StacText(
+                    data: 'Capability enabled: secure_api',
+                    style: StacCustomTextStyle(
+                      fontSize: 16,
+                      fontWeight: StacFontWeight.w600,
+                      color: '#9A3412',
+                    ),
+                  ),
+                  StacSizedBox(height: 8),
+                  StacText(
+                    data:
+                        'This scaffold does not call a secure endpoint by default. '
+                        'Add hostCallSecureApiAction(...) only after your real '
+                        'allowlisted endpoint and payload contract are defined.',
+                  ),
+                ],
+              ),
             ),
 ''';
 

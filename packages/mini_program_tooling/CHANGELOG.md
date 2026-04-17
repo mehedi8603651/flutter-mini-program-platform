@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.22
+
+- replace the default scaffold's host-native demo actions with a safer
+  portable routing starter flow built around three mini-program screens
+- demonstrate the shared mini-program navigation actions by default:
+  `openMiniProgramScreen`, `replaceMiniProgramScreen`,
+  `resetMiniProgramStack`, `popMiniProgramScreen`,
+  `popToMiniProgramRoot`, and `popToMiniProgramScreen`
+- keep `native_navigation` and `secure_api` as capability notes in the starter
+  scaffold instead of generating fake production route and backend calls
+- add regression coverage for the new three-screen portable starter flow
+
 ## 0.2.21
 
 - reduce the generated starter-screen body top spacing by switching scaffolded
