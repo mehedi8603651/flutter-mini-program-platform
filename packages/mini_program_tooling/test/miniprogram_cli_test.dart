@@ -333,6 +333,28 @@ void main() {
       expect(previewController.lastRequest!.deviceId, 'R58M123ABC');
     });
 
+    test('preview forwards Android Wi-Fi physical device ids', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.0.0',
+      );
+      final previewController = _FakeMiniProgramPreviewController();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: StringBuffer(),
+        previewController: previewController,
+        workingDirectory: standaloneRoot,
+      ).run(<String>['preview', '-d', '192.168.1.25:5555']);
+
+      expect(exitCode, 0);
+      expect(previewController.lastRequest, isNotNull);
+      expect(previewController.lastRequest!.deviceId, '192.168.1.25:5555');
+    });
+
     test('env init, use, and status manage active environment state', () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await workspaceRoot.create(recursive: true);

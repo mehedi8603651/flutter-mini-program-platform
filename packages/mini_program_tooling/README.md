@@ -31,7 +31,7 @@ miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
 miniprogram build [mini-program-id]
-miniprogram preview -d <chrome|windows|emulator-5554|android-device-id> [mini-program-id]
+miniprogram preview -d <chrome|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id]
 miniprogram embed init
@@ -68,6 +68,7 @@ Preview v1 currently supports:
 - `windows`
 - Android emulator ids such as `emulator-5554`
 - Android USB device ids such as `R58M123ABC`
+- Android Wi-Fi device ids such as `192.168.1.25:5555`
 
 `preview` is a developer-only loop. It does not require `backend init` or
 `backend start`, does not publish into `backend/api/`, and keeps a managed
@@ -86,6 +87,12 @@ During preview, the CLI:
   reverse is unavailable
 - auto-applies `adb reverse tcp:<port> tcp:<port>` for Android USB preview and
   uses `http://127.0.0.1:<port>/preview/` inside the device session
+- uses a resolved LAN host such as `http://192.168.1.10:<port>/preview/` for
+  Android Wi-Fi preview sessions
+
+For Android Wi-Fi preview, the device must be able to reach your dev machine on
+the same LAN. If auto-detection picks the wrong host IP, set
+`MINI_PROGRAM_PREVIEW_LAN_HOST=<your-lan-ip>` before running preview.
 
 Preview capability behavior in v1:
 

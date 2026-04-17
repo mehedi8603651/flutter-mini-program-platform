@@ -219,6 +219,7 @@ V1 preview targets:
 - `windows`
 - `emulator-5554` and other Android emulator ids
 - Android USB device ids such as `R58M123ABC`
+- Android Wi-Fi device ids such as `192.168.1.25:5555`
 
 Preview behavior:
 
@@ -240,6 +241,10 @@ Preview mode rules:
   `http://10.0.2.2:<port>/preview/`
 - Android USB preview auto-applies `adb reverse tcp:<port> tcp:<port>` and
   uses `http://127.0.0.1:<port>/preview/` inside the device session
+- Android Wi-Fi preview uses a resolved LAN host such as
+  `http://192.168.1.10:<port>/preview/`
+- if auto-detected LAN routing is wrong, set `MINI_PROGRAM_PREVIEW_LAN_HOST`
+  to your dev machine IP before running preview
 
 Preview capability limits in v1:
 

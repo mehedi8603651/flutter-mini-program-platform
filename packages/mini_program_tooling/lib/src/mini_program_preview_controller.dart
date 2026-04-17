@@ -17,6 +17,9 @@ typedef PreviewShellRunner =
       Map<String, String>? environment,
     });
 
+typedef PreviewLanAddressResolver =
+    Future<String?> Function({String? preferredPeerHost});
+
 class PreviewLaunchTarget {
   const PreviewLaunchTarget({
     required this.deviceId,
@@ -24,6 +27,8 @@ class PreviewLaunchTarget {
     required this.previewServerBindAddress,
     required this.previewServerFallbackPublicHost,
     this.adbReverseMode = PreviewAdbReverseMode.none,
+    this.requiresLanPreviewHost = false,
+    this.preferredLanPeerHost,
   });
 
   final String deviceId;
@@ -31,9 +36,25 @@ class PreviewLaunchTarget {
   final InternetAddress previewServerBindAddress;
   final String previewServerFallbackPublicHost;
   final PreviewAdbReverseMode adbReverseMode;
+  final bool requiresLanPreviewHost;
+  final String? preferredLanPeerHost;
 }
 
 enum PreviewAdbReverseMode { none, prefer, require }
+
+enum PreviewAndroidConnectionKind { usb, wifi }
+
+class ResolvedPreviewAdbDevice {
+  const ResolvedPreviewAdbDevice({
+    required this.deviceId,
+    required this.connectionKind,
+    this.peerHost,
+  });
+
+  final String deviceId;
+  final PreviewAndroidConnectionKind connectionKind;
+  final String? peerHost;
+}
 
 class PreparedPreviewTransport {
   const PreparedPreviewTransport({
@@ -206,12 +227,14 @@ class MiniProgramPreviewController {
         const MiniProgramPreviewHostInitializer(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     PreviewShellRunner shellRunner = _defaultShellRunner,
+    PreviewLanAddressResolver lanAddressResolver = _defaultLanAddressResolver,
     PreviewProcessStarter processStarter = _defaultProcessStarter,
   }) : _builder = builder,
        _bundleLoader = bundleLoader,
        _hostInitializer = hostInitializer,
        _stateStore = stateStore,
        _shellRunner = shellRunner,
+       _lanAddressResolver = lanAddressResolver,
        _processStarter = processStarter;
 
   static const Set<String> supportedDeviceIds = <String>{'chrome', 'windows'};
@@ -224,6 +247,7 @@ class MiniProgramPreviewController {
   final MiniProgramPreviewHostInitializer _hostInitializer;
   final LocalCliStateStore _stateStore;
   final PreviewShellRunner _shellRunner;
+  final PreviewLanAddressResolver _lanAddressResolver;
   final PreviewProcessStarter _processStarter;
 
   Future<int> preview(
@@ -428,14 +452,27 @@ class MiniProgramPreviewController {
       );
     }
 
-    final adbDeviceId = await _resolveConnectedAdbDeviceId(trimmedDeviceId);
-    if (adbDeviceId != null) {
+    final adbDevice = await _resolveConnectedAdbDevice(trimmedDeviceId);
+    if (adbDevice != null &&
+        adbDevice.connectionKind == PreviewAndroidConnectionKind.usb) {
       return PreviewLaunchTarget(
-        deviceId: adbDeviceId,
+        deviceId: adbDevice.deviceId,
         flutterPlatforms: const <String>{'android'},
         previewServerBindAddress: InternetAddress.anyIPv4,
         previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
         adbReverseMode: PreviewAdbReverseMode.require,
+      );
+    }
+
+    if (adbDevice != null &&
+        adbDevice.connectionKind == PreviewAndroidConnectionKind.wifi) {
+      return PreviewLaunchTarget(
+        deviceId: adbDevice.deviceId,
+        flutterPlatforms: const <String>{'android'},
+        previewServerBindAddress: InternetAddress.anyIPv4,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
+        requiresLanPreviewHost: true,
+        preferredLanPeerHost: adbDevice.peerHost,
       );
     }
 
@@ -447,13 +484,16 @@ class MiniProgramPreviewController {
       ...supportedDeviceIds.toList()..sort(),
       'Android emulator ids like emulator-5554',
       'Android USB device ids like R58M123ABC',
+      'Android Wi-Fi device ids like 192.168.1.25:5555',
     ];
     return 'Preview currently supports only these devices: '
         '${supported.join(', ')}. '
         'Received: $deviceId';
   }
 
-  Future<String?> _resolveConnectedAdbDeviceId(String requestedDeviceId) async {
+  Future<ResolvedPreviewAdbDevice?> _resolveConnectedAdbDevice(
+    String requestedDeviceId,
+  ) async {
     final adbExecutable = await _resolveAdbExecutable();
     if (adbExecutable == null) {
       return null;
@@ -484,7 +524,18 @@ class MiniProgramPreviewController {
 
     for (final connectedDeviceId in connectedDeviceIds) {
       if (connectedDeviceId.toLowerCase() == requestedDeviceId.toLowerCase()) {
-        return connectedDeviceId;
+        if (_looksLikeWirelessAdbDeviceId(connectedDeviceId)) {
+          return ResolvedPreviewAdbDevice(
+            deviceId: connectedDeviceId,
+            connectionKind: PreviewAndroidConnectionKind.wifi,
+            peerHost: _extractWirelessDeviceHost(connectedDeviceId),
+          );
+        }
+
+        return ResolvedPreviewAdbDevice(
+          deviceId: connectedDeviceId,
+          connectionKind: PreviewAndroidConnectionKind.usb,
+        );
       }
     }
 
@@ -495,6 +546,18 @@ class MiniProgramPreviewController {
     PreviewLaunchTarget launchTarget, {
     required int port,
   }) async {
+    if (launchTarget.requiresLanPreviewHost) {
+      final lanPreviewHost = await _resolvePreviewLanHost(
+        preferredPeerHost: launchTarget.preferredLanPeerHost,
+      );
+      return PreparedPreviewTransport(
+        publicHost: lanPreviewHost,
+        diagnosticMessage:
+            'Android Wi-Fi preview: using LAN host $lanPreviewHost '
+            'for ${launchTarget.deviceId}.',
+      );
+    }
+
     if (launchTarget.adbReverseMode == PreviewAdbReverseMode.none) {
       return PreparedPreviewTransport(
         publicHost: launchTarget.previewServerFallbackPublicHost,
@@ -568,6 +631,32 @@ class MiniProgramPreviewController {
           'ADB reverse failed for ${launchTarget.deviceId}. '
           'Falling back to ${launchTarget.previewServerFallbackPublicHost}.\n'
           '$details',
+    );
+  }
+
+  Future<String> _resolvePreviewLanHost({String? preferredPeerHost}) async {
+    final manualHost =
+        Platform.environment['MINI_PROGRAM_PREVIEW_LAN_HOST']?.trim() ?? '';
+    final fallbackManualHost =
+        Platform.environment['MINI_PROGRAM_PREVIEW_PUBLIC_HOST']?.trim() ?? '';
+    if (manualHost.isNotEmpty) {
+      return manualHost;
+    }
+    if (fallbackManualHost.isNotEmpty) {
+      return fallbackManualHost;
+    }
+
+    final resolvedHost = await _lanAddressResolver(
+      preferredPeerHost: preferredPeerHost,
+    );
+    if (resolvedHost case final host? when host.trim().isNotEmpty) {
+      return host.trim();
+    }
+
+    throw MiniProgramPreviewException(
+      'Android Wi-Fi preview requires a reachable LAN IPv4 address on this '
+      'machine, but none could be resolved. Set MINI_PROGRAM_PREVIEW_LAN_HOST '
+      'to your dev machine IP and try again.',
     );
   }
 
@@ -782,5 +871,136 @@ class MiniProgramPreviewController {
       environment: environment,
       runInShell: true,
     );
+  }
+
+  static bool _looksLikeWirelessAdbDeviceId(String deviceId) {
+    if (!deviceId.contains(':')) {
+      return false;
+    }
+
+    final host = _extractWirelessDeviceHost(deviceId);
+    return host != null && host.trim().isNotEmpty;
+  }
+
+  static String? _extractWirelessDeviceHost(String deviceId) {
+    final separatorIndex = deviceId.lastIndexOf(':');
+    if (separatorIndex <= 0 || separatorIndex == deviceId.length - 1) {
+      return null;
+    }
+
+    return deviceId.substring(0, separatorIndex).trim();
+  }
+
+  static Future<String?> _defaultLanAddressResolver({
+    String? preferredPeerHost,
+  }) async {
+    List<NetworkInterface> interfaces;
+    try {
+      interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+        includeLinkLocal: false,
+      );
+    } on SocketException {
+      return null;
+    }
+
+    final candidates = <String>[];
+    for (final interface in interfaces) {
+      for (final address in interface.addresses) {
+        final host = address.address.trim();
+        if (host.isEmpty ||
+            address.isLoopback ||
+            host == InternetAddress.anyIPv4.address ||
+            _isLinkLocalIpv4(host)) {
+          continue;
+        }
+        candidates.add(host);
+      }
+    }
+
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    final uniqueCandidates = candidates.toSet().toList();
+    if (preferredPeerHost != null && preferredPeerHost.trim().isNotEmpty) {
+      uniqueCandidates.sort(
+        (left, right) => _compareLanCandidates(
+          left,
+          right,
+          preferredPeerHost: preferredPeerHost,
+        ),
+      );
+    } else {
+      uniqueCandidates.sort((left, right) {
+        final leftPrivate = _isPrivateIpv4(left);
+        final rightPrivate = _isPrivateIpv4(right);
+        if (leftPrivate != rightPrivate) {
+          return leftPrivate ? -1 : 1;
+        }
+        return left.compareTo(right);
+      });
+    }
+
+    return uniqueCandidates.first;
+  }
+
+  static int _compareLanCandidates(
+    String left,
+    String right, {
+    required String preferredPeerHost,
+  }) {
+    final leftScore = _sharedIpv4OctetPrefixLength(left, preferredPeerHost);
+    final rightScore = _sharedIpv4OctetPrefixLength(right, preferredPeerHost);
+    if (leftScore != rightScore) {
+      return rightScore.compareTo(leftScore);
+    }
+
+    final leftPrivate = _isPrivateIpv4(left);
+    final rightPrivate = _isPrivateIpv4(right);
+    if (leftPrivate != rightPrivate) {
+      return leftPrivate ? -1 : 1;
+    }
+
+    return left.compareTo(right);
+  }
+
+  static int _sharedIpv4OctetPrefixLength(String left, String right) {
+    final leftParts = left.split('.');
+    final rightParts = right.split('.');
+    if (leftParts.length != 4 || rightParts.length != 4) {
+      return 0;
+    }
+
+    var score = 0;
+    for (var index = 0; index < 4; index += 1) {
+      if (leftParts[index] != rightParts[index]) {
+        break;
+      }
+      score += 1;
+    }
+    return score;
+  }
+
+  static bool _isPrivateIpv4(String host) {
+    final octets = host.split('.').map(int.tryParse).toList();
+    if (octets.length != 4 || octets.any((value) => value == null)) {
+      return false;
+    }
+
+    final first = octets[0]!;
+    final second = octets[1]!;
+    return first == 10 ||
+        (first == 172 && second >= 16 && second <= 31) ||
+        (first == 192 && second == 168);
+  }
+
+  static bool _isLinkLocalIpv4(String host) {
+    final octets = host.split('.').map(int.tryParse).toList();
+    if (octets.length != 4 || octets.any((value) => value == null)) {
+      return false;
+    }
+    return octets[0] == 169 && octets[1] == 254;
   }
 }

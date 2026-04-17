@@ -192,8 +192,10 @@ void main() {
             'mini_program_preview_network_security_config.xml',
           ),
         ).readAsString();
-        expect(androidNetworkConfig, contains('10.0.2.2'));
-        expect(androidNetworkConfig, contains('127.0.0.1'));
+        expect(
+          androidNetworkConfig,
+          contains('<base-config cleartextTrafficPermitted="true" />'),
+        );
       },
     );
 

@@ -648,6 +648,179 @@ void main() {
       },
     );
 
+    test('launches Android Wi-Fi preview with a resolved LAN base URL', () async {
+      final fixture = await _writePreviewBuildFixture(
+        tempDir.path,
+        miniProgramId: 'coupon_center',
+      );
+      final hostInitializer = _FakePreviewHostInitializer();
+      PreviewProcessCall? processCall;
+      final shellCalls = <List<String>>[];
+      final controller = MiniProgramPreviewController(
+        builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+        hostInitializer: hostInitializer,
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              shellCalls.add(<String>[executable, ...arguments]);
+              if (arguments.length == 1 && arguments.single == 'version') {
+                return ProcessResult(0, 0, 'Android Debug Bridge', '');
+              }
+              if (arguments.length == 1 && arguments.single == 'devices') {
+                return ProcessResult(
+                  0,
+                  0,
+                  'List of devices attached\n192.168.1.25:5555\tdevice\n',
+                  '',
+                );
+              }
+              return ProcessResult(1, 1, '', 'unexpected adb invocation');
+            },
+        lanAddressResolver: ({String? preferredPeerHost}) async =>
+            '192.168.1.10',
+        processStarter:
+            ({
+              required String executable,
+              required List<String> arguments,
+              required String workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              processCall = PreviewProcessCall(
+                executable: executable,
+                arguments: arguments,
+                workingDirectory: workingDirectory,
+              );
+              return StartedPreviewProcess(
+                pid: 1,
+                stdout: const Stream<List<int>>.empty(),
+                stderr: const Stream<List<int>>.empty(),
+                exitCode: Future<int>.value(0),
+                kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+              );
+            },
+      );
+
+      final stdoutBuffer = StringBuffer();
+      final exitCode = await controller.preview(
+        MiniProgramPreviewRequest(
+          miniProgramId: 'coupon_center',
+          miniProgramRootPath: fixture.miniProgramRootPath,
+          repoRootPath: fixture.repoRootPath,
+          deviceId: '192.168.1.25:5555',
+        ),
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(processCall, isNotNull);
+      expect(
+        processCall!.arguments,
+        containsAll(<String>['run', '-d', '192.168.1.25:5555']),
+      );
+      expect(
+        processCall!.arguments.any(
+          (argument) => argument.startsWith(
+            '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://192.168.1.10:',
+          ),
+        ),
+        isTrue,
+      );
+      expect(hostInitializer.lastRequest!.requiredPlatforms, const <String>{
+        'android',
+      });
+      expect(
+        shellCalls.any((call) => call.length >= 2 && call.last == 'devices'),
+        isTrue,
+      );
+      expect(
+        shellCalls.any(
+          (call) =>
+              call.length >= 4 &&
+              call[1] == '-s' &&
+              call[2] == '192.168.1.25:5555' &&
+              call[3] == 'reverse',
+        ),
+        isFalse,
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains(
+          'Android Wi-Fi preview: using LAN host 192.168.1.10 for 192.168.1.25:5555.',
+        ),
+      );
+    });
+
+    test(
+      'fails clearly when Android Wi-Fi preview cannot resolve a LAN host',
+      () async {
+        final fixture = await _writePreviewBuildFixture(
+          tempDir.path,
+          miniProgramId: 'coupon_center',
+        );
+        final controller = MiniProgramPreviewController(
+          builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+          hostInitializer: _FakePreviewHostInitializer(),
+          shellRunner:
+              (
+                String executable,
+                List<String> arguments, {
+                String? workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                if (arguments.length == 1 && arguments.single == 'version') {
+                  return ProcessResult(0, 0, 'Android Debug Bridge', '');
+                }
+                if (arguments.length == 1 && arguments.single == 'devices') {
+                  return ProcessResult(
+                    0,
+                    0,
+                    'List of devices attached\n192.168.1.25:5555\tdevice\n',
+                    '',
+                  );
+                }
+                return ProcessResult(1, 1, '', 'unexpected adb invocation');
+              },
+          lanAddressResolver: ({String? preferredPeerHost}) async => null,
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                fail(
+                  'flutter run should not start when LAN host resolution fails',
+                );
+              },
+        );
+
+        await expectLater(
+          controller.preview(
+            MiniProgramPreviewRequest(
+              miniProgramId: 'coupon_center',
+              miniProgramRootPath: fixture.miniProgramRootPath,
+              repoRootPath: fixture.repoRootPath,
+              deviceId: '192.168.1.25:5555',
+            ),
+            stdoutSink: StringBuffer(),
+            stderrSink: StringBuffer(),
+          ),
+          throwsA(
+            isA<MiniProgramPreviewException>().having(
+              (error) => error.message,
+              'message',
+              contains('requires a reachable LAN IPv4 address'),
+            ),
+          ),
+        );
+      },
+    );
+
     test(
       'clears stale preview host build output before launching flutter run',
       () async {
