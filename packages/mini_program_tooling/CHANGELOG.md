@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.25
+
+- add managed preview support for Android emulator targets such as
+  `miniprogram preview -d emulator-5554`
+- add managed preview support for Android USB physical-device targets with
+  automatic `adb reverse` setup and `127.0.0.1` preview transport
+- extend the hidden managed preview host to generate Android platform files and
+  Android debug cleartext/network security config when needed
+- add regression coverage for Android emulator and Android USB preview launch
+  flows
+
 ## 0.2.24
 
 - clear transient managed preview-host build output before every
