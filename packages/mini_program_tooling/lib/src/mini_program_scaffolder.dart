@@ -112,7 +112,6 @@ class MiniProgramScaffolder {
 
     final entryScreenId = '${miniProgramId}_home';
     final detailsScreenId = '${miniProgramId}_details';
-    final routeDemoScreenId = '${miniProgramId}_route_demo';
     final screenFunctionName = '${_toLowerCamelCase(miniProgramId)}Home';
     final packageName = '${miniProgramId}_mini_program';
 
@@ -150,7 +149,6 @@ class MiniProgramScaffolder {
         capabilities: orderedCapabilities,
         entryScreenId: entryScreenId,
         detailsScreenId: detailsScreenId,
-        routeDemoScreenId: routeDemoScreenId,
         screenFunctionName: screenFunctionName,
         packageName: packageName,
       ),
@@ -163,21 +161,8 @@ class MiniProgramScaffolder {
         miniProgramId: miniProgramId,
         title: title,
         capabilities: orderedCapabilities,
-        routeDemoScreenId: routeDemoScreenId,
-        screenFunctionName: '${_toLowerCamelCase(miniProgramId)}Details',
-        packageName: packageName,
-      ),
-      p.join(
-        miniProgramRootPath,
-        'stac',
-        'screens',
-        '$routeDemoScreenId.dart',
-      ): _buildRouteDemoScreen(
-        miniProgramId: miniProgramId,
-        title: title,
         detailsScreenId: detailsScreenId,
-        routeDemoScreenId: routeDemoScreenId,
-        screenFunctionName: '${_toLowerCamelCase(miniProgramId)}RouteDemo',
+        screenFunctionName: '${_toLowerCamelCase(miniProgramId)}Details',
         packageName: packageName,
       ),
       p.join(miniProgramRootPath, 'stac', 'components', '.gitkeep'): '',
@@ -384,7 +369,8 @@ StacOptions get defaultStacOptions => const StacOptions(
       '- edit `manifest.json` before publish',
       '- replace the starter copy under `stac/screens/` with your real portable flow',
       '- use `lib/host_action_helpers.dart` for readable host and mini-program action helpers instead of hand-writing raw `jsonData` maps',
-      '- the scaffold now includes second and third screens so you can edit multi-step portable routing and stack-aware navigation by `screenId`',
+      '- the scaffold starts with a realistic `home` + `details` profile/settings flow instead of a route playground',
+      '- advanced portable route helpers stay in `lib/host_action_helpers.dart` and are shown as commented examples in the generated screens and below in this README',
       '- add reusable UI blocks under `stac/components/` as the flow grows',
     ];
 
@@ -428,9 +414,34 @@ ${notes.join('\n')}
 - `pubspec.yaml`
 - `stac/screens/$entryScreenId.dart`
 - `stac/screens/${miniProgramId}_details.dart`
-- `stac/screens/${miniProgramId}_route_demo.dart`
 - `stac/components/`
 - `stac/theme/`
+
+## Portable route helpers
+
+Keep the visible starter UI simple. When your mini-program really needs more
+stack control, uncomment or adapt these helpers from
+`lib/host_action_helpers.dart`:
+
+- `openMiniProgramScreenAction(...)`
+- `replaceMiniProgramScreenAction(...)`
+- `resetMiniProgramStackAction(...)`
+- `popMiniProgramScreenAction(...)`
+- `popToMiniProgramRootAction(...)`
+- `popToMiniProgramScreenAction(...)`
+
+Example snippet:
+
+```dart
+// Example only: replace the current screen with a follow-up step.
+StacOutlinedButton(
+  onPressed: replaceMiniProgramScreenAction(
+    requestId: '$miniProgramId-replace-follow-up',
+    screenId: '${miniProgramId}_details',
+  ),
+  child: StacText(data: 'Replace with follow-up'),
+)
+```
 
 ## Build
 
@@ -502,14 +513,13 @@ miniprogram embed init --project-root <existing-flutter-app>
     required List<String> capabilities,
     required String entryScreenId,
     required String detailsScreenId,
-    required String routeDemoScreenId,
     required String screenFunctionName,
     required String packageName,
   }) {
     final widgets = <String>[
       '''
             StacText(
-              data: '$title starter flow',
+              data: '$title profile starter',
               style: StacCustomTextStyle(
                 fontSize: 28,
                 fontWeight: StacFontWeight.w700,
@@ -519,9 +529,9 @@ miniprogram embed init --project-root <existing-flutter-app>
             StacSizedBox(height: 12),
             StacText(
               data:
-                  'Replace this generated starter screen with your portable '
-                  'Stac DSL flow. Keep host-specific work behind approved '
-                  'host actions and declared capabilities.',
+                  'Start from a realistic portable profile/settings flow. '
+                  'Replace the copy and data shape with your business case, '
+                  'then add host-specific work only after the contract is real.',
             ),
             StacSizedBox(height: 16),
             StacContainer(
@@ -539,72 +549,31 @@ miniprogram embed init --project-root <existing-flutter-app>
                 ),
               ),
             ),
+            StacSizedBox(height: 20),
+${_buildStarterProfileCard(title)}
+            StacSizedBox(height: 16),
+${_buildStarterChecklistCard()}
             StacSizedBox(height: 24),
             StacFilledButton(
               onPressed: openMiniProgramScreenAction(
                 requestId: '$miniProgramId-open-details',
                 screenId: '$detailsScreenId',
               ),
-              child: StacText(data: 'Continue to second screen'),
+              child: StacText(data: 'Open profile details'),
             ),
             StacSizedBox(height: 8),
             StacText(
               data:
-                  'This starter button uses internal mini-program routing by screenId, '
-                  'so you can build page-to-page portable flows without leaving the mini-program.',
+                  'Keep the default starter simple: one internal route from '
+                  'home to details, then grow the flow around your real use case.',
             ),
-            StacSizedBox(height: 16),
-            StacOutlinedButton(
-              onPressed: replaceMiniProgramScreenAction(
-                requestId: '$miniProgramId-replace-route-demo',
-                screenId: '$routeDemoScreenId',
-              ),
-              child: StacText(data: 'Replace with route demo screen'),
-            ),
-            StacSizedBox(height: 8),
-            StacText(
-              data:
-                  'Use replace when the next step should take over the current '
-                  'screen instead of adding another entry to the mini-program stack.',
-            ),
-            StacSizedBox(height: 16),
-            StacOutlinedButton(
-              onPressed: resetMiniProgramStackAction(
-                requestId: '$miniProgramId-reset-route-demo',
-                screenId: '$routeDemoScreenId',
-              ),
-              child: StacText(data: 'Reset stack to route demo'),
-            ),
-            StacSizedBox(height: 8),
-            StacText(
-              data:
-                  'Use reset when a new step should become the fresh root of the '
-                  'portable flow, such as after onboarding or a completed task.',
-            ),
+${_buildHomeRouteExamplesComment(miniProgramId: miniProgramId, detailsScreenId: detailsScreenId)}
             StacSizedBox(height: 16),
 ''',
     ];
 
     if (capabilities.contains(Capability.analytics.wireValue)) {
       widgets.add(_buildTrackEventButton(miniProgramId));
-    }
-
-    if (widgets.length == 1) {
-      widgets.add('''
-            StacContainer(
-              padding: StacEdgeInsets.all(16),
-              decoration: StacBoxDecoration(
-                color: '#F8FAFC',
-                borderRadius: StacBorderRadius.all(18),
-              ),
-              child: StacText(
-                data:
-                    'No extra starter actions were generated on the first screen. '
-                    'Use the generated route screens as a portable navigation '
-                    'starting point, or replace them with your own business flow.',
-              ),
-            ),
-''');
     }
 
     return '''
@@ -633,14 +602,14 @@ ${widgets.join()}
     required String miniProgramId,
     required String title,
     required List<String> capabilities,
-    required String routeDemoScreenId,
+    required String detailsScreenId,
     required String screenFunctionName,
     required String packageName,
   }) {
     final widgets = <String>[
       '''
             StacText(
-              data: '$title second screen',
+              data: '$title details',
               style: StacCustomTextStyle(
                 fontSize: 26,
                 fontWeight: StacFontWeight.w700,
@@ -650,32 +619,28 @@ ${widgets.join()}
             StacSizedBox(height: 12),
             StacText(
               data:
-                  'This page was opened through internal mini-program routing. '
-                  'Use it as the place to continue your portable multi-step flow.',
+                  'Use this second screen as a realistic details or settings page. '
+                  'Keep the starter polished first, then layer deeper routing only '
+                  'when the real flow needs it.',
             ),
+            StacSizedBox(height: 20),
+${_buildDetailsSectionCard(title: 'Account snapshot', backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', lines: const <String>['Full name: Preview User', 'Primary email: preview.user@example.com', 'Member tier: Ready for customization'])}
+            StacSizedBox(height: 16),
+${_buildDetailsSectionCard(title: 'Preferences starter block', backgroundColor: '#F8FAFC', borderColor: '#D7E3DD', lines: const <String>['Marketing updates: Enabled placeholder', 'Language: English', 'Support lane: Portable mini-program preview'])}
             StacSizedBox(height: 20),
             StacOutlinedButton(
               onPressed: popMiniProgramScreenAction(
-                requestId: '$miniProgramId-pop-root',
+                requestId: '$miniProgramId-pop-home',
               ),
-              child: StacText(data: 'Back to first screen'),
+              child: StacText(data: 'Back to profile home'),
             ),
-            StacSizedBox(height: 12),
-            StacOutlinedButton(
-              onPressed: openMiniProgramScreenAction(
-                requestId: '$miniProgramId-open-route-demo',
-                screenId: '$routeDemoScreenId',
-              ),
-              child: StacText(data: 'Open route demo screen'),
+            StacSizedBox(height: 8),
+            StacText(
+              data:
+                  'This keeps the default starter easy to understand. Add more '
+                  'portable route helpers only when the flow truly needs them.',
             ),
-            StacSizedBox(height: 12),
-            StacOutlinedButton(
-              onPressed: replaceMiniProgramScreenAction(
-                requestId: '$miniProgramId-replace-route-demo-from-details',
-                screenId: '$routeDemoScreenId',
-              ),
-              child: StacText(data: 'Replace with route demo screen'),
-            ),
+${_buildDetailsRouteExamplesComment(miniProgramId: miniProgramId, detailsScreenId: detailsScreenId)}
 ''',
     ];
 
@@ -701,75 +666,6 @@ StacWidget $screenFunctionName() {
         crossAxisAlignment: StacCrossAxisAlignment.start,
         children: [
 ${widgets.join()}
-        ],
-      ),
-    ),
-  );
-}
-''';
-  }
-
-  String _buildRouteDemoScreen({
-    required String miniProgramId,
-    required String title,
-    required String detailsScreenId,
-    required String routeDemoScreenId,
-    required String screenFunctionName,
-    required String packageName,
-  }) {
-    return '''
-import 'package:stac_core/stac_core.dart';
-import 'package:$packageName/host_action_helpers.dart';
-
-@StacScreen(screenName: '$routeDemoScreenId')
-StacWidget $screenFunctionName() {
-  return StacScaffold(
-    appBar: StacAppBar(title: StacText(data: '$title route demo')),
-    body: StacSingleChildScrollView(
-      padding: StacEdgeInsets.symmetric(horizontal: 24),
-      child: StacColumn(
-        crossAxisAlignment: StacCrossAxisAlignment.start,
-        children: [
-          StacText(
-            data: '$title route actions',
-            style: StacCustomTextStyle(
-              fontSize: 26,
-              fontWeight: StacFontWeight.w700,
-              color: '#1A202C',
-            ),
-          ),
-          StacSizedBox(height: 12),
-          StacText(
-            data:
-                'This screen demonstrates stack-aware portable navigation helpers. '
-                'Use these patterns when your mini-program needs to move backward '
-                'or jump to a known earlier step.',
-          ),
-          StacSizedBox(height: 20),
-          StacFilledButton(
-            onPressed: popToMiniProgramRootAction(
-              requestId: '$miniProgramId-pop-to-root',
-            ),
-            child: StacText(data: 'Pop to first screen'),
-          ),
-          StacSizedBox(height: 8),
-          StacText(
-            data:
-                'Pop to root returns to the first screen in the current mini-program stack.',
-          ),
-          StacSizedBox(height: 16),
-          StacOutlinedButton(
-            onPressed: popToMiniProgramScreenAction(
-              requestId: '$miniProgramId-pop-to-details',
-              screenId: '$detailsScreenId',
-            ),
-            child: StacText(data: 'Pop to second screen'),
-          ),
-          StacSizedBox(height: 8),
-          StacText(
-            data:
-                'Pop to screen targets a known earlier screenId when the stack already contains it.',
-          ),
         ],
       ),
     ),
@@ -925,7 +821,7 @@ StacAction hostCallSecureApiAction({
 
   String _buildTrackEventButton(String miniProgramId) =>
       '''
-            StacFilledButton(
+            StacOutlinedButton(
               onPressed: hostTrackEventAction(
                 requestId: '$miniProgramId-track-open',
                 name: '${miniProgramId}_opened',
@@ -934,14 +830,153 @@ StacAction hostCallSecureApiAction({
                   'surface': '$miniProgramId',
                 },
               ),
-              child: StacText(data: 'Track starter event (logs only)'),
+              child: StacText(data: 'Track profile opened event (logs only)'),
             ),
             StacSizedBox(height: 8),
             StacText(
               data:
                   'This starter analytics action only writes to the host log. '
-              'It does not change the UI.',
+                  'It does not change the UI.',
             ),
+''';
+
+  String _buildStarterProfileCard(String title) =>
+      '''
+            StacContainer(
+              padding: StacEdgeInsets.all(18),
+              decoration: StacBoxDecoration(
+                color: '#FFFFFF',
+                borderRadius: StacBorderRadius.all(20),
+                border: StacBorder.all(color: '#E2E8F0'),
+              ),
+              child: StacColumn(
+                crossAxisAlignment: StacCrossAxisAlignment.start,
+                children: [
+                  StacText(
+                    data: 'Preview User',
+                    style: StacCustomTextStyle(
+                      fontSize: 20,
+                      fontWeight: StacFontWeight.w600,
+                      color: '#0F172A',
+                    ),
+                  ),
+                  StacSizedBox(height: 8),
+                  StacText(data: 'Email: preview.user@example.com'),
+                  StacText(data: 'Tier: $title starter'),
+                  StacText(data: 'Status: Ready for your real profile fields'),
+                ],
+              ),
+            ),
+''';
+
+  String _buildStarterChecklistCard() => '''
+            StacContainer(
+              padding: StacEdgeInsets.all(18),
+              decoration: StacBoxDecoration(
+                color: '#F8FAFC',
+                borderRadius: StacBorderRadius.all(20),
+              ),
+              child: StacColumn(
+                crossAxisAlignment: StacCrossAxisAlignment.start,
+                children: [
+                  StacText(
+                    data: 'What to customize next',
+                    style: StacCustomTextStyle(
+                      fontSize: 16,
+                      fontWeight: StacFontWeight.w600,
+                      color: '#0F172A',
+                    ),
+                  ),
+                  StacSizedBox(height: 8),
+                  StacText(
+                    data: 'Replace the preview copy with your business content.',
+                  ),
+                  StacText(
+                    data: 'Wire real profile values from your host-approved model.',
+                  ),
+                  StacText(
+                    data:
+                        'Add native or secure actions only after the host contract exists.',
+                  ),
+                ],
+              ),
+            ),
+''';
+
+  String _buildDetailsSectionCard({
+    required String title,
+    required String backgroundColor,
+    required String borderColor,
+    required List<String> lines,
+  }) {
+    final lineWidgets = lines
+        .map((line) => "                  StacText(data: '$line'),")
+        .join('\n');
+
+    return '''
+            StacContainer(
+              padding: StacEdgeInsets.all(18),
+              decoration: StacBoxDecoration(
+                color: '$backgroundColor',
+                borderRadius: StacBorderRadius.all(20),
+                border: StacBorder.all(color: '$borderColor'),
+              ),
+              child: StacColumn(
+                crossAxisAlignment: StacCrossAxisAlignment.start,
+                children: [
+                  StacText(
+                    data: '$title',
+                    style: StacCustomTextStyle(
+                      fontSize: 16,
+                      fontWeight: StacFontWeight.w600,
+                      color: '#0F172A',
+                    ),
+                  ),
+                  StacSizedBox(height: 8),
+$lineWidgets
+                ],
+              ),
+            ),
+''';
+  }
+
+  String _buildHomeRouteExamplesComment({
+    required String miniProgramId,
+    required String detailsScreenId,
+  }) =>
+      '''
+            // Advanced portable route examples stay commented by default:
+            // StacOutlinedButton(
+            //   onPressed: replaceMiniProgramScreenAction(
+            //     requestId: '$miniProgramId-replace-details',
+            //     screenId: '$detailsScreenId',
+            //   ),
+            //   child: StacText(data: 'Replace with details'),
+            // ),
+            //
+            // StacOutlinedButton(
+            //   onPressed: resetMiniProgramStackAction(
+            //     requestId: '$miniProgramId-reset-details',
+            //     screenId: '$detailsScreenId',
+            //   ),
+            //   child: StacText(data: 'Reset stack to details'),
+            // ),
+''';
+
+  String _buildDetailsRouteExamplesComment({
+    required String miniProgramId,
+    required String detailsScreenId,
+  }) =>
+      '''
+            // More stack-aware helpers live in host_action_helpers.dart:
+            // popToMiniProgramRootAction(
+            //   requestId: '$miniProgramId-pop-root',
+            // )
+            //
+            // popToMiniProgramScreenAction(
+            //   requestId: '$miniProgramId-pop-to-details',
+            //   screenId: '$detailsScreenId',
+            // )
 ''';
 
   String _buildNativeNavigationCapabilityNote() => '''

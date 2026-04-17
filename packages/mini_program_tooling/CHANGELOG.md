@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.23
+
+- replace the route-heavy starter scaffold with a cleaner two-screen
+  profile/settings default built around `home` and `details`
+- remove the generated `..._route_demo.dart` screen from new mini-program
+  scaffolds
+- keep advanced portable routing helpers available in
+  `lib/host_action_helpers.dart`, but move their usage into commented examples
+  and README guidance instead of visible starter buttons
+- add regression coverage for the new realistic default scaffold flow
+
 ## 0.2.22
 
 - replace the default scaffold's host-native demo actions with a safer

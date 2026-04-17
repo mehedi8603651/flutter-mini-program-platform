@@ -84,7 +84,6 @@ void main() {
 
         final screenSource = await screenFile.readAsString();
         final detailsScreenSource = await detailsScreenFile.readAsString();
-        final routeDemoScreenSource = await routeDemoScreenFile.readAsString();
         final helperSource = await helperFile.readAsString();
         final readmeSource = await readmeFile.readAsString();
         expect(
@@ -98,13 +97,29 @@ void main() {
           ),
         );
         expect(screenSource, contains('openMiniProgramScreenAction('));
-        expect(screenSource, contains('Continue to second screen'));
-        expect(screenSource, contains('replaceMiniProgramScreenAction('));
-        expect(screenSource, contains('Replace with route demo screen'));
-        expect(screenSource, contains('resetMiniProgramStackAction('));
-        expect(screenSource, contains('Reset stack to route demo'));
+        expect(screenSource, contains('Coupon Center profile starter'));
+        expect(screenSource, contains('Preview User'));
+        expect(screenSource, contains('What to customize next'));
+        expect(screenSource, contains('Open profile details'));
+        expect(
+          screenSource,
+          contains(
+            '// Advanced portable route examples stay commented by default:',
+          ),
+        );
+        expect(
+          screenSource,
+          contains('//   onPressed: replaceMiniProgramScreenAction('),
+        );
+        expect(
+          screenSource,
+          contains('//   onPressed: resetMiniProgramStackAction('),
+        );
         expect(screenSource, contains('hostTrackEventAction('));
-        expect(screenSource, contains('Track starter event (logs only)'));
+        expect(
+          screenSource,
+          contains('Track profile opened event (logs only)'),
+        );
         expect(screenSource, contains('body: StacSingleChildScrollView('));
         expect(screenSource, isNot(contains('body: StacSafeArea(')));
         expect(
@@ -122,10 +137,7 @@ void main() {
           detailsScreenSource,
           contains("@StacScreen(screenName: 'coupon_center_details')"),
         );
-        expect(
-          routeDemoScreenSource,
-          contains("@StacScreen(screenName: 'coupon_center_route_demo')"),
-        );
+        expect(await routeDemoScreenFile.exists(), isFalse);
         expect(
           detailsScreenSource,
           contains('body: StacSingleChildScrollView('),
@@ -140,41 +152,30 @@ void main() {
           isNot(contains('padding: StacEdgeInsets.all(24)')),
         );
         expect(detailsScreenSource, contains('popMiniProgramScreenAction('));
-        expect(detailsScreenSource, contains('Back to first screen'));
-        expect(detailsScreenSource, contains('openMiniProgramScreenAction('));
-        expect(detailsScreenSource, contains('Open route demo screen'));
-        expect(
-          detailsScreenSource,
-          contains('replaceMiniProgramScreenAction('),
-        );
-        expect(detailsScreenSource, contains('Replace with route demo screen'));
+        expect(detailsScreenSource, contains('Coupon Center details'));
+        expect(detailsScreenSource, contains('Account snapshot'));
+        expect(detailsScreenSource, contains('Preferences starter block'));
+        expect(detailsScreenSource, contains('Back to profile home'));
         expect(
           detailsScreenSource,
           contains('Capability enabled: native_navigation'),
         );
         expect(
           detailsScreenSource,
-          isNot(contains('onPressed: hostOpenNativeScreenAction(')),
+          contains(
+            '// More stack-aware helpers live in host_action_helpers.dart:',
+          ),
+        );
+        expect(detailsScreenSource, contains('// popToMiniProgramRootAction('));
+        expect(
+          detailsScreenSource,
+          contains('// popToMiniProgramScreenAction('),
         );
         expect(
           detailsScreenSource,
-          isNot(contains('Open sample native screen')),
-        );
-        expect(routeDemoScreenSource, contains('popToMiniProgramRootAction('));
-        expect(routeDemoScreenSource, contains('Pop to first screen'));
-        expect(
-          routeDemoScreenSource,
-          contains('popToMiniProgramScreenAction('),
-        );
-        expect(routeDemoScreenSource, contains('Pop to second screen'));
-        expect(
-          routeDemoScreenSource,
           isNot(contains('onPressed: hostOpenNativeScreenAction(')),
         );
-        expect(
-          routeDemoScreenSource,
-          isNot(contains('onPressed: hostCallSecureApiAction(')),
-        );
+        expect(detailsScreenSource, isNot(contains('Open route demo screen')));
         expect(helperSource, contains('StacAction hostTrackEventAction('));
         expect(helperSource, contains("'action': 'trackEvent'"));
         expect(
@@ -217,8 +218,14 @@ void main() {
         expect(helperSource, contains("'action': 'callSecureApi'"));
         expect(
           readmeSource,
-          contains('stac/screens/coupon_center_route_demo.dart'),
+          contains('stac/screens/coupon_center_details.dart'),
         );
+        expect(
+          readmeSource,
+          isNot(contains('stac/screens/coupon_center_route_demo.dart')),
+        );
+        expect(readmeSource, contains('## Portable route helpers'));
+        expect(readmeSource, contains('replaceMiniProgramScreenAction(...)'));
         expect(
           readmeSource,
           contains('does not call any host-owned route by default'),
@@ -273,14 +280,14 @@ void main() {
             'claim_center_details.dart',
           ),
         ).readAsString();
-        final routeDemoScreenSource = await File(
+        final routeDemoScreenFile = File(
           p.join(
             result.miniProgramRootPath,
             'stac',
             'screens',
             'claim_center_route_demo.dart',
           ),
-        ).readAsString();
+        );
         final helperSource = await File(
           p.join(result.miniProgramRootPath, 'lib', 'host_action_helpers.dart'),
         ).readAsString();
@@ -298,6 +305,7 @@ void main() {
           containsPair('mode', 'noCache'),
         );
         expect(screenSource, contains('openMiniProgramScreenAction('));
+        expect(screenSource, contains('Open profile details'));
         expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
         expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
         expect(detailsScreenSource, contains('Capability enabled: secure_api'));
@@ -305,7 +313,8 @@ void main() {
           detailsScreenSource,
           isNot(contains('onPressed: hostCallSecureApiAction(')),
         );
-        expect(routeDemoScreenSource, contains('popToMiniProgramRootAction('));
+        expect(detailsScreenSource, contains('// popToMiniProgramRootAction('));
+        expect(await routeDemoScreenFile.exists(), isFalse);
         expect(helperSource, contains("'action': 'callSecureApi'"));
         expect(
           readmeSource,
