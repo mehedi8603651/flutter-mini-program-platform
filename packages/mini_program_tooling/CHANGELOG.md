@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.24
+
+- clear transient managed preview-host build output before every
+  `miniprogram preview` launch so repeated Chrome preview sessions do not
+  reuse stale shader artifacts and crash on startup
+- remove stale preview-host crash logs as part of the same launch reset
+- add regression coverage for preview-host reuse with pre-existing build files
+
 ## 0.2.23
 
 - replace the route-heavy starter scaffold with a cleaner two-screen

@@ -338,6 +338,82 @@ void main() {
         );
       },
     );
+
+    test(
+      'clears stale preview host build output before launching flutter run',
+      () async {
+        final fixture = await _writePreviewBuildFixture(
+          tempDir.path,
+          miniProgramId: 'coupon_center',
+        );
+        final previewHostRootPath = p.join(
+          fixture.miniProgramRootPath,
+          '.mini_program',
+          'preview_host',
+        );
+        final staleBuildFile = File(
+          p.join(
+            previewHostRootPath,
+            'build',
+            'flutter_assets',
+            'shaders',
+            'ink_sparkle.frag.spirv',
+          ),
+        );
+        await staleBuildFile.parent.create(recursive: true);
+        await staleBuildFile.writeAsString('', flush: true);
+        final staleCrashLog = File(
+          p.join(previewHostRootPath, 'flutter_01.log'),
+        );
+        await staleCrashLog.parent.create(recursive: true);
+        await staleCrashLog.writeAsString('crash log', flush: true);
+
+        final hostInitializer = _FakePreviewHostInitializer();
+        var buildDirectoryExistsAtLaunch = true;
+        var crashLogExistsAtLaunch = true;
+        final controller = MiniProgramPreviewController(
+          builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+          hostInitializer: hostInitializer,
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                buildDirectoryExistsAtLaunch = Directory(
+                  p.join(workingDirectory, 'build'),
+                ).existsSync();
+                crashLogExistsAtLaunch = File(
+                  p.join(workingDirectory, 'flutter_01.log'),
+                ).existsSync();
+                return StartedPreviewProcess(
+                  pid: 1,
+                  stdout: const Stream<List<int>>.empty(),
+                  stderr: const Stream<List<int>>.empty(),
+                  exitCode: Future<int>.value(0),
+                  kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+                );
+              },
+        );
+
+        final exitCode = await controller.preview(
+          MiniProgramPreviewRequest(
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: fixture.miniProgramRootPath,
+            repoRootPath: fixture.repoRootPath,
+            deviceId: 'chrome',
+          ),
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+        );
+
+        expect(exitCode, 0);
+        expect(hostInitializer.invocationCount, 1);
+        expect(buildDirectoryExistsAtLaunch, isFalse);
+        expect(crashLogExistsAtLaunch, isFalse);
+      },
+    );
   });
 }
 
