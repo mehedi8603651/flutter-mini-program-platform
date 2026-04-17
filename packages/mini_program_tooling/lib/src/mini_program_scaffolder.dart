@@ -11,10 +11,7 @@ class MiniProgramScaffoldRequest {
     this.outputRootPath,
     this.title,
     this.description,
-    this.capabilities = const <String>{
-      'analytics',
-      'native_navigation',
-    },
+    this.capabilities = const <String>{'analytics', 'native_navigation'},
     this.force = false,
   });
 
@@ -136,19 +133,10 @@ class MiniProgramScaffolder {
         packageName: packageName,
         title: title,
       ),
-      p.join(
-        miniProgramRootPath,
-        'lib',
-        'default_stac_options.dart',
-      ): _buildDefaultStacOptions(
-        miniProgramId: miniProgramId,
-        title: title,
-      ),
-      p.join(
-        miniProgramRootPath,
-        'lib',
-        'host_action_helpers.dart',
-      ): _buildHostActionHelpers(),
+      p.join(miniProgramRootPath, 'lib', 'default_stac_options.dart'):
+          _buildDefaultStacOptions(miniProgramId: miniProgramId, title: title),
+      p.join(miniProgramRootPath, 'lib', 'host_action_helpers.dart'):
+          _buildHostActionHelpers(),
       p.join(
         miniProgramRootPath,
         'stac',
@@ -244,10 +232,11 @@ class MiniProgramScaffolder {
       );
     }
 
-    final unknownCapabilities = normalized
-        .where((capability) => !_knownCapabilities.containsKey(capability))
-        .toList()
-      ..sort();
+    final unknownCapabilities =
+        normalized
+            .where((capability) => !_knownCapabilities.containsKey(capability))
+            .toList()
+          ..sort();
 
     if (unknownCapabilities.isNotEmpty) {
       throw MiniProgramScaffoldException(
@@ -332,10 +321,8 @@ class MiniProgramScaffolder {
     return const JsonEncoder.withIndent('  ').convert(manifest);
   }
 
-  String _buildPubspec({
-    required String packageName,
-    required String title,
-  }) => '''
+  String _buildPubspec({required String packageName, required String title}) =>
+      '''
 name: $packageName
 description: Portable Stac-authored $title mini-program.
 publish_to: none
@@ -354,7 +341,8 @@ dev_dependencies:
   String _buildDefaultStacOptions({
     required String miniProgramId,
     required String title,
-  }) => '''
+  }) =>
+      '''
 import 'package:stac_core/stac_core.dart';
 
 StacOptions get defaultStacOptions => const StacOptions(
@@ -577,15 +565,13 @@ import 'package:$packageName/host_action_helpers.dart';
 StacWidget $screenFunctionName() {
   return StacScaffold(
     appBar: StacAppBar(title: StacText(data: '$title')),
-    body: StacSafeArea(
-      child: StacSingleChildScrollView(
-        padding: StacEdgeInsets.all(24),
-        child: StacColumn(
-          crossAxisAlignment: StacCrossAxisAlignment.start,
-          children: [
+    body: StacSingleChildScrollView(
+      padding: StacEdgeInsets.all(24),
+      child: StacColumn(
+        crossAxisAlignment: StacCrossAxisAlignment.start,
+        children: [
 ${widgets.join()}
-          ],
-        ),
+        ],
       ),
     ),
   );
@@ -642,15 +628,13 @@ import 'package:$packageName/host_action_helpers.dart';
 StacWidget $screenFunctionName() {
   return StacScaffold(
     appBar: StacAppBar(title: StacText(data: '$title details')),
-    body: StacSafeArea(
-      child: StacSingleChildScrollView(
-        padding: StacEdgeInsets.all(24),
-        child: StacColumn(
-          crossAxisAlignment: StacCrossAxisAlignment.start,
-          children: [
+    body: StacSingleChildScrollView(
+      padding: StacEdgeInsets.all(24),
+      child: StacColumn(
+        crossAxisAlignment: StacCrossAxisAlignment.start,
+        children: [
 ${widgets.join()}
-          ],
-        ),
+        ],
       ),
     ),
   );
@@ -803,7 +787,8 @@ StacAction hostCallSecureApiAction({
 }
 ''';
 
-  String _buildTrackEventButton(String miniProgramId) => '''
+  String _buildTrackEventButton(String miniProgramId) =>
+      '''
             StacFilledButton(
               onPressed: hostTrackEventAction(
                 requestId: '$miniProgramId-track-open',
@@ -823,7 +808,8 @@ StacAction hostCallSecureApiAction({
             ),
 ''';
 
-  String _buildOpenNativeScreenButton(String miniProgramId) => '''
+  String _buildOpenNativeScreenButton(String miniProgramId) =>
+      '''
             StacSizedBox(height: 12),
             StacOutlinedButton(
               onPressed: hostOpenNativeScreenAction(
@@ -839,7 +825,8 @@ StacAction hostCallSecureApiAction({
             ),
 ''';
 
-  String _buildSecureApiButton(String miniProgramId) => '''
+  String _buildSecureApiButton(String miniProgramId) =>
+      '''
             StacSizedBox(height: 12),
             StacOutlinedButton(
               onPressed: hostCallSecureApiAction(
@@ -865,10 +852,12 @@ StacAction hostCallSecureApiAction({
     }
 
     final first = segments.first.toLowerCase();
-    final rest = segments.skip(1).map(
-      (segment) =>
-          '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}',
-    );
+    final rest = segments
+        .skip(1)
+        .map(
+          (segment) =>
+              '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}',
+        );
 
     return '$first${rest.join()}';
   }

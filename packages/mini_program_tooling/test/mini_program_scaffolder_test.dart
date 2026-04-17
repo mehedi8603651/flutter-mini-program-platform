@@ -13,9 +13,9 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp(
         'mini_program_tooling_scaffold_',
       );
-      await Directory(p.join(tempDir.path, 'mini_programs')).create(
-        recursive: true,
-      );
+      await Directory(
+        p.join(tempDir.path, 'mini_programs'),
+      ).create(recursive: true);
     });
 
     tearDown(() async {
@@ -24,173 +24,227 @@ void main() {
       }
     });
 
-    test('creates a buildable starter scaffold with default capabilities', () async {
-      final result = await const MiniProgramScaffolder().scaffold(
-        MiniProgramScaffoldRequest(
-          repoRootPath: tempDir.path,
-          miniProgramId: 'coupon_center',
-        ),
-      );
+    test(
+      'creates a buildable starter scaffold with default capabilities',
+      () async {
+        final result = await const MiniProgramScaffolder().scaffold(
+          MiniProgramScaffoldRequest(
+            repoRootPath: tempDir.path,
+            miniProgramId: 'coupon_center',
+          ),
+        );
 
-      final miniProgramRoot = p.join(tempDir.path, 'mini_programs', 'coupon_center');
-      final manifest = jsonDecode(
-        await File(p.join(miniProgramRoot, 'manifest.json')).readAsString(),
-      ) as Map<String, dynamic>;
-      final screenFile = File(
-        p.join(miniProgramRoot, 'stac', 'screens', 'coupon_center_home.dart'),
-      );
-      final detailsScreenFile = File(
-        p.join(
-          miniProgramRoot,
-          'stac',
-          'screens',
-          'coupon_center_details.dart',
-        ),
-      );
-      final helperFile = File(
-        p.join(miniProgramRoot, 'lib', 'host_action_helpers.dart'),
-      );
+        final miniProgramRoot = p.join(
+          tempDir.path,
+          'mini_programs',
+          'coupon_center',
+        );
+        final manifest =
+            jsonDecode(
+                  await File(
+                    p.join(miniProgramRoot, 'manifest.json'),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>;
+        final screenFile = File(
+          p.join(miniProgramRoot, 'stac', 'screens', 'coupon_center_home.dart'),
+        );
+        final detailsScreenFile = File(
+          p.join(
+            miniProgramRoot,
+            'stac',
+            'screens',
+            'coupon_center_details.dart',
+          ),
+        );
+        final helperFile = File(
+          p.join(miniProgramRoot, 'lib', 'host_action_helpers.dart'),
+        );
 
-      expect(result.miniProgramId, 'coupon_center');
-      expect(manifest['entry'], 'coupon_center_home');
-      expect(
-        manifest['requiredCapabilities'],
-        <String>['analytics', 'native_navigation'],
-      );
-      expect(
-        (manifest['cachePolicy'] as Map<String, dynamic>)['manifest']
-            as Map<String, dynamic>,
-        containsPair('mode', 'staleWhileError'),
-      );
+        expect(result.miniProgramId, 'coupon_center');
+        expect(manifest['entry'], 'coupon_center_home');
+        expect(manifest['requiredCapabilities'], <String>[
+          'analytics',
+          'native_navigation',
+        ]);
+        expect(
+          (manifest['cachePolicy'] as Map<String, dynamic>)['manifest']
+              as Map<String, dynamic>,
+          containsPair('mode', 'staleWhileError'),
+        );
 
-      final screenSource = await screenFile.readAsString();
-      final detailsScreenSource = await detailsScreenFile.readAsString();
-      final helperSource = await helperFile.readAsString();
-      expect(screenSource, contains("@StacScreen(screenName: 'coupon_center_home')"));
-      expect(
-        screenSource,
-        contains(
-          "import 'package:coupon_center_mini_program/host_action_helpers.dart';",
-        ),
-      );
-      expect(screenSource, contains('openMiniProgramScreenAction('));
-      expect(screenSource, contains('Continue to second screen'));
-      expect(screenSource, contains('hostTrackEventAction('));
-      expect(screenSource, contains('Track starter event (logs only)'));
-      expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
-      expect(screenSource, isNot(contains('jsonData:')));
-      expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
-      expect(
-        detailsScreenSource,
-        contains("@StacScreen(screenName: 'coupon_center_details')"),
-      );
-      expect(detailsScreenSource, contains('popMiniProgramScreenAction('));
-      expect(detailsScreenSource, contains('Back to first screen'));
-      expect(detailsScreenSource, contains('hostOpenNativeScreenAction('));
-      expect(detailsScreenSource, contains('Open sample native screen'));
-      expect(helperSource, contains('StacAction hostTrackEventAction('));
-      expect(helperSource, contains("'action': 'trackEvent'"));
-      expect(helperSource, contains('StacAction openMiniProgramScreenAction('));
-      expect(helperSource, contains("'action': 'openMiniProgramScreen'"));
-      expect(helperSource, contains('StacAction resetMiniProgramStackAction('));
-      expect(helperSource, contains("'action': 'resetMiniProgramStack'"));
-      expect(
-        helperSource,
-        contains('StacAction replaceMiniProgramScreenAction('),
-      );
-      expect(helperSource, contains("'action': 'replaceMiniProgramScreen'"));
-      expect(helperSource, contains('StacAction popMiniProgramScreenAction('));
-      expect(helperSource, contains("'action': 'popMiniProgramScreen'"));
-      expect(helperSource, contains('StacAction popToMiniProgramRootAction('));
-      expect(helperSource, contains("'action': 'popToMiniProgramRoot'"));
-      expect(
-        helperSource,
-        contains('StacAction popToMiniProgramScreenAction('),
-      );
-      expect(helperSource, contains("'action': 'popToMiniProgramScreen'"));
-      expect(helperSource, contains('StacAction hostOpenNativeScreenAction('));
-      expect(helperSource, contains("'action': 'openNativeScreen'"));
-      expect(helperSource, contains("'route': route"));
-      expect(helperSource, contains('StacAction hostCallSecureApiAction('));
-      expect(helperSource, contains("'action': 'callSecureApi'"));
+        final screenSource = await screenFile.readAsString();
+        final detailsScreenSource = await detailsScreenFile.readAsString();
+        final helperSource = await helperFile.readAsString();
+        expect(
+          screenSource,
+          contains("@StacScreen(screenName: 'coupon_center_home')"),
+        );
+        expect(
+          screenSource,
+          contains(
+            "import 'package:coupon_center_mini_program/host_action_helpers.dart';",
+          ),
+        );
+        expect(screenSource, contains('openMiniProgramScreenAction('));
+        expect(screenSource, contains('Continue to second screen'));
+        expect(screenSource, contains('hostTrackEventAction('));
+        expect(screenSource, contains('Track starter event (logs only)'));
+        expect(screenSource, contains('body: StacSingleChildScrollView('));
+        expect(screenSource, isNot(contains('body: StacSafeArea(')));
+        expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
+        expect(screenSource, isNot(contains('jsonData:')));
+        expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
+        expect(
+          detailsScreenSource,
+          contains("@StacScreen(screenName: 'coupon_center_details')"),
+        );
+        expect(
+          detailsScreenSource,
+          contains('body: StacSingleChildScrollView('),
+        );
+        expect(detailsScreenSource, isNot(contains('body: StacSafeArea(')));
+        expect(detailsScreenSource, contains('popMiniProgramScreenAction('));
+        expect(detailsScreenSource, contains('Back to first screen'));
+        expect(detailsScreenSource, contains('hostOpenNativeScreenAction('));
+        expect(detailsScreenSource, contains('Open sample native screen'));
+        expect(helperSource, contains('StacAction hostTrackEventAction('));
+        expect(helperSource, contains("'action': 'trackEvent'"));
+        expect(
+          helperSource,
+          contains('StacAction openMiniProgramScreenAction('),
+        );
+        expect(helperSource, contains("'action': 'openMiniProgramScreen'"));
+        expect(
+          helperSource,
+          contains('StacAction resetMiniProgramStackAction('),
+        );
+        expect(helperSource, contains("'action': 'resetMiniProgramStack'"));
+        expect(
+          helperSource,
+          contains('StacAction replaceMiniProgramScreenAction('),
+        );
+        expect(helperSource, contains("'action': 'replaceMiniProgramScreen'"));
+        expect(
+          helperSource,
+          contains('StacAction popMiniProgramScreenAction('),
+        );
+        expect(helperSource, contains("'action': 'popMiniProgramScreen'"));
+        expect(
+          helperSource,
+          contains('StacAction popToMiniProgramRootAction('),
+        );
+        expect(helperSource, contains("'action': 'popToMiniProgramRoot'"));
+        expect(
+          helperSource,
+          contains('StacAction popToMiniProgramScreenAction('),
+        );
+        expect(helperSource, contains("'action': 'popToMiniProgramScreen'"));
+        expect(
+          helperSource,
+          contains('StacAction hostOpenNativeScreenAction('),
+        );
+        expect(helperSource, contains("'action': 'openNativeScreen'"));
+        expect(helperSource, contains("'route': route"));
+        expect(helperSource, contains('StacAction hostCallSecureApiAction('));
+        expect(helperSource, contains("'action': 'callSecureApi'"));
 
-      expect(
-        await File(p.join(miniProgramRoot, 'pubspec.yaml')).exists(),
-        isTrue,
-      );
-      expect(
-        await File(
-          p.join(miniProgramRoot, 'lib', 'default_stac_options.dart'),
-        ).exists(),
-        isTrue,
-      );
-      expect(await helperFile.exists(), isTrue);
-      expect(result.createdPaths, isNotEmpty);
-    });
+        expect(
+          await File(p.join(miniProgramRoot, 'pubspec.yaml')).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
+            p.join(miniProgramRoot, 'lib', 'default_stac_options.dart'),
+          ).exists(),
+          isTrue,
+        );
+        expect(await helperFile.exists(), isTrue);
+        expect(result.createdPaths, isNotEmpty);
+      },
+    );
 
-    test('uses noCache and secure API starter action when secure_api is requested', () async {
-      final result = await const MiniProgramScaffolder().scaffold(
-        MiniProgramScaffoldRequest(
-          repoRootPath: tempDir.path,
-          miniProgramId: 'claim_center',
-          capabilities: const <String>{'analytics', 'secure_api'},
-        ),
-      );
+    test(
+      'uses noCache and secure API starter action when secure_api is requested',
+      () async {
+        final result = await const MiniProgramScaffolder().scaffold(
+          MiniProgramScaffoldRequest(
+            repoRootPath: tempDir.path,
+            miniProgramId: 'claim_center',
+            capabilities: const <String>{'analytics', 'secure_api'},
+          ),
+        );
 
-      final manifest = jsonDecode(
-        await File(
-          p.join(result.miniProgramRootPath, 'manifest.json'),
-        ).readAsString(),
-      ) as Map<String, dynamic>;
-      final screenSource = await File(
-        p.join(result.miniProgramRootPath, 'stac', 'screens', 'claim_center_home.dart'),
-      ).readAsString();
-      final detailsScreenSource = await File(
-        p.join(
-          result.miniProgramRootPath,
-          'stac',
-          'screens',
-          'claim_center_details.dart',
-        ),
-      ).readAsString();
-      final helperSource = await File(
-        p.join(result.miniProgramRootPath, 'lib', 'host_action_helpers.dart'),
-      ).readAsString();
+        final manifest =
+            jsonDecode(
+                  await File(
+                    p.join(result.miniProgramRootPath, 'manifest.json'),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>;
+        final screenSource = await File(
+          p.join(
+            result.miniProgramRootPath,
+            'stac',
+            'screens',
+            'claim_center_home.dart',
+          ),
+        ).readAsString();
+        final detailsScreenSource = await File(
+          p.join(
+            result.miniProgramRootPath,
+            'stac',
+            'screens',
+            'claim_center_details.dart',
+          ),
+        ).readAsString();
+        final helperSource = await File(
+          p.join(result.miniProgramRootPath, 'lib', 'host_action_helpers.dart'),
+        ).readAsString();
 
-      expect(
-        manifest['requiredCapabilities'],
-        <String>['analytics', 'secure_api'],
-      );
-      expect(
-        (manifest['cachePolicy'] as Map<String, dynamic>)['manifest']
-            as Map<String, dynamic>,
-        containsPair('mode', 'noCache'),
-      );
-      expect(screenSource, contains('openMiniProgramScreenAction('));
-      expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
-      expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
-      expect(detailsScreenSource, contains('hostCallSecureApiAction('));
-      expect(helperSource, contains("'action': 'callSecureApi'"));
-    });
+        expect(manifest['requiredCapabilities'], <String>[
+          'analytics',
+          'secure_api',
+        ]);
+        expect(
+          (manifest['cachePolicy'] as Map<String, dynamic>)['manifest']
+              as Map<String, dynamic>,
+          containsPair('mode', 'noCache'),
+        );
+        expect(screenSource, contains('openMiniProgramScreenAction('));
+        expect(screenSource, isNot(contains('hostOpenNativeScreenAction(')));
+        expect(screenSource, isNot(contains('hostCallSecureApiAction(')));
+        expect(detailsScreenSource, contains('hostCallSecureApiAction('));
+        expect(helperSource, contains("'action': 'callSecureApi'"));
+      },
+    );
 
-    test('supports standalone output root outside repo mini_programs', () async {
-      final standaloneRoot = p.join(tempDir.path, 'standalone_coupon_center');
+    test(
+      'supports standalone output root outside repo mini_programs',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'standalone_coupon_center');
 
-      final result = await const MiniProgramScaffolder().scaffold(
-        MiniProgramScaffoldRequest(
-          miniProgramId: 'coupon_center',
-          outputRootPath: standaloneRoot,
-        ),
-      );
+        final result = await const MiniProgramScaffolder().scaffold(
+          MiniProgramScaffoldRequest(
+            miniProgramId: 'coupon_center',
+            outputRootPath: standaloneRoot,
+          ),
+        );
 
-      expect(result.repoRootPath, isNull);
-      expect(result.miniProgramRootPath, standaloneRoot);
-      expect(await File(p.join(standaloneRoot, 'manifest.json')).exists(), isTrue);
+        expect(result.repoRootPath, isNull);
+        expect(result.miniProgramRootPath, standaloneRoot);
+        expect(
+          await File(p.join(standaloneRoot, 'manifest.json')).exists(),
+          isTrue,
+        );
 
-      final readme = await File(p.join(standaloneRoot, 'README.md')).readAsString();
-      expect(readme, contains('miniprogram doctor'));
-      expect(readme, contains('miniprogram build coupon_center'));
-    });
+        final readme = await File(
+          p.join(standaloneRoot, 'README.md'),
+        ).readAsString();
+        expect(readme, contains('miniprogram doctor'));
+        expect(readme, contains('miniprogram build coupon_center'));
+      },
+    );
 
     test('fails on unknown capability values', () async {
       expect(

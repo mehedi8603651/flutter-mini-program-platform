@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.20
+
+- remove the extra scaffolded `StacSafeArea` wrapper from generated starter
+  screens so mini-program bodies do not render with confusing blank space
+  below the app bar
+- add regression coverage to keep new generated screens on the direct
+  `StacSingleChildScrollView` body layout
+
 ## 0.2.19
 
 - fix preview watch mode so build output updates under `stac/.build` do not
