@@ -432,6 +432,111 @@ void main() {
     );
 
     test(
+      'launches Android USB preview with adb reverse and localhost base URL',
+      () async {
+        final fixture = await _writePreviewBuildFixture(
+          tempDir.path,
+          miniProgramId: 'coupon_center',
+        );
+        final hostInitializer = _FakePreviewHostInitializer();
+        PreviewProcessCall? processCall;
+        final shellCalls = <List<String>>[];
+        final controller = MiniProgramPreviewController(
+          builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+          hostInitializer: hostInitializer,
+          shellRunner:
+              (
+                String executable,
+                List<String> arguments, {
+                String? workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                shellCalls.add(<String>[executable, ...arguments]);
+                if (arguments.length == 1 && arguments.single == 'version') {
+                  return ProcessResult(0, 0, 'Android Debug Bridge', '');
+                }
+                if (arguments.length == 1 && arguments.single == 'devices') {
+                  return ProcessResult(
+                    0,
+                    0,
+                    'List of devices attached\nR58M123ABC\tdevice\n',
+                    '',
+                  );
+                }
+                if (arguments.length == 5 &&
+                    arguments[0] == '-s' &&
+                    arguments[1] == 'R58M123ABC' &&
+                    arguments[2] == 'reverse') {
+                  return ProcessResult(0, 0, '', '');
+                }
+                return ProcessResult(1, 1, '', 'unexpected adb invocation');
+              },
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                processCall = PreviewProcessCall(
+                  executable: executable,
+                  arguments: arguments,
+                  workingDirectory: workingDirectory,
+                );
+                return StartedPreviewProcess(
+                  pid: 1,
+                  stdout: const Stream<List<int>>.empty(),
+                  stderr: const Stream<List<int>>.empty(),
+                  exitCode: Future<int>.value(0),
+                  kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+                );
+              },
+        );
+
+        final stdoutBuffer = StringBuffer();
+        final exitCode = await controller.preview(
+          MiniProgramPreviewRequest(
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: fixture.miniProgramRootPath,
+            repoRootPath: fixture.repoRootPath,
+            deviceId: 'r58m123abc',
+          ),
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+        );
+
+        expect(exitCode, 0);
+        expect(processCall, isNotNull);
+        expect(
+          processCall!.arguments,
+          containsAll(<String>['run', '-d', 'R58M123ABC']),
+        );
+        expect(
+          processCall!.arguments.any(
+            (argument) => argument.startsWith(
+              '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://127.0.0.1:',
+            ),
+          ),
+          isTrue,
+        );
+        expect(hostInitializer.lastRequest!.requiredPlatforms, const <String>{
+          'android',
+        });
+        expect(
+          shellCalls.any(
+            (call) =>
+                call.length >= 6 &&
+                call[1] == '-s' &&
+                call[2] == 'R58M123ABC' &&
+                call[3] == 'reverse',
+          ),
+          isTrue,
+        );
+        expect(stdoutBuffer.toString(), contains('ADB reverse: R58M123ABC'));
+      },
+    );
+
+    test(
       'clears stale preview host build output before launching flutter run',
       () async {
         final fixture = await _writePreviewBuildFixture(

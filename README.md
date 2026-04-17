@@ -218,6 +218,7 @@ V1 preview targets:
 - `chrome`
 - `windows`
 - `emulator-5554` and other Android emulator ids
+- Android USB device ids such as `R58M123ABC`
 
 Preview behavior:
 
@@ -235,6 +236,8 @@ Preview mode rules:
 - keeps the last successful UI visible if a rebuild fails
 - Android emulator preview uses the managed host app plus an internal preview
   server exposed to the emulator through `http://10.0.2.2:<port>/preview/`
+- Android USB preview auto-applies `adb reverse tcp:<port> tcp:<port>` and
+  uses `http://127.0.0.1:<port>/preview/` inside the device session
 
 Preview capability limits in v1:
 

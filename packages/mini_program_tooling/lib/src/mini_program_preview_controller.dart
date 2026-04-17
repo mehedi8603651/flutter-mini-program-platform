@@ -9,18 +9,28 @@ import 'mini_program_builder.dart';
 import 'mini_program_preview_host_initializer.dart';
 import 'mini_program_preview_server.dart';
 
+typedef PreviewShellRunner =
+    Future<ProcessResult> Function(
+      String executable,
+      List<String> arguments, {
+      String? workingDirectory,
+      Map<String, String>? environment,
+    });
+
 class PreviewLaunchTarget {
   const PreviewLaunchTarget({
     required this.deviceId,
     required this.flutterPlatforms,
     required this.previewServerBindAddress,
     required this.previewServerPublicHost,
+    this.requiresAdbReverse = false,
   });
 
   final String deviceId;
   final Set<String> flutterPlatforms;
   final InternetAddress previewServerBindAddress;
   final String previewServerPublicHost;
+  final bool requiresAdbReverse;
 }
 
 typedef PreviewProcessStarter =
@@ -181,11 +191,13 @@ class MiniProgramPreviewController {
     MiniProgramPreviewHostInitializer hostInitializer =
         const MiniProgramPreviewHostInitializer(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
+    PreviewShellRunner shellRunner = _defaultShellRunner,
     PreviewProcessStarter processStarter = _defaultProcessStarter,
   }) : _builder = builder,
        _bundleLoader = bundleLoader,
        _hostInitializer = hostInitializer,
        _stateStore = stateStore,
+       _shellRunner = shellRunner,
        _processStarter = processStarter;
 
   static const Set<String> supportedDeviceIds = <String>{'chrome', 'windows'};
@@ -197,6 +209,7 @@ class MiniProgramPreviewController {
   final MiniProgramPreviewBundleLoader _bundleLoader;
   final MiniProgramPreviewHostInitializer _hostInitializer;
   final LocalCliStateStore _stateStore;
+  final PreviewShellRunner _shellRunner;
   final PreviewProcessStarter _processStarter;
 
   Future<int> preview(
@@ -204,8 +217,8 @@ class MiniProgramPreviewController {
     required StringSink stdoutSink,
     required StringSink stderrSink,
   }) async {
-    final normalizedDeviceId = request.deviceId.trim().toLowerCase();
-    final launchTarget = _resolveLaunchTarget(normalizedDeviceId);
+    final rawDeviceId = request.deviceId.trim();
+    final launchTarget = await _resolveLaunchTarget(rawDeviceId);
 
     final miniProgramRootPath = p.normalize(
       p.absolute(request.miniProgramRootPath),
@@ -247,6 +260,16 @@ class MiniProgramPreviewController {
     try {
       stdoutSink.writeln('Preview server: ${previewServer.baseUri}');
       stdoutSink.writeln('Managed preview host: $previewHostRootPath');
+      await _configureAdbReverseIfNeeded(
+        launchTarget,
+        port: previewServer.baseUri.port,
+      );
+      if (launchTarget.requiresAdbReverse) {
+        stdoutSink.writeln(
+          'ADB reverse: ${launchTarget.deviceId} '
+          '(tcp:${previewServer.baseUri.port} -> tcp:${previewServer.baseUri.port})',
+        );
+      }
 
       flutterRunProcess = await _processStarter(
         executable: 'flutter',
@@ -354,8 +377,9 @@ class MiniProgramPreviewController {
     );
   }
 
-  PreviewLaunchTarget _resolveLaunchTarget(String deviceId) {
-    final normalizedDeviceId = deviceId.trim().toLowerCase();
+  Future<PreviewLaunchTarget> _resolveLaunchTarget(String deviceId) async {
+    final trimmedDeviceId = deviceId.trim();
+    final normalizedDeviceId = trimmedDeviceId.toLowerCase();
     if (normalizedDeviceId == 'chrome') {
       return PreviewLaunchTarget(
         deviceId: normalizedDeviceId,
@@ -383,6 +407,17 @@ class MiniProgramPreviewController {
       );
     }
 
+    final adbDeviceId = await _resolveConnectedAdbDeviceId(trimmedDeviceId);
+    if (adbDeviceId != null) {
+      return PreviewLaunchTarget(
+        deviceId: adbDeviceId,
+        flutterPlatforms: const <String>{'android'},
+        previewServerBindAddress: InternetAddress.anyIPv4,
+        previewServerPublicHost: InternetAddress.loopbackIPv4.address,
+        requiresAdbReverse: true,
+      );
+    }
+
     throw MiniProgramPreviewException(_unsupportedDeviceMessage(deviceId));
   }
 
@@ -390,10 +425,161 @@ class MiniProgramPreviewController {
     final supported = <String>[
       ...supportedDeviceIds.toList()..sort(),
       'Android emulator ids like emulator-5554',
+      'Android USB device ids like R58M123ABC',
     ];
     return 'Preview currently supports only these devices: '
         '${supported.join(', ')}. '
         'Received: $deviceId';
+  }
+
+  Future<String?> _resolveConnectedAdbDeviceId(String requestedDeviceId) async {
+    final adbExecutable = await _resolveAdbExecutable();
+    if (adbExecutable == null) {
+      return null;
+    }
+
+    final devicesResult = await _tryShell(adbExecutable, const <String>[
+      'devices',
+    ]);
+    if (devicesResult == null || devicesResult.exitCode != 0) {
+      return null;
+    }
+
+    final connectedDeviceIds = const LineSplitter()
+        .convert('${devicesResult.stdout}')
+        .map((line) => line.trim())
+        .where(
+          (line) =>
+              line.isNotEmpty && !line.startsWith('List of devices attached'),
+        )
+        .map((line) => line.split(RegExp(r'\s+')))
+        .where((parts) => parts.length >= 2 && parts[1] == 'device')
+        .map((parts) => parts.first)
+        .where(
+          (deviceId) =>
+              !_androidEmulatorDeviceIdPattern.hasMatch(deviceId.toLowerCase()),
+        )
+        .toList();
+
+    for (final connectedDeviceId in connectedDeviceIds) {
+      if (connectedDeviceId.toLowerCase() == requestedDeviceId.toLowerCase()) {
+        return connectedDeviceId;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _configureAdbReverseIfNeeded(
+    PreviewLaunchTarget launchTarget, {
+    required int port,
+  }) async {
+    if (!launchTarget.requiresAdbReverse) {
+      return;
+    }
+
+    final adbExecutable = await _resolveAdbExecutable();
+    if (adbExecutable == null) {
+      throw const MiniProgramPreviewException(
+        'Android USB preview requires adb, but no adb executable was found.',
+      );
+    }
+
+    final reverseResult = await _tryShell(adbExecutable, <String>[
+      '-s',
+      launchTarget.deviceId,
+      'reverse',
+      'tcp:$port',
+      'tcp:$port',
+    ]);
+    if (reverseResult == null) {
+      throw MiniProgramPreviewException(
+        'Android USB preview could not run adb reverse for ${launchTarget.deviceId}.',
+      );
+    }
+    if (reverseResult.exitCode == 0) {
+      return;
+    }
+
+    final stderrText = '${reverseResult.stderr}'.trim();
+    final stdoutText = '${reverseResult.stdout}'.trim();
+    throw MiniProgramPreviewException(
+      [
+        'Android USB preview requires adb reverse, but it failed for ${launchTarget.deviceId}.',
+        'Command: adb -s ${launchTarget.deviceId} reverse tcp:$port tcp:$port',
+        if (stdoutText.isNotEmpty) 'stdout:\n$stdoutText',
+        if (stderrText.isNotEmpty) 'stderr:\n$stderrText',
+      ].join('\n'),
+    );
+  }
+
+  Future<String?> _resolveAdbExecutable() async {
+    final candidates = <String>[
+      if (Platform.isWindows)
+        p.join(
+          _resolveLocalAppDataDirectoryPath(),
+          'Android',
+          'Sdk',
+          'platform-tools',
+          'adb.exe',
+        ),
+      if (Platform.environment['ANDROID_SDK_ROOT'] case final sdkRoot?
+          when sdkRoot.trim().isNotEmpty)
+        p.join(
+          sdkRoot,
+          'platform-tools',
+          Platform.isWindows ? 'adb.exe' : 'adb',
+        ),
+      if (Platform.environment['ANDROID_HOME'] case final androidHome?
+          when androidHome.trim().isNotEmpty)
+        p.join(
+          androidHome,
+          'platform-tools',
+          Platform.isWindows ? 'adb.exe' : 'adb',
+        ),
+      Platform.isWindows ? 'adb.exe' : 'adb',
+    ];
+
+    for (final candidate in candidates.toSet()) {
+      final result = await _tryShell(candidate, const <String>['version']);
+      if (result != null && result.exitCode == 0) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  Future<ProcessResult?> _tryShell(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+  }) async {
+    try {
+      return await _shellRunner(
+        executable,
+        arguments,
+        workingDirectory: workingDirectory,
+        environment: environment,
+      );
+    } on ProcessException {
+      return null;
+    }
+  }
+
+  static String _resolveLocalAppDataDirectoryPath() {
+    final localAppData = Platform.environment['LOCALAPPDATA'];
+    if (localAppData != null && localAppData.trim().isNotEmpty) {
+      return localAppData;
+    }
+
+    final userProfile = Platform.environment['USERPROFILE'];
+    if (userProfile != null && userProfile.trim().isNotEmpty) {
+      return p.join(userProfile, 'AppData', 'Local');
+    }
+
+    return Directory.current.path;
   }
 
   Future<void> _resetTransientPreviewHostState(String hostRootPath) async {
@@ -522,6 +708,21 @@ class MiniProgramPreviewController {
       stderr: process.stderr,
       exitCode: process.exitCode,
       kill: ([signal = ProcessSignal.sigterm]) => process.kill(signal),
+    );
+  }
+
+  static Future<ProcessResult> _defaultShellRunner(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+  }) {
+    return Process.run(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      runInShell: true,
     );
   }
 }

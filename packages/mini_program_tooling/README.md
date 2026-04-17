@@ -31,7 +31,7 @@ miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
 miniprogram build [mini-program-id]
-miniprogram preview -d <chrome|windows|emulator-5554> [mini-program-id]
+miniprogram preview -d <chrome|windows|emulator-5554|android-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id]
 miniprogram embed init
@@ -67,6 +67,7 @@ Preview v1 currently supports:
 - `chrome`
 - `windows`
 - Android emulator ids such as `emulator-5554`
+- Android USB device ids such as `R58M123ABC`
 
 `preview` is a developer-only loop. It does not require `backend init` or
 `backend start`, does not publish into `backend/api/`, and keeps a managed
@@ -81,6 +82,8 @@ During preview, the CLI:
 - rebuilds on save and triggers a full preview refresh
 - uses `http://10.0.2.2:<port>/preview/` automatically for Android emulator
   preview sessions
+- auto-applies `adb reverse tcp:<port> tcp:<port>` for Android USB preview and
+  uses `http://127.0.0.1:<port>/preview/` inside the device session
 
 Preview capability behavior in v1:
 

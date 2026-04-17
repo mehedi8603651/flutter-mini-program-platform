@@ -19,7 +19,7 @@ change:
   - `miniprogram doctor`
   - `miniprogram env init|use|status`
   - `miniprogram build`
-  - `miniprogram preview -d <chrome|windows|emulator-5554>`
+  - `miniprogram preview -d <chrome|windows|emulator-5554|android-device-id>`
   - `miniprogram validate`
   - `miniprogram publish`
   - `miniprogram embed init`
@@ -33,7 +33,7 @@ change:
 - managed pinned Stac builder inside the tooling package
 - managed preview host under `.mini_program/preview_host`
 - internal preview server with watch, rebuild, and full preview refresh for
-  Chrome and Windows
+  Chrome, Windows, Android emulator, and Android USB preview
 - hosted embed dependencies through `mini_program_sdk` and
   `mini_program_contracts`
 
@@ -72,6 +72,7 @@ Managed preview is now shipped for:
 - `miniprogram preview -d chrome`
 - `miniprogram preview -d windows`
 - `miniprogram preview -d emulator-5554`
+- `miniprogram preview -d <android-usb-device-id>`
 
 Current preferred developer flow:
 
@@ -114,10 +115,11 @@ Shipped per-target refresh behavior:
 - Windows desktop: restart the preview window or recreate the preview route
 - Android emulator: recreate the preview route inside the managed Android host
   while using `10.0.2.2` to reach the preview transport
+- Android USB: recreate the preview route inside the managed Android host
+  while using `adb reverse` plus `127.0.0.1` to reach the preview transport
 
 Next preview work:
 
-- Android USB physical-device preview support
 - Android Wi-Fi physical-device preview support
 - optional advanced form:
   - `miniprogram preview -d chrome --host-app <path>`
@@ -194,18 +196,16 @@ Smaller future UX improvements that fit the current system:
 
 ## Near-Term Concrete Task List
 
-1. Extend `miniprogram preview` from Chrome and Windows to Android emulator
-   targets on the same preview architecture.
-2. Add physical-device preview support for Android USB and Wi-Fi flows.
-3. Keep preview transport internal to the CLI-managed preview flow instead of
+1. Add physical-device preview support for Android Wi-Fi flows.
+2. Keep preview transport internal to the CLI-managed preview flow instead of
    publishing into `backend/api/` for the normal authoring loop.
-4. Keep target-aware local backend defaults and device overrides inside the
+3. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows and advanced preview cases.
-5. Add cloud publish support with S3 object layout and versioned keys.
-6. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
+4. Add cloud publish support with S3 object layout and versioned keys.
+5. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
    rollout, and secure routes.
-7. Add first-class payment capability contracts and payload models.
-8. Implement payment host bridge support in Flutter hosts first.
-9. Plan Android native-host embedding around a reused Flutter engine.
-10. Keep the CLI as the single source of truth before adding any IDE wrapper.
-11. Add optional auto-generated `requestId` support in author helpers.
+6. Add first-class payment capability contracts and payload models.
+7. Implement payment host bridge support in Flutter hosts first.
+8. Plan Android native-host embedding around a reused Flutter engine.
+9. Keep the CLI as the single source of truth before adding any IDE wrapper.
+10. Add optional auto-generated `requestId` support in author helpers.
