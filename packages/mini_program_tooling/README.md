@@ -186,7 +186,28 @@ AWS cloud publish behavior:
 - uploads immutable release artifacts to S3 under versioned keys
 - uploads release and catalog metadata JSON records for later discovery and rollout services
 - treats bucket object versioning as rollback protection under the immutable release layout
-- does not provision CloudFront, API Gateway, or Lambda resources for you in this phase
+- does not provision CloudFront from the CLI in this phase
+- does not deploy API Gateway and Lambda from the CLI in this phase
+- the repo now includes a deployable AWS SAM backend under:
+  - `infra/aws/mini_program_cloud_api/`
+
+AWS API deployment flow after publish:
+
+```bash
+cd <repo-root>/infra/aws/mini_program_cloud_api
+sam build
+sam deploy --stack-name mini-program-cloud-api-prod --region ap-south-1 --capabilities CAPABILITY_IAM --parameter-overrides ArtifactBucketName=<bucket-name> ArtifactsPrefix=artifacts MetadataPrefix=metadata StageName=prod
+```
+
+The stack output `BackendApiBaseUrl` is the value to use in Flutter hosts:
+
+```bash
+flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/
+```
+
+Deployment details and route coverage are documented in:
+
+- `infra/aws/mini_program_cloud_api/README.md`
 
 Initialize the embedding adapter for an existing Flutter app:
 

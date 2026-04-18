@@ -65,6 +65,24 @@ change:
   the managed preview flow
 - hosted embed dependencies through `mini_program_sdk` and
   `mini_program_contracts`
+- named cloud environments in CLI state:
+  - `miniprogram env init`
+  - `miniprogram env configure <env-name> --provider aws`
+  - `miniprogram env list`
+  - `miniprogram env use <env-name>`
+  - `miniprogram env status`
+- AWS cloud publish:
+  - `miniprogram publish --target cloud`
+  - `miniprogram publish --target cloud --env <env-name>`
+  - versioned S3 artifact upload
+  - release and catalog metadata upload
+- deployable AWS cloud backend under:
+  - `infra/aws/mini_program_cloud_api/`
+  - AWS SAM template
+  - API Gateway HTTP API
+  - Lambda reading the published S3 artifact and metadata layout
+  - backend-compatible routes for discovery, manifests, screens, debug, and
+    health
 
 ## Locked Direction
 
@@ -96,8 +114,7 @@ change:
 ## Priority Roadmap
 
 ### 1. Cloud publish and cloud env
-Preview is shipped. The next major implementation wave should move to cloud
-delivery support:
+Preview is shipped. The first AWS cloud path is also shipped:
 
 - `miniprogram env init`
 - `miniprogram env configure <env-name> --provider <provider>`
@@ -107,15 +124,14 @@ delivery support:
 - `miniprogram publish --target cloud`
 - `miniprogram publish --target cloud --env <env-name>`
 
-Recommended examples:
+Current shipped AWS pieces:
 
 - `miniprogram env configure my-aws-prod --provider aws`
-- `miniprogram env configure my-gcp-staging --provider gcp`
-- `miniprogram env configure my-custom --provider custom`
+- `miniprogram publish --target cloud`
+- `infra/aws/mini_program_cloud_api/template.yaml`
 
-V1 cloud providers should be:
+Next cloud provider work should be:
 
-- `aws`
 - `gcp`
 - `custom-s3-compatible`
 
@@ -167,6 +183,15 @@ Release and storage rules:
 - use rollout or discovery metadata to point hosts at the active release
 - prefer versioned file or path names over CDN invalidation as the default
   update strategy
+
+What is still not done on the cloud path:
+
+- CLI-driven provisioning or deployment of the AWS SAM stack
+- rollout rules and capability filtering in the cloud backend
+- secure API route execution in Lambda
+- GCP provider implementation
+- custom S3-compatible provider implementation
+- CloudFront provisioning and opinionated CDN setup automation
 
 ### 2. Payment and other host-native capabilities
 Add new capabilities only through explicit contracts:
@@ -222,17 +247,17 @@ Smaller future UX improvements that fit the current system:
 
 ## Near-Term Concrete Task List
 
-1. Add cloud publish support with S3 object layout and versioned keys.
-2. Add `env configure <env-name> --provider aws|gcp|custom` with persisted
-   named cloud environments.
-3. Make `publish --target cloud` resolve the active cloud environment by
-   default and accept `--env <env-name>` as an override.
-4. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
-   rollout, and secure routes.
-5. Keep target-aware local backend defaults and device overrides inside the
+1. Add `gcp` cloud publish and matching cloud backend deployment path.
+2. Add `custom-s3-compatible` cloud publish and API configuration model.
+3. Add rollout rules and host-aware selection to the cloud backend.
+4. Add capability filtering enforcement to cloud manifest delivery.
+5. Add secure API route execution contracts and Lambda-side handlers.
+6. Decide whether the CLI should deploy or update the AWS SAM backend
+   directly.
+7. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows.
-6. Add first-class payment capability contracts and payload models.
-7. Implement payment host bridge support in Flutter hosts first.
-8. Plan Android native-host embedding around a reused Flutter engine.
-9. Keep the CLI as the single source of truth before adding any IDE wrapper.
-10. Add optional auto-generated `requestId` support in author helpers.
+8. Add first-class payment capability contracts and payload models.
+9. Implement payment host bridge support in Flutter hosts first.
+10. Plan Android native-host embedding around a reused Flutter engine.
+11. Keep the CLI as the single source of truth before adding any IDE wrapper.
+12. Add optional auto-generated `requestId` support in author helpers.

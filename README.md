@@ -451,7 +451,36 @@ AWS cloud publish in this phase:
 - requires AWS CLI credentials outside the repo
 - requires S3 bucket versioning to be enabled
 - uploads immutable release artifacts plus release/catalog metadata to S3
-- does not provision CloudFront, API Gateway, or Lambda for you yet
+- does not provision CloudFront for you from the CLI yet
+- does not deploy API Gateway and Lambda for you from the CLI yet
+- includes a deployable AWS SAM backend under:
+  - [infra/aws/mini_program_cloud_api/README.md](D:/flutter-mini-program-platform/infra/aws/mini_program_cloud_api/README.md)
+
+The shipped AWS backend stack reads the published S3 objects and serves the
+existing Flutter backend contract:
+
+- `GET /api/discovery/mini-programs.json`
+- `GET /api/manifests/<miniProgramId>/latest.json`
+- `GET /api/manifests/<miniProgramId>/versions/<version>.json`
+- `GET /api/screens/<miniProgramId>/<version>/<screenId>.json`
+- `GET /health`
+
+Typical AWS flow:
+
+```powershell
+cd D:\my_coupon_app
+miniprogram publish --target cloud
+
+cd D:\flutter-mini-program-platform\infra\aws\mini_program_cloud_api
+sam build
+sam deploy --stack-name mini-program-cloud-api-prod --region ap-south-1 --capabilities CAPABILITY_IAM --parameter-overrides ArtifactBucketName=<bucket-name> ArtifactsPrefix=artifacts MetadataPrefix=metadata StageName=prod
+```
+
+Then run your Flutter host against the stack output:
+
+```powershell
+flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/
+```
 
 The best long-term cloud model remains:
 

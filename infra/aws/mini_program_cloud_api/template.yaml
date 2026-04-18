@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Serverless mini-program delivery API for AWS.
+  It exposes backend-style /api routes through API Gateway and Lambda while
+  reading published mini-program artifacts from S3.
+
+Parameters:
+  ArtifactBucketName:
+    Type: String
+    Description: S3 bucket that stores artifacts/ and metadata/ from cloud publish.
+  ArtifactsPrefix:
+    Type: String
+    Default: artifacts
+    Description: S3 object prefix for immutable mini-program artifacts.
+  MetadataPrefix:
+    Type: String
+    Default: metadata
+    Description: S3 object prefix for catalog and release metadata files.
+  StageName:
+    Type: String
+    Default: prod
+    Description: API Gateway stage name.
+  FunctionTimeoutSeconds:
+    Type: Number
+    Default: 15
+    MinValue: 3
+    MaxValue: 30
+    Description: Lambda timeout in seconds.
+  FunctionMemorySize:
+    Type: Number
+    Default: 256
+    AllowedValues:
+      - 128
+      - 256
+      - 512
+      - 1024
+    Description: Lambda memory size in MB.
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues:
+      - DEBUG
+      - INFO
+      - WARN
+      - ERROR
+    Description: Log verbosity for the delivery Lambda.
+
+Resources:
+  MiniProgramDeliveryHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+
+  MiniProgramDeliveryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handler.handler
+      Runtime: nodejs20.x
+      MemorySize: !Ref FunctionMemorySize
+      Timeout: !Ref FunctionTimeoutSeconds
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          ARTIFACT_BUCKET_NAME: !Ref ArtifactBucketName
+          ARTIFACTS_PREFIX: !Ref ArtifactsPrefix
+          METADATA_PREFIX: !Ref MetadataPrefix
+          LOG_LEVEL: !Ref LogLevel
+      Policies:
+        - Statement:
+            - Sid: ReadPublishedMiniProgramBucket
+              Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub arn:${AWS::Partition}:s3:::${ArtifactBucketName}/*
+            - Sid: ListPublishedMiniProgramBucket
+              Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource: !Sub arn:${AWS::Partition}:s3:::${ArtifactBucketName}
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref MiniProgramDeliveryHttpApi
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  HttpApiId:
+    Description: API Gateway HTTP API id.
+    Value: !Ref MiniProgramDeliveryHttpApi
+
+  HttpApiStageUrl:
+    Description: Root invoke URL for the deployed API stage.
+    Value: !Sub https://${MiniProgramDeliveryHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/
+
+  BackendApiBaseUrl:
+    Description: Base URL to use as MINI_PROGRAM_BACKEND_BASE_URL in Flutter hosts.
+    Value: !Sub https://${MiniProgramDeliveryHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/api/
+
+  HealthUrl:
+    Description: Health endpoint for the deployed API.
+    Value: !Sub https://${MiniProgramDeliveryHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/health
+
+  ArtifactBucketName:
+    Description: S3 bucket used by the API.
+    Value: !Ref ArtifactBucketName
