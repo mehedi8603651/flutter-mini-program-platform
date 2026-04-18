@@ -1,5 +1,6 @@
 export 'src/aws_cloud_publisher.dart';
 export 'src/mini_program_builder.dart';
+export 'src/mini_program_cloud_controller.dart';
 export 'src/mini_program_cloud_publisher.dart';
 export 'src/delivery_inspector.dart';
 export 'src/local_backend_controller.dart';

@@ -591,6 +591,118 @@ void main() {
     );
 
     test(
+      'cloud deploy uses the active named env and persists apiBaseUrl',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await Directory(standaloneRoot).create(recursive: true);
+        final envState = LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: repoRoot.path,
+          activeEnvironment: 'my-aws-prod',
+          cloudEnvironments: <CloudEnvironmentConfiguration>[
+            CloudEnvironmentConfiguration(
+              name: 'my-aws-prod',
+              provider: 'aws',
+              values: <String, dynamic>{
+                'bucket': 'mini-program-prod',
+                'region': 'us-east-1',
+                'artifactsPrefix': 'artifacts',
+                'metadataPrefix': 'metadata',
+              },
+              configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+              updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            ),
+          ],
+          initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        );
+        await stateStore.writeEnvironmentState(standaloneRoot, envState);
+        final cloudController = _FakeMiniProgramCloudController();
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          cloudController: cloudController,
+          workingDirectory: standaloneRoot,
+        ).run(<String>['cloud', 'deploy']);
+
+        expect(exitCode, 0);
+        expect(cloudController.lastDeployRequest, isNotNull);
+        expect(
+          cloudController.lastDeployRequest!.environment.name,
+          'my-aws-prod',
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains('Backend API base URL: https://api.example.com/api/'),
+        );
+
+        final updatedState = await stateStore.readEnvironmentState(
+          standaloneRoot,
+        );
+        expect(
+          updatedState!
+              .cloudEnvironmentNamed('my-aws-prod')!
+              .values['apiBaseUrl'],
+          'https://api.example.com/api/',
+        );
+      },
+    );
+
+    test(
+      'cloud rollback forwards version and inferred mini-program id',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        final envState = LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: repoRoot.path,
+          activeEnvironment: 'my-aws-prod',
+          cloudEnvironments: <CloudEnvironmentConfiguration>[
+            CloudEnvironmentConfiguration(
+              name: 'my-aws-prod',
+              provider: 'aws',
+              values: <String, dynamic>{
+                'bucket': 'mini-program-prod',
+                'region': 'us-east-1',
+                'artifactsPrefix': 'artifacts',
+                'metadataPrefix': 'metadata',
+              },
+              configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+              updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            ),
+          ],
+          initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        );
+        await stateStore.writeEnvironmentState(standaloneRoot, envState);
+        final cloudController = _FakeMiniProgramCloudController();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          cloudController: cloudController,
+          workingDirectory: standaloneRoot,
+        ).run(<String>['cloud', 'rollback', '1.0.0']);
+
+        expect(exitCode, 0);
+        expect(cloudController.lastRollbackRequest, isNotNull);
+        expect(cloudController.lastRollbackRequest!.version, '1.0.0');
+        expect(
+          cloudController.lastRollbackRequest!.miniProgramId,
+          'coupon_center',
+        );
+      },
+    );
+
+    test(
       'env init succeeds without a repo root and reports standalone config',
       () async {
         final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
@@ -1680,6 +1792,62 @@ class _FakeMiniProgramCloudPublisher extends MiniProgramCloudPublisher {
       metadataCatalogKey: 'metadata/catalog/coupon_center.json',
       publishedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
       uploadedObjects: const <CloudPublishedObjectRecord>[],
+    );
+  }
+}
+
+class _FakeMiniProgramCloudController extends MiniProgramCloudController {
+  _FakeMiniProgramCloudController();
+
+  MiniProgramCloudDeployRequest? lastDeployRequest;
+  MiniProgramCloudRollbackRequest? lastRollbackRequest;
+
+  @override
+  Future<MiniProgramCloudDeployResult> deploy(
+    MiniProgramCloudDeployRequest request,
+  ) async {
+    lastDeployRequest = request;
+    return MiniProgramCloudDeployResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: 'mini-program-cloud-${request.environment.name}',
+      stageName: 'prod',
+      region: request.environment.values['region'].toString(),
+      bucketName: request.environment.values['bucket'].toString(),
+      backendProjectRootPath: p.join(
+        request.resolvedEnvironmentState.rootPath,
+        '.mini_program',
+        'cloud',
+        'aws_backend',
+      ),
+      outputs: const <String, String>{
+        'BackendApiBaseUrl': 'https://api.example.com/api/',
+        'HealthUrl': 'https://api.example.com/health',
+      },
+      apiBaseUrl: 'https://api.example.com/api/',
+      healthUrl: 'https://api.example.com/health',
+      healthy: true,
+      healthStatusCode: 200,
+      deployedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+
+  @override
+  Future<MiniProgramCloudRollbackResult> rollback(
+    MiniProgramCloudRollbackRequest request,
+  ) async {
+    lastRollbackRequest = request;
+    return MiniProgramCloudRollbackResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      version: request.version,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      catalogKey: 'metadata/catalog/${request.miniProgramId}.json',
+      releaseKey:
+          'metadata/releases/${request.miniProgramId}/${request.version}.json',
+      rolledBackAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
     );
   }
 }

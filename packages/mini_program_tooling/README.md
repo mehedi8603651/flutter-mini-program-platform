@@ -36,6 +36,13 @@ miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud]
+miniprogram cloud deploy
+miniprogram cloud status
+miniprogram cloud outputs
+miniprogram cloud logs
+miniprogram cloud destroy
+miniprogram cloud doctor
+miniprogram cloud rollback <version> [mini-program-id]
 miniprogram embed init
 miniprogram backend start --port 8080
 miniprogram backend stop
@@ -191,7 +198,26 @@ AWS cloud publish behavior:
 - the repo now includes a deployable AWS SAM backend under:
   - `infra/aws/mini_program_cloud_api/`
 
-AWS API deployment flow after publish:
+AWS cloud backend commands:
+
+```bash
+miniprogram cloud deploy
+miniprogram cloud status
+miniprogram cloud outputs
+miniprogram cloud logs
+miniprogram cloud destroy
+miniprogram cloud doctor
+miniprogram cloud rollback 1.0.0 coupon_center
+```
+
+For AWS, these commands:
+
+- use the active named cloud environment by default
+- generate or refresh a managed SAM project under `.mini_program/cloud/aws_backend`
+- deploy or inspect the API Gateway and Lambda stack that serves the existing backend `/api/...` contract
+- persist the deployed `BackendApiBaseUrl` back into the configured environment when deploy succeeds
+
+Equivalent manual AWS API deployment flow after publish:
 
 ```bash
 cd <repo-root>/infra/aws/mini_program_cloud_api
@@ -333,6 +359,8 @@ policy files that were not created by the CLI publish flow.
 - `env configure` stores named cloud environments such as `my-aws-prod` or
   `my-gcp-staging`.
 - `publish --target cloud` is implemented for `aws` in this phase.
+- `cloud deploy|status|outputs|logs|destroy|doctor|rollback` are implemented for
+  `aws` in this phase.
 - `gcp` and `custom-s3-compatible` are the planned next cloud providers.
 - Standalone build/publish/validate no longer require a platform repo root.
 - `preview` is the fastest local authoring loop; `publish` plus

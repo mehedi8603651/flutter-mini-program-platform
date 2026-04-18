@@ -4,6 +4,7 @@ import 'package:args/args.dart';
 import 'package:path/path.dart' as p;
 
 import 'mini_program_cloud_publisher.dart';
+import 'mini_program_cloud_controller.dart';
 import 'delivery_validation.dart';
 import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
@@ -35,6 +36,7 @@ class MiniprogramCli {
         const MiniProgramPreviewController(),
     MiniProgramCloudPublisher cloudPublisher =
         const MiniProgramCloudPublisher(),
+    MiniProgramCloudController? cloudController,
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
@@ -50,6 +52,7 @@ class MiniprogramCli {
        _backendInitializer = backendInitializer,
        _previewController = previewController,
        _cloudPublisher = cloudPublisher,
+       _cloudController = cloudController ?? MiniProgramCloudController(),
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
@@ -66,6 +69,7 @@ class MiniprogramCli {
   final LocalBackendInitializer _backendInitializer;
   final MiniProgramPreviewController _previewController;
   final MiniProgramCloudPublisher _cloudPublisher;
+  final MiniProgramCloudController _cloudController;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
@@ -98,6 +102,8 @@ class MiniprogramCli {
           return await _runValidate(arguments.sublist(1));
         case 'publish':
           return await _runPublish(arguments.sublist(1));
+        case 'cloud':
+          return await _runCloud(arguments.sublist(1));
         case 'embed':
           return await _runEmbed(arguments.sublist(1));
         case 'backend':
@@ -120,6 +126,9 @@ class MiniprogramCli {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramPublishException catch (error) {
+      _stderr.writeln(error.message);
+      return 1;
+    } on MiniProgramCloudException catch (error) {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramEmbeddingInitException catch (error) {
@@ -611,6 +620,313 @@ class MiniprogramCli {
     }
   }
 
+  Future<int> _runCloud(List<String> arguments) async {
+    if (arguments.isEmpty) {
+      _stderr.writeln(_cloudUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'deploy':
+        return _runCloudDeploy(arguments.sublist(1));
+      case 'status':
+        return _runCloudStatus(arguments.sublist(1));
+      case 'outputs':
+        return _runCloudOutputs(arguments.sublist(1));
+      case 'logs':
+        return _runCloudLogs(arguments.sublist(1));
+      case 'destroy':
+        return _runCloudDestroy(arguments.sublist(1));
+      case 'doctor':
+        return _runCloudDoctor(arguments.sublist(1));
+      case 'rollback':
+        return _runCloudRollback(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown cloud command: ${arguments.first}');
+        _stderr.writeln(_cloudUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runCloudDeploy(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud deploy [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.deploy(
+      MiniProgramCloudDeployRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    await _persistCloudEnvironmentValueUpdates(
+      resolved: resolved,
+      environmentName: environment.name,
+      updatedValues: <String, dynamic>{
+        'stackName': result.stackName,
+        'stageName': result.stageName,
+        if (result.apiBaseUrl != null) 'apiBaseUrl': result.apiBaseUrl,
+      },
+    );
+    _stdout.writeln(_formatCloudDeployResult(result));
+    return result.healthy == false ? 1 : 0;
+  }
+
+  Future<int> _runCloudStatus(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud status [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.status(
+      MiniProgramCloudStatusRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    _stdout.writeln(_formatCloudStatusResult(result));
+    return !result.stackExists || result.healthy == false ? 1 : 0;
+  }
+
+  Future<int> _runCloudOutputs(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud outputs [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.outputs(
+      MiniProgramCloudOutputsRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    _stdout.writeln(_formatCloudOutputsResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudLogs(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      )
+      ..addOption(
+        'since',
+        defaultsTo: '1h',
+        help: 'AWS logs tail window such as 10m, 1h, or 1d.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud logs [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.logs(
+      MiniProgramCloudLogsRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        since: results.option('since') ?? '1h',
+      ),
+    );
+    _stdout.writeln(_formatCloudLogsResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudDestroy(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud destroy [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.destroy(
+      MiniProgramCloudDestroyRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    _stdout.writeln(_formatCloudDestroyResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudDoctor(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud doctor [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.doctor(
+      MiniProgramCloudDoctorRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    _stdout.writeln(_formatCloudDoctorResult(result));
+    return result.hasErrors ? 1 : 0;
+  }
+
+  Future<int> _runCloudRollback(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag('help', abbr: 'h', negatable: false)
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      )
+      ..addOption(
+        'mini-program-root',
+        help: 'Optional exact mini-program root path.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram cloud rollback <version> [mini-program-id] [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isEmpty || results.rest.length > 2) {
+      throw const FormatException(
+        'cloud rollback expects <version> and an optional [mini-program-id].',
+      );
+    }
+
+    final version = results.rest.first;
+    final miniProgramId = await _resolveMiniProgramId(
+      commandName: 'cloud rollback',
+      positionalArguments: results.rest.length == 2
+          ? <String>[results.rest[1]]
+          : const <String>[],
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+      additionalSearchRoots: <String>[
+        if (results.option('mini-program-root') case final miniProgramRoot?
+            when miniProgramRoot.trim().isNotEmpty)
+          miniProgramRoot,
+      ],
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.rollback(
+      MiniProgramCloudRollbackRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: miniProgramId,
+        version: version,
+      ),
+    );
+    _stdout.writeln(_formatCloudRollbackResult(result));
+    return 0;
+  }
+
   Future<int> _runEmbedInit(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -824,6 +1140,31 @@ class MiniprogramCli {
       ..addOption(
         'aws-profile',
         help: 'Optional AWS CLI profile used for cloud publish commands.',
+      )
+      ..addOption(
+        'stack-name',
+        help: 'Optional CloudFormation stack name for AWS cloud deploy.',
+      )
+      ..addOption(
+        'stage-name',
+        help: 'Optional API Gateway stage name. Defaults to prod.',
+      )
+      ..addOption(
+        'sam-s3-bucket',
+        help:
+            'Optional S3 bucket used by sam deploy for packaging. Defaults to the artifact bucket.',
+      )
+      ..addOption(
+        'function-timeout-seconds',
+        help: 'Optional Lambda timeout in seconds. Defaults to 15.',
+      )
+      ..addOption(
+        'function-memory-size',
+        help: 'Optional Lambda memory size in MB. Defaults to 256.',
+      )
+      ..addOption(
+        'log-level',
+        help: 'Optional Lambda log level. Defaults to INFO.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -1273,6 +1614,54 @@ class MiniprogramCli {
         when value.trim().isNotEmpty) {
       values['awsProfile'] = value.trim();
     }
+    if (results.option('stack-name') case final value?
+        when value.trim().isNotEmpty) {
+      values['stackName'] = _validateEnvironmentName(value);
+    }
+    if (results.option('stage-name') case final value?
+        when value.trim().isNotEmpty) {
+      values['stageName'] = _validateEnvironmentName(value);
+    }
+    if (results.option('sam-s3-bucket') case final value?
+        when value.trim().isNotEmpty) {
+      values['samS3Bucket'] = value.trim();
+    }
+    if (results.option('function-timeout-seconds') case final value?
+        when value.trim().isNotEmpty) {
+      final parsed = int.tryParse(value.trim());
+      if (parsed == null || parsed < 3 || parsed > 30) {
+        throw const FormatException(
+          '--function-timeout-seconds must be an integer from 3 to 30.',
+        );
+      }
+      values['functionTimeoutSeconds'] = parsed;
+    }
+    if (results.option('function-memory-size') case final value?
+        when value.trim().isNotEmpty) {
+      final parsed = int.tryParse(value.trim());
+      if (parsed == null ||
+          !const <int>[128, 256, 512, 1024].contains(parsed)) {
+        throw const FormatException(
+          '--function-memory-size must be one of 128, 256, 512, or 1024.',
+        );
+      }
+      values['functionMemorySize'] = parsed;
+    }
+    if (results.option('log-level') case final value?
+        when value.trim().isNotEmpty) {
+      final normalized = value.trim().toUpperCase();
+      if (!const <String>[
+        'DEBUG',
+        'INFO',
+        'WARN',
+        'ERROR',
+      ].contains(normalized)) {
+        throw const FormatException(
+          '--log-level must be one of DEBUG, INFO, WARN, or ERROR.',
+        );
+      }
+      values['logLevel'] = normalized;
+    }
     return values;
   }
 
@@ -1384,6 +1773,55 @@ class MiniprogramCli {
     return lines;
   }
 
+  Future<void> _persistCloudEnvironmentValueUpdates({
+    required ResolvedLocalCliEnvironmentState resolved,
+    required String environmentName,
+    required Map<String, dynamic> updatedValues,
+  }) async {
+    if (updatedValues.isEmpty) {
+      return;
+    }
+
+    final existingEnvironment = resolved.state.cloudEnvironmentNamed(
+      environmentName,
+    );
+    if (existingEnvironment == null) {
+      return;
+    }
+
+    final mergedValues = Map<String, dynamic>.from(existingEnvironment.values);
+    for (final entry in updatedValues.entries) {
+      final value = entry.value;
+      if (value == null) {
+        continue;
+      }
+      mergedValues[entry.key] = value;
+    }
+
+    final updatedCloudEnvironments =
+        resolved.state.cloudEnvironments
+            .where((environment) => environment.name != environmentName)
+            .toList()
+          ..add(
+            existingEnvironment.copyWith(
+              values: mergedValues,
+              updatedAtUtc: DateTime.now().toUtc().toIso8601String(),
+            ),
+          );
+    updatedCloudEnvironments.sort((a, b) => a.name.compareTo(b.name));
+
+    final updatedState = resolved.state.copyWith(
+      cloudEnvironments: updatedCloudEnvironments,
+      updatedAtUtc: DateTime.now().toUtc().toIso8601String(),
+    );
+    if (resolved.scope == 'global') {
+      await _stateStore.writeGlobalEnvironmentState(updatedState);
+    } else {
+      await _stateStore.writeEnvironmentState(resolved.rootPath, updatedState);
+      await _stateStore.writeGlobalEnvironmentState(updatedState);
+    }
+  }
+
   String _normalizeAbsoluteUrl(String rawValue) {
     final trimmedValue = rawValue.trim();
     final uri = Uri.tryParse(trimmedValue);
@@ -1420,6 +1858,7 @@ Commands:
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
   publish [mini-program-id]
+  cloud deploy|status|outputs|logs|destroy|doctor|rollback
   embed init
   backend init
   backend start --port 8080
@@ -1444,6 +1883,19 @@ Commands:
   list
   use <local|env-name>
   status
+''';
+
+  String _cloudUsage() => '''
+Usage: miniprogram cloud <command> [arguments]
+
+Commands:
+  deploy
+  status
+  outputs
+  logs
+  destroy
+  doctor
+  rollback <version> [mini-program-id]
 ''';
 
   String _backendUsage() => '''
@@ -1558,6 +2010,151 @@ Commands:
       'Published at UTC: ${result.publishedAtUtc}',
     ];
     return lines.join('\n');
+  }
+
+  String _formatCloudDeployResult(MiniProgramCloudDeployResult result) {
+    final lines = <String>[
+      'Deployed cloud backend.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Bucket: ${result.bucketName}',
+      'Backend project root: ${result.backendProjectRootPath}',
+      if (result.apiBaseUrl != null)
+        'Backend API base URL: ${result.apiBaseUrl}',
+      if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
+      if (result.healthy != null) 'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status code: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      'Outputs:',
+      ...result.outputs.entries.map(
+        (entry) => '- ${entry.key}: ${entry.value}',
+      ),
+      'Deployed at UTC: ${result.deployedAtUtc}',
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatCloudStatusResult(MiniProgramCloudStatusResult result) {
+    final lines = <String>[
+      'Cloud backend status:',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.stackStatusReason != null &&
+          result.stackStatusReason!.trim().isNotEmpty)
+        'Stack status detail: ${result.stackStatusReason}',
+      if (result.apiBaseUrl != null)
+        'Backend API base URL: ${result.apiBaseUrl}',
+      if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
+      if (result.healthy != null) 'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status code: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      if (result.outputs.isNotEmpty) 'Outputs:',
+      if (result.outputs.isNotEmpty)
+        ...result.outputs.entries.map(
+          (entry) => '- ${entry.key}: ${entry.value}',
+        ),
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatCloudOutputsResult(MiniProgramCloudOutputsResult result) {
+    final lines = <String>[
+      'Cloud backend outputs:',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Region: ${result.region}',
+      ...result.outputs.entries.map(
+        (entry) => '- ${entry.key}: ${entry.value}',
+      ),
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatCloudLogsResult(MiniProgramCloudLogsResult result) {
+    final lines = <String>[
+      'Cloud backend logs:',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Region: ${result.region}',
+      'Lambda function: ${result.lambdaFunctionName}',
+      'Since: ${result.since}',
+    ];
+    if (result.stdoutText.isNotEmpty) {
+      lines.add(result.stdoutText);
+    } else {
+      lines.add('(no log lines returned)');
+    }
+    if (result.stderrText.isNotEmpty) {
+      lines.add('stderr: ${result.stderrText}');
+    }
+    return lines.join('\n');
+  }
+
+  String _formatCloudDestroyResult(MiniProgramCloudDestroyResult result) {
+    return <String>[
+      'Destroyed cloud backend stack.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Region: ${result.region}',
+      'Deleted at UTC: ${result.deletedAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatCloudDoctorResult(MiniProgramCloudDoctorResult result) {
+    final lines = <String>['Miniprogram cloud doctor report:'];
+    var okCount = 0;
+    var warningCount = 0;
+    var errorCount = 0;
+    var skippedCount = 0;
+    for (final check in result.checks) {
+      switch (check.status) {
+        case MiniprogramDoctorCheckStatus.ok:
+          okCount++;
+        case MiniprogramDoctorCheckStatus.warning:
+          warningCount++;
+        case MiniprogramDoctorCheckStatus.error:
+          errorCount++;
+        case MiniprogramDoctorCheckStatus.skipped:
+          skippedCount++;
+      }
+      lines.add('[${check.status.name}] ${check.label}: ${check.summary}');
+      if (check.detail case final detail? when detail.trim().isNotEmpty) {
+        lines.add('  $detail');
+      }
+    }
+    lines.add(
+      'Summary: $okCount ok, $warningCount warning, '
+      '$errorCount error, $skippedCount skipped',
+    );
+    return lines.join('\n');
+  }
+
+  String _formatCloudRollbackResult(MiniProgramCloudRollbackResult result) {
+    return <String>[
+      'Rolled back cloud release.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Version: ${result.version}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Catalog key: ${result.catalogKey}',
+      'Release key: ${result.releaseKey}',
+      'Rolled back at UTC: ${result.rolledBackAtUtc}',
+    ].join('\n');
   }
 
   String _formatEmbeddingInitResult(MiniProgramEmbeddingInitResult result) {

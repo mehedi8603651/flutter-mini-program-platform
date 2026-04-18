@@ -76,6 +76,14 @@ change:
   - `miniprogram publish --target cloud --env <env-name>`
   - versioned S3 artifact upload
   - release and catalog metadata upload
+- AWS cloud management through CLI:
+  - `miniprogram cloud deploy`
+  - `miniprogram cloud status`
+  - `miniprogram cloud outputs`
+  - `miniprogram cloud logs`
+  - `miniprogram cloud destroy`
+  - `miniprogram cloud doctor`
+  - `miniprogram cloud rollback <version> [mini-program-id]`
 - deployable AWS cloud backend under:
   - `infra/aws/mini_program_cloud_api/`
   - AWS SAM template
@@ -128,6 +136,7 @@ Current shipped AWS pieces:
 
 - `miniprogram env configure my-aws-prod --provider aws`
 - `miniprogram publish --target cloud`
+- `miniprogram cloud deploy|status|outputs|logs|destroy|doctor|rollback`
 - `infra/aws/mini_program_cloud_api/template.yaml`
 
 Next cloud provider work should be:
@@ -186,7 +195,6 @@ Release and storage rules:
 
 What is still not done on the cloud path:
 
-- CLI-driven provisioning or deployment of the AWS SAM stack
 - rollout rules and capability filtering in the cloud backend
 - secure API route execution in Lambda
 - GCP provider implementation
@@ -252,8 +260,8 @@ Smaller future UX improvements that fit the current system:
 3. Add rollout rules and host-aware selection to the cloud backend.
 4. Add capability filtering enforcement to cloud manifest delivery.
 5. Add secure API route execution contracts and Lambda-side handlers.
-6. Decide whether the CLI should deploy or update the AWS SAM backend
-   directly.
+6. Add deployment drift detection and richer stack update diagnostics for the
+   AWS CLI cloud flow.
 7. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows.
 8. Add first-class payment capability contracts and payload models.

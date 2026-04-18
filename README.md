@@ -137,6 +137,7 @@ This package exposes the global `miniprogram` command used for:
 - preview
 - validate
 - publish
+- cloud
 - embed init
 - backend init/start/stop/status/reset-local
 
@@ -452,7 +453,14 @@ AWS cloud publish in this phase:
 - requires S3 bucket versioning to be enabled
 - uploads immutable release artifacts plus release/catalog metadata to S3
 - does not provision CloudFront for you from the CLI yet
-- does not deploy API Gateway and Lambda for you from the CLI yet
+- deploys and manages the AWS API Gateway and Lambda backend through:
+  - `miniprogram cloud deploy`
+  - `miniprogram cloud status`
+  - `miniprogram cloud outputs`
+  - `miniprogram cloud logs`
+  - `miniprogram cloud destroy`
+  - `miniprogram cloud doctor`
+  - `miniprogram cloud rollback <version> [mini-program-id]`
 - includes a deployable AWS SAM backend under:
   - [infra/aws/mini_program_cloud_api/README.md](D:/flutter-mini-program-platform/infra/aws/mini_program_cloud_api/README.md)
 
@@ -470,10 +478,8 @@ Typical AWS flow:
 ```powershell
 cd D:\my_coupon_app
 miniprogram publish --target cloud
-
-cd D:\flutter-mini-program-platform\infra\aws\mini_program_cloud_api
-sam build
-sam deploy --stack-name mini-program-cloud-api-prod --region ap-south-1 --capabilities CAPABILITY_IAM --parameter-overrides ArtifactBucketName=<bucket-name> ArtifactsPrefix=artifacts MetadataPrefix=metadata StageName=prod
+miniprogram cloud deploy
+miniprogram cloud outputs
 ```
 
 Then run your Flutter host against the stack output:
