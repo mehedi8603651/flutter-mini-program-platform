@@ -11,6 +11,7 @@ import 'local_backend_controller.dart';
 import 'local_backend_initializer.dart';
 import 'local_cli_state.dart';
 import 'mini_program_builder.dart';
+import 'mini_program_host_controller.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
 import 'mini_program_path_resolver.dart';
@@ -37,6 +38,7 @@ class MiniprogramCli {
     MiniProgramCloudPublisher cloudPublisher =
         const MiniProgramCloudPublisher(),
     MiniProgramCloudController? cloudController,
+    MiniProgramHostController? hostController,
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
@@ -53,6 +55,7 @@ class MiniprogramCli {
        _previewController = previewController,
        _cloudPublisher = cloudPublisher,
        _cloudController = cloudController ?? MiniProgramCloudController(),
+       _hostController = hostController ?? MiniProgramHostController(),
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
@@ -70,6 +73,7 @@ class MiniprogramCli {
   final MiniProgramPreviewController _previewController;
   final MiniProgramCloudPublisher _cloudPublisher;
   final MiniProgramCloudController _cloudController;
+  final MiniProgramHostController _hostController;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
@@ -104,6 +108,8 @@ class MiniprogramCli {
           return await _runPublish(arguments.sublist(1));
         case 'cloud':
           return await _runCloud(arguments.sublist(1));
+        case 'host':
+          return await _runHost(arguments.sublist(1));
         case 'embed':
           return await _runEmbed(arguments.sublist(1));
         case 'backend':
@@ -129,6 +135,9 @@ class MiniprogramCli {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramCloudException catch (error) {
+      _stderr.writeln(error.message);
+      return 1;
+    } on MiniProgramHostException catch (error) {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramEmbeddingInitException catch (error) {
@@ -613,9 +622,27 @@ class MiniprogramCli {
     switch (arguments.first) {
       case 'init':
         return _runEmbedInit(arguments.sublist(1));
+      case 'cloud':
+        return _runEmbedCloud(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown embed command: ${arguments.first}');
         _stderr.writeln(_embedUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runEmbedCloud(List<String> arguments) async {
+    if (arguments.isEmpty) {
+      _stderr.writeln(_embedCloudUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'configure':
+        return _runEmbedCloudConfigure(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown embed cloud command: ${arguments.first}');
+        _stderr.writeln(_embedCloudUsage());
         return 64;
     }
   }
@@ -644,6 +671,22 @@ class MiniprogramCli {
       default:
         _stderr.writeln('Unknown cloud command: ${arguments.first}');
         _stderr.writeln(_cloudUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runHost(List<String> arguments) async {
+    if (arguments.isEmpty) {
+      _stderr.writeln(_hostUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'run':
+        return _runHostRun(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown host command: ${arguments.first}');
+        _stderr.writeln(_hostUsage());
         return 64;
     }
   }
@@ -729,6 +772,13 @@ class MiniprogramCli {
     final parser = ArgParser()
       ..addFlag('help', abbr: 'h', negatable: false)
       ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption(
+        'format',
+        allowed: const <String>['text', 'dart-define'],
+        defaultsTo: 'text',
+        help:
+            'Output format. Use dart-define for a direct flutter run snippet.',
+      )
       ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
       ..addOption(
         'repo-root',
@@ -755,7 +805,12 @@ class MiniprogramCli {
         environment: environment,
       ),
     );
-    _stdout.writeln(_formatCloudOutputsResult(result));
+    _stdout.writeln(
+      _formatCloudOutputsResult(
+        result,
+        format: results.option('format') ?? 'text',
+      ),
+    );
     return 0;
   }
 
@@ -927,6 +982,90 @@ class MiniprogramCli {
     return 0;
   }
 
+  Future<int> _runEmbedCloudConfigure(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'project-root',
+        help:
+            'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
+      )
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption(
+        'root',
+        help:
+            'Directory that owns .mini_program/env.json. Defaults to discovery with global fallback.',
+      )
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram embed cloud configure [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final projectRootPath =
+        results.option('project-root') ?? _currentWorkingDirectory();
+    await _requireEmbeddedHostProject(projectRootPath);
+
+    final resolvedEnvironmentState = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+      additionalSearchRoots: <String>[projectRootPath],
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolvedEnvironmentState.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final outputs = await _cloudController.outputs(
+      MiniProgramCloudOutputsRequest(
+        resolvedEnvironmentState: resolvedEnvironmentState,
+        environment: environment,
+      ),
+    );
+    final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(outputs);
+    await _persistCloudEnvironmentValueUpdates(
+      resolved: resolvedEnvironmentState,
+      environmentName: environment.name,
+      updatedValues: <String, dynamic>{'apiBaseUrl': backendApiBaseUrl},
+    );
+
+    final now = DateTime.now().toUtc().toIso8601String();
+    final existingConfiguration = await _stateStore.readHostCloudConfiguration(
+      projectRootPath,
+    );
+    final configuration = EmbeddedHostCloudConfiguration(
+      environmentName: environment.name,
+      provider: environment.provider,
+      backendApiBaseUrl: backendApiBaseUrl,
+      configuredAtUtc: existingConfiguration?.configuredAtUtc ?? now,
+      updatedAtUtc: now,
+    );
+    await _stateStore.writeHostCloudConfiguration(
+      projectRootPath,
+      configuration,
+    );
+
+    _stdout.writeln(
+      _formatEmbeddedHostCloudConfigurationResult(
+        projectRootPath: p.normalize(p.absolute(projectRootPath)),
+        configurationPath: _stateStore.hostCloudConfigurationPath(
+          projectRootPath,
+        ),
+        configuration: configuration,
+      ),
+    );
+    return 0;
+  }
+
   Future<int> _runEmbedInit(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -989,6 +1128,87 @@ class MiniprogramCli {
 
     _stdout.writeln(_formatEmbeddingInitResult(result));
     return 0;
+  }
+
+  Future<int> _runHostRun(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'device',
+        abbr: 'd',
+        help: 'Flutter device id such as chrome, windows, or emulator-5554.',
+      )
+      ..addOption(
+        'project-root',
+        help:
+            'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
+      )
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption(
+        'root',
+        help:
+            'Directory that owns .mini_program/env.json. Defaults to discovery with global fallback.',
+      )
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram host run -d <device> [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final deviceId = results.option('device')?.trim() ?? '';
+    if (deviceId.isEmpty) {
+      throw const FormatException('host run requires -d <device>.');
+    }
+
+    final projectRootPath =
+        results.option('project-root') ?? _currentWorkingDirectory();
+    await _requireEmbeddedHostProject(projectRootPath);
+    final hostConfiguration = await _stateStore.readHostCloudConfiguration(
+      projectRootPath,
+    );
+    final resolvedEnvironmentState = await _resolveEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+      additionalSearchRoots: <String>[projectRootPath],
+    );
+    final environment = _resolveCloudEnvironmentForHostRun(
+      resolvedEnvironmentState: resolvedEnvironmentState,
+      explicitEnvironmentName: results.option('env'),
+      hostConfiguration: hostConfiguration,
+    );
+    final backendApiBaseUrl = await _resolveHostBackendApiBaseUrl(
+      projectRootPath: projectRootPath,
+      resolvedEnvironmentState: resolvedEnvironmentState,
+      environment: environment,
+      hostConfiguration: hostConfiguration,
+    );
+
+    _stdout.writeln(
+      _formatHostRunStart(
+        projectRootPath: p.normalize(p.absolute(projectRootPath)),
+        deviceId: deviceId,
+        environmentName: environment?.name,
+        backendApiBaseUrl: backendApiBaseUrl,
+      ),
+    );
+    final result = await _hostController.run(
+      MiniProgramHostRunRequest(
+        projectRootPath: projectRootPath,
+        deviceId: deviceId,
+        backendApiBaseUrl: backendApiBaseUrl,
+      ),
+    );
+    return result.exitCode;
   }
 
   Future<int> _runEnv(List<String> arguments) async {
@@ -1859,7 +2079,8 @@ Commands:
   validate [mini-program-id]
   publish [mini-program-id]
   cloud deploy|status|outputs|logs|destroy|doctor|rollback
-  embed init
+  host run -d <device>
+  embed init|cloud configure
   backend init
   backend start --port 8080
   backend stop
@@ -1872,6 +2093,14 @@ Usage: miniprogram embed <command> [arguments]
 
 Commands:
   init
+  cloud configure
+''';
+
+  String _embedCloudUsage() => '''
+Usage: miniprogram embed cloud <command> [arguments]
+
+Commands:
+  configure
 ''';
 
   String _envUsage() => '''
@@ -1896,6 +2125,13 @@ Commands:
   destroy
   doctor
   rollback <version> [mini-program-id]
+''';
+
+  String _hostUsage() => '''
+Usage: miniprogram host <command> [arguments]
+
+Commands:
+  run -d <device>
 ''';
 
   String _backendUsage() => '''
@@ -2067,7 +2303,15 @@ Commands:
     return lines.join('\n');
   }
 
-  String _formatCloudOutputsResult(MiniProgramCloudOutputsResult result) {
+  String _formatCloudOutputsResult(
+    MiniProgramCloudOutputsResult result, {
+    required String format,
+  }) {
+    if (format == 'dart-define') {
+      final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(result);
+      return '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=$backendApiBaseUrl';
+    }
+
     final lines = <String>[
       'Cloud backend outputs:',
       'Provider: ${result.provider}',
@@ -2169,6 +2413,38 @@ Commands:
       ...result.createdPaths.map((path) => '- $path'),
     ];
     return lines.join('\n');
+  }
+
+  String _formatEmbeddedHostCloudConfigurationResult({
+    required String projectRootPath,
+    required String configurationPath,
+    required EmbeddedHostCloudConfiguration configuration,
+  }) {
+    return <String>[
+      'Configured embedded host app for cloud mini-program delivery.',
+      'Project root: $projectRootPath',
+      'Config file: $configurationPath',
+      'Environment: ${configuration.environmentName}',
+      'Provider: ${configuration.provider}',
+      'Backend API base URL: ${configuration.backendApiBaseUrl}',
+      'Configured at UTC: ${configuration.configuredAtUtc}',
+      'Updated at UTC: ${configuration.updatedAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatHostRunStart({
+    required String projectRootPath,
+    required String deviceId,
+    required String? environmentName,
+    required String backendApiBaseUrl,
+  }) {
+    return <String>[
+      'Running embedded host app.',
+      'Project root: $projectRootPath',
+      'Device: $deviceId',
+      if (environmentName != null) 'Environment: $environmentName',
+      'Backend API base URL: $backendApiBaseUrl',
+    ].join('\n');
   }
 
   String _formatEnvStatusResult(
@@ -2331,6 +2607,148 @@ Commands:
       lines.addAll(result.removedPaths.map((path) => '- $path'));
     }
     return lines.join('\n');
+  }
+
+  Future<void> _requireEmbeddedHostProject(String projectRootPath) async {
+    final normalizedProjectRootPath = p.normalize(p.absolute(projectRootPath));
+    final projectDirectory = Directory(normalizedProjectRootPath);
+    if (!await projectDirectory.exists()) {
+      throw MiniProgramHostException(
+        'Flutter host project root does not exist: $normalizedProjectRootPath',
+      );
+    }
+
+    final pubspecFile = File(p.join(normalizedProjectRootPath, 'pubspec.yaml'));
+    if (!await pubspecFile.exists()) {
+      throw MiniProgramHostException(
+        'Flutter host project is missing pubspec.yaml: '
+        '$normalizedProjectRootPath',
+      );
+    }
+
+    final generatedRuntimeSetup = File(
+      p.join(
+        normalizedProjectRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    );
+    if (!await generatedRuntimeSetup.exists()) {
+      throw const MiniProgramHostException(
+        'The generated mini-program embedding adapter was not found. Run '
+        '`miniprogram embed init` in the host Flutter app first.',
+      );
+    }
+  }
+
+  String _requireBackendApiBaseUrlFromOutputs(
+    MiniProgramCloudOutputsResult result,
+  ) {
+    final rawBackendApiBaseUrl = result.outputs['BackendApiBaseUrl'];
+    if (rawBackendApiBaseUrl == null || rawBackendApiBaseUrl.trim().isEmpty) {
+      throw const MiniProgramCloudException(
+        'Cloud stack outputs did not include BackendApiBaseUrl.',
+      );
+    }
+    return _normalizeAbsoluteUrl(rawBackendApiBaseUrl);
+  }
+
+  CloudEnvironmentConfiguration? _resolveCloudEnvironmentForHostRun({
+    required ResolvedLocalCliEnvironmentState? resolvedEnvironmentState,
+    required String? explicitEnvironmentName,
+    required EmbeddedHostCloudConfiguration? hostConfiguration,
+  }) {
+    final requestedEnvironmentName =
+        explicitEnvironmentName?.trim().isNotEmpty == true
+        ? explicitEnvironmentName!.trim()
+        : hostConfiguration?.environmentName ??
+              resolvedEnvironmentState?.state.activeEnvironment;
+    if (requestedEnvironmentName == null || requestedEnvironmentName.isEmpty) {
+      throw const MiniProgramHostException(
+        'No cloud environment was selected for the host app. Pass '
+        '`--env <env-name>` or run `miniprogram embed cloud configure --env '
+        '<env-name>` first.',
+      );
+    }
+    if (requestedEnvironmentName == 'local' ||
+        requestedEnvironmentName == 'cloud') {
+      throw const MiniProgramHostException(
+        'host run requires a named cloud environment such as my-aws-prod.',
+      );
+    }
+
+    final resolvedEnvironment = resolvedEnvironmentState?.state
+        .cloudEnvironmentNamed(requestedEnvironmentName);
+    if (resolvedEnvironment != null) {
+      return resolvedEnvironment;
+    }
+    if (hostConfiguration != null &&
+        hostConfiguration.environmentName == requestedEnvironmentName) {
+      return null;
+    }
+
+    throw MiniProgramHostException(
+      'No configured cloud environment named "$requestedEnvironmentName" was '
+      'found. Run `miniprogram env configure $requestedEnvironmentName '
+      '--provider aws ...` first.',
+    );
+  }
+
+  Future<String> _resolveHostBackendApiBaseUrl({
+    required String projectRootPath,
+    required ResolvedLocalCliEnvironmentState? resolvedEnvironmentState,
+    required CloudEnvironmentConfiguration? environment,
+    required EmbeddedHostCloudConfiguration? hostConfiguration,
+  }) async {
+    if (environment != null) {
+      final configuredBackendApiBaseUrl = environment.values['apiBaseUrl']
+          ?.toString()
+          .trim();
+      if (configuredBackendApiBaseUrl != null &&
+          configuredBackendApiBaseUrl.isNotEmpty) {
+        return _normalizeAbsoluteUrl(configuredBackendApiBaseUrl);
+      }
+
+      if (resolvedEnvironmentState != null) {
+        final outputs = await _cloudController.outputs(
+          MiniProgramCloudOutputsRequest(
+            resolvedEnvironmentState: resolvedEnvironmentState,
+            environment: environment,
+          ),
+        );
+        final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(outputs);
+        await _persistCloudEnvironmentValueUpdates(
+          resolved: resolvedEnvironmentState,
+          environmentName: environment.name,
+          updatedValues: <String, dynamic>{'apiBaseUrl': backendApiBaseUrl},
+        );
+
+        final now = DateTime.now().toUtc().toIso8601String();
+        await _stateStore.writeHostCloudConfiguration(
+          projectRootPath,
+          EmbeddedHostCloudConfiguration(
+            environmentName: environment.name,
+            provider: environment.provider,
+            backendApiBaseUrl: backendApiBaseUrl,
+            configuredAtUtc: hostConfiguration?.configuredAtUtc ?? now,
+            updatedAtUtc: now,
+          ),
+        );
+        return backendApiBaseUrl;
+      }
+    }
+
+    if (hostConfiguration != null &&
+        hostConfiguration.backendApiBaseUrl.trim().isNotEmpty) {
+      return _normalizeAbsoluteUrl(hostConfiguration.backendApiBaseUrl);
+    }
+
+    throw const MiniProgramHostException(
+      'No cloud backend API base URL could be resolved for the host app. Run '
+      '`miniprogram cloud deploy` first, then `miniprogram embed cloud '
+      'configure --env <env-name>`.',
+    );
   }
 
   Future<ResolvedLocalCliEnvironmentState?> _discoverEnvironmentState({

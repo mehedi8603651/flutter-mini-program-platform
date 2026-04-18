@@ -232,6 +232,19 @@ flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_HOST=192.168.1.25
 flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_PORT=8080
 ```
 
+For AWS cloud-backed delivery, the CLI can now keep the host-side wiring on the
+same command surface:
+
+```powershell
+cd <existing-flutter-app>
+miniprogram embed cloud configure --env my-aws-prod
+miniprogram host run -d chrome --env my-aws-prod
+```
+
+`embed cloud configure` stores the selected cloud environment under
+`.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with the
+resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+
 ## 5. Open mini-programs from ordinary app buttons
 
 Recommended helper-based example:

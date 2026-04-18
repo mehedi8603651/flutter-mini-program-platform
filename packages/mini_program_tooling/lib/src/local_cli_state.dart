@@ -250,6 +250,79 @@ class CloudEnvironmentConfiguration {
   }
 }
 
+class EmbeddedHostCloudConfiguration {
+  const EmbeddedHostCloudConfiguration({
+    required this.environmentName,
+    required this.provider,
+    required this.backendApiBaseUrl,
+    required this.configuredAtUtc,
+    required this.updatedAtUtc,
+  });
+
+  final String environmentName;
+  final String provider;
+  final String backendApiBaseUrl;
+  final String configuredAtUtc;
+  final String updatedAtUtc;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'environmentName': environmentName,
+    'provider': provider,
+    'backendApiBaseUrl': backendApiBaseUrl,
+    'configuredAtUtc': configuredAtUtc,
+    'updatedAtUtc': updatedAtUtc,
+  };
+
+  factory EmbeddedHostCloudConfiguration.fromJson(Map<String, dynamic> json) {
+    final environmentName = json['environmentName'];
+    final provider = json['provider'];
+    final backendApiBaseUrl = json['backendApiBaseUrl'];
+    final configuredAtUtc = json['configuredAtUtc'];
+    final updatedAtUtc = json['updatedAtUtc'];
+
+    if (environmentName is! String ||
+        provider is! String ||
+        backendApiBaseUrl is! String ||
+        configuredAtUtc is! String ||
+        updatedAtUtc is! String) {
+      throw const LocalCliStateException(
+        'host_cloud.json is missing required fields.',
+      );
+    }
+
+    final trimmedEnvironmentName = environmentName.trim();
+    final trimmedProvider = provider.trim();
+    final trimmedBackendApiBaseUrl = backendApiBaseUrl.trim();
+    if (trimmedEnvironmentName.isEmpty ||
+        !_isSafeEnvironmentName(trimmedEnvironmentName)) {
+      throw LocalCliStateException(
+        'host_cloud.json contains an invalid environmentName value: '
+        '$environmentName',
+      );
+    }
+    if (!CloudEnvironmentConfiguration.supportedProviders.contains(
+      trimmedProvider,
+    )) {
+      throw LocalCliStateException(
+        'host_cloud.json contains an unsupported provider: $provider',
+      );
+    }
+    if (trimmedBackendApiBaseUrl.isEmpty) {
+      throw const LocalCliStateException(
+        'host_cloud.json contains a blank backendApiBaseUrl value.',
+      );
+    }
+
+    return EmbeddedHostCloudConfiguration(
+      environmentName: trimmedEnvironmentName,
+      provider: trimmedProvider,
+      backendApiBaseUrl: trimmedBackendApiBaseUrl,
+      configuredAtUtc: configuredAtUtc,
+      updatedAtUtc: updatedAtUtc,
+    );
+  }
+}
+
 class LocalCliEnvironmentState {
   const LocalCliEnvironmentState({
     required this.schemaVersion,
@@ -513,6 +586,9 @@ class LocalCliStateStore {
   String environmentStatePath(String rootPath) =>
       p.join(stateDirectoryPath(rootPath), 'env.json');
 
+  String hostCloudConfigurationPath(String rootPath) =>
+      p.join(stateDirectoryPath(rootPath), 'host_cloud.json');
+
   String backendWorkspaceStatePath(String rootPath) =>
       p.join(stateDirectoryPath(rootPath), 'backend_workspace.json');
 
@@ -651,6 +727,29 @@ class LocalCliStateStore {
     final file = File(environmentStatePath(rootPath));
     await file.writeAsString(
       const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
+  Future<EmbeddedHostCloudConfiguration?> readHostCloudConfiguration(
+    String rootPath,
+  ) async {
+    final file = File(hostCloudConfigurationPath(rootPath));
+    if (!await file.exists()) {
+      return null;
+    }
+
+    final json = await _readJsonObject(file);
+    return EmbeddedHostCloudConfiguration.fromJson(json);
+  }
+
+  Future<void> writeHostCloudConfiguration(
+    String rootPath,
+    EmbeddedHostCloudConfiguration configuration,
+  ) async {
+    await ensureStateDirectory(rootPath);
+    final file = File(hostCloudConfigurationPath(rootPath));
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(configuration.toJson()),
     );
   }
 

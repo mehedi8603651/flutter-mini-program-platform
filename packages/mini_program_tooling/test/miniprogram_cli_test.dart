@@ -651,6 +651,152 @@ void main() {
       },
     );
 
+    test('cloud outputs supports --format dart-define', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await Directory(standaloneRoot).create(recursive: true);
+      final envState = LocalCliEnvironmentState(
+        schemaVersion: 2,
+        repoRootPath: repoRoot.path,
+        activeEnvironment: 'my-aws-prod',
+        cloudEnvironments: <CloudEnvironmentConfiguration>[
+          CloudEnvironmentConfiguration(
+            name: 'my-aws-prod',
+            provider: 'aws',
+            values: <String, dynamic>{
+              'bucket': 'mini-program-prod',
+              'region': 'us-east-1',
+              'artifactsPrefix': 'artifacts',
+              'metadataPrefix': 'metadata',
+            },
+            configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          ),
+        ],
+        initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+      );
+      await stateStore.writeEnvironmentState(standaloneRoot, envState);
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        cloudController: _FakeMiniProgramCloudController(),
+        workingDirectory: standaloneRoot,
+      ).run(<String>['cloud', 'outputs', '--format', 'dart-define']);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString().trim(),
+        '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://api.example.com/api',
+      );
+    });
+
+    test(
+      'embed cloud configure writes a host_cloud.json file for the host app',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeEmbeddedHostFixture(hostRoot);
+        final envState = LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: repoRoot.path,
+          activeEnvironment: 'my-aws-prod',
+          cloudEnvironments: <CloudEnvironmentConfiguration>[
+            CloudEnvironmentConfiguration(
+              name: 'my-aws-prod',
+              provider: 'aws',
+              values: <String, dynamic>{
+                'bucket': 'mini-program-prod',
+                'region': 'us-east-1',
+                'artifactsPrefix': 'artifacts',
+                'metadataPrefix': 'metadata',
+              },
+              configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+              updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            ),
+          ],
+          initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        );
+        await stateStore.writeGlobalEnvironmentState(envState);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          cloudController: _FakeMiniProgramCloudController(),
+          workingDirectory: hostRoot,
+        ).run(<String>['embed', 'cloud', 'configure', '--env', 'my-aws-prod']);
+
+        expect(exitCode, 0);
+        final configuration = await stateStore.readHostCloudConfiguration(
+          hostRoot,
+        );
+        expect(configuration, isNotNull);
+        expect(configuration!.environmentName, 'my-aws-prod');
+        expect(configuration.provider, 'aws');
+        expect(configuration.backendApiBaseUrl, 'https://api.example.com/api');
+        expect(
+          stdoutBuffer.toString(),
+          contains(
+            'Configured embedded host app for cloud mini-program delivery.',
+          ),
+        );
+      },
+    );
+
+    test(
+      'host run uses the selected cloud env and forwards the backend URL to flutter run',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeEmbeddedHostFixture(hostRoot);
+        final envState = LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: repoRoot.path,
+          activeEnvironment: 'my-aws-prod',
+          cloudEnvironments: <CloudEnvironmentConfiguration>[
+            CloudEnvironmentConfiguration(
+              name: 'my-aws-prod',
+              provider: 'aws',
+              values: <String, dynamic>{
+                'bucket': 'mini-program-prod',
+                'region': 'us-east-1',
+                'artifactsPrefix': 'artifacts',
+                'metadataPrefix': 'metadata',
+                'apiBaseUrl': 'https://api.example.com/api/',
+              },
+              configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+              updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            ),
+          ],
+          initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        );
+        await stateStore.writeGlobalEnvironmentState(envState);
+        final hostController = _FakeMiniProgramHostController();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          cloudController: _FakeMiniProgramCloudController(),
+          hostController: hostController,
+          workingDirectory: hostRoot,
+        ).run(<String>['host', 'run', '-d', 'chrome', '--env', 'my-aws-prod']);
+
+        expect(exitCode, 0);
+        expect(hostController.lastRequest, isNotNull);
+        expect(hostController.lastRequest!.projectRootPath, hostRoot);
+        expect(hostController.lastRequest!.deviceId, 'chrome');
+        expect(
+          hostController.lastRequest!.backendApiBaseUrl,
+          'https://api.example.com/api',
+        );
+      },
+    );
+
     test(
       'cloud rollback forwards version and inferred mini-program id',
       () async {
@@ -1800,6 +1946,7 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
   _FakeMiniProgramCloudController();
 
   MiniProgramCloudDeployRequest? lastDeployRequest;
+  MiniProgramCloudOutputsRequest? lastOutputsRequest;
   MiniProgramCloudRollbackRequest? lastRollbackRequest;
 
   @override
@@ -1833,6 +1980,23 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
   }
 
   @override
+  Future<MiniProgramCloudOutputsResult> outputs(
+    MiniProgramCloudOutputsRequest request,
+  ) async {
+    lastOutputsRequest = request;
+    return MiniProgramCloudOutputsResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: 'mini-program-cloud-${request.environment.name}',
+      region: request.environment.values['region'].toString(),
+      outputs: const <String, String>{
+        'BackendApiBaseUrl': 'https://api.example.com/api/',
+        'HealthUrl': 'https://api.example.com/health',
+      },
+    );
+  }
+
+  @override
   Future<MiniProgramCloudRollbackResult> rollback(
     MiniProgramCloudRollbackRequest request,
   ) async {
@@ -1848,6 +2012,31 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
       releaseKey:
           'metadata/releases/${request.miniProgramId}/${request.version}.json',
       rolledBackAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+}
+
+class _FakeMiniProgramHostController extends MiniProgramHostController {
+  _FakeMiniProgramHostController();
+
+  MiniProgramHostRunRequest? lastRequest;
+
+  @override
+  Future<MiniProgramHostRunResult> run(
+    MiniProgramHostRunRequest request,
+  ) async {
+    lastRequest = request;
+    return MiniProgramHostRunResult(
+      projectRootPath: request.projectRootPath,
+      deviceId: request.deviceId,
+      backendApiBaseUrl: request.backendApiBaseUrl,
+      invocation: <String>[
+        'run',
+        '-d',
+        request.deviceId,
+        '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=${request.backendApiBaseUrl}',
+      ],
+      exitCode: 0,
     );
   }
 }
@@ -1899,6 +2088,28 @@ StacOptions get defaultStacOptions => const StacOptions(
   outputDir: 'stac/.build',
 );
 ''');
+}
+
+Future<void> _writeEmbeddedHostFixture(String hostRootPath) async {
+  await Directory(
+    p.join(hostRootPath, 'lib', 'mini_program'),
+  ).create(recursive: true);
+  await File(p.join(hostRootPath, 'pubspec.yaml')).writeAsString('''
+name: host_app
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.10.0
+''');
+  await File(
+    p.join(
+      hostRootPath,
+      'lib',
+      'mini_program',
+      'mini_program_runtime_setup.dart',
+    ),
+  ).writeAsString('// generated runtime setup');
 }
 
 Future<void> _initializeBackendWorkspaceState(

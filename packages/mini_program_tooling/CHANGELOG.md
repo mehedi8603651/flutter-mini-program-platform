@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- add `miniprogram cloud outputs --format dart-define` for copy-paste host
+  runtime configuration
+- add `miniprogram embed cloud configure --env <env-name>` to bind an embedded
+  Flutter host app to a named cloud environment through
+  `.mini_program/host_cloud.json`
+- add `miniprogram host run -d <device> --env <env-name>` to wrap
+  `flutter run` with the resolved `MINI_PROGRAM_BACKEND_BASE_URL`
+- add the new host-cloud state model and CLI regression coverage for the AWS
+  embedded-host workflow
+
 ## 0.2.28
 
 - add named cloud environment management with:

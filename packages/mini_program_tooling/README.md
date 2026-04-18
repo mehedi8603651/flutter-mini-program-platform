@@ -43,7 +43,9 @@ miniprogram cloud logs
 miniprogram cloud destroy
 miniprogram cloud doctor
 miniprogram cloud rollback <version> [mini-program-id]
+miniprogram host run -d <device>
 miniprogram embed init
+miniprogram embed cloud configure
 miniprogram backend start --port 8080
 miniprogram backend stop
 miniprogram backend status
@@ -194,7 +196,6 @@ AWS cloud publish behavior:
 - uploads release and catalog metadata JSON records for later discovery and rollout services
 - treats bucket object versioning as rollback protection under the immutable release layout
 - does not provision CloudFront from the CLI in this phase
-- does not deploy API Gateway and Lambda from the CLI in this phase
 - the repo now includes a deployable AWS SAM backend under:
   - `infra/aws/mini_program_cloud_api/`
 
@@ -217,7 +218,26 @@ For AWS, these commands:
 - deploy or inspect the API Gateway and Lambda stack that serves the existing backend `/api/...` contract
 - persist the deployed `BackendApiBaseUrl` back into the configured environment when deploy succeeds
 
-Equivalent manual AWS API deployment flow after publish:
+Copy the host-ready backend define directly:
+
+```bash
+miniprogram cloud outputs --format dart-define
+```
+
+Connect an embedded Flutter host app to the named cloud env:
+
+```bash
+cd <existing-flutter-app>
+miniprogram embed init
+miniprogram embed cloud configure --env my-aws-prod
+miniprogram host run -d chrome --env my-aws-prod
+```
+
+`embed cloud configure` stores the selected cloud environment for that host app
+under `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with
+the resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+
+Equivalent manual AWS API deployment flow is still available after publish:
 
 ```bash
 cd <repo-root>/infra/aws/mini_program_cloud_api

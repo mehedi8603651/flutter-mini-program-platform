@@ -482,7 +482,26 @@ miniprogram cloud deploy
 miniprogram cloud outputs
 ```
 
-Then run your Flutter host against the stack output:
+Copy the host-ready define directly when needed:
+
+```powershell
+miniprogram cloud outputs --format dart-define
+```
+
+Then connect an embedded Flutter host app through the CLI:
+
+```powershell
+cd D:\my_flutter_host
+miniprogram embed init
+miniprogram embed cloud configure --env my-aws-prod
+miniprogram host run -d chrome --env my-aws-prod
+```
+
+`embed cloud configure` stores the selected cloud environment for that host app
+under `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with
+the resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+
+Manual Flutter host wiring still works against the stack output:
 
 ```powershell
 flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/
