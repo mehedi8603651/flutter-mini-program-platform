@@ -432,6 +432,71 @@ void main() {
     );
 
     test(
+      'launches iOS preview with ios host platform and localhost base URL',
+      () async {
+        final fixture = await _writePreviewBuildFixture(
+          tempDir.path,
+          miniProgramId: 'coupon_center',
+        );
+        final hostInitializer = _FakePreviewHostInitializer();
+        PreviewProcessCall? processCall;
+        final controller = MiniProgramPreviewController(
+          builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+          hostInitializer: hostInitializer,
+          processStarter:
+              ({
+                required String executable,
+                required List<String> arguments,
+                required String workingDirectory,
+                Map<String, String>? environment,
+              }) async {
+                processCall = PreviewProcessCall(
+                  executable: executable,
+                  arguments: arguments,
+                  workingDirectory: workingDirectory,
+                );
+                return StartedPreviewProcess(
+                  pid: 1,
+                  stdout: const Stream<List<int>>.empty(),
+                  stderr: const Stream<List<int>>.empty(),
+                  exitCode: Future<int>.value(0),
+                  kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+                );
+              },
+        );
+
+        final exitCode = await controller.preview(
+          MiniProgramPreviewRequest(
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: fixture.miniProgramRootPath,
+            repoRootPath: fixture.repoRootPath,
+            deviceId: 'ios',
+          ),
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+        );
+
+        expect(exitCode, 0);
+        expect(processCall, isNotNull);
+        expect(
+          processCall!.arguments,
+          containsAll(<String>['run', '-d', 'ios']),
+        );
+        expect(
+          processCall!.arguments.any(
+            (argument) => argument.startsWith(
+              '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=http://127.0.0.1:',
+            ),
+          ),
+          isTrue,
+        );
+        expect(hostInitializer.lastRequest!.requiredPlatforms, const <String>{
+          'ios',
+        });
+      },
+    );
+
+    test(
       'launches Linux preview with linux host platform and localhost base URL',
       () async {
         final fixture = await _writePreviewBuildFixture(

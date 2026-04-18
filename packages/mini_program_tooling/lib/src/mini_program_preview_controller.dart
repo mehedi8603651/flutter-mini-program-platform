@@ -240,6 +240,7 @@ class MiniProgramPreviewController {
   static const Set<String> supportedDeviceIds = <String>{
     'chrome',
     'edge',
+    'ios',
     'linux',
     'macos',
     'windows',
@@ -443,6 +444,15 @@ class MiniProgramPreviewController {
       return PreviewLaunchTarget(
         deviceId: normalizedDeviceId,
         flutterPlatforms: const <String>{'web'},
+        previewServerBindAddress: InternetAddress.loopbackIPv4,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
+      );
+    }
+
+    if (normalizedDeviceId == 'ios') {
+      return PreviewLaunchTarget(
+        deviceId: normalizedDeviceId,
+        flutterPlatforms: const <String>{'ios'},
         previewServerBindAddress: InternetAddress.loopbackIPv4,
         previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
       );

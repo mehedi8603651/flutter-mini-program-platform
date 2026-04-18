@@ -217,6 +217,7 @@ V1 preview targets:
 
 - `chrome`
 - `edge`
+- `ios` on macOS with Xcode
 - `linux`
 - `macos`
 - `windows`
