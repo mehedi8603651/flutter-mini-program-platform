@@ -28,12 +28,14 @@ miniprogram create <mini-program-id>
 miniprogram doctor
 miniprogram backend init
 miniprogram env init
-miniprogram env use <local|cloud>
+miniprogram env configure <env-name> --provider <provider>
+miniprogram env list
+miniprogram env use <local|env-name>
 miniprogram env status
 miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id]
+miniprogram publish [mini-program-id] [--target local|cloud]
 miniprogram embed init
 miniprogram backend start --port 8080
 miniprogram backend stop
@@ -145,6 +147,46 @@ miniprogram build coupon_center
 miniprogram validate coupon_center
 miniprogram publish coupon_center
 ```
+
+Configure a named AWS cloud environment:
+
+```bash
+miniprogram env init
+miniprogram env configure my-aws-prod --provider aws --bucket mini-program-prod --region us-east-1 --cloudfront-base-url https://d111111abcdef8.cloudfront.net --api-base-url https://api.example.com
+miniprogram env use my-aws-prod
+miniprogram env list
+miniprogram env status
+```
+
+Cloud publish then uses the active named cloud environment by default:
+
+```bash
+cd coupon_center
+miniprogram publish --target cloud
+```
+
+Or use an explicit env override:
+
+```bash
+miniprogram publish --target cloud --env my-aws-prod
+```
+
+Current cloud support in this phase:
+
+- provider implementation shipped: `aws`
+- planned next providers: `gcp`, `custom-s3-compatible`
+- AWS cloud publish requires:
+  - AWS CLI installed and available as `aws`
+  - a configured credential source such as your default account or `--aws-profile`
+  - an S3 bucket with versioning enabled
+
+AWS cloud publish behavior:
+
+- builds the mini-program with the managed Stac builder
+- uploads immutable release artifacts to S3 under versioned keys
+- uploads release and catalog metadata JSON records for later discovery and rollout services
+- treats bucket object versioning as rollback protection under the immutable release layout
+- does not provision CloudFront, API Gateway, or Lambda resources for you in this phase
 
 Initialize the embedding adapter for an existing Flutter app:
 
@@ -266,9 +308,11 @@ policy files that were not created by the CLI publish flow.
 
 ## Notes
 
-- `publish --target cloud` is intentionally reserved for a later CLI phase.
-- `env use local|cloud` only switches saved CLI context in this phase. Cloud
-  publish and cloud backend operations are still follow-up work.
+- `env use` now selects either `local` or a configured named cloud environment.
+- `env configure` stores named cloud environments such as `my-aws-prod` or
+  `my-gcp-staging`.
+- `publish --target cloud` is implemented for `aws` in this phase.
+- `gcp` and `custom-s3-compatible` are the planned next cloud providers.
 - Standalone build/publish/validate no longer require a platform repo root.
 - `preview` is the fastest local authoring loop; `publish` plus
   `backend start` remains the real local delivery simulation.

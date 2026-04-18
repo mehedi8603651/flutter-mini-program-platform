@@ -429,7 +429,31 @@ For this platform type, that tradeoff is usually acceptable.
 
 ## Cloud Direction
 
-The best future cloud model is:
+The current first shipped cloud path is AWS-backed named environments through
+the CLI:
+
+```powershell
+miniprogram env init
+miniprogram env configure my-aws-prod --provider aws --bucket mini-program-prod --region us-east-1 --cloudfront-base-url https://d111111abcdef8.cloudfront.net --api-base-url https://api.example.com
+miniprogram env use my-aws-prod
+miniprogram publish --target cloud
+```
+
+Current cloud support in this phase:
+
+- provider implementation shipped: `aws`
+- planned next providers: `gcp`
+- planned next providers: `custom-s3-compatible`
+
+AWS cloud publish in this phase:
+
+- uses the configured named cloud environment
+- requires AWS CLI credentials outside the repo
+- requires S3 bucket versioning to be enabled
+- uploads immutable release artifacts plus release/catalog metadata to S3
+- does not provision CloudFront, API Gateway, or Lambda for you yet
+
+The best long-term cloud model remains:
 
 - `S3 + CloudFront` for versioned artifacts
   - manifests

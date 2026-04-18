@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:path/path.dart' as p;
 
+import 'mini_program_cloud_publisher.dart';
 import 'delivery_validation.dart';
 import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
@@ -17,6 +18,8 @@ import 'mini_program_preview_server.dart';
 import 'mini_program_publisher.dart';
 import 'mini_program_scaffolder.dart';
 
+const List<String> _supportedPublishTargets = <String>['local', 'cloud'];
+
 class MiniprogramCli {
   MiniprogramCli({
     MiniProgramScaffolder scaffolder = const MiniProgramScaffolder(),
@@ -30,6 +33,8 @@ class MiniprogramCli {
         const LocalBackendInitializer(),
     MiniProgramPreviewController previewController =
         const MiniProgramPreviewController(),
+    MiniProgramCloudPublisher cloudPublisher =
+        const MiniProgramCloudPublisher(),
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
@@ -44,6 +49,7 @@ class MiniprogramCli {
        _backendController = backendController,
        _backendInitializer = backendInitializer,
        _previewController = previewController,
+       _cloudPublisher = cloudPublisher,
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
@@ -59,6 +65,7 @@ class MiniprogramCli {
   final LocalBackendController _backendController;
   final LocalBackendInitializer _backendInitializer;
   final MiniProgramPreviewController _previewController;
+  final MiniProgramCloudPublisher _cloudPublisher;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
@@ -479,8 +486,13 @@ class MiniprogramCli {
       )
       ..addOption(
         'target',
-        allowed: LocalCliEnvironmentState.supportedEnvironments,
+        allowed: _supportedPublishTargets,
         help: 'Publish target. Defaults to the active env or local.',
+      )
+      ..addOption(
+        'env',
+        help:
+            'Named cloud environment override used when --target cloud is selected.',
       );
 
     final results = parser.parse(arguments);
@@ -496,16 +508,10 @@ class MiniprogramCli {
           miniProgramRoot,
       ],
     );
-    final target =
-        results.option('target') ??
-        activeEnvironment?.state.activeEnvironment ??
-        'local';
-    if (target == 'cloud') {
-      throw const MiniProgramPublishException(
-        'Cloud publish is reserved for a later CLI phase. Use --target local '
-        'or omit the flag.',
-      );
-    }
+    final target = _resolvePublishTarget(
+      explicitTarget: results.option('target'),
+      resolvedEnvironmentState: activeEnvironment,
+    );
 
     final miniProgramId = await _resolveMiniProgramId(
       commandName: 'publish',
@@ -528,6 +534,27 @@ class MiniprogramCli {
       currentWorkingDirectory: _currentWorkingDirectory(),
       requireRepoRoot: false,
     );
+    if (target == 'cloud') {
+      final cloudEnvironment = _resolveConfiguredCloudEnvironment(
+        state: activeEnvironment?.state,
+        explicitEnvironmentName: results.option('env'),
+      );
+      final result = await _cloudPublisher.publish(
+        MiniProgramCloudPublishRequest(
+          repoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
+          environment: cloudEnvironment,
+          miniProgramId: miniProgramId,
+          miniProgramRootPath: resolved.isRepoManaged
+              ? null
+              : resolved.miniProgramRootPath,
+          stacCliScriptPath: results.option('stac-cli-script'),
+          skipBuildPubGet: results.flag('skip-build-pub-get'),
+        ),
+      );
+      _stdout.writeln(_formatCloudPublishResult(result));
+      return 0;
+    }
+
     final backendRootPath = await _resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
@@ -657,6 +684,10 @@ class MiniprogramCli {
     switch (arguments.first) {
       case 'init':
         return _runEnvInit(arguments.sublist(1));
+      case 'configure':
+        return _runEnvConfigure(arguments.sublist(1));
+      case 'list':
+        return _runEnvList(arguments.sublist(1));
       case 'use':
         return _runEnvUse(arguments.sublist(1));
       case 'status':
@@ -686,7 +717,6 @@ class MiniprogramCli {
       )
       ..addOption(
         'use',
-        allowed: LocalCliEnvironmentState.supportedEnvironments,
         help: 'Active environment to save. Defaults to local.',
       );
     final results = parser.parse(arguments);
@@ -713,11 +743,23 @@ class MiniprogramCli {
     );
 
     final now = DateTime.now().toUtc().toIso8601String();
+    final configuredCloudEnvironments =
+        existingState?.cloudEnvironments ??
+        const <CloudEnvironmentConfiguration>[];
+    final requestedActiveEnvironment =
+        results.option('use')?.trim() ??
+        existingState?.activeEnvironment ??
+        'local';
+    final activeEnvironment = _validateSelectedEnvironmentName(
+      requestedActiveEnvironment,
+      configuredCloudEnvironments,
+      allowLegacyCloudAlias: true,
+    );
     final state = LocalCliEnvironmentState(
-      schemaVersion: 1,
+      schemaVersion: 2,
       repoRootPath: repoRootPath,
-      activeEnvironment:
-          results.option('use') ?? existingState?.activeEnvironment ?? 'local',
+      activeEnvironment: activeEnvironment,
+      cloudEnvironments: configuredCloudEnvironments,
       initializedAtUtc: existingState?.initializedAtUtc ?? now,
       updatedAtUtc: now,
     );
@@ -737,6 +779,165 @@ class MiniprogramCli {
     return 0;
   }
 
+  Future<int> _runEnvConfigure(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      )
+      ..addOption(
+        'provider',
+        allowed: CloudEnvironmentConfiguration.supportedProviders,
+        help: 'Cloud provider for this named environment.',
+      )
+      ..addOption('bucket', help: 'AWS S3 bucket name for cloud artifacts.')
+      ..addOption(
+        'region',
+        help: 'AWS region for the S3 bucket and related services.',
+      )
+      ..addOption(
+        'artifacts-prefix',
+        defaultsTo: 'artifacts',
+        help: 'Object prefix for immutable release artifacts.',
+      )
+      ..addOption(
+        'metadata-prefix',
+        defaultsTo: 'metadata',
+        help: 'Object prefix for mutable and release metadata records.',
+      )
+      ..addOption(
+        'cloudfront-base-url',
+        help:
+            'Optional CloudFront base URL used to derive public artifact URLs.',
+      )
+      ..addOption(
+        'api-base-url',
+        help: 'Optional API Gateway base URL for discovery and secure routes.',
+      )
+      ..addOption(
+        'aws-profile',
+        help: 'Optional AWS CLI profile used for cloud publish commands.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram env configure <env-name> --provider <provider> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'env configure expects exactly one <env-name> positional argument.',
+      );
+    }
+
+    final environmentName = _validateEnvironmentName(results.rest.single);
+    final provider = results.option('provider')?.trim() ?? '';
+    if (provider.isEmpty) {
+      throw const FormatException(
+        'env configure requires --provider <provider>.',
+      );
+    }
+
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    if (environmentName == 'local') {
+      throw const FormatException('The environment name "local" is reserved.');
+    }
+
+    if (provider != 'aws') {
+      throw MiniProgramPublishException(
+        'Provider "$provider" is not implemented yet. This phase currently '
+        'supports aws only.',
+      );
+    }
+
+    final values = _buildAwsEnvironmentValues(results);
+    final now = DateTime.now().toUtc().toIso8601String();
+    final existingEnvironment = resolved.state.cloudEnvironmentNamed(
+      environmentName,
+    );
+    final updatedEnvironment = CloudEnvironmentConfiguration(
+      name: environmentName,
+      provider: provider,
+      values: values,
+      configuredAtUtc: existingEnvironment?.configuredAtUtc ?? now,
+      updatedAtUtc: now,
+    );
+    final updatedCloudEnvironments =
+        resolved.state.cloudEnvironments
+            .where((environment) => environment.name != environmentName)
+            .toList()
+          ..add(updatedEnvironment);
+    updatedCloudEnvironments.sort((a, b) => a.name.compareTo(b.name));
+
+    final updatedState = resolved.state.copyWith(
+      schemaVersion: 2,
+      cloudEnvironments: updatedCloudEnvironments,
+      updatedAtUtc: now,
+    );
+    if (resolved.scope == 'global') {
+      await _stateStore.writeGlobalEnvironmentState(updatedState);
+    } else {
+      await _stateStore.writeEnvironmentState(resolved.rootPath, updatedState);
+      await _stateStore.writeGlobalEnvironmentState(updatedState);
+    }
+
+    _stdout.writeln(
+      _formatEnvConfigureResult(
+        updatedEnvironment,
+        resolved.copyWithState(updatedState),
+      ),
+    );
+    return 0;
+  }
+
+  Future<int> _runEnvList(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram env list [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final resolved = await _resolveEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    if (resolved == null) {
+      _stdout.writeln(
+        'No miniprogram env configuration was found. Run '
+        '"miniprogram env init" first.',
+      );
+      return 1;
+    }
+
+    _stdout.writeln(_formatEnvListResult(resolved));
+    return 0;
+  }
+
   Future<int> _runEnvUse(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -752,16 +953,13 @@ class MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram env use <local|cloud> [options]');
+      _stdout.writeln('Usage: miniprogram env use <local|env-name> [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
-    if (results.rest.length != 1 ||
-        !LocalCliEnvironmentState.supportedEnvironments.contains(
-          results.rest.single,
-        )) {
+    if (results.rest.length != 1) {
       throw const FormatException(
-        'env use expects exactly one environment: local or cloud.',
+        'env use expects exactly one environment: local or a configured env name.',
       );
     }
 
@@ -769,11 +967,13 @@ class MiniprogramCli {
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
     );
-    final updatedState = LocalCliEnvironmentState(
-      schemaVersion: resolved.state.schemaVersion,
-      repoRootPath: resolved.state.repoRootPath,
-      activeEnvironment: results.rest.single,
-      initializedAtUtc: resolved.state.initializedAtUtc,
+    final selectedEnvironment = _validateSelectedEnvironmentName(
+      results.rest.single,
+      resolved.state.cloudEnvironments,
+    );
+    final updatedState = resolved.state.copyWith(
+      schemaVersion: 2,
+      activeEnvironment: selectedEnvironment,
       updatedAtUtc: DateTime.now().toUtc().toIso8601String(),
     );
     if (resolved.scope == 'global') {
@@ -784,12 +984,7 @@ class MiniprogramCli {
     }
     _stdout.writeln(
       _formatEnvStatusResult(
-        ResolvedLocalCliEnvironmentState(
-          rootPath: resolved.rootPath,
-          filePath: resolved.filePath,
-          state: updatedState,
-          scope: resolved.scope,
-        ),
+        resolved.copyWithState(updatedState),
         switched: true,
       ),
     );
@@ -1046,6 +1241,167 @@ class MiniprogramCli {
       .where((value) => value.isNotEmpty)
       .toSet();
 
+  Map<String, dynamic> _buildAwsEnvironmentValues(ArgResults results) {
+    String requiredOption(String name) {
+      final value = results.option(name)?.trim() ?? '';
+      if (value.isEmpty) {
+        throw FormatException('env configure --provider aws requires --$name.');
+      }
+      return value;
+    }
+
+    final values = <String, dynamic>{
+      'bucket': requiredOption('bucket'),
+      'region': requiredOption('region'),
+      'artifactsPrefix': _normalizeEnvironmentPathPrefix(
+        results.option('artifacts-prefix') ?? 'artifacts',
+      ),
+      'metadataPrefix': _normalizeEnvironmentPathPrefix(
+        results.option('metadata-prefix') ?? 'metadata',
+      ),
+    };
+
+    if (results.option('cloudfront-base-url') case final value?
+        when value.trim().isNotEmpty) {
+      values['cloudFrontBaseUrl'] = _normalizeAbsoluteUrl(value);
+    }
+    if (results.option('api-base-url') case final value?
+        when value.trim().isNotEmpty) {
+      values['apiBaseUrl'] = _normalizeAbsoluteUrl(value);
+    }
+    if (results.option('aws-profile') case final value?
+        when value.trim().isNotEmpty) {
+      values['awsProfile'] = value.trim();
+    }
+    return values;
+  }
+
+  String _validateEnvironmentName(String rawName) {
+    final trimmedName = rawName.trim();
+    if (trimmedName.isEmpty) {
+      throw const FormatException('Environment names must not be blank.');
+    }
+    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(trimmedName)) {
+      throw FormatException(
+        'Environment name "$trimmedName" contains unsupported characters.',
+      );
+    }
+    return trimmedName;
+  }
+
+  String _validateSelectedEnvironmentName(
+    String rawName,
+    List<CloudEnvironmentConfiguration> configuredCloudEnvironments, {
+    bool allowLegacyCloudAlias = false,
+  }) {
+    final trimmedName = rawName.trim();
+    if (trimmedName == 'local') {
+      return 'local';
+    }
+    if (trimmedName == 'cloud' && allowLegacyCloudAlias) {
+      return 'cloud';
+    }
+    if (trimmedName == 'cloud') {
+      throw const FormatException(
+        'env use cloud is no longer the primary workflow. Use a configured '
+        'environment name such as my-aws-prod instead.',
+      );
+    }
+    final normalizedName = _validateEnvironmentName(trimmedName);
+    if (!configuredCloudEnvironments.any(
+      (environment) => environment.name == normalizedName,
+    )) {
+      throw FormatException(
+        'No configured cloud environment named "$normalizedName" was found. '
+        'Run `miniprogram env configure $normalizedName --provider aws ...` '
+        'first.',
+      );
+    }
+    return normalizedName;
+  }
+
+  String _resolvePublishTarget({
+    required String? explicitTarget,
+    required ResolvedLocalCliEnvironmentState? resolvedEnvironmentState,
+  }) {
+    if (explicitTarget case final target? when target.trim().isNotEmpty) {
+      return target;
+    }
+    final activeEnvironment = resolvedEnvironmentState?.state.activeEnvironment;
+    if (activeEnvironment == null || activeEnvironment == 'local') {
+      return 'local';
+    }
+    return 'cloud';
+  }
+
+  CloudEnvironmentConfiguration _resolveConfiguredCloudEnvironment({
+    required LocalCliEnvironmentState? state,
+    required String? explicitEnvironmentName,
+  }) {
+    if (state == null) {
+      throw const MiniProgramPublishException(
+        'No miniprogram env configuration was found. Run '
+        '`miniprogram env init` and `miniprogram env configure ...` first.',
+      );
+    }
+
+    final requestedEnvironmentName =
+        explicitEnvironmentName?.trim().isNotEmpty == true
+        ? explicitEnvironmentName!.trim()
+        : state.activeEnvironment;
+    if (requestedEnvironmentName == 'local') {
+      throw const MiniProgramPublishException(
+        'Cloud publish requires an active or explicit named cloud '
+        'environment. Run `miniprogram env use <env-name>` or pass '
+        '`--env <env-name>`.',
+      );
+    }
+    if (requestedEnvironmentName == 'cloud') {
+      throw const MiniProgramPublishException(
+        'Legacy `cloud` env selection is not enough for cloud publish. '
+        'Configure and select a named environment first.',
+      );
+    }
+
+    final environment = state.cloudEnvironmentNamed(requestedEnvironmentName);
+    if (environment == null) {
+      throw MiniProgramPublishException(
+        'No configured cloud environment named "$requestedEnvironmentName" '
+        'was found.',
+      );
+    }
+    return environment;
+  }
+
+  List<String> _formatCloudEnvironmentValues(
+    CloudEnvironmentConfiguration environment,
+  ) {
+    final lines = <String>[];
+    final sortedKeys = environment.values.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      lines.add('$key: ${environment.values[key]}');
+    }
+    return lines;
+  }
+
+  String _normalizeAbsoluteUrl(String rawValue) {
+    final trimmedValue = rawValue.trim();
+    final uri = Uri.tryParse(trimmedValue);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+      throw FormatException('Expected an absolute URL, but got: $rawValue');
+    }
+    return trimmedValue.replaceFirst(RegExp(r'/+$'), '');
+  }
+
+  String _normalizeEnvironmentPathPrefix(String rawValue) {
+    final normalized = rawValue.trim().replaceAll('\\', '/');
+    final trimmed = normalized.replaceAll(RegExp(r'^/+|/+$'), '');
+    if (trimmed.isEmpty) {
+      throw const FormatException('Cloud object prefixes must not be blank.');
+    }
+    return trimmed;
+  }
+
   String _currentWorkingDirectory() =>
       p.normalize(p.absolute(_workingDirectory ?? Directory.current.path));
 
@@ -1056,7 +1412,9 @@ Commands:
   create <mini-program-id>
   doctor
   env init
-  env use <local|cloud>
+  env configure <env-name> --provider <provider>
+  env list
+  env use <local|env-name>
   env status
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
@@ -1082,7 +1440,9 @@ Usage: miniprogram env <command> [arguments]
 
 Commands:
   init
-  use <local|cloud>
+  configure <env-name> --provider <provider>
+  list
+  use <local|env-name>
   status
 ''';
 
@@ -1170,6 +1530,36 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatCloudPublishResult(MiniProgramCloudPublishResult result) {
+    final versionedObjectCount = result.uploadedObjects
+        .where((record) => record.versionId != null)
+        .length;
+    final lines = <String>[
+      'Published mini-program to cloud: ${result.miniProgramId}',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Version: ${result.version}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Build CLI source: ${result.buildResult.cliSource}',
+      'Built entry screen: ${result.buildResult.entryScreenJsonPath}',
+      'Artifact root key: ${result.artifactRootKey}',
+      'Manifest key: ${result.manifestKey}',
+      'Screens prefix: ${result.screensPrefixKey}',
+      if (result.assetsPrefixKey != null)
+        'Assets prefix: ${result.assetsPrefixKey}',
+      'Release metadata key: ${result.metadataReleaseKey}',
+      'Catalog metadata key: ${result.metadataCatalogKey}',
+      if (result.cloudFrontBaseUrl != null)
+        'CloudFront base URL: ${result.cloudFrontBaseUrl}',
+      if (result.apiBaseUrl != null) 'API base URL: ${result.apiBaseUrl}',
+      'Uploaded objects: ${result.uploadedObjects.length}',
+      'Versioned objects: $versionedObjectCount',
+      'Published at UTC: ${result.publishedAtUtc}',
+    ];
+    return lines.join('\n');
+  }
+
   String _formatEmbeddingInitResult(MiniProgramEmbeddingInitResult result) {
     final lines = <String>[
       'Initialized embedded mini-program adapter for: ${result.packageName}',
@@ -1195,6 +1585,9 @@ Commands:
           'root first.';
     }
 
+    final activeCloudEnvironment = resolved.state.cloudEnvironmentNamed(
+      resolved.state.activeEnvironment,
+    );
     final lines = <String>[
       if (initialized)
         'Initialized miniprogram env.'
@@ -1207,9 +1600,50 @@ Commands:
       'Config file: ${resolved.filePath}',
       'Repo root: ${resolved.state.repoRootPath ?? 'not configured'}',
       'Active environment: ${resolved.state.activeEnvironment}',
+      'Configured cloud environments: ${resolved.state.cloudEnvironments.length}',
+      if (activeCloudEnvironment != null)
+        'Active provider: ${activeCloudEnvironment.provider}',
+      if (activeCloudEnvironment != null)
+        ..._formatCloudEnvironmentValues(activeCloudEnvironment),
+      if (resolved.state.activeEnvironment == 'cloud')
+        'Active provider: legacy cloud alias (reconfigure to a named cloud environment)',
       'Initialized at UTC: ${resolved.state.initializedAtUtc}',
       'Updated at UTC: ${resolved.state.updatedAtUtc}',
     ];
+    return lines.join('\n');
+  }
+
+  String _formatEnvConfigureResult(
+    CloudEnvironmentConfiguration environment,
+    ResolvedLocalCliEnvironmentState resolved,
+  ) {
+    final lines = <String>[
+      'Configured cloud environment: ${environment.name}',
+      'Provider: ${environment.provider}',
+      'Config scope: ${resolved.scope}',
+      'Config root: ${resolved.rootPath}',
+      'Config file: ${resolved.filePath}',
+      ..._formatCloudEnvironmentValues(environment),
+      'Configured at UTC: ${environment.configuredAtUtc}',
+      'Updated at UTC: ${environment.updatedAtUtc}',
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatEnvListResult(ResolvedLocalCliEnvironmentState resolved) {
+    final lines = <String>[
+      'Configured environments:',
+      '${resolved.state.activeEnvironment == 'local' ? '*' : '-'} local',
+    ];
+    for (final environment in resolved.state.cloudEnvironments) {
+      lines.add(
+        '${resolved.state.activeEnvironment == environment.name ? '*' : '-'} '
+        '${environment.name} (${environment.provider})',
+      );
+    }
+    if (resolved.state.activeEnvironment == 'cloud') {
+      lines.add('- cloud (legacy alias)');
+    }
     return lines.join('\n');
   }
 

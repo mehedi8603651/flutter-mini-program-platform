@@ -455,48 +455,140 @@ void main() {
       expect(previewController.lastRequest!.deviceId, '192.168.1.25:5555');
     });
 
-    test('env init, use, and status manage active environment state', () async {
-      final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
-      await workspaceRoot.create(recursive: true);
+    test(
+      'env init, configure, list, use, and status manage named cloud environments',
+      () async {
+        final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
+        await workspaceRoot.create(recursive: true);
 
-      final stdoutBuffer = StringBuffer();
-      final stderrBuffer = StringBuffer();
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: stderrBuffer,
-        workingDirectory: workspaceRoot.path,
-      );
+        final stdoutBuffer = StringBuffer();
+        final stderrBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: stderrBuffer,
+          workingDirectory: workspaceRoot.path,
+        );
 
-      expect(
-        await cli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-      expect(
-        await File(
-          p.join(workspaceRoot.path, '.mini_program', 'env.json'),
-        ).exists(),
-        isTrue,
-      );
-      expect(
-        await File(stateStore.globalEnvironmentStatePath()).exists(),
-        isTrue,
-      );
+        expect(
+          await cli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
+          0,
+        );
+        expect(
+          await File(
+            p.join(workspaceRoot.path, '.mini_program', 'env.json'),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(stateStore.globalEnvironmentStatePath()).exists(),
+          isTrue,
+        );
 
-      expect(await cli.run(<String>['env', 'use', 'cloud']), 0);
+        expect(
+          await cli.run(<String>[
+            'env',
+            'configure',
+            'my-aws-prod',
+            '--provider',
+            'aws',
+            '--bucket',
+            'mini-program-prod',
+            '--region',
+            'us-east-1',
+            '--cloudfront-base-url',
+            'https://d111111abcdef8.cloudfront.net',
+            '--api-base-url',
+            'https://api.example.com',
+          ]),
+          0,
+        );
+        expect(await cli.run(<String>['env', 'use', 'my-aws-prod']), 0);
 
-      final statusBuffer = StringBuffer();
-      final statusCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: statusBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: workspaceRoot.path,
-      );
-      expect(await statusCli.run(<String>['env', 'status']), 0);
-      expect(statusBuffer.toString(), contains('Active environment: cloud'));
-      expect(statusBuffer.toString(), contains('Config scope: local'));
-      expect(stderrBuffer.toString(), isEmpty);
-    });
+        final listBuffer = StringBuffer();
+        final listCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: listBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: workspaceRoot.path,
+        );
+        expect(await listCli.run(<String>['env', 'list']), 0);
+        expect(listBuffer.toString(), contains('* my-aws-prod (aws)'));
+
+        final statusBuffer = StringBuffer();
+        final statusCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: statusBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: workspaceRoot.path,
+        );
+        expect(await statusCli.run(<String>['env', 'status']), 0);
+        expect(
+          statusBuffer.toString(),
+          contains('Active environment: my-aws-prod'),
+        );
+        expect(statusBuffer.toString(), contains('Active provider: aws'));
+        expect(
+          statusBuffer.toString(),
+          contains('Configured cloud environments: 1'),
+        );
+        expect(statusBuffer.toString(), contains('Config scope: local'));
+        expect(stderrBuffer.toString(), isEmpty);
+      },
+    );
+
+    test(
+      'publish --target cloud uses the active named cloud environment',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        final envState = LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: repoRoot.path,
+          activeEnvironment: 'my-aws-prod',
+          cloudEnvironments: <CloudEnvironmentConfiguration>[
+            CloudEnvironmentConfiguration(
+              name: 'my-aws-prod',
+              provider: 'aws',
+              values: <String, dynamic>{
+                'bucket': 'mini-program-prod',
+                'region': 'us-east-1',
+                'artifactsPrefix': 'artifacts',
+                'metadataPrefix': 'metadata',
+              },
+              configuredAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+              updatedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+            ),
+          ],
+          initializedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+        );
+        await stateStore.writeEnvironmentState(standaloneRoot, envState);
+        final cloudPublisher = _FakeMiniProgramCloudPublisher();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          cloudPublisher: cloudPublisher,
+          workingDirectory: standaloneRoot,
+        ).run(<String>['publish', '--target', 'cloud']);
+
+        expect(exitCode, 0);
+        expect(cloudPublisher.lastRequest, isNotNull);
+        expect(cloudPublisher.lastRequest!.environment.name, 'my-aws-prod');
+        expect(cloudPublisher.lastRequest!.environment.provider, 'aws');
+        expect(cloudPublisher.lastRequest!.miniProgramId, 'coupon_center');
+        expect(
+          cloudPublisher.lastRequest!.miniProgramRootPath,
+          p.normalize(p.absolute(standaloneRoot)),
+        );
+      },
+    );
 
     test(
       'env init succeeds without a repo root and reports standalone config',
@@ -1533,6 +1625,62 @@ class _FakeMiniProgramPreviewController extends MiniProgramPreviewController {
   }) async {
     lastRequest = request;
     return 0;
+  }
+}
+
+class _FakeMiniProgramCloudPublisher extends MiniProgramCloudPublisher {
+  _FakeMiniProgramCloudPublisher();
+
+  MiniProgramCloudPublishRequest? lastRequest;
+
+  @override
+  Future<MiniProgramCloudPublishResult> publish(
+    MiniProgramCloudPublishRequest request,
+  ) async {
+    lastRequest = request;
+    return MiniProgramCloudPublishResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId ?? 'coupon_center',
+      version: '1.2.3',
+      buildResult: MiniProgramBuildResult(
+        repoRootPath: request.repoRootPath,
+        miniProgramId: request.miniProgramId ?? 'coupon_center',
+        miniProgramRootPath:
+            request.miniProgramRootPath ??
+            p.join(request.repoRootPath, 'coupon_center'),
+        cliSource: 'fake',
+        invocation: const <String>['dart', 'fake'],
+        outputDirectoryPath: p.join(
+          request.miniProgramRootPath ?? request.repoRootPath,
+          'stac',
+          '.build',
+        ),
+        screensDirectoryPath: p.join(
+          request.miniProgramRootPath ?? request.repoRootPath,
+          'stac',
+          '.build',
+          'screens',
+        ),
+        entryScreenJsonPath: p.join(
+          request.miniProgramRootPath ?? request.repoRootPath,
+          'stac',
+          '.build',
+          'screens',
+          'coupon_center_home.json',
+        ),
+        pubGetRan: false,
+      ),
+      bucketName: 'mini-program-prod',
+      region: 'us-east-1',
+      artifactRootKey: 'artifacts/coupon_center/1.2.3',
+      manifestKey: 'artifacts/coupon_center/1.2.3/manifest.json',
+      screensPrefixKey: 'artifacts/coupon_center/1.2.3/screens',
+      metadataReleaseKey: 'metadata/releases/coupon_center/1.2.3.json',
+      metadataCatalogKey: 'metadata/catalog/coupon_center.json',
+      publishedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+      uploadedObjects: const <CloudPublishedObjectRecord>[],
+    );
   }
 }
 

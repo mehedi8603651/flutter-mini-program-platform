@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.28
+
+- add named cloud environment management with:
+  - `miniprogram env configure <env-name> --provider aws`
+  - `miniprogram env list`
+  - `miniprogram env use <local|env-name>`
+- implement the first cloud publish path with:
+  - `miniprogram publish --target cloud`
+  - `miniprogram publish --target cloud --env <env-name>`
+- add AWS cloud publish support that:
+  - builds the mini-program with the managed Stac builder
+  - requires S3 bucket versioning to be enabled
+  - uploads immutable release artifacts to S3
+  - uploads release and catalog metadata JSON records for later discovery and
+    rollout services
+- add the shared cloud publisher abstraction so `gcp` and
+  `custom-s3-compatible` can plug into the same CLI model later
+- update root and tooling docs for the named cloud-environment workflow and
+  record the completed preview milestone in `nextWorkAgents.md`
+
 ## 0.2.27
 
 - add managed preview support for Microsoft Edge with

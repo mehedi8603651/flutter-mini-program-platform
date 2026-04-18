@@ -99,22 +99,74 @@ change:
 Preview is shipped. The next major implementation wave should move to cloud
 delivery support:
 
+- `miniprogram env init`
+- `miniprogram env configure <env-name> --provider <provider>`
+- `miniprogram env list`
+- `miniprogram env use <env-name>`
+- `miniprogram env status`
 - `miniprogram publish --target cloud`
-- `miniprogram env use cloud`
+- `miniprogram publish --target cloud --env <env-name>`
+
+Recommended examples:
+
+- `miniprogram env configure my-aws-prod --provider aws`
+- `miniprogram env configure my-gcp-staging --provider gcp`
+- `miniprogram env configure my-custom --provider custom`
+
+V1 cloud providers should be:
+
+- `aws`
+- `gcp`
+- `custom-s3-compatible`
+
+Important modeling rule:
+
+- provider and environment are different concerns
+- `aws-prod`, `aws-staging`, `gcp-dev`, and similar named environments should
+  be first-class
+- `publish --target cloud` should use the active cloud environment by default
+  and allow `--env` as an override
+- do not make raw `--provider aws|gcp|...` the main publish interface
 
 Expected architecture:
 
-- S3 versioning for:
+- object storage with version-aware release handling for:
   - manifests
   - screens
   - themes
   - assets
-- CloudFront in front of S3
-- API Gateway + Lambda for:
+- CDN in front of object storage
+- dynamic gateway and serverless compute for:
   - discovery
   - rollout and host-aware selection
   - capability filtering
   - secure API routes
+
+Provider mapping in v1:
+
+- `aws`:
+  - S3
+  - CloudFront
+  - API Gateway
+  - Lambda
+- `gcp`:
+  - Cloud Storage
+  - Cloud CDN
+  - API Gateway
+  - Cloud Run or Cloud Functions
+- `custom-s3-compatible`:
+  - S3-compatible object storage
+  - user-supplied CDN base URL
+  - user-supplied API base URL
+
+Release and storage rules:
+
+- publish immutable release paths per mini-program version
+- treat bucket object versioning as recovery and rollback protection, not the
+  primary release model
+- use rollout or discovery metadata to point hosts at the active release
+- prefer versioned file or path names over CDN invalidation as the default
+  update strategy
 
 ### 2. Payment and other host-native capabilities
 Add new capabilities only through explicit contracts:
@@ -171,15 +223,16 @@ Smaller future UX improvements that fit the current system:
 ## Near-Term Concrete Task List
 
 1. Add cloud publish support with S3 object layout and versioned keys.
-2. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
+2. Add `env configure <env-name> --provider aws|gcp|custom` with persisted
+   named cloud environments.
+3. Make `publish --target cloud` resolve the active cloud environment by
+   default and accept `--env <env-name>` as an override.
+4. Add API Gateway/Lambda-compatible cloud route design for discovery, latest,
    rollout, and secure routes.
-3. Keep target-aware local backend defaults and device overrides inside the
+5. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows.
-4. Add first-class payment capability contracts and payload models.
-5. Implement payment host bridge support in Flutter hosts first.
-6. Plan Android native-host embedding around a reused Flutter engine.
-7. Keep the CLI as the single source of truth before adding any IDE wrapper.
-8. Add optional auto-generated `requestId` support in author helpers.
-9. Add optional advanced preview host attachment for custom host-app testing.
-10. Improve preview refresh latency and preview-only error overlays where
-    needed.
+6. Add first-class payment capability contracts and payload models.
+7. Implement payment host bridge support in Flutter hosts first.
+8. Plan Android native-host embedding around a reused Flutter engine.
+9. Keep the CLI as the single source of truth before adding any IDE wrapper.
+10. Add optional auto-generated `requestId` support in author helpers.

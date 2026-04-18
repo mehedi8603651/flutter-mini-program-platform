@@ -166,27 +166,142 @@ class PublishedLocalArtifactsState {
   }
 }
 
+class CloudEnvironmentConfiguration {
+  const CloudEnvironmentConfiguration({
+    required this.name,
+    required this.provider,
+    required this.values,
+    required this.configuredAtUtc,
+    required this.updatedAtUtc,
+  });
+
+  static const List<String> supportedProviders = <String>[
+    'aws',
+    'gcp',
+    'custom-s3-compatible',
+  ];
+
+  final String name;
+  final String provider;
+  final Map<String, dynamic> values;
+  final String configuredAtUtc;
+  final String updatedAtUtc;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'name': name,
+    'provider': provider,
+    'values': values,
+    'configuredAtUtc': configuredAtUtc,
+    'updatedAtUtc': updatedAtUtc,
+  };
+
+  CloudEnvironmentConfiguration copyWith({
+    String? provider,
+    Map<String, dynamic>? values,
+    String? configuredAtUtc,
+    String? updatedAtUtc,
+  }) {
+    return CloudEnvironmentConfiguration(
+      name: name,
+      provider: provider ?? this.provider,
+      values: values ?? this.values,
+      configuredAtUtc: configuredAtUtc ?? this.configuredAtUtc,
+      updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
+    );
+  }
+
+  factory CloudEnvironmentConfiguration.fromJson(Map<String, dynamic> json) {
+    final name = json['name'];
+    final provider = json['provider'];
+    final rawValues = json['values'];
+    final configuredAtUtc = json['configuredAtUtc'];
+    final updatedAtUtc = json['updatedAtUtc'];
+
+    if (name is! String ||
+        provider is! String ||
+        rawValues is! Map ||
+        configuredAtUtc is! String ||
+        updatedAtUtc is! String) {
+      throw const LocalCliStateException(
+        'env.json contains an invalid cloud environment entry.',
+      );
+    }
+
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty || !_isSafeEnvironmentName(trimmedName)) {
+      throw LocalCliStateException(
+        'env.json contains an invalid cloud environment name: $name',
+      );
+    }
+
+    if (!supportedProviders.contains(provider)) {
+      throw LocalCliStateException(
+        'env.json contains an unsupported cloud provider: $provider',
+      );
+    }
+
+    return CloudEnvironmentConfiguration(
+      name: trimmedName,
+      provider: provider,
+      values: rawValues.map((key, value) => MapEntry(key.toString(), value)),
+      configuredAtUtc: configuredAtUtc,
+      updatedAtUtc: updatedAtUtc,
+    );
+  }
+}
+
 class LocalCliEnvironmentState {
   const LocalCliEnvironmentState({
     required this.schemaVersion,
     required this.repoRootPath,
     required this.activeEnvironment,
+    this.cloudEnvironments = const <CloudEnvironmentConfiguration>[],
     required this.initializedAtUtc,
     required this.updatedAtUtc,
   });
 
-  static const List<String> supportedEnvironments = <String>['local', 'cloud'];
-
   final int schemaVersion;
   final String? repoRootPath;
   final String activeEnvironment;
+  final List<CloudEnvironmentConfiguration> cloudEnvironments;
   final String initializedAtUtc;
   final String updatedAtUtc;
+
+  CloudEnvironmentConfiguration? cloudEnvironmentNamed(String name) {
+    final trimmedName = name.trim();
+    for (final environment in cloudEnvironments) {
+      if (environment.name == trimmedName) {
+        return environment;
+      }
+    }
+    return null;
+  }
+
+  LocalCliEnvironmentState copyWith({
+    int? schemaVersion,
+    String? repoRootPath,
+    String? activeEnvironment,
+    List<CloudEnvironmentConfiguration>? cloudEnvironments,
+    String? initializedAtUtc,
+    String? updatedAtUtc,
+  }) {
+    return LocalCliEnvironmentState(
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      repoRootPath: repoRootPath ?? this.repoRootPath,
+      activeEnvironment: activeEnvironment ?? this.activeEnvironment,
+      cloudEnvironments: cloudEnvironments ?? this.cloudEnvironments,
+      initializedAtUtc: initializedAtUtc ?? this.initializedAtUtc,
+      updatedAtUtc: updatedAtUtc ?? this.updatedAtUtc,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'schemaVersion': schemaVersion,
       'activeEnvironment': activeEnvironment,
+      'cloudEnvironments': cloudEnvironments
+          .map((environment) => environment.toJson())
+          .toList(),
       'initializedAtUtc': initializedAtUtc,
       'updatedAtUtc': updatedAtUtc,
     };
@@ -200,6 +315,7 @@ class LocalCliEnvironmentState {
     final schemaVersion = json['schemaVersion'];
     final rawRepoRootPath = json['repoRootPath'];
     final activeEnvironment = json['activeEnvironment'];
+    final rawCloudEnvironments = json['cloudEnvironments'];
     final initializedAtUtc = json['initializedAtUtc'];
     final updatedAtUtc = json['updatedAtUtc'];
 
@@ -216,7 +332,49 @@ class LocalCliEnvironmentState {
         'env.json contains an invalid repoRootPath value.',
       );
     }
-    if (!supportedEnvironments.contains(activeEnvironment)) {
+    if (rawCloudEnvironments != null && rawCloudEnvironments is! List) {
+      throw const LocalCliStateException(
+        'env.json contains an invalid cloudEnvironments value.',
+      );
+    }
+
+    final cloudEnvironments =
+        (rawCloudEnvironments as List? ?? const <Object>[])
+            .map((value) {
+              if (value is! Map) {
+                throw const LocalCliStateException(
+                  'env.json contains a non-object cloud environment entry.',
+                );
+              }
+              return CloudEnvironmentConfiguration.fromJson(
+                value.map((key, entry) => MapEntry(key.toString(), entry)),
+              );
+            })
+            .cast<CloudEnvironmentConfiguration>()
+            .toList();
+    final seenNames = <String>{};
+    for (final environment in cloudEnvironments) {
+      if (!seenNames.add(environment.name)) {
+        throw LocalCliStateException(
+          'env.json contains duplicate cloud environment name: '
+          '${environment.name}',
+        );
+      }
+    }
+
+    final trimmedActiveEnvironment = activeEnvironment.trim();
+    if (trimmedActiveEnvironment.isEmpty) {
+      throw const LocalCliStateException(
+        'env.json contains a blank activeEnvironment value.',
+      );
+    }
+    final isKnownActiveEnvironment =
+        trimmedActiveEnvironment == 'local' ||
+        trimmedActiveEnvironment == 'cloud' ||
+        cloudEnvironments.any(
+          (environment) => environment.name == trimmedActiveEnvironment,
+        );
+    if (!isKnownActiveEnvironment) {
       throw LocalCliStateException(
         'env.json contains an unsupported activeEnvironment: '
         '$activeEnvironment',
@@ -228,7 +386,8 @@ class LocalCliEnvironmentState {
       repoRootPath: rawRepoRootPath == null || rawRepoRootPath.trim().isEmpty
           ? null
           : p.normalize(p.absolute(rawRepoRootPath)),
-      activeEnvironment: activeEnvironment,
+      activeEnvironment: trimmedActiveEnvironment,
+      cloudEnvironments: cloudEnvironments,
       initializedAtUtc: initializedAtUtc,
       updatedAtUtc: updatedAtUtc,
     );
@@ -303,6 +462,17 @@ class ResolvedLocalCliEnvironmentState {
   final String filePath;
   final LocalCliEnvironmentState state;
   final String scope;
+
+  ResolvedLocalCliEnvironmentState copyWithState(
+    LocalCliEnvironmentState state,
+  ) {
+    return ResolvedLocalCliEnvironmentState(
+      rootPath: rootPath,
+      filePath: filePath,
+      state: state,
+      scope: scope,
+    );
+  }
 }
 
 class ResolvedLocalBackendWorkspaceState {
@@ -753,3 +923,6 @@ class LocalCliStateStore {
     return p.join(_resolveHomeDirectoryPath(), 'AppData', 'Local');
   }
 }
+
+bool _isSafeEnvironmentName(String value) =>
+    RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(value);
