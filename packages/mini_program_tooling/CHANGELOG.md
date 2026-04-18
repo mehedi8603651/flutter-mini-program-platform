@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.29
 
 - add `miniprogram cloud outputs --format dart-define` for copy-paste host
   runtime configuration
