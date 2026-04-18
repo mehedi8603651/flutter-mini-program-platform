@@ -216,6 +216,7 @@ miniprogram preview -d chrome
 V1 preview targets:
 
 - `chrome`
+- `edge`
 - `windows`
 - `emulator-5554` and other Android emulator ids
 - Android USB device ids such as `R58M123ABC`

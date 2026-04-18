@@ -229,6 +229,28 @@ void main() {
       },
     );
 
+    test('preview forwards Edge device ids', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.0.0',
+      );
+      final previewController = _FakeMiniProgramPreviewController();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: StringBuffer(),
+        previewController: previewController,
+        workingDirectory: standaloneRoot,
+      ).run(<String>['preview', '-d', 'edge']);
+
+      expect(exitCode, 0);
+      expect(previewController.lastRequest, isNotNull);
+      expect(previewController.lastRequest!.deviceId, 'edge');
+    });
+
     test('preview rejects unsupported v1 device ids', () async {
       final standaloneRoot = p.join(tempDir.path, 'coupon_center');
       await _writeMiniProgramFixture(
@@ -237,11 +259,23 @@ void main() {
         version: '1.0.0',
       );
       final stderrBuffer = StringBuffer();
+      final previewController = MiniProgramPreviewController(
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              throw const ProcessException('adb.exe', <String>['version']);
+            },
+      );
 
       final exitCode = await MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: StringBuffer(),
         stderrSink: stderrBuffer,
+        previewController: previewController,
         workingDirectory: standaloneRoot,
       ).run(<String>['preview', '-d', 'android']);
 

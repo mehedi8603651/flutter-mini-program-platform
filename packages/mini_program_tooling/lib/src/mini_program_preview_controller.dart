@@ -237,7 +237,11 @@ class MiniProgramPreviewController {
        _lanAddressResolver = lanAddressResolver,
        _processStarter = processStarter;
 
-  static const Set<String> supportedDeviceIds = <String>{'chrome', 'windows'};
+  static const Set<String> supportedDeviceIds = <String>{
+    'chrome',
+    'edge',
+    'windows',
+  };
   static final RegExp _androidEmulatorDeviceIdPattern = RegExp(
     r'^emulator-\d+$',
   );
@@ -425,6 +429,15 @@ class MiniProgramPreviewController {
     final trimmedDeviceId = deviceId.trim();
     final normalizedDeviceId = trimmedDeviceId.toLowerCase();
     if (normalizedDeviceId == 'chrome') {
+      return PreviewLaunchTarget(
+        deviceId: normalizedDeviceId,
+        flutterPlatforms: const <String>{'web'},
+        previewServerBindAddress: InternetAddress.loopbackIPv4,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
+      );
+    }
+
+    if (normalizedDeviceId == 'edge') {
       return PreviewLaunchTarget(
         deviceId: normalizedDeviceId,
         flutterPlatforms: const <String>{'web'},

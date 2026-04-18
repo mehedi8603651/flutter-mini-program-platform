@@ -31,7 +31,7 @@ miniprogram env init
 miniprogram env use <local|cloud>
 miniprogram env status
 miniprogram build [mini-program-id]
-miniprogram preview -d <chrome|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
+miniprogram preview -d <chrome|edge|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id]
 miniprogram embed init
@@ -65,6 +65,7 @@ miniprogram preview -d chrome
 Preview v1 currently supports:
 
 - `chrome`
+- `edge`
 - `windows`
 - Android emulator ids such as `emulator-5554`
 - Android USB device ids such as `R58M123ABC`
