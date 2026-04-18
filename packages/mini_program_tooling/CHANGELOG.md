@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.26
+
+- prefer `adb reverse tcp:<port> tcp:<port>` for Android emulator preview and
+  fall back to `10.0.2.2` only when reverse cannot be applied
+- add managed preview support for Android Wi-Fi physical-device targets such as
+  `miniprogram preview -d 192.168.1.25:5555`
+- resolve a reachable LAN host for Android Wi-Fi preview sessions and allow
+  overriding it with `MINI_PROGRAM_PREVIEW_LAN_HOST`
+- widen the generated Android preview-host debug cleartext config so LAN-based
+  preview transport works across emulator, USB, and Wi-Fi device flows
+- add regression coverage for emulator reverse fallback and Android Wi-Fi
+  preview launch behavior
+
 ## 0.2.25
 
 - add managed preview support for Android emulator targets such as
