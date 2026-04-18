@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.27
+
+- add managed preview support for Microsoft Edge with
+  `miniprogram preview -d edge`
+- add managed preview support for Linux desktop with
+  `miniprogram preview -d linux`
+- add managed preview support for macOS desktop with
+  `miniprogram preview -d macos`
+- add managed preview support for iOS simulator workflows on macOS with
+  `miniprogram preview -d ios`
+- extend the hidden managed preview host generator and regression coverage for
+  the new Edge, Linux, macOS, and iOS preview targets
+
 ## 0.2.26
 
 - prefer `adb reverse tcp:<port> tcp:<port>` for Android emulator preview and
