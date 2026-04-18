@@ -241,6 +241,7 @@ class MiniProgramPreviewController {
     'chrome',
     'edge',
     'linux',
+    'macos',
     'windows',
   };
   static final RegExp _androidEmulatorDeviceIdPattern = RegExp(
@@ -460,6 +461,15 @@ class MiniProgramPreviewController {
       return PreviewLaunchTarget(
         deviceId: normalizedDeviceId,
         flutterPlatforms: const <String>{'linux'},
+        previewServerBindAddress: InternetAddress.loopbackIPv4,
+        previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
+      );
+    }
+
+    if (normalizedDeviceId == 'macos') {
+      return PreviewLaunchTarget(
+        deviceId: normalizedDeviceId,
+        flutterPlatforms: const <String>{'macos'},
         previewServerBindAddress: InternetAddress.loopbackIPv4,
         previewServerFallbackPublicHost: InternetAddress.loopbackIPv4.address,
       );

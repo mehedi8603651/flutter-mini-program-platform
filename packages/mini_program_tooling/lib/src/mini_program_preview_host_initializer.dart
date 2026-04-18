@@ -51,6 +51,7 @@ class MiniProgramPreviewHostInitializer {
   static const Set<String> _supportedFlutterPlatforms = <String>{
     'android',
     'linux',
+    'macos',
     'web',
     'windows',
   };

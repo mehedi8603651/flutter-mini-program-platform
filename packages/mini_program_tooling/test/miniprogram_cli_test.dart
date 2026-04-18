@@ -273,6 +273,28 @@ void main() {
       expect(previewController.lastRequest!.deviceId, 'linux');
     });
 
+    test('preview forwards macOS device ids', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.0.0',
+      );
+      final previewController = _FakeMiniProgramPreviewController();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: StringBuffer(),
+        previewController: previewController,
+        workingDirectory: standaloneRoot,
+      ).run(<String>['preview', '-d', 'macos']);
+
+      expect(exitCode, 0);
+      expect(previewController.lastRequest, isNotNull);
+      expect(previewController.lastRequest!.deviceId, 'macos');
+    });
+
     test('preview rejects unsupported v1 device ids', () async {
       final standaloneRoot = p.join(tempDir.path, 'coupon_center');
       await _writeMiniProgramFixture(
