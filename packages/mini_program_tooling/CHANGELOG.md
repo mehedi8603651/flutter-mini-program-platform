@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.30
+
+- fix AWS cloud commands on Windows by launching `sam` with shell resolution,
+  which avoids false "sam not found" failures when `sam --version` already
+  works in PowerShell
+- rewrite the AWS setup guidance in the root README and tooling README around
+  the full developer path:
+  - account bootstrap
+  - CLI credential setup
+  - S3 bucket creation and versioning
+  - `miniprogram publish --target cloud`
+  - `miniprogram cloud deploy`
+  - embedded host app connection with `embed cloud configure` and `host run`
+- remove repo-`infra` focused wording from the main developer entry-point docs
+  so published-package users see the bundled AWS cloud workflow first
+
 ## 0.2.29
 
 - add `miniprogram cloud outputs --format dart-define` for copy-paste host

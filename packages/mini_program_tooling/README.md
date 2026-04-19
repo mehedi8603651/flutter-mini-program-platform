@@ -184,95 +184,360 @@ Current cloud support in this phase:
 
 - provider implementation shipped: `aws`
 - planned next providers: `gcp`, `custom-s3-compatible`
-- AWS cloud publish requires:
-  - AWS CLI installed and available as `aws`
-  - a configured credential source such as your default account or `--aws-profile`
-  - an S3 bucket with versioning enabled
+- AWS deploy support in `mini_program_tooling` assumes:
+  - Windows + PowerShell
+  - region `ap-south-1`
+  - fastest working path first
+  - normal developers use the published CLI only; they do not need to manually
+    use the repo `infra/` folder
 
-AWS cloud publish behavior:
+Important rule:
 
-- builds the mini-program with the managed Stac builder
-- uploads immutable release artifacts to S3 under versioned keys
-- uploads release and catalog metadata JSON records for later discovery and rollout services
-- treats bucket object versioning as rollback protection under the immutable release layout
-- does not provision CloudFront from the CLI in this phase
-- the AWS backend deploy template is bundled into `mini_program_tooling`
-  releases, so `pub.dev` users do not need the platform repo checked out to
-  run `miniprogram cloud deploy`
-- the repo still keeps the source template under:
-  - `infra/aws/mini_program_cloud_api/`
-  - this is mainly for maintainers, repo contributors, and manual fallback
+- if you signed in with the AWS **root account**, you can create IAM users,
+  buckets, and everything else
+- if you signed in with an **IAM user/role** and cannot create those things,
+  you do not have enough permissions and need an admin to grant them
 
-AWS cloud backend commands:
+### 1. One-time AWS account setup
 
-```bash
-miniprogram cloud deploy
-miniprogram cloud status
-miniprogram cloud outputs
-miniprogram cloud logs
-miniprogram cloud destroy
-miniprogram cloud doctor
-miniprogram cloud rollback 1.0.0 coupon_center
+Best practice:
+
+- use the root account only for:
+  - enabling MFA
+  - creating an admin identity
+- do not use root for daily work
+
+Fastest practical setup for your own standalone AWS account:
+
+1. sign in as **root**
+2. enable **MFA** on root
+3. open **IAM**
+4. create a user like `mini-admin`
+5. give it `AdministratorAccess`
+6. create:
+   - console access
+   - access key for CLI use
+7. sign out of root
+8. sign in as `mini-admin`
+
+For first setup, `AdministratorAccess` is the easiest path. Later you can
+replace it with a narrower deploy policy.
+
+### 2. Install tools on your computer
+
+Install:
+
+- AWS CLI
+- AWS SAM CLI
+- Node.js
+- Flutter
+- Dart
+
+Then verify:
+
+```powershell
+aws --version
+sam --version
+node --version
+flutter --version
+dart --version
 ```
 
-For AWS, these commands:
+### 3. Connect your computer to AWS
 
-- use the active named cloud environment by default
-- generate or refresh a managed SAM project under `.mini_program/cloud/aws_backend`
-- deploy or inspect the API Gateway and Lambda stack that serves the existing backend `/api/...` contract
-- persist the deployed `BackendApiBaseUrl` back into the configured environment when deploy succeeds
+Option A: access key profile
 
-AWS developer prerequisites that still stay manual:
+```powershell
+aws configure --profile my-aws
+aws sts get-caller-identity --profile my-aws
+```
 
-- install `aws` CLI
-- install `sam` CLI
-- install `node`
-- connect the computer to AWS through SSO, access-key profile, or environment variables
-- create the S3 bucket
-- enable S3 bucket versioning
-- grant IAM permissions for S3 publish plus SAM/CloudFormation deploy
+Enter:
 
-So for normal `pub.dev` usage, the developer does not manually create API
-Gateway routes and does not manually copy files from `infra/`. The CLI creates
-the managed backend project from its bundled AWS template, then runs `sam
-build` and `sam deploy`.
+- Access key ID
+- Secret access key
+- Region: `ap-south-1`
+- Output format: `json`
 
-Copy the host-ready backend define directly:
+If that works, your computer is connected to AWS.
 
-```bash
+Option B: AWS SSO
+
+```powershell
+aws configure sso --profile my-sso
+aws sso login --profile my-sso
+aws sts get-caller-identity --profile my-sso
+```
+
+For a new standalone personal account, the access-key profile path is usually
+simpler.
+
+### 4. Create the S3 bucket
+
+Bucket names must be globally unique.
+
+Example:
+
+```powershell
+aws s3api create-bucket --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1 --profile my-aws
+```
+
+Enable versioning:
+
+```powershell
+aws s3api put-bucket-versioning --bucket my-mini-program-prod-ap-south-1-001 --versioning-configuration Status=Enabled --region ap-south-1 --profile my-aws
+aws s3api get-bucket-versioning --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --profile my-aws
+```
+
+Expected result:
+
+```json
+{
+  "Status": "Enabled"
+}
+```
+
+### 5. Create your mini-program
+
+```powershell
+cd D:\
+miniprogram create my_coupon_app
+cd my_coupon_app
+miniprogram preview -d chrome
+```
+
+Use preview first so you confirm the mini-program works before cloud deploy.
+
+### 6. Configure `miniprogram` for AWS
+
+Initialize env:
+
+```powershell
+miniprogram env init
+```
+
+Configure the AWS environment:
+
+```powershell
+miniprogram env configure my-aws-prod --provider aws --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --aws-profile my-aws
+```
+
+Select it:
+
+```powershell
+miniprogram env use my-aws-prod
+miniprogram env status
+```
+
+### 7. Publish and deploy to AWS
+
+Publish the mini-program artifacts to S3:
+
+```powershell
+miniprogram publish --target cloud
+```
+
+Check cloud prerequisites:
+
+```powershell
+miniprogram cloud doctor
+```
+
+Deploy the API Gateway + Lambda backend:
+
+```powershell
+miniprogram cloud deploy
+```
+
+Inspect outputs:
+
+```powershell
+miniprogram cloud outputs
 miniprogram cloud outputs --format dart-define
 ```
 
-Connect an embedded Flutter host app to the named cloud env:
+What the CLI does here:
 
-```bash
-cd <existing-flutter-app>
+- uploads artifacts to S3
+- generates a managed SAM project locally
+- runs `sam build`
+- runs `sam deploy`
+- creates or updates:
+  - API Gateway
+  - Lambda
+  - Lambda IAM role
+
+You do not manually create API Gateway routes.
+
+### 8. Connect a Flutter host app
+
+If you do not have a host app yet:
+
+```powershell
+cd D:\
+flutter create my_mini_host
+cd my_mini_host
 miniprogram embed init
+flutter pub get
+```
+
+Bind that host app to your AWS env:
+
+```powershell
+miniprogram embed cloud configure --env my-aws-prod
+```
+
+Run it:
+
+```powershell
+miniprogram host run -d chrome --env my-aws-prod
+```
+
+Or Windows desktop:
+
+```powershell
+miniprogram host run -d windows --env my-aws-prod
+```
+
+That wraps `flutter run` and passes the deployed backend URL automatically.
+
+### 9. Minimum policies you need
+
+Easiest first setup:
+
+- use `AdministratorAccess` on your admin user
+
+That is the shortest path to get working.
+
+Narrower deploy user later needs at least:
+
+- S3 bucket access
+  - `s3:ListBucket`
+  - `s3:GetBucketLocation`
+  - `s3:GetBucketVersioning`
+  - `s3:GetObject`
+  - `s3:PutObject`
+  - `s3:DeleteObject`
+  - `s3:AbortMultipartUpload`
+- CloudFormation
+  - `cloudformation:CreateStack`
+  - `cloudformation:UpdateStack`
+  - `cloudformation:DeleteStack`
+  - `cloudformation:DescribeStacks`
+  - `cloudformation:DescribeStackEvents`
+  - `cloudformation:DescribeStackResources`
+  - `cloudformation:ListStackResources`
+  - `cloudformation:CreateChangeSet`
+  - `cloudformation:ExecuteChangeSet`
+  - `cloudformation:DeleteChangeSet`
+  - `cloudformation:DescribeChangeSet`
+  - `cloudformation:GetTemplate`
+  - `cloudformation:GetTemplateSummary`
+  - `cloudformation:ValidateTemplate`
+- Lambda
+  - `lambda:CreateFunction`
+  - `lambda:UpdateFunctionCode`
+  - `lambda:UpdateFunctionConfiguration`
+  - `lambda:DeleteFunction`
+  - `lambda:GetFunction`
+  - `lambda:GetFunctionConfiguration`
+  - `lambda:GetPolicy`
+  - `lambda:AddPermission`
+  - `lambda:RemovePermission`
+  - `lambda:TagResource`
+  - `lambda:UntagResource`
+  - `lambda:ListTags`
+- API Gateway
+  - `apigateway:GET`
+  - `apigateway:POST`
+  - `apigateway:PUT`
+  - `apigateway:PATCH`
+  - `apigateway:DELETE`
+  - `apigateway:TagResource`
+  - `apigateway:UntagResource`
+- IAM role management for the Lambda execution role
+  - `iam:CreateRole`
+  - `iam:DeleteRole`
+  - `iam:GetRole`
+  - `iam:PassRole`
+  - `iam:TagRole`
+  - `iam:UntagRole`
+  - `iam:AttachRolePolicy`
+  - `iam:DetachRolePolicy`
+  - `iam:PutRolePolicy`
+  - `iam:DeleteRolePolicy`
+  - `iam:GetRolePolicy`
+  - `iam:ListRolePolicies`
+  - `iam:ListAttachedRolePolicies`
+- If your bucket uses KMS encryption, also:
+  - `kms:Encrypt`
+  - `kms:Decrypt`
+  - `kms:GenerateDataKey`
+  - `kms:DescribeKey`
+
+### 10. If you still cannot create IAM users or buckets
+
+Then one of these is true:
+
+- you are not signed in as root or admin
+- your IAM user/role is restricted
+- your AWS account is inside an AWS Organization with SCP restrictions
+
+In that case, ask the account admin for either:
+
+- `AdministratorAccess` temporarily for setup
+- or a dedicated deploy user/role with the permissions above
+
+### Exact end-to-end command sequence
+
+```powershell
+# 1. configure aws cli
+aws configure --profile my-aws
+aws sts get-caller-identity --profile my-aws
+
+# 2. create bucket
+aws s3api create-bucket --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1 --profile my-aws
+aws s3api put-bucket-versioning --bucket my-mini-program-prod-ap-south-1-001 --versioning-configuration Status=Enabled --region ap-south-1 --profile my-aws
+
+# 3. create and test mini-program locally
+cd D:\
+miniprogram create my_coupon_app
+cd my_coupon_app
+miniprogram preview -d chrome
+
+# 4. configure miniprogram aws env
+miniprogram env init
+miniprogram env configure my-aws-prod --provider aws --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --aws-profile my-aws
+miniprogram env use my-aws-prod
+miniprogram cloud doctor
+
+# 5. publish and deploy
+miniprogram publish --target cloud
+miniprogram cloud deploy
+miniprogram cloud outputs
+
+# 6. host app
+cd D:\
+flutter create my_mini_host
+cd my_mini_host
+miniprogram embed init
+flutter pub get
 miniprogram embed cloud configure --env my-aws-prod
 miniprogram host run -d chrome --env my-aws-prod
 ```
 
-`embed cloud configure` stores the selected cloud environment for that host app
-under `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with
-the resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+Official AWS docs:
 
-Equivalent manual AWS API deployment flow is still available after publish:
-
-```bash
-cd <repo-root>/infra/aws/mini_program_cloud_api
-sam build
-sam deploy --stack-name mini-program-cloud-api-prod --region ap-south-1 --capabilities CAPABILITY_IAM --parameter-overrides ArtifactBucketName=<bucket-name> ArtifactsPrefix=artifacts MetadataPrefix=metadata StageName=prod
-```
-
-The stack output `BackendApiBaseUrl` is the value to use in Flutter hosts:
-
-```bash
-flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/
-```
-
-Deployment details and route coverage are documented in:
-
-- `infra/aws/mini_program_cloud_api/README.md`
+- Root user best practices: https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html
+- Create an administrative user: https://docs.aws.amazon.com/accounts/latest/reference/getting-started-step4.html
+- Create an IAM user: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
+- Install AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+- Configure AWS CLI SSO: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html
+- Install AWS SAM CLI: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
+- `sam deploy` capabilities: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-deploy.html
+- Create S3 bucket with CLI: https://docs.aws.amazon.com/cli/v1/reference/s3api/create-bucket.html
+- Enable S3 versioning: https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html
+- `put-bucket-versioning` CLI: https://docs.aws.amazon.com/cli/v1/reference/s3api/put-bucket-versioning.html
 
 Initialize the embedding adapter for an existing Flutter app:
 

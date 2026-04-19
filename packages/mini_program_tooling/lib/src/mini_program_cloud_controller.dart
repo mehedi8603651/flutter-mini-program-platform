@@ -27,7 +27,7 @@ Future<ProcessResult> _defaultMiniProgramCloudProcessRunner(
     arguments,
     workingDirectory: workingDirectory,
     environment: environment,
-    runInShell: false,
+    runInShell: Platform.isWindows,
   );
 }
 
