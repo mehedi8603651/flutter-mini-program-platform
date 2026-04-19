@@ -461,8 +461,12 @@ AWS cloud publish in this phase:
   - `miniprogram cloud destroy`
   - `miniprogram cloud doctor`
   - `miniprogram cloud rollback <version> [mini-program-id]`
-- includes a deployable AWS SAM backend under:
+- bundles the AWS SAM backend template into published `mini_program_tooling`
+  releases, so developers using `dart pub global activate mini_program_tooling`
+  do not need this repo checked out to run `miniprogram cloud deploy`
+- keeps the source template in the repo under:
   - [infra/aws/mini_program_cloud_api/README.md](D:/flutter-mini-program-platform/infra/aws/mini_program_cloud_api/README.md)
+  - this repo copy is mainly for maintainers, contributors, and manual fallback
 
 The shipped AWS backend stack reads the published S3 objects and serves the
 existing Flutter backend contract:
@@ -500,6 +504,24 @@ miniprogram host run -d chrome --env my-aws-prod
 `embed cloud configure` stores the selected cloud environment for that host app
 under `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with
 the resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+
+Manual AWS work that still stays outside `miniprogram`:
+
+- install `aws` CLI
+- install `sam` CLI
+- install `node`
+- connect the developer computer to AWS credentials
+- create the S3 bucket
+- enable S3 bucket versioning
+- grant IAM permissions for S3 publish plus SAM/CloudFormation deploy
+- optionally configure CloudFront, custom domains, ACM, and Route53
+
+So the normal developer path is:
+
+- no manual API Gateway route creation
+- no manual copying from `infra/`
+- no need to publish `infra/` separately to `pub.dev`
+- use `miniprogram publish --target cloud` plus `miniprogram cloud deploy`
 
 Manual Flutter host wiring still works against the stack output:
 

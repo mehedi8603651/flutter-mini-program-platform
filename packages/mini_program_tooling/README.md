@@ -196,8 +196,12 @@ AWS cloud publish behavior:
 - uploads release and catalog metadata JSON records for later discovery and rollout services
 - treats bucket object versioning as rollback protection under the immutable release layout
 - does not provision CloudFront from the CLI in this phase
-- the repo now includes a deployable AWS SAM backend under:
+- the AWS backend deploy template is bundled into `mini_program_tooling`
+  releases, so `pub.dev` users do not need the platform repo checked out to
+  run `miniprogram cloud deploy`
+- the repo still keeps the source template under:
   - `infra/aws/mini_program_cloud_api/`
+  - this is mainly for maintainers, repo contributors, and manual fallback
 
 AWS cloud backend commands:
 
@@ -217,6 +221,21 @@ For AWS, these commands:
 - generate or refresh a managed SAM project under `.mini_program/cloud/aws_backend`
 - deploy or inspect the API Gateway and Lambda stack that serves the existing backend `/api/...` contract
 - persist the deployed `BackendApiBaseUrl` back into the configured environment when deploy succeeds
+
+AWS developer prerequisites that still stay manual:
+
+- install `aws` CLI
+- install `sam` CLI
+- install `node`
+- connect the computer to AWS through SSO, access-key profile, or environment variables
+- create the S3 bucket
+- enable S3 bucket versioning
+- grant IAM permissions for S3 publish plus SAM/CloudFormation deploy
+
+So for normal `pub.dev` usage, the developer does not manually create API
+Gateway routes and does not manually copy files from `infra/`. The CLI creates
+the managed backend project from its bundled AWS template, then runs `sam
+build` and `sam deploy`.
 
 Copy the host-ready backend define directly:
 
