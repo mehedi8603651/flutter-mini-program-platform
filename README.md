@@ -435,10 +435,18 @@ the CLI:
 
 ```powershell
 miniprogram env init
-miniprogram env configure my-aws-prod --provider aws --bucket mini-program-prod --region us-east-1 --cloudfront-base-url https://d111111abcdef8.cloudfront.net --api-base-url https://api.example.com
-miniprogram env use my-aws-prod
+miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>] [--cloudfront-base-url https://<cloudfront-domain>] [--api-base-url https://<api-domain>]
+miniprogram env use <env-name>
 miniprogram publish --target cloud
 ```
+
+Replace the placeholder values before running that command. In particular:
+
+- `<env-name>` should be something like `my-aws-prod`
+- `<unique-bucket-name>` must be globally unique in S3
+- `<aws-region>` should be a real AWS region such as `ap-south-1`
+- `--cloudfront-base-url` and `--api-base-url` are optional and should only be
+  supplied when you already have those URLs
 
 Current cloud support in this phase:
 
