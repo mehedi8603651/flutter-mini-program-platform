@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.32
+
+- disable Flutter hot reload for the managed preview host because
+  `miniprogram preview` already owns watch/rebuild/refresh; this avoids a
+  Windows Flutter tool crash where locked `build/*.dill` cache files can make
+  Chrome preview fail on startup
+
 ## 0.2.31
 
 - update the bundled AWS SAM backend template from Lambda `nodejs20.x` to

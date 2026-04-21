@@ -348,6 +348,7 @@ void main() {
             'run',
             '-d',
             'chrome',
+            '--no-hot',
             '--dart-define=MINI_PROGRAM_PREVIEW_MINI_PROGRAM_ID=coupon_center',
             '--dart-define=MINI_PROGRAM_PREVIEW_TITLE=Coupon Center',
           ]),

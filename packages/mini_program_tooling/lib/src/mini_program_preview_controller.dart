@@ -873,6 +873,7 @@ class MiniProgramPreviewController {
       hostRootPath,
       '-d',
       deviceId,
+      '--no-hot',
       '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=$previewBaseUrl',
       '--dart-define=MINI_PROGRAM_PREVIEW_MINI_PROGRAM_ID=$miniProgramId',
       '--dart-define=MINI_PROGRAM_PREVIEW_TITLE=$title',
