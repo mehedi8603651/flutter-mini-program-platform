@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.32
+
+- update the bundled AWS SAM backend template from Lambda `nodejs20.x` to
+  `nodejs24.x` so new `miniprogram cloud deploy` stacks avoid the Node.js 20
+  runtime deprecation window
+
 ## 0.2.31
 
 - update generated host and preview app dependencies to

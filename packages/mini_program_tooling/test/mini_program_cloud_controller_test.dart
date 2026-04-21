@@ -129,6 +129,17 @@ void main() {
         ).exists(),
         isTrue,
       );
+      final generatedTemplate = await File(
+        p.join(
+          resolvedEnvironmentState.rootPath,
+          '.mini_program',
+          'cloud',
+          'aws_backend',
+          'template.yaml',
+        ),
+      ).readAsString();
+      expect(generatedTemplate, contains('Runtime: nodejs24.x'));
+      expect(generatedTemplate, isNot(contains('Runtime: nodejs20.x')));
       expect(
         invocations.any(
           (invocation) =>

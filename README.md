@@ -515,7 +515,7 @@ Install:
 
 - AWS CLI
 - AWS SAM CLI
-- Node.js
+- Node.js 24 or newer
 - Flutter
 - Dart
 
@@ -528,6 +528,9 @@ node --version
 flutter --version
 dart --version
 ```
+
+`miniprogram cloud deploy` uses an AWS Lambda `nodejs24.x` backend template.
+Keep AWS SAM CLI up to date enough to deploy `nodejs24.x` functions.
 
 ### 3. Connect your computer to AWS
 

@@ -1303,7 +1303,7 @@ Resources:
     Properties:
       CodeUri: src/
       Handler: handler.handler
-      Runtime: nodejs20.x
+      Runtime: nodejs24.x
       MemorySize: !Ref FunctionMemorySize
       Timeout: !Ref FunctionTimeoutSeconds
       Architectures:

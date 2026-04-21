@@ -56,10 +56,14 @@ Not implemented yet in this stack:
 - internet access from the developer machine to AWS endpoints
 - AWS CLI installed and configured for the target account
 - AWS SAM CLI installed
-- Node.js installed
+- Node.js 24 or newer installed
 - an S3 bucket with versioning enabled
 - mini-programs already published into that bucket through
   `miniprogram publish --target cloud`
+
+The SAM template uses the AWS Lambda `nodejs24.x` runtime. Keep AWS SAM CLI
+current enough to deploy `nodejs24.x` functions, and use Node.js 24 locally
+when maintaining or testing this backend template.
 
 If the developer machine cannot reach AWS at all, `miniprogram cloud deploy`
 cannot work from that machine. In that case, keep using local preview/local
