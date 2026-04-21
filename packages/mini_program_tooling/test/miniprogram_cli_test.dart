@@ -55,6 +55,88 @@ void main() {
       }
     });
 
+    test('root help shows current cloud and host commands', () async {
+      final stdoutBuffer = StringBuffer();
+      final stderrBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: stderrBuffer,
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['--help']);
+
+      expect(exitCode, 0);
+      expect(stderrBuffer.toString(), isEmpty);
+      expect(
+        stdoutBuffer.toString(),
+        contains('publish [mini-program-id] [--target local|cloud]'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('cloud outputs [--format text|dart-define]'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('host run -d <device> [--env <env-name>]'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('embed cloud configure [--env <env-name>]'),
+      );
+    });
+
+    test(
+      'group help requests print usage without unknown command errors',
+      () async {
+        for (final group in <String>[
+          'env',
+          'cloud',
+          'host',
+          'embed',
+          'backend',
+        ]) {
+          final stdoutBuffer = StringBuffer();
+          final stderrBuffer = StringBuffer();
+          final cli = MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: stderrBuffer,
+            workingDirectory: tempDir.path,
+          );
+
+          final exitCode = await cli.run(<String>[group, '--help']);
+
+          expect(exitCode, 0, reason: group);
+          expect(stderrBuffer.toString(), isEmpty, reason: group);
+          expect(
+            stdoutBuffer.toString(),
+            contains('Usage: miniprogram $group'),
+            reason: group,
+          );
+        }
+
+        final embedCloudStdout = StringBuffer();
+        final embedCloudStderr = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: embedCloudStdout,
+          stderrSink: embedCloudStderr,
+          workingDirectory: tempDir.path,
+        );
+
+        final exitCode = await cli.run(<String>['embed', 'cloud', '--help']);
+
+        expect(exitCode, 0);
+        expect(embedCloudStderr.toString(), isEmpty);
+        expect(
+          embedCloudStdout.toString(),
+          contains('Usage: miniprogram embed cloud'),
+        );
+      },
+    );
+
     test('create uses standalone ./<id> output by default', () async {
       final stdoutBuffer = StringBuffer();
       final stderrBuffer = StringBuffer();

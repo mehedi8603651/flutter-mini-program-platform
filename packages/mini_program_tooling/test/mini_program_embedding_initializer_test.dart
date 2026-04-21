@@ -178,8 +178,25 @@ void main() {
     });
 
     test(
-      'generates Android debug cleartext config for local backend access',
+      'generates Android network config for release and local debug access',
       () async {
+        await Directory(
+          p.join(tempDir.path, 'android', 'app', 'src', 'main'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            tempDir.path,
+            'android',
+            'app',
+            'src',
+            'main',
+            'AndroidManifest.xml',
+          ),
+        ).writeAsString(
+          '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n'
+          '    <application android:label="fixture" />\n'
+          '</manifest>\n',
+        );
         await Directory(
           p.join(tempDir.path, 'android', 'app', 'src', 'debug'),
         ).create(recursive: true);
@@ -188,6 +205,16 @@ void main() {
           MiniProgramEmbeddingInitRequest(projectRootPath: tempDir.path),
         );
 
+        final mainManifest = await File(
+          p.join(
+            tempDir.path,
+            'android',
+            'app',
+            'src',
+            'main',
+            'AndroidManifest.xml',
+          ),
+        ).readAsString();
         final debugManifest = await File(
           p.join(
             tempDir.path,
@@ -219,6 +246,19 @@ void main() {
               'android',
               'app',
               'src',
+              'main',
+              'AndroidManifest.xml',
+            ),
+          ),
+        );
+        expect(
+          result.createdPaths,
+          contains(
+            p.join(
+              tempDir.path,
+              'android',
+              'app',
+              'src',
               'debug',
               'AndroidManifest.xml',
             ),
@@ -237,6 +277,12 @@ void main() {
               'xml',
               'mini_program_network_security_config.xml',
             ),
+          ),
+        );
+        expect(
+          mainManifest,
+          contains(
+            '<uses-permission android:name="android.permission.INTERNET"/>',
           ),
         );
         expect(debugManifest, contains('android:usesCleartextTraffic="true"'));

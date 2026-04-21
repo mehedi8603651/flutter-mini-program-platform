@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.33
+
+- add Android release `INTERNET` permission to generated embedded host apps so
+  release APKs can load cloud-delivered mini-programs through API Gateway
+- expand `miniprogram --help` and group-level `--help` output to show current
+  cloud, host-run, embed-cloud, and publish target options
+- refresh root and tooling README guidance for AWS cloud delivery, multi
+  mini-program buckets, host app connection, and Android release networking
+
 ## 0.2.32
 
 - disable Flutter hot reload for the managed preview host because

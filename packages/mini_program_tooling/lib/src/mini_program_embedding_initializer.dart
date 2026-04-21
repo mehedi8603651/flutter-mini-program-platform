@@ -930,9 +930,10 @@ the S3 bucket URL directly.
 - the shared SDK retries local loopback between `10.0.2.2` and `127.0.0.1`
   for transport failures, so Android USB `adb reverse` workflows can still use
   the generated local default
-- `embed init` also adds Android debug-only cleartext config for the local
-  backend so the generated Android local defaults can reach local HTTP backend
-  URLs without manual manifest edits
+- `embed init` also adds Android release `INTERNET` permission for cloud/API
+  delivery and debug-only cleartext config for the local backend, so generated
+  host apps can load AWS mini-programs in release APKs and reach local HTTP
+  backend URLs during development without manual manifest edits
 - local backend conditions:
   - backend should already be running on port `8080`
   - Android USB or emulator loopback may still depend on an active
@@ -969,6 +970,22 @@ flutter run -d emulator-5554
     required String projectRootPath,
   }) {
     final files = <String, String>{};
+    final androidMainManifest = File(
+      p.join(
+        projectRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'AndroidManifest.xml',
+      ),
+    );
+    if (androidMainManifest.existsSync()) {
+      files[androidMainManifest.path] = _ensureAndroidInternetPermission(
+        androidMainManifest.readAsStringSync(),
+      );
+    }
+
     final androidDebugDirectory = Directory(
       p.join(projectRootPath, 'android', 'app', 'src', 'debug'),
     );
@@ -984,6 +1001,27 @@ flutter run -d emulator-5554
           _buildAndroidDebugNetworkSecurityConfig();
     }
     return files;
+  }
+
+  String _ensureAndroidInternetPermission(String source) {
+    if (source.contains('android.permission.INTERNET')) {
+      return source;
+    }
+
+    final normalizedSource = source.replaceAll('\r\n', '\n');
+    final manifestMatch = RegExp(
+      r'<manifest\b[^>]*>',
+      multiLine: true,
+    ).firstMatch(normalizedSource);
+    if (manifestMatch == null) {
+      return source;
+    }
+
+    return normalizedSource.replaceRange(
+      manifestMatch.end,
+      manifestMatch.end,
+      '\n    <uses-permission android:name="android.permission.INTERNET"/>',
+    );
   }
 
   String _buildAndroidDebugManifest() {

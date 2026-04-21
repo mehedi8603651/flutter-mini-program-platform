@@ -614,6 +614,10 @@ class MiniprogramCli {
   }
 
   Future<int> _runEmbed(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_embedUsage());
+      return 0;
+    }
     if (arguments.isEmpty) {
       _stderr.writeln(_embedUsage());
       return 64;
@@ -632,6 +636,10 @@ class MiniprogramCli {
   }
 
   Future<int> _runEmbedCloud(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_embedCloudUsage());
+      return 0;
+    }
     if (arguments.isEmpty) {
       _stderr.writeln(_embedCloudUsage());
       return 64;
@@ -648,6 +656,10 @@ class MiniprogramCli {
   }
 
   Future<int> _runCloud(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_cloudUsage());
+      return 0;
+    }
     if (arguments.isEmpty) {
       _stderr.writeln(_cloudUsage());
       return 64;
@@ -676,6 +688,10 @@ class MiniprogramCli {
   }
 
   Future<int> _runHost(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_hostUsage());
+      return 0;
+    }
     if (arguments.isEmpty) {
       _stderr.writeln(_hostUsage());
       return 64;
@@ -1212,6 +1228,10 @@ class MiniprogramCli {
   }
 
   Future<int> _runEnv(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_envUsage());
+      return 0;
+    }
     if (arguments.isEmpty) {
       _stderr.writeln(_envUsage());
       return 64;
@@ -1581,6 +1601,10 @@ class MiniprogramCli {
   }
 
   Future<int> _runBackend(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_backendUsage());
+      return 0;
+    }
     if (arguments.isEmpty) {
       _stderr.writeln(_backendUsage());
       return 64;
@@ -2063,44 +2087,56 @@ class MiniprogramCli {
   String _currentWorkingDirectory() =>
       p.normalize(p.absolute(_workingDirectory ?? Directory.current.path));
 
+  bool _isGroupHelpRequest(List<String> arguments) {
+    if (arguments.length != 1) {
+      return false;
+    }
+    return arguments.single == '--help' ||
+        arguments.single == '-h' ||
+        arguments.single == 'help';
+  }
+
   String _rootUsage() => '''
 Usage: miniprogram <command> [arguments]
 
 Commands:
   create <mini-program-id>
   doctor
-  env init
-  env configure <env-name> --provider <provider>
-  env list
+  env init|list|status
+  env configure <env-name> --provider aws --bucket <bucket> --region <region>
   env use <local|env-name>
-  env status
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
-  publish [mini-program-id]
-  cloud deploy|status|outputs|logs|destroy|doctor|rollback
-  host run -d <device>
-  embed init|cloud configure
-  backend init
+  publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+  cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
+  cloud outputs [--format text|dart-define]
+  host run -d <device> [--env <env-name>]
+  embed init [--project-root <path>]
+  embed cloud configure [--env <env-name>]
+  backend init [--root <path>]
   backend start --port 8080
   backend stop
   backend status
   backend reset-local --yes
+
+Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
+`miniprogram <group> <command> --help` for command-specific options.
 ''';
 
   String _embedUsage() => '''
 Usage: miniprogram embed <command> [arguments]
 
 Commands:
-  init
-  cloud configure
+  init [--project-root <path>] [--force]
+  cloud configure [--env <env-name>]
 ''';
 
   String _embedCloudUsage() => '''
 Usage: miniprogram embed cloud <command> [arguments]
 
 Commands:
-  configure
+  configure [--env <env-name>]
 ''';
 
   String _envUsage() => '''
@@ -2108,7 +2144,7 @@ Usage: miniprogram env <command> [arguments]
 
 Commands:
   init
-  configure <env-name> --provider <provider>
+  configure <env-name> --provider aws --bucket <bucket> --region <region>
   list
   use <local|env-name>
   status
@@ -2118,27 +2154,27 @@ Commands:
 Usage: miniprogram cloud <command> [arguments]
 
 Commands:
-  deploy
-  status
-  outputs
-  logs
-  destroy
-  doctor
-  rollback <version> [mini-program-id]
+  deploy [--env <env-name>]
+  status [--env <env-name>]
+  outputs [--env <env-name>] [--format text|dart-define]
+  logs [--env <env-name>]
+  destroy [--env <env-name>]
+  doctor [--env <env-name>]
+  rollback <version> [mini-program-id] [--env <env-name>]
 ''';
 
   String _hostUsage() => '''
 Usage: miniprogram host <command> [arguments]
 
 Commands:
-  run -d <device>
+  run -d <device> [--env <env-name>]
 ''';
 
   String _backendUsage() => '''
 Usage: miniprogram backend <command> [arguments]
 
 Commands:
-  init
+  init [--root <path>]
   start --port 8080
   stop
   status

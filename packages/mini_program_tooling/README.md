@@ -3,9 +3,10 @@
 Developer tooling for the portable Flutter mini-program platform.
 
 This package exposes the global `miniprogram` CLI used to create mini-programs,
-build and validate authored flows, publish to the local backend, initialize
-embedding adapters for existing Flutter apps, and manage the local backend
-lifecycle.
+build and validate authored flows, preview with watch/rebuild/refresh, publish
+to local or AWS cloud delivery, deploy the managed AWS backend, initialize
+embedding adapters for existing Flutter apps, bind host apps to cloud
+environments, and manage the local backend lifecycle.
 
 ## Install
 
@@ -28,29 +29,32 @@ miniprogram create <mini-program-id>
 miniprogram doctor
 miniprogram backend init
 miniprogram env init
-miniprogram env configure <env-name> --provider <provider>
+miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>]
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status
 miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud]
-miniprogram cloud deploy
-miniprogram cloud status
-miniprogram cloud outputs
-miniprogram cloud logs
-miniprogram cloud destroy
-miniprogram cloud doctor
-miniprogram cloud rollback <version> [mini-program-id]
-miniprogram host run -d <device>
-miniprogram embed init
-miniprogram embed cloud configure
+miniprogram publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+miniprogram cloud deploy [--env <env-name>]
+miniprogram cloud status [--env <env-name>]
+miniprogram cloud outputs [--env <env-name>] [--format text|dart-define]
+miniprogram cloud logs [--env <env-name>]
+miniprogram cloud destroy [--env <env-name>]
+miniprogram cloud doctor [--env <env-name>]
+miniprogram cloud rollback <version> [mini-program-id] [--env <env-name>]
+miniprogram host run -d <device> [--env <env-name>]
+miniprogram embed init [--project-root <path>] [--force]
+miniprogram embed cloud configure [--env <env-name>]
 miniprogram backend start --port 8080
 miniprogram backend stop
 miniprogram backend status
 miniprogram backend reset-local --yes
 ```
+
+Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
+`miniprogram <group> <command> --help` for command-specific options.
 
 ## Examples
 
@@ -201,6 +205,19 @@ Or use an explicit env override:
 ```bash
 miniprogram publish --target cloud --env my-aws-prod
 ```
+
+One bucket can store many mini-programs for the same environment. Artifacts are
+keyed by mini-program ID and version:
+
+```text
+artifacts/<mini-program-id>/<version>/manifest.json
+artifacts/<mini-program-id>/<version>/screens/<screen-id>.json
+metadata/catalog/<mini-program-id>.json
+metadata/releases/<mini-program-id>/<version>.json
+```
+
+Host apps should use the API Gateway base URL printed by
+`miniprogram cloud outputs`, not the S3 bucket URL.
 
 Current cloud support in this phase:
 
@@ -501,6 +518,10 @@ Generated host-app structure:
 - `lib/mini_program/mini_program_routes.dart` holds host-native route aliases
 - `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
   that call `openAppMiniProgram(...)`
+- Android release builds need internet access to load cloud mini-programs.
+  `miniprogram embed init` writes
+  `android.permission.INTERNET` into `android/app/src/main/AndroidManifest.xml`.
+  Debug builds also get cleartext/network config for local HTTP backend access.
 
 ### 9. Minimum policies you need
 
@@ -676,8 +697,9 @@ So Android emulator development should usually work with:
 flutter run -d emulator-5554
 ```
 
-`miniprogram embed init` also writes Android debug-only cleartext/network
-configuration so the generated emulator default can reach
+`miniprogram embed init` also writes Android release `INTERNET` permission and
+debug-only cleartext/network configuration so cloud release APKs can call the
+API Gateway backend and the generated emulator default can reach
 `http://10.0.2.2:8080/api/` without manual manifest edits.
 
 For physical-device Wi-Fi or cloud testing, override either the full base URL

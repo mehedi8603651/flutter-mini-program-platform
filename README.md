@@ -5,7 +5,7 @@ Portable mini-program platform built around:
 - shared contracts
 - a shared Flutter runtime SDK
 - Stac-authored portable UI
-- local and future cloud delivery
+- local and AWS cloud delivery
 - controlled host-native bridges
 
 The project goal is simple:
@@ -42,14 +42,22 @@ Already shipped:
 - standalone local backend workspace
 - standalone local authoring flow
 - host-app embedding flow for Flutter apps
+- AWS cloud publishing through S3
+- AWS API Gateway + Lambda cloud backend deployment
+- host-app cloud binding and `host run`
 - target-aware local runtime defaults for:
   - Android emulator
   - Windows desktop
   - Chrome on the same machine
+  - Edge on the same machine
+  - Linux desktop
+  - macOS desktop
+  - iOS simulators
   - Android USB with `adb reverse`
+  - Android Wi-Fi over LAN
 
-The current system is strongest for **local developer workflows** and
-**portable Flutter-hosted mini-programs**.
+The current system is strongest for **local developer workflows**,
+**AWS-backed cloud delivery**, and **portable Flutter-hosted mini-programs**.
 
 Future-only roadmap is tracked in:
 
@@ -136,9 +144,11 @@ This package exposes the global `miniprogram` command used for:
 - build
 - preview
 - validate
-- publish
+- publish to local or cloud
 - cloud
 - embed init
+- embed cloud configure
+- host run
 - backend init/start/stop/status/reset-local
 
 ### Mini-Program Authoring
@@ -165,7 +175,8 @@ At a high level:
 1. developer writes Stac DSL mini-program screens
 2. `miniprogram build` runs the managed Stac builder
 3. JSON screens and manifest artifacts are produced
-4. developers either preview them directly or publish them into the local backend workspace
+4. developers either preview them directly, publish them into the local backend
+   workspace, or publish immutable artifacts to cloud storage
 5. host app loads manifest and screen JSON through `mini_program_sdk`
 6. host bridge handles approved native operations
 
@@ -176,6 +187,9 @@ author -> build -> preview
                     or
 author -> build -> validate -> publish -> backend delivery -> SDK load ->
 render -> action dispatch -> host-native execution when needed
+                    or
+author -> build -> validate -> publish --target cloud -> cloud backend ->
+SDK load -> render -> action dispatch -> host-native execution when needed
 ```
 
 ## Preferred Developer Entry Point
@@ -195,6 +209,36 @@ miniprogram --help
 The CLI is the source of truth for developers.
 
 Older wrappers may still exist, but `miniprogram ...` is the preferred path.
+
+Current command map:
+
+```powershell
+miniprogram create <mini-program-id>
+miniprogram doctor
+miniprogram env init
+miniprogram env configure <env-name> --provider aws --bucket <bucket> --region <region> [--aws-profile <profile>]
+miniprogram env list
+miniprogram env use <local|env-name>
+miniprogram env status
+miniprogram build [mini-program-id]
+miniprogram preview -d <device> [mini-program-id]
+miniprogram validate [mini-program-id]
+miniprogram publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+miniprogram cloud doctor|deploy|status|outputs|logs|destroy
+miniprogram cloud outputs --format dart-define
+miniprogram cloud rollback <version> [mini-program-id]
+miniprogram embed init
+miniprogram embed cloud configure --env <env-name>
+miniprogram host run -d <device> --env <env-name>
+miniprogram backend init
+miniprogram backend start --port 8080
+miniprogram backend stop
+miniprogram backend status
+miniprogram backend reset-local --yes
+```
+
+Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
+`miniprogram <group> <command> --help` for command-specific options.
 
 ## Local Developer Workflow
 
@@ -321,6 +365,8 @@ The generated embed layer adds:
 - `mini_program_contracts`
 - app-owned bridge files under `lib/mini_program/`
 - local backend runtime defaults
+- Android release `INTERNET` permission for cloud/API delivery
+- Android debug cleartext config for local HTTP preview/backend development
 
 ## Local Run Targets
 
@@ -467,6 +513,22 @@ Current cloud support in this phase:
 - provider implementation shipped: `aws`
 - planned next providers: `gcp`
 - planned next providers: `custom-s3-compatible`
+
+One cloud environment can serve many mini-programs. The recommended layout is
+one bucket per environment, for example one production bucket and one staging
+bucket, with many mini-program IDs inside it:
+
+```text
+artifacts/<mini-program-id>/<version>/manifest.json
+artifacts/<mini-program-id>/<version>/screens/<screen-id>.json
+artifacts/<mini-program-id>/<version>/assets/...
+metadata/catalog/<mini-program-id>.json
+metadata/releases/<mini-program-id>/<version>.json
+```
+
+The host app does not load directly from S3. It calls the deployed API Gateway
+base URL, and the Lambda backend resolves the requested mini-program ID and
+version from the bucket metadata.
 
 AWS cloud setup guide:
 
@@ -765,6 +827,11 @@ Generated host-app structure:
 - `lib/mini_program/mini_program_routes.dart` holds host-native route aliases
 - `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
   that call `openAppMiniProgram(...)`
+- Android release builds need internet access to load cloud mini-programs.
+  `miniprogram embed init` writes
+  `android.permission.INTERNET` into `android/app/src/main/AndroidManifest.xml`
+  for generated host apps. Debug builds also get local cleartext config for
+  `http://10.0.2.2` and localhost backend testing.
 
 ### 9. Minimum policies you need
 
