@@ -68,7 +68,7 @@ old app already has a clear host-owned secure flow ready to integrate.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.1.2
+  mini_program_sdk: ^0.1.3
   mini_program_contracts: ^0.1.0
 ```
 
@@ -104,6 +104,54 @@ class MyApp extends StatelessWidget {
 
 `MiniProgramAppShell` creates the runtime, wraps the app with
 `MiniProgramRuntimeScope`, and wires the generated sample native route.
+
+Full demo with a button that opens your cloud-published mini-program:
+
+```dart
+import 'package:flutter/material.dart';
+import 'mini_program/mini_program.dart';
+
+void main() {
+  runApp(const MyHostApp());
+}
+
+class MyHostApp extends StatelessWidget {
+  const MyHostApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MiniProgramAppShell(
+      title: 'My Mini Host',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Host App Home')),
+      body: Center(
+        child: FilledButton(
+          onPressed: () {
+            openAppMiniProgram(
+              context,
+              miniProgramId: 'my_coupon_app',
+              title: 'My Coupon App',
+            );
+          },
+          child: const Text('Open My Coupon App'),
+        ),
+      ),
+    );
+  }
+}
+```
 
 ## 3. Review the generated HostBridge
 
@@ -244,6 +292,16 @@ miniprogram host run -d chrome --env my-aws-prod
 `embed cloud configure` stores the selected cloud environment under
 `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with the
 resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+
+For a release APK, build with the deployed backend API URL:
+
+```powershell
+miniprogram cloud outputs --format dart-define
+flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
+```
+
+Use `BackendApiBaseUrl` from `miniprogram cloud outputs`; do not point the host
+app at the S3 bucket URL directly.
 
 ## 5. Open mini-programs from ordinary app buttons
 

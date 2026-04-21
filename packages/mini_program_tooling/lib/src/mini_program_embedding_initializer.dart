@@ -62,7 +62,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.1.2';
+  static const String _miniProgramSdkConstraint = '^0.1.3';
   static const String _miniProgramContractsConstraint = '^0.1.0';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
@@ -832,6 +832,87 @@ flowing through your app-owned route factory.
 - host version: `$hostVersion`
 - lean capabilities: `analytics`, `native_navigation`
 - native route alias: `profile_editor -> $nativeRoutePath`
+
+## Host app structure
+
+- `mini_program.dart` is the barrel import for app code.
+- `mini_program_app_shell.dart` wraps `MaterialApp` with the SDK runtime.
+- `mini_program_launcher.dart` exposes `openAppMiniProgram(...)` and
+  `AppMiniProgramLauncherButton`.
+- `mini_program_runtime_setup.dart` resolves `MINI_PROGRAM_BACKEND_BASE_URL`
+  and builds `MiniProgramRuntime`.
+- `app_host_bridge.dart` is app-owned. Edit it for real analytics,
+  host-native routes, and secure API behavior.
+- `mini_program_routes.dart` holds host-native route aliases.
+- your app `lib/main.dart` stays app-owned. Add buttons, tabs, or menu items
+  that call `openAppMiniProgram(...)`.
+
+Full demo `lib/main.dart`:
+
+```dart
+import 'package:flutter/material.dart';
+import 'mini_program/mini_program.dart';
+
+void main() {
+  runApp(const MyHostApp());
+}
+
+class MyHostApp extends StatelessWidget {
+  const MyHostApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MiniProgramAppShell(
+      title: 'My Mini Host',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Host App Home')),
+      body: Center(
+        child: FilledButton(
+          onPressed: () {
+            openAppMiniProgram(
+              context,
+              miniProgramId: 'my_coupon_app',
+              title: 'My Coupon App',
+            );
+          },
+          child: const Text('Open My Coupon App'),
+        ),
+      ),
+    );
+  }
+}
+```
+
+## Cloud host run and APK build
+
+After `miniprogram cloud deploy`, bind this host app to the environment:
+
+```text
+miniprogram embed cloud configure --env my-aws-prod
+miniprogram host run -d chrome --env my-aws-prod
+```
+
+For release Android APK builds, use the deployed backend API URL:
+
+```text
+miniprogram cloud outputs --format dart-define
+flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
+```
+
+Use the `BackendApiBaseUrl` printed by `miniprogram cloud outputs`; do not use
+the S3 bucket URL directly.
 
 ## Notes
 

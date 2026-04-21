@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3
+
+- replace the minimal spinner with a full-screen branded loading surface so
+  cloud-hosted mini-program launches do not show a blank page during manifest
+  and screen fetches
+- make `MiniProgramPage` render a scaffolded loading state with the resolved
+  mini-program title before the delivered screen is ready
+- refresh README examples around generated host app usage and cloud backend
+  build/run defines
+
 ## 0.1.2
 
 - add `LocalMiniProgramBackendDefaults` so host apps can resolve target-aware

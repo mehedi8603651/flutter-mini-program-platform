@@ -1,9 +1,63 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
+  testWidgets(
+    'renders a scaffolded loading page while the mini-program loads',
+    (tester) async {
+      final loadGate = Completer<void>();
+      final runtime = MiniProgramRuntime(
+        sdkVersion: '1.0.0',
+        source: _DelayedMiniProgramSource(
+          loadGate: loadGate,
+          manifest: _buildManifest(),
+          screenJson: const <String, dynamic>{
+            'type': 'scaffold',
+            'body': <String, dynamic>{
+              'type': 'center',
+              'child': <String, dynamic>{
+                'type': 'text',
+                'data': 'Loaded after cloud fetch',
+              },
+            },
+          },
+        ),
+        hostBridge: _FakeHostBridge(),
+        capabilityRegistry: CapabilityRegistry(const <Capability>[
+          Capability.analytics,
+        ]),
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      );
+
+      await tester.pumpWidget(
+        MiniProgramRuntimeScope(
+          runtime: runtime,
+          child: const MaterialApp(
+            home: MiniProgramPage(
+              miniProgramId: 'profile_center',
+              title: 'Profile Center',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Profile Center'), findsOneWidget);
+      expect(find.text('Loading Profile Center'), findsOneWidget);
+      expect(find.byType(SdkLoadingView), findsOneWidget);
+
+      loadGate.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loaded after cloud fetch'), findsOneWidget);
+      expect(find.text('Loading Profile Center'), findsNothing);
+    },
+  );
+
   testWidgets('loads runtime from MiniProgramRuntimeScope', (tester) async {
     final runtime = MiniProgramRuntime(
       sdkVersion: '1.0.0',
@@ -131,62 +185,63 @@ void main() {
     expect(find.text('Backend unavailable'), findsOneWidget);
   });
 
-  testWidgets('openMiniProgram pushes a MiniProgramPage with the scoped runtime', (
-    tester,
-  ) async {
-    final runtime = MiniProgramRuntime(
-      sdkVersion: '1.0.0',
-      source: _FakeMiniProgramSource(
-        manifest: _buildManifest(),
-        screenJson: const <String, dynamic>{
-          'type': 'scaffold',
-          'body': <String, dynamic>{
-            'type': 'center',
-            'child': <String, dynamic>{
-              'type': 'text',
-              'data': 'Launcher helper screen',
+  testWidgets(
+    'openMiniProgram pushes a MiniProgramPage with the scoped runtime',
+    (tester) async {
+      final runtime = MiniProgramRuntime(
+        sdkVersion: '1.0.0',
+        source: _FakeMiniProgramSource(
+          manifest: _buildManifest(),
+          screenJson: const <String, dynamic>{
+            'type': 'scaffold',
+            'body': <String, dynamic>{
+              'type': 'center',
+              'child': <String, dynamic>{
+                'type': 'text',
+                'data': 'Launcher helper screen',
+              },
             },
           },
-        },
-      ),
-      hostBridge: _FakeHostBridge(),
-      capabilityRegistry: CapabilityRegistry(const <Capability>[
-        Capability.analytics,
-      ]),
-      cacheBundle: MiniProgramCacheBundle.inMemory(),
-    );
+        ),
+        hostBridge: _FakeHostBridge(),
+        capabilityRegistry: CapabilityRegistry(const <Capability>[
+          Capability.analytics,
+        ]),
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      );
 
-    await tester.pumpWidget(
-      MiniProgramRuntimeScope(
-        runtime: runtime,
-        child: MaterialApp(
-          home: Builder(
-            builder: (context) {
-              return Scaffold(
-                body: Center(
-                  child: FilledButton(
-                    onPressed: () {
-                      openMiniProgram<void>(
-                        context,
-                        miniProgramId: 'profile_center',
-                        title: 'Profile Center',
-                      );
-                    },
-                    child: const Text('Launch mini-program'),
+      await tester.pumpWidget(
+        MiniProgramRuntimeScope(
+          runtime: runtime,
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: Center(
+                    child: FilledButton(
+                      onPressed: () {
+                        openMiniProgram<void>(
+                          context,
+                          miniProgramId: 'profile_center',
+                          title: 'Profile Center',
+                        );
+                      },
+                      child: const Text('Launch mini-program'),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Launch mini-program'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Launch mini-program'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Launcher helper screen'), findsOneWidget);
-  });
+      expect(find.text('Launcher helper screen'), findsOneWidget);
+    },
+  );
 
   testWidgets('MiniProgramLauncherButton opens a mini-program by id', (
     tester,
@@ -248,6 +303,33 @@ class _FakeMiniProgramSource implements MiniProgramSource {
 
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    return manifest;
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    return screenJson;
+  }
+}
+
+class _DelayedMiniProgramSource implements MiniProgramSource {
+  const _DelayedMiniProgramSource({
+    required this.loadGate,
+    required this.manifest,
+    required this.screenJson,
+  });
+
+  final Completer<void> loadGate;
+  final MiniProgramManifest manifest;
+  final Map<String, dynamic> screenJson;
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    await loadGate.future;
     return manifest;
   }
 

@@ -175,6 +175,20 @@ Replace the placeholder values before running that command. In particular:
 - `--cloudfront-base-url` and `--api-base-url` are optional and should only be
   supplied when you already have those URLs
 
+Where those optional URLs come from:
+
+- `--api-base-url` is usually the `BackendApiBaseUrl` printed by
+  `miniprogram cloud deploy` or `miniprogram cloud outputs`, for example
+  `https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/`
+- if you use `miniprogram cloud deploy`, you normally do not need to pass
+  `--api-base-url` during `env configure`; the CLI can read the deployed stack
+  output later
+- `--cloudfront-base-url` is the CloudFront distribution domain name, visible
+  in the AWS CloudFront console as the distribution domain, for example
+  `https://<distribution-id>.cloudfront.net`
+- CloudFront is optional in the current AWS CLI flow; API Gateway + Lambda is
+  enough for host-app testing
+
 Cloud publish then uses the active named cloud environment by default:
 
 ```bash
@@ -408,6 +422,82 @@ miniprogram host run -d windows --env my-aws-prod
 ```
 
 That wraps `flutter run` and passes the deployed backend URL automatically.
+
+For release APK builds, use the backend define from the cloud outputs:
+
+```powershell
+miniprogram cloud outputs --format dart-define
+cd D:\my_mini_host
+flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
+```
+
+Use the `BackendApiBaseUrl` shown by `miniprogram cloud outputs`; do not use
+the S3 bucket URL directly. The host app loads through API Gateway + Lambda.
+
+Demo `lib/main.dart` for a host app:
+
+```dart
+import 'package:flutter/material.dart';
+import 'mini_program/mini_program.dart';
+
+void main() {
+  runApp(const MyHostApp());
+}
+
+class MyHostApp extends StatelessWidget {
+  const MyHostApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MiniProgramAppShell(
+      title: 'My Mini Host',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Host App Home')),
+      body: Center(
+        child: FilledButton(
+          onPressed: () {
+            openAppMiniProgram(
+              context,
+              miniProgramId: 'my_coupon_app',
+              title: 'My Coupon App',
+            );
+          },
+          child: const Text('Open My Coupon App'),
+        ),
+      ),
+    );
+  }
+}
+```
+
+Generated host-app structure:
+
+- `pubspec.yaml` is updated with `mini_program_sdk` and
+  `mini_program_contracts`
+- `lib/mini_program/mini_program.dart` is the barrel import for app code
+- `lib/mini_program/mini_program_app_shell.dart` wraps `MaterialApp` with the
+  SDK runtime
+- `lib/mini_program/mini_program_launcher.dart` exposes
+  `openAppMiniProgram(...)` and `AppMiniProgramLauncherButton`
+- `lib/mini_program/mini_program_runtime_setup.dart` resolves
+  `MINI_PROGRAM_BACKEND_BASE_URL` and builds `MiniProgramRuntime`
+- `lib/mini_program/app_host_bridge.dart` is where developers wire real
+  analytics, native screens, and secure API behavior
+- `lib/mini_program/mini_program_routes.dart` holds host-native route aliases
+- `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
+  that call `openAppMiniProgram(...)`
 
 ### 9. Minimum policies you need
 

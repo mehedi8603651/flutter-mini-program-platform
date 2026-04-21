@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'mini_program_host.dart';
 import 'mini_program_runtime.dart';
 import 'widgets/sdk_error_view.dart';
+import 'widgets/sdk_loading_view.dart';
 
 /// High-level embedded page wrapper for existing Flutter apps.
 class MiniProgramPage extends StatelessWidget {
@@ -32,6 +33,16 @@ class MiniProgramPage extends StatelessWidget {
       manifestCache: resolvedRuntime.cacheBundle.manifestCache,
       screenCache: resolvedRuntime.cacheBundle.screenCache,
       logger: resolvedRuntime.logger,
+      loadingBuilder: (context) {
+        final resolvedTitle = title ?? _defaultTitle(miniProgramId);
+        return Scaffold(
+          appBar: AppBar(title: Text(resolvedTitle)),
+          body: SdkLoadingView(
+            title: 'Loading $resolvedTitle',
+            message: 'Fetching the latest mini-program release.',
+          ),
+        );
+      },
       errorBuilder: (context, failure) {
         return Scaffold(
           appBar: AppBar(title: Text(title ?? _defaultTitle(miniProgramId))),

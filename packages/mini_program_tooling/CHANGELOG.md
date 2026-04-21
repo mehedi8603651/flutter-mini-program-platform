@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.31
+
+- update generated host and preview app dependencies to
+  `mini_program_sdk: ^0.1.3`
+- expand host-app documentation with a complete `main.dart` example, generated
+  adapter structure, AWS API-backed APK build command, and guidance for where
+  `BackendApiBaseUrl`, API base URLs, and optional CloudFront domains come from
+- refresh the generated `lib/mini_program/README.md` so embedded host apps show
+  the same cloud run and release APK guidance after `miniprogram embed init`
+
 ## 0.2.30
 
 - fix AWS cloud commands on Windows by launching `sam` with shell resolution,
