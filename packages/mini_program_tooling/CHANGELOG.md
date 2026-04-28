@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.3
+
+- make `miniprogram embed init` generate a lean default host adapter without
+  native route alias files or sample native pages
+- keep native route opening available as an app-owned optional
+  `buildMiniProgramConfig(openNativeRoute: ...)` hook
+
 ## 0.3.2
 
 - make `miniprogram create <id>` default to the minimal `analytics` capability

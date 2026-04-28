@@ -832,8 +832,7 @@ Generated host-app structure:
 - `lib/mini_program/mini_program_runtime_setup.dart` resolves
   `MINI_PROGRAM_BACKEND_BASE_URL` and builds `MiniProgramConfig`
 - `lib/mini_program/app_host_bridge.dart` is where developers wire real
-  analytics, native screens, and secure API behavior
-- `lib/mini_program/mini_program_routes.dart` holds host-native route aliases
+  analytics, optional native screens, and secure API behavior
 - `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
   that call `openAppMiniProgram(...)`
 - This package does not own your Flutter app. It only provides mini-program

@@ -1111,7 +1111,9 @@ class MiniprogramCli {
       ..addOption(
         'native-route-path',
         defaultsTo: '/native/profile-editor',
-        help: 'Sample native route path used by the generated bridge alias.',
+        hide: true,
+        help:
+            'Deprecated compatibility option. Generated lean adapters no longer create route aliases.',
       )
       ..addFlag(
         'force',
@@ -2444,7 +2446,6 @@ Commands:
       if (result.repoRootPath != null) 'Repo root: ${result.repoRootPath}',
       'Host app id: ${result.hostAppId}',
       'Host version: ${result.hostVersion}',
-      'Native route path: ${result.nativeRoutePath}',
       'Files:',
       ...result.createdPaths.map((path) => '- $path'),
     ];
