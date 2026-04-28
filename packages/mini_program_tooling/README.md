@@ -458,6 +458,8 @@ Demo `lib/main.dart` for a host app:
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
 import 'mini_program/mini_program.dart';
 
 void main() {

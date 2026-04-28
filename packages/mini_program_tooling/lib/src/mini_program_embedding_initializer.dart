@@ -461,6 +461,8 @@ class AppMiniProgramLauncher extends StatelessWidget {
 
   String _buildBarrel() {
     return '''
+export 'package:mini_program_sdk/mini_program_sdk.dart';
+
 export 'app_host_bridge.dart';
 export 'mini_program_launcher.dart';
 export 'mini_program_routes.dart';
@@ -675,6 +677,8 @@ scaffold is generated.
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
 import 'mini_program/mini_program.dart';
 
 void main() {
@@ -767,6 +771,8 @@ Full demo `lib/main.dart`:
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
 import 'mini_program/mini_program.dart';
 
 void main() {

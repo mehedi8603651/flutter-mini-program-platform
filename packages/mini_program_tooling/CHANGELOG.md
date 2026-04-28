@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- export `mini_program_sdk` from the generated mini-program adapter barrel so
+  `MiniProgramScope` is available from `mini_program/mini_program.dart`
+- add an explicit `package:mini_program_sdk/mini_program_sdk.dart` import to
+  generated host app examples for clearer IDE completion and diagnostics
+
 ## 0.3.0
 
 - update `miniprogram embed init` to generate `MiniProgramScope` integration

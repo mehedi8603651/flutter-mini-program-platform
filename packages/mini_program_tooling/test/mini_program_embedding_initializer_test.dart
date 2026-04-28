@@ -104,6 +104,10 @@ void main() {
       expect(launcher, isNot(contains('MiniProgramLauncherButton')));
       expect(runtimeSetup, isNot(contains('MaterialApp(')));
       expect(barrel, isNot(contains("export 'mini_program_app_shell.dart';")));
+      expect(
+        barrel,
+        contains("export 'package:mini_program_sdk/mini_program_sdk.dart';"),
+      );
       expect(barrel, contains("export 'app_host_bridge.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(updatedPubspec, contains('mini_program_sdk: ^0.2.0'));
@@ -111,6 +115,10 @@ void main() {
       expect(readme, contains('mini_program_sdk: ^0.2.0'));
       expect(readme, contains('mini_program_contracts: ^0.1.0'));
       expect(readme, contains('MiniProgramScope('));
+      expect(
+        readme,
+        contains("import 'package:mini_program_sdk/mini_program_sdk.dart';"),
+      );
       expect(readme, contains('flutter run -d emulator-5554'));
       expect(readme, contains('MINI_PROGRAM_BACKEND_HOST'));
       expect(readme, contains('adb reverse'));

@@ -82,6 +82,8 @@ flutter pub get
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
 import 'mini_program/mini_program.dart';
 
 void main() {
@@ -115,6 +117,8 @@ Full demo with a button that opens your cloud-published mini-program:
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
 import 'mini_program/mini_program.dart';
 
 void main() {
