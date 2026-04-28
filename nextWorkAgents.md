@@ -141,9 +141,11 @@ MiniProgramScope(
     endpoints: {
       'aws_coupon_demo': MiniProgramEndpoint(
         apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
+        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
       ),
       'gcp_rewards': MiniProgramEndpoint(
         apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
       ),
     },
   ),
@@ -152,16 +154,39 @@ MiniProgramScope(
 ```
 
 - practical partner flow should be:
-  - partner A gives the host team `appId + API base URL`
-  - partner B gives the host team `appId + API base URL`
-  - the host registers those pairs once in config
+  - partner A gives the host team `appId + API base URL + MiniProgram access key`
+  - partner B gives the host team `appId + API base URL + MiniProgram access key`
+  - the host registers those values once in config
   - app screens open each mini-program by `appId`
 - this keeps one host app able to include mini-programs published by different
   developers on AWS, GCP, or custom servers without scattering provider URLs
   throughout Flutter UI code
 - an optional `sourceId` or per-launch endpoint override can exist later for
   testing or advanced routing, but the recommended production API should stay:
-  UI knows `appId`; config knows server/API
+  UI knows `appId`; config knows server/API and access key
+- use the name `MiniProgram access key` for partner access control
+- one mini-program should support multiple access keys, usually one key per
+  host company, environment, or distribution partner
+- all versions of a mini-program can share the same active access key unless a
+  publisher intentionally rotates or revokes it
+- if Company B should lose access, the mini-program owner revokes Company B's
+  key only; Company A and Company C continue working with their own keys
+- access keys should support at least:
+  - create
+  - revoke
+  - rotate
+  - optional expire time
+  - audit metadata such as host company, environment, createdBy, revokedBy
+- backend manifest and screen delivery should validate:
+  - `appId`
+  - `MiniProgram access key`
+  - host app id
+  - host version
+  - SDK/runtime compatibility version
+  - requested capabilities/platform where relevant
+- access keys are access-control and revocation tools, not strong mobile
+  secrets; APKs can be inspected, so secure payment/banking actions must still
+  go through host-owned auth, backend, and bridge contracts
 
 ### Native host expansion should reuse Flutter first
 - if Android native hosts are added later, the first strategy should be:
@@ -193,8 +218,8 @@ Next cloud provider work should be:
 - `gcp`
 - `custom-s3-compatible`
 - multi-endpoint host consumption, where one Flutter host app can register
-  multiple `appId -> API base URL` mappings and open all of them through the
-  same `MiniProgramScope`
+  multiple `appId -> API base URL + MiniProgram access key` mappings and open
+  all of them through the same `MiniProgramScope`
 
 Important modeling rule:
 
@@ -254,6 +279,8 @@ What is still not done on the cloud path:
 - CloudFront provisioning and opinionated CDN setup automation
 - SDK/tooling support for registering multiple remote mini-program endpoints in
   one host app and resolving each launch by `appId`
+- cloud backend support for `MiniProgram access key` management, validation,
+  revocation, rotation, and audit logs
 
 ### 2. Payment and other host-native capabilities
 Add new capabilities only through explicit contracts:
@@ -312,17 +339,19 @@ Smaller future UX improvements that fit the current system:
 1. Add `gcp` cloud publish and matching cloud backend deployment path.
 2. Add `custom-s3-compatible` cloud publish and API configuration model.
 3. Add host runtime support for multiple partner endpoints:
-   `appId -> API base URL`, keeping `openAppMiniProgram(...)` appId-only for
-   normal UI code.
-4. Add rollout rules and host-aware selection to the cloud backend.
-5. Add capability filtering enforcement to cloud manifest delivery.
-6. Add secure API route execution contracts and Lambda-side handlers.
-7. Add deployment drift detection and richer stack update diagnostics for the
+   `appId -> API base URL + MiniProgram access key`, keeping
+   `openAppMiniProgram(...)` appId-only for normal UI code.
+4. Add `MiniProgram access key` management to cloud backends:
+   create, revoke, rotate, expire, validate, and audit per mini-program.
+5. Add rollout rules and host-aware selection to the cloud backend.
+6. Add capability filtering enforcement to cloud manifest delivery.
+7. Add secure API route execution contracts and Lambda-side handlers.
+8. Add deployment drift detection and richer stack update diagnostics for the
    AWS CLI cloud flow.
-8. Keep target-aware local backend defaults and device overrides inside the
+9. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows.
-9. Add first-class payment capability contracts and payload models.
-10. Implement payment host bridge support in Flutter hosts first.
-11. Plan Android native-host embedding around a reused Flutter engine.
-12. Keep the CLI as the single source of truth before adding any IDE wrapper.
-13. Add optional auto-generated `requestId` support in author helpers.
+10. Add first-class payment capability contracts and payload models.
+11. Implement payment host bridge support in Flutter hosts first.
+12. Plan Android native-host embedding around a reused Flutter engine.
+13. Keep the CLI as the single source of truth before adding any IDE wrapper.
+14. Add optional auto-generated `requestId` support in author helpers.
