@@ -114,6 +114,55 @@ change:
   - API Gateway
   - Lambda
 
+### Host apps open by appId, not by raw API URL
+- feature pages and buttons should keep the developer-friendly call shape:
+
+```dart
+openAppMiniProgram(
+  context,
+  appId: 'aws_coupon_demo',
+  title: 'AWS Coupon Demo',
+);
+
+openAppMiniProgram(
+  context,
+  appId: 'gcp_rewards',
+  title: 'GCP Rewards',
+);
+```
+
+- do not add a required `api`, `url`, or backend endpoint parameter to every
+  `openAppMiniProgram(...)` call
+- the host runtime configuration should own endpoint routing, for example:
+
+```dart
+MiniProgramScope(
+  config: buildMiniProgramConfig(
+    endpoints: {
+      'aws_coupon_demo': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
+      ),
+      'gcp_rewards': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+      ),
+    },
+  ),
+  child: const MyApp(),
+);
+```
+
+- practical partner flow should be:
+  - partner A gives the host team `appId + API base URL`
+  - partner B gives the host team `appId + API base URL`
+  - the host registers those pairs once in config
+  - app screens open each mini-program by `appId`
+- this keeps one host app able to include mini-programs published by different
+  developers on AWS, GCP, or custom servers without scattering provider URLs
+  throughout Flutter UI code
+- an optional `sourceId` or per-launch endpoint override can exist later for
+  testing or advanced routing, but the recommended production API should stay:
+  UI knows `appId`; config knows server/API
+
 ### Native host expansion should reuse Flutter first
 - if Android native hosts are added later, the first strategy should be:
   - native app + embedded Flutter runtime for mini-programs
@@ -143,6 +192,9 @@ Next cloud provider work should be:
 
 - `gcp`
 - `custom-s3-compatible`
+- multi-endpoint host consumption, where one Flutter host app can register
+  multiple `appId -> API base URL` mappings and open all of them through the
+  same `MiniProgramScope`
 
 Important modeling rule:
 
@@ -200,6 +252,8 @@ What is still not done on the cloud path:
 - GCP provider implementation
 - custom S3-compatible provider implementation
 - CloudFront provisioning and opinionated CDN setup automation
+- SDK/tooling support for registering multiple remote mini-program endpoints in
+  one host app and resolving each launch by `appId`
 
 ### 2. Payment and other host-native capabilities
 Add new capabilities only through explicit contracts:
@@ -257,15 +311,18 @@ Smaller future UX improvements that fit the current system:
 
 1. Add `gcp` cloud publish and matching cloud backend deployment path.
 2. Add `custom-s3-compatible` cloud publish and API configuration model.
-3. Add rollout rules and host-aware selection to the cloud backend.
-4. Add capability filtering enforcement to cloud manifest delivery.
-5. Add secure API route execution contracts and Lambda-side handlers.
-6. Add deployment drift detection and richer stack update diagnostics for the
+3. Add host runtime support for multiple partner endpoints:
+   `appId -> API base URL`, keeping `openAppMiniProgram(...)` appId-only for
+   normal UI code.
+4. Add rollout rules and host-aware selection to the cloud backend.
+5. Add capability filtering enforcement to cloud manifest delivery.
+6. Add secure API route execution contracts and Lambda-side handlers.
+7. Add deployment drift detection and richer stack update diagnostics for the
    AWS CLI cloud flow.
-7. Keep target-aware local backend defaults and device overrides inside the
+8. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows.
-8. Add first-class payment capability contracts and payload models.
-9. Implement payment host bridge support in Flutter hosts first.
-10. Plan Android native-host embedding around a reused Flutter engine.
-11. Keep the CLI as the single source of truth before adding any IDE wrapper.
-12. Add optional auto-generated `requestId` support in author helpers.
+9. Add first-class payment capability contracts and payload models.
+10. Implement payment host bridge support in Flutter hosts first.
+11. Plan Android native-host embedding around a reused Flutter engine.
+12. Keep the CLI as the single source of truth before adding any IDE wrapper.
+13. Add optional auto-generated `requestId` support in author helpers.
