@@ -72,10 +72,7 @@ void main() {
 
         expect(result.miniProgramId, 'coupon_center');
         expect(manifest['entry'], 'coupon_center_home');
-        expect(manifest['requiredCapabilities'], <String>[
-          'analytics',
-          'native_navigation',
-        ]);
+        expect(manifest['requiredCapabilities'], <String>['analytics']);
         expect(
           (manifest['cachePolicy'] as Map<String, dynamic>)['manifest']
               as Map<String, dynamic>,
@@ -158,7 +155,7 @@ void main() {
         expect(detailsScreenSource, contains('Back to profile home'));
         expect(
           detailsScreenSource,
-          contains('Capability enabled: native_navigation'),
+          isNot(contains('Capability enabled: native_navigation')),
         );
         expect(
           detailsScreenSource,
@@ -228,7 +225,7 @@ void main() {
         expect(readmeSource, contains('replaceMiniProgramScreenAction(...)'));
         expect(
           readmeSource,
-          contains('does not call any host-owned route by default'),
+          isNot(contains('does not call any host-owned route by default')),
         );
 
         expect(
@@ -245,6 +242,48 @@ void main() {
         expect(result.createdPaths, isNotEmpty);
       },
     );
+
+    test('adds native navigation only when requested', () async {
+      final result = await const MiniProgramScaffolder().scaffold(
+        MiniProgramScaffoldRequest(
+          repoRootPath: tempDir.path,
+          miniProgramId: 'native_flow',
+          capabilities: const <String>{'analytics', 'native_navigation'},
+        ),
+      );
+
+      final manifest =
+          jsonDecode(
+                await File(
+                  p.join(result.miniProgramRootPath, 'manifest.json'),
+                ).readAsString(),
+              )
+              as Map<String, dynamic>;
+      final detailsScreenSource = await File(
+        p.join(
+          result.miniProgramRootPath,
+          'stac',
+          'screens',
+          'native_flow_details.dart',
+        ),
+      ).readAsString();
+      final readmeSource = await File(
+        p.join(result.miniProgramRootPath, 'README.md'),
+      ).readAsString();
+
+      expect(manifest['requiredCapabilities'], <String>[
+        'analytics',
+        'native_navigation',
+      ]);
+      expect(
+        detailsScreenSource,
+        contains('Capability enabled: native_navigation'),
+      );
+      expect(
+        readmeSource,
+        contains('does not call any host-owned route by default'),
+      );
+    });
 
     test(
       'uses noCache and secure API starter action when secure_api is requested',

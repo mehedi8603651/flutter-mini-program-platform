@@ -179,7 +179,7 @@ class MiniprogramCli {
       )
       ..addOption(
         'capabilities',
-        defaultsTo: 'analytics,native_navigation',
+        defaultsTo: 'analytics',
         help: 'Comma-separated capability wire values.',
       )
       ..addFlag(

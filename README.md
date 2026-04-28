@@ -249,6 +249,10 @@ cd D:\
 miniprogram create my_coupon_app
 ```
 
+The default scaffold uses only `analytics`, so it opens in a minimal generated
+host app without native-route wiring. Add `native_navigation` only when your
+host app has a real native route callback.
+
 ### 2. Fast preview loop
 
 For the normal authoring loop, use managed preview first:

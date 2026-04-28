@@ -14,6 +14,10 @@ cd D:\
 miniprogram create first_miniprogram
 ```
 
+By default, the scaffold declares only `analytics`. This keeps the generated
+mini-program compatible with the minimal generated host app. Add
+`native_navigation` only when the host app has a real native route callback.
+
 Optional scaffold inputs:
 
 ```powershell
@@ -52,8 +56,11 @@ Current scaffold behavior:
 - `Continue to second screen` uses internal mini-program routing through `openMiniProgramScreenAction(...)`
 - `Track starter event (logs only)` writes to the host analytics log only
 - `Back to first screen` uses internal mini-program routing through `popMiniProgramScreenAction(...)`
-- `Open sample native screen` stays available for real host-owned pages and uses the shared demo route alias `profile_editor`
-- the sample native route works in both current hosts, but it is only a starter demo and should be replaced in real flows
+- `native_navigation` is no longer part of the default scaffold; add it only
+  when the host app has a real native route callback
+- when `native_navigation` is requested, the generated helper file includes
+  `hostOpenNativeScreenAction(...)`, but generated screens leave host route
+  calls out by default
 - the generated helper wrappers still serialize the same JSON shape for backend delivery; authors just no longer need to hand-write it
 
 ## Current supported capability values
@@ -178,7 +185,8 @@ For a local proof:
 
 ## Practical guidance
 
-- Use `analytics,native_navigation` for a low-risk starter flow.
+- Use the default `analytics` capability for the lowest-friction starter flow.
+- Add `native_navigation` only when the host app has a real route callback.
 - Use `secure_api` only when the flow truly needs a host-owned secure endpoint.
 - If the mini-program depends on `secure_api`, keep caching conservative.
 - Prefer page-to-page portable routing first, and only leave the mini-program

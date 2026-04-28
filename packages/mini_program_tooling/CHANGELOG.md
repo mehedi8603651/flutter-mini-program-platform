@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2
+
+- make `miniprogram create <id>` default to the minimal `analytics` capability
+  so the generated mini-program opens in a simple `MiniProgramScope` host
+  without native-route wiring
+- keep `native_navigation` available as an explicit opt-in through
+  `--capabilities analytics,native_navigation`
+
 ## 0.3.1
 
 - export `mini_program_sdk` from the generated mini-program adapter barrel so

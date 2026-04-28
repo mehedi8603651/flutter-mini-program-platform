@@ -11,7 +11,7 @@ class MiniProgramScaffoldRequest {
     this.outputRootPath,
     this.title,
     this.description,
-    this.capabilities = const <String>{'analytics', 'native_navigation'},
+    this.capabilities = const <String>{'analytics'},
     this.force = false,
   });
 

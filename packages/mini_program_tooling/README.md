@@ -70,6 +70,10 @@ Create a standalone mini-program in the current directory:
 miniprogram create coupon_center
 ```
 
+The default scaffold uses only `analytics`, so it opens in a minimal generated
+host app without native-route wiring. Add `native_navigation` only when your
+host app has a real native route callback.
+
 Use managed preview for the fastest authoring loop:
 
 ```bash
