@@ -8,13 +8,15 @@ import 'mini_program_catalog.dart';
 class MiniProgramListPage extends StatefulWidget {
   const MiniProgramListPage({
     super.key,
-    required this.runtime,
+    required this.config,
+    required this.cacheBundle,
     required this.catalogClient,
     required this.sourceDescription,
     required this.discoverySourceKind,
   });
 
-  final MiniProgramRuntime runtime;
+  final MiniProgramConfig config;
+  final MiniProgramCacheBundle cacheBundle;
   final PublishedMiniProgramCatalogClient? catalogClient;
   final String sourceDescription;
   final MiniProgramDiscoverySourceKind discoverySourceKind;
@@ -39,8 +41,8 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
   @override
   void didUpdateWidget(covariant MiniProgramListPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.runtime.source != widget.runtime.source ||
-        oldWidget.runtime.cacheBundle != widget.runtime.cacheBundle ||
+    if (oldWidget.config.source != widget.config.source ||
+        oldWidget.cacheBundle != widget.cacheBundle ||
         oldWidget.discoverySourceKind != widget.discoverySourceKind ||
         oldWidget.catalogClient != widget.catalogClient) {
       _refreshProgramState();
@@ -146,7 +148,9 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
                   onAction: _refreshPrograms,
                 ),
                 const SizedBox(height: 16),
-                ..._buildProgramCards(PartnerMiniProgramCatalog.availablePrograms),
+                ..._buildProgramCards(
+                  PartnerMiniProgramCatalog.availablePrograms,
+                ),
               ],
             );
           }
@@ -179,19 +183,14 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
               program: program,
               discoveryFuture: _discoveryFutures[program.id]!,
               onOpen: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => MiniProgramPage(
-                      miniProgramId: program.id,
-                      title: program.title,
-                    ),
-                  ),
+                MiniProgramScope.of(context).openMiniProgram<void>(
+                  appId: program.id,
+                  title: program.title,
                 );
               },
               onPreviewCapabilityFailure: () {
-                final previewRuntime = widget.runtime.copyWith(
-                  capabilityRegistry:
-                      partnerAppMissingNavigationCapabilityRegistry,
+                final previewRuntime = _buildPreviewRuntime(
+                  partnerAppMissingNavigationCapabilityRegistry,
                 );
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -245,13 +244,26 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
         program.id,
         () => _discoveryResolver.resolve(
           miniProgramId: program.id,
-          source: widget.runtime.source,
-          manifestCache: widget.runtime.cacheBundle.manifestCache,
-          screenCache: widget.runtime.cacheBundle.screenCache,
+          source: widget.config.source,
+          manifestCache: widget.cacheBundle.manifestCache,
+          screenCache: widget.cacheBundle.screenCache,
           sourceKind: widget.discoverySourceKind,
         ),
       );
     }
+  }
+
+  MiniProgramRuntime _buildPreviewRuntime(CapabilityRegistry registry) {
+    return MiniProgramRuntime(
+      sdkVersion: widget.config.sdkVersion,
+      source: widget.config.source,
+      hostBridge: widget.config.hostBridge,
+      capabilityRegistry: registry,
+      featureFlagEvaluator: widget.config.featureFlagEvaluator,
+      cacheBundle: widget.cacheBundle,
+      logger: widget.config.logger,
+      disposeSource: false,
+    );
   }
 }
 
@@ -315,7 +327,9 @@ class _MiniProgramCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _DiscoveryBadge(
-                      label: isChecking ? 'Checking' : discoveryState.badgeLabel,
+                      label: isChecking
+                          ? 'Checking'
+                          : discoveryState.badgeLabel,
                       tone: isChecking
                           ? _DiscoveryTone.neutral
                           : _toneFor(discoveryState.status),
@@ -531,10 +545,7 @@ class _CatalogNotice extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+                  Text(message, style: Theme.of(context).textTheme.bodyLarge),
                   if (actionLabel != null && onAction != null) ...[
                     const SizedBox(height: 12),
                     OutlinedButton.icon(

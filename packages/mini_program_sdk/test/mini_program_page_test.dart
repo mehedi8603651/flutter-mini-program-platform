@@ -1,5 +1,8 @@
 import 'dart:async';
 
+// Compatibility coverage intentionally exercises deprecated launcher APIs.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';

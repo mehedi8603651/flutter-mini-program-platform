@@ -43,6 +43,9 @@ abstract final class StacInitializer {
   }
 
   @visibleForTesting
+  static bool get isInitializedForTesting => _initialized;
+
+  @visibleForTesting
   static void resetForTesting() {
     _initialized = false;
     _initialization = null;

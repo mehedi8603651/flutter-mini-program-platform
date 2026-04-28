@@ -151,6 +151,10 @@ backend mode the host sends:
 - optional `pinnedVersion`
 - `capabilities`
 
+`sdkVersion` is the host runtime compatibility version used for manifest
+`sdkVersionRange` checks. It is not the Dart pub package version of
+`mini_program_sdk`.
+
 Example allowed request:
 
 ```text

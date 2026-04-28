@@ -10,3 +10,9 @@ abstract interface class MiniProgramSource {
     required String screenId,
   });
 }
+
+/// Optional contract for sources that own disposable resources.
+abstract interface class DisposableMiniProgramSource
+    implements MiniProgramSource {
+  void dispose();
+}

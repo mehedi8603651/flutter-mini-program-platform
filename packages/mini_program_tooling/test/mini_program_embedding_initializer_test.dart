@@ -45,9 +45,6 @@ void main() {
       final launcher = await File(
         p.join(integrationRootPath, 'mini_program_launcher.dart'),
       ).readAsString();
-      final appShell = await File(
-        p.join(integrationRootPath, 'mini_program_app_shell.dart'),
-      ).readAsString();
       final barrel = await File(
         p.join(integrationRootPath, 'mini_program.dart'),
       ).readAsString();
@@ -65,7 +62,7 @@ void main() {
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
-      expect(result.createdPaths, hasLength(9));
+      expect(result.createdPaths, hasLength(8));
       expect(
         runtimeSetup,
         contains("const String _hostAppId = 'my_existing_app';"),
@@ -97,33 +94,37 @@ void main() {
         ),
       );
       expect(hostBridge, contains('MiniProgramRoutes.profileEditorAlias'));
+      expect(hostBridge, isNot(contains('navigatorKey')));
       expect(launcher, contains('Future<T?> openAppMiniProgram<T>('));
       expect(
         launcher,
-        contains('class AppMiniProgramLauncherButton extends StatelessWidget'),
+        contains('class AppMiniProgramLauncher extends StatelessWidget'),
       );
-      expect(
-        appShell,
-        contains('class MiniProgramAppShell extends StatefulWidget'),
-      );
-      expect(appShell, contains('MiniProgramRuntimeScope('));
-      expect(barrel, contains("export 'mini_program_app_shell.dart';"));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.1.3'));
+      expect(launcher, contains('MiniProgramScope.of(context)'));
+      expect(launcher, isNot(contains('MiniProgramLauncherButton')));
+      expect(runtimeSetup, isNot(contains('MaterialApp(')));
+      expect(barrel, isNot(contains("export 'mini_program_app_shell.dart';")));
+      expect(barrel, contains("export 'app_host_bridge.dart';"));
+      expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.2.0'));
       expect(updatedPubspec, contains('mini_program_contracts: ^0.1.0'));
+      expect(readme, contains('mini_program_sdk: ^0.2.0'));
+      expect(readme, contains('mini_program_contracts: ^0.1.0'));
+      expect(readme, contains('MiniProgramScope('));
+      expect(readme, contains('flutter run -d emulator-5554'));
+      expect(readme, contains('MINI_PROGRAM_BACKEND_HOST'));
+      expect(readme, contains('adb reverse'));
+      expect(readme, contains('resolved backend base URL'));
       expect(
         readme,
-        allOf(
-          contains('mini_program_sdk: ^0.1.3'),
-          contains('mini_program_contracts: ^0.1.0'),
-          contains('MiniProgramAppShell('),
-          contains('flutter run -d emulator-5554'),
-          contains('MINI_PROGRAM_BACKEND_HOST'),
-          contains('adb reverse'),
-          contains('resolved backend base URL'),
+        contains(
+          'This package does not own your Flutter app. It only provides mini-program',
         ),
       );
+      expect(readme, contains('MiniProgramConfig` is immutable'));
       expect(readme, contains('flutter build apk --release'));
       expect(readme, contains('openAppMiniProgram('));
+      expect(readme, isNot(contains('MiniProgramAppShell')));
     });
 
     test('supports custom host metadata and route path', () async {
@@ -141,14 +142,6 @@ void main() {
       ).readAsString();
       final routes = await File(
         p.join(tempDir.path, 'lib', 'mini_program', 'mini_program_routes.dart'),
-      ).readAsString();
-      final appShell = await File(
-        p.join(
-          tempDir.path,
-          'lib',
-          'mini_program',
-          'mini_program_app_shell.dart',
-        ),
       ).readAsString();
       final runtimeSetup = await File(
         p.join(
@@ -169,12 +162,15 @@ void main() {
         ),
       );
       expect(hostBridge, contains('MiniProgramRoutes.nativeProfileEditor'));
-      expect(appShell, contains('MiniProgramRoutes.nativeProfileEditor'));
       expect(
         runtimeSetup,
         contains("const String _hostAppId = 'campus_super_app';"),
       );
       expect(runtimeSetup, contains("const String _hostVersion = '9.4.1';"));
+      expect(
+        runtimeSetup,
+        contains('MiniProgramConfig buildMiniProgramConfig'),
+      );
     });
 
     test(

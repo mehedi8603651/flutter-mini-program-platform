@@ -24,11 +24,13 @@ Future<void> main(List<String> arguments) async {
     )
     ..addOption(
       'host-app-id',
-      help: 'Optional host app identifier. Defaults to the pubspec package name.',
+      help:
+          'Optional host app identifier. Defaults to the pubspec package name.',
     )
     ..addOption(
       'host-version',
-      help: 'Optional host version. Defaults to the pubspec version without +build suffix.',
+      help:
+          'Optional host version. Defaults to the pubspec version without +build suffix.',
     )
     ..addOption(
       'native-route-path',
@@ -77,7 +79,9 @@ Future<void> main(List<String> arguments) async {
     );
 
     if (results.option('output') == 'json') {
-      stdout.writeln(const JsonEncoder.withIndent('  ').convert(result.toJson()));
+      stdout.writeln(
+        const JsonEncoder.withIndent('  ').convert(result.toJson()),
+      );
     } else {
       stdout.writeln(_formatResult(result));
     }
@@ -100,8 +104,8 @@ String _formatResult(MiniProgramEmbeddingInitResult result) {
     'Next steps:',
     '- Add mini_program_sdk and mini_program_contracts to pubspec.yaml if they are missing.',
     "- Import 'mini_program/mini_program.dart' from your app entrypoint.",
-    '- Wrap your app home with MiniProgramAppShell(...) instead of wiring the runtime by hand.',
-    "- Call openAppMiniProgram(context, miniProgramId: 'my_data') from your existing UI.",
+    '- Wrap your app with MiniProgramScope(config: buildMiniProgramConfig(), child: MyApp()).',
+    "- Call openAppMiniProgram(context, appId: 'my_data') from your existing UI.",
   ];
 
   return lines.join('\n');

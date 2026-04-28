@@ -62,7 +62,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.1.3';
+  static const String _miniProgramSdkConstraint = '^0.2.0';
   static const String _miniProgramContractsConstraint = '^0.1.0';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
@@ -130,8 +130,6 @@ class MiniProgramEmbeddingInitializer {
           _buildNativeProfileEditorPage(),
       p.join(integrationRootPath, 'mini_program_launcher.dart'):
           _buildLauncher(),
-      p.join(integrationRootPath, 'mini_program_app_shell.dart'):
-          _buildAppShell(),
       p.join(integrationRootPath, 'mini_program.dart'): _buildBarrel(),
       p.join(integrationRootPath, 'README.md'): _buildReadme(
         packageName: packageName,
@@ -316,16 +314,19 @@ abstract final class MiniProgramRoutes {
 
   String _buildHostBridge({required String logPrefix}) {
     return '''
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import 'mini_program_routes.dart';
 
-class AppHostBridge implements HostBridge {
-  AppHostBridge({required this.navigatorKey});
+typedef AppNativeRouteOpener =
+    Future<Object?> Function(String routeName, Map<String, dynamic> arguments);
 
-  final GlobalKey<NavigatorState> navigatorKey;
+class AppHostBridge implements HostBridge {
+  const AppHostBridge({this.openNativeRoute});
+
+  final AppNativeRouteOpener? openNativeRoute;
 
   static const Map<String, String> _routeAliases = <String, String>{
     MiniProgramRoutes.profileEditorAlias: MiniProgramRoutes.nativeProfileEditor,
@@ -347,20 +348,17 @@ class AppHostBridge implements HostBridge {
   Future<HostActionResult> openNativeScreen(
     OpenNativeScreenActionPayload payload,
   ) async {
-    final navigator = navigatorKey.currentState;
-    if (navigator == null) {
+    final routeOpener = openNativeRoute;
+    if (routeOpener == null) {
       return HostActionResult.failed(
         actionName: ActionNames.openNativeScreen,
-        message: 'Navigator not available.',
+        message: 'Host native navigation is not configured.',
       );
     }
 
     try {
       final routeName = _routeAliases[payload.route] ?? payload.route;
-      final result = await navigator.pushNamed<Object?>(
-        routeName,
-        arguments: payload.args,
-      );
+      final result = await routeOpener(routeName, payload.args);
 
       if (payload.expectResult && result == null) {
         return HostActionResult.cancelled(
@@ -408,156 +406,53 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 Future<T?> openAppMiniProgram<T>(
   BuildContext context, {
-  required String miniProgramId,
+  required String appId,
   String? title,
-  MiniProgramRuntime? runtime,
-  bool useRootNavigator = false,
-  MiniProgramRouteBuilder<T>? routeBuilder,
+  Map<String, dynamic>? initialData,
+  String? version,
+  Uri? source,
+  MiniProgramLaunchOptions options = const MiniProgramLaunchOptions(),
 }) {
-  return openMiniProgram<T>(
-    context,
-    miniProgramId: miniProgramId,
+  return MiniProgramScope.of(context).openMiniProgram<T>(
+    appId: appId,
     title: title,
-    runtime: runtime,
-    useRootNavigator: useRootNavigator,
-    routeBuilder: routeBuilder,
+    initialData: initialData,
+    version: version,
+    source: source,
+    options: options,
   );
 }
 
-class AppMiniProgramLauncherButton extends StatelessWidget {
-  const AppMiniProgramLauncherButton({
+class AppMiniProgramLauncher extends StatelessWidget {
+  const AppMiniProgramLauncher({
     super.key,
-    required this.miniProgramId,
+    required this.appId,
     required this.child,
     this.title,
-    this.runtime,
-    this.icon,
-    this.style,
-    this.useRootNavigator = false,
-    this.routeBuilder,
+    this.initialData,
+    this.version,
+    this.source,
+    this.options = const MiniProgramLaunchOptions(),
   });
 
-  final String miniProgramId;
+  final String appId;
   final Widget child;
   final String? title;
-  final MiniProgramRuntime? runtime;
-  final Widget? icon;
-  final ButtonStyle? style;
-  final bool useRootNavigator;
-  final MiniProgramRouteBuilder<void>? routeBuilder;
+  final Map<String, dynamic>? initialData;
+  final String? version;
+  final Uri? source;
+  final MiniProgramLaunchOptions options;
 
   @override
   Widget build(BuildContext context) {
-    return MiniProgramLauncherButton(
-      miniProgramId: miniProgramId,
+    return MiniProgramLauncher(
+      appId: appId,
       title: title,
-      runtime: runtime,
-      icon: icon,
-      style: style,
-      useRootNavigator: useRootNavigator,
-      routeBuilder: routeBuilder,
+      initialData: initialData,
+      version: version,
+      source: source,
+      options: options,
       child: child,
-    );
-  }
-}
-''';
-  }
-
-  String _buildAppShell() {
-    return '''
-import 'package:flutter/material.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
-
-import 'mini_program_routes.dart';
-import 'mini_program_runtime_setup.dart';
-import 'native_profile_editor_page.dart';
-
-class MiniProgramAppShell extends StatefulWidget {
-  const MiniProgramAppShell({
-    super.key,
-    required this.home,
-    this.title = '',
-    this.initialRoute,
-    this.routes = const <String, WidgetBuilder>{},
-    this.onGenerateRoute,
-    this.onUnknownRoute,
-    this.navigatorObservers = const <NavigatorObserver>[],
-    this.builder,
-    this.theme,
-    this.darkTheme,
-    this.themeMode,
-    this.locale,
-    this.localizationsDelegates,
-    this.supportedLocales = const <Locale>[Locale('en', 'US')],
-    this.debugShowCheckedModeBanner = true,
-  });
-
-  final Widget home;
-  final String title;
-  final String? initialRoute;
-  final Map<String, WidgetBuilder> routes;
-  final RouteFactory? onGenerateRoute;
-  final RouteFactory? onUnknownRoute;
-  final List<NavigatorObserver> navigatorObservers;
-  final TransitionBuilder? builder;
-  final ThemeData? theme;
-  final ThemeData? darkTheme;
-  final ThemeMode? themeMode;
-  final Locale? locale;
-  final Iterable<LocalizationsDelegate<dynamic>>? localizationsDelegates;
-  final Iterable<Locale> supportedLocales;
-  final bool debugShowCheckedModeBanner;
-
-  @override
-  State<MiniProgramAppShell> createState() => _MiniProgramAppShellState();
-}
-
-class _MiniProgramAppShellState extends State<MiniProgramAppShell> {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  late final MiniProgramRuntime _runtime;
-
-  @override
-  void initState() {
-    super.initState();
-    _runtime = buildMiniProgramRuntime(_navigatorKey);
-  }
-
-  Route<dynamic>? _handleGeneratedRoutes(RouteSettings settings) {
-    if (settings.name == MiniProgramRoutes.nativeProfileEditor) {
-      final args =
-          (settings.arguments as Map?)?.cast<String, dynamic>() ??
-          <String, dynamic>{};
-      return MaterialPageRoute<void>(
-        builder: (_) => NativeProfileEditorPage(initialArgs: args),
-        settings: settings,
-      );
-    }
-
-    return widget.onGenerateRoute?.call(settings);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MiniProgramRuntimeScope(
-      runtime: _runtime,
-      child: MaterialApp(
-        navigatorKey: _navigatorKey,
-        title: widget.title,
-        home: widget.home,
-        initialRoute: widget.initialRoute,
-        routes: widget.routes,
-        onGenerateRoute: _handleGeneratedRoutes,
-        onUnknownRoute: widget.onUnknownRoute,
-        navigatorObservers: widget.navigatorObservers,
-        builder: widget.builder,
-        theme: widget.theme,
-        darkTheme: widget.darkTheme,
-        themeMode: widget.themeMode ?? ThemeMode.system,
-        locale: widget.locale,
-        localizationsDelegates: widget.localizationsDelegates,
-        supportedLocales: widget.supportedLocales,
-        debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
-      ),
     );
   }
 }
@@ -566,9 +461,10 @@ class _MiniProgramAppShellState extends State<MiniProgramAppShell> {
 
   String _buildBarrel() {
     return '''
-export 'mini_program_app_shell.dart';
+export 'app_host_bridge.dart';
 export 'mini_program_launcher.dart';
 export 'mini_program_routes.dart';
+export 'mini_program_runtime_setup.dart';
 ''';
   }
 
@@ -578,7 +474,7 @@ export 'mini_program_routes.dart';
   }) {
     return '''
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
@@ -600,15 +496,16 @@ const int _configuredBackendPort = int.fromEnvironment(
   defaultValue: LocalMiniProgramBackendDefaults.defaultPort,
 );
 
-const Set<Capability> _supportedCapabilities = <Capability>{
-  Capability.analytics,
-  Capability.nativeNavigation,
-};
-
-MiniProgramRuntime buildMiniProgramRuntime(
-  GlobalKey<NavigatorState> navigatorKey,
-) {
-  final locale = WidgetsBinding.instance.platformDispatcher.locale;
+MiniProgramConfig buildMiniProgramConfig({
+  AppNativeRouteOpener? openNativeRoute,
+}) {
+  final locale = WidgetsFlutterBinding.ensureInitialized()
+      .platformDispatcher
+      .locale;
+  final supportedCapabilities = <Capability>{
+    Capability.analytics,
+    if (openNativeRoute != null) Capability.nativeNavigation,
+  };
   final backendApiBaseUri = LocalMiniProgramBackendDefaults.resolveBaseUri(
     configuredBaseUrl: _configuredBackendBaseUrl,
     configuredHost: _configuredBackendHost,
@@ -616,7 +513,7 @@ MiniProgramRuntime buildMiniProgramRuntime(
   );
   _logResolvedBackendBaseUri(backendApiBaseUri);
 
-  return MiniProgramRuntime(
+  return MiniProgramConfig(
     sdkVersion: _sdkVersion,
     source: HttpMiniProgramSource.fromDeliveryContext(
       apiBaseUri: backendApiBaseUri,
@@ -624,13 +521,13 @@ MiniProgramRuntime buildMiniProgramRuntime(
         hostApp: _hostAppId,
         sdkVersion: _sdkVersion,
         hostVersion: _hostVersion,
-        capabilities: _supportedCapabilities,
+        capabilities: supportedCapabilities,
         platform: _platformName(),
         locale: locale.toLanguageTag(),
       ),
     ),
-    hostBridge: AppHostBridge(navigatorKey: navigatorKey),
-    capabilityRegistry: CapabilityRegistry(_supportedCapabilities),
+    hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
+    capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     cacheBundle: MiniProgramCacheBundle.inMemory(),
   );
 }
@@ -752,7 +649,6 @@ This folder was generated by `init_mini_program_embedding`.
 Generated files:
 
 - `mini_program.dart`
-- `mini_program_app_shell.dart`
 - `mini_program_routes.dart`
 - `app_host_bridge.dart`
 - `mini_program_runtime_setup.dart`
@@ -782,7 +678,12 @@ import 'package:flutter/material.dart';
 import 'mini_program/mini_program.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MiniProgramScope(
+      config: buildMiniProgramConfig(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -790,7 +691,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MiniProgramAppShell(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: const HomePage(),
     );
@@ -805,47 +706,62 @@ import 'mini_program/mini_program.dart';
 
 openAppMiniProgram(
   context,
-  miniProgramId: 'my_data',
+  appId: 'my_data',
   title: 'My Data',
 );
 ```
 
-Or use the generated launcher button:
+Or use the generated launcher widget:
 
 ```dart
-const AppMiniProgramLauncherButton(
-  miniProgramId: 'my_data',
+const AppMiniProgramLauncher(
+  appId: 'my_data',
   title: 'My Data',
   child: Text('Open Mini Program'),
 )
 ```
 
-`MiniProgramAppShell` already wires the generated runtime and sample native
-route registration. If your app needs custom named routes too, pass
-`onGenerateRoute` into `MiniProgramAppShell` and unhandled routes will keep
-flowing through your app-owned route factory.
+This package does not own your Flutter app. It only provides mini-program
+capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,
+`MaterialApp.router`, GoRouter, theme, localization, state management, routes,
+and navigator setup remain fully yours.
 
 ## Generated defaults
 
 - package name: `$packageName`
 - host app id: `$hostAppId`
 - host version: `$hostVersion`
-- lean capabilities: `analytics`, `native_navigation`
+- lean capabilities: `analytics`; `native_navigation` is added when you pass an
+  `openNativeRoute` callback to `buildMiniProgramConfig`
 - native route alias: `profile_editor -> $nativeRoutePath`
 
 ## Host app structure
 
 - `mini_program.dart` is the barrel import for app code.
-- `mini_program_app_shell.dart` wraps `MaterialApp` with the SDK runtime.
 - `mini_program_launcher.dart` exposes `openAppMiniProgram(...)` and
-  `AppMiniProgramLauncherButton`.
+  `AppMiniProgramLauncher`.
 - `mini_program_runtime_setup.dart` resolves `MINI_PROGRAM_BACKEND_BASE_URL`
-  and builds `MiniProgramRuntime`.
+  and builds `MiniProgramConfig`.
 - `app_host_bridge.dart` is app-owned. Edit it for real analytics,
   host-native routes, and secure API behavior.
 - `mini_program_routes.dart` holds host-native route aliases.
 - your app `lib/main.dart` stays app-owned. Add buttons, tabs, or menu items
   that call `openAppMiniProgram(...)`.
+
+## Runtime ownership
+
+- Recommended: `MiniProgramScope(config: buildMiniProgramConfig(), child: MyApp())`.
+- Advanced: `MiniProgramController` and `MiniProgramNavigationDelegate`.
+- Manual embedding: `MiniProgramRuntimeScope`, `MiniProgramPage`, and
+  `MiniProgramHost`.
+- `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the
+  scope with a new key when switching environments.
+- `MiniProgramConfig.sdkVersion` is the runtime compatibility version checked
+  against manifest `sdkVersionRange`, not the `mini_program_sdk` pub package
+  version.
+- `MiniProgramScope` does not load a manifest, start a network request,
+  initialize Stac, insert an overlay, or push a route until you open a
+  mini-program.
 
 Full demo `lib/main.dart`:
 
@@ -854,7 +770,12 @@ import 'package:flutter/material.dart';
 import 'mini_program/mini_program.dart';
 
 void main() {
-  runApp(const MyHostApp());
+  runApp(
+    MiniProgramScope(
+      config: buildMiniProgramConfig(),
+      child: const MyHostApp(),
+    ),
+  );
 }
 
 class MyHostApp extends StatelessWidget {
@@ -862,7 +783,7 @@ class MyHostApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MiniProgramAppShell(
+    return MaterialApp(
       title: 'My Mini Host',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
@@ -883,7 +804,7 @@ class HomePage extends StatelessWidget {
           onPressed: () {
             openAppMiniProgram(
               context,
-              miniProgramId: 'my_coupon_app',
+              appId: 'my_coupon_app',
               title: 'My Coupon App',
             );
           },
@@ -918,9 +839,12 @@ the S3 bucket URL directly.
 
 - `app_host_bridge.dart` is app-owned. Replace route aliases, analytics, and
   secure API behavior with your real implementation.
-- `mini_program_app_shell.dart` is the lowest-friction app entrypoint. It keeps
-  `main.dart` and `MyApp` small while still letting you override normal
-  `MaterialApp` options.
+- This package does not own your Flutter app. It only provides mini-program
+  capability through `MiniProgramScope`. Your `MaterialApp`,
+  `GetMaterialApp`, `MaterialApp.router`, GoRouter, theme, localization, state
+  management, routes, and navigator setup remain fully yours.
+- Multiple scopes are technically allowed for isolated runtimes, but normal
+  apps should keep one `MiniProgramScope` near the app root.
 - `mini_program_launcher.dart` is the developer-friendly entrypoint for feature
   pages. It keeps widget code from repeating Navigator glue.
 - `mini_program_runtime_setup.dart` defaults to:

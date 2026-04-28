@@ -12,14 +12,15 @@ typedef ManifestRequestQueryParametersBuilder =
     Map<String, String> Function(String miniProgramId);
 
 /// HTTP-backed source that loads manifests and screen JSON from backend paths.
-class HttpMiniProgramSource implements MiniProgramSource {
+class HttpMiniProgramSource implements DisposableMiniProgramSource {
   HttpMiniProgramSource({
     required this.apiBaseUri,
     this.manifestRequestQueryParametersBuilder,
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
     http.Client? client,
-  }) : _client = client ?? http.Client();
+  }) : _client = client ?? http.Client(),
+       _ownsClient = client == null;
 
   factory HttpMiniProgramSource.fromDeliveryContext({
     required Uri apiBaseUri,
@@ -44,6 +45,14 @@ class HttpMiniProgramSource implements MiniProgramSource {
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
   final http.Client _client;
+  final bool _ownsClient;
+
+  @override
+  void dispose() {
+    if (_ownsClient) {
+      _client.close();
+    }
+  }
 
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {

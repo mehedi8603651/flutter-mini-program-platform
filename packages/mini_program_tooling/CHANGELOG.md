@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- update `miniprogram embed init` to generate `MiniProgramScope` integration
+  helpers instead of `MiniProgramAppShell`
+- generate `buildMiniProgramConfig(...)` and scope-based launcher helpers while
+  leaving `MaterialApp`, routes, navigator keys, themes, and routers app-owned
+- bump generated host and preview app dependencies to `mini_program_sdk: ^0.2.0`
+
 ## 0.2.33
 
 - add Android release `INTERNET` permission to generated embedded host apps so

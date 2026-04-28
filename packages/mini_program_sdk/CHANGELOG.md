@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+- add `MiniProgramScope`, `MiniProgramController`, `MiniProgramConfig`,
+  `MiniProgramLaunchOptions`, and `MiniProgramLauncher` as the primary
+  host-owned app integration API
+- keep `MaterialApp`, router, theme, localization, state management, and
+  navigator setup fully owned by the host app
+- deprecate the free `openMiniProgram(...)` helper and
+  `MiniProgramLauncherButton` in favor of scope-based launching
+- add lazy runtime creation and owned-source disposal support
+
 ## 0.1.3
 
 - replace the minimal spinner with a full-screen branded loading surface so

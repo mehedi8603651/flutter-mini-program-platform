@@ -50,6 +50,7 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
   late final CapabilityRegistry _capabilityRegistry;
   late final HostBridge _hostBridge;
   late final MiniProgramCacheBundle _cacheBundle;
+  late final MiniProgramConfig _miniProgramConfig;
   late final MiniProgramDiscoverySourceKind _discoverySourceKind;
   late final PublishedMiniProgramCatalogClient? _catalogClient;
 
@@ -102,28 +103,24 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
         authSessionService: authSessionService,
       ),
     );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildAppWithRuntime(_cacheBundle);
-  }
-
-  Widget _buildAppWithRuntime(MiniProgramCacheBundle cacheBundle) {
-    final runtime = MiniProgramRuntime(
+    _miniProgramConfig = MiniProgramConfig(
       sdkVersion: superAppHostSdkVersion,
       source: _source,
       hostBridge: _hostBridge,
       capabilityRegistry: _capabilityRegistry,
       featureFlagEvaluator: widget.featureFlagEvaluator,
-      cacheBundle: cacheBundle,
+      cacheBundle: _cacheBundle,
     );
+  }
 
-    return MiniProgramRuntimeScope(
-      runtime: runtime,
+  @override
+  Widget build(BuildContext context) {
+    return MiniProgramScope(
+      config: _miniProgramConfig,
       child: _buildMaterialApp(
         home: MiniProgramListPage(
-          runtime: runtime,
+          config: _miniProgramConfig,
+          cacheBundle: _cacheBundle,
           catalogClient: _catalogClient,
           sourceDescription: _sourceDescription,
           discoverySourceKind: _discoverySourceKind,

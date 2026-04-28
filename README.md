@@ -770,7 +770,12 @@ import 'package:flutter/material.dart';
 import 'mini_program/mini_program.dart';
 
 void main() {
-  runApp(const MyHostApp());
+  runApp(
+    MiniProgramScope(
+      config: buildMiniProgramConfig(),
+      child: const MyHostApp(),
+    ),
+  );
 }
 
 class MyHostApp extends StatelessWidget {
@@ -778,7 +783,7 @@ class MyHostApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MiniProgramAppShell(
+    return MaterialApp(
       title: 'My Mini Host',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
@@ -799,7 +804,7 @@ class HomePage extends StatelessWidget {
           onPressed: () {
             openAppMiniProgram(
               context,
-              miniProgramId: 'my_coupon_app',
+              appId: 'my_coupon_app',
               title: 'My Coupon App',
             );
           },
@@ -816,17 +821,24 @@ Generated host-app structure:
 - `pubspec.yaml` is updated with `mini_program_sdk` and
   `mini_program_contracts`
 - `lib/mini_program/mini_program.dart` is the barrel import for app code
-- `lib/mini_program/mini_program_app_shell.dart` wraps `MaterialApp` with the
-  SDK runtime
 - `lib/mini_program/mini_program_launcher.dart` exposes
-  `openAppMiniProgram(...)` and `AppMiniProgramLauncherButton`
+  `openAppMiniProgram(...)` and `AppMiniProgramLauncher`
 - `lib/mini_program/mini_program_runtime_setup.dart` resolves
-  `MINI_PROGRAM_BACKEND_BASE_URL` and builds `MiniProgramRuntime`
+  `MINI_PROGRAM_BACKEND_BASE_URL` and builds `MiniProgramConfig`
 - `lib/mini_program/app_host_bridge.dart` is where developers wire real
   analytics, native screens, and secure API behavior
 - `lib/mini_program/mini_program_routes.dart` holds host-native route aliases
 - `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
   that call `openAppMiniProgram(...)`
+- This package does not own your Flutter app. It only provides mini-program
+  capability through `MiniProgramScope`. Your `MaterialApp`,
+  `GetMaterialApp`, `MaterialApp.router`, GoRouter, theme, localization, state
+  management, routes, and navigator setup remain fully yours.
+- `MiniProgramConfig.sdkVersion` is the runtime compatibility version checked
+  against manifest `sdkVersionRange`, not the `mini_program_sdk` pub package
+  version.
+- `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the
+  scope with a new key when switching environments.
 - Android release builds need internet access to load cloud mini-programs.
   `miniprogram embed init` writes
   `android.permission.INTERNET` into `android/app/src/main/AndroidManifest.xml`

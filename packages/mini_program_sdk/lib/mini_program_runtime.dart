@@ -19,6 +19,7 @@ class MiniProgramRuntime {
     required this.cacheBundle,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
+    this.disposeSource = false,
   });
 
   final String sdkVersion;
@@ -28,6 +29,7 @@ class MiniProgramRuntime {
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle cacheBundle;
   final SdkLogger logger;
+  final bool disposeSource;
 
   MiniProgramRuntime copyWith({
     String? sdkVersion,
@@ -37,17 +39,24 @@ class MiniProgramRuntime {
     FeatureFlagEvaluator? featureFlagEvaluator,
     MiniProgramCacheBundle? cacheBundle,
     SdkLogger? logger,
+    bool? disposeSource,
   }) {
     return MiniProgramRuntime(
       sdkVersion: sdkVersion ?? this.sdkVersion,
       source: source ?? this.source,
       hostBridge: hostBridge ?? this.hostBridge,
       capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
-      featureFlagEvaluator:
-          featureFlagEvaluator ?? this.featureFlagEvaluator,
+      featureFlagEvaluator: featureFlagEvaluator ?? this.featureFlagEvaluator,
       cacheBundle: cacheBundle ?? this.cacheBundle,
       logger: logger ?? this.logger,
+      disposeSource: disposeSource ?? this.disposeSource,
     );
+  }
+
+  void dispose() {
+    if (disposeSource && source is DisposableMiniProgramSource) {
+      (source as DisposableMiniProgramSource).dispose();
+    }
   }
 }
 
@@ -78,7 +87,8 @@ class MiniProgramRuntimeScope extends InheritedWidget {
   }
 
   static MiniProgramRuntimeScope? maybeOf(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<MiniProgramRuntimeScope>();
+    return context
+        .dependOnInheritedWidgetOfExactType<MiniProgramRuntimeScope>();
   }
 
   @override
@@ -90,6 +100,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.featureFlagEvaluator !=
             oldWidget.runtime.featureFlagEvaluator ||
         runtime.cacheBundle != oldWidget.runtime.cacheBundle ||
-        runtime.logger != oldWidget.runtime.logger;
+        runtime.logger != oldWidget.runtime.logger ||
+        runtime.disposeSource != oldWidget.runtime.disposeSource;
   }
 }

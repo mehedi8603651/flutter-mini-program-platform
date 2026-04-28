@@ -8,8 +8,8 @@ shared platform contracts.
 
 ## What it includes
 
-- `MiniProgramRuntime` and `MiniProgramRuntimeScope`
-- `MiniProgramPage` and `openMiniProgram(...)`
+- `MiniProgramScope`, `MiniProgramController`, and `MiniProgramConfig`
+- `MiniProgramPage` and lower-level runtime scope APIs
 - `MiniProgramHost` for lower-level embedding
 - manifest loading and version validation
 - capability registry and feature-flag evaluation
@@ -21,7 +21,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.1.3
+  mini_program_sdk: ^0.2.0
   mini_program_contracts: ^0.1.0
 ```
 
@@ -32,8 +32,13 @@ uses the local `mini_program_contracts` checkout.
 
 For most host apps, prefer generating the adapter with
 `miniprogram embed init`. That creates `lib/mini_program/`, adds the SDK
-dependencies to `pubspec.yaml`, and gives you `MiniProgramAppShell` plus
-`openAppMiniProgram(...)`.
+dependencies to `pubspec.yaml`, and gives you `buildMiniProgramConfig(...)`
+plus `openAppMiniProgram(...)`.
+
+This package does not own your Flutter app. It only provides mini-program
+capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,
+`MaterialApp.router`, GoRouter, theme, localization, state management, routes,
+and navigator setup remain fully yours.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -41,7 +46,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
-  final runtime = MiniProgramRuntime(
+  final config = MiniProgramConfig(
     sdkVersion: '1.0.0',
     source: HttpMiniProgramSource.fromDeliveryContext(
       apiBaseUri: LocalMiniProgramBackendDefaults.resolveBaseUri(
@@ -73,16 +78,41 @@ void main() {
   );
 
   runApp(
-    MiniProgramRuntimeScope(
-      runtime: runtime,
-      child: const MaterialApp(
-        home: MiniProgramPage(
-          miniProgramId: 'my_coupon_app',
-          title: 'My Coupon App',
-        ),
-      ),
+    MiniProgramScope(
+      config: config,
+      child: const MyApp(),
     ),
   );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(home: HomePage());
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: FilledButton(
+          onPressed: () {
+            MiniProgramScope.of(context).openMiniProgram(
+              appId: 'my_coupon_app',
+              title: 'My Coupon App',
+            );
+          },
+          child: const Text('Open My Coupon App'),
+        ),
+      ),
+    );
+  }
 }
 
 class NoopHostBridge implements HostBridge {
@@ -114,6 +144,12 @@ class NoopHostBridge implements HostBridge {
   }
 }
 ```
+
+`MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
+mini-program delivery backends and compared with manifest `sdkVersionRange`
+values. It is not the pub package version of `mini_program_sdk`; for example,
+the package can be `0.2.0` while the runtime compatibility version remains
+`1.0.0`.
 
 Generated host apps usually pass the backend URL at build or run time:
 
@@ -173,10 +209,60 @@ launches show an app bar and branded progress UI instead of a blank route while
 the manifest and entry screen are fetched. Advanced hosts can still pass a
 custom `loadingBuilder` to `MiniProgramHost`.
 
+## API layers
+
+- Recommended: `MiniProgramScope(config: buildMiniProgramConfig(), child: MyApp())`.
+- Advanced: `MiniProgramController` and `MiniProgramNavigationDelegate` for
+  custom runtime or navigation ownership.
+- Manual embedding: `MiniProgramRuntimeScope`, `MiniProgramPage`, and
+  `MiniProgramHost` remain available for specialized integrations.
+
+`MiniProgramConfig` is treated as immutable after `MiniProgramScope` is
+created. To switch environments, recreate the scope with a new key:
+
+```dart
+MiniProgramScope(
+  key: ValueKey(environment),
+  config: config,
+  child: const MyApp(),
+);
+```
+
+For normal apps, use `config`. Controller injection is mainly for tests or
+advanced ownership:
+
+```dart
+MiniProgramScope(
+  controller: customController,
+  disposeController: false,
+  child: const MyApp(),
+);
+```
+
+Injected controllers are not disposed by default. Controllers created by the
+scope are disposed with the scope. Multiple scopes are technically allowed for
+isolated runtimes, but most host apps should keep one `MiniProgramScope` near
+the app root.
+
+Custom navigation stays framework-neutral:
+
+```dart
+typedef MiniProgramNavigationDelegate = Future<T?> Function<T>(
+  BuildContext context,
+  MiniProgramLaunchRequest request,
+  Widget page,
+);
+
+typedef MiniProgramRouteBuilder<T> = Route<T> Function(
+  BuildContext context,
+  MiniProgramLaunchRequest request,
+  Widget page,
+);
+```
+
 ## Notes
 
 - This package is the runtime only. Authoring and local backend workflows live
   in `mini_program_tooling`.
-- `MiniProgramPage` is the preferred high-level entrypoint for existing Flutter
-  apps.
-- `MiniProgramHost` remains available for advanced host integrations.
+- No manifest loading, network request, Stac initialization, mini-program route,
+  or overlay work starts until a mini-program is opened.

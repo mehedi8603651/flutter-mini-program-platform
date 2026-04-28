@@ -48,6 +48,10 @@ manifest route can use query parameters such as:
 - `sdkVersion`
 - `capabilities`
 
+`sdkVersion` is the host runtime compatibility version used for manifest
+`sdkVersionRange` checks. It is not the Dart pub package version of
+`mini_program_sdk`.
+
 For the current `profile_center` sample, a missing required capability returns
 `412` with a JSON error body instead of a manifest.
 
