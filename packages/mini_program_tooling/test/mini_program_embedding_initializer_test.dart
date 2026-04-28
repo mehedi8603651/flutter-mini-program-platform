@@ -125,6 +125,18 @@ void main() {
         readme,
         contains("import 'package:mini_program_sdk/mini_program_sdk.dart';"),
       );
+      expect(
+        readme,
+        contains("import 'mini_program/mini_program_launcher.dart';"),
+      );
+      expect(
+        readme,
+        contains("import 'mini_program/mini_program_runtime_setup.dart';"),
+      );
+      expect(
+        readme,
+        isNot(contains("import 'mini_program/mini_program.dart';")),
+      );
       expect(readme, contains('flutter run -d emulator-5554'));
       expect(readme, contains('MINI_PROGRAM_BACKEND_HOST'));
       expect(readme, contains('adb reverse'));

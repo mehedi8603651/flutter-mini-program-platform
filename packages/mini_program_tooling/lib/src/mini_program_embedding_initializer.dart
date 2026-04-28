@@ -604,7 +604,7 @@ scaffold is generated.
 import 'package:flutter/material.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
-import 'mini_program/mini_program.dart';
+import 'mini_program/mini_program_runtime_setup.dart';
 
 void main() {
   runApp(
@@ -631,7 +631,7 @@ class MyApp extends StatelessWidget {
 ## 3. Open any mini-program from an ordinary app button
 
 ```dart
-import 'mini_program/mini_program.dart';
+import 'mini_program/mini_program_launcher.dart';
 
 openAppMiniProgram(
   context,
@@ -665,7 +665,8 @@ and navigator setup remain fully yours.
 
 ## Host app structure
 
-- `mini_program.dart` is the barrel import for app code.
+- `mini_program.dart` is an optional generated barrel export if you prefer one
+  app-local import.
 - `mini_program_launcher.dart` exposes `openAppMiniProgram(...)` and
   `AppMiniProgramLauncher`.
 - `mini_program_runtime_setup.dart` resolves `MINI_PROGRAM_BACKEND_BASE_URL`
@@ -696,7 +697,8 @@ Full demo `lib/main.dart`:
 import 'package:flutter/material.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
-import 'mini_program/mini_program.dart';
+import 'mini_program/mini_program_launcher.dart';
+import 'mini_program/mini_program_runtime_setup.dart';
 
 void main() {
   runApp(

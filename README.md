@@ -773,7 +773,8 @@ Demo `lib/main.dart` for a host app:
 import 'package:flutter/material.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
-import 'mini_program/mini_program.dart';
+import 'mini_program/mini_program_launcher.dart';
+import 'mini_program/mini_program_runtime_setup.dart';
 
 void main() {
   runApp(
@@ -826,7 +827,8 @@ Generated host-app structure:
 
 - `pubspec.yaml` is updated with `mini_program_sdk` and
   `mini_program_contracts`
-- `lib/mini_program/mini_program.dart` is the barrel import for app code
+- `lib/mini_program/mini_program.dart` is an optional generated barrel export
+  if you prefer one app-local import
 - `lib/mini_program/mini_program_launcher.dart` exposes
   `openAppMiniProgram(...)` and `AppMiniProgramLauncher`
 - `lib/mini_program/mini_program_runtime_setup.dart` resolves
