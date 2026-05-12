@@ -7,7 +7,7 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  mini_program_contracts: ^0.1.0
+  mini_program_contracts: ^0.1.1
   path: ^1.9.1
   pub_semver: ^2.2.0
   shelf: ^1.4.2

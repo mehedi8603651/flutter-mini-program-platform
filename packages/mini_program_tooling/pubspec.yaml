@@ -1,6 +1,6 @@
 name: mini_program_tooling
 description: Local developer and CI tooling for the Flutter mini-program platform.
-version: 0.3.3
+version: 0.3.4
 repository: https://github.com/mehedi8603651/flutter-mini-program-platform
 
 executables:
@@ -12,7 +12,7 @@ environment:
 dependencies:
   args: ^2.7.0
   http: ^1.5.0
-  mini_program_contracts: ^0.1.0
+  mini_program_contracts: ^0.1.1
   path: ^1.9.1
   pub_semver: ^2.2.0
 

@@ -62,8 +62,8 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.2.0';
-  static const String _miniProgramContractsConstraint = '^0.1.0';
+  static const String _miniProgramSdkConstraint = '^0.3.0';
+  static const String _miniProgramContractsConstraint = '^0.1.1';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
     MiniProgramEmbeddingInitRequest request,
@@ -478,6 +478,8 @@ const int _configuredBackendPort = int.fromEnvironment(
 
 MiniProgramConfig buildMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
+  Map<String, MiniProgramEndpoint> endpoints =
+      const <String, MiniProgramEndpoint>{},
 }) {
   final locale = WidgetsFlutterBinding.ensureInitialized()
       .platformDispatcher
@@ -492,20 +494,26 @@ MiniProgramConfig buildMiniProgramConfig({
     configuredPort: _configuredBackendPort,
   );
   _logResolvedBackendBaseUri(backendApiBaseUri);
+  final deliveryContext = MiniProgramDeliveryContext(
+    hostApp: _hostAppId,
+    sdkVersion: _sdkVersion,
+    hostVersion: _hostVersion,
+    capabilities: supportedCapabilities,
+    platform: _platformName(),
+    locale: locale.toLanguageTag(),
+  );
 
   return MiniProgramConfig(
     sdkVersion: _sdkVersion,
-    source: HttpMiniProgramSource.fromDeliveryContext(
-      apiBaseUri: backendApiBaseUri,
-      deliveryContext: MiniProgramDeliveryContext(
-        hostApp: _hostAppId,
-        sdkVersion: _sdkVersion,
-        hostVersion: _hostVersion,
-        capabilities: supportedCapabilities,
-        platform: _platformName(),
-        locale: locale.toLanguageTag(),
-      ),
-    ),
+    source: endpoints.isEmpty
+        ? HttpMiniProgramSource.fromDeliveryContext(
+            apiBaseUri: backendApiBaseUri,
+            deliveryContext: deliveryContext,
+          )
+        : EndpointRoutingMiniProgramSource(
+            endpoints: endpoints,
+            deliveryContext: deliveryContext,
+          ),
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     cacheBundle: MiniProgramCacheBundle.inMemory(),
@@ -649,6 +657,45 @@ const AppMiniProgramLauncher(
   child: Text('Open Mini Program'),
 )
 ```
+
+## 4. Optional multi-publisher endpoints
+
+If different partners publish mini-programs to different backends, keep app UI
+appId-only and register each endpoint once in runtime config:
+
+```dart
+MiniProgramScope(
+  config: buildMiniProgramConfig(
+    endpoints: <String, MiniProgramEndpoint>{
+      'aws_coupon_demo': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
+        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      ),
+      'gcp_rewards': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+      ),
+    },
+  ),
+  child: const MyApp(),
+);
+```
+
+Then open each mini-program normally:
+
+```dart
+openAppMiniProgram(
+  context,
+  appId: 'aws_coupon_demo',
+  title: 'AWS Coupon Demo',
+);
+```
+
+Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
+For protected cloud delivery, the backend should validate the
+`X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
+revoking one partner key does not affect other partners using the same
+mini-program.
 
 This package does not own your Flutter app. It only provides mini-program
 capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,

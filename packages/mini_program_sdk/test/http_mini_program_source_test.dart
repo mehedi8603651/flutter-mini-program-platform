@@ -100,6 +100,37 @@ void main() {
       expect(screenJson['type'], 'scaffold');
     });
 
+    test('sends MiniProgram access key header on backend requests', () async {
+      final requestedHeaders = <String?>[];
+      final source = HttpMiniProgramSource(
+        apiBaseUri: Uri.parse('https://backend.example.com/api/'),
+        accessKey: 'mpk_live_partner_a',
+        headers: const <String, String>{'x-host-channel': 'stable'},
+        client: MockClient((request) async {
+          requestedHeaders.add(
+            request.headers[MiniProgramHttpHeaders.accessKey],
+          );
+          expect(request.headers['x-host-channel'], 'stable');
+          if (request.url.path.contains('/manifests/')) {
+            return http.Response(_manifestJson, 200);
+          }
+          return http.Response(_screenJson, 200);
+        }),
+      );
+
+      await source.loadManifest('profile_center');
+      await source.loadScreen(
+        miniProgramId: 'profile_center',
+        version: '1.0.0',
+        screenId: 'profile_center_home',
+      );
+
+      expect(requestedHeaders, <String>[
+        'mpk_live_partner_a',
+        'mpk_live_partner_a',
+      ]);
+    });
+
     test(
       'throws a structured source exception when the backend rejects delivery',
       () {

@@ -378,8 +378,8 @@ void main() {
       final pubspec = await File(
         p.join(hostRootPath, 'pubspec.yaml'),
       ).readAsString();
-      expect(pubspec, contains('mini_program_sdk: ^0.2.0'));
-      expect(pubspec, contains('mini_program_contracts: ^0.1.0'));
+      expect(pubspec, contains('mini_program_sdk: ^0.3.0'));
+      expect(pubspec, contains('mini_program_contracts: ^0.1.1'));
       expect(pubspec, contains('http: ^1.5.0'));
     });
   });

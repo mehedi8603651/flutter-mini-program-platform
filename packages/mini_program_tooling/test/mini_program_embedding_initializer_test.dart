@@ -116,10 +116,10 @@ void main() {
       expect(barrel, contains("export 'app_host_bridge.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.2.0'));
-      expect(updatedPubspec, contains('mini_program_contracts: ^0.1.0'));
-      expect(readme, contains('mini_program_sdk: ^0.2.0'));
-      expect(readme, contains('mini_program_contracts: ^0.1.0'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.3.0'));
+      expect(updatedPubspec, contains('mini_program_contracts: ^0.1.1'));
+      expect(readme, contains('mini_program_sdk: ^0.3.0'));
+      expect(readme, contains('mini_program_contracts: ^0.1.1'));
       expect(readme, contains('MiniProgramScope('));
       expect(
         readme,
@@ -148,6 +148,8 @@ void main() {
         ),
       );
       expect(readme, contains('MiniProgramConfig` is immutable'));
+      expect(readme, contains('MiniProgram access key'));
+      expect(readme, contains('MiniProgramEndpoint('));
       expect(readme, contains('flutter build apk --release'));
       expect(readme, contains('openAppMiniProgram('));
       expect(readme, isNot(contains('MiniProgramAppShell')));

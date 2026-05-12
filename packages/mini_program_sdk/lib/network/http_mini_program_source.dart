@@ -11,11 +11,17 @@ import 'mini_program_source_exception.dart';
 typedef ManifestRequestQueryParametersBuilder =
     Map<String, String> Function(String miniProgramId);
 
+abstract final class MiniProgramHttpHeaders {
+  static const String accessKey = 'x-mini-program-access-key';
+}
+
 /// HTTP-backed source that loads manifests and screen JSON from backend paths.
 class HttpMiniProgramSource implements DisposableMiniProgramSource {
   HttpMiniProgramSource({
     required this.apiBaseUri,
     this.manifestRequestQueryParametersBuilder,
+    this.accessKey,
+    this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
     http.Client? client,
@@ -25,6 +31,8 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
   factory HttpMiniProgramSource.fromDeliveryContext({
     required Uri apiBaseUri,
     required MiniProgramDeliveryContext deliveryContext,
+    String? accessKey,
+    Map<String, String> headers = const <String, String>{},
     Duration requestTimeout = const Duration(seconds: 5),
     bool enableLocalLoopbackFallback = true,
     http.Client? client,
@@ -33,6 +41,8 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
       apiBaseUri: apiBaseUri,
       manifestRequestQueryParametersBuilder: (_) =>
           deliveryContext.toQueryParameters(),
+      accessKey: accessKey,
+      headers: headers,
       requestTimeout: requestTimeout,
       enableLocalLoopbackFallback: enableLocalLoopbackFallback,
       client: client,
@@ -42,6 +52,8 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
   final Uri apiBaseUri;
   final ManifestRequestQueryParametersBuilder?
   manifestRequestQueryParametersBuilder;
+  final String? accessKey;
+  final Map<String, String> headers;
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
   final http.Client _client;
@@ -132,7 +144,9 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
   }) async {
     late final http.Response response;
     try {
-      response = await _client.get(uri).timeout(requestTimeout);
+      response = await _client
+          .get(uri, headers: _requestHeaders())
+          .timeout(requestTimeout);
     } on TimeoutException {
       throw _TransportSourceException(
         MiniProgramSourceException(
@@ -187,6 +201,15 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
     }
 
     return decoded;
+  }
+
+  Map<String, String> _requestHeaders() {
+    final requestHeaders = <String, String>{...headers};
+    final normalizedAccessKey = accessKey?.trim();
+    if (normalizedAccessKey != null && normalizedAccessKey.isNotEmpty) {
+      requestHeaders[MiniProgramHttpHeaders.accessKey] = normalizedAccessKey;
+    }
+    return requestHeaders;
   }
 
   List<Uri> _candidateUris(Uri primaryUri) {

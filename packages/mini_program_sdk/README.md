@@ -21,8 +21,8 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.2.0
-  mini_program_contracts: ^0.1.0
+  mini_program_sdk: ^0.3.0
+  mini_program_contracts: ^0.1.1
 ```
 
 For monorepo contributor work, keep `pubspec_overrides.yaml` so the package
@@ -148,8 +148,59 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.2.0` while the runtime compatibility version remains
+the package can be `0.3.0` while the runtime compatibility version remains
 `1.0.0`.
+
+## Multi-publisher endpoints
+
+For one host app with mini-programs from multiple publishers or cloud
+providers, keep UI calls appId-only and register server details once in
+configuration:
+
+```dart
+final config = MiniProgramConfig(
+  sdkVersion: '1.0.0',
+  source: EndpointRoutingMiniProgramSource(
+    deliveryContext: const MiniProgramDeliveryContext(
+      hostApp: 'sample_host',
+      sdkVersion: '1.0.0',
+      hostVersion: '1.0.0',
+      capabilities: <Capability>{Capability.analytics},
+      platform: 'android',
+      locale: 'en-US',
+    ),
+    endpoints: <String, MiniProgramEndpoint>{
+      'aws_coupon_demo': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
+        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      ),
+      'gcp_rewards': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+      ),
+    },
+  ),
+  hostBridge: const NoopHostBridge(),
+  capabilityRegistry: CapabilityRegistry(
+    const <Capability>[Capability.analytics],
+  ),
+);
+```
+
+Screens still open mini-programs by app id:
+
+```dart
+MiniProgramScope.of(context).openMiniProgram(
+  appId: 'aws_coupon_demo',
+  title: 'AWS Coupon Demo',
+);
+```
+
+Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
+For protected cloud delivery, the backend should validate the
+`X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
+revoking one partner key does not affect other partners using the same
+mini-program.
 
 Generated host apps usually pass the backend URL at build or run time:
 

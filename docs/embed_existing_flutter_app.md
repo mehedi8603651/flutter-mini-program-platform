@@ -67,8 +67,8 @@ old app already has a clear host-owned secure flow ready to integrate.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.2.0
-  mini_program_contracts: ^0.1.0
+  mini_program_sdk: ^0.3.0
+  mini_program_contracts: ^0.1.1
 ```
 
 `embed init` now patches `pubspec.yaml` to add or replace these dependencies for
@@ -255,7 +255,7 @@ Most apps do not need to touch this immediately. Pass the generated config into
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.2.0` while the runtime compatibility version remains
+the package can be `0.3.0` while the runtime compatibility version remains
 `1.0.0`.
 
 `MiniProgramConfig` is treated as immutable after `MiniProgramScope` is
@@ -357,6 +357,34 @@ The same app can open many mini-programs:
 - `openAppMiniProgram(context, appId: 'coupon_center')`
 - `openAppMiniProgram(context, appId: 'feedback_form')`
 - `openAppMiniProgram(context, appId: 'profile_center')`
+
+For mini-programs from different publishers or cloud providers, register
+endpoint routing once in `buildMiniProgramConfig(...)` and keep UI calls
+appId-only:
+
+```dart
+MiniProgramScope(
+  config: buildMiniProgramConfig(
+    endpoints: <String, MiniProgramEndpoint>{
+      'aws_coupon_demo': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
+        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      ),
+      'gcp_rewards': MiniProgramEndpoint(
+        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+      ),
+    },
+  ),
+  child: const MyApp(),
+);
+```
+
+Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
+For protected cloud delivery, the backend should validate the
+`X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
+revoking one partner key does not affect other partners using the same
+mini-program.
 
 Or use the generated launcher widget:
 

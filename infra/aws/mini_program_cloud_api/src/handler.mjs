@@ -4,12 +4,17 @@ import {
   ListObjectsV2Command,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 const backendJsonContentType = 'application/json; charset=utf-8';
+const accessKeyHeaderName = 'x-mini-program-access-key';
 const logLevel = (process.env.LOG_LEVEL || 'INFO').trim().toUpperCase();
 const artifactBucketName = requiredEnv('ARTIFACT_BUCKET_NAME');
 const artifactsPrefix = normalizePrefix(process.env.ARTIFACTS_PREFIX || 'artifacts');
 const metadataPrefix = normalizePrefix(process.env.METADATA_PREFIX || 'metadata');
+const requireMiniProgramAccessKeys = parseBoolean(
+  process.env.REQUIRE_MINI_PROGRAM_ACCESS_KEYS || 'false',
+);
 
 const s3 = new S3Client({});
 
@@ -73,6 +78,7 @@ export const handler = async (event) => {
         traceId,
         miniProgramId: pathSegments[2],
         query,
+        event,
       });
     }
 
@@ -88,6 +94,7 @@ export const handler = async (event) => {
         traceId,
         miniProgramId: pathSegments[3],
         query,
+        event,
       });
     }
 
@@ -106,6 +113,7 @@ export const handler = async (event) => {
         traceId,
         miniProgramId: pathSegments[2],
         version,
+        event,
       });
     }
 
@@ -124,6 +132,7 @@ export const handler = async (event) => {
         miniProgramId: pathSegments[2],
         version: pathSegments[3],
         screenId,
+        event,
       });
     }
 
@@ -244,9 +253,10 @@ async function handleDiscovery({ traceId, query }) {
   });
 }
 
-async function handleLatestManifest({ traceId, miniProgramId, query }) {
+async function handleLatestManifest({ traceId, miniProgramId, query, event }) {
   validateSafeSegment(miniProgramId, 'miniProgramId', traceId);
   validateDeliveryContext(query, traceId);
+  await requireMiniProgramAccess({ miniProgramId, event, traceId });
 
   const decision = await resolveManifestDecision({ miniProgramId, query });
   const manifest = await readJsonObject(decision.manifestKey);
@@ -283,9 +293,10 @@ async function handleLatestManifest({ traceId, miniProgramId, query }) {
   });
 }
 
-async function handleDebugDecision({ traceId, miniProgramId, query }) {
+async function handleDebugDecision({ traceId, miniProgramId, query, event }) {
   validateSafeSegment(miniProgramId, 'miniProgramId', traceId);
   validateDeliveryContext(query, traceId);
+  await requireMiniProgramAccess({ miniProgramId, event, traceId });
 
   const decision = await resolveManifestDecision({ miniProgramId, query });
   const body = withTraceId(
@@ -327,9 +338,10 @@ async function handleDebugDecision({ traceId, miniProgramId, query }) {
   });
 }
 
-async function handleVersionedManifest({ traceId, miniProgramId, version }) {
+async function handleVersionedManifest({ traceId, miniProgramId, version, event }) {
   validateSafeSegment(miniProgramId, 'miniProgramId', traceId);
   validateSafeSegment(version, 'version', traceId);
+  await requireMiniProgramAccess({ miniProgramId, event, traceId });
 
   const key = objectJoin(artifactsPrefix, miniProgramId, version, 'manifest.json');
   return jsonFromS3Object({
@@ -340,10 +352,11 @@ async function handleVersionedManifest({ traceId, miniProgramId, version }) {
   });
 }
 
-async function handleScreen({ traceId, miniProgramId, version, screenId }) {
+async function handleScreen({ traceId, miniProgramId, version, screenId, event }) {
   validateSafeSegment(miniProgramId, 'miniProgramId', traceId);
   validateSafeSegment(version, 'version', traceId);
   validateSafeSegment(screenId, 'screenId', traceId);
+  await requireMiniProgramAccess({ miniProgramId, event, traceId });
 
   const key = objectJoin(
     artifactsPrefix,
@@ -358,6 +371,98 @@ async function handleScreen({ traceId, miniProgramId, version, screenId }) {
     notFoundMessage: `Screen "${screenId}" for mini-program "${miniProgramId}" version "${version}" was not found.`,
     extraHeaders: { 'x-mini-program-id': miniProgramId },
   });
+}
+
+async function requireMiniProgramAccess({ miniProgramId, event, traceId }) {
+  const accessPolicy = await readMiniProgramAccessPolicy(miniProgramId);
+  if (accessPolicy == null) {
+    if (!requireMiniProgramAccessKeys) {
+      return;
+    }
+    throw new DeliveryApiError({
+      statusCode: 403,
+      responseType: 'access_key_error',
+      errorCode: 'access_key_not_configured',
+      message: `MiniProgram access keys are required, but no access key policy exists for "${miniProgramId}".`,
+      details: { miniProgramId, traceId },
+    });
+  }
+
+  const requestAccessKey = nullIfBlank(
+    resolveHeader(event, accessKeyHeaderName),
+  );
+  if (!requestAccessKey) {
+    throw new DeliveryApiError({
+      statusCode: 401,
+      responseType: 'access_key_error',
+      errorCode: 'access_key_missing',
+      message: 'MiniProgram access key is required for this mini-program.',
+      details: { miniProgramId, traceId },
+    });
+  }
+
+  if (!accessPolicyAllowsKey(accessPolicy, requestAccessKey)) {
+    throw new DeliveryApiError({
+      statusCode: 403,
+      responseType: 'access_key_error',
+      errorCode: 'access_key_invalid',
+      message: 'MiniProgram access key is not authorized for this mini-program.',
+      details: { miniProgramId, traceId },
+    });
+  }
+}
+
+async function readMiniProgramAccessPolicy(miniProgramId) {
+  const key = objectJoin(metadataPrefix, 'access_keys', `${miniProgramId}.json`);
+  try {
+    return await readJsonObject(key);
+  } catch (error) {
+    if (error instanceof DeliveryApiError && error.errorCode === 'artifact_not_found') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function accessPolicyAllowsKey(policy, requestAccessKey) {
+  const candidates = [
+    ...(Array.isArray(policy.keys) ? policy.keys : []),
+    ...(Array.isArray(policy.accessKeys) ? policy.accessKeys : []),
+  ];
+  if (candidates.length === 0) {
+    return false;
+  }
+
+  const requestAccessKeySha256 = sha256Hex(requestAccessKey);
+  return candidates.some((candidate) =>
+    accessKeyCandidateMatches(candidate, requestAccessKey, requestAccessKeySha256),
+  );
+}
+
+function accessKeyCandidateMatches(candidate, requestAccessKey, requestAccessKeySha256) {
+  if (typeof candidate === 'string') {
+    return safeStringEquals(candidate, requestAccessKey);
+  }
+  if (!candidate || typeof candidate !== 'object') {
+    return false;
+  }
+  if (candidate.enabled === false || candidate.revoked === true) {
+    return false;
+  }
+
+  const plainKey =
+    nullIfBlank(candidate.key) ||
+    nullIfBlank(candidate.value) ||
+    nullIfBlank(candidate.accessKey);
+  if (plainKey && safeStringEquals(plainKey, requestAccessKey)) {
+    return true;
+  }
+
+  const sha256 =
+    nullIfBlank(candidate.sha256) ||
+    nullIfBlank(candidate.sha256Hash) ||
+    nullIfBlank(candidate.hash);
+  return sha256 ? safeStringEquals(sha256.toLowerCase(), requestAccessKeySha256) : false;
 }
 
 async function jsonFromS3Object({ traceId, key, notFoundMessage, extraHeaders = {} }) {
@@ -659,6 +764,35 @@ function resolveTraceId(event) {
   return `aws_lb_${timestamp}`;
 }
 
+function resolveHeader(event, name) {
+  const targetName = name.toLowerCase();
+  for (const [headerName, headerValue] of Object.entries(event?.headers ?? {})) {
+    if (headerName.toLowerCase() === targetName) {
+      return headerValue;
+    }
+  }
+  return null;
+}
+
+function parseBoolean(value) {
+  return ['1', 'true', 'yes', 'y', 'on'].includes(
+    String(value || '').trim().toLowerCase(),
+  );
+}
+
+function sha256Hex(value) {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function safeStringEquals(left, right) {
+  const leftBuffer = Buffer.from(String(left), 'utf8');
+  const rightBuffer = Buffer.from(String(right), 'utf8');
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
 function withTraceId(body, traceId) {
   const responseBody = { ...body, traceId };
   const details = responseBody.details;
@@ -681,7 +815,7 @@ function jsonResponse({
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
     'access-control-allow-headers':
-      'Content-Type, Authorization, X-Host-App, X-Host-Version, X-Host-User-Id, X-Host-Tenant-Id, X-Request-Id',
+      'Content-Type, Authorization, X-Mini-Program-Access-Key, X-Host-App, X-Host-Version, X-Host-User-Id, X-Host-Tenant-Id, X-Request-Id',
     'access-control-expose-headers':
       'x-backend-trace-id, x-mini-program-id, x-mini-program-version, x-mini-program-selection-mode, x-mini-program-decision-reason, x-mini-program-matched-rule-id, x-mini-program-catalog-count, x-debug-route, x-debug-outcome',
     'access-control-max-age': '600',

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- add `MiniProgramEndpoint` and `EndpointRoutingMiniProgramSource` so one host
+  app can open many mini-programs from different API base URLs by appId
+- add MiniProgram access key support through the
+  `x-mini-program-access-key` HTTP request header
+- document pairing this header with backend-side key validation for protected
+  multi-publisher endpoints
+- keep UI launch calls appId-only while endpoint config owns server/API and
+  access-key routing
+
 ## 0.2.0
 
 - add `MiniProgramScope`, `MiniProgramController`, `MiniProgramConfig`,

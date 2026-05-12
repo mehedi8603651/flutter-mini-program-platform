@@ -29,7 +29,7 @@ miniprogram create <mini-program-id>
 miniprogram doctor
 miniprogram backend init
 miniprogram env init
-miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>]
+miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>] [--require-access-keys]
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status
@@ -169,7 +169,7 @@ Configure a named AWS cloud environment:
 
 ```bash
 miniprogram env init
-miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>] [--cloudfront-base-url https://<cloudfront-domain>] [--api-base-url https://<api-domain>]
+miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>] [--cloudfront-base-url https://<cloudfront-domain>] [--api-base-url https://<api-domain>] [--require-access-keys]
 miniprogram env use <env-name>
 miniprogram env list
 miniprogram env status
@@ -182,6 +182,8 @@ Replace the placeholder values before running that command. In particular:
 - `<aws-region>` should be a real AWS region such as `ap-south-1`
 - `--cloudfront-base-url` and `--api-base-url` are optional and should only be
   supplied when you already have those URLs
+- `--require-access-keys` makes the AWS delivery backend reject manifest and
+  screen requests unless the mini-program has valid access-key metadata
 
 Where those optional URLs come from:
 
@@ -523,7 +525,9 @@ Generated host-app structure:
 - `lib/mini_program/mini_program_launcher.dart` exposes
   `openAppMiniProgram(...)` and `AppMiniProgramLauncher`
 - `lib/mini_program/mini_program_runtime_setup.dart` resolves
-  `MINI_PROGRAM_BACKEND_BASE_URL` and builds `MiniProgramConfig`
+  `MINI_PROGRAM_BACKEND_BASE_URL`, accepts optional
+  `Map<String, MiniProgramEndpoint>` endpoint routing, and builds
+  `MiniProgramConfig`
 - `lib/mini_program/app_host_bridge.dart` is where developers wire real
   analytics, optional native screens, and secure API behavior
 - `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
@@ -531,6 +535,13 @@ Generated host-app structure:
 - `MiniProgramScope` does not create or control `MaterialApp`,
   `MaterialApp.router`, GetX, GoRouter, Provider, Bloc, Riverpod, themes,
   localization, routes, or navigator setup
+- for multi-publisher apps, register
+  `appId -> API base URL + MiniProgram access key` in
+  `buildMiniProgramConfig(endpoints: ...)`; screens still call
+  `openAppMiniProgram(context, appId: ...)`
+- protected cloud backends should validate `X-Mini-Program-Access-Key` against
+  per-mini-program access-key metadata so one partner key can be revoked
+  without changing the appId or breaking other partners
 - Android release builds need internet access to load cloud mini-programs.
   `miniprogram embed init` writes
   `android.permission.INTERNET` into `android/app/src/main/AndroidManifest.xml`.

@@ -41,6 +41,7 @@ Implemented in this phase:
 - latest-manifest resolution from published catalog and release metadata
 - versioned manifest and screen loading
 - debug decision inspection
+- optional per-mini-program access-key validation from S3 metadata
 - backend-style error bodies, trace ids, and response headers
 
 Not implemented yet in this stack:
@@ -271,7 +272,7 @@ sam build
 Deploy with explicit parameters:
 
 ```powershell
-sam deploy --stack-name mini-program-cloud-api-prod --region ap-south-1 --capabilities CAPABILITY_IAM --parameter-overrides ArtifactBucketName=mehed-mini-program-prod-ap-south-1-20260418 ArtifactsPrefix=artifacts MetadataPrefix=metadata StageName=prod
+sam deploy --stack-name mini-program-cloud-api-prod --region ap-south-1 --capabilities CAPABILITY_IAM --parameter-overrides ArtifactBucketName=mehed-mini-program-prod-ap-south-1-20260418 ArtifactsPrefix=artifacts MetadataPrefix=metadata StageName=prod RequireMiniProgramAccessKeys=true
 ```
 
 You can also use guided deploy once:
@@ -290,6 +291,10 @@ Important parameters:
   - default `metadata`
 - `StageName`
   - default `prod`
+- `RequireMiniProgramAccessKeys`
+  - default `false` for compatibility
+  - set to `true` when every protected mini-program route must have an access
+    key policy under `metadata/access_keys/`
 
 CLI-exposed AWS env options that influence deploy:
 
@@ -300,6 +305,51 @@ CLI-exposed AWS env options that influence deploy:
 - `--function-timeout-seconds`
 - `--function-memory-size`
 - `--log-level`
+- `--require-access-keys`
+
+## MiniProgram Access Keys
+
+For production partner delivery, create one or more MiniProgram access keys per
+mini-program and store the allowed keys in S3:
+
+```json
+{
+  "schemaVersion": 1,
+  "miniProgramId": "my_coupon_app",
+  "keys": [
+    {
+      "id": "company-a",
+      "sha256": "SHA256_HEX_OF_ACCESS_KEY",
+      "enabled": true
+    },
+    {
+      "id": "company-b",
+      "key": "mpk_live_plaintext_development_key",
+      "enabled": true
+    }
+  ]
+}
+```
+
+Upload it to:
+
+```text
+metadata/access_keys/my_coupon_app.json
+```
+
+The host app config keeps endpoint URLs and keys out of UI code:
+
+```dart
+MiniProgramEndpoint(
+  apiBaseUri: Uri.parse('https://abc123.execute-api.ap-south-1.amazonaws.com/prod/api/'),
+  accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+)
+```
+
+The SDK sends the key as `X-Mini-Program-Access-Key` for manifest and screen
+requests. To revoke one company without breaking others, disable or remove only
+that company's key entry. SHA-256 key hashes are preferred for production
+metadata; plaintext keys are accepted to keep local/manual setup simple.
 
 ## Outputs
 

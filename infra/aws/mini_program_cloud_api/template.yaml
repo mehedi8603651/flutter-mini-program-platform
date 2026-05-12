@@ -45,6 +45,13 @@ Parameters:
       - WARN
       - ERROR
     Description: Log verbosity for the delivery Lambda.
+  RequireMiniProgramAccessKeys:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Require metadata/access_keys/<miniProgramId>.json for every protected mini-program route.
 
 Resources:
   MiniProgramDeliveryHttpApi:
@@ -68,6 +75,7 @@ Resources:
           ARTIFACTS_PREFIX: !Ref ArtifactsPrefix
           METADATA_PREFIX: !Ref MetadataPrefix
           LOG_LEVEL: !Ref LogLevel
+          REQUIRE_MINI_PROGRAM_ACCESS_KEYS: !Ref RequireMiniProgramAccessKeys
       Policies:
         - Statement:
             - Sid: ReadPublishedMiniProgramBucket

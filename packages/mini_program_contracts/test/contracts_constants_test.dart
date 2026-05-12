@@ -49,6 +49,16 @@ void main() {
       expect(MiniProgramErrorCodes.backendUnreachable, 'backend_unreachable');
       expect(MiniProgramErrorCodes.backendTimeout, 'backend_timeout');
       expect(
+        MiniProgramErrorCodes.endpointNotConfigured,
+        'endpoint_not_configured',
+      );
+      expect(
+        MiniProgramErrorCodes.accessKeyNotConfigured,
+        'access_key_not_configured',
+      );
+      expect(MiniProgramErrorCodes.accessKeyMissing, 'access_key_missing');
+      expect(MiniProgramErrorCodes.accessKeyInvalid, 'access_key_invalid');
+      expect(
         MiniProgramErrorCodes.secureApiNotAllowlisted,
         'secure_api_not_allowlisted',
       );

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:mini_program_tooling/mini_program_tooling.dart';
@@ -582,9 +583,23 @@ void main() {
             'https://d111111abcdef8.cloudfront.net',
             '--api-base-url',
             'https://api.example.com',
+            '--require-access-keys',
           ]),
           0,
         );
+        final savedEnvJson =
+            jsonDecode(
+                  await File(
+                    p.join(workspaceRoot.path, '.mini_program', 'env.json'),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>;
+        final savedCloudEnvironment =
+            (savedEnvJson['cloudEnvironments'] as List<dynamic>).single
+                as Map<String, dynamic>;
+        final savedValues =
+            savedCloudEnvironment['values'] as Map<String, dynamic>;
+        expect(savedValues['requireAccessKeys'], isTrue);
         expect(await cli.run(<String>['env', 'use', 'my-aws-prod']), 0);
 
         final listBuffer = StringBuffer();
@@ -1506,7 +1521,7 @@ dependencies:
       );
       expect(
         await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-        contains('mini_program_sdk: ^0.2.0'),
+        contains('mini_program_sdk: ^0.3.0'),
       );
     });
 

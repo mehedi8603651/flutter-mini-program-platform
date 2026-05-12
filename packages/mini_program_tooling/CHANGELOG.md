@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.4
+
+- update generated host adapters to accept an optional
+  `Map<String, MiniProgramEndpoint>` for multi-publisher endpoint routing
+- update the AWS delivery backend template to validate per-mini-program
+  MiniProgram access keys from `metadata/access_keys/<appId>.json`
+- add `miniprogram env configure --require-access-keys` for strict AWS
+  delivery deployments
+- bump generated host dependencies to `mini_program_sdk: ^0.3.0` and
+  `mini_program_contracts: ^0.1.1`
+
 ## 0.3.3
 
 - make `miniprogram embed init` generate a lean default host adapter without

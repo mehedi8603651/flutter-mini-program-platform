@@ -40,6 +40,7 @@ void main() {
           'region': 'ap-south-1',
           'artifactsPrefix': 'artifacts',
           'metadataPrefix': 'metadata',
+          'requireAccessKeys': true,
         },
         configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
         updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
@@ -139,7 +140,20 @@ void main() {
         ),
       ).readAsString();
       expect(generatedTemplate, contains('Runtime: nodejs24.x'));
+      expect(generatedTemplate, contains('RequireMiniProgramAccessKeys'));
       expect(generatedTemplate, isNot(contains('Runtime: nodejs20.x')));
+      final generatedHandler = await File(
+        p.join(
+          resolvedEnvironmentState.rootPath,
+          '.mini_program',
+          'cloud',
+          'aws_backend',
+          'src',
+          'handler.mjs',
+        ),
+      ).readAsString();
+      expect(generatedHandler, contains('x-mini-program-access-key'));
+      expect(generatedHandler, contains('access_key_invalid'));
       expect(
         invocations.any(
           (invocation) =>
@@ -151,6 +165,14 @@ void main() {
         invocations.any(
           (invocation) =>
               invocation.first == 'sam' && invocation.contains('deploy'),
+        ),
+        isTrue,
+      );
+      expect(
+        invocations.any(
+          (invocation) =>
+              invocation.first == 'sam' &&
+              invocation.contains('RequireMiniProgramAccessKeys=true'),
         ),
         isTrue,
       );

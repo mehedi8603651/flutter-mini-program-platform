@@ -1407,6 +1407,13 @@ class MiniprogramCli {
       ..addOption(
         'log-level',
         help: 'Optional Lambda log level. Defaults to INFO.',
+      )
+      ..addFlag(
+        'require-access-keys',
+        negatable: true,
+        defaultsTo: false,
+        help:
+            'Require AWS delivery routes to validate MiniProgram access keys.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -1907,6 +1914,9 @@ class MiniprogramCli {
         );
       }
       values['logLevel'] = normalized;
+    }
+    if (results.flag('require-access-keys')) {
+      values['requireAccessKeys'] = true;
     }
     return values;
   }
