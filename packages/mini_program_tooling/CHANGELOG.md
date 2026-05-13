@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.5
+
+- fix generated AWS delivery handlers so async route failures, including
+  MiniProgram access-key rejections, are converted into structured HTTP
+  responses instead of escaping as Lambda 500s
+- fix generated managed preview hosts to keep hosted package constraints in
+  `dependencies` and use repo-local `dependency_overrides` only when a local
+  platform repo is available
+
 ## 0.3.4
 
 - update generated host adapters to accept an optional
