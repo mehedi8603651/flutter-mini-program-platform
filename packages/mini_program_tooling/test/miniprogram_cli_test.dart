@@ -76,11 +76,23 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
+        contains('access-key create|list|revoke|rotate'),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('cloud outputs [--format text|dart-define]'),
       );
       expect(
         stdoutBuffer.toString(),
+        contains('cloud app list|info|disable|delete'),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('host run -d <device> [--env <env-name>]'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('host endpoint add <mini-program-id>'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -93,6 +105,7 @@ void main() {
       () async {
         for (final group in <String>[
           'env',
+          'access-key',
           'cloud',
           'host',
           'embed',
@@ -134,6 +147,41 @@ void main() {
         expect(
           embedCloudStdout.toString(),
           contains('Usage: miniprogram embed cloud'),
+        );
+
+        final cloudAppStdout = StringBuffer();
+        final cloudAppStderr = StringBuffer();
+        final cloudAppCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: cloudAppStdout,
+          stderrSink: cloudAppStderr,
+          workingDirectory: tempDir.path,
+        );
+
+        expect(await cloudAppCli.run(<String>['cloud', 'app', '--help']), 0);
+        expect(cloudAppStderr.toString(), isEmpty);
+        expect(
+          cloudAppStdout.toString(),
+          contains('Usage: miniprogram cloud app'),
+        );
+
+        final hostEndpointStdout = StringBuffer();
+        final hostEndpointStderr = StringBuffer();
+        final hostEndpointCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: hostEndpointStdout,
+          stderrSink: hostEndpointStderr,
+          workingDirectory: tempDir.path,
+        );
+
+        expect(
+          await hostEndpointCli.run(<String>['host', 'endpoint', '--help']),
+          0,
+        );
+        expect(hostEndpointStderr.toString(), isEmpty);
+        expect(
+          hostEndpointStdout.toString(),
+          contains('Usage: miniprogram host endpoint'),
         );
       },
     );
@@ -787,6 +835,147 @@ void main() {
       expect(
         stdoutBuffer.toString().trim(),
         '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://api.example.com/api',
+      );
+    });
+
+    test(
+      'access-key create forwards the selected env and prints secret',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await Directory(standaloneRoot).create(recursive: true);
+        final envState = LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: repoRoot.path,
+          activeEnvironment: 'my-aws-prod',
+          cloudEnvironments: <CloudEnvironmentConfiguration>[
+            CloudEnvironmentConfiguration(
+              name: 'my-aws-prod',
+              provider: 'aws',
+              values: <String, dynamic>{
+                'bucket': 'mini-program-prod',
+                'region': 'us-east-1',
+                'artifactsPrefix': 'artifacts',
+                'metadataPrefix': 'metadata',
+              },
+              configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+              updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            ),
+          ],
+          initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        );
+        await stateStore.writeEnvironmentState(standaloneRoot, envState);
+        final cloudController = _FakeMiniProgramCloudController();
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              cloudController: cloudController,
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'access-key',
+              'create',
+              'coupon_center',
+              '--key-id',
+              'company-a',
+            ]);
+
+        expect(exitCode, 0);
+        expect(cloudController.lastAccessKeyCreateRequest, isNotNull);
+        expect(
+          cloudController.lastAccessKeyCreateRequest!.miniProgramId,
+          'coupon_center',
+        );
+        expect(cloudController.lastAccessKeyCreateRequest!.keyId, 'company-a');
+        expect(stdoutBuffer.toString(), contains('Access key: mpk_live_fake'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('miniprogram host endpoint add coupon_center'),
+        );
+      },
+    );
+
+    test('cloud app delete defaults to a dry run', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await Directory(standaloneRoot).create(recursive: true);
+      final envState = LocalCliEnvironmentState(
+        schemaVersion: 2,
+        repoRootPath: repoRoot.path,
+        activeEnvironment: 'my-aws-prod',
+        cloudEnvironments: <CloudEnvironmentConfiguration>[
+          CloudEnvironmentConfiguration(
+            name: 'my-aws-prod',
+            provider: 'aws',
+            values: <String, dynamic>{
+              'bucket': 'mini-program-prod',
+              'region': 'us-east-1',
+              'artifactsPrefix': 'artifacts',
+              'metadataPrefix': 'metadata',
+            },
+            configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+            updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          ),
+        ],
+        initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+      );
+      await stateStore.writeEnvironmentState(standaloneRoot, envState);
+      final cloudController = _FakeMiniProgramCloudController();
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        cloudController: cloudController,
+        workingDirectory: standaloneRoot,
+      ).run(<String>['cloud', 'app', 'delete', 'coupon_center']);
+
+      expect(exitCode, 0);
+      expect(cloudController.lastAppDeleteRequest, isNotNull);
+      expect(cloudController.lastAppDeleteRequest!.confirmed, isFalse);
+      expect(stdoutBuffer.toString(), contains('Dry run'));
+    });
+
+    test('host endpoint add writes a reusable endpoint map', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: StringBuffer(),
+            workingDirectory: hostRoot,
+          ).run(<String>[
+            'host',
+            'endpoint',
+            'add',
+            'aws_coupon_demo',
+            '--api-base-url',
+            'https://api.example.com/prod/api/',
+            '--access-key',
+            'mpk_live_company_a_12345678901234567890',
+          ]);
+
+      expect(exitCode, 0);
+      final endpointFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      );
+      final endpointSource = await endpointFile.readAsString();
+      expect(endpointSource, contains('buildMiniProgramEndpoints'));
+      expect(endpointSource, contains('"aws_coupon_demo"'));
+      expect(endpointSource, contains('MiniProgramEndpoint('));
+      expect(endpointSource, contains('https://api.example.com/prod/api'));
+      expect(
+        stdoutBuffer.toString(),
+        contains(
+          'config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints())',
+        ),
       );
     });
 
@@ -2045,6 +2234,14 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
   MiniProgramCloudDeployRequest? lastDeployRequest;
   MiniProgramCloudOutputsRequest? lastOutputsRequest;
   MiniProgramCloudRollbackRequest? lastRollbackRequest;
+  MiniProgramAccessKeyCreateRequest? lastAccessKeyCreateRequest;
+  MiniProgramAccessKeyListRequest? lastAccessKeyListRequest;
+  MiniProgramAccessKeyRevokeRequest? lastAccessKeyRevokeRequest;
+  MiniProgramAccessKeyRotateRequest? lastAccessKeyRotateRequest;
+  MiniProgramCloudAppListRequest? lastAppListRequest;
+  MiniProgramCloudAppInfoRequest? lastAppInfoRequest;
+  MiniProgramCloudAppDisableRequest? lastAppDisableRequest;
+  MiniProgramCloudAppDeleteRequest? lastAppDeleteRequest;
 
   @override
   Future<MiniProgramCloudDeployResult> deploy(
@@ -2109,6 +2306,158 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
       releaseKey:
           'metadata/releases/${request.miniProgramId}/${request.version}.json',
       rolledBackAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+
+  @override
+  Future<MiniProgramAccessKeyCreateResult> createAccessKey(
+    MiniProgramAccessKeyCreateRequest request,
+  ) async {
+    lastAccessKeyCreateRequest = request;
+    return MiniProgramAccessKeyCreateResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      policyKey: 'metadata/access_keys/${request.miniProgramId}.json',
+      keyId: request.keyId,
+      accessKey: 'mpk_live_fake_${request.miniProgramId}_${request.keyId}',
+      createdAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+
+  @override
+  Future<MiniProgramAccessKeyListResult> listAccessKeys(
+    MiniProgramAccessKeyListRequest request,
+  ) async {
+    lastAccessKeyListRequest = request;
+    return MiniProgramAccessKeyListResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      policyKey: 'metadata/access_keys/${request.miniProgramId}.json',
+      policyExists: true,
+      keys: const <MiniProgramAccessKeyEntry>[],
+    );
+  }
+
+  @override
+  Future<MiniProgramAccessKeyRevokeResult> revokeAccessKey(
+    MiniProgramAccessKeyRevokeRequest request,
+  ) async {
+    lastAccessKeyRevokeRequest = request;
+    return MiniProgramAccessKeyRevokeResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      policyKey: 'metadata/access_keys/${request.miniProgramId}.json',
+      keyId: request.keyId,
+      revokedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+
+  @override
+  Future<MiniProgramAccessKeyRotateResult> rotateAccessKey(
+    MiniProgramAccessKeyRotateRequest request,
+  ) async {
+    lastAccessKeyRotateRequest = request;
+    return MiniProgramAccessKeyRotateResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      policyKey: 'metadata/access_keys/${request.miniProgramId}.json',
+      revokedKeyId: request.keyId,
+      newKeyId: request.newKeyId ?? '${request.keyId}-v2',
+      accessKey: 'mpk_live_fake_${request.miniProgramId}_${request.keyId}_v2',
+      rotatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+
+  @override
+  Future<MiniProgramCloudAppListResult> listApps(
+    MiniProgramCloudAppListRequest request,
+  ) async {
+    lastAppListRequest = request;
+    return MiniProgramCloudAppListResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      apps: const <MiniProgramCloudAppSummary>[
+        MiniProgramCloudAppSummary(
+          miniProgramId: 'coupon_center',
+          catalogKey: 'metadata/catalog/coupon_center.json',
+          latestVersion: '1.2.3',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<MiniProgramCloudAppInfoResult> appInfo(
+    MiniProgramCloudAppInfoRequest request,
+  ) async {
+    lastAppInfoRequest = request;
+    return MiniProgramCloudAppInfoResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      catalogKey: 'metadata/catalog/${request.miniProgramId}.json',
+      catalog: <String, Object?>{
+        'latestVersion': '1.2.3',
+        'releaseKey': 'metadata/releases/${request.miniProgramId}/1.2.3.json',
+      },
+      releaseKey: 'metadata/releases/${request.miniProgramId}/1.2.3.json',
+      accessPolicyKey: 'metadata/access_keys/${request.miniProgramId}.json',
+      accessKeyCount: 1,
+      activeAccessKeyCount: 1,
+    );
+  }
+
+  @override
+  Future<MiniProgramCloudAppDisableResult> disableApp(
+    MiniProgramCloudAppDisableRequest request,
+  ) async {
+    lastAppDisableRequest = request;
+    return MiniProgramCloudAppDisableResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      catalogKey: 'metadata/catalog/${request.miniProgramId}.json',
+      disabledCatalogKey: 'metadata/disabled/${request.miniProgramId}.json',
+      disabledAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+      dryRun: !request.confirmed,
+    );
+  }
+
+  @override
+  Future<MiniProgramCloudAppDeleteResult> deleteApp(
+    MiniProgramCloudAppDeleteRequest request,
+  ) async {
+    lastAppDeleteRequest = request;
+    return MiniProgramCloudAppDeleteResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      miniProgramId: request.miniProgramId,
+      bucketName: request.environment.values['bucket'].toString(),
+      region: request.environment.values['region'].toString(),
+      deletedKeys: <String>[
+        'metadata/catalog/${request.miniProgramId}.json',
+        'metadata/access_keys/${request.miniProgramId}.json',
+      ],
+      dryRun: !request.confirmed,
+      deletedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
     );
   }
 }

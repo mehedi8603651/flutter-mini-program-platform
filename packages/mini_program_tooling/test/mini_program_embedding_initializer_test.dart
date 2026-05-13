@@ -149,7 +149,8 @@ void main() {
       );
       expect(readme, contains('MiniProgramConfig` is immutable'));
       expect(readme, contains('MiniProgram access key'));
-      expect(readme, contains('MiniProgramEndpoint('));
+      expect(readme, contains('miniprogram host endpoint add'));
+      expect(readme, contains('buildMiniProgramEndpoints()'));
       expect(readme, contains('flutter build apk --release'));
       expect(readme, contains('openAppMiniProgram('));
       expect(readme, isNot(contains('MiniProgramAppShell')));

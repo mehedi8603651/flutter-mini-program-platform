@@ -6,7 +6,8 @@ This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, preview with watch/rebuild/refresh, publish
 to local or AWS cloud delivery, deploy the managed AWS backend, initialize
 embedding adapters for existing Flutter apps, bind host apps to cloud
-environments, and manage the local backend lifecycle.
+environments, manage MiniProgram access keys, generate host endpoint maps, and
+manage the local backend lifecycle.
 
 ## Install
 
@@ -37,6 +38,10 @@ miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
+miniprogram access-key list <mini-program-id> [--env <env-name>]
+miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
+miniprogram access-key rotate <mini-program-id> --key-id <id> [--new-key-id <id>] [--env <env-name>]
 miniprogram cloud deploy [--env <env-name>]
 miniprogram cloud status [--env <env-name>]
 miniprogram cloud outputs [--env <env-name>] [--format text|dart-define]
@@ -44,7 +49,12 @@ miniprogram cloud logs [--env <env-name>]
 miniprogram cloud destroy [--env <env-name>]
 miniprogram cloud doctor [--env <env-name>]
 miniprogram cloud rollback <version> [mini-program-id] [--env <env-name>]
+miniprogram cloud app list [--env <env-name>]
+miniprogram cloud app info <mini-program-id> [--env <env-name>]
+miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
+miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram host run -d <device> [--env <env-name>]
+miniprogram host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
 miniprogram embed init [--project-root <path>] [--force]
 miniprogram embed cloud configure [--env <env-name>]
 miniprogram backend start --port 8080
@@ -224,6 +234,93 @@ metadata/releases/<mini-program-id>/<version>.json
 
 Host apps should use the API Gateway base URL printed by
 `miniprogram cloud outputs`, not the S3 bucket URL.
+
+### MiniProgram access keys
+
+When an environment was configured with `--require-access-keys`, create one
+MiniProgram access key per host company, partner, or integration:
+
+```bash
+miniprogram access-key create aws_coupon_demo --key-id company-a --env my-aws-prod
+miniprogram access-key create aws_coupon_demo --key-id company-b --env my-aws-prod
+miniprogram access-key list aws_coupon_demo --env my-aws-prod
+```
+
+The CLI prints the access key once. Give that key only to the host app team
+that should use it. The backend stores only a SHA-256 hash in:
+
+```text
+metadata/access_keys/<mini-program-id>.json
+```
+
+If one company should lose access, revoke only that company's key:
+
+```bash
+miniprogram access-key revoke aws_coupon_demo --key-id company-b --env my-aws-prod
+```
+
+To replace a leaked or old key:
+
+```bash
+miniprogram access-key rotate aws_coupon_demo --key-id company-a --new-key-id company-a-2026-05 --env my-aws-prod
+```
+
+### Manage published cloud apps
+
+Use `cloud app` commands to inspect or clean old mini-program API metadata:
+
+```bash
+miniprogram cloud app list --env my-aws-prod
+miniprogram cloud app info aws_coupon_demo --env my-aws-prod
+```
+
+Disable removes the active catalog pointer, so normal latest-version opens stop
+working, but immutable release artifacts remain available for inspection:
+
+```bash
+miniprogram cloud app disable aws_coupon_demo --env my-aws-prod
+miniprogram cloud app disable aws_coupon_demo --env my-aws-prod --yes
+```
+
+Delete is destructive and dry-runs unless you pass `--yes`:
+
+```bash
+miniprogram cloud app delete old_coupon_demo --env my-aws-prod
+miniprogram cloud app delete old_coupon_demo --env my-aws-prod --yes
+```
+
+### Host endpoint map
+
+One host app can include many mini-programs from many publishers and cloud
+providers. Keep button code appId-only, and keep API base URLs plus
+MiniProgram access keys in host runtime config.
+
+Generate or update a host-owned endpoint file:
+
+```bash
+cd my_mini_host
+miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+miniprogram host endpoint add gcp_rewards --api-base-url https://gcp.example.com/api/ --access-key mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+```
+
+Then wire it once:
+
+```dart
+import 'mini_program/mini_program_endpoints.dart';
+import 'mini_program/mini_program_runtime_setup.dart';
+
+MiniProgramScope(
+  config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+  child: const MyApp(),
+);
+```
+
+Buttons remain clean:
+
+```dart
+openAppMiniProgram(context, appId: 'aws_coupon_demo', title: 'AWS Coupon Demo');
+openAppMiniProgram(context, appId: 'gcp_rewards', title: 'GCP Rewards');
+```
 
 Current cloud support in this phase:
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.6
+
+- add `miniprogram access-key create|list|revoke|rotate` so teams can manage
+  per-mini-program MiniProgram access keys without hand-editing S3 metadata
+- add `miniprogram cloud app list|info|disable|delete` for inspecting active
+  cloud catalogs, disabling a mini-program without deleting release artifacts,
+  and safely dry-running destructive cleanup before `--yes`
+- add `miniprogram host endpoint add` to generate/update a host-owned
+  `mini_program_endpoints.dart` map for many publishers and cloud providers,
+  keeping UI launch code appId-only
+- document the multi-publisher flow where each endpoint is protected by a
+  MiniProgram access key and host apps call `openAppMiniProgram` with only the
+  appId
+
 ## 0.3.5
 
 - fix generated AWS delivery handlers so async route failures, including

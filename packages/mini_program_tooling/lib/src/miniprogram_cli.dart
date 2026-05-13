@@ -106,6 +106,8 @@ class MiniprogramCli {
           return await _runValidate(arguments.sublist(1));
         case 'publish':
           return await _runPublish(arguments.sublist(1));
+        case 'access-key':
+          return await _runAccessKey(arguments.sublist(1));
         case 'cloud':
           return await _runCloud(arguments.sublist(1));
         case 'host':
@@ -655,6 +657,32 @@ class MiniprogramCli {
     }
   }
 
+  Future<int> _runAccessKey(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_accessKeyUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_accessKeyUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'create':
+        return _runAccessKeyCreate(arguments.sublist(1));
+      case 'list':
+        return _runAccessKeyList(arguments.sublist(1));
+      case 'revoke':
+        return _runAccessKeyRevoke(arguments.sublist(1));
+      case 'rotate':
+        return _runAccessKeyRotate(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown access-key command: ${arguments.first}');
+        _stderr.writeln(_accessKeyUsage());
+        return 64;
+    }
+  }
+
   Future<int> _runCloud(List<String> arguments) async {
     if (_isGroupHelpRequest(arguments)) {
       _stdout.writeln(_cloudUsage());
@@ -680,9 +708,37 @@ class MiniprogramCli {
         return _runCloudDoctor(arguments.sublist(1));
       case 'rollback':
         return _runCloudRollback(arguments.sublist(1));
+      case 'app':
+        return _runCloudApp(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown cloud command: ${arguments.first}');
         _stderr.writeln(_cloudUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runCloudApp(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_cloudAppUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_cloudAppUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'list':
+        return _runCloudAppList(arguments.sublist(1));
+      case 'info':
+        return _runCloudAppInfo(arguments.sublist(1));
+      case 'disable':
+        return _runCloudAppDisable(arguments.sublist(1));
+      case 'delete':
+        return _runCloudAppDelete(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown cloud app command: ${arguments.first}');
+        _stderr.writeln(_cloudAppUsage());
         return 64;
     }
   }
@@ -700,9 +756,31 @@ class MiniprogramCli {
     switch (arguments.first) {
       case 'run':
         return _runHostRun(arguments.sublist(1));
+      case 'endpoint':
+        return _runHostEndpoint(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown host command: ${arguments.first}');
         _stderr.writeln(_hostUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runHostEndpoint(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_hostEndpointUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_hostEndpointUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'add':
+        return _runHostEndpointAdd(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown host endpoint command: ${arguments.first}');
+        _stderr.writeln(_hostEndpointUsage());
         return 64;
     }
   }
@@ -998,6 +1076,319 @@ class MiniprogramCli {
     return 0;
   }
 
+  Future<int> _runAccessKeyCreate(List<String> arguments) async {
+    final parser = _accessKeyParser()
+      ..addOption('key-id', help: 'Stable label for this partner key.')
+      ..addOption(
+        'key',
+        hide: true,
+        help: 'Optional explicit access key value. Intended for tests/CI.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram access-key create <mini-program-id> --key-id <id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'access-key create expects exactly one <mini-program-id>.',
+      );
+    }
+    final keyId = results.option('key-id')?.trim() ?? '';
+    if (keyId.isEmpty) {
+      throw const FormatException('access-key create requires --key-id <id>.');
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.createAccessKey(
+      MiniProgramAccessKeyCreateRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+        keyId: keyId,
+        accessKey: results.option('key'),
+      ),
+    );
+    _stdout.writeln(_formatAccessKeyCreateResult(result));
+    return 0;
+  }
+
+  Future<int> _runAccessKeyList(List<String> arguments) async {
+    final parser = _accessKeyParser();
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram access-key list <mini-program-id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'access-key list expects exactly one <mini-program-id>.',
+      );
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.listAccessKeys(
+      MiniProgramAccessKeyListRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+      ),
+    );
+    _stdout.writeln(_formatAccessKeyListResult(result));
+    return 0;
+  }
+
+  Future<int> _runAccessKeyRevoke(List<String> arguments) async {
+    final parser = _accessKeyParser()
+      ..addOption('key-id', help: 'Access key id to revoke.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram access-key revoke <mini-program-id> --key-id <id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'access-key revoke expects exactly one <mini-program-id>.',
+      );
+    }
+    final keyId = results.option('key-id')?.trim() ?? '';
+    if (keyId.isEmpty) {
+      throw const FormatException('access-key revoke requires --key-id <id>.');
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.revokeAccessKey(
+      MiniProgramAccessKeyRevokeRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+        keyId: keyId,
+      ),
+    );
+    _stdout.writeln(_formatAccessKeyRevokeResult(result));
+    return 0;
+  }
+
+  Future<int> _runAccessKeyRotate(List<String> arguments) async {
+    final parser = _accessKeyParser()
+      ..addOption('key-id', help: 'Access key id to revoke.')
+      ..addOption('new-key-id', help: 'Optional id for the new key.')
+      ..addOption(
+        'key',
+        hide: true,
+        help: 'Optional explicit access key value. Intended for tests/CI.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram access-key rotate <mini-program-id> --key-id <id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'access-key rotate expects exactly one <mini-program-id>.',
+      );
+    }
+    final keyId = results.option('key-id')?.trim() ?? '';
+    if (keyId.isEmpty) {
+      throw const FormatException('access-key rotate requires --key-id <id>.');
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.rotateAccessKey(
+      MiniProgramAccessKeyRotateRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+        keyId: keyId,
+        newKeyId: results.option('new-key-id'),
+        accessKey: results.option('key'),
+      ),
+    );
+    _stdout.writeln(_formatAccessKeyRotateResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudAppList(List<String> arguments) async {
+    final parser = _cloudAppParser();
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram cloud app list [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException('cloud app list does not accept arguments.');
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.listApps(
+      MiniProgramCloudAppListRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    _stdout.writeln(_formatCloudAppListResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudAppInfo(List<String> arguments) async {
+    final parser = _cloudAppParser();
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram cloud app info <mini-program-id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'cloud app info expects exactly one <mini-program-id>.',
+      );
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.appInfo(
+      MiniProgramCloudAppInfoRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+      ),
+    );
+    _stdout.writeln(_formatCloudAppInfoResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudAppDisable(List<String> arguments) async {
+    final parser = _cloudAppParser()
+      ..addFlag(
+        'yes',
+        negatable: false,
+        help:
+            'Actually disable the app. Without this, the command is a dry run.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram cloud app disable <mini-program-id> [--yes] [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'cloud app disable expects exactly one <mini-program-id>.',
+      );
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.disableApp(
+      MiniProgramCloudAppDisableRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+        confirmed: results.flag('yes'),
+      ),
+    );
+    _stdout.writeln(_formatCloudAppDisableResult(result));
+    return 0;
+  }
+
+  Future<int> _runCloudAppDelete(List<String> arguments) async {
+    final parser = _cloudAppParser()
+      ..addFlag(
+        'yes',
+        negatable: false,
+        help:
+            'Actually delete objects. Without this, the command is a dry run.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram cloud app delete <mini-program-id> [--yes] [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'cloud app delete expects exactly one <mini-program-id>.',
+      );
+    }
+    final resolved = await _requireEnvironmentState(
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolved.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    final result = await _cloudController.deleteApp(
+      MiniProgramCloudAppDeleteRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+        miniProgramId: results.rest.single,
+        confirmed: results.flag('yes'),
+      ),
+    );
+    _stdout.writeln(_formatCloudAppDeleteResult(result));
+    return 0;
+  }
+
   Future<int> _runEmbedCloudConfigure(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -1227,6 +1618,84 @@ class MiniprogramCli {
       ),
     );
     return result.exitCode;
+  }
+
+  Future<int> _runHostEndpointAdd(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'project-root',
+        help:
+            'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
+      )
+      ..addOption(
+        'api-base-url',
+        help:
+            'Mini-program delivery API base URL, for example https://api.example.com/prod/api/.',
+      )
+      ..addOption(
+        'access-key',
+        help: 'MiniProgram access key issued for this host app or partner.',
+      )
+      ..addFlag(
+        'force',
+        negatable: false,
+        help: 'Replace an unrecognized generated endpoint file.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram host endpoint add <mini-program-id> --api-base-url <url> --access-key <key> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'host endpoint add expects exactly one <mini-program-id>.',
+      );
+    }
+    final rawApiBaseUrl = results.option('api-base-url')?.trim() ?? '';
+    if (rawApiBaseUrl.isEmpty) {
+      throw const FormatException(
+        'host endpoint add requires --api-base-url <url>.',
+      );
+    }
+    final apiBaseUri = Uri.tryParse(rawApiBaseUrl);
+    if (apiBaseUri == null ||
+        !apiBaseUri.hasScheme ||
+        apiBaseUri.host.isEmpty) {
+      throw FormatException(
+        'host endpoint add expected an absolute --api-base-url, got: '
+        '$rawApiBaseUrl',
+      );
+    }
+    final accessKey = results.option('access-key')?.trim() ?? '';
+    if (accessKey.isEmpty) {
+      throw const FormatException(
+        'host endpoint add requires --access-key <key>.',
+      );
+    }
+
+    final projectRootPath =
+        results.option('project-root') ?? _currentWorkingDirectory();
+    await _requireEmbeddedHostProject(projectRootPath);
+    final result = await _hostController.addEndpoint(
+      MiniProgramHostEndpointAddRequest(
+        projectRootPath: projectRootPath,
+        appId: results.rest.single,
+        apiBaseUri: apiBaseUri,
+        accessKey: accessKey,
+        force: results.flag('force'),
+      ),
+    );
+    _stdout.writeln(_formatHostEndpointAddResult(result));
+    return 0;
   }
 
   Future<int> _runEnv(List<String> arguments) async {
@@ -1921,6 +2390,34 @@ class MiniprogramCli {
     return values;
   }
 
+  ArgParser _accessKeyParser() => ArgParser()
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      negatable: false,
+      help: 'Show usage information.',
+    )
+    ..addOption('env', help: 'Named cloud environment override.')
+    ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+    ..addOption(
+      'repo-root',
+      help: 'Optional repo root used to locate an existing env.json.',
+    );
+
+  ArgParser _cloudAppParser() => ArgParser()
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      negatable: false,
+      help: 'Show usage information.',
+    )
+    ..addOption('env', help: 'Named cloud environment override.')
+    ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
+    ..addOption(
+      'repo-root',
+      help: 'Optional repo root used to locate an existing env.json.',
+    );
+
   String _validateEnvironmentName(String rawName) {
     final trimmedName = rawName.trim();
     if (trimmedName.isEmpty) {
@@ -2121,9 +2618,12 @@ Commands:
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
   publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+  access-key create|list|revoke|rotate <mini-program-id> [--env <env-name>]
   cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
+  cloud app list|info|disable|delete [options]
   cloud outputs [--format text|dart-define]
   host run -d <device> [--env <env-name>]
+  host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
   embed init [--project-root <path>]
   embed cloud configure [--env <env-name>]
   backend init [--root <path>]
@@ -2134,6 +2634,16 @@ Commands:
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+''';
+
+  String _accessKeyUsage() => '''
+Usage: miniprogram access-key <command> [arguments]
+
+Commands:
+  create <mini-program-id> --key-id <id> [--env <env-name>]
+  list <mini-program-id> [--env <env-name>]
+  revoke <mini-program-id> --key-id <id> [--env <env-name>]
+  rotate <mini-program-id> --key-id <id> [--new-key-id <id>] [--env <env-name>]
 ''';
 
   String _embedUsage() => '''
@@ -2173,6 +2683,20 @@ Commands:
   destroy [--env <env-name>]
   doctor [--env <env-name>]
   rollback <version> [mini-program-id] [--env <env-name>]
+  app list [--env <env-name>]
+  app info <mini-program-id> [--env <env-name>]
+  app disable <mini-program-id> [--yes] [--env <env-name>]
+  app delete <mini-program-id> [--yes] [--env <env-name>]
+''';
+
+  String _cloudAppUsage() => '''
+Usage: miniprogram cloud app <command> [arguments]
+
+Commands:
+  list [--env <env-name>]
+  info <mini-program-id> [--env <env-name>]
+  disable <mini-program-id> [--yes] [--env <env-name>]
+  delete <mini-program-id> [--yes] [--env <env-name>]
 ''';
 
   String _hostUsage() => '''
@@ -2180,6 +2704,14 @@ Usage: miniprogram host <command> [arguments]
 
 Commands:
   run -d <device> [--env <env-name>]
+  endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+''';
+
+  String _hostEndpointUsage() => '''
+Usage: miniprogram host endpoint <command> [arguments]
+
+Commands:
+  add <mini-program-id> --api-base-url <url> --access-key <key>
 ''';
 
   String _backendUsage() => '''
@@ -2446,6 +2978,172 @@ Commands:
       'Catalog key: ${result.catalogKey}',
       'Release key: ${result.releaseKey}',
       'Rolled back at UTC: ${result.rolledBackAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatAccessKeyCreateResult(MiniProgramAccessKeyCreateResult result) {
+    return <String>[
+      'Created MiniProgram access key.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Key id: ${result.keyId}',
+      'Access key: ${result.accessKey}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Policy key: ${result.policyKey}',
+      'Created at UTC: ${result.createdAtUtc}',
+      'Host endpoint command:',
+      'miniprogram host endpoint add ${result.miniProgramId} --api-base-url <BackendApiBaseUrl> --access-key ${result.accessKey}',
+    ].join('\n');
+  }
+
+  String _formatAccessKeyListResult(MiniProgramAccessKeyListResult result) {
+    final lines = <String>[
+      'MiniProgram access keys:',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Policy key: ${result.policyKey}',
+      'Policy exists: ${result.policyExists}',
+    ];
+    if (result.keys.isEmpty) {
+      lines.add('(no keys)');
+    } else {
+      for (final key in result.keys) {
+        lines.add(
+          '- ${key.id}: ${key.active ? 'active' : 'revoked'} '
+          '(created ${key.createdAtUtc}, updated ${key.updatedAtUtc})',
+        );
+      }
+    }
+    return lines.join('\n');
+  }
+
+  String _formatAccessKeyRevokeResult(MiniProgramAccessKeyRevokeResult result) {
+    return <String>[
+      'Revoked MiniProgram access key.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Key id: ${result.keyId}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Policy key: ${result.policyKey}',
+      'Revoked at UTC: ${result.revokedAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatAccessKeyRotateResult(MiniProgramAccessKeyRotateResult result) {
+    return <String>[
+      'Rotated MiniProgram access key.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Revoked key id: ${result.revokedKeyId}',
+      'New key id: ${result.newKeyId}',
+      'Access key: ${result.accessKey}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Policy key: ${result.policyKey}',
+      'Rotated at UTC: ${result.rotatedAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatCloudAppListResult(MiniProgramCloudAppListResult result) {
+    final lines = <String>[
+      'Cloud mini-program apps:',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+    ];
+    if (result.apps.isEmpty) {
+      lines.add('(no active apps)');
+    } else {
+      for (final app in result.apps) {
+        lines.add(
+          '- ${app.miniProgramId}: '
+          '${app.latestVersion ?? 'unknown version'} '
+          '(${app.catalogKey})',
+        );
+      }
+    }
+    return lines.join('\n');
+  }
+
+  String _formatCloudAppInfoResult(MiniProgramCloudAppInfoResult result) {
+    return <String>[
+      'Cloud mini-program app:',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Catalog key: ${result.catalogKey}',
+      if (result.catalog['latestVersion'] != null)
+        'Latest version: ${result.catalog['latestVersion']}',
+      if (result.releaseKey != null) 'Release key: ${result.releaseKey}',
+      if (result.release?['artifacts'] case final artifacts?)
+        'Artifacts: $artifacts',
+      'Access policy key: ${result.accessPolicyKey ?? 'not found'}',
+      'Access keys: ${result.activeAccessKeyCount} active / ${result.accessKeyCount} total',
+    ].join('\n');
+  }
+
+  String _formatCloudAppDisableResult(MiniProgramCloudAppDisableResult result) {
+    return <String>[
+      result.dryRun
+          ? 'Dry run: cloud mini-program app would be disabled.'
+          : 'Disabled cloud mini-program app.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Catalog key: ${result.catalogKey}',
+      'Disabled catalog key: ${result.disabledCatalogKey}',
+      'Disabled at UTC: ${result.disabledAtUtc}',
+      if (result.dryRun)
+        'Re-run with --yes to remove the active catalog pointer.',
+    ].join('\n');
+  }
+
+  String _formatCloudAppDeleteResult(MiniProgramCloudAppDeleteResult result) {
+    final lines = <String>[
+      result.dryRun
+          ? 'Dry run: cloud mini-program app objects would be deleted.'
+          : 'Deleted cloud mini-program app objects.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Mini-program: ${result.miniProgramId}',
+      'Bucket: ${result.bucketName}',
+      'Region: ${result.region}',
+      'Object count: ${result.deletedKeys.length}',
+      if (result.dryRun) 'Re-run with --yes to delete these objects.',
+      'Objects:',
+      ...result.deletedKeys.map((key) => '- $key'),
+      'Completed at UTC: ${result.deletedAtUtc}',
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatHostEndpointAddResult(MiniProgramHostEndpointAddResult result) {
+    return <String>[
+      result.created
+          ? 'Created MiniProgram host endpoint map.'
+          : result.updated
+          ? 'Updated MiniProgram host endpoint.'
+          : 'Added MiniProgram host endpoint.',
+      'Project root: ${result.projectRootPath}',
+      'Endpoint file: ${result.filePath}',
+      'Mini-program: ${result.appId}',
+      'API base URL: ${result.apiBaseUri}',
+      'Endpoint count: ${result.endpointCount}',
+      'Use it from MiniProgramScope:',
+      'config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),',
     ].join('\n');
   }
 

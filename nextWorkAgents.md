@@ -338,11 +338,12 @@ Smaller future UX improvements that fit the current system:
 
 1. Add `gcp` cloud publish and matching cloud backend deployment path.
 2. Add `custom-s3-compatible` cloud publish and API configuration model.
-3. Add host runtime support for multiple partner endpoints:
+3. Done in tooling `0.3.6`: add host runtime support for multiple partner endpoints:
    `appId -> API base URL + MiniProgram access key`, keeping
    `openAppMiniProgram(...)` appId-only for normal UI code.
-4. Add `MiniProgram access key` management to cloud backends:
-   create, revoke, rotate, expire, validate, and audit per mini-program.
+4. Partly done in tooling `0.3.6`: add `MiniProgram access key` management to
+   AWS cloud backends with create, list, revoke, and rotate. Next: expire and
+   audit per mini-program.
 5. Add rollout rules and host-aware selection to the cloud backend.
 6. Add capability filtering enforcement to cloud manifest delivery.
 7. Add secure API route execution contracts and Lambda-side handlers.

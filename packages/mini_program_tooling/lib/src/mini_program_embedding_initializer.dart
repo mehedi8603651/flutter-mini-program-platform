@@ -663,19 +663,17 @@ const AppMiniProgramLauncher(
 If different partners publish mini-programs to different backends, keep app UI
 appId-only and register each endpoint once in runtime config:
 
+```bash
+miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+miniprogram host endpoint add gcp_rewards --api-base-url https://gcp.example.com/api/ --access-key mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+```
+
 ```dart
+import 'mini_program/mini_program_endpoints.dart';
+
 MiniProgramScope(
   config: buildMiniProgramConfig(
-    endpoints: <String, MiniProgramEndpoint>{
-      'aws_coupon_demo': MiniProgramEndpoint(
-        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-      ),
-      'gcp_rewards': MiniProgramEndpoint(
-        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
-        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
-      ),
-    },
+    endpoints: buildMiniProgramEndpoints(),
   ),
   child: const MyApp(),
 );
