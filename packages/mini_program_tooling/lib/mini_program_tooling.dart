@@ -3,6 +3,7 @@ export 'src/mini_program_builder.dart';
 export 'src/mini_program_cloud_controller.dart';
 export 'src/mini_program_cloud_publisher.dart';
 export 'src/mini_program_host_controller.dart';
+export 'src/mini_program_partner_handoff.dart';
 export 'src/delivery_inspector.dart';
 export 'src/local_backend_controller.dart';
 export 'src/local_cli_state.dart';

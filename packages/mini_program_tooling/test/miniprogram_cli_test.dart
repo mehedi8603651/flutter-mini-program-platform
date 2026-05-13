@@ -88,11 +88,19 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
+        contains('partner package <mini-program-id>'),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('host run -d <device> [--env <env-name>]'),
       );
       expect(
         stdoutBuffer.toString(),
         contains('host endpoint add <mini-program-id>'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('host endpoint import <partner-package.json>'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -107,6 +115,7 @@ void main() {
           'env',
           'access-key',
           'cloud',
+          'partner',
           'host',
           'embed',
           'backend',
@@ -977,6 +986,82 @@ void main() {
           'config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints())',
         ),
       );
+    });
+
+    test('partner package writes a portable handoff file', () async {
+      final outputPath = p.join(tempDir.path, 'aws_coupon_demo.partner.json');
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: StringBuffer(),
+            workingDirectory: tempDir.path,
+          ).run(<String>[
+            'partner',
+            'package',
+            'aws_coupon_demo',
+            '--title',
+            'AWS Coupon Demo',
+            '--api-base-url',
+            'https://api.example.com/prod/api/',
+            '--access-key',
+            'mpk_live_company_a_12345678901234567890',
+            '--output',
+            outputPath,
+          ]);
+
+      expect(exitCode, 0);
+      final decoded =
+          jsonDecode(await File(outputPath).readAsString())
+              as Map<String, dynamic>;
+      expect(decoded['schemaVersion'], 1);
+      expect(decoded['type'], 'mini_program_partner_handoff');
+      expect(decoded['appId'], 'aws_coupon_demo');
+      expect(decoded['title'], 'AWS Coupon Demo');
+      expect(decoded['apiBaseUrl'], 'https://api.example.com/prod/api');
+      expect(decoded['accessKey'], 'mpk_live_company_a_12345678901234567890');
+      expect(
+        stdoutBuffer.toString(),
+        contains('miniprogram host endpoint import'),
+      );
+    });
+
+    test('host endpoint import reads a partner handoff package', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+      final packagePath = p.join(tempDir.path, 'gcp_rewards.partner.json');
+      final handoff = MiniProgramPartnerHandoff(
+        appId: 'gcp_rewards',
+        title: 'GCP Rewards',
+        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+        accessKey: 'mpk_live_company_b_12345678901234567890',
+        generatedAtUtc: DateTime.utc(2026, 5, 14).toIso8601String(),
+      );
+      await File(packagePath).writeAsString(jsonEncode(handoff.toJson()));
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: hostRoot,
+      ).run(<String>['host', 'endpoint', 'import', packagePath]);
+
+      expect(exitCode, 0);
+      final endpointFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      );
+      final endpointSource = await endpointFile.readAsString();
+      expect(endpointSource, contains('"gcp_rewards"'));
+      expect(endpointSource, contains('https://gcp.example.com/api'));
+      expect(
+        endpointSource,
+        contains('mpk_live_company_b_12345678901234567890'),
+      );
+      expect(stdoutBuffer.toString(), contains('Imported MiniProgram'));
+      expect(stdoutBuffer.toString(), contains('Open from app UI by appId'));
     });
 
     test(

@@ -6,7 +6,8 @@ This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, preview with watch/rebuild/refresh, publish
 to local or AWS cloud delivery, deploy the managed AWS backend, initialize
 embedding adapters for existing Flutter apps, bind host apps to cloud
-environments, manage MiniProgram access keys, generate host endpoint maps, and
+environments, manage MiniProgram access keys, generate host endpoint maps,
+exchange partner handoff packages between publishers and host app teams, and
 manage the local backend lifecycle.
 
 ## Install
@@ -53,8 +54,10 @@ miniprogram cloud app list [--env <env-name>]
 miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
+miniprogram partner package <mini-program-id> --access-key <key> [--api-base-url <url>|--env <env-name>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+miniprogram host endpoint import <partner-package.json>
 miniprogram embed init [--project-root <path>] [--force]
 miniprogram embed cloud configure [--env <env-name>]
 miniprogram backend start --port 8080
@@ -294,6 +297,20 @@ miniprogram cloud app delete old_coupon_demo --env my-aws-prod --yes
 One host app can include many mini-programs from many publishers and cloud
 providers. Keep button code appId-only, and keep API base URLs plus
 MiniProgram access keys in host runtime config.
+
+For partner handoff, the publisher can package the appId, title, API base URL,
+and one MiniProgram access key into a JSON file:
+
+```bash
+miniprogram partner package aws_coupon_demo --title "AWS Coupon Demo" --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --env my-aws-prod --output aws_coupon_demo.partner.json
+```
+
+The host app team imports that package from the Flutter app root:
+
+```bash
+cd my_mini_host
+miniprogram host endpoint import ../aws_coupon_demo.partner.json
+```
 
 Generate or update a host-owned endpoint file:
 

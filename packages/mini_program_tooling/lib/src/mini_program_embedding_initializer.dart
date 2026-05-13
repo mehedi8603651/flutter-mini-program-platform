@@ -663,6 +663,20 @@ const AppMiniProgramLauncher(
 If different partners publish mini-programs to different backends, keep app UI
 appId-only and register each endpoint once in runtime config:
 
+Publisher handoff file:
+
+```bash
+miniprogram partner package aws_coupon_demo --title "AWS Coupon Demo" --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --env my-aws-prod --output aws_coupon_demo.partner.json
+```
+
+Host import:
+
+```bash
+miniprogram host endpoint import ../aws_coupon_demo.partner.json
+```
+
+Manual host entry is also available:
+
 ```bash
 miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 miniprogram host endpoint add gcp_rewards --api-base-url https://gcp.example.com/api/ --access-key mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy

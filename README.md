@@ -852,6 +852,9 @@ Generated host-app structure:
   `appId -> API base URL + MiniProgram access key` in
   `buildMiniProgramConfig(endpoints: ...)`; screens still call
   `openAppMiniProgram(context, appId: ...)`
+- publishers can hand this to host teams with
+  `miniprogram partner package`, and host teams can import it with
+  `miniprogram host endpoint import`
 - protected cloud backends should validate `X-Mini-Program-Access-Key` against
   per-mini-program access-key metadata so one partner key can be revoked
   without changing the appId or breaking other partners

@@ -344,15 +344,18 @@ Smaller future UX improvements that fit the current system:
 4. Partly done in tooling `0.3.6`: add `MiniProgram access key` management to
    AWS cloud backends with create, list, revoke, and rotate. Next: expire and
    audit per mini-program.
-5. Add rollout rules and host-aware selection to the cloud backend.
-6. Add capability filtering enforcement to cloud manifest delivery.
-7. Add secure API route execution contracts and Lambda-side handlers.
-8. Add deployment drift detection and richer stack update diagnostics for the
+5. Done in tooling `0.3.7`: add partner handoff packages and host endpoint
+   import, so publishers can share one JSON file per app/key and host apps can
+   keep button code appId-only.
+6. Add rollout rules and host-aware selection to the cloud backend.
+7. Add capability filtering enforcement to cloud manifest delivery.
+8. Add secure API route execution contracts and Lambda-side handlers.
+9. Add deployment drift detection and richer stack update diagnostics for the
    AWS CLI cloud flow.
-9. Keep target-aware local backend defaults and device overrides inside the
+10. Keep target-aware local backend defaults and device overrides inside the
    generated host runtime for real backend flows.
-10. Add first-class payment capability contracts and payload models.
-11. Implement payment host bridge support in Flutter hosts first.
-12. Plan Android native-host embedding around a reused Flutter engine.
-13. Keep the CLI as the single source of truth before adding any IDE wrapper.
-14. Add optional auto-generated `requestId` support in author helpers.
+11. Add first-class payment capability contracts and payload models.
+12. Implement payment host bridge support in Flutter hosts first.
+13. Plan Android native-host embedding around a reused Flutter engine.
+14. Keep the CLI as the single source of truth before adding any IDE wrapper.
+15. Add optional auto-generated `requestId` support in author helpers.

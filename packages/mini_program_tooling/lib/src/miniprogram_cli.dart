@@ -15,6 +15,7 @@ import 'mini_program_host_controller.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
 import 'mini_program_path_resolver.dart';
+import 'mini_program_partner_handoff.dart';
 import 'mini_program_preview_controller.dart';
 import 'mini_program_preview_server.dart';
 import 'mini_program_publisher.dart';
@@ -39,6 +40,8 @@ class MiniprogramCli {
         const MiniProgramCloudPublisher(),
     MiniProgramCloudController? cloudController,
     MiniProgramHostController? hostController,
+    MiniProgramPartnerHandoffController partnerHandoffController =
+        const MiniProgramPartnerHandoffController(),
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
@@ -56,6 +59,7 @@ class MiniprogramCli {
        _cloudPublisher = cloudPublisher,
        _cloudController = cloudController ?? MiniProgramCloudController(),
        _hostController = hostController ?? MiniProgramHostController(),
+       _partnerHandoffController = partnerHandoffController,
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
@@ -74,6 +78,7 @@ class MiniprogramCli {
   final MiniProgramCloudPublisher _cloudPublisher;
   final MiniProgramCloudController _cloudController;
   final MiniProgramHostController _hostController;
+  final MiniProgramPartnerHandoffController _partnerHandoffController;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
@@ -110,6 +115,8 @@ class MiniprogramCli {
           return await _runAccessKey(arguments.sublist(1));
         case 'cloud':
           return await _runCloud(arguments.sublist(1));
+        case 'partner':
+          return await _runPartner(arguments.sublist(1));
         case 'host':
           return await _runHost(arguments.sublist(1));
         case 'embed':
@@ -140,6 +147,9 @@ class MiniprogramCli {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramHostException catch (error) {
+      _stderr.writeln(error.message);
+      return 1;
+    } on MiniProgramPartnerHandoffException catch (error) {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramEmbeddingInitException catch (error) {
@@ -743,6 +753,26 @@ class MiniprogramCli {
     }
   }
 
+  Future<int> _runPartner(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_partnerUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_partnerUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'package':
+        return _runPartnerPackage(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown partner command: ${arguments.first}');
+        _stderr.writeln(_partnerUsage());
+        return 64;
+    }
+  }
+
   Future<int> _runHost(List<String> arguments) async {
     if (_isGroupHelpRequest(arguments)) {
       _stdout.writeln(_hostUsage());
@@ -778,6 +808,8 @@ class MiniprogramCli {
     switch (arguments.first) {
       case 'add':
         return _runHostEndpointAdd(arguments.sublist(1));
+      case 'import':
+        return _runHostEndpointImport(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown host endpoint command: ${arguments.first}');
         _stderr.writeln(_hostEndpointUsage());
@@ -1389,6 +1421,86 @@ class MiniprogramCli {
     return 0;
   }
 
+  Future<int> _runPartnerPackage(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'title',
+        help:
+            'Human-readable mini-program title. Defaults to a title derived from the appId.',
+      )
+      ..addOption(
+        'api-base-url',
+        help:
+            'Mini-program delivery API base URL. If omitted, the active cloud environment output is used.',
+      )
+      ..addOption(
+        'access-key',
+        help: 'MiniProgram access key issued for the host company or partner.',
+      )
+      ..addOption(
+        'output',
+        abbr: 'o',
+        help:
+            'Output JSON package path. Defaults to ./<mini-program-id>.partner.json.',
+      )
+      ..addOption('env', help: 'Named cloud environment override.')
+      ..addOption(
+        'root',
+        help:
+            'Directory that owns .mini_program/env.json. Defaults to discovery with global fallback.',
+      )
+      ..addOption(
+        'repo-root',
+        help: 'Optional repo root used to locate an existing env.json.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram partner package <mini-program-id> --access-key <key> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'partner package expects exactly one <mini-program-id>.',
+      );
+    }
+
+    final appId = results.rest.single.trim();
+    final accessKey = results.option('access-key')?.trim() ?? '';
+    if (accessKey.isEmpty) {
+      throw const FormatException(
+        'partner package requires --access-key <key>.',
+      );
+    }
+    final apiBaseUrl = await _resolvePartnerPackageApiBaseUrl(
+      explicitApiBaseUrl: results.option('api-base-url'),
+      explicitEnvironmentName: results.option('env'),
+      explicitRootPath: results.option('root'),
+      explicitRepoRootPath: results.option('repo-root'),
+    );
+    final result = await _partnerHandoffController.createPackage(
+      MiniProgramPartnerPackageRequest(
+        appId: appId,
+        title: results.option('title')?.trim().isNotEmpty == true
+            ? results.option('title')!.trim()
+            : _defaultTitleForAppId(appId),
+        apiBaseUri: Uri.parse(apiBaseUrl),
+        accessKey: accessKey,
+        outputPath: results.option('output'),
+      ),
+    );
+    _stdout.writeln(_formatPartnerPackageResult(result));
+    return 0;
+  }
+
   Future<int> _runEmbedCloudConfigure(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -1695,6 +1807,62 @@ class MiniprogramCli {
       ),
     );
     _stdout.writeln(_formatHostEndpointAddResult(result));
+    return 0;
+  }
+
+  Future<int> _runHostEndpointImport(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'project-root',
+        help:
+            'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
+      )
+      ..addFlag(
+        'force',
+        negatable: false,
+        help: 'Replace an unrecognized generated endpoint file.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram host endpoint import <partner-package.json> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'host endpoint import expects exactly one <partner-package.json>.',
+      );
+    }
+
+    final packagePath = results.rest.single;
+    final handoff = await _partnerHandoffController.readPackage(packagePath);
+    final projectRootPath =
+        results.option('project-root') ?? _currentWorkingDirectory();
+    await _requireEmbeddedHostProject(projectRootPath);
+    final result = await _hostController.addEndpoint(
+      MiniProgramHostEndpointAddRequest(
+        projectRootPath: projectRootPath,
+        appId: handoff.appId,
+        apiBaseUri: handoff.apiBaseUri,
+        accessKey: handoff.accessKey,
+        force: results.flag('force'),
+      ),
+    );
+    _stdout.writeln(
+      _formatHostEndpointImportResult(
+        packagePath: p.normalize(p.absolute(packagePath)),
+        handoff: handoff,
+        endpointResult: result,
+      ),
+    );
     return 0;
   }
 
@@ -2575,6 +2743,70 @@ class MiniprogramCli {
     }
   }
 
+  Future<String> _resolvePartnerPackageApiBaseUrl({
+    required String? explicitApiBaseUrl,
+    required String? explicitEnvironmentName,
+    required String? explicitRootPath,
+    required String? explicitRepoRootPath,
+  }) async {
+    if (explicitApiBaseUrl case final rawValue?
+        when rawValue.trim().isNotEmpty) {
+      return _normalizeAbsoluteUrl(rawValue);
+    }
+
+    final resolved = await _resolveEnvironmentState(
+      explicitRootPath: explicitRootPath,
+      explicitRepoRootPath: explicitRepoRootPath,
+    );
+    if (resolved == null) {
+      throw const FormatException(
+        'partner package requires --api-base-url <url> or a configured cloud '
+        'environment. Run `miniprogram env init` and '
+        '`miniprogram env configure ...` first.',
+      );
+    }
+    final requestedEnvironmentName =
+        explicitEnvironmentName?.trim().isNotEmpty == true
+        ? explicitEnvironmentName!.trim()
+        : resolved.state.activeEnvironment;
+    if (requestedEnvironmentName.isEmpty ||
+        requestedEnvironmentName == 'local' ||
+        requestedEnvironmentName == 'cloud') {
+      throw const FormatException(
+        'partner package needs a named cloud environment when '
+        '--api-base-url is omitted. Run `miniprogram env use <env-name>` or '
+        'pass `--env <env-name>`.',
+      );
+    }
+    final environment = resolved.state.cloudEnvironmentNamed(
+      requestedEnvironmentName,
+    );
+    if (environment == null) {
+      throw FormatException(
+        'No configured cloud environment named "$requestedEnvironmentName" '
+        'was found.',
+      );
+    }
+    final savedApiBaseUrl = environment.values['apiBaseUrl']?.toString().trim();
+    if (savedApiBaseUrl != null && savedApiBaseUrl.isNotEmpty) {
+      return _normalizeAbsoluteUrl(savedApiBaseUrl);
+    }
+
+    final outputs = await _cloudController.outputs(
+      MiniProgramCloudOutputsRequest(
+        resolvedEnvironmentState: resolved,
+        environment: environment,
+      ),
+    );
+    final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(outputs);
+    await _persistCloudEnvironmentValueUpdates(
+      resolved: resolved,
+      environmentName: environment.name,
+      updatedValues: <String, dynamic>{'apiBaseUrl': backendApiBaseUrl},
+    );
+    return backendApiBaseUrl;
+  }
+
   String _normalizeAbsoluteUrl(String rawValue) {
     final trimmedValue = rawValue.trim();
     final uri = Uri.tryParse(trimmedValue);
@@ -2582,6 +2814,20 @@ class MiniprogramCli {
       throw FormatException('Expected an absolute URL, but got: $rawValue');
     }
     return trimmedValue.replaceFirst(RegExp(r'/+$'), '');
+  }
+
+  String _defaultTitleForAppId(String appId) {
+    final words = appId
+        .trim()
+        .split(RegExp(r'[._-]+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+    if (words.isEmpty) {
+      return appId;
+    }
+    return words
+        .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
+        .join(' ');
   }
 
   String _normalizeEnvironmentPathPrefix(String rawValue) {
@@ -2622,8 +2868,10 @@ Commands:
   cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
   cloud app list|info|disable|delete [options]
   cloud outputs [--format text|dart-define]
+  partner package <mini-program-id> --access-key <key> [--env <env-name>]
   host run -d <device> [--env <env-name>]
   host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+  host endpoint import <partner-package.json>
   embed init [--project-root <path>]
   embed cloud configure [--env <env-name>]
   backend init [--root <path>]
@@ -2634,6 +2882,13 @@ Commands:
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+''';
+
+  String _partnerUsage() => '''
+Usage: miniprogram partner <command> [arguments]
+
+Commands:
+  package <mini-program-id> --access-key <key> [--api-base-url <url>|--env <env-name>]
 ''';
 
   String _accessKeyUsage() => '''
@@ -2705,6 +2960,7 @@ Usage: miniprogram host <command> [arguments]
 Commands:
   run -d <device> [--env <env-name>]
   endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+  endpoint import <partner-package.json>
 ''';
 
   String _hostEndpointUsage() => '''
@@ -2712,6 +2968,7 @@ Usage: miniprogram host endpoint <command> [arguments]
 
 Commands:
   add <mini-program-id> --api-base-url <url> --access-key <key>
+  import <partner-package.json>
 ''';
 
   String _backendUsage() => '''
@@ -3130,6 +3387,19 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatPartnerPackageResult(MiniProgramPartnerPackageResult result) {
+    return <String>[
+      'Created MiniProgram partner handoff package.',
+      'Package file: ${result.filePath}',
+      'Mini-program: ${result.handoff.appId}',
+      'Title: ${result.handoff.title}',
+      'API base URL: ${result.handoff.apiBaseUri}',
+      'Generated at UTC: ${result.handoff.generatedAtUtc}',
+      'Host import command:',
+      'miniprogram host endpoint import ${result.filePath}',
+    ].join('\n');
+  }
+
   String _formatHostEndpointAddResult(MiniProgramHostEndpointAddResult result) {
     return <String>[
       result.created
@@ -3144,6 +3414,29 @@ Commands:
       'Endpoint count: ${result.endpointCount}',
       'Use it from MiniProgramScope:',
       'config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),',
+    ].join('\n');
+  }
+
+  String _formatHostEndpointImportResult({
+    required String packagePath,
+    required MiniProgramPartnerHandoff handoff,
+    required MiniProgramHostEndpointAddResult endpointResult,
+  }) {
+    return <String>[
+      endpointResult.created
+          ? 'Imported MiniProgram partner handoff and created endpoint map.'
+          : endpointResult.updated
+          ? 'Imported MiniProgram partner handoff and updated endpoint.'
+          : 'Imported MiniProgram partner handoff and added endpoint.',
+      'Package file: $packagePath',
+      'Project root: ${endpointResult.projectRootPath}',
+      'Endpoint file: ${endpointResult.filePath}',
+      'Mini-program: ${handoff.appId}',
+      'Title: ${handoff.title}',
+      'API base URL: ${handoff.apiBaseUri}',
+      'Endpoint count: ${endpointResult.endpointCount}',
+      'Open from app UI by appId only:',
+      "openAppMiniProgram(context, appId: '${handoff.appId}', title: ...);",
     ].join('\n');
   }
 

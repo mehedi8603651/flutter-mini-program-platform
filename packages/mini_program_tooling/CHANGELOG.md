@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.7
+
+- add `miniprogram partner package` to generate a portable JSON handoff file
+  containing appId, title, API base URL, and a MiniProgram access key for a
+  host company or partner
+- add `miniprogram host endpoint import` so host teams can import a partner
+  handoff package directly into the generated `mini_program_endpoints.dart`
+  endpoint map
+- document the partner handoff flow as the developer-friendly path for one
+  host app that includes mini-programs from many publishers and cloud providers
+
 ## 0.3.6
 
 - add `miniprogram access-key create|list|revoke|rotate` so teams can manage
