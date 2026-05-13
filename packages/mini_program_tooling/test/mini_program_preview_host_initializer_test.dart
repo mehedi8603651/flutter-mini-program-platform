@@ -19,7 +19,7 @@ void main() {
     });
 
     test(
-      'bootstraps the managed host and writes local path dependencies',
+      'bootstraps the managed host and writes local path overrides',
       () async {
         final hostRootPath = p.join(
           tempDir.path,
@@ -89,6 +89,9 @@ void main() {
             .replaceAll('\\', '/');
         expect(pubspec, contains('path: $expectedSdkPath'));
         expect(pubspec, contains('path: $expectedContractsPath'));
+        expect(pubspec, contains('mini_program_sdk: ^0.3.0'));
+        expect(pubspec, contains('mini_program_contracts: ^0.1.1'));
+        expect(pubspec, contains('dependency_overrides:'));
 
         final mainDart = await File(
           p.join(hostRootPath, 'lib', 'main.dart'),

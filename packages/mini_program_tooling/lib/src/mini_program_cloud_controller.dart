@@ -1441,15 +1441,15 @@ export const handler = async (event) => {
     }
 
     if (method === 'GET' && pathSegments.length === 3 && pathSegments[0] === 'api' && pathSegments[1] === 'discovery' && isCatalogSegment(pathSegments[2])) {
-      return handleDiscovery({ traceId, query });
+      return await handleDiscovery({ traceId, query });
     }
 
     if (method === 'GET' && pathSegments.length === 4 && pathSegments[0] === 'api' && pathSegments[1] === 'manifests' && isLatestSegment(pathSegments[3])) {
-      return handleLatestManifest({ traceId, miniProgramId: pathSegments[2], query, event });
+      return await handleLatestManifest({ traceId, miniProgramId: pathSegments[2], query, event });
     }
 
     if (method === 'GET' && pathSegments.length === 5 && pathSegments[0] === 'api' && pathSegments[1] === 'debug' && pathSegments[2] === 'manifests' && isDecisionSegment(pathSegments[4])) {
-      return handleDebugDecision({ traceId, miniProgramId: pathSegments[3], query, event });
+      return await handleDebugDecision({ traceId, miniProgramId: pathSegments[3], query, event });
     }
 
     if (method === 'GET' && pathSegments.length === 5 && pathSegments[0] === 'api' && pathSegments[1] === 'manifests' && pathSegments[3] === 'versions') {
@@ -1457,7 +1457,7 @@ export const handler = async (event) => {
       if (version == null) {
         return badRequest('Manifest version path is invalid.', traceId);
       }
-      return handleVersionedManifest({ traceId, miniProgramId: pathSegments[2], version, event });
+      return await handleVersionedManifest({ traceId, miniProgramId: pathSegments[2], version, event });
     }
 
     if (method === 'GET' && pathSegments.length === 5 && pathSegments[0] === 'api' && pathSegments[1] === 'screens') {
@@ -1465,7 +1465,7 @@ export const handler = async (event) => {
       if (screenId == null) {
         return badRequest('Screen path is invalid.', traceId);
       }
-      return handleScreen({ traceId, miniProgramId: pathSegments[2], version: pathSegments[3], screenId, event });
+      return await handleScreen({ traceId, miniProgramId: pathSegments[2], version: pathSegments[3], screenId, event });
     }
 
     if (method === 'POST' && pathSegments.length >= 3 && pathSegments[0] === 'api' && pathSegments[1] === 'secure') {

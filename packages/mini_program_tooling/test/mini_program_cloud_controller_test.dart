@@ -155,6 +155,18 @@ void main() {
       expect(generatedHandler, contains('x-mini-program-access-key'));
       expect(generatedHandler, contains('access_key_invalid'));
       expect(
+        generatedHandler,
+        contains('return await handleLatestManifest'),
+        reason:
+            'Async route failures must be converted by the handler error boundary.',
+      );
+      expect(
+        generatedHandler,
+        contains('return await handleScreen'),
+        reason:
+            'Protected screen access-key failures must not escape as Lambda 500s.',
+      );
+      expect(
         invocations.any(
           (invocation) =>
               invocation.first == 'sam' && invocation.contains('build'),

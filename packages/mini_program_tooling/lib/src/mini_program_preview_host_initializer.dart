@@ -223,11 +223,13 @@ class MiniProgramPreviewHostInitializer {
       '  flutter:',
       '    sdk: flutter',
       '  http: $_httpConstraint',
-      ..._miniProgramDependencyLines(
-        hostRootPath: hostRootPath,
-        repoRootPath: repoRootPath,
-      ),
+      '  mini_program_sdk: $_sdkConstraint',
+      '  mini_program_contracts: $_contractsConstraint',
     ];
+    final dependencyOverrides = _miniProgramDependencyOverrideLines(
+      hostRootPath: hostRootPath,
+      repoRootPath: repoRootPath,
+    );
 
     return [
       'name: $_projectName',
@@ -240,21 +242,22 @@ class MiniProgramPreviewHostInitializer {
       '',
       ...dependencies,
       '',
+      if (dependencyOverrides.isNotEmpty) ...<String>[
+        ...dependencyOverrides,
+        '',
+      ],
       'flutter:',
       '  uses-material-design: true',
       '',
     ].join('\n');
   }
 
-  List<String> _miniProgramDependencyLines({
+  List<String> _miniProgramDependencyOverrideLines({
     required String hostRootPath,
     required String? repoRootPath,
   }) {
     if (repoRootPath == null) {
-      return <String>[
-        '  mini_program_sdk: $_sdkConstraint',
-        '  mini_program_contracts: $_contractsConstraint',
-      ];
+      return const <String>[];
     }
 
     final sdkPath = _yamlRelativePath(
@@ -266,6 +269,7 @@ class MiniProgramPreviewHostInitializer {
       from: hostRootPath,
     );
     return <String>[
+      'dependency_overrides:',
       '  mini_program_sdk:',
       '    path: $sdkPath',
       '  mini_program_contracts:',
