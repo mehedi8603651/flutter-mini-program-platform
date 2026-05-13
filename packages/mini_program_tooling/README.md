@@ -574,31 +574,33 @@ flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://
 Use the `BackendApiBaseUrl` shown by `miniprogram cloud outputs`; do not use
 the S3 bucket URL directly. The host app loads through API Gateway + Lambda.
 
-Demo `lib/main.dart` for a host app:
+Demo `lib/main.dart` after `miniprogram host endpoint import` or
+`miniprogram host endpoint add` has created `mini_program_endpoints.dart`:
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
+import 'mini_program/mini_program_endpoints.dart';
 import 'mini_program/mini_program_launcher.dart';
 import 'mini_program/mini_program_runtime_setup.dart';
 
 void main() {
   runApp(
     MiniProgramScope(
-      config: buildMiniProgramConfig(),
-      child: const MyHostApp(),
+      config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+      child: const MyApp(),
     ),
   );
 }
 
-class MyHostApp extends StatelessWidget {
-  const MyHostApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'My Mini Host',
+      title: 'MiniProgram Host',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
       home: const HomePage(),
@@ -612,23 +614,82 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Host App Home')),
+      appBar: AppBar(title: const Text('MiniProgram Host')),
       body: Center(
         child: FilledButton(
           onPressed: () {
             openAppMiniProgram(
               context,
-              appId: 'my_coupon_app',
-              title: 'My Coupon App',
+              appId: 'aws_coupon_demo',
+              title: 'AWS Coupon Demo',
             );
           },
-          child: const Text('Open My Coupon App'),
+          child: const Text('Open Coupon MiniProgram'),
         ),
       ),
     );
   }
 }
 ```
+
+If the host app uses state management, keep using it normally. `MiniProgramScope`
+is only a mini-program service scope, so it can sit inside or outside your
+state-management root.
+
+Riverpod:
+
+```dart
+void main() {
+  runApp(
+    ProviderScope(
+      child: MiniProgramScope(
+        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+        child: const MyApp(),
+      ),
+    ),
+  );
+}
+```
+
+Provider:
+
+```dart
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+      ],
+      child: MiniProgramScope(
+        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+        child: const MyApp(),
+      ),
+    ),
+  );
+}
+```
+
+Bloc:
+
+```dart
+void main() {
+  runApp(
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => AuthBloc()),
+      ],
+      child: MiniProgramScope(
+        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+        child: const MyApp(),
+      ),
+    ),
+  );
+}
+```
+
+`MiniProgramScope` does not require Riverpod, Provider, Bloc, GetX, or GoRouter;
+these examples are only composition patterns for host apps that already use
+those packages.
 
 Generated host-app structure:
 

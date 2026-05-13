@@ -153,6 +153,9 @@ void main() {
       expect(readme, contains('miniprogram host endpoint import'));
       expect(readme, contains('miniprogram host endpoint add'));
       expect(readme, contains('buildMiniProgramEndpoints()'));
+      expect(readme, contains('ProviderScope('));
+      expect(readme, contains('MultiProvider('));
+      expect(readme, contains('MultiBlocProvider('));
       expect(readme, contains('flutter build apk --release'));
       expect(readme, contains('openAppMiniProgram('));
       expect(readme, isNot(contains('MiniProgramAppShell')));

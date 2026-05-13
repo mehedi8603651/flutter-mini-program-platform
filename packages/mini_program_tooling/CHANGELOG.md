@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.8
+
+- expand README host integration examples with a copy-paste
+  `MiniProgramScope(config: buildMiniProgramConfig(endpoints: ...))`
+  `MaterialApp` demo
+- document how `MiniProgramScope` composes with app-owned Riverpod, Provider,
+  and Bloc root wrappers without adding SDK dependencies on those packages
+- refresh generated host adapter README guidance so state management and
+  endpoint-map setup stay clear for new host app developers
+
 ## 0.3.7
 
 - add `miniprogram partner package` to generate a portable JSON handoff file
