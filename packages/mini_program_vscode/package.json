@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -97,6 +97,31 @@
         "icon": "$(cloud-upload)"
       },
       {
+        "command": "miniProgramTools.embedInit",
+        "title": "MiniProgram: Embed Init",
+        "icon": "$(package)"
+      },
+      {
+        "command": "miniProgramTools.configureHostCloud",
+        "title": "MiniProgram: Configure Host Cloud",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "miniProgramTools.importHostEndpoint",
+        "title": "MiniProgram: Import Host Endpoint",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "miniProgramTools.addHostEndpoint",
+        "title": "MiniProgram: Add Host Endpoint",
+        "icon": "$(add)"
+      },
+      {
+        "command": "miniProgramTools.runHostApp",
+        "title": "MiniProgram: Run Host App",
+        "icon": "$(run)"
+      },
+      {
         "command": "miniProgramTools.openOutput",
         "title": "MiniProgram: Open Output",
         "icon": "$(output)"
@@ -118,6 +143,16 @@
           "command": "miniProgramTools.createMiniProgram",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@3"
+        },
+        {
+          "command": "miniProgramTools.importHostEndpoint",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "miniProgramTools.runHostApp",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@5"
         }
       ]
     }

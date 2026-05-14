@@ -5,11 +5,17 @@ import * as vscode from 'vscode';
 import {
   buildBuildArgs,
   buildCreateArgs,
+  buildEmbedCloudConfigureArgs,
+  buildEmbedInitArgs,
+  buildHostEndpointAddArgs,
+  buildHostEndpointImportArgs,
+  buildHostRunArgs,
   buildPreviewArgs,
   buildPublishArgs,
   buildValidateArgs,
   buildWorkflowStatusArgs,
   formatCommandLine,
+  formatRedactedCommandLine,
   resolveCliPath,
   runCli,
   runCliStreaming,
@@ -42,7 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const cliPath = configuredCliPath();
     const args = buildWorkflowStatusArgs({ workspacePath, remote });
-    output.appendLine(`> ${formatCommandLine(cliPath, args)}`);
+    output.appendLine(`> ${formatRedactedCommandLine(cliPath, args)}`);
     try {
       const result = await runCli(cliPath, args, {
         cwd: workspacePath,
@@ -102,6 +108,21 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publish', () =>
       publishMiniProgram(output, refreshStatus),
     ),
+    vscode.commands.registerCommand('miniProgramTools.embedInit', () =>
+      embedInit(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.configureHostCloud', () =>
+      configureHostCloud(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.importHostEndpoint', () =>
+      importHostEndpoint(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.addHostEndpoint', () =>
+      addHostEndpoint(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.runHostApp', () =>
+      runHostApp(),
+    ),
     vscode.commands.registerCommand('miniProgramTools.openOutput', () =>
       output.show(true),
     ),
@@ -140,6 +161,7 @@ async function createMiniProgram(output: vscode.OutputChannel): Promise<void> {
   const appId = await vscode.window.showInputBox({
     prompt: 'Mini-program appId',
     placeHolder: 'coupon_demo',
+    ignoreFocusOut: true,
     validateInput: (value) => {
       const trimmed = value.trim();
       if (!trimmed) {
@@ -159,6 +181,7 @@ async function createMiniProgram(output: vscode.OutputChannel): Promise<void> {
     prompt: 'Mini-program title',
     placeHolder: titleFromAppId(appId),
     value: titleFromAppId(appId),
+    ignoreFocusOut: true,
   });
   if (title === undefined) {
     return;
@@ -196,7 +219,7 @@ async function publishMiniProgram(
       },
       { label: 'local', description: 'Publish to local delivery artifacts' },
     ],
-    { title: 'MiniProgram publish target' },
+    { title: 'MiniProgram publish target', ignoreFocusOut: true },
   );
   if (!targetChoice) {
     return;
@@ -207,6 +230,7 @@ async function publishMiniProgram(
     const value = await vscode.window.showInputBox({
       prompt: 'Optional cloud environment name',
       placeHolder: 'Leave blank to use active environment',
+      ignoreFocusOut: true,
     });
     if (value === undefined) {
       return;
@@ -227,6 +251,183 @@ async function publishMiniProgram(
   );
 }
 
+async function embedInit(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const force = await chooseForce('Overwrite scaffold-managed host adapter files?');
+  if (force === undefined) {
+    return;
+  }
+
+  await runWorkspaceCliCommand(
+    'Embed Init',
+    buildEmbedInitArgs({ projectRoot, force }),
+    output,
+    refreshStatus,
+  );
+}
+
+async function configureHostCloud(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const envName = await vscode.window.showInputBox({
+    prompt: 'Optional cloud environment name',
+    placeHolder: 'Leave blank to use active environment',
+    ignoreFocusOut: true,
+  });
+  if (envName === undefined) {
+    return;
+  }
+
+  await runWorkspaceCliCommand(
+    'Configure Host Cloud',
+    buildEmbedCloudConfigureArgs({
+      projectRoot,
+      envName: envName.trim() || undefined,
+    }),
+    output,
+    refreshStatus,
+  );
+}
+
+async function importHostEndpoint(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const selectedFiles = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      'Partner package JSON': ['json'],
+    },
+    openLabel: 'Import partner package',
+    title: 'Choose a MiniProgram partner package',
+  });
+  const partnerPackagePath = selectedFiles?.[0]?.fsPath;
+  if (!partnerPackagePath) {
+    return;
+  }
+  const force = await chooseForce('Replace an unrecognized endpoint file?');
+  if (force === undefined) {
+    return;
+  }
+
+  await runWorkspaceCliCommand(
+    'Import Host Endpoint',
+    buildHostEndpointImportArgs({ partnerPackagePath, projectRoot, force }),
+    output,
+    refreshStatus,
+  );
+}
+
+async function addHostEndpoint(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const appId = await vscode.window.showInputBox({
+    prompt: 'Mini-program appId',
+    placeHolder: 'coupon_demo',
+    ignoreFocusOut: true,
+    validateInput: validateAppId,
+  });
+  if (!appId) {
+    return;
+  }
+  const apiBaseUrl = await vscode.window.showInputBox({
+    prompt: 'Mini-program delivery API base URL',
+    placeHolder: 'https://example.com/prod/api',
+    ignoreFocusOut: true,
+    validateInput: validateAbsoluteUrl,
+  });
+  if (!apiBaseUrl) {
+    return;
+  }
+  const accessKey = await vscode.window.showInputBox({
+    prompt: 'MiniProgram access key',
+    password: true,
+    placeHolder: 'mpk_live_...',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Access key is required.',
+  });
+  if (!accessKey) {
+    return;
+  }
+  const force = await chooseForce('Replace an unrecognized endpoint file?');
+  if (force === undefined) {
+    return;
+  }
+
+  await runWorkspaceCliCommand(
+    'Add Host Endpoint',
+    buildHostEndpointAddArgs({
+      appId: appId.trim(),
+      apiBaseUrl: apiBaseUrl.trim(),
+      accessKey: accessKey.trim(),
+      projectRoot,
+      force,
+    }),
+    output,
+    refreshStatus,
+  );
+}
+
+async function runHostApp(): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const defaultDevice = configuredDefaultPreviewDevice();
+  const deviceId = await vscode.window.showInputBox({
+    prompt: 'Flutter device ID',
+    value: defaultDevice,
+    placeHolder: 'emulator-5554',
+    ignoreFocusOut: true,
+  });
+  if (!deviceId) {
+    return;
+  }
+  const envName = await vscode.window.showInputBox({
+    prompt: 'Optional cloud environment name',
+    placeHolder: 'Leave blank to use active/host environment',
+    ignoreFocusOut: true,
+  });
+  if (envName === undefined) {
+    return;
+  }
+
+  const cliPath = configuredCliPath();
+  const args = buildHostRunArgs({
+    deviceId: deviceId.trim(),
+    projectRoot,
+    envName: envName.trim() || undefined,
+  });
+  const terminal = vscode.window.createTerminal({
+    name: 'MiniProgram Host',
+    cwd: projectRoot,
+  });
+  terminal.show();
+  terminal.sendText(formatCommandLine(cliPath, args));
+}
+
 async function previewMiniProgram(): Promise<void> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -241,6 +442,7 @@ async function previewMiniProgram(): Promise<void> {
     prompt: 'Preview device ID',
     value: defaultDevice,
     placeHolder: 'emulator-5554',
+    ignoreFocusOut: true,
   });
   if (!deviceId) {
     return;
@@ -312,7 +514,7 @@ async function runCliCommand(
   const cliPath = configuredCliPath();
   output.show(true);
   output.appendLine('');
-  output.appendLine(`> ${formatCommandLine(cliPath, args)}`);
+  output.appendLine(`> ${formatRedactedCommandLine(cliPath, args)}`);
   try {
     const result = await runCliStreaming(cliPath, args, {
       cwd,
@@ -365,6 +567,59 @@ function getWorkspacePath(): string | undefined {
     return path.dirname(activeFile.fsPath);
   }
   return undefined;
+}
+
+async function requireHostProjectRoot(): Promise<string | undefined> {
+  const workspacePath = getWorkspacePath();
+  if (!workspacePath) {
+    vscode.window.showWarningMessage('Open a Flutter host app folder first.');
+    return undefined;
+  }
+  if (!fs.existsSync(path.join(workspacePath, 'pubspec.yaml'))) {
+    vscode.window.showWarningMessage(
+      'Open the Flutter host app root folder that contains pubspec.yaml.',
+    );
+    return undefined;
+  }
+  return workspacePath;
+}
+
+async function chooseForce(prompt: string): Promise<boolean | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      { label: 'Normal', description: 'Do not pass --force', force: false },
+      { label: 'Force', description: prompt, force: true },
+    ],
+    { title: 'MiniProgram command mode', ignoreFocusOut: true },
+  );
+  return choice?.force;
+}
+
+function validateAppId(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'App ID is required.';
+  }
+  if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) {
+    return 'Use lowercase letters, numbers, and underscores, starting with a letter.';
+  }
+  return undefined;
+}
+
+function validateAbsoluteUrl(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'API base URL is required.';
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.protocol || !parsed.host) {
+      return 'Enter an absolute URL.';
+    }
+    return undefined;
+  } catch {
+    return 'Enter an absolute URL.';
+  }
 }
 
 function titleFromAppId(appId: string): string {

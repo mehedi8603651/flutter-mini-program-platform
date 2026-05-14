@@ -434,5 +434,6 @@ Smaller future UX improvements that fit the current system:
     render status without scraping terminal text.
 16. Done in `packages/mini_program_vscode`: build a native VS Code
     Activity Bar/sidebar extension MVP that wraps CLI status plus core create,
-    build, validate, preview, and publish commands.
+    build, validate, preview, publish, host embed/init, host endpoint import/add,
+    and host run commands.
 17. Add optional auto-generated `requestId` support in author helpers.

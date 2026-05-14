@@ -43,6 +43,36 @@ export interface WorkspaceMiniProgramArgsOptions {
   readonly miniProgramRoot?: string;
 }
 
+export interface EmbedInitArgsOptions {
+  readonly projectRoot: string;
+  readonly force?: boolean;
+}
+
+export interface EmbedCloudConfigureArgsOptions {
+  readonly projectRoot: string;
+  readonly envName?: string;
+}
+
+export interface HostEndpointImportArgsOptions {
+  readonly partnerPackagePath: string;
+  readonly projectRoot: string;
+  readonly force?: boolean;
+}
+
+export interface HostEndpointAddArgsOptions {
+  readonly appId: string;
+  readonly apiBaseUrl: string;
+  readonly accessKey: string;
+  readonly projectRoot: string;
+  readonly force?: boolean;
+}
+
+export interface HostRunArgsOptions {
+  readonly deviceId: string;
+  readonly projectRoot: string;
+  readonly envName?: string;
+}
+
 export function resolveCliPath(value: string | undefined | null): string {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : defaultCliPath;
@@ -102,8 +132,85 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
   return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
+export function buildEmbedInitArgs(options: EmbedInitArgsOptions): string[] {
+  const args = ['embed', 'init', '--project-root', options.projectRoot];
+  if (options.force) {
+    args.push('--force');
+  }
+  return args;
+}
+
+export function buildEmbedCloudConfigureArgs(
+  options: EmbedCloudConfigureArgsOptions,
+): string[] {
+  const args = [
+    'embed',
+    'cloud',
+    'configure',
+    '--project-root',
+    options.projectRoot,
+  ];
+  if (options.envName?.trim()) {
+    args.push('--env', options.envName.trim());
+  }
+  return args;
+}
+
+export function buildHostEndpointImportArgs(
+  options: HostEndpointImportArgsOptions,
+): string[] {
+  const args = [
+    'host',
+    'endpoint',
+    'import',
+    options.partnerPackagePath,
+    '--project-root',
+    options.projectRoot,
+  ];
+  if (options.force) {
+    args.push('--force');
+  }
+  return args;
+}
+
+export function buildHostEndpointAddArgs(
+  options: HostEndpointAddArgsOptions,
+): string[] {
+  const args = [
+    'host',
+    'endpoint',
+    'add',
+    options.appId,
+    '--api-base-url',
+    options.apiBaseUrl,
+    '--access-key',
+    options.accessKey,
+    '--project-root',
+    options.projectRoot,
+  ];
+  if (options.force) {
+    args.push('--force');
+  }
+  return args;
+}
+
+export function buildHostRunArgs(options: HostRunArgsOptions): string[] {
+  const args = ['host', 'run', '-d', options.deviceId, '--project-root', options.projectRoot];
+  if (options.envName?.trim()) {
+    args.push('--env', options.envName.trim());
+  }
+  return args;
+}
+
 export function formatCommandLine(command: string, args: readonly string[]): string {
   return [command, ...args].map(shellQuote).join(' ');
+}
+
+export function formatRedactedCommandLine(
+  command: string,
+  args: readonly string[],
+): string {
+  return formatCommandLine(command, redactSecretArgs(args));
 }
 
 export function runCli(
@@ -189,4 +296,16 @@ function withMiniProgramRoot(args: string[], miniProgramRoot?: string): string[]
     args.push('--mini-program-root', miniProgramRoot.trim());
   }
   return args;
+}
+
+function redactSecretArgs(args: readonly string[]): string[] {
+  const redacted = [...args];
+  for (let index = 0; index < redacted.length; index += 1) {
+    if (redacted[index] === '--access-key' && index + 1 < redacted.length) {
+      redacted[index + 1] = '<redacted>';
+    } else if (redacted[index].startsWith('--access-key=')) {
+      redacted[index] = '--access-key=<redacted>';
+    }
+  }
+  return redacted;
 }
