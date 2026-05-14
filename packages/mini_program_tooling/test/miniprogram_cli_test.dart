@@ -88,6 +88,10 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
+        contains('workflow status [--workspace <path>]'),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('partner package <mini-program-id>'),
       );
       expect(
@@ -115,6 +119,7 @@ void main() {
           'env',
           'access-key',
           'cloud',
+          'workflow',
           'partner',
           'host',
           'embed',
@@ -192,6 +197,25 @@ void main() {
           hostEndpointStdout.toString(),
           contains('Usage: miniprogram host endpoint'),
         );
+
+        final workflowStatusStdout = StringBuffer();
+        final workflowStatusStderr = StringBuffer();
+        final workflowStatusCli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: workflowStatusStdout,
+          stderrSink: workflowStatusStderr,
+          workingDirectory: tempDir.path,
+        );
+
+        expect(
+          await workflowStatusCli.run(<String>['workflow', 'status', '--help']),
+          0,
+        );
+        expect(workflowStatusStderr.toString(), isEmpty);
+        expect(
+          workflowStatusStdout.toString(),
+          contains('Usage: miniprogram workflow status'),
+        );
       },
     );
 
@@ -236,6 +260,88 @@ void main() {
       expect(exitCode, 0);
       expect(stdoutBuffer.toString(), contains('Miniprogram doctor report:'));
       expect(stdoutBuffer.toString(), contains('[ok] Fake check: all good'));
+    });
+
+    test('doctor supports machine-readable JSON output', () async {
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        doctor: const _FakeMiniprogramDoctor(),
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['doctor', '--json']);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'doctor');
+      expect(json['hasErrors'], isFalse);
+      expect(json['checks'], isA<List>());
+    });
+
+    test('status commands support JSON output', () async {
+      final envRoot = p.join(tempDir.path, 'coupon_center');
+      await Directory(envRoot).create(recursive: true);
+      await _writeAwsEnvironmentState(stateStore, envRoot);
+      final backendRoot = p.join(tempDir.path, 'backend_workspace');
+      await _initializeBackendWorkspaceState(stateStore, backendRoot);
+      final cloudController = _FakeMiniProgramCloudController();
+
+      final envStdout = StringBuffer();
+      expect(
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: envStdout,
+          stderrSink: StringBuffer(),
+          workingDirectory: envRoot,
+        ).run(<String>['env', 'status', '--json']),
+        0,
+      );
+      expect(jsonDecode(envStdout.toString())['command'], 'env status');
+
+      final backendStdout = StringBuffer();
+      expect(
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: backendStdout,
+          stderrSink: StringBuffer(),
+          backendController: _FakeLocalBackendController(),
+          workingDirectory: envRoot,
+        ).run(<String>['backend', 'status', '--json']),
+        0,
+      );
+      expect(jsonDecode(backendStdout.toString())['healthy'], isTrue);
+
+      final cloudStdout = StringBuffer();
+      expect(
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: cloudStdout,
+          stderrSink: StringBuffer(),
+          cloudController: cloudController,
+          workingDirectory: envRoot,
+        ).run(<String>['cloud', 'status', '--json']),
+        0,
+      );
+      expect(jsonDecode(cloudStdout.toString())['stackExists'], isTrue);
+
+      final accessStdout = StringBuffer();
+      expect(
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: accessStdout,
+          stderrSink: StringBuffer(),
+          cloudController: cloudController,
+          workingDirectory: envRoot,
+        ).run(<String>['access-key', 'list', 'coupon_center', '--json']),
+        0,
+      );
+      final accessJson =
+          jsonDecode(accessStdout.toString()) as Map<String, dynamic>;
+      expect(accessJson['activeCount'], 1);
+      expect(accessStdout.toString(), isNot(contains('sha256')));
     });
 
     test('build resolves a repo-managed mini-program from repo root', () async {
@@ -1063,6 +1169,152 @@ void main() {
       expect(stdoutBuffer.toString(), contains('Imported MiniProgram'));
       expect(stdoutBuffer.toString(), contains('Open from app UI by appId'));
     });
+
+    test('workflow status reports unknown workspaces as JSON', () async {
+      final stdoutBuffer = StringBuffer();
+      final unknownRoot = p.join(tempDir.path, 'unknown');
+      await Directory(unknownRoot).create(recursive: true);
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: unknownRoot,
+      ).run(<String>['workflow', 'status', '--json']);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'workflow status');
+      expect(json['workspace']['type'], 'unknown');
+      expect(json['remote']['checked'], isFalse);
+    });
+
+    test(
+      'workflow status is local-first and redacts partner secrets',
+      () async {
+        final miniProgramRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          miniProgramRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        await Directory(
+          p.join(miniProgramRoot, 'stac', '.build', 'screens'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            miniProgramRoot,
+            'stac',
+            '.build',
+            'screens',
+            'coupon_center_home.json',
+          ),
+        ).writeAsString('{}');
+        await File(
+          p.join(miniProgramRoot, 'coupon_center.partner.json'),
+        ).writeAsString(
+          jsonEncode(<String, Object?>{
+            'schemaVersion': 1,
+            'type': 'mini_program_partner_handoff',
+            'appId': 'coupon_center',
+            'title': 'Coupon Center',
+            'apiBaseUrl': 'https://api.example.com/api',
+            'accessKey': 'mpk_live_secret_should_not_print_123456',
+            'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
+          }),
+        );
+        await _writeAwsEnvironmentState(stateStore, miniProgramRoot);
+        final cloudController = _FakeMiniProgramCloudController();
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          cloudController: cloudController,
+          workingDirectory: miniProgramRoot,
+        ).run(<String>['workflow', 'status', '--json']);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), isNot(contains('secret_should_not')));
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(json['workspace']['type'], 'mini_program');
+        expect(json['miniProgram']['appId'], 'coupon_center');
+        expect(json['miniProgram']['build']['exists'], isTrue);
+        expect(
+          json['miniProgram']['partnerPackages'][0]['hasAccessKey'],
+          isTrue,
+        );
+        expect(json['remote']['checked'], isFalse);
+        expect(cloudController.lastStatusRequest, isNull);
+        expect(cloudController.lastAppInfoRequest, isNull);
+        expect(cloudController.lastAccessKeyListRequest, isNull);
+      },
+    );
+
+    test('workflow status reports host endpoints without secrets', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+      final endpointFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      );
+      await endpointFile.writeAsString('''
+// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
+// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessKey":"mpk_live_secret_b_12345678901234567890"}}
+// END MINI_PROGRAM_ENDPOINTS_JSON
+''');
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: hostRoot,
+      ).run(<String>['workflow', 'status', '--json']);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), isNot(contains('secret_a')));
+      expect(stdoutBuffer.toString(), isNot(contains('secret_b')));
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['workspace']['type'], 'host_app');
+      expect(json['hostApp']['endpointCount'], 2);
+      expect(json['hostApp']['endpointAppIds'], contains('coupon_center'));
+      expect(json['hostApp']['endpoints'][0]['hasAccessKey'], isTrue);
+    });
+
+    test(
+      'workflow status remote mode calls cloud app and access-key checks',
+      () async {
+        final miniProgramRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          miniProgramRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+        );
+        await _writeAwsEnvironmentState(stateStore, miniProgramRoot);
+        final cloudController = _FakeMiniProgramCloudController();
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          cloudController: cloudController,
+          workingDirectory: miniProgramRoot,
+        ).run(<String>['workflow', 'status', '--remote', '--json']);
+
+        expect(exitCode, 0);
+        expect(cloudController.lastStatusRequest, isNotNull);
+        expect(cloudController.lastAppInfoRequest, isNotNull);
+        expect(cloudController.lastAccessKeyListRequest, isNotNull);
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(json['remote']['checked'], isTrue);
+        expect(json['remote']['app']['miniProgramId'], 'coupon_center');
+        expect(json['remote']['accessKeys']['activeCount'], 1);
+      },
+    );
 
     test(
       'embed cloud configure writes a host_cloud.json file for the host app',
@@ -2317,6 +2569,7 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
   _FakeMiniProgramCloudController();
 
   MiniProgramCloudDeployRequest? lastDeployRequest;
+  MiniProgramCloudStatusRequest? lastStatusRequest;
   MiniProgramCloudOutputsRequest? lastOutputsRequest;
   MiniProgramCloudRollbackRequest? lastRollbackRequest;
   MiniProgramAccessKeyCreateRequest? lastAccessKeyCreateRequest;
@@ -2355,6 +2608,30 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
       healthy: true,
       healthStatusCode: 200,
       deployedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    );
+  }
+
+  @override
+  Future<MiniProgramCloudStatusResult> status(
+    MiniProgramCloudStatusRequest request,
+  ) async {
+    lastStatusRequest = request;
+    return MiniProgramCloudStatusResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: 'mini-program-cloud-${request.environment.name}',
+      stageName: 'prod',
+      region: request.environment.values['region'].toString(),
+      stackExists: true,
+      stackStatus: 'CREATE_COMPLETE',
+      outputs: const <String, String>{
+        'BackendApiBaseUrl': 'https://api.example.com/api/',
+        'HealthUrl': 'https://api.example.com/health',
+      },
+      apiBaseUrl: 'https://api.example.com/api/',
+      healthUrl: 'https://api.example.com/health',
+      healthy: true,
+      healthStatusCode: 200,
     );
   }
 
@@ -2425,7 +2702,15 @@ class _FakeMiniProgramCloudController extends MiniProgramCloudController {
       region: request.environment.values['region'].toString(),
       policyKey: 'metadata/access_keys/${request.miniProgramId}.json',
       policyExists: true,
-      keys: const <MiniProgramAccessKeyEntry>[],
+      keys: const <MiniProgramAccessKeyEntry>[
+        MiniProgramAccessKeyEntry(
+          id: 'host-a',
+          sha256: 'sha256_should_not_print',
+          enabled: true,
+          createdAtUtc: '2026-04-19T00:00:00.000Z',
+          updatedAtUtc: '2026-04-19T00:00:00.000Z',
+        ),
+      ],
     );
   }
 
@@ -2641,6 +2926,39 @@ environment:
       'mini_program_runtime_setup.dart',
     ),
   ).writeAsString('// generated runtime setup');
+}
+
+Future<void> _writeAwsEnvironmentState(
+  LocalCliStateStore stateStore,
+  String rootPath, {
+  String environmentName = 'my-aws-prod',
+}) async {
+  await stateStore.writeEnvironmentState(
+    rootPath,
+    LocalCliEnvironmentState(
+      schemaVersion: 2,
+      repoRootPath: null,
+      activeEnvironment: environmentName,
+      cloudEnvironments: <CloudEnvironmentConfiguration>[
+        CloudEnvironmentConfiguration(
+          name: environmentName,
+          provider: 'aws',
+          values: <String, dynamic>{
+            'bucket': 'mini-program-prod',
+            'region': 'us-east-1',
+            'artifactsPrefix': 'artifacts',
+            'metadataPrefix': 'metadata',
+            'apiBaseUrl': 'https://api.example.com/api/',
+            'requireAccessKeys': true,
+          },
+          configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+        ),
+      ],
+      initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+      updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    ),
+  );
 }
 
 Future<void> _initializeBackendWorkspaceState(

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
@@ -20,6 +21,7 @@ import 'mini_program_preview_controller.dart';
 import 'mini_program_preview_server.dart';
 import 'mini_program_publisher.dart';
 import 'mini_program_scaffolder.dart';
+import 'mini_program_workflow_status.dart';
 
 const List<String> _supportedPublishTargets = <String>['local', 'cloud'];
 
@@ -115,6 +117,8 @@ class MiniprogramCli {
           return await _runAccessKey(arguments.sublist(1));
         case 'cloud':
           return await _runCloud(arguments.sublist(1));
+        case 'workflow':
+          return await _runWorkflow(arguments.sublist(1));
         case 'partner':
           return await _runPartner(arguments.sublist(1));
         case 'host':
@@ -247,7 +251,8 @@ class MiniprogramCli {
       ..addOption(
         'repo-root',
         help: 'Optional explicit platform repo root to verify.',
-      );
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
 
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -264,7 +269,11 @@ class MiniprogramCli {
     final result = await _doctor.diagnose(
       explicitRepoRootPath: results.option('repo-root'),
     );
-    _stdout.writeln(_formatDoctorResult(result));
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_doctorResultJson(result)));
+    } else {
+      _stdout.writeln(_formatDoctorResult(result));
+    }
     return result.hasErrors ? 1 : 0;
   }
 
@@ -753,6 +762,26 @@ class MiniprogramCli {
     }
   }
 
+  Future<int> _runWorkflow(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_workflowUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_workflowUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'status':
+        return _runWorkflowStatus(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown workflow command: ${arguments.first}');
+        _stderr.writeln(_workflowUsage());
+        return 64;
+    }
+  }
+
   Future<int> _runPartner(List<String> arguments) async {
     if (_isGroupHelpRequest(arguments)) {
       _stdout.writeln(_partnerUsage());
@@ -863,6 +892,7 @@ class MiniprogramCli {
   Future<int> _runCloudStatus(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag('help', abbr: 'h', negatable: false)
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
       ..addOption('env', help: 'Named cloud environment override.')
       ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
       ..addOption(
@@ -890,7 +920,11 @@ class MiniprogramCli {
         environment: environment,
       ),
     );
-    _stdout.writeln(_formatCloudStatusResult(result));
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(miniProgramWorkflowStatusCloudJson(result)));
+    } else {
+      _stdout.writeln(_formatCloudStatusResult(result));
+    }
     return !result.stackExists || result.healthy == false ? 1 : 0;
   }
 
@@ -1155,7 +1189,8 @@ class MiniprogramCli {
   }
 
   Future<int> _runAccessKeyList(List<String> arguments) async {
-    final parser = _accessKeyParser();
+    final parser = _accessKeyParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
@@ -1184,7 +1219,13 @@ class MiniprogramCli {
         miniProgramId: results.rest.single,
       ),
     );
-    _stdout.writeln(_formatAccessKeyListResult(result));
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(miniProgramWorkflowStatusAccessKeyListJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatAccessKeyListResult(result));
+    }
     return 0;
   }
 
@@ -1866,6 +1907,60 @@ class MiniprogramCli {
     return 0;
   }
 
+  Future<int> _runWorkflowStatus(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addFlag(
+        'remote',
+        negatable: false,
+        help: 'Check remote cloud/app/access-key status when configured.',
+      )
+      ..addOption(
+        'workspace',
+        help:
+            'Mini-program or Flutter host app workspace. Defaults to the current directory.',
+      )
+      ..addOption('env', help: 'Named cloud environment override.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram workflow status [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'workflow status does not accept positional arguments.',
+      );
+    }
+
+    final controller = MiniProgramWorkflowStatusController(
+      stateStore: _stateStore,
+      validator: _validator,
+      backendController: _backendController,
+      cloudController: _cloudController,
+    );
+    final result = await controller.inspect(
+      MiniProgramWorkflowStatusRequest(
+        workspacePath:
+            results.option('workspace') ?? _currentWorkingDirectory(),
+        environmentName: results.option('env'),
+        remote: results.flag('remote'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(result.json));
+    } else {
+      _stdout.writeln(_formatWorkflowStatusResult(result));
+    }
+    return 0;
+  }
+
   Future<int> _runEnv(List<String> arguments) async {
     if (_isGroupHelpRequest(arguments)) {
       _stdout.writeln(_envUsage());
@@ -2226,6 +2321,7 @@ class MiniprogramCli {
         negatable: false,
         help: 'Show usage information.',
       )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
       ..addOption('root', help: 'Directory that owns .mini_program/env.json.')
       ..addOption(
         'repo-root',
@@ -2242,7 +2338,11 @@ class MiniprogramCli {
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
     );
-    _stdout.writeln(_formatEnvStatusResult(resolved));
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_envStatusJson(resolved)));
+    } else {
+      _stdout.writeln(_formatEnvStatusResult(resolved));
+    }
     return resolved == null ? 1 : 0;
   }
 
@@ -2398,6 +2498,7 @@ class MiniprogramCli {
         negatable: false,
         help: 'Show usage information.',
       )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
       ..addOption(
         'root',
         help:
@@ -2419,7 +2520,13 @@ class MiniprogramCli {
     final result = await _backendController.status(
       repoRootPath: backendRootPath!,
     );
-    _stdout.writeln(_formatBackendStatusResult(result));
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(miniProgramWorkflowStatusBackendJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatBackendStatusResult(result));
+    }
     return result.healthy ? 0 : 1;
   }
 
@@ -2856,7 +2963,7 @@ Usage: miniprogram <command> [arguments]
 
 Commands:
   create <mini-program-id>
-  doctor
+  doctor [--json]
   env init|list|status
   env configure <env-name> --provider aws --bucket <bucket> --region <region>
   env use <local|env-name>
@@ -2868,6 +2975,7 @@ Commands:
   cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
   cloud app list|info|disable|delete [options]
   cloud outputs [--format text|dart-define]
+  workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
   partner package <mini-program-id> --access-key <key> [--env <env-name>]
   host run -d <device> [--env <env-name>]
   host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
@@ -2877,11 +2985,18 @@ Commands:
   backend init [--root <path>]
   backend start --port 8080
   backend stop
-  backend status
+  backend status [--json]
   backend reset-local --yes
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+''';
+
+  String _workflowUsage() => '''
+Usage: miniprogram workflow <command> [arguments]
+
+Commands:
+  status [--workspace <path>] [--env <env-name>] [--remote] [--json]
 ''';
 
   String _partnerUsage() => '''
@@ -2896,7 +3011,7 @@ Usage: miniprogram access-key <command> [arguments]
 
 Commands:
   create <mini-program-id> --key-id <id> [--env <env-name>]
-  list <mini-program-id> [--env <env-name>]
+  list <mini-program-id> [--env <env-name>] [--json]
   revoke <mini-program-id> --key-id <id> [--env <env-name>]
   rotate <mini-program-id> --key-id <id> [--new-key-id <id>] [--env <env-name>]
 ''';
@@ -2924,7 +3039,7 @@ Commands:
   configure <env-name> --provider aws --bucket <bucket> --region <region>
   list
   use <local|env-name>
-  status
+  status [--json]
 ''';
 
   String _cloudUsage() => '''
@@ -2932,7 +3047,7 @@ Usage: miniprogram cloud <command> [arguments]
 
 Commands:
   deploy [--env <env-name>]
-  status [--env <env-name>]
+  status [--env <env-name>] [--json]
   outputs [--env <env-name>] [--format text|dart-define]
   logs [--env <env-name>]
   destroy [--env <env-name>]
@@ -2978,9 +3093,152 @@ Commands:
   init [--root <path>]
   start --port 8080
   stop
-  status
+  status [--json]
   reset-local --yes
 ''';
+
+  String _prettyJson(Object? value) =>
+      const JsonEncoder.withIndent('  ').convert(value);
+
+  Map<String, Object?> _doctorResultJson(MiniprogramDoctorResult result) {
+    var okCount = 0;
+    var warningCount = 0;
+    var errorCount = 0;
+    var skippedCount = 0;
+    for (final check in result.checks) {
+      switch (check.status) {
+        case MiniprogramDoctorCheckStatus.ok:
+          okCount++;
+        case MiniprogramDoctorCheckStatus.warning:
+          warningCount++;
+        case MiniprogramDoctorCheckStatus.error:
+          errorCount++;
+        case MiniprogramDoctorCheckStatus.skipped:
+          skippedCount++;
+      }
+    }
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'doctor',
+      'hasErrors': result.hasErrors,
+      'summary': <String, int>{
+        'ok': okCount,
+        'warning': warningCount,
+        'error': errorCount,
+        'skipped': skippedCount,
+      },
+      'checks': result.checks
+          .map(
+            (check) => <String, Object?>{
+              'label': check.label,
+              'status': check.status.name,
+              'summary': check.summary,
+              'detail': check.detail,
+            },
+          )
+          .toList(),
+    };
+  }
+
+  Map<String, Object?> _envStatusJson(
+    ResolvedLocalCliEnvironmentState? resolved,
+  ) {
+    if (resolved == null) {
+      return <String, Object?>{
+        'schemaVersion': 1,
+        'command': 'env status',
+        'configured': false,
+      };
+    }
+    final activeCloudEnvironment = resolved.state.cloudEnvironmentNamed(
+      resolved.state.activeEnvironment,
+    );
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'env status',
+      'configured': true,
+      'scope': resolved.scope,
+      'rootPath': resolved.rootPath,
+      'filePath': resolved.filePath,
+      'repoRootPath': resolved.state.repoRootPath,
+      'activeEnvironment': resolved.state.activeEnvironment,
+      'cloudEnvironmentCount': resolved.state.cloudEnvironments.length,
+      'activeCloudEnvironment': activeCloudEnvironment == null
+          ? null
+          : _cloudEnvironmentJson(activeCloudEnvironment),
+      'initializedAtUtc': resolved.state.initializedAtUtc,
+      'updatedAtUtc': resolved.state.updatedAtUtc,
+    };
+  }
+
+  Map<String, Object?> _cloudEnvironmentJson(
+    CloudEnvironmentConfiguration environment,
+  ) {
+    return <String, Object?>{
+      'name': environment.name,
+      'provider': environment.provider,
+      'values': environment.values,
+      'configuredAtUtc': environment.configuredAtUtc,
+      'updatedAtUtc': environment.updatedAtUtc,
+    };
+  }
+
+  String _formatWorkflowStatusResult(MiniProgramWorkflowStatusResult result) {
+    final json = result.json;
+    final workspace = json['workspace'] as Map<String, Object?>;
+    final environment = json['environment'] as Map<String, Object?>;
+    final miniProgram = json['miniProgram'] as Map<String, Object?>;
+    final hostApp = json['hostApp'] as Map<String, Object?>;
+    final backend = json['backend'] as Map<String, Object?>;
+    final remote = json['remote'] as Map<String, Object?>;
+    final nextActions = (json['nextActions'] as List).cast<String>();
+    final lines = <String>[
+      'MiniProgram workflow status',
+      'Workspace: ${workspace['path']}',
+      'Type: ${workspace['type']}',
+      'Ready: ${json['ready']}',
+      'Severity: ${json['severity']}',
+    ];
+    if (miniProgram['detected'] == true) {
+      final build = miniProgram['build'] as Map<String, Object?>;
+      final validation = miniProgram['validation'] as Map<String, Object?>;
+      lines.addAll(<String>[
+        'Mini-program: ${miniProgram['appId'] ?? 'unknown'}',
+        'Version: ${miniProgram['version'] ?? 'unknown'}',
+        'Build: ${build['exists'] == true ? 'found' : 'missing'} (${build['screenCount']} screen JSON file(s))',
+        'Validation: ${validation['status']}',
+        'Partner packages: ${(miniProgram['partnerPackages'] as List).length}',
+      ]);
+    }
+    if (hostApp['detected'] == true) {
+      lines.addAll(<String>[
+        'Host runtime setup: ${hostApp['runtimeSetupExists']}',
+        'Host endpoint map: ${hostApp['endpointMapExists']}',
+        'Endpoint count: ${hostApp['endpointCount']}',
+      ]);
+    }
+    lines.addAll(<String>[
+      'Environment configured: ${environment['configured']}',
+      if (environment['selectedEnvironment'] != null)
+        'Environment: ${environment['selectedEnvironment']}',
+      if (environment['provider'] != null)
+        'Provider: ${environment['provider']}',
+      if (environment['apiBaseUrl'] != null)
+        'API base URL: ${environment['apiBaseUrl']}',
+      'Backend configured: ${backend['configured']}',
+      'Remote checked: ${remote['checked']}',
+    ]);
+    if ((remote['errors'] as List?)?.isNotEmpty == true) {
+      lines.add('Remote errors: ${(remote['errors'] as List).join('; ')}');
+    }
+    if (nextActions.isEmpty) {
+      lines.add('Next step: no immediate action.');
+    } else {
+      lines.add('Next actions:');
+      lines.addAll(nextActions.map((action) => '- $action'));
+    }
+    return lines.join('\n');
+  }
 
   String _formatCreateResult(MiniProgramScaffoldResult result) {
     final lines = <String>[

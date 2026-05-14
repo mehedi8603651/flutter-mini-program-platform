@@ -28,23 +28,23 @@ dart pub global activate --source path <repo-root>/packages/mini_program_tooling
 
 ```text
 miniprogram create <mini-program-id>
-miniprogram doctor
+miniprogram doctor [--json]
 miniprogram backend init
 miniprogram env init
 miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>] [--require-access-keys]
 miniprogram env list
 miniprogram env use <local|env-name>
-miniprogram env status
+miniprogram env status [--json]
 miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud] [--env <env-name>]
 miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
-miniprogram access-key list <mini-program-id> [--env <env-name>]
+miniprogram access-key list <mini-program-id> [--env <env-name>] [--json]
 miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
 miniprogram access-key rotate <mini-program-id> --key-id <id> [--new-key-id <id>] [--env <env-name>]
 miniprogram cloud deploy [--env <env-name>]
-miniprogram cloud status [--env <env-name>]
+miniprogram cloud status [--env <env-name>] [--json]
 miniprogram cloud outputs [--env <env-name>] [--format text|dart-define]
 miniprogram cloud logs [--env <env-name>]
 miniprogram cloud destroy [--env <env-name>]
@@ -54,6 +54,7 @@ miniprogram cloud app list [--env <env-name>]
 miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
+miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
 miniprogram partner package <mini-program-id> --access-key <key> [--api-base-url <url>|--env <env-name>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
@@ -62,12 +63,38 @@ miniprogram embed init [--project-root <path>] [--force]
 miniprogram embed cloud configure [--env <env-name>]
 miniprogram backend start --port 8080
 miniprogram backend stop
-miniprogram backend status
+miniprogram backend status [--json]
 miniprogram backend reset-local --yes
 ```
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+
+## Workflow status
+
+Use workflow status when you want the CLI to tell you what is ready, what is
+missing, and what command to run next:
+
+```bash
+miniprogram workflow status
+miniprogram workflow status --json
+```
+
+By default the command is local-first, so it is safe for frequent IDE refresh.
+It detects whether the current folder is a mini-program, a generated Flutter
+host app, or an unknown folder. It checks local build output, generated host
+endpoint maps, local env configuration, backend workspace state, and nearby
+partner packages.
+
+Use `--remote` only when you want AWS/backend checks:
+
+```bash
+miniprogram workflow status --remote --json
+```
+
+JSON output is intended for a future VS Code Activity Bar/sidebar extension.
+It is redacted: endpoint and partner package access-key values are never
+printed, only key IDs, counts, app IDs, URLs, and `hasAccessKey` flags.
 
 ## Examples
 

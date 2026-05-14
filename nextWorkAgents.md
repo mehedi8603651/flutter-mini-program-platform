@@ -429,7 +429,7 @@ Smaller future UX improvements that fit the current system:
 12. Implement payment host bridge support in Flutter hosts first.
 13. Plan Android native-host embedding around a reused Flutter engine.
 14. Keep the CLI as the single source of truth before adding any IDE wrapper.
-15. Add tooling `0.3.9` workflow status and machine-readable `--json` output
+15. Done in tooling `0.3.9`: add workflow status and machine-readable `--json` output
     for doctor/env/backend/cloud/access-key status so a VS Code extension can
     render status without scraping terminal text.
 16. Build a native VS Code Activity Bar/sidebar extension MVP that wraps CLI

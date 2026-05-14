@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.9
+
+- add `miniprogram workflow status` with local-first workspace detection for
+  mini-program and embedded host app projects
+- add machine-readable `--json` output to workflow, doctor, env, backend,
+  cloud status, and access-key list commands for future VS Code sidebar
+  integration
+- keep workflow status redacted by reporting access-key presence, IDs, and
+  counts without printing endpoint or partner package secrets
+
 ## 0.3.8
 
 - expand README host integration examples with a copy-paste
