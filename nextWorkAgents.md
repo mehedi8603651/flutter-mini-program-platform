@@ -304,14 +304,85 @@ For future Java/Kotlin or other native hosts:
 - only consider a second renderer if business and performance evidence force it
 
 ### 4. IDE UX layer on top of the CLI
-After the CLI preview and cloud model are stable, a VS Code extension is a good
-follow-up:
+After the CLI preview, AWS publish, access-key, partner package, and host
+endpoint import flows are stable, a VS Code extension is a good follow-up.
+The extension should be a native VS Code Activity Bar/sidebar extension first,
+not a webview dashboard.
 
-- command palette wrappers around CLI flows
-- backend status and logs
-- cloud target UI
-- preview launch UI
-- manifest and publish inspection
+The required foundation is a CLI-first status layer, likely in tooling `0.3.9`:
+
+- `miniprogram workflow status`
+- `miniprogram workflow status --json`
+- `miniprogram doctor --json`
+- `miniprogram env status --json`
+- `miniprogram backend status --json`
+- `miniprogram cloud status --json`
+- `miniprogram access-key list <mini-program-id> --json`
+
+The human output should show what is ready, what is missing, and the next
+recommended command. The JSON output should be stable enough for the extension
+to render without scraping terminal text.
+
+The workflow status command should detect at least:
+
+- current workspace type:
+  - mini-program
+  - Flutter host app
+  - unknown folder
+- mini-program status:
+  - `manifest.json` exists
+  - build output exists
+  - validation status
+  - active cloud environment
+  - API base URL configured
+  - cloud catalog/release exists
+  - active access-key count
+  - nearby partner package files
+- host app status:
+  - `pubspec.yaml` exists
+  - `miniprogram embed init` was run
+  - generated runtime setup exists
+  - generated endpoint map exists
+  - endpoint count
+  - configured backend/API status
+  - suggested run/build command
+
+VS Code extension MVP:
+
+- Activity Bar icon: `MiniProgram`
+- Sidebar sections:
+  - Project
+  - Workflow Status
+  - Cloud / Backend
+  - Access Keys
+  - Host Apps
+  - Logs
+- Command Palette actions:
+  - `MiniProgram: Create MiniProgram`
+  - `MiniProgram: Build`
+  - `MiniProgram: Validate`
+  - `MiniProgram: Preview`
+  - `MiniProgram: Publish`
+  - `MiniProgram: Create Access Key`
+  - `MiniProgram: Create Partner Package`
+  - `MiniProgram: Import Host Endpoint`
+  - `MiniProgram: Run Host App`
+  - `MiniProgram: Refresh Status`
+- Create flow:
+  - ask user for target folder
+  - ask for appId
+  - ask for title
+  - run `miniprogram create <appId> --title <title> --output-root <folder>/<appId>`
+  - offer to open the created folder
+- Status flow:
+  - run `miniprogram workflow status --json`
+  - render small status rows/cards in the sidebar
+  - show next recommended action
+  - keep raw command output in a MiniProgram output channel
+
+The extension must call the CLI for real work. It must not reimplement create,
+build, validate, publish, AWS, access-key, partner package, host endpoint, or
+backend logic.
 
 This remains a wrapper over the CLI, not a replacement for it.
 
@@ -358,4 +429,10 @@ Smaller future UX improvements that fit the current system:
 12. Implement payment host bridge support in Flutter hosts first.
 13. Plan Android native-host embedding around a reused Flutter engine.
 14. Keep the CLI as the single source of truth before adding any IDE wrapper.
-15. Add optional auto-generated `requestId` support in author helpers.
+15. Add tooling `0.3.9` workflow status and machine-readable `--json` output
+    for doctor/env/backend/cloud/access-key status so a VS Code extension can
+    render status without scraping terminal text.
+16. Build a native VS Code Activity Bar/sidebar extension MVP that wraps CLI
+    commands for create, build, validate, preview, publish, access keys,
+    partner packages, host endpoint import, host run, and status refresh.
+17. Add optional auto-generated `requestId` support in author helpers.
