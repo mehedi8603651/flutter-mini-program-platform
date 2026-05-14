@@ -917,8 +917,10 @@ Generated host-app structure:
   `miniprogram partner package`, and host teams can import it with
   `miniprogram host endpoint import`
 - `miniprogram workflow status --json` gives a redacted status snapshot for
-  future VS Code sidebar integration; add `--remote` only when you want cloud
+  VS Code sidebar integration; add `--remote` only when you want cloud
   app/access-key checks
+- `packages/mini_program_vscode` contains the local-first MiniProgram Tools VS
+  Code extension MVP for status, create, build, validate, preview, and publish
 - protected cloud backends should validate `X-Mini-Program-Access-Key` against
   per-mini-program access-key metadata so one partner key can be revoked
   without changing the appId or breaking other partners

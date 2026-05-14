@@ -1,0 +1,137 @@
+{
+  "name": "mini-program-tools",
+  "displayName": "MiniProgram Tools",
+  "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
+  "version": "0.1.0",
+  "publisher": "mini-program",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mehedi8603651/flutter-mini-program-platform"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "MiniProgram",
+      "properties": {
+        "miniProgram.cliPath": {
+          "type": "string",
+          "default": "miniprogram",
+          "description": "Path or command name for the installed MiniProgram CLI."
+        },
+        "miniProgram.defaultPreviewDevice": {
+          "type": "string",
+          "default": "emulator-5554",
+          "description": "Default device ID used by MiniProgram: Preview."
+        },
+        "miniProgram.status.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Refresh local workflow status when the extension activates or the workspace changes."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "miniProgramTools",
+          "title": "MiniProgram",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "miniProgramTools": [
+        {
+          "id": "miniProgramTools.statusView",
+          "name": "Status"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "miniProgramTools.statusView",
+        "contents": "Open a mini-program or Flutter host app workspace, then refresh status.\n[Refresh Status](command:miniProgramTools.refreshStatus)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "miniProgramTools.refreshStatus",
+        "title": "MiniProgram: Refresh Status",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "miniProgramTools.refreshRemoteStatus",
+        "title": "MiniProgram: Refresh Remote Status",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "miniProgramTools.createMiniProgram",
+        "title": "MiniProgram: Create MiniProgram",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "miniProgramTools.build",
+        "title": "MiniProgram: Build",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "miniProgramTools.validate",
+        "title": "MiniProgram: Validate",
+        "icon": "$(check)"
+      },
+      {
+        "command": "miniProgramTools.preview",
+        "title": "MiniProgram: Preview",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "miniProgramTools.publish",
+        "title": "MiniProgram: Publish",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "miniProgramTools.openOutput",
+        "title": "MiniProgram: Open Output",
+        "icon": "$(output)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "miniProgramTools.refreshStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "miniProgramTools.refreshRemoteStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "miniProgramTools.createMiniProgram",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@3"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test out/test/*.test.js",
+    "package:vsix": "npm run compile && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/vscode": "^1.96.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.9.3"
+  }
+}

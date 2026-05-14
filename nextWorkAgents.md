@@ -432,7 +432,7 @@ Smaller future UX improvements that fit the current system:
 15. Done in tooling `0.3.9`: add workflow status and machine-readable `--json` output
     for doctor/env/backend/cloud/access-key status so a VS Code extension can
     render status without scraping terminal text.
-16. Build a native VS Code Activity Bar/sidebar extension MVP that wraps CLI
-    commands for create, build, validate, preview, publish, access keys,
-    partner packages, host endpoint import, host run, and status refresh.
+16. Done in `packages/mini_program_vscode`: build a native VS Code
+    Activity Bar/sidebar extension MVP that wraps CLI status plus core create,
+    build, validate, preview, and publish commands.
 17. Add optional auto-generated `requestId` support in author helpers.
