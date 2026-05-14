@@ -31,10 +31,16 @@ export interface CreateArgsOptions {
 export interface PublishArgsOptions {
   readonly target: 'local' | 'cloud';
   readonly envName?: string;
+  readonly miniProgramRoot?: string;
 }
 
 export interface PreviewArgsOptions {
   readonly deviceId: string;
+  readonly miniProgramRoot?: string;
+}
+
+export interface WorkspaceMiniProgramArgsOptions {
+  readonly miniProgramRoot?: string;
 }
 
 export function resolveCliPath(value: string | undefined | null): string {
@@ -69,16 +75,23 @@ export function buildCreateArgs(options: CreateArgsOptions): string[] {
   return args;
 }
 
-export function buildBuildArgs(): string[] {
-  return ['build'];
+export function buildBuildArgs(
+  options: WorkspaceMiniProgramArgsOptions = {},
+): string[] {
+  return withMiniProgramRoot(['build'], options.miniProgramRoot);
 }
 
-export function buildValidateArgs(): string[] {
-  return ['validate'];
+export function buildValidateArgs(
+  options: WorkspaceMiniProgramArgsOptions = {},
+): string[] {
+  return withMiniProgramRoot(['validate'], options.miniProgramRoot);
 }
 
 export function buildPreviewArgs(options: PreviewArgsOptions): string[] {
-  return ['preview', '-d', options.deviceId];
+  return withMiniProgramRoot(
+    ['preview', '-d', options.deviceId],
+    options.miniProgramRoot,
+  );
 }
 
 export function buildPublishArgs(options: PublishArgsOptions): string[] {
@@ -86,7 +99,7 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
   if (options.envName?.trim()) {
     args.push('--env', options.envName.trim());
   }
-  return args;
+  return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
 export function formatCommandLine(command: string, args: readonly string[]): string {
@@ -169,4 +182,11 @@ function shellQuote(value: string): string {
     return `"${value.replace(/"/g, '\\"')}"`;
   }
   return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function withMiniProgramRoot(args: string[], miniProgramRoot?: string): string[] {
+  if (miniProgramRoot?.trim()) {
+    args.push('--mini-program-root', miniProgramRoot.trim());
+  }
+  return args;
 }

@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import {
@@ -80,12 +81,17 @@ export function activate(context: vscode.ExtensionContext): void {
       createMiniProgram(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.build', () =>
-      runWorkspaceCliCommand('Build', buildBuildArgs(), output, refreshStatus),
+      runMiniProgramWorkspaceCliCommand(
+        'Build',
+        (workspacePath) => buildBuildArgs({ miniProgramRoot: workspacePath }),
+        output,
+        refreshStatus,
+      ),
     ),
     vscode.commands.registerCommand('miniProgramTools.validate', () =>
-      runWorkspaceCliCommand(
+      runMiniProgramWorkspaceCliCommand(
         'Validate',
-        buildValidateArgs(),
+        (workspacePath) => buildValidateArgs({ miniProgramRoot: workspacePath }),
         output,
         refreshStatus,
       ),
@@ -158,7 +164,7 @@ async function createMiniProgram(output: vscode.OutputChannel): Promise<void> {
     return;
   }
 
-  const outputRoot = path.join(parentFolder, appId);
+  const outputRoot = resolveCreateOutputRoot(parentFolder, appId);
   const args = buildCreateArgs({ appId, title, outputRoot });
   const ok = await runCliCommand('Create MiniProgram', args, parentFolder, output);
   if (!ok) {
@@ -208,9 +214,14 @@ async function publishMiniProgram(
     envName = value.trim() || undefined;
   }
 
-  await runWorkspaceCliCommand(
+  await runMiniProgramWorkspaceCliCommand(
     'Publish',
-    buildPublishArgs({ target: targetChoice.label as 'local' | 'cloud', envName }),
+    (workspacePath) =>
+      buildPublishArgs({
+        target: targetChoice.label as 'local' | 'cloud',
+        envName,
+        miniProgramRoot: workspacePath,
+      }),
     output,
     refreshStatus,
   );
@@ -236,7 +247,10 @@ async function previewMiniProgram(): Promise<void> {
   }
 
   const cliPath = configuredCliPath();
-  const args = buildPreviewArgs({ deviceId: deviceId.trim() });
+  const args = buildPreviewArgs({
+    deviceId: deviceId.trim(),
+    miniProgramRoot: workspacePath,
+  });
   const terminal = vscode.window.createTerminal({
     name: 'MiniProgram Preview',
     cwd: workspacePath,
@@ -260,6 +274,30 @@ async function runWorkspaceCliCommand(
   }
 
   const ok = await runCliCommand(label, args, workspacePath, output);
+  if (ok) {
+    await refreshStatus(false);
+  }
+}
+
+async function runMiniProgramWorkspaceCliCommand(
+  label: string,
+  buildArgs: (workspacePath: string) => readonly string[],
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = getWorkspacePath();
+  if (!workspacePath) {
+    vscode.window.showWarningMessage('Open a mini-program workspace first.');
+    return;
+  }
+  if (!fs.existsSync(path.join(workspacePath, 'manifest.json'))) {
+    vscode.window.showWarningMessage(
+      'Open the exact mini-program root folder that contains manifest.json.',
+    );
+    return;
+  }
+
+  const ok = await runCliCommand(label, buildArgs(workspacePath), workspacePath, output);
   if (ok) {
     await refreshStatus(false);
   }
@@ -335,6 +373,12 @@ function titleFromAppId(appId: string): string {
     .filter((part) => part.length > 0)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function resolveCreateOutputRoot(selectedFolder: string, appId: string): string {
+  return path.basename(selectedFolder).toLowerCase() === appId.toLowerCase()
+    ? selectedFolder
+    : path.join(selectedFolder, appId);
 }
 
 function errorMessage(error: unknown): string {

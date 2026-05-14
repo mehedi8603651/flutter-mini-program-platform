@@ -61,16 +61,42 @@ test('builds core workflow command arguments', () => {
       'Coupon Demo',
     ],
   );
-  assert.deepEqual(buildBuildArgs(), ['build']);
-  assert.deepEqual(buildValidateArgs(), ['validate']);
-  assert.deepEqual(buildPreviewArgs({ deviceId: 'emulator-5554' }), [
+  assert.deepEqual(buildBuildArgs({ miniProgramRoot: 'D:/work/coupon_demo' }), [
+    'build',
+    '--mini-program-root',
+    'D:/work/coupon_demo',
+  ]);
+  assert.deepEqual(
+    buildValidateArgs({ miniProgramRoot: 'D:/work/coupon_demo' }),
+    ['validate', '--mini-program-root', 'D:/work/coupon_demo'],
+  );
+  assert.deepEqual(
+    buildPreviewArgs({
+      deviceId: 'emulator-5554',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
     'preview',
     '-d',
     'emulator-5554',
+    '--mini-program-root',
+    'D:/work/coupon_demo',
   ]);
   assert.deepEqual(
-    buildPublishArgs({ target: 'cloud', envName: 'my-aws-prod' }),
-    ['publish', '--target', 'cloud', '--env', 'my-aws-prod'],
+    buildPublishArgs({
+      target: 'cloud',
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publish',
+      '--target',
+      'cloud',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
   );
   assert.deepEqual(buildPublishArgs({ target: 'local' }), [
     'publish',
