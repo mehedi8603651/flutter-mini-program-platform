@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -122,6 +122,26 @@
         "icon": "$(run)"
       },
       {
+        "command": "miniProgramTools.createAccessKey",
+        "title": "MiniProgram: Create Access Key",
+        "icon": "$(key)"
+      },
+      {
+        "command": "miniProgramTools.listAccessKeys",
+        "title": "MiniProgram: List Access Keys",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "miniProgramTools.revokeAccessKey",
+        "title": "MiniProgram: Revoke Access Key",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "miniProgramTools.rotateAccessKey",
+        "title": "MiniProgram: Rotate Access Key",
+        "icon": "$(sync)"
+      },
+      {
         "command": "miniProgramTools.openOutput",
         "title": "MiniProgram: Open Output",
         "icon": "$(output)"
@@ -153,6 +173,16 @@
           "command": "miniProgramTools.runHostApp",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@5"
+        },
+        {
+          "command": "miniProgramTools.createAccessKey",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@6"
+        },
+        {
+          "command": "miniProgramTools.listAccessKeys",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@7"
         }
       ]
     }

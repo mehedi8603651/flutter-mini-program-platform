@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Add access-key commands for create, list, revoke, and rotate.
+- Infer mini-program appId from the current mini-program workspace manifest
+  when prompting for access-key commands.
+- Keep generated access keys visible in the output channel for copy/paste while
+  still redacting secret command-line inputs.
+
 ## 0.1.1
 
 - Add host app commands for embed init, host cloud configuration, endpoint

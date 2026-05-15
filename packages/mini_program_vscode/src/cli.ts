@@ -73,6 +73,31 @@ export interface HostRunArgsOptions {
   readonly envName?: string;
 }
 
+export interface AccessKeyCreateArgsOptions {
+  readonly appId: string;
+  readonly keyId: string;
+  readonly envName?: string;
+}
+
+export interface AccessKeyListArgsOptions {
+  readonly appId: string;
+  readonly envName?: string;
+  readonly json?: boolean;
+}
+
+export interface AccessKeyRevokeArgsOptions {
+  readonly appId: string;
+  readonly keyId: string;
+  readonly envName?: string;
+}
+
+export interface AccessKeyRotateArgsOptions {
+  readonly appId: string;
+  readonly keyId: string;
+  readonly newKeyId?: string;
+  readonly envName?: string;
+}
+
 export function resolveCliPath(value: string | undefined | null): string {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : defaultCliPath;
@@ -202,6 +227,58 @@ export function buildHostRunArgs(options: HostRunArgsOptions): string[] {
   return args;
 }
 
+export function buildAccessKeyCreateArgs(
+  options: AccessKeyCreateArgsOptions,
+): string[] {
+  const args = [
+    'access-key',
+    'create',
+    options.appId,
+    '--key-id',
+    options.keyId,
+  ];
+  return withEnvName(args, options.envName);
+}
+
+export function buildAccessKeyListArgs(
+  options: AccessKeyListArgsOptions,
+): string[] {
+  const args = ['access-key', 'list', options.appId];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withEnvName(args, options.envName);
+}
+
+export function buildAccessKeyRevokeArgs(
+  options: AccessKeyRevokeArgsOptions,
+): string[] {
+  const args = [
+    'access-key',
+    'revoke',
+    options.appId,
+    '--key-id',
+    options.keyId,
+  ];
+  return withEnvName(args, options.envName);
+}
+
+export function buildAccessKeyRotateArgs(
+  options: AccessKeyRotateArgsOptions,
+): string[] {
+  const args = [
+    'access-key',
+    'rotate',
+    options.appId,
+    '--key-id',
+    options.keyId,
+  ];
+  if (options.newKeyId?.trim()) {
+    args.push('--new-key-id', options.newKeyId.trim());
+  }
+  return withEnvName(args, options.envName);
+}
+
 export function formatCommandLine(command: string, args: readonly string[]): string {
   return [command, ...args].map(shellQuote).join(' ');
 }
@@ -298,13 +375,23 @@ function withMiniProgramRoot(args: string[], miniProgramRoot?: string): string[]
   return args;
 }
 
+function withEnvName(args: string[], envName?: string): string[] {
+  if (envName?.trim()) {
+    args.push('--env', envName.trim());
+  }
+  return args;
+}
+
 function redactSecretArgs(args: readonly string[]): string[] {
+  const secretOptions = new Set(['--access-key', '--key']);
   const redacted = [...args];
   for (let index = 0; index < redacted.length; index += 1) {
-    if (redacted[index] === '--access-key' && index + 1 < redacted.length) {
+    if (secretOptions.has(redacted[index]) && index + 1 < redacted.length) {
       redacted[index + 1] = '<redacted>';
     } else if (redacted[index].startsWith('--access-key=')) {
       redacted[index] = '--access-key=<redacted>';
+    } else if (redacted[index].startsWith('--key=')) {
+      redacted[index] = '--key=<redacted>';
     }
   }
   return redacted;

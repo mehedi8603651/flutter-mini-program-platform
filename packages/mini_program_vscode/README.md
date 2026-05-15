@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.1.vsix
+code --install-extension mini-program-tools-0.1.2.vsix
 ```
 
 ## Features
@@ -36,6 +36,10 @@ code --install-extension mini-program-tools-0.1.1.vsix
   - `MiniProgram: Import Host Endpoint`
   - `MiniProgram: Add Host Endpoint`
   - `MiniProgram: Run Host App`
+  - `MiniProgram: Create Access Key`
+  - `MiniProgram: List Access Keys`
+  - `MiniProgram: Revoke Access Key`
+  - `MiniProgram: Rotate Access Key`
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
@@ -55,7 +59,9 @@ Status` when you want cloud/backend checks.
 
 The sidebar renders only the redacted workflow status fields. It does not show
 raw MiniProgram access-key values from endpoint maps or partner packages.
-Commands that accept `--access-key` also redact the access key in the
-MiniProgram output channel.
+Commands that accept secret command-line inputs redact those values in the
+MiniProgram output channel. Create/rotate access-key commands still show the
+newly generated key returned by the CLI so you can copy it into a partner
+package or host endpoint.
 Endpoint setup prompts stay open when you switch windows, so you can copy API
 URLs or access keys and paste them without restarting the command.

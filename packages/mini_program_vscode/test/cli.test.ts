@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildAccessKeyCreateArgs,
+  buildAccessKeyListArgs,
+  buildAccessKeyRevokeArgs,
+  buildAccessKeyRotateArgs,
   buildBuildArgs,
   buildCreateArgs,
   buildEmbedCloudConfigureArgs,
@@ -198,6 +202,75 @@ test('builds host app command arguments', () => {
   );
 });
 
+test('builds access-key command arguments', () => {
+  assert.deepEqual(
+    buildAccessKeyCreateArgs({
+      appId: 'coupon_demo',
+      keyId: 'host-a',
+      envName: 'my-aws-prod',
+    }),
+    [
+      'access-key',
+      'create',
+      'coupon_demo',
+      '--key-id',
+      'host-a',
+      '--env',
+      'my-aws-prod',
+    ],
+  );
+  assert.deepEqual(
+    buildAccessKeyListArgs({
+      appId: 'coupon_demo',
+      envName: 'my-aws-prod',
+      json: true,
+    }),
+    [
+      'access-key',
+      'list',
+      'coupon_demo',
+      '--json',
+      '--env',
+      'my-aws-prod',
+    ],
+  );
+  assert.deepEqual(
+    buildAccessKeyRevokeArgs({
+      appId: 'coupon_demo',
+      keyId: 'host-a',
+      envName: 'my-aws-prod',
+    }),
+    [
+      'access-key',
+      'revoke',
+      'coupon_demo',
+      '--key-id',
+      'host-a',
+      '--env',
+      'my-aws-prod',
+    ],
+  );
+  assert.deepEqual(
+    buildAccessKeyRotateArgs({
+      appId: 'coupon_demo',
+      keyId: 'host-a',
+      newKeyId: 'host-a-2026-05',
+      envName: 'my-aws-prod',
+    }),
+    [
+      'access-key',
+      'rotate',
+      'coupon_demo',
+      '--key-id',
+      'host-a',
+      '--new-key-id',
+      'host-a-2026-05',
+      '--env',
+      'my-aws-prod',
+    ],
+  );
+});
+
 test('redacts access keys in command output', () => {
   const commandLine = formatRedactedCommandLine('miniprogram', [
     'host',
@@ -210,4 +283,14 @@ test('redacts access keys in command output', () => {
 
   assert.match(commandLine, /--access-key "?<redacted>"?/);
   assert.doesNotMatch(commandLine, /secret_should_not_print/);
+
+  const hiddenKeyCommandLine = formatRedactedCommandLine('miniprogram', [
+    'access-key',
+    'create',
+    'coupon_demo',
+    '--key',
+    'mpk_live_hidden_should_not_print',
+  ]);
+  assert.match(hiddenKeyCommandLine, /--key "?<redacted>"?/);
+  assert.doesNotMatch(hiddenKeyCommandLine, /hidden_should_not_print/);
 });

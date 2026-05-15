@@ -3,6 +3,10 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import {
+  buildAccessKeyCreateArgs,
+  buildAccessKeyListArgs,
+  buildAccessKeyRevokeArgs,
+  buildAccessKeyRotateArgs,
   buildBuildArgs,
   buildCreateArgs,
   buildEmbedCloudConfigureArgs,
@@ -122,6 +126,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.runHostApp', () =>
       runHostApp(),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.createAccessKey', () =>
+      createAccessKey(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.listAccessKeys', () =>
+      listAccessKeys(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.revokeAccessKey', () =>
+      revokeAccessKey(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.rotateAccessKey', () =>
+      rotateAccessKey(output, refreshStatus),
     ),
     vscode.commands.registerCommand('miniProgramTools.openOutput', () =>
       output.show(true),
@@ -428,6 +444,165 @@ async function runHostApp(): Promise<void> {
   terminal.sendText(formatCommandLine(cliPath, args));
 }
 
+async function createAccessKey(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const appId = await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const keyId = await promptKeyId('Access key id', 'host-a');
+  if (!keyId) {
+    return;
+  }
+  const envName = await promptOptionalEnvName();
+  if (envName === undefined) {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'Create Access Key',
+    buildAccessKeyCreateArgs({ appId, keyId, envName }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+    vscode.window.showInformationMessage(
+      'Access key created. Copy the generated key from the MiniProgram output channel.',
+    );
+  }
+}
+
+async function listAccessKeys(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const appId = await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const envName = await promptOptionalEnvName();
+  if (envName === undefined) {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'List Access Keys',
+    buildAccessKeyListArgs({ appId, envName, json: true }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+  }
+}
+
+async function revokeAccessKey(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const appId = await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const keyId = await promptKeyId('Access key id to revoke', 'host-a');
+  if (!keyId) {
+    return;
+  }
+  const envName = await promptOptionalEnvName();
+  if (envName === undefined) {
+    return;
+  }
+  const confirmed = await vscode.window.showWarningMessage(
+    `Revoke access key "${keyId}" for "${appId}"?`,
+    { modal: true },
+    'Revoke',
+  );
+  if (confirmed !== 'Revoke') {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'Revoke Access Key',
+    buildAccessKeyRevokeArgs({ appId, keyId, envName }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+  }
+}
+
+async function rotateAccessKey(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const appId = await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const keyId = await promptKeyId('Access key id to rotate', 'host-a');
+  if (!keyId) {
+    return;
+  }
+  const newKeyId = await vscode.window.showInputBox({
+    prompt: 'Optional new access key id',
+    placeHolder: `${keyId}-next`,
+    ignoreFocusOut: true,
+  });
+  if (newKeyId === undefined) {
+    return;
+  }
+  const envName = await promptOptionalEnvName();
+  if (envName === undefined) {
+    return;
+  }
+  const confirmed = await vscode.window.showWarningMessage(
+    `Rotate access key "${keyId}" for "${appId}"? The old key will be revoked.`,
+    { modal: true },
+    'Rotate',
+  );
+  if (confirmed !== 'Rotate') {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'Rotate Access Key',
+    buildAccessKeyRotateArgs({
+      appId,
+      keyId,
+      newKeyId: newKeyId.trim() || undefined,
+      envName,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+    vscode.window.showInformationMessage(
+      'Access key rotated. Copy the new generated key from the MiniProgram output channel.',
+    );
+  }
+}
+
 async function previewMiniProgram(): Promise<void> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -582,6 +757,68 @@ async function requireHostProjectRoot(): Promise<string | undefined> {
     return undefined;
   }
   return workspacePath;
+}
+
+async function requireWorkspacePath(): Promise<string | undefined> {
+  const workspacePath = getWorkspacePath();
+  if (!workspacePath) {
+    vscode.window.showWarningMessage(
+      'Open a mini-program or Flutter host app folder first.',
+    );
+    return undefined;
+  }
+  return workspacePath;
+}
+
+async function promptAppId(): Promise<string | undefined> {
+  const inferredAppId = await inferWorkspaceMiniProgramAppId();
+  const appId = await vscode.window.showInputBox({
+    prompt: 'Mini-program appId',
+    value: inferredAppId,
+    placeHolder: 'coupon_demo',
+    ignoreFocusOut: true,
+    validateInput: validateAppId,
+  });
+  return appId?.trim() || undefined;
+}
+
+async function promptKeyId(
+  prompt: string,
+  placeHolder: string,
+): Promise<string | undefined> {
+  const keyId = await vscode.window.showInputBox({
+    prompt,
+    placeHolder,
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Key id is required.',
+  });
+  return keyId?.trim() || undefined;
+}
+
+async function promptOptionalEnvName(): Promise<string | undefined> {
+  const envName = await vscode.window.showInputBox({
+    prompt: 'Optional cloud environment name',
+    placeHolder: 'Leave blank to use active environment',
+    ignoreFocusOut: true,
+  });
+  return envName === undefined ? undefined : envName.trim() || '';
+}
+
+async function inferWorkspaceMiniProgramAppId(): Promise<string | undefined> {
+  const workspacePath = getWorkspacePath();
+  if (!workspacePath) {
+    return undefined;
+  }
+  const manifestPath = path.join(workspacePath, 'manifest.json');
+  try {
+    if (!fs.existsSync(manifestPath)) {
+      return undefined;
+    }
+    const decoded = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8'));
+    return typeof decoded.id === 'string' ? decoded.id : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function chooseForce(prompt: string): Promise<boolean | undefined> {

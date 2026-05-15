@@ -435,5 +435,5 @@ Smaller future UX improvements that fit the current system:
 16. Done in `packages/mini_program_vscode`: build a native VS Code
     Activity Bar/sidebar extension MVP that wraps CLI status plus core create,
     build, validate, preview, publish, host embed/init, host endpoint import/add,
-    and host run commands.
+    host run, and access-key create/list/revoke/rotate commands.
 17. Add optional auto-generated `requestId` support in author helpers.
