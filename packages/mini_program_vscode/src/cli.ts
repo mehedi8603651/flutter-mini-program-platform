@@ -73,6 +73,69 @@ export interface HostRunArgsOptions {
   readonly envName?: string;
 }
 
+export interface EnvInitArgsOptions {
+  readonly rootPath?: string;
+  readonly useEnvironment?: string;
+}
+
+export interface EnvConfigureAwsArgsOptions {
+  readonly environmentName: string;
+  readonly rootPath?: string;
+  readonly bucket: string;
+  readonly region: string;
+  readonly awsProfile?: string;
+  readonly apiBaseUrl?: string;
+  readonly stackName?: string;
+  readonly stageName?: string;
+  readonly requireAccessKeys?: boolean;
+}
+
+export interface EnvUseArgsOptions {
+  readonly environmentName: string;
+  readonly rootPath?: string;
+}
+
+export interface EnvStatusArgsOptions {
+  readonly rootPath?: string;
+  readonly json?: boolean;
+}
+
+export interface CloudDeployArgsOptions {
+  readonly envName?: string;
+  readonly rootPath?: string;
+}
+
+export interface CloudStatusArgsOptions {
+  readonly envName?: string;
+  readonly rootPath?: string;
+  readonly json?: boolean;
+}
+
+export interface CloudOutputsArgsOptions {
+  readonly envName?: string;
+  readonly rootPath?: string;
+  readonly format?: 'text' | 'dart-define';
+}
+
+export interface BackendInitArgsOptions {
+  readonly backendRoot?: string;
+  readonly force?: boolean;
+}
+
+export interface BackendStartArgsOptions {
+  readonly backendRoot?: string;
+  readonly port?: number | string;
+}
+
+export interface BackendStopArgsOptions {
+  readonly backendRoot?: string;
+}
+
+export interface BackendStatusArgsOptions {
+  readonly backendRoot?: string;
+  readonly json?: boolean;
+}
+
 export interface AccessKeyCreateArgsOptions {
   readonly appId: string;
   readonly keyId: string;
@@ -227,6 +290,116 @@ export function buildHostRunArgs(options: HostRunArgsOptions): string[] {
   return args;
 }
 
+export function buildEnvInitArgs(options: EnvInitArgsOptions = {}): string[] {
+  const args = ['env', 'init'];
+  withRootPath(args, options.rootPath);
+  if (options.useEnvironment?.trim()) {
+    args.push('--use', options.useEnvironment.trim());
+  }
+  return args;
+}
+
+export function buildEnvConfigureAwsArgs(
+  options: EnvConfigureAwsArgsOptions,
+): string[] {
+  const args = [
+    'env',
+    'configure',
+    options.environmentName,
+    '--provider',
+    'aws',
+    '--bucket',
+    options.bucket,
+    '--region',
+    options.region,
+  ];
+  withRootPath(args, options.rootPath);
+  if (options.awsProfile?.trim()) {
+    args.push('--aws-profile', options.awsProfile.trim());
+  }
+  if (options.apiBaseUrl?.trim()) {
+    args.push('--api-base-url', options.apiBaseUrl.trim());
+  }
+  if (options.stackName?.trim()) {
+    args.push('--stack-name', options.stackName.trim());
+  }
+  if (options.stageName?.trim()) {
+    args.push('--stage-name', options.stageName.trim());
+  }
+  if (options.requireAccessKeys) {
+    args.push('--require-access-keys');
+  }
+  return args;
+}
+
+export function buildEnvUseArgs(options: EnvUseArgsOptions): string[] {
+  const args = ['env', 'use', options.environmentName];
+  return withRootPath(args, options.rootPath);
+}
+
+export function buildEnvStatusArgs(options: EnvStatusArgsOptions = {}): string[] {
+  const args = ['env', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withRootPath(args, options.rootPath);
+}
+
+export function buildCloudDeployArgs(options: CloudDeployArgsOptions = {}): string[] {
+  const args = ['cloud', 'deploy'];
+  withOptionalEnv(args, options.envName);
+  return withRootPath(args, options.rootPath);
+}
+
+export function buildCloudStatusArgs(options: CloudStatusArgsOptions = {}): string[] {
+  const args = ['cloud', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  withOptionalEnv(args, options.envName);
+  return withRootPath(args, options.rootPath);
+}
+
+export function buildCloudOutputsArgs(options: CloudOutputsArgsOptions = {}): string[] {
+  const args = ['cloud', 'outputs'];
+  if (options.format?.trim()) {
+    args.push('--format', options.format);
+  }
+  withOptionalEnv(args, options.envName);
+  return withRootPath(args, options.rootPath);
+}
+
+export function buildBackendInitArgs(options: BackendInitArgsOptions = {}): string[] {
+  const args = ['backend', 'init'];
+  withRootPath(args, options.backendRoot);
+  if (options.force) {
+    args.push('--force');
+  }
+  return args;
+}
+
+export function buildBackendStartArgs(options: BackendStartArgsOptions = {}): string[] {
+  const args = ['backend', 'start'];
+  withRootPath(args, options.backendRoot);
+  if (options.port !== undefined && `${options.port}`.trim()) {
+    args.push('--port', `${options.port}`.trim());
+  }
+  return args;
+}
+
+export function buildBackendStopArgs(options: BackendStopArgsOptions = {}): string[] {
+  const args = ['backend', 'stop'];
+  return withRootPath(args, options.backendRoot);
+}
+
+export function buildBackendStatusArgs(options: BackendStatusArgsOptions = {}): string[] {
+  const args = ['backend', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withRootPath(args, options.backendRoot);
+}
+
 export function buildAccessKeyCreateArgs(
   options: AccessKeyCreateArgsOptions,
 ): string[] {
@@ -378,6 +551,17 @@ function withMiniProgramRoot(args: string[], miniProgramRoot?: string): string[]
 function withEnvName(args: string[], envName?: string): string[] {
   if (envName?.trim()) {
     args.push('--env', envName.trim());
+  }
+  return args;
+}
+
+function withOptionalEnv(args: string[], envName?: string): string[] {
+  return withEnvName(args, envName);
+}
+
+function withRootPath(args: string[], rootPath?: string): string[] {
+  if (rootPath?.trim()) {
+    args.push('--root', rootPath.trim());
   }
   return args;
 }

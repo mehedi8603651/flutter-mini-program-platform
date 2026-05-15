@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -122,6 +122,61 @@
         "icon": "$(run)"
       },
       {
+        "command": "miniProgramTools.envInit",
+        "title": "MiniProgram: Env Init",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "miniProgramTools.configureAwsEnvironment",
+        "title": "MiniProgram: Configure AWS Environment",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "miniProgramTools.useEnvironment",
+        "title": "MiniProgram: Use Environment",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "miniProgramTools.environmentStatus",
+        "title": "MiniProgram: Environment Status",
+        "icon": "$(info)"
+      },
+      {
+        "command": "miniProgramTools.cloudDeploy",
+        "title": "MiniProgram: Cloud Deploy",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "miniProgramTools.cloudStatus",
+        "title": "MiniProgram: Cloud Status",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "miniProgramTools.cloudOutputs",
+        "title": "MiniProgram: Cloud Outputs",
+        "icon": "$(symbol-property)"
+      },
+      {
+        "command": "miniProgramTools.backendInit",
+        "title": "MiniProgram: Backend Init",
+        "icon": "$(database)"
+      },
+      {
+        "command": "miniProgramTools.backendStart",
+        "title": "MiniProgram: Backend Start",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "miniProgramTools.backendStop",
+        "title": "MiniProgram: Backend Stop",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "miniProgramTools.backendStatus",
+        "title": "MiniProgram: Backend Status",
+        "icon": "$(pulse)"
+      },
+      {
         "command": "miniProgramTools.createAccessKey",
         "title": "MiniProgram: Create Access Key",
         "icon": "$(key)"
@@ -175,14 +230,24 @@
           "group": "navigation@5"
         },
         {
-          "command": "miniProgramTools.createAccessKey",
+          "command": "miniProgramTools.cloudStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@6"
         },
         {
-          "command": "miniProgramTools.listAccessKeys",
+          "command": "miniProgramTools.backendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@7"
+        },
+        {
+          "command": "miniProgramTools.createAccessKey",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@8"
+        },
+        {
+          "command": "miniProgramTools.listAccessKeys",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@9"
         }
       ]
     }

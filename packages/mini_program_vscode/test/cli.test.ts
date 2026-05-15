@@ -5,10 +5,21 @@ import {
   buildAccessKeyListArgs,
   buildAccessKeyRevokeArgs,
   buildAccessKeyRotateArgs,
+  buildBackendInitArgs,
+  buildBackendStartArgs,
+  buildBackendStatusArgs,
+  buildBackendStopArgs,
   buildBuildArgs,
+  buildCloudDeployArgs,
+  buildCloudOutputsArgs,
+  buildCloudStatusArgs,
   buildCreateArgs,
   buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
+  buildEnvConfigureAwsArgs,
+  buildEnvInitArgs,
+  buildEnvStatusArgs,
+  buildEnvUseArgs,
   buildHostEndpointAddArgs,
   buildHostEndpointImportArgs,
   buildHostRunArgs,
@@ -200,6 +211,136 @@ test('builds host app command arguments', () => {
       'my-aws-prod',
     ],
   );
+});
+
+test('builds environment and cloud command arguments', () => {
+  assert.deepEqual(
+    buildEnvInitArgs({
+      rootPath: 'D:/work/coupon_demo',
+      useEnvironment: 'my-aws-prod',
+    }),
+    [
+      'env',
+      'init',
+      '--root',
+      'D:/work/coupon_demo',
+      '--use',
+      'my-aws-prod',
+    ],
+  );
+  assert.deepEqual(
+    buildEnvConfigureAwsArgs({
+      environmentName: 'my-aws-prod',
+      rootPath: 'D:/work/coupon_demo',
+      bucket: 'my-bucket',
+      region: 'ap-south-1',
+      awsProfile: 'my-aws',
+      apiBaseUrl: 'https://api.example.com/prod/api',
+      stackName: 'mini-program-cloud-prod',
+      stageName: 'prod',
+      requireAccessKeys: true,
+    }),
+    [
+      'env',
+      'configure',
+      'my-aws-prod',
+      '--provider',
+      'aws',
+      '--bucket',
+      'my-bucket',
+      '--region',
+      'ap-south-1',
+      '--root',
+      'D:/work/coupon_demo',
+      '--aws-profile',
+      'my-aws',
+      '--api-base-url',
+      'https://api.example.com/prod/api',
+      '--stack-name',
+      'mini-program-cloud-prod',
+      '--stage-name',
+      'prod',
+      '--require-access-keys',
+    ],
+  );
+  assert.deepEqual(
+    buildEnvUseArgs({
+      environmentName: 'my-aws-prod',
+      rootPath: 'D:/work/coupon_demo',
+    }),
+    ['env', 'use', 'my-aws-prod', '--root', 'D:/work/coupon_demo'],
+  );
+  assert.deepEqual(buildEnvStatusArgs({ rootPath: 'D:/work/coupon_demo' }), [
+    'env',
+    'status',
+    '--json',
+    '--root',
+    'D:/work/coupon_demo',
+  ]);
+  assert.deepEqual(
+    buildCloudDeployArgs({
+      envName: 'my-aws-prod',
+      rootPath: 'D:/work/coupon_demo',
+    }),
+    ['cloud', 'deploy', '--env', 'my-aws-prod', '--root', 'D:/work/coupon_demo'],
+  );
+  assert.deepEqual(
+    buildCloudStatusArgs({
+      envName: 'my-aws-prod',
+      rootPath: 'D:/work/coupon_demo',
+    }),
+    [
+      'cloud',
+      'status',
+      '--json',
+      '--env',
+      'my-aws-prod',
+      '--root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildCloudOutputsArgs({
+      envName: 'my-aws-prod',
+      rootPath: 'D:/work/coupon_demo',
+      format: 'dart-define',
+    }),
+    [
+      'cloud',
+      'outputs',
+      '--format',
+      'dart-define',
+      '--env',
+      'my-aws-prod',
+      '--root',
+      'D:/work/coupon_demo',
+    ],
+  );
+});
+
+test('builds backend command arguments', () => {
+  assert.deepEqual(buildBackendInitArgs(), ['backend', 'init']);
+  assert.deepEqual(
+    buildBackendInitArgs({ backendRoot: 'D:/backend', force: true }),
+    ['backend', 'init', '--root', 'D:/backend', '--force'],
+  );
+  assert.deepEqual(
+    buildBackendStartArgs({ backendRoot: 'D:/backend', port: 8081 }),
+    ['backend', 'start', '--root', 'D:/backend', '--port', '8081'],
+  );
+  assert.deepEqual(buildBackendStopArgs({ backendRoot: 'D:/backend' }), [
+    'backend',
+    'stop',
+    '--root',
+    'D:/backend',
+  ]);
+  assert.deepEqual(buildBackendStatusArgs({ backendRoot: 'D:/backend' }), [
+    'backend',
+    'status',
+    '--json',
+    '--root',
+    'D:/backend',
+  ]);
 });
 
 test('builds access-key command arguments', () => {

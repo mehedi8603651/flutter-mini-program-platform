@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.2.vsix
+code --install-extension mini-program-tools-0.1.3.vsix
 ```
 
 ## Features
@@ -36,6 +36,17 @@ code --install-extension mini-program-tools-0.1.2.vsix
   - `MiniProgram: Import Host Endpoint`
   - `MiniProgram: Add Host Endpoint`
   - `MiniProgram: Run Host App`
+  - `MiniProgram: Env Init`
+  - `MiniProgram: Configure AWS Environment`
+  - `MiniProgram: Use Environment`
+  - `MiniProgram: Environment Status`
+  - `MiniProgram: Cloud Deploy`
+  - `MiniProgram: Cloud Status`
+  - `MiniProgram: Cloud Outputs`
+  - `MiniProgram: Backend Init`
+  - `MiniProgram: Backend Start`
+  - `MiniProgram: Backend Stop`
+  - `MiniProgram: Backend Status`
   - `MiniProgram: Create Access Key`
   - `MiniProgram: List Access Keys`
   - `MiniProgram: Revoke Access Key`
@@ -54,6 +65,19 @@ code --install-extension mini-program-tools-0.1.2.vsix
 
 Remote status checks are never automatic. Use `MiniProgram: Refresh Remote
 Status` when you want cloud/backend checks.
+
+## Environment and backend workflow
+
+Use `MiniProgram: Env Init` in a mini-program or host workspace before
+configuring cloud delivery. `MiniProgram: Configure AWS Environment` prompts for
+the environment name, S3 bucket, region, optional AWS profile, stack/stage names,
+and access-key enforcement. `MiniProgram: Cloud Deploy` deploys the AWS backend,
+and `MiniProgram: Cloud Outputs` prints the backend API URL or a Flutter
+`--dart-define` snippet.
+
+Local backend commands are also available for development: initialize the backend
+workspace, start/stop the local backend, and inspect backend status without
+leaving VS Code.
 
 ## Secret handling
 

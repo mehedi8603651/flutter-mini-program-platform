@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+- Add environment commands for init, AWS configuration, active environment
+  selection, and environment status.
+- Add cloud commands for deploy, status, and outputs.
+- Add local backend commands for init, start, stop, and status.
+- Keep status-style commands useful when the backend/cloud stack is not ready by
+  printing CLI output instead of treating readiness as an extension failure.
+
 ## 0.1.2
 
 - Add access-key commands for create, list, revoke, and rotate.
