@@ -25,6 +25,7 @@ import {
   buildHostEndpointAddArgs,
   buildHostEndpointImportArgs,
   buildHostRunArgs,
+  buildPartnerPackageArgs,
   buildPreviewArgs,
   buildPublishArgs,
   buildValidateArgs,
@@ -182,6 +183,15 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.rotateAccessKey', () =>
       rotateAccessKey(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.createPartnerPackage', () =>
+      createPartnerPackage(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.validatePartnerPackage', () =>
+      validatePartnerPackage(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.openPartnerPackage', () =>
+      openPartnerPackage(),
     ),
     vscode.commands.registerCommand('miniProgramTools.openOutput', () =>
       output.show(true),
@@ -1035,6 +1045,174 @@ async function rotateAccessKey(
   }
 }
 
+async function createPartnerPackage(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const appId = await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program title for host developers',
+    value: titleFromAppId(appId),
+    ignoreFocusOut: true,
+  });
+  if (title === undefined) {
+    return;
+  }
+  const accessKey = await vscode.window.showInputBox({
+    prompt: 'MiniProgram access key for this host/partner',
+    password: true,
+    placeHolder: 'mpk_live_...',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Access key is required.',
+  });
+  if (!accessKey) {
+    return;
+  }
+  const deliverySource = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Configured environment',
+        description: 'Use active or selected env to resolve API base URL',
+        value: 'env',
+      },
+      {
+        label: 'Direct API base URL',
+        description: 'Paste the backend API URL manually',
+        value: 'api',
+      },
+    ],
+    { title: 'Partner package delivery source', ignoreFocusOut: true },
+  );
+  if (!deliverySource) {
+    return;
+  }
+
+  let envName: string | undefined;
+  let apiBaseUrl: string | undefined;
+  if (deliverySource.value === 'env') {
+    const value = await promptOptionalEnvName();
+    if (value === undefined) {
+      return;
+    }
+    envName = value;
+  } else {
+    const value = await vscode.window.showInputBox({
+      prompt: 'Mini-program delivery API base URL',
+      placeHolder: 'https://example.com/prod/api',
+      ignoreFocusOut: true,
+      validateInput: validateAbsoluteUrl,
+    });
+    if (!value) {
+      return;
+    }
+    apiBaseUrl = value.trim();
+  }
+
+  const outputPath = await choosePartnerPackageOutputPath(workspacePath, appId);
+  if (!outputPath) {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'Create Partner Package',
+    buildPartnerPackageArgs({
+      appId,
+      title: title.trim() || undefined,
+      accessKey: accessKey.trim(),
+      envName,
+      apiBaseUrl,
+      outputPath,
+      rootPath: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+  if (!ok) {
+    return;
+  }
+  await refreshStatus(false);
+  const openChoice = await vscode.window.showInformationMessage(
+    `Created partner package for ${appId}. Treat this file as secret.`,
+    'Open File',
+    'Reveal Folder',
+  );
+  if (openChoice === 'Open File') {
+    const document = await vscode.workspace.openTextDocument(outputPath);
+    await vscode.window.showTextDocument(document);
+  } else if (openChoice === 'Reveal Folder') {
+    await vscode.commands.executeCommand(
+      'revealFileInOS',
+      vscode.Uri.file(outputPath),
+    );
+  }
+}
+
+async function validatePartnerPackage(output: vscode.OutputChannel): Promise<void> {
+  const packagePath = await choosePartnerPackageFile();
+  if (!packagePath) {
+    return;
+  }
+  try {
+    const decoded = JSON.parse(await fs.promises.readFile(packagePath, 'utf8'));
+    const errors = validatePartnerPackageJson(decoded);
+    output.show(true);
+    output.appendLine('');
+    output.appendLine(`Validated partner package: ${packagePath}`);
+    if (errors.length > 0) {
+      for (const error of errors) {
+        output.appendLine(`- ${error}`);
+      }
+      vscode.window.showErrorMessage(
+        `Partner package is invalid. See MiniProgram output.`,
+      );
+      return;
+    }
+    output.appendLine(`App ID: ${decoded.appId}`);
+    output.appendLine(`Title: ${decoded.title ?? ''}`);
+    output.appendLine(`API base URL: ${decoded.apiBaseUrl}`);
+    output.appendLine(`Access key: ${decoded.accessKey ? '<redacted>' : 'missing'}`);
+    vscode.window.showInformationMessage('Partner package looks valid.');
+  } catch (error) {
+    const message = `Failed to validate partner package: ${errorMessage(error)}`;
+    output.show(true);
+    output.appendLine(message);
+    vscode.window.showErrorMessage(message);
+  }
+}
+
+async function openPartnerPackage(): Promise<void> {
+  const packagePath = await choosePartnerPackageFile();
+  if (!packagePath) {
+    return;
+  }
+  const choice = await vscode.window.showQuickPick(
+    [
+      { label: 'Open File', value: 'open' },
+      { label: 'Reveal Folder', value: 'reveal' },
+    ],
+    { title: 'Open partner package', ignoreFocusOut: true },
+  );
+  if (!choice) {
+    return;
+  }
+  if (choice.value === 'open') {
+    const document = await vscode.workspace.openTextDocument(packagePath);
+    await vscode.window.showTextDocument(document);
+  } else {
+    await vscode.commands.executeCommand(
+      'revealFileInOS',
+      vscode.Uri.file(packagePath),
+    );
+  }
+}
+
 async function previewMiniProgram(): Promise<void> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -1243,6 +1421,94 @@ async function promptOptionalEnvName(): Promise<string | undefined> {
   return envName === undefined ? undefined : envName.trim() || '';
 }
 
+async function choosePartnerPackageOutputPath(
+  workspacePath: string,
+  appId: string,
+): Promise<string | undefined> {
+  const uri = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.file(path.join(workspacePath, `${appId}.partner.json`)),
+    filters: {
+      'Partner package JSON': ['json'],
+    },
+    saveLabel: 'Create partner package',
+    title: 'Choose partner package output file',
+  });
+  return uri?.fsPath;
+}
+
+async function choosePartnerPackageFile(): Promise<string | undefined> {
+  const workspacePath = getWorkspacePath();
+  const existingPackages = workspacePath
+    ? await findPartnerPackageFiles(workspacePath)
+    : [];
+  if (existingPackages.length > 0) {
+    const selected = await vscode.window.showQuickPick(
+      [
+        ...existingPackages.map((filePath) => ({
+          label: path.basename(filePath),
+          description: path.dirname(filePath),
+          filePath,
+        })),
+        {
+          label: 'Choose another file...',
+          description: 'Select a .partner.json file',
+          filePath: '',
+        },
+      ],
+      { title: 'Choose a MiniProgram partner package', ignoreFocusOut: true },
+    );
+    if (!selected) {
+      return undefined;
+    }
+    if (selected.filePath) {
+      return selected.filePath;
+    }
+  }
+
+  const selectedFiles = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      'Partner package JSON': ['json'],
+    },
+    openLabel: 'Choose partner package',
+    title: 'Choose a MiniProgram partner package',
+  });
+  return selectedFiles?.[0]?.fsPath;
+}
+
+async function findPartnerPackageFiles(workspacePath: string): Promise<string[]> {
+  const files: string[] = [];
+  async function visit(directoryPath: string, depth: number): Promise<void> {
+    if (depth > 3 || files.length >= 20) {
+      return;
+    }
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'build') {
+        continue;
+      }
+      const entryPath = path.join(directoryPath, entry.name);
+      if (entry.isFile() && entry.name.endsWith('.partner.json')) {
+        files.push(entryPath);
+      } else if (entry.isDirectory()) {
+        await visit(entryPath, depth + 1);
+      }
+      if (files.length >= 20) {
+        return;
+      }
+    }
+  }
+  await visit(workspacePath, 0);
+  return files.sort((left, right) => left.localeCompare(right));
+}
+
 async function inferWorkspaceMiniProgramAppId(): Promise<string | undefined> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -1407,6 +1673,33 @@ function validatePort(value: string): string | undefined {
     return 'Port must be 1-65535.';
   }
   return undefined;
+}
+
+function validatePartnerPackageJson(decoded: unknown): string[] {
+  const errors: string[] = [];
+  if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
+    return ['Package must be a JSON object.'];
+  }
+  const object = decoded as Record<string, unknown>;
+  if (object.schemaVersion !== 1) {
+    errors.push('schemaVersion must be 1.');
+  }
+  if (object.type !== 'mini_program_partner_handoff') {
+    errors.push('type must be mini_program_partner_handoff.');
+  }
+  if (typeof object.appId !== 'string' || !object.appId.trim()) {
+    errors.push('appId is required.');
+  }
+  if (typeof object.title !== 'string' || !object.title.trim()) {
+    errors.push('title is required.');
+  }
+  if (typeof object.apiBaseUrl !== 'string' || validateAbsoluteUrl(object.apiBaseUrl)) {
+    errors.push('apiBaseUrl must be an absolute URL.');
+  }
+  if (typeof object.accessKey !== 'string' || !object.accessKey.trim()) {
+    errors.push('accessKey is required.');
+  }
+  return errors;
 }
 
 function titleFromAppId(appId: string): string {

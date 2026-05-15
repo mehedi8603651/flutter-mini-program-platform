@@ -161,6 +161,16 @@ export interface AccessKeyRotateArgsOptions {
   readonly envName?: string;
 }
 
+export interface PartnerPackageArgsOptions {
+  readonly appId: string;
+  readonly title?: string;
+  readonly accessKey: string;
+  readonly envName?: string;
+  readonly apiBaseUrl?: string;
+  readonly outputPath?: string;
+  readonly rootPath?: string;
+}
+
 export function resolveCliPath(value: string | undefined | null): string {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : defaultCliPath;
@@ -450,6 +460,31 @@ export function buildAccessKeyRotateArgs(
     args.push('--new-key-id', options.newKeyId.trim());
   }
   return withEnvName(args, options.envName);
+}
+
+export function buildPartnerPackageArgs(
+  options: PartnerPackageArgsOptions,
+): string[] {
+  const args = [
+    'partner',
+    'package',
+    options.appId,
+    '--access-key',
+    options.accessKey,
+  ];
+  if (options.title?.trim()) {
+    args.push('--title', options.title.trim());
+  }
+  if (options.envName?.trim()) {
+    args.push('--env', options.envName.trim());
+  }
+  if (options.apiBaseUrl?.trim()) {
+    args.push('--api-base-url', options.apiBaseUrl.trim());
+  }
+  if (options.outputPath?.trim()) {
+    args.push('--output', options.outputPath.trim());
+  }
+  return withRootPath(args, options.rootPath);
 }
 
 export function formatCommandLine(command: string, args: readonly string[]): string {

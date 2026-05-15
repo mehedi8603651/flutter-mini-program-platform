@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+- Add partner package commands for publisher handoff creation, local validation,
+  and opening/revealing existing `.partner.json` files.
+- Redact partner package access-key inputs from command lines printed in the
+  output channel.
+- Refresh workflow status after creating a partner package so the sidebar shows
+  nearby handoff files.
+
 ## 0.1.3
 
 - Add environment commands for init, AWS configuration, active environment

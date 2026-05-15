@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.3.vsix
+code --install-extension mini-program-tools-0.1.4.vsix
 ```
 
 ## Features
@@ -51,6 +51,9 @@ code --install-extension mini-program-tools-0.1.3.vsix
   - `MiniProgram: List Access Keys`
   - `MiniProgram: Revoke Access Key`
   - `MiniProgram: Rotate Access Key`
+  - `MiniProgram: Create Partner Package`
+  - `MiniProgram: Validate Partner Package`
+  - `MiniProgram: Open Partner Package`
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
@@ -78,6 +81,20 @@ and `MiniProgram: Cloud Outputs` prints the backend API URL or a Flutter
 Local backend commands are also available for development: initialize the backend
 workspace, start/stop the local backend, and inspect backend status without
 leaving VS Code.
+
+## Partner handoff workflow
+
+Mini-program publishers can create the host handoff file from VS Code:
+
+1. Run `MiniProgram: Create Access Key` and copy the generated key.
+2. Run `MiniProgram: Create Partner Package`.
+3. Enter the appId, title, access key, and either a configured env or direct API
+   base URL.
+4. Send the generated `.partner.json` file to the host app developer.
+
+The host developer then runs `MiniProgram: Import Host Endpoint` and selects the
+partner package. Partner packages contain an access key, so treat them as secret
+files and do not commit them.
 
 ## Secret handling
 

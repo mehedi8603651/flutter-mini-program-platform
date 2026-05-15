@@ -23,6 +23,7 @@ import {
   buildHostEndpointAddArgs,
   buildHostEndpointImportArgs,
   buildHostRunArgs,
+  buildPartnerPackageArgs,
   buildPreviewArgs,
   buildPublishArgs,
   buildValidateArgs,
@@ -412,6 +413,50 @@ test('builds access-key command arguments', () => {
   );
 });
 
+test('builds partner package command arguments', () => {
+  assert.deepEqual(
+    buildPartnerPackageArgs({
+      appId: 'coupon_demo',
+      title: 'Coupon Demo',
+      accessKey: 'mpk_live_secret',
+      envName: 'my-aws-prod',
+      outputPath: 'D:/work/coupon_demo.partner.json',
+      rootPath: 'D:/work/coupon_demo',
+    }),
+    [
+      'partner',
+      'package',
+      'coupon_demo',
+      '--access-key',
+      'mpk_live_secret',
+      '--title',
+      'Coupon Demo',
+      '--env',
+      'my-aws-prod',
+      '--output',
+      'D:/work/coupon_demo.partner.json',
+      '--root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPartnerPackageArgs({
+      appId: 'gcp_rewards',
+      accessKey: 'mpk_live_secret',
+      apiBaseUrl: 'https://api.example.com/api',
+    }),
+    [
+      'partner',
+      'package',
+      'gcp_rewards',
+      '--access-key',
+      'mpk_live_secret',
+      '--api-base-url',
+      'https://api.example.com/api',
+    ],
+  );
+});
+
 test('redacts access keys in command output', () => {
   const commandLine = formatRedactedCommandLine('miniprogram', [
     'host',
@@ -434,4 +479,14 @@ test('redacts access keys in command output', () => {
   ]);
   assert.match(hiddenKeyCommandLine, /--key "?<redacted>"?/);
   assert.doesNotMatch(hiddenKeyCommandLine, /hidden_should_not_print/);
+
+  const partnerPackageCommandLine = formatRedactedCommandLine('miniprogram', [
+    'partner',
+    'package',
+    'coupon_demo',
+    '--access-key',
+    'mpk_live_partner_should_not_print',
+  ]);
+  assert.match(partnerPackageCommandLine, /--access-key "?<redacted>"?/);
+  assert.doesNotMatch(partnerPackageCommandLine, /partner_should_not_print/);
 });
