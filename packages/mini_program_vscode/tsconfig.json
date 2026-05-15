@@ -9,8 +9,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
-    "types": ["node", "vscode"]
+    "moduleResolution": "node10"
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }
