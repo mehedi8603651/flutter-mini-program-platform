@@ -1,0 +1,227 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import * as path from 'node:path';
+import test from 'node:test';
+
+import {
+  buildDiagnosticsReport,
+  formatDiagnosticsReport,
+} from '../src/diagnostics';
+import { WorkflowStatusReport } from '../src/workflowStatus';
+
+test('unknown workspace reports actionable warning', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-unknown-');
+  try {
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'workspace',
+      workflowReport: {
+        schemaVersion: 1,
+        command: 'workflow status',
+        workspace: { type: 'unknown', path: workspacePath },
+        environment: { configured: false },
+        backend: { configured: false },
+        remote: { checked: false },
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.equal(report.summary.warning > 0, true);
+    assert.match(text, /Workspace is not recognized/);
+    assert.match(text, /Open a mini-program root/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('mini-program missing build suggests build', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-mini-');
+  try {
+    await writeFile(
+      path.join(workspacePath, 'manifest.json'),
+      JSON.stringify({ id: 'coupon_demo', version: '1.0.0', entry: 'coupon_home' }),
+    );
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'miniProgram',
+      workflowReport: miniProgramReport(workspacePath, {
+        build: {
+          exists: false,
+          screenCount: 0,
+          screensDirectory: path.join(workspacePath, 'stac', '.build', 'screens'),
+        },
+        validation: { status: 'not_run' },
+        partnerPackages: [],
+      }),
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /Build output is missing/);
+    assert.match(text, /Run MiniProgram: Build/);
+    assert.match(text, /Run MiniProgram: Validate/);
+    assert.match(text, /Run MiniProgram: Create Partner Package/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('host app missing endpoint, scope, and internet permission suggests fixes', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-host-');
+  try {
+    await mkdir(path.join(workspacePath, 'lib'), { recursive: true });
+    await writeFile(
+      path.join(workspacePath, 'pubspec.yaml'),
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.2.0\n',
+    );
+    await writeFile(path.join(workspacePath, 'lib', 'main.dart'), 'void main() {}\n');
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'hostApp',
+      workflowReport: {
+        schemaVersion: 1,
+        command: 'workflow status',
+        workspace: { type: 'host_app', path: workspacePath },
+        hostApp: {
+          detected: true,
+          runtimeSetupExists: false,
+          launcherExists: false,
+          endpointMapExists: false,
+          endpointCount: 0,
+          endpoints: [],
+        },
+        environment: { configured: false },
+        backend: { configured: false },
+        remote: { checked: false },
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /Endpoint map is missing/);
+    assert.match(text, /MiniProgram: Import Host Endpoint/);
+    assert.match(text, /MiniProgramScope was not found/);
+    assert.match(text, /android.permission.INTERNET/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('remote diagnostics surfaces cloud and access-key errors', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-cloud-');
+  try {
+    const localReport: WorkflowStatusReport = {
+      schemaVersion: 1,
+      command: 'workflow status',
+      workspace: { type: 'mini_program', path: workspacePath },
+      environment: {
+        configured: true,
+        selectedEnvironment: 'my-aws-prod',
+        provider: 'aws',
+        apiBaseUrl: 'https://api.example.com/prod/api',
+        requireAccessKeys: true,
+      },
+      backend: { configured: true },
+      remote: { checked: false },
+    };
+    const remoteReport: WorkflowStatusReport = {
+      ...localReport,
+      remote: {
+        checked: true,
+        cloudStatus: { healthy: false, stackStatus: 'ROLLBACK_COMPLETE' },
+        app: {},
+        accessKeys: { activeCount: 0 },
+        errors: ['Cloud app info failed.'],
+      },
+    };
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'cloudDelivery',
+      workflowReport: localReport,
+      remoteWorkflowReport: remoteReport,
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /Cloud stack is not healthy/);
+    assert.match(text, /0 active access key/);
+    assert.match(text, /Cloud app info failed/);
+    assert.match(text, /Run MiniProgram: Create Access Key/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('diagnostic output redacts access-key secrets', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-secret-');
+  try {
+    const secret = 'mpk_live_super_secret_value_1234567890';
+    const generated = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'hostApp',
+      workflowReport: {
+        schemaVersion: 1,
+        command: 'workflow status',
+        workspace: { type: 'host_app', path: workspacePath },
+        hostApp: {
+          detected: true,
+          endpointCount: 1,
+          endpoints: [
+            {
+              appId: 'coupon_demo',
+              apiBaseUri: 'https://api.example.com/api',
+              hasAccessKey: true,
+              accessKey: secret,
+            },
+          ],
+        },
+        environment: { configured: false },
+        backend: { configured: false },
+        remote: { checked: false },
+      },
+    });
+    const text = formatDiagnosticsReport({
+      ...generated,
+      checks: [
+        ...generated.checks,
+        {
+          id: 'secret.fixture',
+          label: 'Secret fixture',
+          severity: 'warning',
+          summary: 'Secret should be redacted.',
+          detail: secret,
+        },
+      ],
+    });
+    assert.doesNotMatch(text, new RegExp(secret));
+    assert.match(text, /mpk_live_<redacted>/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+async function tempWorkspace(prefix: string): Promise<string> {
+  return mkdtemp(path.join(tmpdir(), prefix));
+}
+
+function miniProgramReport(
+  workspacePath: string,
+  miniProgram: Record<string, unknown>,
+): WorkflowStatusReport {
+  return {
+    schemaVersion: 1,
+    command: 'workflow status',
+    workspace: { type: 'mini_program', path: workspacePath },
+    miniProgram: {
+      detected: true,
+      appId: 'coupon_demo',
+      version: '1.0.0',
+      entry: 'coupon_home',
+      ...miniProgram,
+    },
+    environment: { configured: false },
+    backend: { configured: false },
+    remote: { checked: false },
+  };
+}

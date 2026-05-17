@@ -14,6 +14,7 @@ import {
   buildCloudOutputsArgs,
   buildCloudStatusArgs,
   buildCreateArgs,
+  buildDoctorArgs,
   buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
   buildEnvConfigureAwsArgs,
@@ -65,6 +66,11 @@ test('builds workflow status command arguments', () => {
       '--remote',
     ],
   );
+});
+
+test('builds doctor command arguments', () => {
+  assert.deepEqual(buildDoctorArgs(), ['doctor', '--json']);
+  assert.deepEqual(buildDoctorArgs({ json: false }), ['doctor']);
 });
 
 test('builds core workflow command arguments', () => {

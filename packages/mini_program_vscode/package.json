@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -212,6 +212,26 @@
         "icon": "$(folder-opened)"
       },
       {
+        "command": "miniProgramTools.diagnoseWorkspace",
+        "title": "MiniProgram: Diagnose Workspace",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "miniProgramTools.diagnoseMiniProgram",
+        "title": "MiniProgram: Diagnose MiniProgram",
+        "icon": "$(package)"
+      },
+      {
+        "command": "miniProgramTools.diagnoseHostApp",
+        "title": "MiniProgram: Diagnose Host App",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "miniProgramTools.diagnoseCloudDelivery",
+        "title": "MiniProgram: Diagnose Cloud Delivery",
+        "icon": "$(cloud)"
+      },
+      {
         "command": "miniProgramTools.openOutput",
         "title": "MiniProgram: Open Output",
         "icon": "$(output)"
@@ -235,39 +255,44 @@
           "group": "navigation@3"
         },
         {
-          "command": "miniProgramTools.importHostEndpoint",
+          "command": "miniProgramTools.diagnoseWorkspace",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@4"
         },
         {
-          "command": "miniProgramTools.runHostApp",
+          "command": "miniProgramTools.importHostEndpoint",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@5"
         },
         {
-          "command": "miniProgramTools.cloudStatus",
+          "command": "miniProgramTools.runHostApp",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@6"
         },
         {
-          "command": "miniProgramTools.backendStatus",
+          "command": "miniProgramTools.cloudStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@7"
         },
         {
-          "command": "miniProgramTools.createAccessKey",
+          "command": "miniProgramTools.backendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@8"
         },
         {
-          "command": "miniProgramTools.listAccessKeys",
+          "command": "miniProgramTools.createAccessKey",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@9"
         },
         {
-          "command": "miniProgramTools.createPartnerPackage",
+          "command": "miniProgramTools.listAccessKeys",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@10"
+        },
+        {
+          "command": "miniProgramTools.createPartnerPackage",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@11"
         }
       ]
     }

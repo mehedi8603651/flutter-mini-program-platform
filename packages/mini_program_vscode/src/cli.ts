@@ -22,6 +22,10 @@ export interface WorkflowStatusArgsOptions {
   readonly remote?: boolean;
 }
 
+export interface DoctorArgsOptions {
+  readonly json?: boolean;
+}
+
 export interface CreateArgsOptions {
   readonly appId: string;
   readonly title?: string;
@@ -191,6 +195,14 @@ export function buildWorkflowStatusArgs(
   }
   if (options.remote) {
     args.push('--remote');
+  }
+  return args;
+}
+
+export function buildDoctorArgs(options: DoctorArgsOptions = {}): string[] {
+  const args = ['doctor'];
+  if (options.json ?? true) {
+    args.push('--json');
   }
   return args;
 }

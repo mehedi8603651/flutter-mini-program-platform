@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5
+
+- Add diagnostics commands for workspace, mini-program, host app, and cloud
+  delivery checks.
+- Print pass/warn/error reports with concrete fix suggestions in the MiniProgram
+  output channel.
+- Keep diagnostics secret-safe by redacting MiniProgram access-key values.
+
 ## 0.1.4
 
 - Add partner package commands for publisher handoff creation, local validation,

@@ -16,6 +16,7 @@ import {
   buildCloudOutputsArgs,
   buildCloudStatusArgs,
   buildCreateArgs,
+  buildDoctorArgs,
   buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
   buildEnvConfigureAwsArgs,
@@ -36,6 +37,12 @@ import {
   runCli,
   runCliStreaming,
 } from './cli';
+import {
+  DiagnosticScope,
+  buildDiagnosticsReport,
+  formatDiagnosticsReport,
+  redactSecrets,
+} from './diagnostics';
 import { MiniProgramStatusTreeProvider } from './statusTree';
 import { parseWorkflowStatusJson } from './workflowStatus';
 
@@ -192,6 +199,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.openPartnerPackage', () =>
       openPartnerPackage(),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.diagnoseWorkspace', () =>
+      diagnoseWorkspace('workspace', output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.diagnoseMiniProgram', () =>
+      diagnoseWorkspace('miniProgram', output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.diagnoseHostApp', () =>
+      diagnoseWorkspace('hostApp', output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.diagnoseCloudDelivery', () =>
+      diagnoseWorkspace('cloudDelivery', output),
     ),
     vscode.commands.registerCommand('miniProgramTools.openOutput', () =>
       output.show(true),
@@ -1213,6 +1232,88 @@ async function openPartnerPackage(): Promise<void> {
   }
 }
 
+async function diagnoseWorkspace(
+  scope: DiagnosticScope,
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+
+  const cliPath = configuredCliPath();
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(`== ${diagnosticCommandTitle(scope)} ==`);
+
+  let workflowReport;
+  const workflowArgs = buildWorkflowStatusArgs({ workspacePath });
+  output.appendLine(`> ${formatRedactedCommandLine(cliPath, workflowArgs)}`);
+  try {
+    const result = await runCli(cliPath, workflowArgs, {
+      cwd: workspacePath,
+      timeoutMs: 30000,
+    });
+    if (result.stderr.trim()) {
+      output.append(redactSecrets(result.stderr));
+    }
+    workflowReport = parseWorkflowStatusJson(result.stdout);
+  } catch (error) {
+    output.appendLine(`Workflow status failed: ${errorMessage(error)}`);
+  }
+
+  let doctorReport: Record<string, unknown> | undefined;
+  const doctorArgs = buildDoctorArgs({ json: true });
+  output.appendLine(`> ${formatRedactedCommandLine(cliPath, doctorArgs)}`);
+  try {
+    const result = await runCli(cliPath, doctorArgs, {
+      cwd: workspacePath,
+      timeoutMs: 60000,
+    });
+    if (result.stderr.trim()) {
+      output.append(redactSecrets(result.stderr));
+    }
+    doctorReport = parseJsonObject(result.stdout);
+  } catch (error) {
+    output.appendLine(`Doctor failed: ${errorMessage(error)}`);
+  }
+
+  let remoteWorkflowReport;
+  if (scope === 'cloudDelivery') {
+    const remoteArgs = buildWorkflowStatusArgs({ workspacePath, remote: true });
+    output.appendLine(`> ${formatRedactedCommandLine(cliPath, remoteArgs)}`);
+    try {
+      const result = await runCli(cliPath, remoteArgs, {
+        cwd: workspacePath,
+        timeoutMs: 120000,
+      });
+      if (result.stderr.trim()) {
+        output.append(redactSecrets(result.stderr));
+      }
+      remoteWorkflowReport = parseWorkflowStatusJson(result.stdout);
+    } catch (error) {
+      output.appendLine(`Remote workflow status failed: ${errorMessage(error)}`);
+    }
+  }
+
+  const report = await buildDiagnosticsReport({
+    workspacePath,
+    scope,
+    workflowReport,
+    remoteWorkflowReport,
+    doctorReport,
+  });
+  output.appendLine('');
+  output.appendLine(formatDiagnosticsReport(report));
+  if (report.summary.error > 0) {
+    vscode.window.showErrorMessage('Diagnostics found errors.');
+  } else if (report.summary.warning > 0) {
+    vscode.window.showWarningMessage('Diagnostics found warnings.');
+  } else {
+    vscode.window.showInformationMessage('Diagnostics passed.');
+  }
+}
+
 async function previewMiniProgram(): Promise<void> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -1419,6 +1520,31 @@ async function promptOptionalEnvName(): Promise<string | undefined> {
     ignoreFocusOut: true,
   });
   return envName === undefined ? undefined : envName.trim() || '';
+}
+
+function diagnosticCommandTitle(scope: DiagnosticScope): string {
+  switch (scope) {
+    case 'miniProgram':
+      return 'MiniProgram: Diagnose MiniProgram';
+    case 'hostApp':
+      return 'MiniProgram: Diagnose Host App';
+    case 'cloudDelivery':
+      return 'MiniProgram: Diagnose Cloud Delivery';
+    default:
+      return 'MiniProgram: Diagnose Workspace';
+  }
+}
+
+function parseJsonObject(rawOutput: string): Record<string, unknown> {
+  const trimmed = rawOutput.trim();
+  const jsonText = trimmed.startsWith('{') && trimmed.endsWith('}')
+    ? trimmed
+    : trimmed.slice(trimmed.indexOf('{'), trimmed.lastIndexOf('}') + 1);
+  const decoded: unknown = JSON.parse(jsonText);
+  if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
+    throw new Error('Command did not return a JSON object.');
+  }
+  return decoded as Record<string, unknown>;
 }
 
 async function choosePartnerPackageOutputPath(

@@ -1,0 +1,624 @@
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+import {
+  WorkflowStatusReport,
+  asBoolean,
+  asNumber,
+  asRecord,
+  asString,
+  asStringList,
+} from './workflowStatus';
+
+export type DiagnosticSeverity = 'ok' | 'warning' | 'error';
+export type DiagnosticScope =
+  | 'workspace'
+  | 'miniProgram'
+  | 'hostApp'
+  | 'cloudDelivery';
+
+export interface DiagnosticCheck {
+  readonly id: string;
+  readonly label: string;
+  readonly severity: DiagnosticSeverity;
+  readonly summary: string;
+  readonly detail?: string;
+  readonly fix?: string;
+}
+
+export interface DiagnosticSummary {
+  readonly ok: number;
+  readonly warning: number;
+  readonly error: number;
+}
+
+export interface DiagnosticReport {
+  readonly title: string;
+  readonly generatedAtUtc: string;
+  readonly workspacePath: string;
+  readonly checks: DiagnosticCheck[];
+  readonly summary: DiagnosticSummary;
+}
+
+export interface BuildDiagnosticsOptions {
+  readonly workspacePath: string;
+  readonly scope: DiagnosticScope;
+  readonly workflowReport?: WorkflowStatusReport;
+  readonly remoteWorkflowReport?: WorkflowStatusReport;
+  readonly doctorReport?: Record<string, unknown>;
+}
+
+interface ManifestInfo {
+  readonly exists: boolean;
+  readonly path: string;
+  readonly id?: string;
+  readonly version?: string;
+  readonly entry?: string;
+  readonly error?: string;
+}
+
+export async function buildDiagnosticsReport(
+  options: BuildDiagnosticsOptions,
+): Promise<DiagnosticReport> {
+  const workflowReport = options.workflowReport;
+  const workspace = asRecord(workflowReport?.workspace);
+  const detectedType = asString(workspace.type, await detectWorkspaceType(options.workspacePath));
+  const checks: DiagnosticCheck[] = [
+    check(
+      'workspace.type',
+      'Workspace type',
+      detectedType === 'unknown' ? 'warning' : 'ok',
+      detectedType === 'unknown'
+        ? 'Workspace is not recognized as a mini-program or host app.'
+        : `Detected ${detectedType}.`,
+      options.workspacePath,
+      detectedType === 'unknown'
+        ? 'Open a mini-program root with manifest.json or a Flutter host app root with pubspec.yaml.'
+        : undefined,
+    ),
+  ];
+
+  if (options.scope === 'workspace' || options.scope === 'miniProgram') {
+    checks.push(
+      ...(await buildMiniProgramChecks(
+        options.workspacePath,
+        workflowReport,
+        options.scope === 'miniProgram',
+      )),
+    );
+  }
+  if (options.scope === 'workspace' || options.scope === 'hostApp') {
+    checks.push(
+      ...(await buildHostAppChecks(
+        options.workspacePath,
+        workflowReport,
+        options.scope === 'hostApp',
+      )),
+    );
+  }
+  if (options.scope === 'workspace' || options.scope === 'cloudDelivery') {
+    checks.push(
+      ...buildCloudDeliveryChecks(
+        workflowReport,
+        options.remoteWorkflowReport,
+        options.scope === 'cloudDelivery',
+      ),
+    );
+  }
+  if (options.doctorReport) {
+    checks.push(buildDoctorCheck(options.doctorReport));
+  }
+
+  return {
+    title: titleForScope(options.scope),
+    generatedAtUtc: new Date().toISOString(),
+    workspacePath: options.workspacePath,
+    checks,
+    summary: summarizeChecks(checks),
+  };
+}
+
+export function formatDiagnosticsReport(report: DiagnosticReport): string {
+  const lines = [
+    report.title,
+    `Generated at UTC: ${report.generatedAtUtc}`,
+    `Workspace: ${report.workspacePath}`,
+    `Summary: ${report.summary.ok} ok, ${report.summary.warning} warning, ${report.summary.error} error`,
+    '',
+  ];
+  for (const item of report.checks) {
+    lines.push(`[${item.severity.toUpperCase()}] ${item.label}: ${item.summary}`);
+    if (item.detail) {
+      lines.push(`  Detail: ${item.detail}`);
+    }
+    if (item.fix) {
+      lines.push(`  Fix: ${item.fix}`);
+    }
+  }
+  return redactSecrets(lines.join('\n'));
+}
+
+export function redactSecrets(value: string): string {
+  return value.replace(/mpk_live_[A-Za-z0-9._-]+/g, 'mpk_live_<redacted>');
+}
+
+async function buildMiniProgramChecks(
+  workspacePath: string,
+  workflowReport: WorkflowStatusReport | undefined,
+  strictScope: boolean,
+): Promise<DiagnosticCheck[]> {
+  const miniProgram = asRecord(workflowReport?.miniProgram);
+  const detected = asBoolean(miniProgram.detected) || (await exists(path.join(workspacePath, 'manifest.json')));
+  if (!detected) {
+    return [
+      check(
+        'mini_program.detected',
+        'Mini-program workspace',
+        strictScope ? 'error' : 'warning',
+        'No mini-program manifest was found.',
+        path.join(workspacePath, 'manifest.json'),
+        'Open the mini-program root folder or run MiniProgram: Create MiniProgram.',
+      ),
+    ];
+  }
+
+  const manifest = await readManifest(workspacePath);
+  const build = asRecord(miniProgram.build);
+  const validation = asRecord(miniProgram.validation);
+  const partnerPackages = Array.isArray(miniProgram.partnerPackages)
+    ? miniProgram.partnerPackages.length
+    : 0;
+  const buildExists = asBoolean(build.exists) || (await countJsonFiles(path.join(workspacePath, 'stac', '.build', 'screens'))) > 0;
+  const entry = manifest.entry || asString(miniProgram.entry);
+  const entryPath = entry
+    ? path.join(workspacePath, 'stac', '.build', 'screens', `${entry}.json`)
+    : '';
+  const entryExists = entryPath ? await exists(entryPath) : false;
+  const validationStatus = asString(validation.status, 'not_run');
+
+  return [
+    check(
+      'mini_program.manifest',
+      'Manifest',
+      manifest.exists && !manifest.error ? 'ok' : 'error',
+      manifest.exists && !manifest.error ? 'manifest.json was found.' : 'manifest.json is missing or invalid.',
+      manifest.error || manifest.path,
+      'Open the mini-program root folder or recreate the scaffold.',
+    ),
+    check(
+      'mini_program.manifest_id',
+      'Manifest appId',
+      manifest.id ? 'ok' : 'error',
+      manifest.id ? `App ID: ${manifest.id}` : 'Manifest is missing id.',
+      undefined,
+      'Add an id field to manifest.json.',
+    ),
+    check(
+      'mini_program.manifest_version',
+      'Manifest version',
+      manifest.version ? 'ok' : 'error',
+      manifest.version ? `Version: ${manifest.version}` : 'Manifest is missing version.',
+      undefined,
+      'Add a version field to manifest.json.',
+    ),
+    check(
+      'mini_program.manifest_entry',
+      'Manifest entry',
+      entry ? 'ok' : 'error',
+      entry ? `Entry: ${entry}` : 'Manifest is missing entry.',
+      undefined,
+      'Add an entry field to manifest.json.',
+    ),
+    check(
+      'mini_program.build',
+      'Build output',
+      buildExists ? 'ok' : 'warning',
+      buildExists ? 'Build output exists.' : 'Build output is missing.',
+      asString(build.screensDirectory, path.join(workspacePath, 'stac', '.build', 'screens')),
+      buildExists ? undefined : 'Run MiniProgram: Build.',
+    ),
+    check(
+      'mini_program.entry_screen',
+      'Entry screen JSON',
+      entryExists ? 'ok' : 'warning',
+      entryExists ? 'Entry screen JSON exists.' : 'Entry screen JSON is missing.',
+      entryPath || 'No entry screen path could be resolved.',
+      entryExists ? undefined : 'Run MiniProgram: Build and confirm manifest entry matches a screen.',
+    ),
+    check(
+      'mini_program.validation',
+      'Validation',
+      validationStatus === 'ok'
+        ? 'ok'
+        : validationStatus === 'error'
+          ? 'error'
+          : 'warning',
+      `Validation status: ${validationStatus}.`,
+      asString(validation.reason),
+      validationStatus === 'ok' ? undefined : 'Run MiniProgram: Validate.',
+    ),
+    check(
+      'mini_program.partner_packages',
+      'Partner packages',
+      partnerPackages > 0 ? 'ok' : 'warning',
+      `${partnerPackages} partner package file(s) found.`,
+      undefined,
+      partnerPackages > 0 ? undefined : 'Run MiniProgram: Create Partner Package after creating an access key.',
+    ),
+  ];
+}
+
+async function buildHostAppChecks(
+  workspacePath: string,
+  workflowReport: WorkflowStatusReport | undefined,
+  strictScope: boolean,
+): Promise<DiagnosticCheck[]> {
+  const hostApp = asRecord(workflowReport?.hostApp);
+  const pubspecPath = path.join(workspacePath, 'pubspec.yaml');
+  const pubspecExists = await exists(pubspecPath);
+  const runtimeSetupPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart');
+  const launcherPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_launcher.dart');
+  const endpointPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_endpoints.dart');
+  const detected = asBoolean(hostApp.detected) || pubspecExists;
+  if (!detected) {
+    return [
+      check(
+        'host_app.detected',
+        'Host app workspace',
+        strictScope ? 'error' : 'warning',
+        'No Flutter host app pubspec was found.',
+        pubspecPath,
+        'Open the Flutter host app root folder.',
+      ),
+    ];
+  }
+
+  const pubspec = pubspecExists ? await readText(pubspecPath) : '';
+  const runtimeSetupExists = asBoolean(hostApp.runtimeSetupExists) || await exists(runtimeSetupPath);
+  const launcherExists = asBoolean(hostApp.launcherExists) || await exists(launcherPath);
+  const endpointMapExists = asBoolean(hostApp.endpointMapExists) || await exists(endpointPath);
+  const endpoints = Array.isArray(hostApp.endpoints) ? hostApp.endpoints : [];
+  const endpointCount = asNumber(hostApp.endpointCount, endpoints.length);
+  const endpointIssues = endpoints
+    .map((entry) => asRecord(entry))
+    .filter((entry) => !asString(entry.apiBaseUri) || !asBoolean(entry.hasAccessKey))
+    .map((entry) => asString(entry.appId, 'unknown'));
+  const hasScope = await dartFilesContain(workspacePath, 'MiniProgramScope');
+  const internetPermission = await fileContains(
+    path.join(workspacePath, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
+    'android.permission.INTERNET',
+  );
+
+  return [
+    check(
+      'host_app.pubspec',
+      'Flutter pubspec',
+      pubspecExists ? 'ok' : 'error',
+      pubspecExists ? 'pubspec.yaml was found.' : 'pubspec.yaml is missing.',
+      pubspecPath,
+      pubspecExists ? undefined : 'Open the Flutter host app root folder.',
+    ),
+    check(
+      'host_app.sdk_dependency',
+      'mini_program_sdk dependency',
+      pubspec.includes('mini_program_sdk') ? 'ok' : 'warning',
+      pubspec.includes('mini_program_sdk')
+        ? 'mini_program_sdk dependency is present.'
+        : 'mini_program_sdk dependency was not found in pubspec.yaml.',
+      undefined,
+      pubspec.includes('mini_program_sdk') ? undefined : 'Run MiniProgram: Embed Init.',
+    ),
+    check(
+      'host_app.runtime_setup',
+      'Runtime setup',
+      runtimeSetupExists ? 'ok' : 'warning',
+      runtimeSetupExists ? 'Generated runtime setup exists.' : 'Generated runtime setup is missing.',
+      runtimeSetupPath,
+      runtimeSetupExists ? undefined : 'Run MiniProgram: Embed Init.',
+    ),
+    check(
+      'host_app.launcher',
+      'Launcher helper',
+      launcherExists ? 'ok' : 'warning',
+      launcherExists ? 'Generated launcher helper exists.' : 'Generated launcher helper is missing.',
+      launcherPath,
+      launcherExists ? undefined : 'Run MiniProgram: Embed Init.',
+    ),
+    check(
+      'host_app.endpoint_map',
+      'Endpoint map',
+      endpointMapExists && endpointCount > 0 ? 'ok' : 'warning',
+      endpointMapExists
+        ? `${endpointCount} endpoint(s) configured.`
+        : 'Endpoint map is missing.',
+      endpointPath,
+      endpointMapExists && endpointCount > 0
+        ? undefined
+        : 'Run MiniProgram: Import Host Endpoint or MiniProgram: Add Host Endpoint.',
+    ),
+    check(
+      'host_app.endpoint_entries',
+      'Endpoint entries',
+      endpointIssues.length === 0 ? 'ok' : 'error',
+      endpointIssues.length === 0
+        ? 'Endpoint entries include API URL and access-key metadata.'
+        : `Incomplete endpoint entries: ${endpointIssues.join(', ')}.`,
+      undefined,
+      endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
+    ),
+    check(
+      'host_app.scope',
+      'MiniProgramScope',
+      hasScope ? 'ok' : 'warning',
+      hasScope ? 'MiniProgramScope is referenced in Dart code.' : 'MiniProgramScope was not found in lib/**/*.dart.',
+      undefined,
+      hasScope ? undefined : 'Wrap the host app with MiniProgramScope(config: buildMiniProgramConfig(...), child: MyApp()).',
+    ),
+    check(
+      'host_app.android_internet',
+      'Android internet permission',
+      internetPermission ? 'ok' : 'warning',
+      internetPermission
+        ? 'Release Android manifest has INTERNET permission.'
+        : 'Release Android manifest is missing INTERNET permission.',
+      path.join(workspacePath, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
+      internetPermission ? undefined : 'Run MiniProgram: Embed Init or add android.permission.INTERNET.',
+    ),
+  ];
+}
+
+function buildCloudDeliveryChecks(
+  workflowReport: WorkflowStatusReport | undefined,
+  remoteWorkflowReport: WorkflowStatusReport | undefined,
+  strictScope: boolean,
+): DiagnosticCheck[] {
+  const localEnvironment = asRecord(workflowReport?.environment);
+  const remoteReport = remoteWorkflowReport ?? workflowReport;
+  const remote = asRecord(remoteReport?.remote);
+  const cloudStatus = asRecord(remote.cloudStatus);
+  const app = asRecord(remote.app);
+  const accessKeys = asRecord(remote.accessKeys);
+  const errors = asStringList(remote.errors);
+  const configured = asBoolean(localEnvironment.configured);
+  const remoteChecked = asBoolean(remote.checked);
+  const apiBaseUrl = asString(localEnvironment.apiBaseUrl);
+  const provider = asString(localEnvironment.provider);
+  const selectedEnvironment = asString(localEnvironment.selectedEnvironment);
+  const activeAccessKeys = asNumber(accessKeys.activeCount, -1);
+
+  const uncheckedSeverity: DiagnosticSeverity = strictScope ? 'warning' : 'ok';
+  const uncheckedSummary = strictScope
+    ? 'Remote status was not checked.'
+    : 'Remote status is skipped for local workspace diagnostics.';
+
+  return [
+    check(
+      'cloud.env_configured',
+      'Environment configuration',
+      configured ? 'ok' : 'warning',
+      configured ? `Environment: ${selectedEnvironment || 'configured'}.` : 'No environment configuration was found.',
+      provider ? `Provider: ${provider}` : undefined,
+      configured ? undefined : 'Run MiniProgram: Env Init and MiniProgram: Configure AWS Environment.',
+    ),
+    check(
+      'cloud.api_base_url',
+      'Backend API base URL',
+      apiBaseUrl ? 'ok' : 'warning',
+      apiBaseUrl ? `API base URL: ${apiBaseUrl}` : 'No API base URL is configured yet.',
+      undefined,
+      apiBaseUrl ? undefined : 'Run MiniProgram: Cloud Deploy, then MiniProgram: Cloud Outputs or Configure Host Cloud.',
+    ),
+    check(
+      'cloud.access_key_policy',
+      'Access-key policy',
+      asBoolean(localEnvironment.requireAccessKeys) ? 'ok' : 'warning',
+      asBoolean(localEnvironment.requireAccessKeys)
+        ? 'Access keys are required by the selected environment.'
+        : 'Access-key enforcement is not enabled or not reported.',
+      undefined,
+      asBoolean(localEnvironment.requireAccessKeys) ? undefined : 'For protected delivery, configure AWS environment with require access keys enabled.',
+    ),
+    check(
+      'cloud.remote_checked',
+      'Remote diagnostics',
+      remoteChecked ? 'ok' : uncheckedSeverity,
+      remoteChecked ? 'Remote status was checked.' : uncheckedSummary,
+      undefined,
+      remoteChecked ? undefined : 'Run MiniProgram: Diagnose Cloud Delivery.',
+    ),
+    check(
+      'cloud.stack_health',
+      'Cloud stack health',
+      !remoteChecked
+        ? uncheckedSeverity
+        : asBoolean(cloudStatus.healthy)
+          ? 'ok'
+          : 'error',
+      !remoteChecked
+        ? uncheckedSummary
+        : asBoolean(cloudStatus.healthy)
+          ? 'Cloud stack is healthy.'
+          : 'Cloud stack is not healthy.',
+      asString(cloudStatus.stackStatus),
+      !remoteChecked || asBoolean(cloudStatus.healthy) ? undefined : 'Run MiniProgram: Cloud Deploy or inspect MiniProgram: Cloud Status.',
+    ),
+    check(
+      'cloud.latest_version',
+      'Latest published version',
+      !remoteChecked
+        ? uncheckedSeverity
+        : asString(app.latestVersion)
+          ? 'ok'
+          : 'warning',
+      !remoteChecked
+        ? uncheckedSummary
+        : asString(app.latestVersion)
+          ? `Latest version: ${asString(app.latestVersion)}.`
+          : 'No latest published version was reported.',
+      undefined,
+      !remoteChecked || asString(app.latestVersion) ? undefined : 'Run MiniProgram: Publish.',
+    ),
+    check(
+      'cloud.access_keys',
+      'Active access keys',
+      !remoteChecked
+        ? uncheckedSeverity
+        : activeAccessKeys > 0
+          ? 'ok'
+          : 'warning',
+      !remoteChecked
+        ? uncheckedSummary
+        : activeAccessKeys >= 0
+          ? `${activeAccessKeys} active access key(s).`
+          : 'Access-key status was not reported.',
+      undefined,
+      !remoteChecked || activeAccessKeys > 0 ? undefined : 'Run MiniProgram: Create Access Key.',
+    ),
+    check(
+      'cloud.remote_errors',
+      'Remote errors',
+      errors.length === 0 ? 'ok' : 'error',
+      errors.length === 0 ? 'No remote errors reported.' : `${errors.length} remote error(s) reported.`,
+      errors.join('; '),
+      errors.length === 0 ? undefined : 'Run MiniProgram: Cloud Status and check the MiniProgram output channel.',
+    ),
+  ];
+}
+
+function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticCheck {
+  const summary = asRecord(doctorReport.summary);
+  const errors = asNumber(summary.error);
+  const warnings = asNumber(summary.warning);
+  const ok = asNumber(summary.ok);
+  const skipped = asNumber(summary.skipped);
+  return check(
+    'cli.doctor',
+    'CLI doctor',
+    errors > 0 ? 'error' : warnings > 0 ? 'warning' : 'ok',
+    `${ok} ok, ${warnings} warning, ${errors} error, ${skipped} skipped.`,
+    undefined,
+    errors > 0 || warnings > 0 ? 'Run miniprogram doctor --json and inspect the reported checks.' : undefined,
+  );
+}
+
+function check(
+  id: string,
+  label: string,
+  severity: DiagnosticSeverity,
+  summary: string,
+  detail?: string,
+  fix?: string,
+): DiagnosticCheck {
+  return { id, label, severity, summary, detail, fix };
+}
+
+function summarizeChecks(checks: readonly DiagnosticCheck[]): DiagnosticSummary {
+  return {
+    ok: checks.filter((item) => item.severity === 'ok').length,
+    warning: checks.filter((item) => item.severity === 'warning').length,
+    error: checks.filter((item) => item.severity === 'error').length,
+  };
+}
+
+function titleForScope(scope: DiagnosticScope): string {
+  switch (scope) {
+    case 'miniProgram':
+      return 'MiniProgram mini-program diagnostics';
+    case 'hostApp':
+      return 'MiniProgram host app diagnostics';
+    case 'cloudDelivery':
+      return 'MiniProgram cloud delivery diagnostics';
+    default:
+      return 'MiniProgram workspace diagnostics';
+  }
+}
+
+async function detectWorkspaceType(workspacePath: string): Promise<string> {
+  if (await exists(path.join(workspacePath, 'manifest.json'))) {
+    return 'mini_program';
+  }
+  if (await exists(path.join(workspacePath, 'pubspec.yaml'))) {
+    return 'host_app';
+  }
+  return 'unknown';
+}
+
+async function readManifest(workspacePath: string): Promise<ManifestInfo> {
+  const manifestPath = path.join(workspacePath, 'manifest.json');
+  try {
+    const raw = await fs.readFile(manifestPath, 'utf8');
+    const decoded = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      exists: true,
+      path: manifestPath,
+      id: asString(decoded.id),
+      version: asString(decoded.version),
+      entry: asString(decoded.entry),
+    };
+  } catch (error) {
+    return {
+      exists: false,
+      path: manifestPath,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readText(filePath: string): Promise<string> {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+async function fileContains(filePath: string, pattern: string): Promise<boolean> {
+  return (await readText(filePath)).includes(pattern);
+}
+
+async function countJsonFiles(directoryPath: string): Promise<number> {
+  try {
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    return entries.filter((entry) => entry.isFile() && entry.name.endsWith('.json')).length;
+  } catch {
+    return 0;
+  }
+}
+
+async function dartFilesContain(workspacePath: string, pattern: string): Promise<boolean> {
+  const libPath = path.join(workspacePath, 'lib');
+  async function visit(directoryPath: string, depth: number): Promise<boolean> {
+    if (depth > 8) {
+      return false;
+    }
+    let entries;
+    try {
+      entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(directoryPath, entry.name);
+      if (entry.isDirectory()) {
+        if (await visit(entryPath, depth + 1)) {
+          return true;
+        }
+      } else if (entry.isFile() && entry.name.endsWith('.dart')) {
+        if ((await readText(entryPath)).includes(pattern)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  return visit(libPath, 0);
+}

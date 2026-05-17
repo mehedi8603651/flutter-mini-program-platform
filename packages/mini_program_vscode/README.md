@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.4.vsix
+code --install-extension mini-program-tools-0.1.5.vsix
 ```
 
 ## Features
@@ -54,6 +54,10 @@ code --install-extension mini-program-tools-0.1.4.vsix
   - `MiniProgram: Create Partner Package`
   - `MiniProgram: Validate Partner Package`
   - `MiniProgram: Open Partner Package`
+  - `MiniProgram: Diagnose Workspace`
+  - `MiniProgram: Diagnose MiniProgram`
+  - `MiniProgram: Diagnose Host App`
+  - `MiniProgram: Diagnose Cloud Delivery`
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
@@ -95,6 +99,19 @@ Mini-program publishers can create the host handoff file from VS Code:
 The host developer then runs `MiniProgram: Import Host Endpoint` and selects the
 partner package. Partner packages contain an access key, so treat them as secret
 files and do not commit them.
+
+## Diagnostics
+
+Use `MiniProgram: Diagnose Workspace` for local checks that are safe to run often.
+It combines workflow status, `miniprogram doctor --json`, and lightweight project
+file checks. Use the focused commands when debugging a specific area:
+
+- `MiniProgram: Diagnose MiniProgram`
+- `MiniProgram: Diagnose Host App`
+- `MiniProgram: Diagnose Cloud Delivery`
+
+Cloud delivery diagnostics are manual and may call remote AWS/backend status.
+Diagnostic output includes fix suggestions and redacts MiniProgram access keys.
 
 ## Secret handling
 
