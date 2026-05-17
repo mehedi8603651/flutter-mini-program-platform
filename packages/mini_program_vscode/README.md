@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.5.vsix
+code --install-extension mini-program-tools-0.1.6.vsix
 ```
 
 ## Features
@@ -58,6 +58,12 @@ code --install-extension mini-program-tools-0.1.5.vsix
   - `MiniProgram: Diagnose MiniProgram`
   - `MiniProgram: Diagnose Host App`
   - `MiniProgram: Diagnose Cloud Delivery`
+  - `MiniProgram: Setup New MiniProgram`
+  - `MiniProgram: Publish MiniProgram to AWS`
+  - `MiniProgram: Prepare Partner Handoff`
+  - `MiniProgram: Setup Host App`
+  - `MiniProgram: Add MiniProgram to Host`
+  - `MiniProgram: Run Host Smoke Test`
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
@@ -112,6 +118,24 @@ file checks. Use the focused commands when debugging a specific area:
 
 Cloud delivery diagnostics are manual and may call remote AWS/backend status.
 Diagnostic output includes fix suggestions and redacts MiniProgram access keys.
+
+## Guided workflows
+
+Guided workflows run the common commands in the right order and stop when a step
+fails:
+
+- `MiniProgram: Setup New MiniProgram`: create, build, and validate a new
+  mini-program.
+- `MiniProgram: Publish MiniProgram to AWS`: build, validate, publish, and run
+  cloud diagnostics.
+- `MiniProgram: Prepare Partner Handoff`: build, validate, publish, create an
+  access key, create a `.partner.json`, and validate it.
+- `MiniProgram: Setup Host App`: run embed init, optionally configure cloud, and
+  diagnose the host.
+- `MiniProgram: Add MiniProgram to Host`: import a partner package or add an
+  endpoint manually, then diagnose the host.
+- `MiniProgram: Run Host Smoke Test`: diagnose the host and start a host run
+  terminal.
 
 ## Secret handling
 

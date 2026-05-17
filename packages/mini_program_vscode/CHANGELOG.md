@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6
+
+- Add one-click guided workflows for new mini-program setup, AWS publish,
+  partner handoff, host setup, host endpoint add/import, and host smoke tests.
+- Guided workflows run existing CLI commands in sequence and stop on the first
+  failed step.
+- Add tests for guided workflow definitions and ordering.
+
 ## 0.1.5
 
 - Add diagnostics commands for workspace, mini-program, host app, and cloud

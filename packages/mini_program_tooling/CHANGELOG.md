@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.10
+
+- refresh generated host adapter README guidance with an optional typed
+  `MiniProgramInfo`/`MiniPrograms` registry pattern for host apps that open
+  many mini-programs
+- document why keeping `appId` and title together helps avoid repeated string
+  typos across buttons, menus, analytics, and tests
+
 ## 0.3.9
 
 - add `miniprogram workflow status` with local-first workspace detection for

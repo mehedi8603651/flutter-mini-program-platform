@@ -152,6 +152,13 @@ void main() {
       expect(readme, contains('miniprogram partner package'));
       expect(readme, contains('miniprogram host endpoint import'));
       expect(readme, contains('miniprogram host endpoint add'));
+      expect(readme, contains('class MiniProgramInfo'));
+      expect(readme, contains('class MiniPrograms'));
+      expect(
+        readme,
+        contains('It keeps appId and title together, which avoids typo bugs'),
+      );
+      expect(readme, contains('MiniPrograms.coupon.appId'));
       expect(readme, contains('buildMiniProgramEndpoints()'));
       expect(readme, contains('ProviderScope('));
       expect(readme, contains('MultiProvider('));

@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -232,6 +232,36 @@
         "icon": "$(cloud)"
       },
       {
+        "command": "miniProgramTools.setupNewMiniProgram",
+        "title": "MiniProgram: Setup New MiniProgram",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "miniProgramTools.publishMiniProgramToAws",
+        "title": "MiniProgram: Publish MiniProgram to AWS",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "miniProgramTools.preparePartnerHandoff",
+        "title": "MiniProgram: Prepare Partner Handoff",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "miniProgramTools.setupHostApp",
+        "title": "MiniProgram: Setup Host App",
+        "icon": "$(package)"
+      },
+      {
+        "command": "miniProgramTools.addMiniProgramToHost",
+        "title": "MiniProgram: Add MiniProgram to Host",
+        "icon": "$(add)"
+      },
+      {
+        "command": "miniProgramTools.runHostSmokeTest",
+        "title": "MiniProgram: Run Host Smoke Test",
+        "icon": "$(run)"
+      },
+      {
         "command": "miniProgramTools.openOutput",
         "title": "MiniProgram: Open Output",
         "icon": "$(output)"
@@ -250,7 +280,7 @@
           "group": "navigation@2"
         },
         {
-          "command": "miniProgramTools.createMiniProgram",
+          "command": "miniProgramTools.setupNewMiniProgram",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@3"
         },
@@ -260,12 +290,12 @@
           "group": "navigation@4"
         },
         {
-          "command": "miniProgramTools.importHostEndpoint",
+          "command": "miniProgramTools.addMiniProgramToHost",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@5"
         },
         {
-          "command": "miniProgramTools.runHostApp",
+          "command": "miniProgramTools.runHostSmokeTest",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@6"
         },
@@ -290,7 +320,7 @@
           "group": "navigation@10"
         },
         {
-          "command": "miniProgramTools.createPartnerPackage",
+          "command": "miniProgramTools.preparePartnerHandoff",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@11"
         }

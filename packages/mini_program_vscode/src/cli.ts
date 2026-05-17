@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { spawn } from 'child_process';
 
 export const defaultCliPath = 'miniprogram';
@@ -545,17 +547,17 @@ export function runCliStreaming(
           }, options.timeoutMs)
         : undefined;
 
-    child.stdout?.on('data', (data: Buffer) => {
+    child.stdout?.on('data', (data: { toString(): string }) => {
       const chunk = data.toString();
       stdout += chunk;
       options.onStdout?.(chunk);
     });
-    child.stderr?.on('data', (data: Buffer) => {
+    child.stderr?.on('data', (data: { toString(): string }) => {
       const chunk = data.toString();
       stderr += chunk;
       options.onStderr?.(chunk);
     });
-    child.on('error', (error) => {
+    child.on('error', (error: Error) => {
       if (settled) {
         return;
       }
@@ -565,7 +567,7 @@ export function runCliStreaming(
       }
       reject(error);
     });
-    child.on('close', (exitCode) => {
+    child.on('close', (exitCode: number | null) => {
       if (settled) {
         return;
       }

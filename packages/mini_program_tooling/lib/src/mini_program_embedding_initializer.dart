@@ -658,7 +658,54 @@ const AppMiniProgramLauncher(
 )
 ```
 
-## 4. Optional multi-publisher endpoints
+## 4. Optional registry for many mini-programs
+
+For one or two buttons, inline strings are easiest to read. When one host app
+opens many mini-programs, keep each `appId` and display title together in a
+small registry so buttons, menus, analytics, and tests do not repeat strings:
+
+```dart
+// Optional: use this only when the host opens many mini-programs.
+// It keeps appId and title together, which avoids typo bugs across buttons,
+// menus, analytics events, and tests.
+class MiniProgramInfo {
+  const MiniProgramInfo({
+    required this.appId,
+    required this.title,
+  });
+
+  final String appId;
+  final String title;
+}
+
+// Constants-only namespace. The private constructor prevents MiniPrograms()
+// from being created accidentally.
+class MiniPrograms {
+  const MiniPrograms._();
+
+  static const coupon = MiniProgramInfo(
+    appId: 'coupon',
+    title: 'Coupon',
+  );
+
+  static const profile = MiniProgramInfo(
+    appId: 'profile',
+    title: 'Profile',
+  );
+}
+```
+
+Then use the registry from ordinary host UI code:
+
+```dart
+openAppMiniProgram(
+  context,
+  appId: MiniPrograms.coupon.appId,
+  title: MiniPrograms.coupon.title,
+);
+```
+
+## 5. Optional multi-publisher endpoints
 
 If different partners publish mini-programs to different backends, keep app UI
 appId-only and register each endpoint once in runtime config:
