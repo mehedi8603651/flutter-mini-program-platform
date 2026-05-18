@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.7.vsix
+code --install-extension mini-program-tools-0.1.8.vsix
 ```
 
 ## Features
@@ -68,6 +68,8 @@ code --install-extension mini-program-tools-0.1.7.vsix
   - `MiniProgram: Add MiniProgram to Registry`
   - `MiniProgram: Copy Demo Host Button`
   - `MiniProgram: Copy Workflow Commands`
+  - `MiniProgram: Check Host Endpoint Remote`
+  - `MiniProgram: Copy Cleanup Commands`
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
@@ -139,6 +141,11 @@ The extension does not edit `main.dart`; paste copied snippets into your
 host-owned UI so Provider, Riverpod, GetX, GoRouter, and custom app structures
 stay under your control.
 
+Use `MiniProgram: Check Host Endpoint Remote` from a host app to pick one
+configured endpoint appId and inspect cloud health, published app metadata, and
+active access-key status. This is useful because normal host workspace status
+does not assume which appId you want to inspect remotely.
+
 ## Diagnostics
 
 Use `MiniProgram: Diagnose Workspace` for local checks that are safe to run often.
@@ -185,3 +192,23 @@ MiniProgram access keys protect mini-program delivery access only. They are
 revocable partner/app credentials, not user-auth tokens or server secrets. Use
 JWT/OAuth/session tokens through host-owned `callSecureApi` logic for protected
 user APIs.
+
+## Troubleshooting notes
+
+Flutter may print an advisory warning like
+`Failed to decode advisories for shared_preferences_android` when using a pub
+mirror. If the command also says `Got dependencies!`, dependency resolution
+completed and the warning is mirror metadata noise.
+
+On Windows, release APK builds can print Kotlin daemon cache warnings after a
+successful `Built build\app\outputs\flutter-apk\app-release.apk` line. If the
+APK exists, the build succeeded. If the warning keeps returning, run:
+
+```powershell
+flutter clean
+flutter pub get
+cd android
+.\gradlew --stop
+cd ..
+flutter build apk --release
+```

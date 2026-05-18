@@ -12,6 +12,7 @@ import {
   buildBackendStatusArgs,
   buildBackendStopArgs,
   buildBuildArgs,
+  buildCloudAppInfoArgs,
   buildCloudDeployArgs,
   buildCloudOutputsArgs,
   buildCloudStatusArgs,
@@ -51,6 +52,7 @@ import {
 import {
   MiniProgramRegistryEntry,
   buildDemoHostButtonSnippet,
+  buildCleanupCommandTemplate,
   buildHostCommandTemplate,
   buildPublisherCommandTemplate,
   buildRegistryFile,
@@ -261,6 +263,12 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.copyWorkflowCommands', () =>
       copyWorkflowCommands(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.checkHostEndpointRemote', () =>
+      checkHostEndpointRemote(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.copyCleanupCommands', () =>
+      copyCleanupCommands(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.openOutput', () =>
       output.show(true),
@@ -1904,6 +1912,149 @@ async function copyWorkflowCommands(output: vscode.OutputChannel): Promise<void>
   vscode.window.showInformationMessage('MiniProgram workflow commands copied.');
 }
 
+async function checkHostEndpointRemote(output: vscode.OutputChannel): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const appId = await chooseHostEndpointAppId(projectRoot);
+  if (!appId) {
+    return;
+  }
+  const envName = await promptOptionalEnvName();
+  if (envName === undefined) {
+    return;
+  }
+
+  const cliPath = configuredCliPath();
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(`== MiniProgram: Check Host Endpoint Remote ==`);
+  output.appendLine(`Endpoint appId: ${appId}`);
+
+  const steps = [
+    {
+      label: 'Cloud Status',
+      args: buildCloudStatusArgs({
+        envName,
+        rootPath: projectRoot,
+        json: true,
+      }),
+      allowNonZeroExit: true,
+    },
+    {
+      label: 'Cloud App Info',
+      args: buildCloudAppInfoArgs({
+        appId,
+        envName,
+        rootPath: projectRoot,
+      }),
+      allowNonZeroExit: true,
+    },
+    {
+      label: 'Access Key List',
+      args: buildAccessKeyListArgs({
+        appId,
+        envName,
+        json: true,
+      }),
+      allowNonZeroExit: true,
+    },
+  ];
+
+  let failed = false;
+  for (const step of steps) {
+    output.appendLine('');
+    output.appendLine(`-- ${step.label}`);
+    output.appendLine(`> ${formatRedactedCommandLine(cliPath, step.args)}`);
+    try {
+      const result = await runCli(cliPath, step.args, {
+        cwd: projectRoot,
+        timeoutMs: 120000,
+      });
+      if (result.stdout.trim()) {
+        output.appendLine(redactSecrets(result.stdout.trim()));
+      }
+      if (result.stderr.trim()) {
+        output.appendLine(redactSecrets(result.stderr.trim()));
+      }
+      if (result.exitCode !== 0) {
+        failed = true;
+        output.appendLine(`${step.label} exited with code ${result.exitCode}.`);
+      }
+    } catch (error) {
+      failed = true;
+      output.appendLine(`${step.label} failed: ${errorMessage(error)}`);
+    }
+  }
+
+  if (failed) {
+    vscode.window.showWarningMessage(
+      `Remote endpoint check completed with warnings for ${appId}.`,
+    );
+  } else {
+    vscode.window.showInformationMessage(
+      `Remote endpoint check completed for ${appId}.`,
+    );
+  }
+}
+
+async function copyCleanupCommands(output: vscode.OutputChannel): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const appId = fs.existsSync(path.join(workspacePath, 'pubspec.yaml'))
+    ? await chooseHostEndpointAppId(workspacePath)
+    : await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const envName = await promptOptionalEnvName();
+  if (envName === undefined) {
+    return;
+  }
+  const keyId = await vscode.window.showInputBox({
+    prompt: 'Optional access key id to revoke',
+    placeHolder: 'Leave blank to keep <KEY_ID> placeholder',
+    ignoreFocusOut: true,
+  });
+  if (keyId === undefined) {
+    return;
+  }
+  const includeWorkspaceDelete = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Include local workspace delete',
+        description: 'Adds Remove-Item for the current workspace',
+        value: true,
+      },
+      {
+        label: 'Do not include local workspace delete',
+        description: 'Only copy cloud/access-key cleanup commands',
+        value: false,
+      },
+    ],
+    { title: 'Cleanup command scope', ignoreFocusOut: true },
+  );
+  if (!includeWorkspaceDelete) {
+    return;
+  }
+
+  const commands = buildCleanupCommandTemplate({
+    appId,
+    envName,
+    keyId: keyId.trim() || undefined,
+    workspacePath: includeWorkspaceDelete.value ? workspacePath : undefined,
+  });
+  await vscode.env.clipboard.writeText(commands);
+  output.show(true);
+  output.appendLine('');
+  output.appendLine('Copied cleanup commands:');
+  output.appendLine(commands);
+  vscode.window.showInformationMessage('MiniProgram cleanup commands copied.');
+}
+
 async function previewMiniProgram(): Promise<void> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -2284,6 +2435,27 @@ async function chooseAppIdForRegistry(
     validateInput: validateAppId,
   });
   return appId?.trim() || undefined;
+}
+
+async function chooseHostEndpointAppId(
+  projectRoot: string,
+): Promise<string | undefined> {
+  const endpointAppIds = await readHostEndpointAppIds(projectRoot);
+  if (endpointAppIds.length === 0) {
+    vscode.window.showWarningMessage(
+      'No host endpoints found. Import or add an endpoint first.',
+    );
+    return undefined;
+  }
+  const selected = await vscode.window.showQuickPick(
+    endpointAppIds.map((appId) => ({
+      label: appId,
+      description: 'Configured host endpoint',
+      appId,
+    })),
+    { title: 'Choose host endpoint appId', ignoreFocusOut: true },
+  );
+  return selected?.appId;
 }
 
 async function chooseHostMiniProgramEntry(

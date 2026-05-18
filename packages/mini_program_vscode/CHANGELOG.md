@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.8
+
+- Add `MiniProgram: Check Host Endpoint Remote` so host developers can pick a
+  configured endpoint appId and inspect cloud/app/access-key status from VS Code.
+- Add `MiniProgram: Copy Cleanup Commands` for test/E2E app cleanup and access
+  key revocation command snippets.
+- Improve host status and diagnostics wording when endpoint routing is active,
+  making clear the default backend URL is only a fallback.
+- Document Flutter pub mirror advisory warnings and Kotlin daemon cache warnings
+  as troubleshooting notes.
+
 ## 0.1.7
 
 - Add host registry helpers for generating `lib/mini_program/mini_program_registry.dart`

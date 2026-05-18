@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildDemoHostButtonSnippet,
+  buildCleanupCommandTemplate,
   buildHostCommandTemplate,
   buildPublisherCommandTemplate,
   buildRegistryFile,
@@ -98,4 +99,17 @@ test('builds copyable workflow command templates', () => {
   });
   assert.match(host, /embed init --project-root "D:\\host_app"/);
   assert.match(host, /flutter build apk --release/);
+});
+
+test('builds cleanup command templates', () => {
+  const commands = buildCleanupCommandTemplate({
+    appId: 'coupon_demo',
+    envName: 'my-aws-prod',
+    keyId: 'host-a',
+    workspacePath: 'D:\\work\\coupon_demo',
+  });
+  assert.match(commands, /cloud app delete coupon_demo --env my-aws-prod/);
+  assert.match(commands, /access-key revoke coupon_demo --key-id host-a/);
+  assert.match(commands, /--yes/);
+  assert.match(commands, /Remove-Item -Recurse -Force "D:\\work\\coupon_demo"/);
 });

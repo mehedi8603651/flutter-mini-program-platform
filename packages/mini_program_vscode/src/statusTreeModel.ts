@@ -77,14 +77,21 @@ export function buildStatusTreeSections(
   }
 
   if (asBoolean(hostApp.detected)) {
+    const endpointCount = asNumber(hostApp.endpointCount);
     sections.push({
       label: 'Host app',
       icon: 'device-mobile',
       rows: compactRows([
         row('Runtime setup', yesNo(asBoolean(hostApp.runtimeSetupExists))),
         row('Endpoint map', yesNo(asBoolean(hostApp.endpointMapExists))),
-        row('Endpoint count', String(asNumber(hostApp.endpointCount))),
+        row('Endpoint count', String(endpointCount)),
         row('Endpoint app IDs', asStringList(hostApp.endpointAppIds).join(', ')),
+        row(
+          'Routing',
+          endpointCount > 0
+            ? 'endpoint map active'
+            : 'default backend fallback',
+        ),
       ]),
     });
   }
@@ -102,7 +109,10 @@ export function buildStatusTreeSections(
   });
 
   sections.push({
-    label: 'Backend',
+    label:
+      asBoolean(hostApp.detected) && asNumber(hostApp.endpointCount) > 0
+        ? 'Backend fallback'
+        : 'Backend',
     icon: 'server',
     rows: compactRows([
       row('Configured', yesNo(asBoolean(backend.configured))),

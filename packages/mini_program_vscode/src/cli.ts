@@ -123,6 +123,12 @@ export interface CloudOutputsArgsOptions {
   readonly format?: 'text' | 'dart-define';
 }
 
+export interface CloudAppInfoArgsOptions {
+  readonly appId: string;
+  readonly envName?: string;
+  readonly rootPath?: string;
+}
+
 export interface BackendInitArgsOptions {
   readonly backendRoot?: string;
   readonly force?: boolean;
@@ -389,6 +395,14 @@ export function buildCloudOutputsArgs(options: CloudOutputsArgsOptions = {}): st
   if (options.format?.trim()) {
     args.push('--format', options.format);
   }
+  withOptionalEnv(args, options.envName);
+  return withRootPath(args, options.rootPath);
+}
+
+export function buildCloudAppInfoArgs(
+  options: CloudAppInfoArgsOptions,
+): string[] {
+  const args = ['cloud', 'app', 'info', options.appId];
   withOptionalEnv(args, options.envName);
   return withRootPath(args, options.rootPath);
 }

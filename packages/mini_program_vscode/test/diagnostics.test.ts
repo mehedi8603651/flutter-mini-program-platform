@@ -158,6 +158,8 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
     const text = formatDiagnosticsReport(report);
     assert.match(text, /not opened from host UI: profile/);
     assert.match(text, /MiniProgram: Copy Demo Host Button/);
+    assert.match(text, /Endpoint routing is active/);
+    assert.match(text, /default backend URL is only a fallback/);
     assert.match(text, /delivery access only/);
     assert.doesNotMatch(text, /mpk_live_secret/);
   } finally {

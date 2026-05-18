@@ -488,12 +488,6 @@ MiniProgramConfig buildMiniProgramConfig({
     Capability.analytics,
     if (openNativeRoute != null) Capability.nativeNavigation,
   };
-  final backendApiBaseUri = LocalMiniProgramBackendDefaults.resolveBaseUri(
-    configuredBaseUrl: _configuredBackendBaseUrl,
-    configuredHost: _configuredBackendHost,
-    configuredPort: _configuredBackendPort,
-  );
-  _logResolvedBackendBaseUri(backendApiBaseUri);
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,
     sdkVersion: _sdkVersion,
@@ -502,21 +496,42 @@ MiniProgramConfig buildMiniProgramConfig({
     platform: _platformName(),
     locale: locale.toLanguageTag(),
   );
+  final source = endpoints.isEmpty
+      ? _buildDefaultHttpSource(deliveryContext)
+      : _buildEndpointRoutingSource(endpoints, deliveryContext);
 
   return MiniProgramConfig(
     sdkVersion: _sdkVersion,
-    source: endpoints.isEmpty
-        ? HttpMiniProgramSource.fromDeliveryContext(
-            apiBaseUri: backendApiBaseUri,
-            deliveryContext: deliveryContext,
-          )
-        : EndpointRoutingMiniProgramSource(
-            endpoints: endpoints,
-            deliveryContext: deliveryContext,
-          ),
+    source: source,
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     cacheBundle: MiniProgramCacheBundle.inMemory(),
+  );
+}
+
+MiniProgramSource _buildDefaultHttpSource(
+  MiniProgramDeliveryContext deliveryContext,
+) {
+  final backendApiBaseUri = LocalMiniProgramBackendDefaults.resolveBaseUri(
+    configuredBaseUrl: _configuredBackendBaseUrl,
+    configuredHost: _configuredBackendHost,
+    configuredPort: _configuredBackendPort,
+  );
+  _logResolvedBackendBaseUri(backendApiBaseUri);
+  return HttpMiniProgramSource.fromDeliveryContext(
+    apiBaseUri: backendApiBaseUri,
+    deliveryContext: deliveryContext,
+  );
+}
+
+MiniProgramSource _buildEndpointRoutingSource(
+  Map<String, MiniProgramEndpoint> endpoints,
+  MiniProgramDeliveryContext deliveryContext,
+) {
+  _logEndpointRouting(endpoints);
+  return EndpointRoutingMiniProgramSource(
+    endpoints: endpoints,
+    deliveryContext: deliveryContext,
   );
 }
 
@@ -524,6 +539,14 @@ void _logResolvedBackendBaseUri(Uri backendApiBaseUri) {
   debugPrint(
     '[mini_program][runtime] Backend base URL: \$backendApiBaseUri '
     '(source: \${_backendResolutionSource()})',
+  );
+}
+
+void _logEndpointRouting(Map<String, MiniProgramEndpoint> endpoints) {
+  final appIds = endpoints.keys.toList()..sort();
+  debugPrint(
+    '[mini_program][runtime] Endpoint routing enabled for '
+    '\${appIds.length} mini-program endpoint(s): \${appIds.join(', ')}',
   );
 }
 

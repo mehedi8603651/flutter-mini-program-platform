@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -287,6 +287,16 @@
         "icon": "$(copy)"
       },
       {
+        "command": "miniProgramTools.checkHostEndpointRemote",
+        "title": "MiniProgram: Check Host Endpoint Remote",
+        "icon": "$(cloud)"
+      },
+      {
+        "command": "miniProgramTools.copyCleanupCommands",
+        "title": "MiniProgram: Copy Cleanup Commands",
+        "icon": "$(trash)"
+      },
+      {
         "command": "miniProgramTools.openOutput",
         "title": "MiniProgram: Open Output",
         "icon": "$(output)"
@@ -335,29 +345,39 @@
           "group": "navigation@8"
         },
         {
-          "command": "miniProgramTools.cloudStatus",
+          "command": "miniProgramTools.checkHostEndpointRemote",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@9"
         },
         {
-          "command": "miniProgramTools.backendStatus",
+          "command": "miniProgramTools.copyCleanupCommands",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@10"
         },
         {
-          "command": "miniProgramTools.createAccessKey",
+          "command": "miniProgramTools.cloudStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@11"
         },
         {
-          "command": "miniProgramTools.listAccessKeys",
+          "command": "miniProgramTools.backendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12"
         },
         {
-          "command": "miniProgramTools.preparePartnerHandoff",
+          "command": "miniProgramTools.createAccessKey",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@13"
+        },
+        {
+          "command": "miniProgramTools.listAccessKeys",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@14"
+        },
+        {
+          "command": "miniProgramTools.preparePartnerHandoff",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@15"
         }
       ]
     }

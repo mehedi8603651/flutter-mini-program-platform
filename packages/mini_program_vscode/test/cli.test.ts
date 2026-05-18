@@ -11,6 +11,7 @@ import {
   buildBackendStopArgs,
   buildBuildArgs,
   buildCloudDeployArgs,
+  buildCloudAppInfoArgs,
   buildCloudOutputsArgs,
   buildCloudStatusArgs,
   buildCreateArgs,
@@ -317,6 +318,23 @@ test('builds environment and cloud command arguments', () => {
       'outputs',
       '--format',
       'dart-define',
+      '--env',
+      'my-aws-prod',
+      '--root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildCloudAppInfoArgs({
+      appId: 'coupon_demo',
+      envName: 'my-aws-prod',
+      rootPath: 'D:/work/coupon_demo',
+    }),
+    [
+      'cloud',
+      'app',
+      'info',
+      'coupon_demo',
       '--env',
       'my-aws-prod',
       '--root',

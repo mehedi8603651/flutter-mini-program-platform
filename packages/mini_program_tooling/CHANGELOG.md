@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.11
+
+- make generated host runtime setup log endpoint routing when
+  `buildMiniProgramConfig(endpoints: ...)` is used, instead of always printing
+  the local fallback backend URL
+- keep endpoint routing logs secret-safe by reporting only endpoint appIds and
+  counts, not MiniProgram access-key values
+
 ## 0.3.10
 
 - refresh generated host adapter README guidance with an optional typed

@@ -362,6 +362,20 @@ async function buildHostAppChecks(
       endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
     ),
     check(
+      'host_app.endpoint_routing',
+      'Endpoint routing',
+      endpointMapExists && endpointCount > 0 ? 'ok' : 'warning',
+      endpointMapExists && endpointCount > 0
+        ? 'Endpoint routing is active; configured appIds use their endpoint map entries.'
+        : 'Endpoint routing is not active, so launches use the default backend fallback.',
+      endpointMapExists && endpointCount > 0
+        ? 'The default backend URL is only a fallback when no endpoint map is configured.'
+        : undefined,
+      endpointMapExists && endpointCount > 0
+        ? undefined
+        : 'Run MiniProgram: Import Host Endpoint or MiniProgram: Add Host Endpoint.',
+    ),
+    check(
       'host_app.endpoint_launch_usage',
       'Endpoint launch usage',
       unopenedEndpointAppIds.length === 0 ? 'ok' : 'warning',

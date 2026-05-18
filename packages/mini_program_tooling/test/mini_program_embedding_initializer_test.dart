@@ -84,6 +84,8 @@ void main() {
           "debugPrint(\n    '[mini_program][runtime] Backend base URL: \$backendApiBaseUri '",
         ),
       );
+      expect(runtimeSetup, contains('Endpoint routing enabled for'));
+      expect(runtimeSetup, contains('_buildEndpointRoutingSource'));
       expect(
         result.createdPaths,
         isNot(

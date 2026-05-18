@@ -172,6 +172,25 @@ export function buildHostCommandTemplate(options: {
   ].join('\n');
 }
 
+export function buildCleanupCommandTemplate(options: {
+  readonly appId: string;
+  readonly envName?: string;
+  readonly keyId?: string;
+  readonly workspacePath?: string;
+}): string {
+  const envName = options.envName || 'my-aws-prod';
+  const keyId = options.keyId?.trim() || '<KEY_ID>';
+  const commands = [
+    `miniprogram cloud app delete ${options.appId} --env ${envName}`,
+    `miniprogram access-key revoke ${options.appId} --key-id ${keyId} --env ${envName}`,
+    `miniprogram cloud app delete ${options.appId} --env ${envName} --yes`,
+  ];
+  if (options.workspacePath?.trim()) {
+    commands.push(`Remove-Item -Recurse -Force "${options.workspacePath.trim()}"`);
+  }
+  return commands.join('\n');
+}
+
 function parseEndpointAppIdsFromGeneratedJson(source: string): string[] {
   const match = /BEGIN MINI_PROGRAM_ENDPOINTS_JSON\s*[\r\n]+\/\/\s*(\{.*?\})\s*[\r\n]+\/\/\s*END MINI_PROGRAM_ENDPOINTS_JSON/s.exec(source);
   if (!match) {
