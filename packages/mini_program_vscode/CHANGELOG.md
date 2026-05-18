@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.7
+
+- Add host registry helpers for generating `lib/mini_program/mini_program_registry.dart`
+  and adding mini-program entries from configured endpoints.
+- Add `MiniProgram: Copy Demo Host Button` and `MiniProgram: Copy Workflow
+  Commands` for faster host app setup and repeatable publish/install/test flows.
+- Keep demo button assistance copy-only so the extension never edits
+  host-owned `main.dart`.
+- Extend host diagnostics to warn when an endpoint is configured but no likely
+  host UI launcher opens that appId.
+- Clarify that MiniProgram access keys protect delivery access and are not
+  user-auth or server secrets.
+
 ## 0.1.6
 
 - Add one-click guided workflows for new mini-program setup, AWS publish,

@@ -108,6 +108,63 @@ test('host app missing endpoint, scope, and internet permission suggests fixes',
   }
 });
 
+test('host app warns when endpoint has no likely launcher usage', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-host-launcher-');
+  try {
+    await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
+    await writeFile(
+      path.join(workspacePath, 'pubspec.yaml'),
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.0\n',
+    );
+    await writeFile(
+      path.join(workspacePath, 'lib', 'main.dart'),
+      "import 'package:mini_program_sdk/mini_program_sdk.dart';\nvoid main() { MiniProgramScope; }\n",
+    );
+    await writeFile(
+      path.join(workspacePath, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      `// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
+// {"profile":{"apiBaseUri":"https://api.example.com/api","accessKey":"mpk_live_secret"}}
+// END MINI_PROGRAM_ENDPOINTS_JSON
+`,
+    );
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'hostApp',
+      workflowReport: {
+        schemaVersion: 1,
+        command: 'workflow status',
+        workspace: { type: 'host_app', path: workspacePath },
+        hostApp: {
+          detected: true,
+          runtimeSetupExists: true,
+          launcherExists: true,
+          endpointMapExists: true,
+          endpointCount: 1,
+          endpoints: [
+            {
+              appId: 'profile',
+              apiBaseUri: 'https://api.example.com/api',
+              hasAccessKey: true,
+            },
+          ],
+        },
+        environment: { configured: false },
+        backend: { configured: false },
+        remote: { checked: false },
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /not opened from host UI: profile/);
+    assert.match(text, /MiniProgram: Copy Demo Host Button/);
+    assert.match(text, /delivery access only/);
+    assert.doesNotMatch(text, /mpk_live_secret/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('remote diagnostics surfaces cloud and access-key errors', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-cloud-');
   try {

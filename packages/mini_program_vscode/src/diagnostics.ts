@@ -9,6 +9,10 @@ import {
   asString,
   asStringList,
 } from './workflowStatus';
+import {
+  endpointLaunchUsageMissing,
+  parseEndpointAppIds,
+} from './hostIntegration';
 
 export type DiagnosticSeverity = 'ok' | 'warning' | 'error';
 export type DiagnosticScope =
@@ -283,6 +287,17 @@ async function buildHostAppChecks(
     .map((entry) => asRecord(entry))
     .filter((entry) => !asString(entry.apiBaseUri) || !asBoolean(entry.hasAccessKey))
     .map((entry) => asString(entry.appId, 'unknown'));
+  const endpointAppIdsFromReport = endpoints
+    .map((entry) => asString(asRecord(entry).appId))
+    .filter((appId): appId is string => Boolean(appId));
+  const endpointAppIds = endpointAppIdsFromReport.length > 0
+    ? endpointAppIdsFromReport
+    : endpointMapExists
+      ? parseEndpointAppIds(await readText(endpointPath))
+      : [];
+  const unopenedEndpointAppIds = endpointAppIds.length > 0
+    ? endpointLaunchUsageMissing(await readDartSources(workspacePath), endpointAppIds)
+    : [];
   const hasScope = await dartFilesContain(workspacePath, 'MiniProgramScope');
   const internetPermission = await fileContains(
     path.join(workspacePath, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
@@ -345,6 +360,24 @@ async function buildHostAppChecks(
         : `Incomplete endpoint entries: ${endpointIssues.join(', ')}.`,
       undefined,
       endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
+    ),
+    check(
+      'host_app.endpoint_launch_usage',
+      'Endpoint launch usage',
+      unopenedEndpointAppIds.length === 0 ? 'ok' : 'warning',
+      unopenedEndpointAppIds.length === 0
+        ? 'Every configured endpoint has a likely launcher usage.'
+        : `Endpoint(s) are configured but not opened from host UI: ${unopenedEndpointAppIds.join(', ')}.`,
+      undefined,
+      unopenedEndpointAppIds.length === 0
+        ? undefined
+        : 'Run MiniProgram: Copy Demo Host Button or add an openAppMiniProgram button/menu item.',
+    ),
+    check(
+      'host_app.access_key_security_model',
+      'Access-key security model',
+      'ok',
+      'MiniProgram access keys protect delivery access only; use JWT/OAuth/session tokens through callSecureApi for protected user APIs.',
     ),
     check(
       'host_app.scope',
@@ -595,30 +628,35 @@ async function countJsonFiles(directoryPath: string): Promise<number> {
 }
 
 async function dartFilesContain(workspacePath: string, pattern: string): Promise<boolean> {
+  return (await readDartSources(workspacePath)).some(({ source }) =>
+    source.includes(pattern),
+  );
+}
+
+async function readDartSources(
+  workspacePath: string,
+): Promise<Array<{ readonly path: string; readonly source: string }>> {
   const libPath = path.join(workspacePath, 'lib');
-  async function visit(directoryPath: string, depth: number): Promise<boolean> {
+  const sources: Array<{ readonly path: string; readonly source: string }> = [];
+  async function visit(directoryPath: string, depth: number): Promise<void> {
     if (depth > 8) {
-      return false;
+      return;
     }
     let entries;
     try {
       entries = await fs.readdir(directoryPath, { withFileTypes: true });
     } catch {
-      return false;
+      return;
     }
     for (const entry of entries) {
       const entryPath = path.join(directoryPath, entry.name);
       if (entry.isDirectory()) {
-        if (await visit(entryPath, depth + 1)) {
-          return true;
-        }
+        await visit(entryPath, depth + 1);
       } else if (entry.isFile() && entry.name.endsWith('.dart')) {
-        if ((await readText(entryPath)).includes(pattern)) {
-          return true;
-        }
+        sources.push({ path: entryPath, source: await readText(entryPath) });
       }
     }
-    return false;
   }
-  return visit(libPath, 0);
+  await visit(libPath, 0);
+  return sources;
 }

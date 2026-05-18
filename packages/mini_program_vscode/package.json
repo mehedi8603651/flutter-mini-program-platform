@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {
@@ -262,6 +262,31 @@
         "icon": "$(run)"
       },
       {
+        "command": "miniProgramTools.generateMiniProgramRegistry",
+        "title": "MiniProgram: Generate Host Registry",
+        "icon": "$(symbol-constant)"
+      },
+      {
+        "command": "miniProgramTools.addMiniProgramToRegistry",
+        "title": "MiniProgram: Add MiniProgram to Registry",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "miniProgramTools.copyDemoHostButton",
+        "title": "MiniProgram: Copy Demo Host Button",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "miniProgramTools.insertDemoHostButton",
+        "title": "MiniProgram: Copy Demo Host Button",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "miniProgramTools.copyWorkflowCommands",
+        "title": "MiniProgram: Copy Workflow Commands",
+        "icon": "$(copy)"
+      },
+      {
         "command": "miniProgramTools.openOutput",
         "title": "MiniProgram: Open Output",
         "icon": "$(output)"
@@ -300,29 +325,39 @@
           "group": "navigation@6"
         },
         {
-          "command": "miniProgramTools.cloudStatus",
+          "command": "miniProgramTools.copyDemoHostButton",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@7"
         },
         {
-          "command": "miniProgramTools.backendStatus",
+          "command": "miniProgramTools.copyWorkflowCommands",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@8"
         },
         {
-          "command": "miniProgramTools.createAccessKey",
+          "command": "miniProgramTools.cloudStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@9"
         },
         {
-          "command": "miniProgramTools.listAccessKeys",
+          "command": "miniProgramTools.backendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@10"
         },
         {
-          "command": "miniProgramTools.preparePartnerHandoff",
+          "command": "miniProgramTools.createAccessKey",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@11"
+        },
+        {
+          "command": "miniProgramTools.listAccessKeys",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12"
+        },
+        {
+          "command": "miniProgramTools.preparePartnerHandoff",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@13"
         }
       ]
     }

@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.6.vsix
+code --install-extension mini-program-tools-0.1.7.vsix
 ```
 
 ## Features
@@ -64,6 +64,10 @@ code --install-extension mini-program-tools-0.1.6.vsix
   - `MiniProgram: Setup Host App`
   - `MiniProgram: Add MiniProgram to Host`
   - `MiniProgram: Run Host Smoke Test`
+  - `MiniProgram: Generate Host Registry`
+  - `MiniProgram: Add MiniProgram to Registry`
+  - `MiniProgram: Copy Demo Host Button`
+  - `MiniProgram: Copy Workflow Commands`
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
@@ -106,6 +110,35 @@ The host developer then runs `MiniProgram: Import Host Endpoint` and selects the
 partner package. Partner packages contain an access key, so treat them as secret
 files and do not commit them.
 
+## Host registry and demo buttons
+
+Host apps with many mini-programs can generate
+`lib/mini_program/mini_program_registry.dart` from the endpoint map:
+
+- `MiniProgram: Generate Host Registry` creates or refreshes registry entries
+  for configured endpoint appIds.
+- `MiniProgram: Add MiniProgram to Registry` adds one typed entry with appId and
+  title kept together.
+- `MiniProgram: Copy Demo Host Button` copies a button snippet that calls
+  `openAppMiniProgram(...)` and includes the imports to add.
+
+The registry keeps button code, menus, analytics, and tests from repeating raw
+strings:
+
+```dart
+openAppMiniProgram(
+  context,
+  appId: MiniPrograms.profile.appId,
+  title: MiniPrograms.profile.title,
+);
+```
+
+Diagnostics also warn when `mini_program_endpoints.dart` contains an endpoint
+but no likely host UI launcher opens that appId.
+The extension does not edit `main.dart`; paste copied snippets into your
+host-owned UI so Provider, Riverpod, GetX, GoRouter, and custom app structures
+stay under your control.
+
 ## Diagnostics
 
 Use `MiniProgram: Diagnose Workspace` for local checks that are safe to run often.
@@ -147,3 +180,8 @@ newly generated key returned by the CLI so you can copy it into a partner
 package or host endpoint.
 Endpoint setup prompts stay open when you switch windows, so you can copy API
 URLs or access keys and paste them without restarting the command.
+
+MiniProgram access keys protect mini-program delivery access only. They are
+revocable partner/app credentials, not user-auth tokens or server secrets. Use
+JWT/OAuth/session tokens through host-owned `callSecureApi` logic for protected
+user APIs.

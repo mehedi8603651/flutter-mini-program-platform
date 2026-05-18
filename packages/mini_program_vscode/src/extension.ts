@@ -48,6 +48,18 @@ import {
   formatGuidedWorkflowPlan,
   guidedWorkflowById,
 } from './guidedWorkflows';
+import {
+  MiniProgramRegistryEntry,
+  buildDemoHostButtonSnippet,
+  buildHostCommandTemplate,
+  buildPublisherCommandTemplate,
+  buildRegistryFile,
+  dartFieldNameFromAppId,
+  parseEndpointAppIds,
+  parseRegistryEntries,
+  titleFromAppId as hostTitleFromAppId,
+  upsertRegistryEntry,
+} from './hostIntegration';
 import { MiniProgramStatusTreeProvider } from './statusTree';
 import { parseWorkflowStatusJson } from './workflowStatus';
 
@@ -234,6 +246,21 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.runHostSmokeTest', () =>
       runGuidedWorkflow('runHostSmokeTest', output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.generateMiniProgramRegistry', () =>
+      generateMiniProgramRegistry(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.addMiniProgramToRegistry', () =>
+      addMiniProgramToRegistry(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.copyDemoHostButton', () =>
+      copyDemoHostButton(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.insertDemoHostButton', () =>
+      copyDemoHostButton(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.copyWorkflowCommands', () =>
+      copyWorkflowCommands(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.openOutput', () =>
       output.show(true),
@@ -1706,6 +1733,177 @@ async function guidedRunHostSmokeTest(output: vscode.OutputChannel): Promise<boo
   return true;
 }
 
+async function generateMiniProgramRegistry(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const appIds = await readHostEndpointAppIds(projectRoot);
+  if (appIds.length === 0) {
+    vscode.window.showWarningMessage(
+      'No host endpoints found. Import or add an endpoint first.',
+    );
+    return;
+  }
+
+  const registryPath = hostRegistryPath(projectRoot);
+  const existingSource = await readOptionalText(registryPath);
+  const entries = appIds.map((appId) => ({
+    appId,
+    title: hostTitleFromAppId(appId),
+  }));
+  const source = entries.reduce(
+    (current, entry) => upsertRegistryEntry(current, entry),
+    existingSource || buildRegistryFile(),
+  );
+
+  await fs.promises.mkdir(path.dirname(registryPath), { recursive: true });
+  await fs.promises.writeFile(registryPath, source, 'utf8');
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(`Generated MiniProgram registry: ${registryPath}`);
+  output.appendLine(`Entries: ${entries.map((entry) => entry.appId).join(', ')}`);
+  vscode.window.showInformationMessage('MiniProgram registry generated.');
+}
+
+async function addMiniProgramToRegistry(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const endpointAppIds = await readHostEndpointAppIds(projectRoot);
+  const appId = await chooseAppIdForRegistry(endpointAppIds);
+  if (!appId) {
+    return;
+  }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program title',
+    value: hostTitleFromAppId(appId),
+    ignoreFocusOut: true,
+  });
+  if (title === undefined) {
+    return;
+  }
+
+  const registryPath = hostRegistryPath(projectRoot);
+  const existingSource = await readOptionalText(registryPath);
+  const source = upsertRegistryEntry(existingSource, {
+    appId,
+    title: title.trim() || hostTitleFromAppId(appId),
+  });
+  await fs.promises.mkdir(path.dirname(registryPath), { recursive: true });
+  await fs.promises.writeFile(registryPath, source, 'utf8');
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(`Updated MiniProgram registry: ${registryPath}`);
+  output.appendLine(`Added/updated: ${appId}`);
+  vscode.window.showInformationMessage(`MiniProgram registry updated for ${appId}.`);
+}
+
+async function copyDemoHostButton(output: vscode.OutputChannel): Promise<void> {
+  const projectRoot = await requireHostProjectRoot();
+  if (!projectRoot) {
+    return;
+  }
+  const entry = await chooseHostMiniProgramEntry(projectRoot);
+  if (!entry) {
+    return;
+  }
+  const style = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Use MiniPrograms registry',
+        description: 'Recommended for host apps with many mini-programs',
+        useRegistry: true,
+      },
+      {
+        label: 'Use inline appId/title',
+        description: 'Simpler for one-button demos',
+        useRegistry: false,
+      },
+    ],
+    { title: 'Demo button style', ignoreFocusOut: true },
+  );
+  if (!style) {
+    return;
+  }
+
+  if (style.useRegistry) {
+    await writeRegistryEntry(projectRoot, entry);
+  }
+  const buttonSnippet = buildDemoHostButtonSnippet(entry, {
+    useRegistry: style.useRegistry,
+  });
+  const importLines = [
+    'mini_program/mini_program_launcher.dart',
+    ...(style.useRegistry ? ['mini_program/mini_program_registry.dart'] : []),
+  ].map((importPath) => `import '${importPath}';`);
+  const snippet = [
+    '// Add these imports if they are not already in this Dart file:',
+    ...importLines.map((line) => `// ${line}`),
+    '',
+    buttonSnippet,
+  ].join('\n');
+  await vscode.env.clipboard.writeText(snippet);
+  output.show(true);
+  output.appendLine('');
+  output.appendLine('Copied demo host button snippet:');
+  output.appendLine(snippet);
+  vscode.window.showInformationMessage(
+    'Demo host button copied. Paste it into your host-owned UI.',
+  );
+}
+
+async function copyWorkflowCommands(output: vscode.OutputChannel): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const inferredMode = fs.existsSync(path.join(workspacePath, 'manifest.json'))
+    ? 'publisher'
+    : fs.existsSync(path.join(workspacePath, 'pubspec.yaml'))
+      ? 'host'
+      : undefined;
+  const mode = inferredMode
+    ? { value: inferredMode }
+    : await vscode.window.showQuickPick(
+        [
+          { label: 'Publisher mini-program commands', value: 'publisher' },
+          { label: 'Host app commands', value: 'host' },
+        ],
+        { title: 'Workflow command template', ignoreFocusOut: true },
+      );
+  if (!mode) {
+    return;
+  }
+
+  let commands: string;
+  if (mode.value === 'publisher') {
+    const manifest = await readWorkspaceManifest(workspacePath);
+    commands = buildPublisherCommandTemplate({
+      appId: manifest?.id,
+      title: manifest?.title || (manifest?.id ? hostTitleFromAppId(manifest.id) : undefined),
+      envName: 'my-aws-prod',
+    });
+  } else {
+    commands = buildHostCommandTemplate({
+      projectRoot: workspacePath,
+      deviceId: configuredDefaultPreviewDevice(),
+    });
+  }
+
+  await vscode.env.clipboard.writeText(commands);
+  output.show(true);
+  output.appendLine('');
+  output.appendLine('Copied workflow commands:');
+  output.appendLine(commands);
+  vscode.window.showInformationMessage('MiniProgram workflow commands copied.');
+}
+
 async function previewMiniProgram(): Promise<void> {
   const workspacePath = getWorkspacePath();
   if (!workspacePath) {
@@ -2043,6 +2241,161 @@ async function promptHostEndpointInputs(): Promise<
     apiBaseUrl: apiBaseUrl.trim(),
     accessKey: accessKey.trim(),
   };
+}
+
+async function chooseAppIdForRegistry(
+  endpointAppIds: readonly string[],
+): Promise<string | undefined> {
+  if (endpointAppIds.length === 0) {
+    const appId = await vscode.window.showInputBox({
+      prompt: 'Mini-program appId',
+      placeHolder: 'coupon_demo',
+      ignoreFocusOut: true,
+      validateInput: validateAppId,
+    });
+    return appId?.trim() || undefined;
+  }
+
+  const selected = await vscode.window.showQuickPick(
+    [
+      ...endpointAppIds.map((appId) => ({
+        label: appId,
+        description: 'Configured host endpoint',
+        appId,
+      })),
+      {
+        label: 'Enter another appId...',
+        description: 'Add a registry entry before endpoint import',
+        appId: '',
+      },
+    ],
+    { title: 'Mini-program appId', ignoreFocusOut: true },
+  );
+  if (!selected) {
+    return undefined;
+  }
+  if (selected.appId) {
+    return selected.appId;
+  }
+  const appId = await vscode.window.showInputBox({
+    prompt: 'Mini-program appId',
+    placeHolder: 'coupon_demo',
+    ignoreFocusOut: true,
+    validateInput: validateAppId,
+  });
+  return appId?.trim() || undefined;
+}
+
+async function chooseHostMiniProgramEntry(
+  projectRoot: string,
+): Promise<MiniProgramRegistryEntry | undefined> {
+  const registryEntries = await readHostRegistryEntries(projectRoot);
+  const endpointAppIds = await readHostEndpointAppIds(projectRoot);
+  const knownEntries = [
+    ...registryEntries,
+    ...endpointAppIds
+      .filter((appId) => !registryEntries.some((entry) => entry.appId === appId))
+      .map((appId) => ({ appId, title: hostTitleFromAppId(appId) })),
+  ];
+
+  const selected = await vscode.window.showQuickPick(
+    [
+      ...knownEntries.map((entry) => ({
+        label: entry.title,
+        description: entry.appId,
+        entry,
+      })),
+      {
+        label: 'Enter another mini-program...',
+        description: 'Use a manual appId/title',
+        entry: undefined,
+      },
+    ],
+    { title: 'Choose mini-program for demo button', ignoreFocusOut: true },
+  );
+  if (!selected) {
+    return undefined;
+  }
+  if (selected.entry) {
+    return selected.entry;
+  }
+  const appId = await vscode.window.showInputBox({
+    prompt: 'Mini-program appId',
+    placeHolder: 'coupon_demo',
+    ignoreFocusOut: true,
+    validateInput: validateAppId,
+  });
+  if (!appId) {
+    return undefined;
+  }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program title',
+    value: hostTitleFromAppId(appId),
+    ignoreFocusOut: true,
+  });
+  if (title === undefined) {
+    return undefined;
+  }
+  return { appId: appId.trim(), title: title.trim() || hostTitleFromAppId(appId) };
+}
+
+async function writeRegistryEntry(
+  projectRoot: string,
+  entry: MiniProgramRegistryEntry,
+): Promise<void> {
+  const registryPath = hostRegistryPath(projectRoot);
+  const existingSource = await readOptionalText(registryPath);
+  const source = upsertRegistryEntry(existingSource, entry);
+  await fs.promises.mkdir(path.dirname(registryPath), { recursive: true });
+  await fs.promises.writeFile(registryPath, source, 'utf8');
+}
+
+async function readHostEndpointAppIds(projectRoot: string): Promise<string[]> {
+  const endpointPath = path.join(
+    projectRoot,
+    'lib',
+    'mini_program',
+    'mini_program_endpoints.dart',
+  );
+  const source = await readOptionalText(endpointPath);
+  return source ? parseEndpointAppIds(source) : [];
+}
+
+async function readHostRegistryEntries(
+  projectRoot: string,
+): Promise<MiniProgramRegistryEntry[]> {
+  const source = await readOptionalText(hostRegistryPath(projectRoot));
+  return source ? parseRegistryEntries(source) : [];
+}
+
+async function readWorkspaceManifest(
+  workspacePath: string,
+): Promise<{ readonly id?: string; readonly title?: string } | undefined> {
+  try {
+    const raw = await fs.promises.readFile(
+      path.join(workspacePath, 'manifest.json'),
+      'utf8',
+    );
+    const decoded = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      id: typeof decoded.id === 'string' ? decoded.id : undefined,
+      title: typeof decoded.title === 'string' ? decoded.title : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+async function readOptionalText(filePath: string): Promise<string | undefined> {
+  try {
+    return await fs.promises.readFile(filePath, 'utf8');
+  } catch {
+    return undefined;
+  }
+}
+
+function hostRegistryPath(projectRoot: string): string {
+  return path.join(projectRoot, 'lib', 'mini_program', 'mini_program_registry.dart');
 }
 
 async function promptOptionalEnvName(): Promise<string | undefined> {
