@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- add `MiniProgramEndpoint.public(...)` for public/static CDN, GitHub Pages,
+  and demo mini-program delivery without a MiniProgram access key
+- allow `MiniProgramEndpoint.accessKey` to be null for public endpoints while
+  keeping protected endpoint access-key validation unchanged
+
 ## 0.3.0
 
 - add `MiniProgramEndpoint` and `EndpointRoutingMiniProgramSource` so one host

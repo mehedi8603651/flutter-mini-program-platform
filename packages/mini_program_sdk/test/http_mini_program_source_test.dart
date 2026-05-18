@@ -132,6 +132,26 @@ void main() {
     });
 
     test(
+      'does not send MiniProgram access key header when key is null',
+      () async {
+        final requestedHeaders = <String?>[];
+        final source = HttpMiniProgramSource(
+          apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+          client: MockClient((request) async {
+            requestedHeaders.add(
+              request.headers[MiniProgramHttpHeaders.accessKey],
+            );
+            return http.Response(_manifestJson, 200);
+          }),
+        );
+
+        await source.loadManifest('profile_center');
+
+        expect(requestedHeaders, <String?>[null]);
+      },
+    );
+
+    test(
       'throws a structured source exception when the backend rejects delivery',
       () {
         final source = HttpMiniProgramSource(

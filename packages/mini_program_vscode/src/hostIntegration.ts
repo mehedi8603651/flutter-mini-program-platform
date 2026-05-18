@@ -10,7 +10,7 @@ export function parseEndpointAppIds(source: string): string[] {
   }
 
   return unique(
-    [...source.matchAll(/["']([a-z][a-z0-9_]*)["']\s*:\s*MiniProgramEndpoint\s*\(/g)]
+    [...source.matchAll(/["']([a-z][a-z0-9_]*)["']\s*:\s*MiniProgramEndpoint(?:\.public)?\s*\(/g)]
       .map((match) => match[1])
       .filter(Boolean),
   );

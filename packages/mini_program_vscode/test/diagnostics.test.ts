@@ -114,7 +114,7 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
     await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
     await writeFile(
       path.join(workspacePath, 'pubspec.yaml'),
-      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.0\n',
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.1\n',
     );
     await writeFile(
       path.join(workspacePath, 'lib', 'main.dart'),
@@ -145,6 +145,7 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
             {
               appId: 'profile',
               apiBaseUri: 'https://api.example.com/api',
+              accessMode: 'protected',
               hasAccessKey: true,
             },
           ],
@@ -162,6 +163,55 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
     assert.match(text, /default backend URL is only a fallback/);
     assert.match(text, /delivery access only/);
     assert.doesNotMatch(text, /mpk_live_secret/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('host app accepts public endpoint metadata without access key', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-host-public-');
+  try {
+    await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
+    await writeFile(
+      path.join(workspacePath, 'pubspec.yaml'),
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.1\n',
+    );
+    await writeFile(
+      path.join(workspacePath, 'lib', 'main.dart'),
+      "import 'package:mini_program_sdk/mini_program_sdk.dart';\nvoid main() { MiniProgramScope; openAppMiniProgram(null, appId: 'public_coupon'); }\n",
+    );
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'hostApp',
+      workflowReport: {
+        schemaVersion: 1,
+        command: 'workflow status',
+        workspace: { type: 'host_app', path: workspacePath },
+        hostApp: {
+          detected: true,
+          runtimeSetupExists: true,
+          launcherExists: true,
+          endpointMapExists: true,
+          endpointCount: 1,
+          endpoints: [
+            {
+              appId: 'public_coupon',
+              apiBaseUri: 'https://user.github.io/repo/public_mini_program',
+              accessMode: 'public',
+              hasAccessKey: false,
+            },
+          ],
+        },
+        environment: { configured: false },
+        backend: { configured: false },
+        remote: { checked: false },
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /public_coupon:public/);
+    assert.doesNotMatch(text, /Incomplete endpoint entries/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

@@ -8,8 +8,8 @@ package, host endpoint, or backend logic.
 
 ## Local install
 
-Requires `mini_program_tooling` 0.3.9 or newer, because the sidebar reads
-`miniprogram workflow status --json`.
+Requires `mini_program_tooling` 0.3.12 or newer for public/static endpoint
+support and `miniprogram workflow status --json`.
 
 ```bash
 dart pub global activate mini_program_tooling
@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.8.vsix
+code --install-extension mini-program-tools-0.1.9.vsix
 ```
 
 ## Features
@@ -73,6 +73,10 @@ code --install-extension mini-program-tools-0.1.8.vsix
   - `MiniProgram: Refresh Status`
   - `MiniProgram: Refresh Remote Status`
 
+`MiniProgram: Publish` supports cloud, local, and public/static export targets.
+The static target writes a folder that can be uploaded to GitHub Pages or a CDN
+and then used from a public endpoint.
+
 ## Settings
 
 - `miniProgram.cliPath`: command or path for the installed CLI. Defaults to
@@ -100,17 +104,26 @@ leaving VS Code.
 
 ## Partner handoff workflow
 
-Mini-program publishers can create the host handoff file from VS Code:
+Mini-program publishers can create protected or public host handoff files from
+VS Code:
 
 1. Run `MiniProgram: Create Access Key` and copy the generated key.
 2. Run `MiniProgram: Create Partner Package`.
-3. Enter the appId, title, access key, and either a configured env or direct API
-   base URL.
-4. Send the generated `.partner.json` file to the host app developer.
+3. Choose protected delivery with an access key, or public/static delivery with
+   no access key.
+4. Enter the appId, title, and either a configured env or direct API base URL.
+5. Send the generated `.partner.json` file to the host app developer.
 
 The host developer then runs `MiniProgram: Import Host Endpoint` and selects the
-partner package. Partner packages contain an access key, so treat them as secret
-files and do not commit them.
+partner package. Protected partner packages contain an access key, so treat them
+as secret files and do not commit them. Public partner packages have
+`accessMode: "public"` and do not contain an access key.
+
+`MiniProgram: Add Host Endpoint` also supports both modes. Use protected mode
+for AWS/GCP/backend delivery that requires a MiniProgram access key. Use
+public/static mode for GitHub Pages, CDN, S3 public hosting, Cloudflare Pages,
+Netlify, Vercel static hosting, or other public content. Public mode has no
+delivery access control.
 
 ## Host registry and demo buttons
 

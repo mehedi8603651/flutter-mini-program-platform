@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.12
+
+- add `miniprogram publish --target static --output <folder>` for public
+  GitHub Pages/CDN/static-hosting mini-program delivery
+- add public endpoint support with `miniprogram host endpoint add --public`
+  and schema v2 partner handoff packages using `accessMode`
+- keep protected AWS/backend delivery unchanged while reporting public vs
+  protected endpoint mode in workflow status
+
 ## 0.3.11
 
 - make generated host runtime setup log endpoint routing when

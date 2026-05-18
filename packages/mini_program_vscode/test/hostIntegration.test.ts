@@ -32,6 +32,19 @@ Map<String, MiniProgramEndpoint> buildMiniProgramEndpoints() {
   assert.deepEqual(parseEndpointAppIds(source), ['coupon_demo']);
 });
 
+test('parses public endpoint appIds from Dart source', () => {
+  const source = `Map<String, MiniProgramEndpoint> buildMiniProgramEndpoints() {
+  return <String, MiniProgramEndpoint>{
+    "public_coupon": MiniProgramEndpoint.public(
+      apiBaseUri: Uri.parse("https://user.github.io/repo/public_mini_program"),
+    ),
+  };
+}
+`;
+
+  assert.deepEqual(parseEndpointAppIds(source), ['public_coupon']);
+});
+
 test('builds and upserts registry entries', () => {
   const source = buildRegistryFile([
     { appId: 'coupon_demo', title: 'Coupon Demo' },

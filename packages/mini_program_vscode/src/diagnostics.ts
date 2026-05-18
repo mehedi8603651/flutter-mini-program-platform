@@ -285,8 +285,30 @@ async function buildHostAppChecks(
   const endpointCount = asNumber(hostApp.endpointCount, endpoints.length);
   const endpointIssues = endpoints
     .map((entry) => asRecord(entry))
-    .filter((entry) => !asString(entry.apiBaseUri) || !asBoolean(entry.hasAccessKey))
+    .filter((entry) => {
+      const accessMode = asString(
+        entry.accessMode,
+        asBoolean(entry.hasAccessKey) ? 'protected' : 'public',
+      );
+      return (
+        !asString(entry.apiBaseUri) ||
+        (accessMode === 'protected' && !asBoolean(entry.hasAccessKey)) ||
+        (accessMode !== 'protected' && accessMode !== 'public')
+      );
+    })
     .map((entry) => asString(entry.appId, 'unknown'));
+  const endpointModeSummary = endpoints
+    .map((entry) => {
+      const endpoint = asRecord(entry);
+      const appId = asString(endpoint.appId);
+      const accessMode = asString(
+        endpoint.accessMode,
+        asBoolean(endpoint.hasAccessKey) ? 'protected' : 'public',
+      );
+      return appId ? `${appId}:${accessMode}` : '';
+    })
+    .filter(Boolean)
+    .join(', ');
   const endpointAppIdsFromReport = endpoints
     .map((entry) => asString(asRecord(entry).appId))
     .filter((appId): appId is string => Boolean(appId));
@@ -356,9 +378,9 @@ async function buildHostAppChecks(
       'Endpoint entries',
       endpointIssues.length === 0 ? 'ok' : 'error',
       endpointIssues.length === 0
-        ? 'Endpoint entries include API URL and access-key metadata.'
+        ? 'Endpoint entries include API URL and valid public/protected access metadata.'
         : `Incomplete endpoint entries: ${endpointIssues.join(', ')}.`,
-      undefined,
+      endpointModeSummary || undefined,
       endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
     ),
     check(

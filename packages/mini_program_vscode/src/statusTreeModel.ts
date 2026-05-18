@@ -78,6 +78,16 @@ export function buildStatusTreeSections(
 
   if (asBoolean(hostApp.detected)) {
     const endpointCount = asNumber(hostApp.endpointCount);
+    const endpoints = Array.isArray(hostApp.endpoints) ? hostApp.endpoints : [];
+    const endpointModes = endpoints
+      .map((entry) => {
+        const endpoint = asRecord(entry);
+        const appId = asString(endpoint.appId);
+        const mode = asString(endpoint.accessMode, asBoolean(endpoint.hasAccessKey) ? 'protected' : 'public');
+        return appId ? `${appId}:${mode}` : '';
+      })
+      .filter(Boolean)
+      .join(', ');
     sections.push({
       label: 'Host app',
       icon: 'device-mobile',
@@ -86,6 +96,7 @@ export function buildStatusTreeSections(
         row('Endpoint map', yesNo(asBoolean(hostApp.endpointMapExists))),
         row('Endpoint count', String(endpointCount)),
         row('Endpoint app IDs', asStringList(hostApp.endpointAppIds).join(', ')),
+        row('Endpoint modes', endpointModes),
         row(
           'Routing',
           endpointCount > 0

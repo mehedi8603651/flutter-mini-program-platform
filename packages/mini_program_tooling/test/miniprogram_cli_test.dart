@@ -72,7 +72,7 @@ void main() {
       expect(stderrBuffer.toString(), isEmpty);
       expect(
         stdoutBuffer.toString(),
-        contains('publish [mini-program-id] [--target local|cloud]'),
+        contains('publish [mini-program-id] [--target local|cloud|static]'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -851,6 +851,44 @@ void main() {
     );
 
     test(
+      'publish --target static writes to the selected output folder',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        final staticPublisher = _FakeMiniProgramStaticPublisher();
+        final outputPath = p.join(tempDir.path, 'public_mini_program');
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              staticPublisher: staticPublisher,
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publish',
+              '--target',
+              'static',
+              '--output',
+              outputPath,
+            ]);
+
+        expect(exitCode, 0);
+        expect(staticPublisher.lastRequest, isNotNull);
+        expect(staticPublisher.lastRequest!.outputPath, outputPath);
+        expect(staticPublisher.lastRequest!.miniProgramId, 'coupon_center');
+        expect(
+          staticPublisher.lastRequest!.miniProgramRootPath,
+          p.normalize(p.absolute(standaloneRoot)),
+        );
+      },
+    );
+
+    test(
       'cloud deploy uses the active named env and persists apiBaseUrl',
       () async {
         final standaloneRoot = p.join(tempDir.path, 'coupon_center');
@@ -1094,6 +1132,63 @@ void main() {
       );
     });
 
+    test('host endpoint add supports public static endpoints', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: StringBuffer(),
+            workingDirectory: hostRoot,
+          ).run(<String>[
+            'host',
+            'endpoint',
+            'add',
+            'public_coupon_demo',
+            '--api-base-url',
+            'https://user.github.io/repo/public_mini_program/',
+            '--public',
+          ]);
+
+      expect(exitCode, 0);
+      final endpointFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      );
+      final endpointSource = await endpointFile.readAsString();
+      expect(endpointSource, contains('"accessMode":"public"'));
+      expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(endpointSource, isNot(contains('accessKey:')));
+    });
+
+    test('host endpoint add requires access key or public mode', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+      final stderrBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: stderrBuffer,
+            workingDirectory: hostRoot,
+          ).run(<String>[
+            'host',
+            'endpoint',
+            'add',
+            'public_coupon_demo',
+            '--api-base-url',
+            'https://user.github.io/repo/public_mini_program/',
+          ]);
+
+      expect(exitCode, 64);
+      expect(
+        stderrBuffer.toString(),
+        contains('requires --access-key <key> or --public'),
+      );
+    });
+
     test('partner package writes a portable handoff file', () async {
       final outputPath = p.join(tempDir.path, 'aws_coupon_demo.partner.json');
       final stdoutBuffer = StringBuffer();
@@ -1122,17 +1217,92 @@ void main() {
       final decoded =
           jsonDecode(await File(outputPath).readAsString())
               as Map<String, dynamic>;
-      expect(decoded['schemaVersion'], 1);
+      expect(decoded['schemaVersion'], 2);
       expect(decoded['type'], 'mini_program_partner_handoff');
       expect(decoded['appId'], 'aws_coupon_demo');
       expect(decoded['title'], 'AWS Coupon Demo');
       expect(decoded['apiBaseUrl'], 'https://api.example.com/prod/api');
+      expect(decoded['accessMode'], 'protected');
       expect(decoded['accessKey'], 'mpk_live_company_a_12345678901234567890');
       expect(
         stdoutBuffer.toString(),
         contains('miniprogram host endpoint import'),
       );
     });
+
+    test('partner package supports public static handoff files', () async {
+      final outputPath = p.join(
+        tempDir.path,
+        'public_coupon_demo.partner.json',
+      );
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: StringBuffer(),
+            workingDirectory: tempDir.path,
+          ).run(<String>[
+            'partner',
+            'package',
+            'public_coupon_demo',
+            '--title',
+            'Public Coupon Demo',
+            '--api-base-url',
+            'https://user.github.io/repo/public_mini_program/',
+            '--public',
+            '--output',
+            outputPath,
+          ]);
+
+      expect(exitCode, 0);
+      final decoded =
+          jsonDecode(await File(outputPath).readAsString())
+              as Map<String, dynamic>;
+      expect(decoded['schemaVersion'], 2);
+      expect(decoded['accessMode'], 'public');
+      expect(decoded.containsKey('accessKey'), isFalse);
+    });
+
+    test(
+      'host endpoint import supports old schema v1 partner packages',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeEmbeddedHostFixture(hostRoot);
+        final packagePath = p.join(tempDir.path, 'legacy.partner.json');
+        await File(packagePath).writeAsString(
+          jsonEncode(<String, Object?>{
+            'schemaVersion': 1,
+            'type': 'mini_program_partner_handoff',
+            'appId': 'legacy_rewards',
+            'title': 'Legacy Rewards',
+            'apiBaseUrl': 'https://legacy.example.com/api',
+            'accessKey': 'mpk_live_legacy_12345678901234567890',
+            'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
+          }),
+        );
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: hostRoot,
+        ).run(<String>['host', 'endpoint', 'import', packagePath]);
+
+        expect(exitCode, 0);
+        final endpointFile = File(
+          p.join(
+            hostRoot,
+            'lib',
+            'mini_program',
+            'mini_program_endpoints.dart',
+          ),
+        );
+        final endpointSource = await endpointFile.readAsString();
+        expect(endpointSource, contains('"legacy_rewards"'));
+        expect(endpointSource, contains('"accessMode":"protected"'));
+      },
+    );
 
     test('host endpoint import reads a partner handoff package', () async {
       final hostRoot = p.join(tempDir.path, 'host_app');
@@ -1168,6 +1338,36 @@ void main() {
       );
       expect(stdoutBuffer.toString(), contains('Imported MiniProgram'));
       expect(stdoutBuffer.toString(), contains('Open from app UI by appId'));
+    });
+
+    test('host endpoint import supports public partner packages', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+      final packagePath = p.join(tempDir.path, 'public.partner.json');
+      final handoff = MiniProgramPartnerHandoff(
+        appId: 'public_rewards',
+        title: 'Public Rewards',
+        apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+        accessMode: MiniProgramPartnerHandoff.accessModePublic,
+        generatedAtUtc: DateTime.utc(2026, 5, 14).toIso8601String(),
+      );
+      await File(packagePath).writeAsString(jsonEncode(handoff.toJson()));
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: StringBuffer(),
+        workingDirectory: hostRoot,
+      ).run(<String>['host', 'endpoint', 'import', packagePath]);
+
+      expect(exitCode, 0);
+      final endpointFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      );
+      final endpointSource = await endpointFile.readAsString();
+      expect(endpointSource, contains('"public_rewards"'));
+      expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(endpointSource, isNot(contains('accessKey:')));
     });
 
     test('workflow status reports unknown workspaces as JSON', () async {
@@ -1246,6 +1446,10 @@ void main() {
           json['miniProgram']['partnerPackages'][0]['hasAccessKey'],
           isTrue,
         );
+        expect(
+          json['miniProgram']['partnerPackages'][0]['accessMode'],
+          'protected',
+        );
         expect(json['remote']['checked'], isFalse);
         expect(cloudController.lastStatusRequest, isNull);
         expect(cloudController.lastAppInfoRequest, isNull);
@@ -1261,7 +1465,7 @@ void main() {
       );
       await endpointFile.writeAsString('''
 // BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessKey":"mpk_live_secret_b_12345678901234567890"}}
+// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","accessMode":"protected","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessMode":"public"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 ''');
       final stdoutBuffer = StringBuffer();
@@ -1281,6 +1485,8 @@ void main() {
       expect(json['hostApp']['endpointCount'], 2);
       expect(json['hostApp']['endpointAppIds'], contains('coupon_center'));
       expect(json['hostApp']['endpoints'][0]['hasAccessKey'], isTrue);
+      expect(json['hostApp']['endpoints'][0]['accessMode'], 'protected');
+      expect(json['hostApp']['endpoints'][1]['accessMode'], 'public');
     });
 
     test(
@@ -2047,7 +2253,7 @@ dependencies:
       );
       expect(
         await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-        contains('mini_program_sdk: ^0.3.0'),
+        contains('mini_program_sdk: ^0.3.1'),
       );
     });
 
@@ -2561,6 +2767,85 @@ class _FakeMiniProgramCloudPublisher extends MiniProgramCloudPublisher {
       metadataCatalogKey: 'metadata/catalog/coupon_center.json',
       publishedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
       uploadedObjects: const <CloudPublishedObjectRecord>[],
+    );
+  }
+}
+
+class _FakeMiniProgramStaticPublisher extends MiniProgramStaticPublisher {
+  _FakeMiniProgramStaticPublisher();
+
+  MiniProgramStaticPublishRequest? lastRequest;
+
+  @override
+  Future<MiniProgramStaticPublishResult> publish(
+    MiniProgramStaticPublishRequest request,
+  ) async {
+    lastRequest = request;
+    final miniProgramRootPath =
+        request.miniProgramRootPath ??
+        p.join(request.repoRootPath, request.miniProgramId ?? 'coupon_center');
+    final buildResult = MiniProgramBuildResult(
+      repoRootPath: request.repoRootPath,
+      miniProgramId: request.miniProgramId ?? 'coupon_center',
+      miniProgramRootPath: miniProgramRootPath,
+      cliSource: 'fake',
+      invocation: const <String>['dart', 'fake'],
+      outputDirectoryPath: p.join(miniProgramRootPath, 'stac', '.build'),
+      screensDirectoryPath: p.join(
+        miniProgramRootPath,
+        'stac',
+        '.build',
+        'screens',
+      ),
+      entryScreenJsonPath: p.join(
+        miniProgramRootPath,
+        'stac',
+        '.build',
+        'screens',
+        'coupon_center_home.json',
+      ),
+      pubGetRan: false,
+    );
+    return MiniProgramStaticPublishResult(
+      outputPath: request.outputPath,
+      miniProgramId: request.miniProgramId ?? 'coupon_center',
+      version: '1.2.3',
+      buildResult: buildResult,
+      manifestLatestPath: p.join(
+        request.outputPath,
+        'manifests',
+        request.miniProgramId ?? 'coupon_center',
+        'latest.json',
+      ),
+      manifestVersionPath: p.join(
+        request.outputPath,
+        'manifests',
+        request.miniProgramId ?? 'coupon_center',
+        'versions',
+        '1.2.3.json',
+      ),
+      screensDirectoryPath: p.join(
+        request.outputPath,
+        'screens',
+        request.miniProgramId ?? 'coupon_center',
+        '1.2.3',
+      ),
+      metadataReleasePath: p.join(
+        request.outputPath,
+        'metadata',
+        'releases',
+        request.miniProgramId ?? 'coupon_center',
+        '1.2.3.json',
+      ),
+      metadataCatalogPath: p.join(
+        request.outputPath,
+        'metadata',
+        'catalog',
+        '${request.miniProgramId ?? 'coupon_center'}.json',
+      ),
+      instructionsPath: p.join(request.outputPath, 'PUBLISH_INSTRUCTIONS.md'),
+      publishedAtUtc: DateTime.utc(2026, 5, 18).toIso8601String(),
+      writtenFiles: const <StaticPublishedFileRecord>[],
     );
   }
 }

@@ -62,7 +62,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.3.0';
+  static const String _miniProgramSdkConstraint = '^0.3.1';
   static const String _miniProgramContractsConstraint = '^0.1.1';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
@@ -739,6 +739,13 @@ Publisher handoff file:
 miniprogram partner package aws_coupon_demo --title "AWS Coupon Demo" --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --env my-aws-prod --output aws_coupon_demo.partner.json
 ```
 
+Public/static handoff files are also supported for GitHub Pages, CDN, and other
+public hosting:
+
+```bash
+miniprogram partner package public_coupon_demo --title "Public Coupon Demo" --public --api-base-url https://user.github.io/repo/public_mini_program/ --output public_coupon_demo.partner.json
+```
+
 Host import:
 
 ```bash
@@ -749,7 +756,7 @@ Manual host entry is also available:
 
 ```bash
 miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-miniprogram host endpoint add gcp_rewards --api-base-url https://gcp.example.com/api/ --access-key mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+miniprogram host endpoint add public_coupon_demo --api-base-url https://user.github.io/repo/public_mini_program/ --public
 ```
 
 ```dart

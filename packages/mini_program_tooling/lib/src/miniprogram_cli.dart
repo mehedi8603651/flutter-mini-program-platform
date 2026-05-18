@@ -21,9 +21,14 @@ import 'mini_program_preview_controller.dart';
 import 'mini_program_preview_server.dart';
 import 'mini_program_publisher.dart';
 import 'mini_program_scaffolder.dart';
+import 'mini_program_static_publisher.dart';
 import 'mini_program_workflow_status.dart';
 
-const List<String> _supportedPublishTargets = <String>['local', 'cloud'];
+const List<String> _supportedPublishTargets = <String>[
+  'local',
+  'cloud',
+  'static',
+];
 
 class MiniprogramCli {
   MiniprogramCli({
@@ -40,6 +45,8 @@ class MiniprogramCli {
         const MiniProgramPreviewController(),
     MiniProgramCloudPublisher cloudPublisher =
         const MiniProgramCloudPublisher(),
+    MiniProgramStaticPublisher staticPublisher =
+        const MiniProgramStaticPublisher(),
     MiniProgramCloudController? cloudController,
     MiniProgramHostController? hostController,
     MiniProgramPartnerHandoffController partnerHandoffController =
@@ -59,6 +66,7 @@ class MiniprogramCli {
        _backendInitializer = backendInitializer,
        _previewController = previewController,
        _cloudPublisher = cloudPublisher,
+       _staticPublisher = staticPublisher,
        _cloudController = cloudController ?? MiniProgramCloudController(),
        _hostController = hostController ?? MiniProgramHostController(),
        _partnerHandoffController = partnerHandoffController,
@@ -78,6 +86,7 @@ class MiniprogramCli {
   final LocalBackendInitializer _backendInitializer;
   final MiniProgramPreviewController _previewController;
   final MiniProgramCloudPublisher _cloudPublisher;
+  final MiniProgramStaticPublisher _staticPublisher;
   final MiniProgramCloudController _cloudController;
   final MiniProgramHostController _hostController;
   final MiniProgramPartnerHandoffController _partnerHandoffController;
@@ -529,6 +538,12 @@ class MiniprogramCli {
         help: 'Publish target. Defaults to the active env or local.',
       )
       ..addOption(
+        'output',
+        abbr: 'o',
+        help:
+            'Output folder when --target static is selected, for example public_mini_program.',
+      )
+      ..addOption(
         'env',
         help:
             'Named cloud environment override used when --target cloud is selected.',
@@ -591,6 +606,29 @@ class MiniprogramCli {
         ),
       );
       _stdout.writeln(_formatCloudPublishResult(result));
+      return 0;
+    }
+
+    if (target == 'static') {
+      final outputPath = results.option('output')?.trim() ?? '';
+      if (outputPath.isEmpty) {
+        throw const FormatException(
+          'publish --target static requires --output <folder>.',
+        );
+      }
+      final result = await _staticPublisher.publish(
+        MiniProgramStaticPublishRequest(
+          repoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
+          outputPath: outputPath,
+          miniProgramId: miniProgramId,
+          miniProgramRootPath: resolved.isRepoManaged
+              ? null
+              : resolved.miniProgramRootPath,
+          stacCliScriptPath: results.option('stac-cli-script'),
+          skipBuildPubGet: results.flag('skip-build-pub-get'),
+        ),
+      );
+      _stdout.writeln(_formatStaticPublishResult(result));
       return 0;
     }
 
@@ -1484,6 +1522,12 @@ class MiniprogramCli {
         'access-key',
         help: 'MiniProgram access key issued for the host company or partner.',
       )
+      ..addFlag(
+        'public',
+        negatable: false,
+        help:
+            'Create a public/static partner package without a MiniProgram access key.',
+      )
       ..addOption(
         'output',
         abbr: 'o',
@@ -1503,7 +1547,7 @@ class MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram partner package <mini-program-id> --access-key <key> [options]',
+        'Usage: miniprogram partner package <mini-program-id> (--access-key <key>|--public) [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -1516,9 +1560,15 @@ class MiniprogramCli {
 
     final appId = results.rest.single.trim();
     final accessKey = results.option('access-key')?.trim() ?? '';
-    if (accessKey.isEmpty) {
+    final isPublic = results.flag('public');
+    if (accessKey.isEmpty && !isPublic) {
       throw const FormatException(
-        'partner package requires --access-key <key>.',
+        'partner package requires --access-key <key> or --public.',
+      );
+    }
+    if (accessKey.isNotEmpty && isPublic) {
+      throw const FormatException(
+        'partner package cannot use both --access-key and --public.',
       );
     }
     final apiBaseUrl = await _resolvePartnerPackageApiBaseUrl(
@@ -1534,7 +1584,7 @@ class MiniprogramCli {
             ? results.option('title')!.trim()
             : _defaultTitleForAppId(appId),
         apiBaseUri: Uri.parse(apiBaseUrl),
-        accessKey: accessKey,
+        accessKey: isPublic ? null : accessKey,
         outputPath: results.option('output'),
       ),
     );
@@ -1796,6 +1846,12 @@ class MiniprogramCli {
         help: 'MiniProgram access key issued for this host app or partner.',
       )
       ..addFlag(
+        'public',
+        negatable: false,
+        help:
+            'Register a public/static endpoint that does not use a MiniProgram access key.',
+      )
+      ..addFlag(
         'force',
         negatable: false,
         help: 'Replace an unrecognized generated endpoint file.',
@@ -1803,7 +1859,7 @@ class MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram host endpoint add <mini-program-id> --api-base-url <url> --access-key <key> [options]',
+        'Usage: miniprogram host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public) [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -1829,9 +1885,15 @@ class MiniprogramCli {
       );
     }
     final accessKey = results.option('access-key')?.trim() ?? '';
-    if (accessKey.isEmpty) {
+    final isPublic = results.flag('public');
+    if (accessKey.isEmpty && !isPublic) {
       throw const FormatException(
-        'host endpoint add requires --access-key <key>.',
+        'host endpoint add requires --access-key <key> or --public.',
+      );
+    }
+    if (accessKey.isNotEmpty && isPublic) {
+      throw const FormatException(
+        'host endpoint add cannot use both --access-key and --public.',
       );
     }
 
@@ -1843,7 +1905,7 @@ class MiniprogramCli {
         projectRootPath: projectRootPath,
         appId: results.rest.single,
         apiBaseUri: apiBaseUri,
-        accessKey: accessKey,
+        accessKey: isPublic ? null : accessKey,
         force: results.flag('force'),
       ),
     );
@@ -2970,15 +3032,15 @@ Commands:
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
-  publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+  publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>]
   access-key create|list|revoke|rotate <mini-program-id> [--env <env-name>]
   cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
   cloud app list|info|disable|delete [options]
   cloud outputs [--format text|dart-define]
   workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-  partner package <mini-program-id> --access-key <key> [--env <env-name>]
+  partner package <mini-program-id> (--access-key <key>|--public) [--env <env-name>]
   host run -d <device> [--env <env-name>]
-  host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+  host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
   host endpoint import <partner-package.json>
   embed init [--project-root <path>]
   embed cloud configure [--env <env-name>]
@@ -3003,7 +3065,7 @@ Commands:
 Usage: miniprogram partner <command> [arguments]
 
 Commands:
-  package <mini-program-id> --access-key <key> [--api-base-url <url>|--env <env-name>]
+  package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>]
 ''';
 
   String _accessKeyUsage() => '''
@@ -3074,7 +3136,7 @@ Usage: miniprogram host <command> [arguments]
 
 Commands:
   run -d <device> [--env <env-name>]
-  endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+  endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
   endpoint import <partner-package.json>
 ''';
 
@@ -3082,7 +3144,7 @@ Commands:
 Usage: miniprogram host endpoint <command> [arguments]
 
 Commands:
-  add <mini-program-id> --api-base-url <url> --access-key <key>
+  add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
   import <partner-package.json>
 ''';
 
@@ -3339,6 +3401,29 @@ Commands:
       'Uploaded objects: ${result.uploadedObjects.length}',
       'Versioned objects: $versionedObjectCount',
       'Published at UTC: ${result.publishedAtUtc}',
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatStaticPublishResult(MiniProgramStaticPublishResult result) {
+    final lines = <String>[
+      'Published mini-program to static folder: ${result.miniProgramId}',
+      'Version: ${result.version}',
+      'Output folder: ${result.outputPath}',
+      'Build CLI source: ${result.buildResult.cliSource}',
+      'Built entry screen: ${result.buildResult.entryScreenJsonPath}',
+      'Latest manifest: ${result.manifestLatestPath}',
+      'Versioned manifest: ${result.manifestVersionPath}',
+      'Screens directory: ${result.screensDirectoryPath}',
+      if (result.assetsDirectoryPath != null)
+        'Assets directory: ${result.assetsDirectoryPath}',
+      'Release metadata: ${result.metadataReleasePath}',
+      'Catalog metadata: ${result.metadataCatalogPath}',
+      'Instructions: ${result.instructionsPath}',
+      'Written files: ${result.writtenFiles.length}',
+      'Published at UTC: ${result.publishedAtUtc}',
+      'Host endpoint example:',
+      'MiniProgramEndpoint.public(apiBaseUri: Uri.parse(\'https://your-cdn.example.com/public_mini_program/\'))',
     ];
     return lines.join('\n');
   }
@@ -3651,6 +3736,7 @@ Commands:
       'Package file: ${result.filePath}',
       'Mini-program: ${result.handoff.appId}',
       'Title: ${result.handoff.title}',
+      'Access mode: ${result.handoff.accessMode}',
       'API base URL: ${result.handoff.apiBaseUri}',
       'Generated at UTC: ${result.handoff.generatedAtUtc}',
       'Host import command:',
@@ -3668,6 +3754,7 @@ Commands:
       'Project root: ${result.projectRootPath}',
       'Endpoint file: ${result.filePath}',
       'Mini-program: ${result.appId}',
+      'Access mode: ${result.accessMode}',
       'API base URL: ${result.apiBaseUri}',
       'Endpoint count: ${result.endpointCount}',
       'Use it from MiniProgramScope:',
@@ -3691,6 +3778,7 @@ Commands:
       'Endpoint file: ${endpointResult.filePath}',
       'Mini-program: ${handoff.appId}',
       'Title: ${handoff.title}',
+      'Access mode: ${handoff.accessMode}',
       'API base URL: ${handoff.apiBaseUri}',
       'Endpoint count: ${endpointResult.endpointCount}',
       'Open from app UI by appId only:',

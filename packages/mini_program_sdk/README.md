@@ -21,7 +21,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.0
+  mini_program_sdk: ^0.3.1
   mini_program_contracts: ^0.1.1
 ```
 
@@ -148,7 +148,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.0` while the runtime compatibility version remains
+the package can be `0.3.1` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints
@@ -174,9 +174,10 @@ final config = MiniProgramConfig(
         apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
         accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
       ),
-      'gcp_rewards': MiniProgramEndpoint(
-        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
-        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+      'public_coupon_demo': MiniProgramEndpoint.public(
+        apiBaseUri: Uri.parse(
+          'https://user.github.io/repo/public_mini_program/',
+        ),
       ),
     },
   ),
@@ -196,11 +197,18 @@ MiniProgramScope.of(context).openMiniProgram(
 );
 ```
 
-Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
+Rule: UI knows `appId`; config knows API base URL and delivery access mode.
 For protected cloud delivery, the backend should validate the
 `X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
 revoking one partner key does not affect other partners using the same
 mini-program.
+
+For public/static demos, open-source samples, GitHub Pages, CDN, S3 public
+hosting, Cloudflare Pages, Netlify, or Vercel static hosting, use
+`MiniProgramEndpoint.public(...)`. Public mode sends no MiniProgram access-key
+header and has no delivery access control, so do not use it for private or
+business-only mini-programs. Prefer GitHub Pages or a CDN over
+`raw.githubusercontent.com` for real usage.
 
 Generated host apps usually pass the backend URL at build or run time:
 

@@ -364,6 +364,10 @@ async function publishMiniProgram(
         label: 'cloud',
         description: 'Publish to the active or selected cloud environment',
       },
+      {
+        label: 'static',
+        description: 'Export public/CDN-ready files for GitHub Pages or static hosting',
+      },
       { label: 'local', description: 'Publish to local delivery artifacts' },
     ],
     { title: 'MiniProgram publish target', ignoreFocusOut: true },
@@ -385,12 +389,28 @@ async function publishMiniProgram(
     envName = value.trim() || undefined;
   }
 
+  let outputPath: string | undefined;
+  if (targetChoice.label === 'static') {
+    const folders = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: 'Use static output folder',
+      title: 'Choose public static output folder',
+    });
+    outputPath = folders?.[0]?.fsPath;
+    if (!outputPath) {
+      return;
+    }
+  }
+
   await runMiniProgramWorkspaceCliCommand(
     'Publish',
     (workspacePath) =>
       buildPublishArgs({
-        target: targetChoice.label as 'local' | 'cloud',
+        target: targetChoice.label as 'local' | 'cloud' | 'static',
         envName,
+        outputPath,
         miniProgramRoot: workspacePath,
       }),
     output,
@@ -508,15 +528,24 @@ async function addHostEndpoint(
   if (!apiBaseUrl) {
     return;
   }
-  const accessKey = await vscode.window.showInputBox({
-    prompt: 'MiniProgram access key',
-    password: true,
-    placeHolder: 'mpk_live_...',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Access key is required.',
-  });
-  if (!accessKey) {
+  const accessMode = await chooseEndpointAccessMode();
+  if (!accessMode) {
     return;
+  }
+  let accessKey: string | undefined;
+  if (accessMode === 'protected') {
+    const value = await vscode.window.showInputBox({
+      prompt: 'MiniProgram access key',
+      password: true,
+      placeHolder: 'mpk_live_...',
+      ignoreFocusOut: true,
+      validateInput: (input) =>
+        input.trim() ? undefined : 'Access key is required.',
+    });
+    if (!value) {
+      return;
+    }
+    accessKey = value.trim();
   }
   const force = await chooseForce('Replace an unrecognized endpoint file?');
   if (force === undefined) {
@@ -528,7 +557,8 @@ async function addHostEndpoint(
     buildHostEndpointAddArgs({
       appId: appId.trim(),
       apiBaseUrl: apiBaseUrl.trim(),
-      accessKey: accessKey.trim(),
+      accessKey,
+      public: accessMode === 'public',
       projectRoot,
       force,
     }),
@@ -1142,15 +1172,24 @@ async function createPartnerPackage(
   if (title === undefined) {
     return;
   }
-  const accessKey = await vscode.window.showInputBox({
-    prompt: 'MiniProgram access key for this host/partner',
-    password: true,
-    placeHolder: 'mpk_live_...',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Access key is required.',
-  });
-  if (!accessKey) {
+  const accessMode = await chooseEndpointAccessMode();
+  if (!accessMode) {
     return;
+  }
+  let accessKey: string | undefined;
+  if (accessMode === 'protected') {
+    const value = await vscode.window.showInputBox({
+      prompt: 'MiniProgram access key for this host/partner',
+      password: true,
+      placeHolder: 'mpk_live_...',
+      ignoreFocusOut: true,
+      validateInput: (input) =>
+        input.trim() ? undefined : 'Access key is required.',
+    });
+    if (!value) {
+      return;
+    }
+    accessKey = value.trim();
   }
   const deliverySource = await vscode.window.showQuickPick(
     [
@@ -1202,7 +1241,8 @@ async function createPartnerPackage(
     buildPartnerPackageArgs({
       appId,
       title: title.trim() || undefined,
-      accessKey: accessKey.trim(),
+      accessKey,
+      public: accessMode === 'public',
       envName,
       apiBaseUrl,
       outputPath,
@@ -1215,8 +1255,11 @@ async function createPartnerPackage(
     return;
   }
   await refreshStatus(false);
+  const packageMessage = accessMode === 'public'
+    ? `Created public partner package for ${appId}.`
+    : `Created partner package for ${appId}. Treat this file as secret.`;
   const openChoice = await vscode.window.showInformationMessage(
-    `Created partner package for ${appId}. Treat this file as secret.`,
+    packageMessage,
     'Open File',
     'Reveal Folder',
   );
@@ -1261,7 +1304,8 @@ async function validatePartnerPackageFile(
     output.appendLine(`App ID: ${decoded.appId}`);
     output.appendLine(`Title: ${decoded.title ?? ''}`);
     output.appendLine(`API base URL: ${decoded.apiBaseUrl}`);
-    output.appendLine(`Access key: ${decoded.accessKey ? '<redacted>' : 'missing'}`);
+    output.appendLine(`Access mode: ${decoded.accessMode ?? 'protected'}`);
+    output.appendLine(`Access key: ${decoded.accessKey ? '<redacted>' : 'not required'}`);
     vscode.window.showInformationMessage('Partner package looks valid.');
     return true;
   } catch (error) {
@@ -2355,7 +2399,8 @@ async function promptHostEndpointInputs(): Promise<
   | {
       readonly appId: string;
       readonly apiBaseUrl: string;
-      readonly accessKey: string;
+      readonly accessKey?: string;
+      readonly public?: boolean;
     }
   | undefined
 > {
@@ -2377,20 +2422,30 @@ async function promptHostEndpointInputs(): Promise<
   if (!apiBaseUrl) {
     return undefined;
   }
-  const accessKey = await vscode.window.showInputBox({
-    prompt: 'MiniProgram access key',
-    password: true,
-    placeHolder: 'mpk_live_...',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Access key is required.',
-  });
-  if (!accessKey) {
+  const accessMode = await chooseEndpointAccessMode();
+  if (!accessMode) {
     return undefined;
+  }
+  let accessKey: string | undefined;
+  if (accessMode === 'protected') {
+    const value = await vscode.window.showInputBox({
+      prompt: 'MiniProgram access key',
+      password: true,
+      placeHolder: 'mpk_live_...',
+      ignoreFocusOut: true,
+      validateInput: (input) =>
+        input.trim() ? undefined : 'Access key is required.',
+    });
+    if (!value) {
+      return undefined;
+    }
+    accessKey = value.trim();
   }
   return {
     appId: appId.trim(),
     apiBaseUrl: apiBaseUrl.trim(),
-    accessKey: accessKey.trim(),
+    accessKey,
+    public: accessMode === 'public',
   };
 }
 
@@ -2739,6 +2794,25 @@ async function chooseRequireAccessKeys(): Promise<boolean | undefined> {
   return choice?.value;
 }
 
+async function chooseEndpointAccessMode(): Promise<'protected' | 'public' | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Protected endpoint',
+        description: 'Requires a MiniProgram access key',
+        value: 'protected' as const,
+      },
+      {
+        label: 'Public/static endpoint',
+        description: 'No access key; use only for public CDN/GitHub Pages content',
+        value: 'public' as const,
+      },
+    ],
+    { title: 'MiniProgram endpoint access mode', ignoreFocusOut: true },
+  );
+  return choice?.value;
+}
+
 async function chooseBackendRoot(
   workspacePath: string,
   options: {
@@ -2868,8 +2942,8 @@ function validatePartnerPackageJson(decoded: unknown): string[] {
     return ['Package must be a JSON object.'];
   }
   const object = decoded as Record<string, unknown>;
-  if (object.schemaVersion !== 1) {
-    errors.push('schemaVersion must be 1.');
+  if (object.schemaVersion !== 1 && object.schemaVersion !== 2) {
+    errors.push('schemaVersion must be 1 or 2.');
   }
   if (object.type !== 'mini_program_partner_handoff') {
     errors.push('type must be mini_program_partner_handoff.');
@@ -2883,8 +2957,19 @@ function validatePartnerPackageJson(decoded: unknown): string[] {
   if (typeof object.apiBaseUrl !== 'string' || validateAbsoluteUrl(object.apiBaseUrl)) {
     errors.push('apiBaseUrl must be an absolute URL.');
   }
-  if (typeof object.accessKey !== 'string' || !object.accessKey.trim()) {
-    errors.push('accessKey is required.');
+  const accessMode = object.schemaVersion === 1
+    ? 'protected'
+    : typeof object.accessMode === 'string'
+      ? object.accessMode.trim()
+      : '';
+  if (object.schemaVersion === 2 && accessMode !== 'protected' && accessMode !== 'public') {
+    errors.push('accessMode must be protected or public.');
+  }
+  if (accessMode === 'protected' && (typeof object.accessKey !== 'string' || !object.accessKey.trim())) {
+    errors.push('accessKey is required for protected packages.');
+  }
+  if (accessMode === 'public' && typeof object.accessKey === 'string' && object.accessKey.trim()) {
+    errors.push('accessKey must be omitted for public packages.');
   }
   return errors;
 }

@@ -4,7 +4,7 @@ Developer tooling for the portable Flutter mini-program platform.
 
 This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, preview with watch/rebuild/refresh, publish
-to local or AWS cloud delivery, deploy the managed AWS backend, initialize
+to local, public static, or AWS cloud delivery, deploy the managed AWS backend, initialize
 embedding adapters for existing Flutter apps, bind host apps to cloud
 environments, manage MiniProgram access keys, generate host endpoint maps,
 exchange partner handoff packages between publishers and host app teams, and
@@ -38,7 +38,7 @@ miniprogram env status [--json]
 miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+miniprogram publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>]
 miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
 miniprogram access-key list <mini-program-id> [--env <env-name>] [--json]
 miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
@@ -55,9 +55,9 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-miniprogram partner package <mini-program-id> --access-key <key> [--api-base-url <url>|--env <env-name>] [--output <file>]
+miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
-miniprogram host endpoint add <mini-program-id> --api-base-url <url> --access-key <key>
+miniprogram host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
 miniprogram host endpoint import <partner-package.json>
 miniprogram embed init [--project-root <path>] [--force]
 miniprogram embed cloud configure [--env <env-name>]
@@ -265,6 +265,48 @@ metadata/releases/<mini-program-id>/<version>.json
 Host apps should use the API Gateway base URL printed by
 `miniprogram cloud outputs`, not the S3 bucket URL.
 
+### Public static publish
+
+For demos, open-source samples, testing, fun apps, or other content that can be
+fully public, export a static delivery folder:
+
+```bash
+cd coupon_center
+miniprogram publish --target static --output public_mini_program
+```
+
+The output folder is ready for GitHub Pages, CDN, S3 public hosting,
+Cloudflare Pages, Netlify, Vercel static hosting, or similar:
+
+```text
+public_mini_program/
+  manifests/<mini-program-id>/latest.json
+  manifests/<mini-program-id>/versions/<version>.json
+  screens/<mini-program-id>/<version>/<screen-id>.json
+  assets/<mini-program-id>/<version>/
+  metadata/catalog/<mini-program-id>.json
+  metadata/releases/<mini-program-id>/<version>.json
+  PUBLISH_INSTRUCTIONS.md
+```
+
+Public static delivery is unauthenticated. Do not publish private data or
+business-only mini-programs this way. Prefer GitHub Pages or a CDN over
+`raw.githubusercontent.com` for real usage.
+
+Host apps add public static endpoints without access keys:
+
+```bash
+miniprogram host endpoint add public_coupon_demo --api-base-url https://user.github.io/repo/public_mini_program/ --public
+```
+
+Generated Dart uses:
+
+```dart
+MiniProgramEndpoint.public(
+  apiBaseUri: Uri.parse('https://user.github.io/repo/public_mini_program/'),
+)
+```
+
 ### MiniProgram access keys
 
 When an environment was configured with `--require-access-keys`, create one
@@ -322,14 +364,20 @@ miniprogram cloud app delete old_coupon_demo --env my-aws-prod --yes
 ### Host endpoint map
 
 One host app can include many mini-programs from many publishers and cloud
-providers. Keep button code appId-only, and keep API base URLs plus
-MiniProgram access keys in host runtime config.
+providers. Keep button code appId-only, and keep API base URLs plus public or
+protected delivery mode in host runtime config.
 
 For partner handoff, the publisher can package the appId, title, API base URL,
-and one MiniProgram access key into a JSON file:
+and one MiniProgram access key into a JSON file for protected delivery:
 
 ```bash
 miniprogram partner package aws_coupon_demo --title "AWS Coupon Demo" --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --env my-aws-prod --output aws_coupon_demo.partner.json
+```
+
+For public/static delivery, create a public handoff package without a key:
+
+```bash
+miniprogram partner package public_coupon_demo --title "Public Coupon Demo" --public --api-base-url https://user.github.io/repo/public_mini_program/ --output public_coupon_demo.partner.json
 ```
 
 The host app team imports that package from the Flutter app root:
@@ -344,7 +392,7 @@ Generate or update a host-owned endpoint file:
 ```bash
 cd my_mini_host
 miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-miniprogram host endpoint add gcp_rewards --api-base-url https://gcp.example.com/api/ --access-key mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+miniprogram host endpoint add public_coupon_demo --api-base-url https://user.github.io/repo/public_mini_program/ --public
 ```
 
 Then wire it once:
@@ -363,7 +411,7 @@ Buttons remain clean:
 
 ```dart
 openAppMiniProgram(context, appId: 'aws_coupon_demo', title: 'AWS Coupon Demo');
-openAppMiniProgram(context, appId: 'gcp_rewards', title: 'GCP Rewards');
+openAppMiniProgram(context, appId: 'public_coupon_demo', title: 'Public Coupon Demo');
 ```
 
 Current cloud support in this phase:

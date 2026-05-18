@@ -30,8 +30,20 @@ class MiniProgramEndpoint {
     this.enableLocalLoopbackFallback = true,
   });
 
+  /// Creates a public/static mini-program endpoint.
+  ///
+  /// Public endpoints do not send the MiniProgram access-key header and should
+  /// only be used for public demos, open-source samples, or CDN-hosted content
+  /// that does not need delivery access control.
+  const MiniProgramEndpoint.public({
+    required this.apiBaseUri,
+    this.headers = const <String, String>{},
+    this.requestTimeout = const Duration(seconds: 5),
+    this.enableLocalLoopbackFallback = true,
+  }) : accessKey = null;
+
   final Uri apiBaseUri;
-  final String accessKey;
+  final String? accessKey;
   final Map<String, String> headers;
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
@@ -152,7 +164,10 @@ class EndpointRoutingMiniProgramSource implements DisposableMiniProgramSource {
     return appId;
   }
 
-  static String _normalizeAccessKey(String rawAccessKey, String appId) {
+  static String? _normalizeAccessKey(String? rawAccessKey, String appId) {
+    if (rawAccessKey == null) {
+      return null;
+    }
     final accessKey = rawAccessKey.trim();
     if (accessKey.isEmpty) {
       throw ArgumentError.value(

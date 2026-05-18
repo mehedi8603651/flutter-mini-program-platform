@@ -133,6 +133,22 @@ test('builds core workflow command arguments', () => {
     '--target',
     'local',
   ]);
+  assert.deepEqual(
+    buildPublishArgs({
+      target: 'static',
+      outputPath: 'D:/public_mini_program',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publish',
+      '--target',
+      'static',
+      '--output',
+      'D:/public_mini_program',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
 });
 
 test('builds host app command arguments', () => {
@@ -200,6 +216,25 @@ test('builds host app command arguments', () => {
       '--project-root',
       'D:/host',
       '--force',
+    ],
+  );
+  assert.deepEqual(
+    buildHostEndpointAddArgs({
+      appId: 'public_coupon',
+      apiBaseUrl: 'https://user.github.io/repo/public_mini_program',
+      public: true,
+      projectRoot: 'D:/host',
+    }),
+    [
+      'host',
+      'endpoint',
+      'add',
+      'public_coupon',
+      '--api-base-url',
+      'https://user.github.io/repo/public_mini_program',
+      '--public',
+      '--project-root',
+      'D:/host',
     ],
   );
   assert.deepEqual(
@@ -477,6 +512,24 @@ test('builds partner package command arguments', () => {
       'mpk_live_secret',
       '--api-base-url',
       'https://api.example.com/api',
+    ],
+  );
+  assert.deepEqual(
+    buildPartnerPackageArgs({
+      appId: 'public_coupon',
+      public: true,
+      apiBaseUrl: 'https://user.github.io/repo/public_mini_program',
+      outputPath: 'D:/work/public_coupon.partner.json',
+    }),
+    [
+      'partner',
+      'package',
+      'public_coupon',
+      '--public',
+      '--api-base-url',
+      'https://user.github.io/repo/public_mini_program',
+      '--output',
+      'D:/work/public_coupon.partner.json',
     ],
   );
 });

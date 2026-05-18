@@ -35,9 +35,10 @@ export interface CreateArgsOptions {
 }
 
 export interface PublishArgsOptions {
-  readonly target: 'local' | 'cloud';
+  readonly target: 'local' | 'cloud' | 'static';
   readonly envName?: string;
   readonly miniProgramRoot?: string;
+  readonly outputPath?: string;
 }
 
 export interface PreviewArgsOptions {
@@ -68,7 +69,8 @@ export interface HostEndpointImportArgsOptions {
 export interface HostEndpointAddArgsOptions {
   readonly appId: string;
   readonly apiBaseUrl: string;
-  readonly accessKey: string;
+  readonly accessKey?: string;
+  readonly public?: boolean;
   readonly projectRoot: string;
   readonly force?: boolean;
 }
@@ -176,7 +178,8 @@ export interface AccessKeyRotateArgsOptions {
 export interface PartnerPackageArgsOptions {
   readonly appId: string;
   readonly title?: string;
-  readonly accessKey: string;
+  readonly accessKey?: string;
+  readonly public?: boolean;
   readonly envName?: string;
   readonly apiBaseUrl?: string;
   readonly outputPath?: string;
@@ -247,6 +250,9 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
   if (options.envName?.trim()) {
     args.push('--env', options.envName.trim());
   }
+  if (options.outputPath?.trim()) {
+    args.push('--output', options.outputPath.trim());
+  }
   return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
@@ -301,11 +307,13 @@ export function buildHostEndpointAddArgs(
     options.appId,
     '--api-base-url',
     options.apiBaseUrl,
-    '--access-key',
-    options.accessKey,
-    '--project-root',
-    options.projectRoot,
   ];
+  if (options.public) {
+    args.push('--public');
+  } else if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
+  args.push('--project-root', options.projectRoot);
   if (options.force) {
     args.push('--force');
   }
@@ -497,9 +505,12 @@ export function buildPartnerPackageArgs(
     'partner',
     'package',
     options.appId,
-    '--access-key',
-    options.accessKey,
   ];
+  if (options.public) {
+    args.push('--public');
+  } else if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
   }

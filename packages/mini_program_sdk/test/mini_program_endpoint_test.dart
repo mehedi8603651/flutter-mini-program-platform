@@ -49,6 +49,47 @@ void main() {
       );
     });
 
+    test('supports public endpoints without an access key', () async {
+      final createdSources = <_RecordingSource>[];
+      final source = EndpointRoutingMiniProgramSource(
+        endpoints: <String, MiniProgramEndpoint>{
+          'public_coupon_demo': MiniProgramEndpoint.public(
+            apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+          ),
+        },
+        deliveryContext: _deliveryContext,
+        sourceFactory:
+            ({required appId, required endpoint, required deliveryContext}) {
+              final createdSource = _RecordingSource(
+                appId: appId,
+                endpoint: endpoint,
+              );
+              createdSources.add(createdSource);
+              return createdSource;
+            },
+      );
+
+      final manifest = await source.loadManifest('public_coupon_demo');
+
+      expect(manifest.id, 'public_coupon_demo');
+      expect(createdSources.single.endpoint.accessKey, isNull);
+    });
+
+    test('rejects a blank protected access key', () {
+      expect(
+        () => EndpointRoutingMiniProgramSource(
+          endpoints: <String, MiniProgramEndpoint>{
+            'aws_coupon_demo': MiniProgramEndpoint(
+              apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
+              accessKey: '   ',
+            ),
+          },
+          deliveryContext: _deliveryContext,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
     test('throws a structured error for an unregistered appId', () async {
       final source = EndpointRoutingMiniProgramSource(
         endpoints: <String, MiniProgramEndpoint>{

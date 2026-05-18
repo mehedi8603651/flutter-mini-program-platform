@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- Add public/static endpoint support to publish, host endpoint, and partner
+  package prompts.
+- Let host developers add/import public endpoints without MiniProgram access
+  keys while keeping protected endpoint command logging redacted.
+- Show public/protected endpoint mode in status and diagnostics.
+
 ## 0.1.8
 
 - Add `MiniProgram: Check Host Endpoint Remote` so host developers can pick a

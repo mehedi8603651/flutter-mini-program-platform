@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "publisher": "mini-program",
   "license": "MIT",
   "repository": {

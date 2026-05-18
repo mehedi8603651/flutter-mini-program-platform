@@ -241,6 +241,7 @@ class MiniProgramWorkflowStatusController {
             (entry) => <String, Object?>{
               'appId': entry.key,
               'apiBaseUri': entry.value['apiBaseUri'],
+              'accessMode': entry.value['accessMode'],
               'hasAccessKey': entry.value['hasAccessKey'],
             },
           )
@@ -608,6 +609,11 @@ class MiniProgramWorkflowStatusController {
           'appId': json?['appId']?.toString(),
           'title': json?['title']?.toString(),
           'apiBaseUrl': json?['apiBaseUrl']?.toString(),
+          'accessMode':
+              json?['accessMode']?.toString() ??
+              ((json?['accessKey']?.toString().isNotEmpty ?? false)
+                  ? 'protected'
+                  : 'public'),
           'hasAccessKey': (json?['accessKey']?.toString().isNotEmpty ?? false),
         });
       } catch (error) {
@@ -639,9 +645,14 @@ class MiniProgramWorkflowStatusController {
     }
     return decoded.map((key, value) {
       final record = value is Map ? value : <String, Object?>{};
+      final hasAccessKey = record['accessKey']?.toString().isNotEmpty ?? false;
+      final accessMode =
+          record['accessMode']?.toString() ??
+          (hasAccessKey ? 'protected' : 'public');
       return MapEntry(key.toString(), <String, Object?>{
         'apiBaseUri': record['apiBaseUri']?.toString(),
-        'hasAccessKey': record['accessKey']?.toString().isNotEmpty ?? false,
+        'accessMode': accessMode,
+        'hasAccessKey': hasAccessKey,
       });
     });
   }

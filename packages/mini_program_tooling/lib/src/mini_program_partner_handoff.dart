@@ -18,14 +18,16 @@ class MiniProgramPartnerHandoff {
     required String appId,
     required String title,
     required Uri apiBaseUri,
-    required String accessKey,
+    String? accessMode,
+    String? accessKey,
     required String generatedAtUtc,
   }) : appId = appId.trim(),
        title = title.trim(),
        apiBaseUri = _normalizeApiBaseUri(apiBaseUri),
-       accessKey = accessKey.trim(),
+       accessMode = _normalizeAccessMode(accessMode, accessKey),
+       accessKey = _normalizeOptionalAccessKey(accessKey),
        generatedAtUtc = generatedAtUtc.trim() {
-    if (schemaVersion != currentSchemaVersion) {
+    if (schemaVersion != 1 && schemaVersion != currentSchemaVersion) {
       throw MiniProgramPartnerHandoffException(
         'Unsupported MiniProgram partner handoff schema version: '
         '$schemaVersion.',
@@ -33,7 +35,19 @@ class MiniProgramPartnerHandoff {
     }
     _validateSafeIdentifier(appId, 'appId');
     _validateTitle(title);
-    _validateAccessKey(accessKey);
+    if (this.accessMode == accessModeProtected) {
+      final protectedAccessKey = this.accessKey;
+      if (protectedAccessKey == null || protectedAccessKey.isEmpty) {
+        throw const MiniProgramPartnerHandoffException(
+          'Protected MiniProgram partner handoff requires accessKey.',
+        );
+      }
+      _validateAccessKey(protectedAccessKey);
+    } else if (this.accessKey != null && this.accessKey!.isNotEmpty) {
+      throw const MiniProgramPartnerHandoffException(
+        'Public MiniProgram partner handoff must not include accessKey.',
+      );
+    }
     if (DateTime.tryParse(this.generatedAtUtc) == null) {
       throw const MiniProgramPartnerHandoffException(
         'MiniProgram partner handoff generatedAtUtc must be an ISO timestamp.',
@@ -59,25 +73,37 @@ class MiniProgramPartnerHandoff {
         'MiniProgram partner handoff apiBaseUrl is invalid.',
       );
     }
+    final schemaVersion = _readInt(decoded, 'schemaVersion');
+    final accessMode = schemaVersion == 1
+        ? accessModeProtected
+        : _readString(decoded, 'accessMode');
     return MiniProgramPartnerHandoff(
-      schemaVersion: _readInt(decoded, 'schemaVersion'),
+      schemaVersion: schemaVersion,
       appId: _readString(decoded, 'appId'),
       title: _readString(decoded, 'title'),
       apiBaseUri: apiBaseUri,
-      accessKey: _readString(decoded, 'accessKey'),
+      accessMode: accessMode,
+      accessKey: accessMode == accessModePublic
+          ? _readOptionalString(decoded, 'accessKey')
+          : _readString(decoded, 'accessKey'),
       generatedAtUtc: _readString(decoded, 'generatedAtUtc'),
     );
   }
 
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
   static const String documentType = 'mini_program_partner_handoff';
+  static const String accessModeProtected = 'protected';
+  static const String accessModePublic = 'public';
 
   final int schemaVersion;
   final String appId;
   final String title;
   final Uri apiBaseUri;
-  final String accessKey;
+  final String accessMode;
+  final String? accessKey;
   final String generatedAtUtc;
+
+  bool get isPublic => accessMode == accessModePublic;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -86,7 +112,8 @@ class MiniProgramPartnerHandoff {
       'appId': appId,
       'title': title,
       'apiBaseUrl': apiBaseUri.toString(),
-      'accessKey': accessKey,
+      'accessMode': accessMode,
+      if (accessKey != null) 'accessKey': accessKey,
       'generatedAtUtc': generatedAtUtc,
     };
   }
@@ -99,6 +126,23 @@ class MiniProgramPartnerHandoff {
       );
     }
     return value.trim();
+  }
+
+  static String? _readOptionalString(
+    Map<dynamic, dynamic> decoded,
+    String key,
+  ) {
+    final value = decoded[key];
+    if (value == null) {
+      return null;
+    }
+    if (value is! String) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff "$key" must be a string.',
+      );
+    }
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   static int _readInt(Map<dynamic, dynamic> decoded, String key) {
@@ -152,6 +196,28 @@ class MiniProgramPartnerHandoff {
       );
     }
   }
+
+  static String _normalizeAccessMode(String? accessMode, String? accessKey) {
+    final normalizedMode = accessMode?.trim().toLowerCase();
+    if (normalizedMode == null || normalizedMode.isEmpty) {
+      return accessKey?.trim().isNotEmpty == true
+          ? accessModeProtected
+          : accessModePublic;
+    }
+    if (normalizedMode == accessModeProtected ||
+        normalizedMode == accessModePublic) {
+      return normalizedMode;
+    }
+    throw MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff accessMode must be "$accessModeProtected" '
+      'or "$accessModePublic".',
+    );
+  }
+
+  static String? _normalizeOptionalAccessKey(String? accessKey) {
+    final trimmed = accessKey?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
 }
 
 class MiniProgramPartnerPackageRequest {
@@ -159,7 +225,7 @@ class MiniProgramPartnerPackageRequest {
     required this.appId,
     required this.title,
     required this.apiBaseUri,
-    required this.accessKey,
+    this.accessKey,
     this.outputPath,
     this.generatedAtUtc,
   });
@@ -167,7 +233,7 @@ class MiniProgramPartnerPackageRequest {
   final String appId;
   final String title;
   final Uri apiBaseUri;
-  final String accessKey;
+  final String? accessKey;
   final String? outputPath;
   final DateTime? generatedAtUtc;
 }
@@ -192,7 +258,7 @@ class MiniProgramPartnerHandoffController {
       appId: request.appId.trim(),
       title: request.title.trim(),
       apiBaseUri: request.apiBaseUri,
-      accessKey: request.accessKey.trim(),
+      accessKey: request.accessKey?.trim(),
       generatedAtUtc: (request.generatedAtUtc ?? DateTime.now().toUtc())
           .toIso8601String(),
     );

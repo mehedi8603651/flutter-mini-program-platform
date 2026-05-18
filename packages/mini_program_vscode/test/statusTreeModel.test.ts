@@ -19,6 +19,10 @@ test('renders mini-program and host status rows', () => {
       endpointMapExists: true,
       endpointCount: 2,
       endpointAppIds: ['coupon_demo', 'rewards'],
+      endpoints: [
+        { appId: 'coupon_demo', accessMode: 'protected', hasAccessKey: true },
+        { appId: 'rewards', accessMode: 'public', hasAccessKey: false },
+      ],
     },
     environment: {
       configured: true,
@@ -36,6 +40,7 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Host app/);
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
+  assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);
   assert.match(text, /Routing: endpoint map active/);
   assert.match(text, /Backend fallback/);
   assert.match(text, /Access keys required: yes/);
