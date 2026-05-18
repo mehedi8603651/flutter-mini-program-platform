@@ -16,6 +16,7 @@ class MiniProgramStaticPublishRequest {
     this.miniProgramRootPath,
     this.stacCliScriptPath,
     this.skipBuildPubGet = false,
+    this.clean = false,
   });
 
   final String repoRootPath;
@@ -24,6 +25,7 @@ class MiniProgramStaticPublishRequest {
   final String? miniProgramRootPath;
   final String? stacCliScriptPath;
   final bool skipBuildPubGet;
+  final bool clean;
 }
 
 class StaticPublishedFileRecord {
@@ -48,8 +50,10 @@ class MiniProgramStaticPublishResult {
     required this.metadataReleasePath,
     required this.metadataCatalogPath,
     required this.instructionsPath,
+    required this.nojekyllPath,
     required this.publishedAtUtc,
     required this.writtenFiles,
+    this.cleaned = false,
     this.assetsDirectoryPath,
   });
 
@@ -64,8 +68,10 @@ class MiniProgramStaticPublishResult {
   final String metadataReleasePath;
   final String metadataCatalogPath;
   final String instructionsPath;
+  final String nojekyllPath;
   final String publishedAtUtc;
   final List<StaticPublishedFileRecord> writtenFiles;
+  final bool cleaned;
 }
 
 class MiniProgramStaticPublisher {
@@ -140,6 +146,11 @@ class MiniProgramStaticPublisher {
       '${buildResult.miniProgramId}.json',
     );
     final instructionsPath = p.join(outputPath, 'PUBLISH_INSTRUCTIONS.md');
+    final nojekyllPath = p.join(outputPath, '.nojekyll');
+
+    if (request.clean) {
+      await _cleanGeneratedStaticOutput(outputPath);
+    }
 
     await Directory(manifestVersionsDirectoryPath).create(recursive: true);
     await _replaceDirectory(screensDirectoryPath, outputRoot: outputPath);
@@ -237,6 +248,12 @@ class MiniProgramStaticPublisher {
       version: version,
       writtenFiles: writtenFiles,
     );
+    await _writeTextFile(
+      nojekyllPath,
+      '',
+      outputRoot: outputPath,
+      writtenFiles: writtenFiles,
+    );
 
     return MiniProgramStaticPublishResult(
       outputPath: outputPath,
@@ -250,8 +267,10 @@ class MiniProgramStaticPublisher {
       metadataReleasePath: releaseMetadataPath,
       metadataCatalogPath: catalogMetadataPath,
       instructionsPath: instructionsPath,
+      nojekyllPath: nojekyllPath,
       publishedAtUtc: publishedAtUtc,
       writtenFiles: writtenFiles,
+      cleaned: request.clean,
     );
   }
 
@@ -341,6 +360,32 @@ class MiniProgramStaticPublisher {
     await directory.create(recursive: true);
   }
 
+  Future<void> _cleanGeneratedStaticOutput(String outputRoot) async {
+    final generatedDirectoryNames = <String>[
+      'manifests',
+      'screens',
+      'assets',
+      'metadata',
+    ];
+    for (final directoryName in generatedDirectoryNames) {
+      final directoryPath = p.join(outputRoot, directoryName);
+      _assertContainedPath(path: directoryPath, root: outputRoot);
+      final directory = Directory(directoryPath);
+      if (await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+    }
+
+    for (final fileName in <String>['PUBLISH_INSTRUCTIONS.md', '.nojekyll']) {
+      final filePath = p.join(outputRoot, fileName);
+      _assertContainedPath(path: filePath, root: outputRoot);
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+  }
+
   Future<void> _writeJsonFile(
     String filePath,
     Map<String, Object?> json, {
@@ -352,6 +397,23 @@ class MiniProgramStaticPublisher {
     await File(
       filePath,
     ).writeAsString('${const JsonEncoder.withIndent('  ').convert(json)}\n');
+    writtenFiles.add(
+      StaticPublishedFileRecord(
+        relativePath: _relativeStaticPath(filePath, outputRoot),
+        localSourcePath: filePath,
+      ),
+    );
+  }
+
+  Future<void> _writeTextFile(
+    String filePath,
+    String value, {
+    required String outputRoot,
+    required List<StaticPublishedFileRecord> writtenFiles,
+  }) async {
+    _assertContainedPath(path: filePath, root: outputRoot);
+    await Directory(p.dirname(filePath)).create(recursive: true);
+    await File(filePath).writeAsString(value);
     writtenFiles.add(
       StaticPublishedFileRecord(
         relativePath: _relativeStaticPath(filePath, outputRoot),
@@ -376,6 +438,10 @@ version `$version`.
 
 Upload the contents of this folder to GitHub Pages, a CDN, S3 public hosting,
 Cloudflare Pages, Netlify, Vercel static hosting, or another public static host.
+
+GitHub Pages users should keep the generated `.nojekyll` file so generated
+paths are served as normal static files. If this folder is committed inside a
+larger Pages repo, also keep a `.nojekyll` file at the repo root.
 
 Use the public URL for this folder as the endpoint base URI:
 

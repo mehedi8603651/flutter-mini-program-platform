@@ -39,6 +39,7 @@ export interface PublishArgsOptions {
   readonly envName?: string;
   readonly miniProgramRoot?: string;
   readonly outputPath?: string;
+  readonly clean?: boolean;
 }
 
 export interface PreviewArgsOptions {
@@ -252,6 +253,9 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
   }
   if (options.outputPath?.trim()) {
     args.push('--output', options.outputPath.trim());
+  }
+  if (options.clean) {
+    args.push('--clean');
   }
   return withMiniProgramRoot(args, options.miniProgramRoot);
 }

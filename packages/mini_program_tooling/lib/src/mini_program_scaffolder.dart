@@ -134,6 +134,7 @@ class MiniProgramScaffolder {
         packageName: packageName,
         title: title,
       ),
+      p.join(miniProgramRootPath, '.gitignore'): _buildGitignore(),
       p.join(miniProgramRootPath, 'lib', 'default_stac_options.dart'):
           _buildDefaultStacOptions(miniProgramId: miniProgramId, title: title),
       p.join(miniProgramRootPath, 'lib', 'host_action_helpers.dart'):
@@ -339,6 +340,15 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.0.0
+''';
+
+  String _buildGitignore() => '''
+.dart_tool/
+.packages
+.pub/
+build/
+stac/.build/
+*.log
 ''';
 
   String _buildDefaultStacOptions({

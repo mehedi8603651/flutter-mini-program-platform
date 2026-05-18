@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.13
+
+- add `miniprogram publish --target static --clean` to safely remove generated
+  static delivery output before writing a new public version
+- generate `.nojekyll` for GitHub Pages static delivery exports
+- add `.gitignore` to newly scaffolded mini-programs so local Dart/Stac build
+  cache folders are not committed accidentally
+- expand public GitHub Pages delivery docs with clean-repo guidance
+
 ## 0.3.12
 
 - add `miniprogram publish --target static --output <folder>` for public

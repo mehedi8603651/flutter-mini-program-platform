@@ -1,4 +1,6 @@
 import * as fs from 'fs/promises';
+import * as http from 'http';
+import * as https from 'https';
 import * as path from 'path';
 
 import {
@@ -433,7 +435,99 @@ async function buildHostAppChecks(
       path.join(workspacePath, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
       internetPermission ? undefined : 'Run MiniProgram: Embed Init or add android.permission.INTERNET.',
     ),
+    ...(await buildPublicEndpointChecks(endpoints)),
   ];
+}
+
+async function buildPublicEndpointChecks(
+  endpoints: readonly unknown[],
+): Promise<DiagnosticCheck[]> {
+  const checks: DiagnosticCheck[] = [];
+  for (const rawEndpoint of endpoints) {
+    const endpoint = asRecord(rawEndpoint);
+    const appId = asString(endpoint.appId);
+    const apiBaseUri = asString(endpoint.apiBaseUri);
+    const accessMode = asString(
+      endpoint.accessMode,
+      asBoolean(endpoint.hasAccessKey) ? 'protected' : 'public',
+    );
+    if (!appId || !apiBaseUri || accessMode !== 'public') {
+      continue;
+    }
+
+    const hasAccessKey = asBoolean(endpoint.hasAccessKey);
+    checks.push(
+      check(
+        `host_app.public_endpoint_access.${appId}`,
+        `Public endpoint access: ${appId}`,
+        hasAccessKey ? 'error' : 'ok',
+        hasAccessKey
+          ? 'Public endpoint metadata should not include a MiniProgram access key.'
+          : 'Public endpoint does not require a MiniProgram access key.',
+        apiBaseUri,
+        hasAccessKey
+          ? 'Re-add the endpoint with MiniProgram: Add Host Endpoint and choose public mode.'
+          : undefined,
+      ),
+    );
+
+    const manifestUrl = resolveEndpointUrl(
+      apiBaseUri,
+      `manifests/${appId}/latest.json`,
+    );
+    const manifestResponse = await getJsonObject(manifestUrl);
+    checks.push(
+      check(
+        `host_app.public_manifest.${appId}`,
+        `Public manifest URL: ${appId}`,
+        manifestResponse.ok ? 'ok' : 'warning',
+        manifestResponse.ok
+          ? 'Public latest manifest is reachable.'
+          : 'Public latest manifest could not be loaded.',
+        manifestResponse.ok ? manifestUrl : `${manifestUrl} (${manifestResponse.error})`,
+        manifestResponse.ok
+          ? undefined
+          : 'Confirm GitHub Pages/CDN is deployed and the host endpoint base URL ends with the static output folder.',
+      ),
+    );
+
+    const version = asString(manifestResponse.json?.version);
+    const entry = asString(manifestResponse.json?.entry);
+    if (!manifestResponse.ok || !version || !entry) {
+      checks.push(
+        check(
+          `host_app.public_entry_screen.${appId}`,
+          `Public entry screen URL: ${appId}`,
+          'warning',
+          'Public entry screen could not be checked because manifest version or entry is missing.',
+          manifestUrl,
+          'Confirm latest.json has version and entry fields.',
+        ),
+      );
+      continue;
+    }
+
+    const screenUrl = resolveEndpointUrl(
+      apiBaseUri,
+      `screens/${appId}/${version}/${entry}.json`,
+    );
+    const screenResponse = await getJsonObject(screenUrl);
+    checks.push(
+      check(
+        `host_app.public_entry_screen.${appId}`,
+        `Public entry screen URL: ${appId}`,
+        screenResponse.ok ? 'ok' : 'warning',
+        screenResponse.ok
+          ? 'Public entry screen JSON is reachable.'
+          : 'Public entry screen JSON could not be loaded.',
+        screenResponse.ok ? screenUrl : `${screenUrl} (${screenResponse.error})`,
+        screenResponse.ok
+          ? undefined
+          : 'Run miniprogram publish --target static again and push the generated screens folder.',
+      ),
+    );
+  }
+  return checks;
 }
 
 function buildCloudDeliveryChecks(
@@ -695,4 +789,68 @@ async function readDartSources(
   }
   await visit(libPath, 0);
   return sources;
+}
+
+function resolveEndpointUrl(apiBaseUri: string, relativePath: string): string {
+  const normalizedBase = apiBaseUri.endsWith('/') ? apiBaseUri : `${apiBaseUri}/`;
+  return new URL(relativePath, normalizedBase).toString();
+}
+
+async function getJsonObject(
+  url: string,
+  redirectCount = 0,
+): Promise<{ readonly ok: boolean; readonly json?: Record<string, unknown>; readonly error?: string }> {
+  try {
+    const response = await getText(url);
+    if (
+      response.statusCode >= 300 &&
+      response.statusCode < 400 &&
+      response.location &&
+      redirectCount < 3
+    ) {
+      return getJsonObject(new URL(response.location, url).toString(), redirectCount + 1);
+    }
+    if (response.statusCode !== 200) {
+      return { ok: false, error: `HTTP ${response.statusCode}` };
+    }
+    const decoded = JSON.parse(response.body) as unknown;
+    if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
+      return { ok: false, error: 'Response was not a JSON object' };
+    }
+    return { ok: true, json: decoded as Record<string, unknown> };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function getText(
+  url: string,
+): Promise<{ readonly statusCode: number; readonly body: string; readonly location?: string }> {
+  return new Promise((resolve, reject) => {
+    const client = url.startsWith('https:') ? https : http;
+    const request = client.get(url, { timeout: 5000 }, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk: string) => {
+        body += chunk;
+      });
+      response.on('end', () => {
+        const locationHeader = response.headers.location;
+        resolve({
+          statusCode: response.statusCode ?? 0,
+          body,
+          location: Array.isArray(locationHeader)
+            ? locationHeader[0]
+            : locationHeader,
+        });
+      });
+    });
+    request.on('timeout', () => {
+      request.destroy(new Error(`Request timed out: ${url}`));
+    });
+    request.on('error', reject);
+  });
 }

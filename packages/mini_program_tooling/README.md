@@ -38,7 +38,7 @@ miniprogram env status [--json]
 miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>]
+miniprogram publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>] [--clean]
 miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
 miniprogram access-key list <mini-program-id> [--env <env-name>] [--json]
 miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
@@ -275,6 +275,14 @@ cd coupon_center
 miniprogram publish --target static --output public_mini_program
 ```
 
+Use `--clean` when you want the CLI to remove older generated static output
+before writing the new version. The cleanup is conservative: it removes only
+generated static delivery folders/files, not your README or unrelated files.
+
+```bash
+miniprogram publish --target static --output public_mini_program --clean
+```
+
 The output folder is ready for GitHub Pages, CDN, S3 public hosting,
 Cloudflare Pages, Netlify, Vercel static hosting, or similar:
 
@@ -287,11 +295,46 @@ public_mini_program/
   metadata/catalog/<mini-program-id>.json
   metadata/releases/<mini-program-id>/<version>.json
   PUBLISH_INSTRUCTIONS.md
+  .nojekyll
 ```
 
 Public static delivery is unauthenticated. Do not publish private data or
 business-only mini-programs this way. Prefer GitHub Pages or a CDN over
 `raw.githubusercontent.com` for real usage.
+
+### Public GitHub Pages delivery
+
+For a clean public GitHub Pages repo, commit only the generated delivery folder
+and simple repo metadata:
+
+```text
+.gitignore
+.nojekyll
+README.md
+public_mini_program/
+```
+
+The generated `.nojekyll` file should be kept so GitHub Pages serves generated
+paths normally. If you commit `public_mini_program/` inside a larger GitHub
+Pages repo, also keep a `.nojekyll` file at the repo root. A public delivery
+repo should not contain development folders like `.dart_tool/`, `stac/.build/`,
+or local build output.
+
+Recommended flow:
+
+```bash
+miniprogram publish --target static --output public_mini_program --clean
+git add public_mini_program .nojekyll README.md
+git commit -m "Publish public mini-program"
+git push
+```
+
+After GitHub Pages is enabled, verify these URLs in a browser:
+
+```text
+https://<user>.github.io/<repo>/public_mini_program/manifests/<appId>/latest.json
+https://<user>.github.io/<repo>/public_mini_program/screens/<appId>/<version>/<entry>.json
+```
 
 Host apps add public static endpoints without access keys:
 

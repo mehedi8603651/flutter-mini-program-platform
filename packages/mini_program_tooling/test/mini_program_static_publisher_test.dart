@@ -145,6 +145,71 @@ void main() {
         ).readAsString(),
         contains('MiniProgramEndpoint.public'),
       );
+      expect(await File(p.join(outputPath, '.nojekyll')).exists(), isTrue);
+    });
+
+    test('clean removes only generated static output before writing', () async {
+      final outputPath = p.join(tempDir.path, 'public_mini_program');
+      await Directory(
+        p.join(outputPath, 'screens', 'old_app'),
+      ).create(recursive: true);
+      await File(
+        p.join(outputPath, 'screens', 'old_app', 'old.json'),
+      ).writeAsString('{}');
+      await File(p.join(outputPath, 'README.md')).writeAsString('keep me');
+
+      final publisher = MiniProgramStaticPublisher(
+        builder: _FakeMiniProgramBuilder(
+          MiniProgramBuildResult(
+            repoRootPath: tempDir.path,
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: miniProgramRoot.path,
+            cliSource: 'fake',
+            invocation: const <String>['dart', 'fake'],
+            outputDirectoryPath: p.join(miniProgramRoot.path, 'stac', '.build'),
+            screensDirectoryPath: screensDirectoryPath,
+            entryScreenJsonPath: p.join(
+              screensDirectoryPath,
+              'coupon_center_home.json',
+            ),
+            pubGetRan: false,
+          ),
+        ),
+      );
+
+      final result = await publisher.publish(
+        MiniProgramStaticPublishRequest(
+          repoRootPath: tempDir.path,
+          miniProgramRootPath: miniProgramRoot.path,
+          miniProgramId: 'coupon_center',
+          outputPath: outputPath,
+          clean: true,
+        ),
+      );
+
+      expect(result.cleaned, isTrue);
+      expect(
+        await File(
+          p.join(outputPath, 'screens', 'old_app', 'old.json'),
+        ).exists(),
+        isFalse,
+      );
+      expect(
+        await File(p.join(outputPath, 'README.md')).readAsString(),
+        'keep me',
+      );
+      expect(
+        await File(
+          p.join(
+            outputPath,
+            'screens',
+            'coupon_center',
+            '1.2.3',
+            'coupon_center_home.json',
+          ),
+        ).exists(),
+        isTrue,
+      );
     });
   });
 }

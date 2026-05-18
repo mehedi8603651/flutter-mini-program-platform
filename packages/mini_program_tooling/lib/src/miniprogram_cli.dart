@@ -543,6 +543,12 @@ class MiniprogramCli {
         help:
             'Output folder when --target static is selected, for example public_mini_program.',
       )
+      ..addFlag(
+        'clean',
+        negatable: false,
+        help:
+            'When --target static is selected, remove generated static delivery output before writing the new version.',
+      )
       ..addOption(
         'env',
         help:
@@ -626,6 +632,7 @@ class MiniprogramCli {
               : resolved.miniProgramRootPath,
           stacCliScriptPath: results.option('stac-cli-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
+          clean: results.flag('clean'),
         ),
       );
       _stdout.writeln(_formatStaticPublishResult(result));
@@ -3032,7 +3039,7 @@ Commands:
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
-  publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>]
+  publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>] [--clean]
   access-key create|list|revoke|rotate <mini-program-id> [--env <env-name>]
   cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
   cloud app list|info|disable|delete [options]
@@ -3420,6 +3427,8 @@ Commands:
       'Release metadata: ${result.metadataReleasePath}',
       'Catalog metadata: ${result.metadataCatalogPath}',
       'Instructions: ${result.instructionsPath}',
+      'GitHub Pages marker: ${result.nojekyllPath}',
+      'Cleaned generated output first: ${result.cleaned}',
       'Written files: ${result.writtenFiles.length}',
       'Published at UTC: ${result.publishedAtUtc}',
       'Host endpoint example:',

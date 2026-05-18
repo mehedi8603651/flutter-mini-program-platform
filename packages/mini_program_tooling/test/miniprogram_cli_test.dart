@@ -875,12 +875,14 @@ void main() {
               'static',
               '--output',
               outputPath,
+              '--clean',
             ]);
 
         expect(exitCode, 0);
         expect(staticPublisher.lastRequest, isNotNull);
         expect(staticPublisher.lastRequest!.outputPath, outputPath);
         expect(staticPublisher.lastRequest!.miniProgramId, 'coupon_center');
+        expect(staticPublisher.lastRequest!.clean, isTrue);
         expect(
           staticPublisher.lastRequest!.miniProgramRootPath,
           p.normalize(p.absolute(standaloneRoot)),
@@ -2844,8 +2846,10 @@ class _FakeMiniProgramStaticPublisher extends MiniProgramStaticPublisher {
         '${request.miniProgramId ?? 'coupon_center'}.json',
       ),
       instructionsPath: p.join(request.outputPath, 'PUBLISH_INSTRUCTIONS.md'),
+      nojekyllPath: p.join(request.outputPath, '.nojekyll'),
       publishedAtUtc: DateTime.utc(2026, 5, 18).toIso8601String(),
       writtenFiles: const <StaticPublishedFileRecord>[],
+      cleaned: request.clean,
     );
   }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.10
+
+- Add `MiniProgram: Publish Public Static MiniProgram` as a direct GitHub
+  Pages/CDN export command with optional `--clean`.
+- Extend host diagnostics for public endpoints by checking latest manifest and
+  entry screen URLs, and by confirming no MiniProgram access key is required.
+- Update docs for `mini_program_tooling` 0.3.13 public static publishing.
+
 ## 0.1.9
 
 - Add public/static endpoint support to publish, host endpoint, and partner

@@ -69,6 +69,7 @@ void main() {
           p.join(miniProgramRoot, 'lib', 'host_action_helpers.dart'),
         );
         final readmeFile = File(p.join(miniProgramRoot, 'README.md'));
+        final gitignoreFile = File(p.join(miniProgramRoot, '.gitignore'));
 
         expect(result.miniProgramId, 'coupon_center');
         expect(manifest['entry'], 'coupon_center_home');
@@ -239,6 +240,8 @@ void main() {
           isTrue,
         );
         expect(await helperFile.exists(), isTrue);
+        expect(await gitignoreFile.exists(), isTrue);
+        expect(await gitignoreFile.readAsString(), contains('stac/.build/'));
         expect(result.createdPaths, isNotEmpty);
       },
     );

@@ -138,6 +138,7 @@ test('builds core workflow command arguments', () => {
       target: 'static',
       outputPath: 'D:/public_mini_program',
       miniProgramRoot: 'D:/work/coupon_demo',
+      clean: true,
     }),
     [
       'publish',
@@ -145,6 +146,7 @@ test('builds core workflow command arguments', () => {
       'static',
       '--output',
       'D:/public_mini_program',
+      '--clean',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],

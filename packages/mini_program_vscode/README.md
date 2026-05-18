@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Local install
 
-Requires `mini_program_tooling` 0.3.12 or newer for public/static endpoint
+Requires `mini_program_tooling` 0.3.13 or newer for public/static endpoint
 support and `miniprogram workflow status --json`.
 
 ```bash
@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.9.vsix
+code --install-extension mini-program-tools-0.1.10.vsix
 ```
 
 ## Features
@@ -31,6 +31,7 @@ code --install-extension mini-program-tools-0.1.9.vsix
   - `MiniProgram: Validate`
   - `MiniProgram: Preview`
   - `MiniProgram: Publish`
+  - `MiniProgram: Publish Public Static MiniProgram`
   - `MiniProgram: Embed Init`
   - `MiniProgram: Configure Host Cloud`
   - `MiniProgram: Import Host Endpoint`
@@ -74,8 +75,10 @@ code --install-extension mini-program-tools-0.1.9.vsix
   - `MiniProgram: Refresh Remote Status`
 
 `MiniProgram: Publish` supports cloud, local, and public/static export targets.
-The static target writes a folder that can be uploaded to GitHub Pages or a CDN
-and then used from a public endpoint.
+`MiniProgram: Publish Public Static MiniProgram` opens the static export flow
+directly and can pass `--clean` to remove generated static output before writing
+the new version. The static target writes a folder that can be uploaded to
+GitHub Pages or a CDN and then used from a public endpoint.
 
 ## Settings
 
@@ -124,6 +127,14 @@ for AWS/GCP/backend delivery that requires a MiniProgram access key. Use
 public/static mode for GitHub Pages, CDN, S3 public hosting, Cloudflare Pages,
 Netlify, Vercel static hosting, or other public content. Public mode has no
 delivery access control.
+
+Host diagnostics check public endpoints by loading:
+
+- `manifests/<appId>/latest.json`
+- `screens/<appId>/<version>/<entry>.json`
+
+They also verify public endpoint metadata does not require a MiniProgram access
+key. These checks run only when you manually run diagnostics.
 
 ## Host registry and demo buttons
 

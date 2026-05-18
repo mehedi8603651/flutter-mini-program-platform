@@ -150,6 +150,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publish', () =>
       publishMiniProgram(output, refreshStatus),
     ),
+    vscode.commands.registerCommand('miniProgramTools.publishPublicStaticMiniProgram', () =>
+      publishPublicStaticMiniProgram(output, refreshStatus),
+    ),
     vscode.commands.registerCommand('miniProgramTools.embedInit', () =>
       embedInit(output, refreshStatus),
     ),
@@ -390,18 +393,17 @@ async function publishMiniProgram(
   }
 
   let outputPath: string | undefined;
+  let clean = false;
   if (targetChoice.label === 'static') {
-    const folders = await vscode.window.showOpenDialog({
-      canSelectFiles: false,
-      canSelectFolders: true,
-      canSelectMany: false,
-      openLabel: 'Use static output folder',
-      title: 'Choose public static output folder',
-    });
-    outputPath = folders?.[0]?.fsPath;
+    outputPath = await chooseStaticOutputFolder();
     if (!outputPath) {
       return;
     }
+    const cleanChoice = await chooseStaticClean();
+    if (cleanChoice === undefined) {
+      return;
+    }
+    clean = cleanChoice;
   }
 
   await runMiniProgramWorkspaceCliCommand(
@@ -411,6 +413,34 @@ async function publishMiniProgram(
         target: targetChoice.label as 'local' | 'cloud' | 'static',
         envName,
         outputPath,
+        clean,
+        miniProgramRoot: workspacePath,
+      }),
+    output,
+    refreshStatus,
+  );
+}
+
+async function publishPublicStaticMiniProgram(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const outputPath = await chooseStaticOutputFolder();
+  if (!outputPath) {
+    return;
+  }
+  const clean = await chooseStaticClean();
+  if (clean === undefined) {
+    return;
+  }
+
+  await runMiniProgramWorkspaceCliCommand(
+    'Publish Public Static MiniProgram',
+    (workspacePath) =>
+      buildPublishArgs({
+        target: 'static',
+        outputPath,
+        clean,
         miniProgramRoot: workspacePath,
       }),
     output,
@@ -2773,6 +2803,41 @@ async function chooseForce(prompt: string): Promise<boolean | undefined> {
     { title: 'MiniProgram command mode', ignoreFocusOut: true },
   );
   return choice?.force;
+}
+
+async function chooseStaticOutputFolder(): Promise<string | undefined> {
+  const workspacePath = getWorkspacePath();
+  const defaultUri = workspacePath
+    ? vscode.Uri.file(path.join(workspacePath, 'public_mini_program'))
+    : undefined;
+  const folders = await vscode.window.showOpenDialog({
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    defaultUri,
+    openLabel: 'Use static output folder',
+    title: 'Choose public static output folder',
+  });
+  return folders?.[0]?.fsPath;
+}
+
+async function chooseStaticClean(): Promise<boolean | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Clean generated output first',
+        description: 'Removes generated manifests/screens/assets/metadata before publishing',
+        value: true,
+      },
+      {
+        label: 'Keep existing generated output',
+        description: 'Overwrites current version files and keeps older versions',
+        value: false,
+      },
+    ],
+    { title: 'Public static publish cleanup', ignoreFocusOut: true },
+  );
+  return choice?.value;
 }
 
 async function chooseRequireAccessKeys(): Promise<boolean | undefined> {

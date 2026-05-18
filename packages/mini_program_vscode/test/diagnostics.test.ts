@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import test from 'node:test';
@@ -170,6 +172,27 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
 
 test('host app accepts public endpoint metadata without access key', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-host-public-');
+  const server = createServer((request, response) => {
+    if (request.url === '/public_mini_program/manifests/public_coupon/latest.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({
+        id: 'public_coupon',
+        version: '1.0.0',
+        entry: 'public_coupon_home',
+      }));
+      return;
+    }
+    if (request.url === '/public_mini_program/screens/public_coupon/1.0.0/public_coupon_home.json') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ type: 'text', data: 'Public coupon' }));
+      return;
+    }
+    response.writeHead(404);
+    response.end('not found');
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address() as AddressInfo;
+  const apiBaseUri = `http://127.0.0.1:${address.port}/public_mini_program/`;
   try {
     await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
     await writeFile(
@@ -197,7 +220,7 @@ test('host app accepts public endpoint metadata without access key', async () =>
           endpoints: [
             {
               appId: 'public_coupon',
-              apiBaseUri: 'https://user.github.io/repo/public_mini_program',
+              apiBaseUri,
               accessMode: 'public',
               hasAccessKey: false,
             },
@@ -211,8 +234,12 @@ test('host app accepts public endpoint metadata without access key', async () =>
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /public_coupon:public/);
+    assert.match(text, /Public latest manifest is reachable/);
+    assert.match(text, /Public entry screen JSON is reachable/);
+    assert.match(text, /does not require a MiniProgram access key/);
     assert.doesNotMatch(text, /Incomplete endpoint entries/);
   } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
