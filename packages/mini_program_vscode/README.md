@@ -6,18 +6,36 @@ This extension is a thin UI over the installed `miniprogram` CLI. It does not
 reimplement create, build, validate, publish, preview, AWS, access-key, partner
 package, host endpoint, or backend logic.
 
-## Local install
+## Marketplace install
 
 Requires `mini_program_tooling` 0.3.13 or newer for public/static endpoint
 support and `miniprogram workflow status --json`.
 
+Install or upgrade the CLI first:
+
 ```bash
 dart pub global activate mini_program_tooling
+```
+
+Then install the extension from VS Code Marketplace:
+
+```bash
+code --install-extension MiniProgramTools.mini-program-tools
+```
+
+You can also install it from the VS Code Extensions view by searching for
+`MiniProgram Tools`.
+
+## Local VSIX install
+
+Use this only when testing an unreleased extension build locally.
+
+```bash
 cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.11.vsix
+code --install-extension mini-program-tools-0.1.12.vsix
 ```
 
 ## Features

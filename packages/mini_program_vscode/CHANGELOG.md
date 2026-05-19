@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.12
+
+- Prepare the public Marketplace release metadata for publisher
+  `MiniProgramTools`.
+- Add the Marketplace PNG icon to packaged extension metadata.
+- Put Marketplace install instructions before local VSIX development install
+  instructions in the README.
+
 ## 0.1.11
 
 - Fix `MiniProgram: Setup New MiniProgram` and `MiniProgram: Create MiniProgram`
