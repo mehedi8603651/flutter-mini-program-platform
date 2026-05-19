@@ -17,7 +17,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.10.vsix
+code --install-extension mini-program-tools-0.1.11.vsix
 ```
 
 ## Features

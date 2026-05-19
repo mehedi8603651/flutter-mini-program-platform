@@ -83,11 +83,11 @@ test('builds core workflow command arguments', () => {
     }),
     [
       'create',
-      'coupon_demo',
       '--output-root',
       'D:/work/coupon_demo',
       '--title',
       'Coupon Demo',
+      'coupon_demo',
     ],
   );
   assert.deepEqual(buildBuildArgs({ miniProgramRoot: 'D:/work/coupon_demo' }), [

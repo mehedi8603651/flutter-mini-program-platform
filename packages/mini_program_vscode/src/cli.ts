@@ -220,10 +220,11 @@ export function buildDoctorArgs(options: DoctorArgsOptions = {}): string[] {
 }
 
 export function buildCreateArgs(options: CreateArgsOptions): string[] {
-  const args = ['create', options.appId, '--output-root', options.outputRoot];
+  const args = ['create', '--output-root', options.outputRoot];
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
   }
+  args.push(options.appId);
   return args;
 }
 

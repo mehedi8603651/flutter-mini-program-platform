@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11
+
+- Fix `MiniProgram: Setup New MiniProgram` and `MiniProgram: Create MiniProgram`
+  command argument order for `mini_program_tooling` 0.3.13.
+
 ## 0.1.10
 
 - Add `MiniProgram: Publish Public Static MiniProgram` as a direct GitHub
