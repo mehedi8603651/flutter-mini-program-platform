@@ -21,12 +21,29 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.1
+  mini_program_sdk: ^0.3.2
   mini_program_contracts: ^0.1.1
 ```
 
 For monorepo contributor work, keep `pubspec_overrides.yaml` so the package
 uses the local `mini_program_contracts` checkout.
+
+## VS Code extension
+
+For host-app setup, endpoint import, diagnostics, and guided mini-program
+workflows, install **MiniProgram Tools** from the VS Code Marketplace:
+
+- Marketplace: https://marketplace.visualstudio.com/items?itemName=MiniProgramTools.mini-program-tools
+- Install command:
+
+```bash
+dart pub global activate mini_program_tooling
+code --install-extension MiniProgramTools.mini-program-tools
+```
+
+The extension does not replace the SDK or CLI. It calls the installed
+`miniprogram` CLI and helps developers wire `MiniProgramScope`, endpoints,
+partner packages, public static delivery, and cloud delivery from VS Code.
 
 ## Minimal usage
 
@@ -148,7 +165,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.1` while the runtime compatibility version remains
+the package can be `0.3.2` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints

@@ -24,6 +24,23 @@ Repo-local contributor install:
 dart pub global activate --source path <repo-root>/packages/mini_program_tooling
 ```
 
+## VS Code extension
+
+If you prefer buttons, status panels, diagnostics, and guided workflows instead
+of typing every command, install **MiniProgram Tools** from the VS Code
+Marketplace:
+
+- Marketplace: https://marketplace.visualstudio.com/items?itemName=MiniProgramTools.mini-program-tools
+- Install command:
+
+```bash
+code --install-extension MiniProgramTools.mini-program-tools
+```
+
+The extension is a thin UI over this same `miniprogram` CLI. Keep
+`mini_program_tooling` installed globally because the extension calls the CLI as
+the source of truth.
+
 ## CLI surface
 
 ```text

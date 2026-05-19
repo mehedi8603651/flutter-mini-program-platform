@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.14
+
+- add the MiniProgram Tools VS Code Marketplace link and install command to
+  the README so CLI users can discover the sidebar workflow extension
+
 ## 0.3.13
 
 - add `miniprogram publish --target static --clean` to safely remove generated

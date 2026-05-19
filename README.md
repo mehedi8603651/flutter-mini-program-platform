@@ -39,6 +39,8 @@ Already shipped:
   - `mini_program_sdk`
   - `mini_program_tooling`
 - global `miniprogram` CLI
+- MiniProgram Tools VS Code extension:
+  https://marketplace.visualstudio.com/items?itemName=MiniProgramTools.mini-program-tools
 - standalone local backend workspace
 - standalone local authoring flow
 - host-app embedding flow for Flutter apps

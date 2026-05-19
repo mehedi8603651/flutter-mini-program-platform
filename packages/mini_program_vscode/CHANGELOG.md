@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.13
+
+- Add the public Marketplace URL to README install instructions.
+
 ## 0.1.12
 
 - Prepare the public Marketplace release metadata for publisher

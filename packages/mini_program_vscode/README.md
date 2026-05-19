@@ -19,6 +19,8 @@ dart pub global activate mini_program_tooling
 
 Then install the extension from VS Code Marketplace:
 
+- Marketplace: https://marketplace.visualstudio.com/items?itemName=MiniProgramTools.mini-program-tools
+
 ```bash
 code --install-extension MiniProgramTools.mini-program-tools
 ```
@@ -35,7 +37,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.12.vsix
+code --install-extension mini-program-tools-0.1.13.vsix
 ```
 
 ## Features

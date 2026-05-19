@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- add the MiniProgram Tools VS Code Marketplace link and install command to
+  the README so host app developers can discover guided setup and diagnostics
+
 ## 0.3.1
 
 - add `MiniProgramEndpoint.public(...)` for public/static CDN, GitHub Pages,
