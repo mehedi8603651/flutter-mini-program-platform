@@ -52,6 +52,18 @@ For most host apps, prefer generating the adapter with
 dependencies to `pubspec.yaml`, and gives you `buildMiniProgramConfig(...)`
 plus `openAppMiniProgram(...)`.
 
+For first-run testing without AWS or access keys, use:
+
+```bash
+miniprogram embed init --with-demo
+```
+
+That adds a public jsDelivr demo endpoint and registry entry using:
+
+```text
+https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/
+```
+
 This package does not own your Flutter app. It only provides mini-program
 capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,
 `MaterialApp.router`, GoRouter, theme, localization, state management, routes,

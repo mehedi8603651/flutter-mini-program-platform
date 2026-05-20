@@ -44,6 +44,8 @@ Already shipped:
 - standalone local backend workspace
 - standalone local authoring flow
 - host-app embedding flow for Flutter apps
+- opt-in `miniprogram embed init --with-demo` flow for a public jsDelivr demo
+  endpoint without AWS or access keys
 - AWS cloud publishing through S3
 - AWS API Gateway + Lambda cloud backend deployment
 - host-app cloud binding and `host run`

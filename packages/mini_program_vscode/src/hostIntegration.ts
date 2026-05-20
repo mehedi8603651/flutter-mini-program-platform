@@ -165,7 +165,7 @@ export function buildHostCommandTemplate(options: {
   const projectRoot = options.projectRoot;
   const deviceId = options.deviceId || 'emulator-5554';
   return [
-    `miniprogram embed init --project-root "${projectRoot}"`,
+    `miniprogram embed init --with-demo --project-root "${projectRoot}"`,
     `miniprogram host endpoint import "<path-to-partner-json>" --project-root "${projectRoot}"`,
     `miniprogram host run -d ${deviceId} --project-root "${projectRoot}"`,
     'flutter build apk --release',

@@ -168,6 +168,14 @@ test('builds host app command arguments', () => {
     '--force',
   ]);
   assert.deepEqual(
+    buildEmbedInitArgs({ projectRoot: 'D:/host', withDemo: true }),
+    ['embed', 'init', '--project-root', 'D:/host', '--with-demo'],
+  );
+  assert.deepEqual(
+    buildEmbedInitArgs({ projectRoot: 'D:/host', withDemo: true, force: true }),
+    ['embed', 'init', '--project-root', 'D:/host', '--with-demo', '--force'],
+  );
+  assert.deepEqual(
     buildEmbedCloudConfigureArgs({
       projectRoot: 'D:/host',
       envName: 'my-aws-prod',

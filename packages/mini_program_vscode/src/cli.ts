@@ -54,6 +54,7 @@ export interface WorkspaceMiniProgramArgsOptions {
 export interface EmbedInitArgsOptions {
   readonly projectRoot: string;
   readonly force?: boolean;
+  readonly withDemo?: boolean;
 }
 
 export interface EmbedCloudConfigureArgsOptions {
@@ -263,6 +264,9 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
 
 export function buildEmbedInitArgs(options: EmbedInitArgsOptions): string[] {
   const args = ['embed', 'init', '--project-root', options.projectRoot];
+  if (options.withDemo) {
+    args.push('--with-demo');
+  }
   if (options.force) {
     args.push('--force');
   }

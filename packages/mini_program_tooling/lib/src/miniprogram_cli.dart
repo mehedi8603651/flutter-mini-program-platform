@@ -1720,6 +1720,12 @@ class MiniprogramCli {
         'force',
         negatable: false,
         help: 'Overwrite scaffold-managed files if the target already exists.',
+      )
+      ..addFlag(
+        'with-demo',
+        negatable: false,
+        help:
+            'Add a public GitHub/jsDelivr demo endpoint, registry entry, and README button snippet.',
       );
 
     final results = parser.parse(arguments);
@@ -1742,6 +1748,7 @@ class MiniprogramCli {
         hostVersion: results.option('host-version'),
         nativeRoutePath: results.option('native-route-path')!,
         force: results.flag('force'),
+        withDemo: results.flag('with-demo'),
       ),
     );
 
@@ -3049,7 +3056,7 @@ Commands:
   host run -d <device> [--env <env-name>]
   host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
   host endpoint import <partner-package.json>
-  embed init [--project-root <path>]
+  embed init [--project-root <path>] [--with-demo]
   embed cloud configure [--env <env-name>]
   backend init [--root <path>]
   backend start --port 8080
@@ -3802,6 +3809,8 @@ Commands:
       if (result.repoRootPath != null) 'Repo root: ${result.repoRootPath}',
       'Host app id: ${result.hostAppId}',
       'Host version: ${result.hostVersion}',
+      if (result.withDemo)
+        'Public demo: profile via https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/',
       'Files:',
       ...result.createdPaths.map((path) => '- $path'),
     ];

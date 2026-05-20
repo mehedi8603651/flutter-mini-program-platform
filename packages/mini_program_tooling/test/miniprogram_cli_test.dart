@@ -108,6 +108,10 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
+        contains('embed init [--project-root <path>] [--with-demo]'),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('embed cloud configure [--env <env-name>]'),
       );
     });
@@ -2255,8 +2259,65 @@ dependencies:
       );
       expect(
         await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-        contains('mini_program_sdk: ^0.3.1'),
+        contains('mini_program_sdk: ^0.3.2'),
       );
+    });
+
+    test('embed init with demo generates public demo endpoint files', () async {
+      final projectRoot = p.join(tempDir.path, 'host_app');
+      await Directory(p.join(projectRoot, 'lib')).create(recursive: true);
+      await File(p.join(projectRoot, 'pubspec.yaml')).writeAsString('''
+name: host_app
+version: 1.0.0+1
+
+dependencies:
+  flutter:
+    sdk: flutter
+''');
+
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: repoRoot.path,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'embed',
+        'init',
+        '--project-root',
+        projectRoot,
+        '--with-demo',
+      ]);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('Public demo: profile via'));
+      final endpointSource = await File(
+        p.join(
+          projectRoot,
+          'lib',
+          'mini_program',
+          'mini_program_endpoints.dart',
+        ),
+      ).readAsString();
+      final registrySource = await File(
+        p.join(
+          projectRoot,
+          'lib',
+          'mini_program',
+          'mini_program_registry.dart',
+        ),
+      ).readAsString();
+      expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(
+        endpointSource,
+        contains(
+          'https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/',
+        ),
+      );
+      expect(registrySource, contains("appId: 'profile'"));
+      expect(registrySource, contains("title: 'Public Demo'"));
     });
 
     test('embed init defaults to the current working directory', () async {

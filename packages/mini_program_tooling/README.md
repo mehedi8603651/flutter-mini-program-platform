@@ -76,7 +76,7 @@ miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--a
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
 miniprogram host endpoint import <partner-package.json>
-miniprogram embed init [--project-root <path>] [--force]
+miniprogram embed init [--project-root <path>] [--force] [--with-demo]
 miniprogram embed cloud configure [--env <env-name>]
 miniprogram backend start --port 8080
 miniprogram backend stop
@@ -676,6 +676,32 @@ flutter create my_mini_host
 cd my_mini_host
 miniprogram embed init
 flutter pub get
+```
+
+For first-run testing without AWS, access keys, or your own published
+mini-program yet, generate a public jsDelivr demo endpoint:
+
+```powershell
+miniprogram embed init --with-demo
+flutter pub get
+```
+
+That also creates:
+
+- `lib/mini_program/mini_program_endpoints.dart`
+- `lib/mini_program/mini_program_registry.dart`
+- a README button snippet using `MiniPrograms.publicDemo`
+
+The generated demo endpoint is public and uses:
+
+```text
+https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/
+```
+
+When publishing your own public static mini-program, replace it with your repo:
+
+```text
+https://cdn.jsdelivr.net/gh/mehedi8603651/<repo>@main/
 ```
 
 Bind that host app to your AWS env:

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.15
+
+- add `miniprogram embed init --with-demo` to generate a public jsDelivr demo
+  endpoint, mini-program registry, and README button snippet for first-run host
+  app testing without AWS or access keys
+- update generated host adapters and preview hosts to depend on
+  `mini_program_sdk: ^0.3.2`
+
 ## 0.3.14
 
 - add the MiniProgram Tools VS Code Marketplace link and install command to

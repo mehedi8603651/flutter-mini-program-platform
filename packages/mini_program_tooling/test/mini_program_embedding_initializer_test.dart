@@ -59,6 +59,7 @@ void main() {
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
+      expect(result.withDemo, isFalse);
       expect(result.createdPaths, hasLength(6));
       expect(
         runtimeSetup,
@@ -118,9 +119,9 @@ void main() {
       expect(barrel, contains("export 'app_host_bridge.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.3.1'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.3.2'));
       expect(updatedPubspec, contains('mini_program_contracts: ^0.1.1'));
-      expect(readme, contains('mini_program_sdk: ^0.3.1'));
+      expect(readme, contains('mini_program_sdk: ^0.3.2'));
       expect(readme, contains('mini_program_contracts: ^0.1.1'));
       expect(readme, contains('MiniProgramScope('));
       expect(
@@ -162,12 +163,67 @@ void main() {
       );
       expect(readme, contains('MiniPrograms.coupon.appId'));
       expect(readme, contains('buildMiniProgramEndpoints()'));
+      expect(readme, contains('miniprogram embed init --with-demo --force'));
+      expect(readme, isNot(contains('MiniPrograms.publicDemo.appId')));
       expect(readme, contains('ProviderScope('));
       expect(readme, contains('MultiProvider('));
       expect(readme, contains('MultiBlocProvider('));
       expect(readme, contains('flutter build apk --release'));
       expect(readme, contains('openAppMiniProgram('));
       expect(readme, isNot(contains('MiniProgramAppShell')));
+    });
+
+    test('withDemo generates public endpoint and registry files', () async {
+      final result = await const MiniProgramEmbeddingInitializer().initialize(
+        MiniProgramEmbeddingInitRequest(
+          projectRootPath: tempDir.path,
+          withDemo: true,
+        ),
+      );
+
+      final integrationRootPath = p.join(tempDir.path, 'lib', 'mini_program');
+      final endpointSource = await File(
+        p.join(integrationRootPath, 'mini_program_endpoints.dart'),
+      ).readAsString();
+      final registrySource = await File(
+        p.join(integrationRootPath, 'mini_program_registry.dart'),
+      ).readAsString();
+      final barrel = await File(
+        p.join(integrationRootPath, 'mini_program.dart'),
+      ).readAsString();
+      final readme = await File(
+        p.join(integrationRootPath, 'README.md'),
+      ).readAsString();
+
+      expect(result.withDemo, isTrue);
+      expect(
+        result.createdPaths,
+        contains(p.join(integrationRootPath, 'mini_program_endpoints.dart')),
+      );
+      expect(
+        result.createdPaths,
+        contains(p.join(integrationRootPath, 'mini_program_registry.dart')),
+      );
+      expect(endpointSource, contains('"accessMode":"public"'));
+      expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(endpointSource, contains('MiniPrograms.publicDemo.appId'));
+      expect(
+        endpointSource,
+        contains(
+          'https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/',
+        ),
+      );
+      expect(registrySource, contains("appId: 'profile'"));
+      expect(registrySource, contains("title: 'Public Demo'"));
+      expect(barrel, contains("export 'mini_program_endpoints.dart';"));
+      expect(barrel, contains("export 'mini_program_registry.dart';"));
+      expect(readme, contains('Public demo endpoint'));
+      expect(readme, contains('MiniPrograms.publicDemo.appId'));
+      expect(readme, contains('Open Public Demo'));
+      expect(
+        readme,
+        contains('https://cdn.jsdelivr.net/gh/mehedi8603651/<repo>@main/'),
+      );
     });
 
     test('supports custom host metadata and route path', () async {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.14
+
+- Add `--with-demo` support to `MiniProgram: Embed Init` and guided host setup
+  so first-run host apps can generate a public jsDelivr demo endpoint and
+  registry from VS Code.
+- Update copied host workflow commands to use the public demo endpoint for
+  first-run testing.
+
 ## 0.1.13
 
 - Add the public Marketplace URL to README install instructions.

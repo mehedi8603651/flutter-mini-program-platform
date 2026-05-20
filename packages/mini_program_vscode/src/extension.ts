@@ -460,10 +460,14 @@ async function embedInit(
   if (force === undefined) {
     return;
   }
+  const withDemo = await chooseWithDemo();
+  if (withDemo === undefined) {
+    return;
+  }
 
   await runWorkspaceCliCommand(
     'Embed Init',
-    buildEmbedInitArgs({ projectRoot, force }),
+    buildEmbedInitArgs({ projectRoot, force, withDemo }),
     output,
     refreshStatus,
   );
@@ -1671,9 +1675,13 @@ async function guidedSetupHostApp(output: vscode.OutputChannel): Promise<boolean
   if (force === undefined) {
     return false;
   }
+  const withDemo = await chooseWithDemo();
+  if (withDemo === undefined) {
+    return false;
+  }
   if (!(await runGuidedCliStep(
     'Embed Init',
-    buildEmbedInitArgs({ projectRoot, force }),
+    buildEmbedInitArgs({ projectRoot, force, withDemo }),
     projectRoot,
     output,
   ))) {
@@ -2803,6 +2811,25 @@ async function chooseForce(prompt: string): Promise<boolean | undefined> {
     { title: 'MiniProgram command mode', ignoreFocusOut: true },
   );
   return choice?.force;
+}
+
+async function chooseWithDemo(): Promise<boolean | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Add public demo endpoint',
+        description: 'Recommended for first test; uses public jsDelivr/GitHub delivery',
+        withDemo: true,
+      },
+      {
+        label: 'Clean adapter only',
+        description: 'No demo endpoint or registry; production-friendly default',
+        withDemo: false,
+      },
+    ],
+    { title: 'MiniProgram public demo', ignoreFocusOut: true },
+  );
+  return choice?.withDemo;
 }
 
 async function chooseStaticOutputFolder(): Promise<string | undefined> {

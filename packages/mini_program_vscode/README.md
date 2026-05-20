@@ -8,8 +8,9 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.13 or newer for public/static endpoint
-support and `miniprogram workflow status --json`.
+Requires `mini_program_tooling` 0.3.15 or newer for public demo endpoint
+generation, public/static endpoint support, and `miniprogram workflow status
+--json`.
 
 Install or upgrade the CLI first:
 
@@ -37,7 +38,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.13.vsix
+code --install-extension mini-program-tools-0.1.14.vsix
 ```
 
 ## Features
@@ -99,6 +100,19 @@ code --install-extension mini-program-tools-0.1.13.vsix
 directly and can pass `--clean` to remove generated static output before writing
 the new version. The static target writes a folder that can be uploaded to
 GitHub Pages or a CDN and then used from a public endpoint.
+
+`MiniProgram: Embed Init` can also generate a public first-run demo endpoint.
+Choose **Add public demo endpoint** when prompted to create:
+
+- `lib/mini_program/mini_program_endpoints.dart`
+- `lib/mini_program/mini_program_registry.dart`
+- README snippets using `MiniPrograms.publicDemo`
+
+The demo uses this public jsDelivr endpoint:
+
+```text
+https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/
+```
 
 ## Settings
 
