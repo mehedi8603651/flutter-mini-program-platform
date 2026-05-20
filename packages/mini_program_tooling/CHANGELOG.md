@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.17
+
+- fix standalone mini-program path resolution so commands run from a
+  mini-program root prefer the current directory before an accidental nested
+  `./<appId>` folder
+- add a regression test for preview/build roots that contain a nested folder
+  with the same mini-program id
+
 ## 0.3.16
 
 - make `miniprogram host endpoint add/import` update both

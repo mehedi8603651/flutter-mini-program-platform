@@ -24,10 +24,20 @@ void main() {
         p.join(repoRoot.path, 'packages', 'mini_program_tooling'),
       ).create(recursive: true);
       await File(
-        p.join(repoRoot.path, 'packages', 'mini_program_tooling', 'pubspec.yaml'),
+        p.join(
+          repoRoot.path,
+          'packages',
+          'mini_program_tooling',
+          'pubspec.yaml',
+        ),
       ).writeAsString('name: mini_program_tooling');
       await File(
-        p.join(repoRoot.path, 'mini_programs', 'coupon_center', 'manifest.json'),
+        p.join(
+          repoRoot.path,
+          'mini_programs',
+          'coupon_center',
+          'manifest.json',
+        ),
       ).writeAsString('{"id":"coupon_center"}');
     });
 
@@ -37,26 +47,29 @@ void main() {
       }
     });
 
-    test('resolves repo-managed mini-program when repo root is known', () async {
-      final result = await const MiniProgramPathResolver().resolve(
-        miniProgramId: 'coupon_center',
-        repoRootPath: repoRoot.path,
-      );
+    test(
+      'resolves repo-managed mini-program when repo root is known',
+      () async {
+        final result = await const MiniProgramPathResolver().resolve(
+          miniProgramId: 'coupon_center',
+          repoRootPath: repoRoot.path,
+        );
 
-      expect(result.repoRootPath, repoRoot.path);
-      expect(
-        result.miniProgramRootPath,
-        p.join(repoRoot.path, 'mini_programs', 'coupon_center'),
-      );
-      expect(result.isRepoManaged, isTrue);
-    });
+        expect(result.repoRootPath, repoRoot.path);
+        expect(
+          result.miniProgramRootPath,
+          p.join(repoRoot.path, 'mini_programs', 'coupon_center'),
+        );
+        expect(result.isRepoManaged, isTrue);
+      },
+    );
 
     test('resolves standalone ./<id> when working outside the repo', () async {
       final standaloneRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await standaloneRoot.create(recursive: true);
-      await File(p.join(standaloneRoot.path, 'manifest.json')).writeAsString(
-        '{"id":"coupon_center"}',
-      );
+      await File(
+        p.join(standaloneRoot.path, 'manifest.json'),
+      ).writeAsString('{"id":"coupon_center"}');
 
       final result = await const MiniProgramPathResolver().resolve(
         miniProgramId: 'coupon_center',
@@ -68,19 +81,45 @@ void main() {
       expect(result.isRepoManaged, isFalse);
     });
 
-    test('infers the mini-program id from the current working directory', () async {
+    test('prefers current mini-program root over nested ./<id>', () async {
       final standaloneRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await standaloneRoot.create(recursive: true);
-      await File(p.join(standaloneRoot.path, 'manifest.json')).writeAsString(
-        '{"id":"coupon_center"}',
+      await File(
+        p.join(standaloneRoot.path, 'manifest.json'),
+      ).writeAsString('{"id":"coupon_center"}');
+      final nestedRoot = Directory(
+        p.join(standaloneRoot.path, 'coupon_center'),
       );
+      await nestedRoot.create(recursive: true);
+      await File(
+        p.join(nestedRoot.path, 'manifest.json'),
+      ).writeAsString('{"id":"coupon_center"}');
 
-      final inferredId = await const MiniProgramPathResolver().inferMiniProgramId(
+      final result = await const MiniProgramPathResolver().resolve(
+        miniProgramId: 'coupon_center',
         currentWorkingDirectory: standaloneRoot.path,
       );
 
-      expect(inferredId, 'coupon_center');
+      expect(result.repoRootPath, isNull);
+      expect(result.miniProgramRootPath, standaloneRoot.path);
+      expect(result.isRepoManaged, isFalse);
     });
+
+    test(
+      'infers the mini-program id from the current working directory',
+      () async {
+        final standaloneRoot = Directory(p.join(tempDir.path, 'coupon_center'));
+        await standaloneRoot.create(recursive: true);
+        await File(
+          p.join(standaloneRoot.path, 'manifest.json'),
+        ).writeAsString('{"id":"coupon_center"}');
+
+        final inferredId = await const MiniProgramPathResolver()
+            .inferMiniProgramId(currentWorkingDirectory: standaloneRoot.path);
+
+        expect(inferredId, 'coupon_center');
+      },
+    );
 
     test('discovers repo root from a nested working directory', () async {
       final nestedDir = Directory(
@@ -88,10 +127,11 @@ void main() {
       );
       await nestedDir.create(recursive: true);
 
-      final repoRootPath = await const MiniProgramPathResolver().resolveRepoRoot(
-        currentWorkingDirectory: nestedDir.path,
-        required: true,
-      );
+      final repoRootPath = await const MiniProgramPathResolver()
+          .resolveRepoRoot(
+            currentWorkingDirectory: nestedDir.path,
+            required: true,
+          );
 
       expect(repoRootPath, repoRoot.path);
     });

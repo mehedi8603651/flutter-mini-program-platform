@@ -86,17 +86,18 @@ class MiniProgramPathResolver {
         ),
       if (normalizedRepoRootPath != null)
         _MiniProgramCandidate(
-          path: p.join(normalizedRepoRootPath, 'mini_programs', normalizedMiniProgramId),
+          path: p.join(
+            normalizedRepoRootPath,
+            'mini_programs',
+            normalizedMiniProgramId,
+          ),
           label: '--repo-root + mini_programs/<id>',
           isRepoManaged: true,
         ),
+      _MiniProgramCandidate(path: cwd, label: 'current directory'),
       _MiniProgramCandidate(
         path: p.join(cwd, normalizedMiniProgramId),
         label: './<id>',
-      ),
-      _MiniProgramCandidate(
-        path: cwd,
-        label: 'current directory',
       ),
     ];
 
@@ -108,7 +109,8 @@ class MiniProgramPathResolver {
         expectedMiniProgramId: normalizedMiniProgramId,
       );
       if (match != null) {
-        final resolvedRepoRoot = normalizedRepoRootPath ??
+        final resolvedRepoRoot =
+            normalizedRepoRootPath ??
             await resolveRepoRoot(
               currentWorkingDirectory: cwd,
               additionalSearchPath: match.miniProgramRootPath,
@@ -119,7 +121,8 @@ class MiniProgramPathResolver {
           repoRootPath: resolvedRepoRoot,
           miniProgramRootPath: match.miniProgramRootPath,
           miniProgramId: match.miniProgramId,
-          isRepoManaged: candidate.isRepoManaged ||
+          isRepoManaged:
+              candidate.isRepoManaged ||
               (resolvedRepoRoot != null &&
                   p.isWithin(
                     p.join(resolvedRepoRoot, 'mini_programs'),
@@ -149,7 +152,8 @@ class MiniProgramPathResolver {
     String? additionalSearchPath,
     bool required = false,
   }) async {
-    if (explicitRepoRootPath != null && explicitRepoRootPath.trim().isNotEmpty) {
+    if (explicitRepoRootPath != null &&
+        explicitRepoRootPath.trim().isNotEmpty) {
       final normalizedRepoRoot = p.normalize(p.absolute(explicitRepoRootPath));
       if (!await _looksLikeRepoRoot(normalizedRepoRoot)) {
         throw MiniProgramPathResolutionException(
@@ -164,7 +168,8 @@ class MiniProgramPathResolver {
       p.normalize(
         p.absolute(currentWorkingDirectory ?? Directory.current.path),
       ),
-      if (additionalSearchPath != null && additionalSearchPath.trim().isNotEmpty)
+      if (additionalSearchPath != null &&
+          additionalSearchPath.trim().isNotEmpty)
         p.normalize(p.absolute(additionalSearchPath)),
     };
 
@@ -185,9 +190,7 @@ class MiniProgramPathResolver {
     return null;
   }
 
-  Future<String?> discoverRepoRoot({
-    required String startDirectory,
-  }) async {
+  Future<String?> discoverRepoRoot({required String startDirectory}) async {
     var current = p.normalize(p.absolute(startDirectory));
 
     while (true) {
@@ -207,12 +210,7 @@ class MiniProgramPathResolver {
     final miniProgramsRoot = Directory(p.join(directoryPath, 'mini_programs'));
     final backendApiRoot = Directory(p.join(directoryPath, 'backend', 'api'));
     final toolingPackage = File(
-      p.join(
-        directoryPath,
-        'packages',
-        'mini_program_tooling',
-        'pubspec.yaml',
-      ),
+      p.join(directoryPath, 'packages', 'mini_program_tooling', 'pubspec.yaml'),
     );
 
     return await miniProgramsRoot.exists() &&
