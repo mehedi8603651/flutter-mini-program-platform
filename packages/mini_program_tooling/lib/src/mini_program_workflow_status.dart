@@ -221,7 +221,14 @@ class MiniProgramWorkflowStatusController {
       'mini_program',
       'mini_program_endpoints.dart',
     );
+    final registryPath = p.join(
+      workspacePath,
+      'lib',
+      'mini_program',
+      'mini_program_registry.dart',
+    );
     final endpoints = await _readEndpointMetadata(File(endpointPath));
+    final registryEntries = await _readRegistryMetadata(File(registryPath));
     final hostCloud = await _stateStore.readHostCloudConfiguration(
       workspacePath,
     );
@@ -236,6 +243,18 @@ class MiniProgramWorkflowStatusController {
       'endpointMapPath': endpointPath,
       'endpointCount': endpoints.length,
       'endpointAppIds': endpoints.keys.toList()..sort(),
+      'registryExists': await File(registryPath).exists(),
+      'registryPath': registryPath,
+      'registryCount': registryEntries.length,
+      'registryAppIds': registryEntries.keys.toList()..sort(),
+      'registry': registryEntries.entries
+          .map(
+            (entry) => <String, Object?>{
+              'appId': entry.key,
+              'title': entry.value,
+            },
+          )
+          .toList(),
       'endpoints': endpoints.entries
           .map(
             (entry) => <String, Object?>{
@@ -655,6 +674,30 @@ class MiniProgramWorkflowStatusController {
         'hasAccessKey': hasAccessKey,
       });
     });
+  }
+
+  Future<Map<String, String>> _readRegistryMetadata(File file) async {
+    if (!await file.exists()) {
+      return <String, String>{};
+    }
+    final source = await file.readAsString();
+    if (!source.contains('class MiniPrograms') ||
+        !source.contains('MiniProgramInfo')) {
+      return <String, String>{};
+    }
+    final entries = <String, String>{};
+    final pattern = RegExp(
+      r'''static\s+const\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=\s*MiniProgramInfo\s*\(\s*appId:\s*(['"])(.*?)\1\s*,\s*title:\s*(['"])(.*?)\3\s*,?\s*\)''',
+      dotAll: true,
+    );
+    for (final match in pattern.allMatches(source)) {
+      final appId = match.group(2)?.trim() ?? '';
+      final title = match.group(4)?.trim() ?? '';
+      if (appId.isNotEmpty && title.isNotEmpty) {
+        entries[appId] = title;
+      }
+    }
+    return entries;
   }
 }
 

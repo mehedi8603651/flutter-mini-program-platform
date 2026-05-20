@@ -1856,6 +1856,11 @@ class MiniprogramCli {
             'Mini-program delivery API base URL, for example https://api.example.com/prod/api/.',
       )
       ..addOption(
+        'title',
+        help:
+            'Display title to write into mini_program_registry.dart. Defaults to a title-cased appId.',
+      )
+      ..addOption(
         'access-key',
         help: 'MiniProgram access key issued for this host app or partner.',
       )
@@ -1873,7 +1878,7 @@ class MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public) [options]',
+        'Usage: miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -1918,6 +1923,7 @@ class MiniprogramCli {
       MiniProgramHostEndpointAddRequest(
         projectRootPath: projectRootPath,
         appId: results.rest.single,
+        title: results.option('title'),
         apiBaseUri: apiBaseUri,
         accessKey: isPublic ? null : accessKey,
         force: results.flag('force'),
@@ -1968,6 +1974,7 @@ class MiniprogramCli {
       MiniProgramHostEndpointAddRequest(
         projectRootPath: projectRootPath,
         appId: handoff.appId,
+        title: handoff.title,
         apiBaseUri: handoff.apiBaseUri,
         accessKey: handoff.accessKey,
         force: results.flag('force'),
@@ -3054,7 +3061,7 @@ Commands:
   workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
   partner package <mini-program-id> (--access-key <key>|--public) [--env <env-name>]
   host run -d <device> [--env <env-name>]
-  host endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
+  host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public)
   host endpoint import <partner-package.json>
   embed init [--project-root <path>] [--with-demo]
   embed cloud configure [--env <env-name>]
@@ -3769,10 +3776,13 @@ Commands:
           : 'Added MiniProgram host endpoint.',
       'Project root: ${result.projectRootPath}',
       'Endpoint file: ${result.filePath}',
+      'Registry file: ${result.registryFilePath}',
       'Mini-program: ${result.appId}',
+      'Title: ${result.title}',
       'Access mode: ${result.accessMode}',
       'API base URL: ${result.apiBaseUri}',
       'Endpoint count: ${result.endpointCount}',
+      'Registry count: ${result.registryCount}',
       'Use it from MiniProgramScope:',
       'config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),',
     ].join('\n');
@@ -3792,11 +3802,13 @@ Commands:
       'Package file: $packagePath',
       'Project root: ${endpointResult.projectRootPath}',
       'Endpoint file: ${endpointResult.filePath}',
+      'Registry file: ${endpointResult.registryFilePath}',
       'Mini-program: ${handoff.appId}',
       'Title: ${handoff.title}',
       'Access mode: ${handoff.accessMode}',
       'API base URL: ${handoff.apiBaseUri}',
       'Endpoint count: ${endpointResult.endpointCount}',
+      'Registry count: ${endpointResult.registryCount}',
       'Open from app UI by appId only:',
       "openAppMiniProgram(context, appId: '${handoff.appId}', title: ...);",
     ].join('\n');

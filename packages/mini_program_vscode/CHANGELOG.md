@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.15
+
+- Prompt for a display title when adding host endpoints manually and pass it
+  through to `miniprogram host endpoint add --title`.
+- Support the generated registry `values` and `byAppId` helpers.
+- Warn in host diagnostics when endpoint appIds and registry appIds drift.
+
 ## 0.1.14
 
 - Add `--with-demo` support to `MiniProgram: Embed Init` and guided host setup

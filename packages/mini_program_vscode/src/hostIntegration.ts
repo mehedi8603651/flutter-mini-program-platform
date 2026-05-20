@@ -47,6 +47,13 @@ export function buildRegistryFile(
 class MiniPrograms {
   const MiniPrograms._();
 ${entrySource ? `\n${indentBlock(entrySource, 2)}\n` : ''}
+  static const values = <MiniProgramInfo>[
+${normalizedEntries.map((entry) => `    ${dartFieldNameFromAppId(entry.appId)},`).join('\n')}
+  ];
+
+  static const byAppId = <String, MiniProgramInfo>{
+${normalizedEntries.map((entry) => `    ${dartFieldNameFromAppId(entry.appId)}.appId: ${dartFieldNameFromAppId(entry.appId)},`).join('\n')}
+  };
 }
 `;
 }

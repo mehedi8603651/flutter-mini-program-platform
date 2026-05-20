@@ -774,7 +774,8 @@ Use the `BackendApiBaseUrl` shown by `miniprogram cloud outputs`; do not use
 the S3 bucket URL directly. The host app loads through API Gateway + Lambda.
 
 Demo `lib/main.dart` after `miniprogram host endpoint import` or
-`miniprogram host endpoint add` has created `mini_program_endpoints.dart`:
+`miniprogram host endpoint add --title <title>` has created
+`mini_program_endpoints.dart` and `mini_program_registry.dart`:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -782,6 +783,7 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import 'mini_program/mini_program_endpoints.dart';
 import 'mini_program/mini_program_launcher.dart';
+import 'mini_program/mini_program_registry.dart';
 import 'mini_program/mini_program_runtime_setup.dart';
 
 void main() {
@@ -819,8 +821,8 @@ class HomePage extends StatelessWidget {
           onPressed: () {
             openAppMiniProgram(
               context,
-              appId: 'aws_coupon_demo',
-              title: 'AWS Coupon Demo',
+              appId: MiniPrograms.awsCouponDemo.appId,
+              title: MiniPrograms.awsCouponDemo.title,
             );
           },
           child: const Text('Open Coupon MiniProgram'),

@@ -553,6 +553,16 @@ async function addHostEndpoint(
   if (!appId) {
     return;
   }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program display title',
+    value: hostTitleFromAppId(appId.trim()),
+    placeHolder: 'Coupon Demo',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
+  });
+  if (!title) {
+    return;
+  }
   const apiBaseUrl = await vscode.window.showInputBox({
     prompt: 'Mini-program delivery API base URL',
     placeHolder: 'https://example.com/prod/api',
@@ -590,6 +600,7 @@ async function addHostEndpoint(
     'Add Host Endpoint',
     buildHostEndpointAddArgs({
       appId: appId.trim(),
+      title: title.trim(),
       apiBaseUrl: apiBaseUrl.trim(),
       accessKey,
       public: accessMode === 'public',
@@ -2436,6 +2447,7 @@ async function promptKeyId(
 async function promptHostEndpointInputs(): Promise<
   | {
       readonly appId: string;
+      readonly title: string;
       readonly apiBaseUrl: string;
       readonly accessKey?: string;
       readonly public?: boolean;
@@ -2449,6 +2461,16 @@ async function promptHostEndpointInputs(): Promise<
     validateInput: validateAppId,
   });
   if (!appId) {
+    return undefined;
+  }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program display title',
+    value: hostTitleFromAppId(appId.trim()),
+    placeHolder: 'Coupon Demo',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
+  });
+  if (!title) {
     return undefined;
   }
   const apiBaseUrl = await vscode.window.showInputBox({
@@ -2481,6 +2503,7 @@ async function promptHostEndpointInputs(): Promise<
   }
   return {
     appId: appId.trim(),
+    title: title.trim(),
     apiBaseUrl: apiBaseUrl.trim(),
     accessKey,
     public: accessMode === 'public',

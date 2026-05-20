@@ -215,6 +215,8 @@ void main() {
       );
       expect(registrySource, contains("appId: 'profile'"));
       expect(registrySource, contains("title: 'Public Demo'"));
+      expect(registrySource, contains('static const values'));
+      expect(registrySource, contains('static const byAppId'));
       expect(barrel, contains("export 'mini_program_endpoints.dart';"));
       expect(barrel, contains("export 'mini_program_registry.dart';"));
       expect(readme, contains('Public demo endpoint'));

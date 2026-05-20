@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.16
+
+- make `miniprogram host endpoint add/import` update both
+  `mini_program_endpoints.dart` and `mini_program_registry.dart` so host apps
+  can keep appId/title metadata in one generated place
+- add optional `--title` to `host endpoint add`; partner imports reuse the
+  title from the partner handoff file
+- generate registry `values` and `byAppId` helpers for many-mini-program host
+  apps
+- include host registry appIds in `workflow status --json`
+
 ## 0.3.15
 
 - add `miniprogram embed init --with-demo` to generate a public jsDelivr demo

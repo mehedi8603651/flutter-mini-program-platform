@@ -70,6 +70,7 @@ export interface HostEndpointImportArgsOptions {
 
 export interface HostEndpointAddArgsOptions {
   readonly appId: string;
+  readonly title?: string;
   readonly apiBaseUrl: string;
   readonly accessKey?: string;
   readonly public?: boolean;
@@ -317,6 +318,9 @@ export function buildHostEndpointAddArgs(
     '--api-base-url',
     options.apiBaseUrl,
   ];
+  if (options.title?.trim()) {
+    args.push('--title', options.title.trim());
+  }
   if (options.public) {
     args.push('--public');
   } else if (options.accessKey?.trim()) {

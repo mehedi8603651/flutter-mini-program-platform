@@ -518,6 +518,14 @@ class MiniPrograms {
     appId: '$_publicDemoAppId',
     title: '$_publicDemoTitle',
   );
+
+  static const values = <MiniProgramInfo>[
+    publicDemo,
+  ];
+
+  static const byAppId = <String, MiniProgramInfo>{
+    publicDemo.appId: publicDemo,
+  };
 }
 ''';
   }

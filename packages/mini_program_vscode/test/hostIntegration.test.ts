@@ -51,6 +51,8 @@ test('builds and upserts registry entries', () => {
   ]);
   assert.match(source, /class MiniProgramInfo/);
   assert.match(source, /static const couponDemo/);
+  assert.match(source, /static const values/);
+  assert.match(source, /static const byAppId/);
 
   const updated = upsertRegistryEntry(source, {
     appId: 'profile',

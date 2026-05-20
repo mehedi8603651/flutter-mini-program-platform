@@ -1115,6 +1115,8 @@ void main() {
             'endpoint',
             'add',
             'aws_coupon_demo',
+            '--title',
+            'AWS Coupon Demo',
             '--api-base-url',
             'https://api.example.com/prod/api/',
             '--access-key',
@@ -1128,8 +1130,17 @@ void main() {
       final endpointSource = await endpointFile.readAsString();
       expect(endpointSource, contains('buildMiniProgramEndpoints'));
       expect(endpointSource, contains('"aws_coupon_demo"'));
+      expect(endpointSource, contains('MiniPrograms.awsCouponDemo.appId'));
       expect(endpointSource, contains('MiniProgramEndpoint('));
       expect(endpointSource, contains('https://api.example.com/prod/api'));
+      final registryFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
+      );
+      final registrySource = await registryFile.readAsString();
+      expect(registrySource, contains('static const awsCouponDemo'));
+      expect(registrySource, contains('title: "AWS Coupon Demo"'));
+      expect(registrySource, contains('static const values'));
+      expect(registrySource, contains('static const byAppId'));
       expect(
         stdoutBuffer.toString(),
         contains(
@@ -1153,6 +1164,8 @@ void main() {
             'endpoint',
             'add',
             'public_coupon_demo',
+            '--title',
+            'Public Coupon Demo',
             '--api-base-url',
             'https://user.github.io/repo/public_mini_program/',
             '--public',
@@ -1165,7 +1178,14 @@ void main() {
       final endpointSource = await endpointFile.readAsString();
       expect(endpointSource, contains('"accessMode":"public"'));
       expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(endpointSource, contains('MiniPrograms.publicCouponDemo.appId'));
       expect(endpointSource, isNot(contains('accessKey:')));
+      final registryFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
+      );
+      final registrySource = await registryFile.readAsString();
+      expect(registrySource, contains('static const publicCouponDemo'));
+      expect(registrySource, contains('title: "Public Coupon Demo"'));
     });
 
     test('host endpoint add requires access key or public mode', () async {
@@ -1307,6 +1327,11 @@ void main() {
         final endpointSource = await endpointFile.readAsString();
         expect(endpointSource, contains('"legacy_rewards"'));
         expect(endpointSource, contains('"accessMode":"protected"'));
+        final registryFile = File(
+          p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
+        );
+        final registrySource = await registryFile.readAsString();
+        expect(registrySource, contains('title: "Legacy Rewards"'));
       },
     );
 
@@ -1344,6 +1369,12 @@ void main() {
       );
       expect(stdoutBuffer.toString(), contains('Imported MiniProgram'));
       expect(stdoutBuffer.toString(), contains('Open from app UI by appId'));
+      final registryFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
+      );
+      final registrySource = await registryFile.readAsString();
+      expect(registrySource, contains('static const gcpRewards'));
+      expect(registrySource, contains('title: "GCP Rewards"'));
     });
 
     test('host endpoint import supports public partner packages', () async {
@@ -1374,6 +1405,11 @@ void main() {
       expect(endpointSource, contains('"public_rewards"'));
       expect(endpointSource, contains('MiniProgramEndpoint.public('));
       expect(endpointSource, isNot(contains('accessKey:')));
+      final registryFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
+      );
+      final registrySource = await registryFile.readAsString();
+      expect(registrySource, contains('title: "Public Rewards"'));
     });
 
     test('workflow status reports unknown workspaces as JSON', () async {

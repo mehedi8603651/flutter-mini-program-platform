@@ -209,6 +209,7 @@ test('builds host app command arguments', () => {
   assert.deepEqual(
     buildHostEndpointAddArgs({
       appId: 'coupon_demo',
+      title: 'Coupon Demo',
       apiBaseUrl: 'https://api.example.com/prod/api',
       accessKey: 'mpk_live_secret',
       projectRoot: 'D:/host',
@@ -221,6 +222,8 @@ test('builds host app command arguments', () => {
       'coupon_demo',
       '--api-base-url',
       'https://api.example.com/prod/api',
+      '--title',
+      'Coupon Demo',
       '--access-key',
       'mpk_live_secret',
       '--project-root',

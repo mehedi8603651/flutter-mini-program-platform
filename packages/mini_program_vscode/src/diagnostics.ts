@@ -14,6 +14,7 @@ import {
 import {
   endpointLaunchUsageMissing,
   parseEndpointAppIds,
+  parseRegistryEntries,
 } from './hostIntegration';
 
 export type DiagnosticSeverity = 'ok' | 'warning' | 'error';
@@ -265,6 +266,7 @@ async function buildHostAppChecks(
   const runtimeSetupPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart');
   const launcherPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_launcher.dart');
   const endpointPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_endpoints.dart');
+  const registryPath = path.join(workspacePath, 'lib', 'mini_program', 'mini_program_registry.dart');
   const detected = asBoolean(hostApp.detected) || pubspecExists;
   if (!detected) {
     return [
@@ -319,6 +321,15 @@ async function buildHostAppChecks(
     : endpointMapExists
       ? parseEndpointAppIds(await readText(endpointPath))
       : [];
+  const registryExists = await exists(registryPath);
+  const registryEntries = registryExists
+    ? parseRegistryEntries(await readText(registryPath))
+    : [];
+  const registryAppIds = registryEntries.map((entry) => entry.appId);
+  const endpointAppIdSet = new Set(endpointAppIds);
+  const registryAppIdSet = new Set(registryAppIds);
+  const endpointsMissingRegistry = endpointAppIds.filter((appId) => !registryAppIdSet.has(appId));
+  const registryMissingEndpoint = registryAppIds.filter((appId) => !endpointAppIdSet.has(appId));
   const unopenedEndpointAppIds = endpointAppIds.length > 0
     ? endpointLaunchUsageMissing(await readDartSources(workspacePath), endpointAppIds)
     : [];
@@ -410,6 +421,18 @@ async function buildHostAppChecks(
       unopenedEndpointAppIds.length === 0
         ? undefined
         : 'Run MiniProgram: Copy Demo Host Button or add an openAppMiniProgram button/menu item.',
+    ),
+    check(
+      'host_app.registry_sync',
+      'MiniProgram registry sync',
+      endpointsMissingRegistry.length === 0 && registryMissingEndpoint.length === 0 ? 'ok' : 'warning',
+      endpointsMissingRegistry.length === 0 && registryMissingEndpoint.length === 0
+        ? 'Endpoint map and MiniProgram registry appIds match.'
+        : `Endpoint/registry mismatch. Missing registry: ${endpointsMissingRegistry.join(', ') || 'none'}; missing endpoint: ${registryMissingEndpoint.join(', ') || 'none'}.`,
+      registryExists ? registryPath : undefined,
+      endpointsMissingRegistry.length === 0 && registryMissingEndpoint.length === 0
+        ? undefined
+        : 'Re-add the endpoint with MiniProgram: Add Host Endpoint or re-import the partner package.',
     ),
     check(
       'host_app.access_key_security_model',

@@ -8,9 +8,9 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.15 or newer for public demo endpoint
-generation, public/static endpoint support, and `miniprogram workflow status
---json`.
+Requires `mini_program_tooling` 0.3.16 or newer for endpoint/registry sync,
+public demo generation, public/static endpoint support, and
+`miniprogram workflow status --json`.
 
 Install or upgrade the CLI first:
 
@@ -38,7 +38,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.14.vsix
+code --install-extension mini-program-tools-0.1.15.vsix
 ```
 
 ## Features
@@ -160,7 +160,10 @@ as secret files and do not commit them. Public partner packages have
 for AWS/GCP/backend delivery that requires a MiniProgram access key. Use
 public/static mode for GitHub Pages, CDN, S3 public hosting, Cloudflare Pages,
 Netlify, Vercel static hosting, or other public content. Public mode has no
-delivery access control.
+delivery access control. Manual endpoint add asks for a display title and the
+CLI writes both `mini_program_endpoints.dart` and
+`mini_program_registry.dart`, so host UI code can use
+`MiniPrograms.<name>.appId` and `MiniPrograms.<name>.title`.
 
 Host diagnostics check public endpoints by loading:
 
@@ -194,7 +197,8 @@ openAppMiniProgram(
 ```
 
 Diagnostics also warn when `mini_program_endpoints.dart` contains an endpoint
-but no likely host UI launcher opens that appId.
+but no likely host UI launcher opens that appId, or when endpoint appIds and
+registry appIds no longer match.
 The extension does not edit `main.dart`; paste copied snippets into your
 host-owned UI so Provider, Riverpod, GetX, GoRouter, and custom app structures
 stay under your control.
