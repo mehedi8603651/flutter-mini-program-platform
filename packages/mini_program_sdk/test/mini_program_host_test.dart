@@ -414,6 +414,221 @@ void main() {
     });
 
     testWidgets(
+      'does not call publisher backend before a backend widget or action',
+      (tester) async {
+        final connector = _FakeBackendConnector();
+        final source = _FakeMiniProgramSource(
+          manifest: _buildManifest(),
+          screenJson: _helloScreenJson,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MiniProgramHost(
+              miniProgramId: 'profile_center',
+              sdkVersion: '1.1.0',
+              source: source,
+              hostBridge: _FakeHostBridge(),
+              backendConnector: connector,
+              capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+              manifestCache: InMemoryManifestCache(),
+              screenCache: InMemoryScreenCache(),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Hello from profile center'), findsOneWidget);
+        expect(connector.calls, isEmpty);
+      },
+    );
+
+    testWidgets('backend builder auto-loads once and binds response data', (
+      tester,
+    ) async {
+      final connector = _FakeBackendConnector(
+        responder: (request) async => MiniProgramBackendResult.success(
+          requestId: request.requestId,
+          endpoint: request.endpoint,
+          method: request.method,
+          data: const <String, dynamic>{
+            'title': 'Backend title',
+            'user': <String, dynamic>{'name': 'Publisher User'},
+          },
+        ),
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _backendBuilderScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: connector,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.pump();
+
+      expect(find.text('Backend title'), findsOneWidget);
+      expect(find.text('Publisher User'), findsOneWidget);
+      expect(connector.calls, hasLength(1));
+      expect(connector.calls.single.endpoint, 'home/bootstrap');
+    });
+
+    testWidgets('backend builder renders repeated item templates', (
+      tester,
+    ) async {
+      final connector = _FakeBackendConnector(
+        responder: (request) async => MiniProgramBackendResult.success(
+          requestId: request.requestId,
+          endpoint: request.endpoint,
+          method: request.method,
+          data: const <String, dynamic>{
+            'coupons': [
+              <String, dynamic>{'id': 'c1', 'title': '10% OFF'},
+              <String, dynamic>{'id': 'c2', 'title': 'Free delivery'},
+            ],
+          },
+        ),
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _backendListBuilderScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: connector,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coupon c1: 10% OFF'), findsOneWidget);
+      expect(find.text('Coupon c2: Free delivery'), findsOneWidget);
+    });
+
+    testWidgets('backend query action refreshes a bound builder', (
+      tester,
+    ) async {
+      var count = 0;
+      final connector = _FakeBackendConnector(
+        responder: (request) async {
+          count++;
+          return MiniProgramBackendResult.success(
+            requestId: request.requestId,
+            endpoint: request.endpoint,
+            method: request.method,
+            data: <String, dynamic>{'title': 'Backend title $count'},
+          );
+        },
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _backendBuilderRefreshScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: connector,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Backend title 1'), findsOneWidget);
+
+      await tester.tap(find.text('Refresh backend'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Backend title 2'), findsOneWidget);
+      expect(connector.calls, hasLength(2));
+    });
+
+    testWidgets('backend builder keeps previous data available after failure', (
+      tester,
+    ) async {
+      var count = 0;
+      final connector = _FakeBackendConnector(
+        responder: (request) async {
+          count++;
+          if (count == 1) {
+            return MiniProgramBackendResult.success(
+              requestId: request.requestId,
+              endpoint: request.endpoint,
+              method: request.method,
+              data: const <String, dynamic>{'title': 'Last good title'},
+            );
+          }
+          return MiniProgramBackendResult.failed(
+            requestId: request.requestId,
+            endpoint: request.endpoint,
+            method: request.method,
+            message: 'Backend failed',
+            errorCode: 'backend_failed',
+          );
+        },
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _backendBuilderRefreshScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: connector,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Refresh backend'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Error: Backend failed. Previous: Last good title'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
       'opens a second mini-program screen and pops back by screenId',
       (tester) async {
         final source = _FakeMiniProgramSource(
@@ -760,13 +975,23 @@ class _FakeHostBridge implements HostBridge {
 }
 
 class _FakeBackendConnector implements MiniProgramBackendConnector {
+  _FakeBackendConnector({this.responder});
+
   final List<MiniProgramBackendRequest> calls = <MiniProgramBackendRequest>[];
+  final Future<MiniProgramBackendResult> Function(
+    MiniProgramBackendRequest request,
+  )?
+  responder;
 
   @override
   Future<MiniProgramBackendResult> call(
     MiniProgramBackendRequest request,
   ) async {
     calls.add(request);
+    final resolvedResponder = responder;
+    if (resolvedResponder != null) {
+      return resolvedResponder(request);
+    }
     return MiniProgramBackendResult.success(
       requestId: request.requestId,
       endpoint: request.endpoint,
@@ -865,6 +1090,84 @@ const Map<String, dynamic> _backendActionScreenJson = <String, dynamic>{
       },
       'child': <String, dynamic>{'type': 'text', 'data': 'Load Backend Data'},
     },
+  },
+};
+
+const Map<String, dynamic> _backendBuilderScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'miniProgramBackendBuilder',
+    'requestId': 'home',
+    'endpoint': 'home/bootstrap',
+    'cacheTtlSeconds': 60,
+    'loading': <String, dynamic>{'type': 'text', 'data': 'Loading backend'},
+    'error': <String, dynamic>{
+      'type': 'text',
+      'data': 'Error: {{backend.home.message}}',
+    },
+    'child': <String, dynamic>{
+      'type': 'column',
+      'children': [
+        <String, dynamic>{
+          'type': 'text',
+          'data': '{{backend.home.data.title}}',
+        },
+        <String, dynamic>{
+          'type': 'text',
+          'data': '{{backend.home.data.user.name}}',
+        },
+      ],
+    },
+  },
+};
+
+const Map<String, dynamic> _backendListBuilderScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'miniProgramBackendBuilder',
+    'requestId': 'coupons',
+    'endpoint': 'coupons/list',
+    'itemsPath': 'data.coupons',
+    'loading': <String, dynamic>{'type': 'text', 'data': 'Loading coupons'},
+    'empty': <String, dynamic>{'type': 'text', 'data': 'No coupons yet'},
+    'itemTemplate': <String, dynamic>{
+      'type': 'text',
+      'data': 'Coupon {{item.id}}: {{item.title}}',
+    },
+  },
+};
+
+const Map<String, dynamic> _backendBuilderRefreshScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'column',
+    'children': [
+      <String, dynamic>{
+        'type': 'miniProgramBackendBuilder',
+        'requestId': 'home',
+        'endpoint': 'home/bootstrap',
+        'loading': <String, dynamic>{'type': 'text', 'data': 'Loading backend'},
+        'error': <String, dynamic>{
+          'type': 'text',
+          'data':
+              'Error: {{backend.home.message}}. Previous: {{backend.home.data.title}}',
+        },
+        'child': <String, dynamic>{
+          'type': 'text',
+          'data': '{{backend.home.data.title}}',
+        },
+      },
+      <String, dynamic>{
+        'type': 'elevatedButton',
+        'onPressed': <String, dynamic>{
+          'actionType': 'miniProgramBackendQuery',
+          'requestId': 'home',
+          'endpoint': 'home/bootstrap',
+          'forceRefresh': true,
+        },
+        'child': <String, dynamic>{'type': 'text', 'data': 'Refresh backend'},
+      },
+    ],
   },
 };
 

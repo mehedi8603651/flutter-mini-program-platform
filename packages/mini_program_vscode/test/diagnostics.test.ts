@@ -69,6 +69,40 @@ test('mini-program missing build suggests build', async () => {
   }
 });
 
+test('mini-program backend query usage suggests backend base URL', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-backend-query-');
+  try {
+    await writeFile(
+      path.join(workspacePath, 'manifest.json'),
+      JSON.stringify({ id: 'coupon_demo', version: '1.0.0', entry: 'coupon_home' }),
+    );
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'miniProgram',
+      workflowReport: miniProgramReport(workspacePath, {
+        build: { exists: true, screenCount: 1 },
+        validation: { status: 'ok' },
+        partnerPackages: [{ appId: 'coupon_demo' }],
+        backendUsage: {
+          usesPublisherBackend: true,
+          usesBackendBuilder: true,
+          usesBackendQueryAction: true,
+          usesBackendState: true,
+          requestIds: ['home'],
+        },
+      }),
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /Mini-program source uses backend query\/state helpers/);
+    assert.match(text, /Request IDs: home/);
+    assert.match(text, /--backend-base-url/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('host app missing endpoint, scope, and internet permission suggests fixes', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-host-');
   try {

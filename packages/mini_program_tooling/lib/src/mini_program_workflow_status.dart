@@ -171,6 +171,7 @@ class MiniProgramWorkflowStatusController {
         ? false
         : await File(entryScreenPath).exists();
     final partnerPackages = await _findPartnerPackages(workspacePath);
+    final backendUsage = await _detectMiniProgramBackendUsage(workspacePath);
 
     return <String, Object?>{
       'detected': true,
@@ -192,6 +193,7 @@ class MiniProgramWorkflowStatusController {
         'reason': 'Validation has not been checked yet.',
       },
       'partnerPackages': partnerPackages,
+      'backendUsage': backendUsage,
     };
   }
 
@@ -706,6 +708,68 @@ class MiniProgramWorkflowStatusController {
       }
     }
     return entries;
+  }
+
+  Future<Map<String, Object?>> _detectMiniProgramBackendUsage(
+    String workspacePath,
+  ) async {
+    final roots = <Directory>[
+      Directory(p.join(workspacePath, 'lib')),
+      Directory(p.join(workspacePath, 'stac')),
+    ];
+    final sources = <String>[];
+    for (final root in roots) {
+      if (!await root.exists()) {
+        continue;
+      }
+      await for (final entity in root.list(recursive: true)) {
+        if (entity is! File) {
+          continue;
+        }
+        final basename = p.basename(entity.path);
+        if (!basename.endsWith('.dart') && !basename.endsWith('.json')) {
+          continue;
+        }
+        try {
+          sources.add(await entity.readAsString());
+        } catch (_) {
+          // Ignore unreadable generated/build files; workflow status should
+          // remain best-effort and local-first.
+        }
+      }
+    }
+    final joined = sources.join('\n');
+    final requestIds = <String>{};
+    final requestIdPattern = RegExp(
+      r'''requestId\s*:\s*(['"])(.*?)\1|"requestId"\s*:\s*"(.*?)"''',
+      dotAll: true,
+    );
+    for (final match in requestIdPattern.allMatches(joined)) {
+      final value = match.group(2) ?? match.group(3) ?? '';
+      if (value.trim().isNotEmpty) {
+        requestIds.add(value.trim());
+      }
+    }
+    final usesAction =
+        joined.contains('miniProgramBackendAction(') ||
+        joined.contains('"actionType":"miniProgramBackend"') ||
+        joined.contains('"actionType": "miniProgramBackend"');
+    final usesQueryAction =
+        joined.contains('miniProgramBackendQueryAction(') ||
+        joined.contains('"actionType":"miniProgramBackendQuery"') ||
+        joined.contains('"actionType": "miniProgramBackendQuery"');
+    final usesBuilder =
+        joined.contains('miniProgramBackendBuilder(') ||
+        joined.contains('"type":"miniProgramBackendBuilder"') ||
+        joined.contains('"type": "miniProgramBackendBuilder"');
+    return <String, Object?>{
+      'usesBackendAction': usesAction,
+      'usesBackendQueryAction': usesQueryAction,
+      'usesBackendBuilder': usesBuilder,
+      'usesBackendState': usesQueryAction || usesBuilder,
+      'usesPublisherBackend': usesAction || usesQueryAction || usesBuilder,
+      'requestIds': requestIds.toList()..sort(),
+    };
   }
 }
 

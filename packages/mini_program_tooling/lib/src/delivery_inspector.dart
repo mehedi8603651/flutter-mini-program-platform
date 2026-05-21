@@ -50,7 +50,8 @@ class DeliveryInspectionRequest {
     return resolved.replace(queryParameters: queryParameters);
   }
 
-  static bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
+  static bool _hasValue(String? value) =>
+      value != null && value.trim().isNotEmpty;
 }
 
 class DeliveryInspectionResponse {
@@ -69,10 +70,8 @@ class DeliveryInspectionResponse {
 }
 
 class DeliveryInspectorClient {
-  DeliveryInspectorClient({
-    required this.apiBaseUri,
-    http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+  DeliveryInspectorClient({required this.apiBaseUri, http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   final Uri apiBaseUri;
   final http.Client _httpClient;
@@ -103,7 +102,8 @@ class DeliveryInspectorClient {
     );
   }
 
-  static bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
+  static bool _hasValue(String? value) =>
+      value != null && value.trim().isNotEmpty;
 }
 
 String formatDeliveryInspectionResponse(DeliveryInspectionResponse response) {
@@ -148,7 +148,9 @@ String formatDeliveryInspectionResponse(DeliveryInspectionResponse response) {
     lines.add('  version: ${manifestSummary['version']}');
     lines.add('  entry: ${manifestSummary['entry']}');
     lines.add('  sdkVersionRange: ${manifestSummary['sdkVersionRange']}');
-    final requiredCapabilities = _asList(manifestSummary['requiredCapabilities']);
+    final requiredCapabilities = _asList(
+      manifestSummary['requiredCapabilities'],
+    );
     if (requiredCapabilities.isNotEmpty) {
       lines.add('  requiredCapabilities: ${requiredCapabilities.join(', ')}');
     }

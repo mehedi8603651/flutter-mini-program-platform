@@ -55,6 +55,7 @@ export function buildStatusTreeSections(
   if (asBoolean(miniProgram.detected)) {
     const build = asRecord(miniProgram.build);
     const validation = asRecord(miniProgram.validation);
+    const backendUsage = asRecord(miniProgram.backendUsage);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
       ? miniProgram.partnerPackages.length
       : 0;
@@ -72,6 +73,14 @@ export function buildStatusTreeSections(
         ),
         row('Validation', asString(validation.status, 'not_run')),
         row('Partner packages', String(partnerPackages)),
+        row(
+          'Backend usage',
+          asBoolean(backendUsage.usesPublisherBackend)
+            ? asBoolean(backendUsage.usesBackendState)
+              ? 'query/state'
+              : 'action'
+            : 'none',
+        ),
       ]),
     });
   }

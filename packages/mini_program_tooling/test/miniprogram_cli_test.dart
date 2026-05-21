@@ -1480,6 +1480,18 @@ void main() {
             'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
           }),
         );
+        await File(
+          p.join(miniProgramRoot, 'stac', 'screens', 'coupon_center_home.dart'),
+        ).writeAsString('''
+miniProgramBackendBuilder(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+);
+miniProgramBackendQueryAction(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+);
+''');
         await _writeAwsEnvironmentState(stateStore, miniProgramRoot);
         final cloudController = _FakeMiniProgramCloudController();
         final stdoutBuffer = StringBuffer();
@@ -1510,6 +1522,18 @@ void main() {
         expect(
           json['miniProgram']['partnerPackages'][0]['backendConfigured'],
           isTrue,
+        );
+        expect(
+          json['miniProgram']['backendUsage']['usesBackendBuilder'],
+          isTrue,
+        );
+        expect(
+          json['miniProgram']['backendUsage']['usesBackendQueryAction'],
+          isTrue,
+        );
+        expect(
+          json['miniProgram']['backendUsage']['requestIds'],
+          contains('home'),
         );
         expect(json['remote']['checked'], isFalse);
         expect(cloudController.lastStatusRequest, isNull);
@@ -2323,7 +2347,7 @@ dependencies:
       );
       expect(
         await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-        contains('mini_program_sdk: ^0.3.3'),
+        contains('mini_program_sdk: ^0.3.4'),
       );
     });
 

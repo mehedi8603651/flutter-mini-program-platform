@@ -10,10 +10,7 @@ abstract final class LocalMiniProgramBackendDefaults {
   static const int defaultPort = 8080;
   static const String defaultPath = '/api/';
 
-  static String defaultHost({
-    TargetPlatform? platform,
-    bool isWeb = kIsWeb,
-  }) {
+  static String defaultHost({TargetPlatform? platform, bool isWeb = kIsWeb}) {
     if (isWeb) {
       return '127.0.0.1';
     }

@@ -103,39 +103,42 @@ void main() {
       },
     );
 
-    test('defaults to the per-user global backend workspace when root is omitted', () async {
-      final initializer = LocalBackendInitializer(
-        stateStore: stateStore,
-        templateRootPath: templateRoot.path,
-      );
+    test(
+      'defaults to the per-user global backend workspace when root is omitted',
+      () async {
+        final initializer = LocalBackendInitializer(
+          stateStore: stateStore,
+          templateRootPath: templateRoot.path,
+        );
 
-      final result = await initializer.initialize(
-        const LocalBackendInitRequest(),
-      );
+        final result = await initializer.initialize(
+          const LocalBackendInitRequest(),
+        );
 
-      final expectedRoot = p.join(
-        tempDir.path,
-        'fake_local_app_data',
-        'mini_program',
-        'backend',
-      );
-      expect(result.backendRootPath, expectedRoot);
-      expect(
-        await File(
-          p.join(
-            expectedRoot,
-            'backend',
-            'local_backend_service',
-            'bin',
-            'server.dart',
-          ),
-        ).exists(),
-        isTrue,
-      );
-      expect(
-        await File(stateStore.globalBackendWorkspaceStatePath()).exists(),
-        isTrue,
-      );
-    });
+        final expectedRoot = p.join(
+          tempDir.path,
+          'fake_local_app_data',
+          'mini_program',
+          'backend',
+        );
+        expect(result.backendRootPath, expectedRoot);
+        expect(
+          await File(
+            p.join(
+              expectedRoot,
+              'backend',
+              'local_backend_service',
+              'bin',
+              'server.dart',
+            ),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(stateStore.globalBackendWorkspaceStatePath()).exists(),
+          isTrue,
+        );
+      },
+    );
   });
 }

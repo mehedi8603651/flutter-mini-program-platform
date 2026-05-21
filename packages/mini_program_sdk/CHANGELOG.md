@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.4
+
+- add `MiniProgramBackendStore`, `MiniProgramBackendSnapshot`,
+  `MiniProgramBackendQuery`, and binding resolution for lazy publisher backend
+  data state
+- add `miniProgramBackendQuery` actions that call the existing publisher
+  backend connector, store loading/success/error state by request id, and
+  trigger bound UI rebuilds
+- add `miniProgramBackendBuilder` for loading, error, child, empty, and simple
+  repeated item templates with `{{backend.*}}` and `{{item.*}}` bindings
+
 ## 0.3.3
 
 - add lazy publisher-owned backend connector APIs for mini-program server calls

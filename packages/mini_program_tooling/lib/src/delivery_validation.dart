@@ -1,7 +1,4 @@
-enum ValidationSeverity {
-  error,
-  warning,
-}
+enum ValidationSeverity { error, warning }
 
 class DeliveryValidationMessage {
   const DeliveryValidationMessage({

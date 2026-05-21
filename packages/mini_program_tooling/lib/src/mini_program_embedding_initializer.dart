@@ -67,7 +67,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.3.3';
+  static const String _miniProgramSdkConstraint = '^0.3.4';
   static const String _miniProgramContractsConstraint = '^0.1.1';
   static const String _publicDemoAppId = 'profile';
   static const String _publicDemoTitle = 'Public Demo';
@@ -955,9 +955,15 @@ mini-program.
 If a mini-program needs its publisher-owned Firebase/AWS/custom backend, pass
 `--backend-base-url` in the partner package or host endpoint command. Generated
 runtime setup wires that backend lazily, and generated mini-program helpers can
-call it with `miniProgramBackendAction(endpoint: 'home/bootstrap', ...)`.
-Backend secrets must stay on the publisher server; never put them in JSON,
-source, APK, IPA, or web JavaScript.
+call it with `miniProgramBackendAction(...)`, `miniProgramBackendQueryAction(...)`,
+or `miniProgramBackendBuilder(...)`.
+
+Use `miniProgramBackendBuilder(...)` when UI should load JSON and bind values
+like `{{backend.home.data.title}}` or repeat simple list item templates with
+`{{item.title}}`. Use batch endpoints such as `home/bootstrap`, CDN image URLs,
+short timeouts, and explicit cache TTLs only for safe `GET` responses. Backend
+secrets must stay on the publisher server; never put them in JSON, source, APK,
+IPA, or web JavaScript.
 
 This package does not own your Flutter app. It only provides mini-program
 capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,

@@ -34,6 +34,18 @@ test('renders mini-program and host status rows', () => {
         },
       ],
     },
+    miniProgram: {
+      detected: true,
+      appId: 'coupon_demo',
+      version: '1.0.0',
+      build: { exists: true, screenCount: 1 },
+      validation: { status: 'ok' },
+      partnerPackages: [],
+      backendUsage: {
+        usesPublisherBackend: true,
+        usesBackendState: true,
+      },
+    },
     environment: {
       configured: true,
       selectedEnvironment: 'my-aws-prod',
@@ -48,6 +60,7 @@ test('renders mini-program and host status rows', () => {
 
   const text = flattenStatusSections(buildStatusTreeSections(report));
   assert.match(text, /Host app/);
+  assert.match(text, /Backend usage: query\/state/);
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);

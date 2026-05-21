@@ -31,10 +31,12 @@ void main() {
       expect(report.messages, isEmpty);
     });
 
-    test('fails when secure_api manifest allows entry-screen caching', () async {
-      await _writeValidFixture(
-        tempDir.path,
-        authoredManifestJson: '''
+    test(
+      'fails when secure_api manifest allows entry-screen caching',
+      () async {
+        await _writeValidFixture(
+          tempDir.path,
+          authoredManifestJson: '''
 {
   "id": "feedback_form",
   "version": "1.1.0",
@@ -48,23 +50,24 @@ void main() {
   }
 }
 ''',
-        miniProgramId: 'feedback_form',
-      );
+          miniProgramId: 'feedback_form',
+        );
 
-      final report = await const DeliveryRepositoryValidator().validate(
-        repoRootPath: tempDir.path,
-        miniProgramId: 'feedback_form',
-      );
+        final report = await const DeliveryRepositoryValidator().validate(
+          repoRootPath: tempDir.path,
+          miniProgramId: 'feedback_form',
+        );
 
-      expect(report.hasErrors, isTrue);
-      expect(
-        report.messages.any(
-          (message) =>
-              message.code == 'secure_api_entry_screen_must_not_cache',
-        ),
-        isTrue,
-      );
-    });
+        expect(report.hasErrors, isTrue);
+        expect(
+          report.messages.any(
+            (message) =>
+                message.code == 'secure_api_entry_screen_must_not_cache',
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('fails when rollout versions are not published', () async {
       await _writeValidFixture(

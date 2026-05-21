@@ -4,7 +4,9 @@ import 'package:stac/stac.dart';
 import '../actions/sdk_mini_program_navigation_parser.dart';
 import '../actions/sdk_host_action_parser.dart';
 import '../actions/sdk_mini_program_backend_parser.dart';
+import '../actions/sdk_mini_program_backend_query_parser.dart';
 import '../observability/sdk_logger.dart';
+import 'sdk_mini_program_backend_builder_parser.dart';
 
 /// Ensures the SDK's Stac extensions are registered exactly once per isolate.
 abstract final class StacInitializer {
@@ -22,9 +24,11 @@ abstract final class StacInitializer {
   static Future<void> _initialize(SdkLogger logger) async {
     try {
       await Stac.initialize(
+        parsers: const [SdkMiniProgramBackendBuilderParser()],
         actionParsers: const [
           SdkHostActionParser(),
           SdkMiniProgramBackendParser(),
+          SdkMiniProgramBackendQueryParser(),
           SdkMiniProgramNavigationParser(),
         ],
         showErrorWidgets: false,

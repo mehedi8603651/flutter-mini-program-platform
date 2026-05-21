@@ -3,12 +3,13 @@ import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 
-typedef ManagedStacProcessRunner = Future<ProcessResult> Function(
-  String executable,
-  List<String> arguments, {
-  String? workingDirectory,
-  Map<String, String>? environment,
-});
+typedef ManagedStacProcessRunner =
+    Future<ProcessResult> Function(
+      String executable,
+      List<String> arguments, {
+      String? workingDirectory,
+      Map<String, String>? environment,
+    });
 
 class ManagedStacBuilderException implements Exception {
   const ManagedStacBuilderException(this.message);
@@ -79,7 +80,8 @@ class ManagedStacBuilder {
       templateRootPath: templateRootPath,
       cacheRootPath: cacheRootPath,
       bundledTemplateAvailable:
-          templateRootPath != null && await _looksLikeTemplateRoot(templateRootPath),
+          templateRootPath != null &&
+          await _looksLikeTemplateRoot(templateRootPath),
       cachePrepared: cachePrepared,
       dependenciesResolved: dependenciesResolved,
     );
@@ -103,11 +105,10 @@ class ManagedStacBuilder {
       p.join(cacheRootPath, '.dart_tool', 'package_config.json'),
     );
     if (!await packageConfigFile.exists()) {
-      final result = await _processRunner(
-        'dart',
-        const <String>['pub', 'get'],
-        workingDirectory: cacheRootPath,
-      );
+      final result = await _processRunner('dart', const <String>[
+        'pub',
+        'get',
+      ], workingDirectory: cacheRootPath);
       if (result.exitCode != 0) {
         final stdoutText = '${result.stdout}'.trim();
         final stderrText = '${result.stderr}'.trim();
@@ -131,7 +132,8 @@ class ManagedStacBuilder {
 
   Future<String> _requireTemplateRootPath() async {
     final templateRootPath = await _resolveTemplateRootPath();
-    if (templateRootPath == null || !await _looksLikeTemplateRoot(templateRootPath)) {
+    if (templateRootPath == null ||
+        !await _looksLikeTemplateRoot(templateRootPath)) {
       throw const ManagedStacBuilderException(
         'The managed pinned Stac builder template is missing from '
         'mini_program_tooling.',
@@ -202,7 +204,9 @@ class ManagedStacBuilder {
   Future<bool> _looksLikeTemplateRoot(String rootPath) async {
     final normalizedRootPath = p.normalize(p.absolute(rootPath));
     return await File(p.join(normalizedRootPath, 'pubspec.yaml')).exists() &&
-        await File(p.join(normalizedRootPath, 'bin', 'stac_cli.dart')).exists() &&
+        await File(
+          p.join(normalizedRootPath, 'bin', 'stac_cli.dart'),
+        ).exists() &&
         await File(p.join(normalizedRootPath, 'lib', 'stac_cli.dart')).exists();
   }
 

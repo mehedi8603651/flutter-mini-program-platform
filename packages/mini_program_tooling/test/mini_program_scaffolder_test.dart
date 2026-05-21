@@ -216,7 +216,25 @@ void main() {
         expect(helperSource, contains("'action': 'callSecureApi'"));
         expect(helperSource, contains('StacAction miniProgramBackendAction('));
         expect(helperSource, contains("'actionType': 'miniProgramBackend'"));
+        expect(
+          helperSource,
+          contains('StacAction miniProgramBackendQueryAction('),
+        );
+        expect(
+          helperSource,
+          contains("'actionType': 'miniProgramBackendQuery'"),
+        );
+        expect(helperSource, contains('StacWidget miniProgramBackendBuilder('));
+        expect(helperSource, contains("'type': 'miniProgramBackendBuilder'"));
+        expect(helperSource, contains('itemTemplate.toJson()'));
         expect(helperSource, contains("'cacheTtlSeconds'"));
+        expect(readmeSource, contains('## Publisher backend helpers'));
+        expect(readmeSource, contains('miniProgramBackendBuilder('));
+        expect(
+          readmeSource,
+          contains('{{backend.coupon_center-home.data.title}}'),
+        );
+        expect(readmeSource, contains('{{item.title}}'));
         expect(
           readmeSource,
           contains('stac/screens/coupon_center_details.dart'),

@@ -22,7 +22,11 @@ void main() {
 
     test('builds with an explicit Stac CLI script path', () async {
       final repoRoot = tempDir.path;
-      final miniProgramRoot = p.join(repoRoot, 'mini_programs', 'coupon_center');
+      final miniProgramRoot = p.join(
+        repoRoot,
+        'mini_programs',
+        'coupon_center',
+      );
       await _writeMiniProgramFixture(
         miniProgramRoot,
         miniProgramId: 'coupon_center',
@@ -78,41 +82,44 @@ void main() {
       expect(await File(result.entryScreenJsonPath).exists(), isTrue);
     });
 
-    test('supports a standalone mini-program root with repo-root vendored CLI resolution', () async {
-      final repoRoot = tempDir.path;
-      final standaloneRoot = p.join(tempDir.path, 'standalone_claim_center');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'claim_center',
-      );
+    test(
+      'supports a standalone mini-program root with repo-root vendored CLI resolution',
+      () async {
+        final repoRoot = tempDir.path;
+        final standaloneRoot = p.join(tempDir.path, 'standalone_claim_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'claim_center',
+        );
 
-      final vendoredCliPath = p.join(
-        repoRoot,
-        'stac-dev',
-        'packages',
-        'stac_cli',
-        'bin',
-        'stac_cli.dart',
-      );
-      await Directory(p.dirname(vendoredCliPath)).create(recursive: true);
-      await File(vendoredCliPath).writeAsString(_fakeStacCliSource);
+        final vendoredCliPath = p.join(
+          repoRoot,
+          'stac-dev',
+          'packages',
+          'stac_cli',
+          'bin',
+          'stac_cli.dart',
+        );
+        await Directory(p.dirname(vendoredCliPath)).create(recursive: true);
+        await File(vendoredCliPath).writeAsString(_fakeStacCliSource);
 
-      final builder = MiniProgramBuilder(
-        managedStacBuilder: const _MissingManagedStacBuilder(),
-      );
-      final result = await builder.build(
-        MiniProgramBuildRequest(
-          repoRootPath: repoRoot,
-          miniProgramRootPath: standaloneRoot,
-          skipPubGet: true,
-        ),
-      );
+        final builder = MiniProgramBuilder(
+          managedStacBuilder: const _MissingManagedStacBuilder(),
+        );
+        final result = await builder.build(
+          MiniProgramBuildRequest(
+            repoRootPath: repoRoot,
+            miniProgramRootPath: standaloneRoot,
+            skipPubGet: true,
+          ),
+        );
 
-      expect(result.cliSource, 'vendored_script');
-      expect(result.miniProgramRootPath, standaloneRoot);
-      expect(result.miniProgramId, 'claim_center');
-      expect(await File(result.entryScreenJsonPath).exists(), isTrue);
-    });
+        expect(result.cliSource, 'vendored_script');
+        expect(result.miniProgramRootPath, standaloneRoot);
+        expect(result.miniProgramId, 'claim_center');
+        expect(await File(result.entryScreenJsonPath).exists(), isTrue);
+      },
+    );
 
     test('uses the managed pinned Stac builder by default', () async {
       final standaloneRoot = p.join(tempDir.path, 'standalone_coupon_center');
@@ -147,13 +154,13 @@ void main() {
 
       final builder = MiniProgramBuilder(
         managedStacBuilder: const _MissingManagedStacBuilder(),
-        processRunner: (
-          String executable,
-          List<String> arguments, {
-          String? workingDirectory,
-          Map<String, String>? environment,
-        }) async =>
-            ProcessResult(1, 1, '', 'not found'),
+        processRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async => ProcessResult(1, 1, '', 'not found'),
       );
 
       expect(
@@ -174,9 +181,9 @@ Future<void> _writeMiniProgramFixture(
   String miniProgramRootPath, {
   required String miniProgramId,
 }) async {
-  await Directory(p.join(miniProgramRootPath, 'stac', 'screens')).create(
-    recursive: true,
-  );
+  await Directory(
+    p.join(miniProgramRootPath, 'stac', 'screens'),
+  ).create(recursive: true);
   await Directory(p.join(miniProgramRootPath, 'lib')).create(recursive: true);
 
   await File(p.join(miniProgramRootPath, 'manifest.json')).writeAsString('''

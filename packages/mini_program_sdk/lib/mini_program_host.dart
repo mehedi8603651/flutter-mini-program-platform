@@ -12,6 +12,7 @@ import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
 import 'network/asset_resolver.dart';
 import 'network/mini_program_backend_connector.dart';
+import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
 import 'network/mini_program_source_exception.dart';
 import 'observability/sdk_logger.dart';
@@ -64,6 +65,7 @@ class MiniProgramHost extends StatefulWidget {
 class _MiniProgramHostState extends State<MiniProgramHost> {
   final ManifestLoader _manifestLoader = const ManifestLoader();
   final AssetResolver _assetResolver = AssetResolver();
+  final MiniProgramBackendStore _backendStore = MiniProgramBackendStore();
 
   late Future<void> _loadFuture;
   int _loadGeneration = 0;
@@ -102,7 +104,14 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _manifest = null;
     _usedStaleManifestCache = false;
     _screenStack = const <_RenderedMiniProgramScreen>[];
+    _backendStore.clear();
     _loadFuture = _loadMiniProgram(_loadGeneration);
+  }
+
+  @override
+  void dispose() {
+    _backendStore.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMiniProgram(int generation) async {
@@ -466,6 +475,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           hostBridge: widget.hostBridge,
           capabilityRegistry: widget.capabilityRegistry,
           backendConnector: widget.backendConnector,
+          backendStore: _backendStore,
           featureFlagEvaluator: widget.featureFlagEvaluator,
           logger: widget.logger,
           openMiniProgramScreen: _openMiniProgramScreen,

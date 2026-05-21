@@ -172,6 +172,7 @@ async function buildMiniProgramChecks(
   const manifest = await readManifest(workspacePath);
   const build = asRecord(miniProgram.build);
   const validation = asRecord(miniProgram.validation);
+  const backendUsage = asRecord(miniProgram.backendUsage);
   const partnerPackages = Array.isArray(miniProgram.partnerPackages)
     ? miniProgram.partnerPackages.length
     : 0;
@@ -182,6 +183,12 @@ async function buildMiniProgramChecks(
     : '';
   const entryExists = entryPath ? await exists(entryPath) : false;
   const validationStatus = asString(validation.status, 'not_run');
+  const usesPublisherBackend = asBoolean(backendUsage.usesPublisherBackend);
+  const usesBackendState =
+    asBoolean(backendUsage.usesBackendBuilder) ||
+    asBoolean(backendUsage.usesBackendQueryAction) ||
+    asBoolean(backendUsage.usesBackendState);
+  const backendRequestIds = asStringList(backendUsage.requestIds);
 
   return [
     check(
@@ -251,6 +258,22 @@ async function buildMiniProgramChecks(
       `${partnerPackages} partner package file(s) found.`,
       undefined,
       partnerPackages > 0 ? undefined : 'Run MiniProgram: Create Partner Package after creating an access key.',
+    ),
+    check(
+      'mini_program.publisher_backend_usage',
+      'Publisher backend usage',
+      usesPublisherBackend ? 'warning' : 'ok',
+      usesPublisherBackend
+        ? usesBackendState
+          ? 'Mini-program source uses backend query/state helpers.'
+          : 'Mini-program source uses publisher backend actions.'
+        : 'No publisher backend action or builder usage was detected.',
+      backendRequestIds.length > 0
+        ? `Request IDs: ${backendRequestIds.join(', ')}`
+        : undefined,
+      usesPublisherBackend
+        ? 'When adding this mini-program to a host, include --backend-base-url in the partner package or host endpoint.'
+        : undefined,
     ),
   ];
 }

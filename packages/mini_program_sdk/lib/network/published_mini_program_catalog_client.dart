@@ -9,10 +9,7 @@ import 'mini_program_source_exception.dart';
 
 /// Lightweight catalog of published mini-programs exposed by backend discovery.
 class PublishedMiniProgramCatalog {
-  const PublishedMiniProgramCatalog({
-    required this.entries,
-    this.traceId,
-  });
+  const PublishedMiniProgramCatalog({required this.entries, this.traceId});
 
   final List<PublishedMiniProgramSummary> entries;
   final String? traceId;

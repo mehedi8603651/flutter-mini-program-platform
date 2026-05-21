@@ -21,7 +21,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.3
+  mini_program_sdk: ^0.3.4
   mini_program_contracts: ^0.1.1
 ```
 
@@ -177,7 +177,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.3` while the runtime compatibility version remains
+the package can be `0.3.4` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints
@@ -284,6 +284,65 @@ final config = MiniProgramConfig(
 Generated host adapters from `miniprogram embed init` wire this connector for
 you. Backend calls are lazy: no HTTP client or request is created until a
 mini-program action calls the publisher backend.
+
+Mini-programs can also load backend JSON into local mini-program state and bind
+simple UI text to that state. Generated mini-program scaffolds include helper
+functions for this:
+
+```dart
+miniProgramBackendBuilder(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+  cacheTtl: const Duration(seconds: 60),
+  loading: StacText(data: 'Loading...'),
+  error: StacText(data: '{{backend.home.message}}'),
+  child: StacColumn(
+    children: [
+      StacText(data: '{{backend.home.data.title}}'),
+      StacText(data: '{{backend.home.data.user.name}}'),
+    ],
+  ),
+)
+```
+
+The builder starts the query only when it renders, stores the result under the
+`requestId`, and does not refetch on normal rebuilds. A button or refresh action
+can update the same state:
+
+```dart
+StacFilledButton(
+  onPressed: miniProgramBackendQueryAction(
+    requestId: 'home',
+    endpoint: 'home/bootstrap',
+    forceRefresh: true,
+  ),
+  child: StacText(data: 'Refresh'),
+)
+```
+
+For simple lists, provide `itemsPath` and an `itemTemplate`:
+
+```dart
+miniProgramBackendBuilder(
+  requestId: 'coupons',
+  endpoint: 'coupons/list',
+  itemsPath: 'data.coupons',
+  empty: StacText(data: 'No coupons yet'),
+  itemTemplate: StacText(data: '{{item.title}}'),
+)
+```
+
+Supported bindings include:
+
+```text
+{{backend.home.loading}}
+{{backend.home.success}}
+{{backend.home.errorCode}}
+{{backend.home.message}}
+{{backend.home.fromCache}}
+{{backend.home.data.title}}
+{{item.title}}
+```
 
 Security rules:
 

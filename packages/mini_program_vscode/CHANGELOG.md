@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.17
+
+- Show mini-program publisher backend action/query/builder usage in sidebar
+  status and diagnostics.
+- Warn when backend query/state helpers are detected so host setup includes
+  `--backend-base-url`.
+- Update docs for `mini_program_tooling` 0.3.19 and SDK backend binding
+  helpers.
+
 ## 0.1.16
 
 - Add optional publisher backend URL prompts to host endpoint add and partner

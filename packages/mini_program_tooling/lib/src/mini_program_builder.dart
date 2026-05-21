@@ -5,12 +5,13 @@ import 'package:path/path.dart' as p;
 
 import 'managed_stac_builder.dart';
 
-typedef ProcessRunner = Future<ProcessResult> Function(
-  String executable,
-  List<String> arguments, {
-  String? workingDirectory,
-  Map<String, String>? environment,
-});
+typedef ProcessRunner =
+    Future<ProcessResult> Function(
+      String executable,
+      List<String> arguments, {
+      String? workingDirectory,
+      Map<String, String>? environment,
+    });
 
 class MiniProgramBuildRequest {
   const MiniProgramBuildRequest({
@@ -114,9 +115,9 @@ class MiniProgramBuilder {
       }
     }
 
-    final manifest = jsonDecode(
-      await File(manifestPath).readAsString(),
-    ) as Map<String, dynamic>;
+    final manifest =
+        jsonDecode(await File(manifestPath).readAsString())
+            as Map<String, dynamic>;
     final resolvedMiniProgramId = '${manifest['id'] ?? ''}'.trim();
     if (resolvedMiniProgramId.isEmpty) {
       throw MiniProgramBuildException(
@@ -293,11 +294,9 @@ class MiniProgramBuilder {
       }
     }
 
-    final globalStacResult = await _processRunner(
-      'stac',
-      const <String>['--version'],
-      workingDirectory: repoRootPath ?? miniProgramRootPath,
-    );
+    final globalStacResult = await _processRunner('stac', const <String>[
+      '--version',
+    ], workingDirectory: repoRootPath ?? miniProgramRootPath);
     if (globalStacResult.exitCode == 0) {
       return _BuildCommand(
         source: 'global_stac',
@@ -394,7 +393,9 @@ class MiniProgramBuilder {
       return p.normalize(p.absolute(miniProgramRootPath.trim()));
     }
 
-    if (repoRootPath == null || miniProgramId == null || miniProgramId.trim().isEmpty) {
+    if (repoRootPath == null ||
+        miniProgramId == null ||
+        miniProgramId.trim().isEmpty) {
       throw const MiniProgramBuildException(
         'Provide either --mini-program-root or both --repo-root and --id.',
       );

@@ -932,8 +932,12 @@ Generated host-app structure:
   without changing the appId or breaking other partners
 - publisher-owned business backends are configured separately with
   `MiniProgramEndpoint.backend` / `--backend-base-url`; they are lazy,
-  action-driven, and should use relative `miniProgramBackendAction` endpoints
+  action-driven, and should use relative `miniProgramBackendAction`,
+  `miniProgramBackendQueryAction`, or `miniProgramBackendBuilder` endpoints
   such as `home/bootstrap`
+- backend query/builder helpers can bind simple values like
+  `{{backend.home.data.title}}` and repeated item templates like
+  `{{item.title}}` without host app custom code
 - publisher backend secrets stay on the publisher server, not in mini-program
   JSON, host source, APK, IPA, or web JavaScript
 - `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the

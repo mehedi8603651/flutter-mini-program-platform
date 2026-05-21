@@ -453,16 +453,57 @@ StacOutlinedButton(
 )
 ```
 
-## Publisher backend helper
+## Publisher backend helpers
 
-Use `miniProgramBackendAction(...)` when this mini-program needs to call its own
-publisher-owned Firebase, AWS, or custom server through the host runtime:
+Use `miniProgramBackendBuilder(...)` when this mini-program needs to lazily load
+JSON from its own publisher-owned Firebase, AWS, or custom server and bind simple
+UI values without host app custom code:
+
+```dart
+miniProgramBackendBuilder(
+  requestId: '$miniProgramId-home',
+  endpoint: 'home/bootstrap',
+  cacheTtl: const Duration(seconds: 60),
+  loading: StacText(data: 'Loading...'),
+  error: StacText(data: '{{backend.$miniProgramId-home.message}}'),
+  child: StacColumn(
+    children: [
+      StacText(data: '{{backend.$miniProgramId-home.data.title}}'),
+    ],
+  ),
+)
+```
+
+For repeated item templates:
+
+```dart
+miniProgramBackendBuilder(
+  requestId: '$miniProgramId-coupons',
+  endpoint: 'coupons/list',
+  itemsPath: 'data.coupons',
+  empty: StacText(data: 'No coupons yet'),
+  itemTemplate: StacText(data: '{{item.title}}'),
+)
+```
+
+Use `miniProgramBackendQueryAction(...)` when a button should refresh the same
+state:
+
+```dart
+miniProgramBackendQueryAction(
+  requestId: '$miniProgramId-load-home',
+  endpoint: 'home/bootstrap',
+  forceRefresh: true,
+)
+```
+
+Use `miniProgramBackendAction(...)` only when you need a fire-and-return backend
+call without storing state for bindings:
 
 ```dart
 miniProgramBackendAction(
-  requestId: '$miniProgramId-load-home',
-  endpoint: 'home/bootstrap',
-  method: 'GET',
+  requestId: '$miniProgramId-track-impression',
+  endpoint: 'analytics/impression',
   cacheTtl: const Duration(seconds: 60),
 )
 ```
@@ -470,6 +511,8 @@ miniProgramBackendAction(
 Keep `endpoint` relative. Do not put backend secrets in mini-program JSON,
 Flutter source, APK, IPA, or web JavaScript. Secrets stay on the publisher
 server; the host endpoint config only stores the publisher backend base URL.
+Prefer batch endpoints like `home/bootstrap`, CDN image URLs, short timeouts,
+and explicit cache TTLs only for safe `GET` responses.
 
 ## Build
 
@@ -863,6 +906,59 @@ StacAction miniProgramBackendAction({
       if (cacheTtl != null) 'cacheTtlSeconds': cacheTtl.inSeconds,
     },
   );
+}
+
+StacAction miniProgramBackendQueryAction({
+  required String requestId,
+  required String endpoint,
+  String method = 'GET',
+  Map<String, dynamic> body = const <String, dynamic>{},
+  Duration? cacheTtl,
+  bool forceRefresh = false,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramBackendQuery',
+      'requestId': requestId,
+      'endpoint': endpoint,
+      'method': method,
+      if (body.isNotEmpty) 'body': body,
+      if (cacheTtl != null) 'cacheTtlSeconds': cacheTtl.inSeconds,
+      if (forceRefresh) 'forceRefresh': true,
+    },
+  );
+}
+
+StacWidget miniProgramBackendBuilder({
+  required String requestId,
+  required String endpoint,
+  String method = 'GET',
+  Map<String, dynamic> body = const <String, dynamic>{},
+  Duration? cacheTtl,
+  bool forceRefresh = false,
+  StacWidget? loading,
+  StacWidget? error,
+  StacWidget? child,
+  StacWidget? empty,
+  StacWidget? itemTemplate,
+  String? itemsPath,
+}) {
+  return StacWidget.fromJson(<String, dynamic>{
+    'type': 'miniProgramBackendBuilder',
+    'requestId': requestId,
+    'endpoint': endpoint,
+    'method': method,
+    if (body.isNotEmpty) 'body': body,
+    if (cacheTtl != null) 'cacheTtlSeconds': cacheTtl.inSeconds,
+    if (forceRefresh) 'forceRefresh': true,
+    if (loading != null) 'loading': loading.toJson(),
+    if (error != null) 'error': error.toJson(),
+    if (child != null) 'child': child.toJson(),
+    if (empty != null) 'empty': empty.toJson(),
+    if (itemTemplate != null) 'itemTemplate': itemTemplate.toJson(),
+    if (itemsPath != null && itemsPath.trim().isNotEmpty)
+      'itemsPath': itemsPath.trim(),
+  });
 }
 ''';
 

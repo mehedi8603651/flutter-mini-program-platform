@@ -490,17 +490,36 @@ openAppMiniProgram(context, appId: 'public_coupon_demo', title: 'Public Coupon D
 
 Use publisher backend endpoints when the mini-program company owns its Firebase,
 AWS, or custom server. Delivery still comes from `--api-base-url`; business API
-calls use `--backend-base-url` and the generated `miniProgramBackendAction(...)`
-helper in `lib/host_action_helpers.dart`.
+calls use `--backend-base-url` and the generated backend helpers in
+`lib/host_action_helpers.dart`.
 
 ```dart
-miniProgramBackendAction(
-  requestId: 'load-home',
+miniProgramBackendBuilder(
+  requestId: 'home',
   endpoint: 'home/bootstrap',
-  method: 'GET',
   cacheTtl: const Duration(seconds: 60),
+  loading: StacText(data: 'Loading...'),
+  error: StacText(data: '{{backend.home.message}}'),
+  child: StacColumn(
+    children: [
+      StacText(data: '{{backend.home.data.title}}'),
+    ],
+  ),
 )
 ```
+
+Refresh the same state from a button:
+
+```dart
+miniProgramBackendQueryAction(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+  forceRefresh: true,
+)
+```
+
+Use `miniProgramBackendAction(...)` when you need a backend call result without
+storing state for `{{backend.*}}` bindings.
 
 Rules:
 
@@ -510,6 +529,8 @@ Rules:
 - backend secrets must stay on the publisher server, not in JSON, source, APK,
   IPA, or web JavaScript
 - use batch APIs, short timeouts, paginated responses, and CDN image URLs
+- use `itemsPath` + `itemTemplate` for simple repeated backend lists with
+  `{{item.*}}` bindings
 
 Current cloud support in this phase:
 

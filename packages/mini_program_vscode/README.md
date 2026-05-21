@@ -8,9 +8,9 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.18 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.19 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
-endpoint metadata, and
+endpoint metadata, backend query/state diagnostics, and
 `miniprogram workflow status --json`.
 
 Install or upgrade the CLI first:
@@ -39,7 +39,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.16.vsix
+code --install-extension mini-program-tools-0.1.17.vsix
 ```
 
 ## Features
@@ -168,10 +168,23 @@ CLI writes both `mini_program_endpoints.dart` and
 
 Endpoint add and partner package creation can also include an optional
 publisher-owned backend base URL. That backend is for business API calls from
-`miniProgramBackend` actions, not for manifest/screen delivery. Backend secrets
-must stay on the publisher server; the host app stores only the public base URL
-and optional delivery access key. Diagnostics show whether a publisher backend
-is configured and never print access-key values.
+`miniProgramBackend`, `miniProgramBackendQuery`, and
+`miniProgramBackendBuilder` usage, not for manifest/screen delivery. Backend
+secrets must stay on the publisher server; the host app stores only the public
+base URL and optional delivery access key. Diagnostics show whether a publisher
+backend is configured and never print access-key values.
+
+Backend query/state helpers support simple bindings such as:
+
+```text
+{{backend.home.data.title}}
+{{backend.home.message}}
+{{item.title}}
+```
+
+If diagnostics detects backend query or builder usage in a mini-program, it
+prints a fix reminding you to include `--backend-base-url` when creating the
+partner package or adding the endpoint to a host app.
 
 Host diagnostics check public endpoints by loading:
 

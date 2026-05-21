@@ -42,10 +42,7 @@ void main() {
             'version': '1.1.0',
             'entry': 'profile_center_home',
             'sdkVersionRange': '>=1.0.0 <2.0.0',
-            'requiredCapabilities': <String>[
-              'analytics',
-              'native_navigation',
-            ],
+            'requiredCapabilities': <String>['analytics', 'native_navigation'],
           },
           'rollout': <String, dynamic>{
             'type': 'rule_based',
@@ -76,7 +73,10 @@ void main() {
     final client = DeliveryInspectorClient(
       apiBaseUri: Uri.parse('http://127.0.0.1:8080/api/'),
       httpClient: MockClient((request) async {
-        expect(request.url.path, '/api/debug/manifests/profile_center/decision');
+        expect(
+          request.url.path,
+          '/api/debug/manifests/profile_center/decision',
+        );
         expect(request.headers['x-request-id'], 'debug_trace_123');
         return http.Response(
           '{"miniProgramId":"profile_center","outcome":"resolved","simulatedStatusCode":200,"traceId":"debug_trace_123"}',

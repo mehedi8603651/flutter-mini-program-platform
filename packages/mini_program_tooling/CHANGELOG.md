@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.19
+
+- generate `miniProgramBackendQueryAction(...)` and
+  `miniProgramBackendBuilder(...)` helpers for publisher backend query, state,
+  and simple `{{backend.*}}` / `{{item.*}}` bindings
+- update generated mini-program README guidance with backend binding examples
+  and batch/cache/relative-endpoint recommendations
+- update generated host adapters and preview hosts to depend on
+  `mini_program_sdk: ^0.3.4`
+
 ## 0.3.18
 
 - add publisher-owned backend endpoint metadata to host endpoint add/import and
