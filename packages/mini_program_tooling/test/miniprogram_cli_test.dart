@@ -1198,6 +1198,8 @@ void main() {
       expect(registrySource, contains('title: "AWS Coupon Demo"'));
       expect(registrySource, contains('static const values'));
       expect(registrySource, contains('static const byAppId'));
+      expect(registrySource, contains('"aws_coupon_demo": awsCouponDemo'));
+      expect(registrySource, isNot(contains('awsCouponDemo.appId:')));
       expect(
         stdoutBuffer.toString(),
         contains(

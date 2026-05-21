@@ -919,7 +919,7 @@ void _writeCorsHeaders(HttpResponse response) {
   );
   response.headers.set(
     'access-control-allow-headers',
-    'content-type, x-mini-program-id, x-mini-program-sdk-version, x-mini-program-platform, x-mini-program-locale',
+    'content-type, x-mini-program-access-key, x-mini-program-app-id, x-mini-program-host-app, x-mini-program-host-version, x-mini-program-id, x-mini-program-sdk-version, x-mini-program-platform, x-mini-program-locale',
   );
 }
 

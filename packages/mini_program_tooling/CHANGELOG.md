@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.21
+
+- fix generated `mini_program_registry.dart` so `byAppId` uses literal string
+  keys and analyzes cleanly in host apps
+- fix mock publisher backend CORS headers so Chrome/web host apps can call the
+  backend connector's default MiniProgram headers
+
 ## 0.3.20
 
 - add opt-in mock publisher backend starter with

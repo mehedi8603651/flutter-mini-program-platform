@@ -126,6 +126,14 @@ void main() {
         Uri.parse('http://127.0.0.1:$runningPort/coupons/list'),
       ).send();
       expect(options.statusCode, HttpStatus.noContent);
+      expect(
+        options.headers['access-control-allow-headers'],
+        contains('x-mini-program-app-id'),
+      );
+      expect(
+        options.headers['access-control-allow-headers'],
+        contains('x-mini-program-host-app'),
+      );
 
       final status = await starter.status(
         miniProgramRootPath: miniProgramRoot.path,

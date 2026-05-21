@@ -524,7 +524,7 @@ class MiniPrograms {
   ];
 
   static const byAppId = <String, MiniProgramInfo>{
-    publicDemo.appId: publicDemo,
+    '$_publicDemoAppId': publicDemo,
   };
 }
 ''';

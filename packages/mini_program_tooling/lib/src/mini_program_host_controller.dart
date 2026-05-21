@@ -517,7 +517,7 @@ class MiniProgramHostController {
       ..writeln()
       ..writeln('  static const byAppId = <String, MiniProgramInfo>{');
     for (final entry in sortedEntries) {
-      buffer.writeln('    ${entry.constantName}.appId: ${entry.constantName},');
+      buffer.writeln('    ${_dartString(entry.appId)}: ${entry.constantName},');
     }
     buffer
       ..writeln('  };')
