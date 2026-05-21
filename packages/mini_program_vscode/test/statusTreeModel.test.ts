@@ -20,8 +20,18 @@ test('renders mini-program and host status rows', () => {
       endpointCount: 2,
       endpointAppIds: ['coupon_demo', 'rewards'],
       endpoints: [
-        { appId: 'coupon_demo', accessMode: 'protected', hasAccessKey: true },
-        { appId: 'rewards', accessMode: 'public', hasAccessKey: false },
+        {
+          appId: 'coupon_demo',
+          accessMode: 'protected',
+          hasAccessKey: true,
+          backendConfigured: true,
+        },
+        {
+          appId: 'rewards',
+          accessMode: 'public',
+          hasAccessKey: false,
+          backendConfigured: false,
+        },
       ],
     },
     environment: {
@@ -41,6 +51,7 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);
+  assert.match(text, /Publisher backends: coupon_demo:backend, rewards:none/);
   assert.match(text, /Routing: endpoint map active/);
   assert.match(text, /Backend fallback/);
   assert.match(text, /Access keys required: yes/);

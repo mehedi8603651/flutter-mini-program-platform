@@ -3,6 +3,7 @@ import 'package:stac/stac.dart';
 
 import '../actions/sdk_mini_program_navigation_parser.dart';
 import '../actions/sdk_host_action_parser.dart';
+import '../actions/sdk_mini_program_backend_parser.dart';
 import '../observability/sdk_logger.dart';
 
 /// Ensures the SDK's Stac extensions are registered exactly once per isolate.
@@ -23,6 +24,7 @@ abstract final class StacInitializer {
       await Stac.initialize(
         actionParsers: const [
           SdkHostActionParser(),
+          SdkMiniProgramBackendParser(),
           SdkMiniProgramNavigationParser(),
         ],
         showErrorWidgets: false,

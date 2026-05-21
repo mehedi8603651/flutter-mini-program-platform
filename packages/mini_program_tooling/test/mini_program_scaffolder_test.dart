@@ -214,6 +214,9 @@ void main() {
         expect(helperSource, contains("'route': route"));
         expect(helperSource, contains('StacAction hostCallSecureApiAction('));
         expect(helperSource, contains("'action': 'callSecureApi'"));
+        expect(helperSource, contains('StacAction miniProgramBackendAction('));
+        expect(helperSource, contains("'actionType': 'miniProgramBackend'"));
+        expect(helperSource, contains("'cacheTtlSeconds'"));
         expect(
           readmeSource,
           contains('stac/screens/coupon_center_details.dart'),

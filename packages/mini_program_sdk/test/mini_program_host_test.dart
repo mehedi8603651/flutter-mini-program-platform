@@ -347,15 +347,49 @@ void main() {
       expect(bridge.callSecureApiCalls.single.endpoint, 'feedback/submit');
     });
 
-    testWidgets('opens a second mini-program screen and pops back by screenId', (
+    testWidgets('dispatches publisher backend action through connector', (
+      tester,
+    ) async {
+      final connector = _FakeBackendConnector();
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _backendActionScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: connector,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Load Backend Data'));
+      await tester.pumpAndSettle();
+
+      expect(connector.calls, hasLength(1));
+      expect(connector.calls.single.miniProgramId, 'profile_center');
+      expect(connector.calls.single.endpoint, 'home/bootstrap');
+      expect(
+        connector.calls.single.cachePolicy.ttl,
+        const Duration(seconds: 60),
+      );
+    });
+
+    testWidgets('backend action fails clearly without a connector', (
       tester,
     ) async {
       final source = _FakeMiniProgramSource(
         manifest: _buildManifest(),
-        screenJsonById: const <String, Map<String, dynamic>>{
-          'profile/home': _openDetailsScreenJson,
-          'profile/details': _detailsScreenJson,
-        },
+        screenJson: _backendActionScreenJson,
       );
 
       await tester.pumpWidget(
@@ -373,20 +407,53 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      expect(find.text('Open details'), findsOneWidget);
-
-      await tester.tap(find.text('Open details'));
+      await tester.tap(find.text('Load Backend Data'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Portable details screen'), findsOneWidget);
-      expect(find.text('Open details'), findsNothing);
-
-      await tester.tap(find.text('Back to first screen'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Open details'), findsOneWidget);
-      expect(find.text('Portable details screen'), findsNothing);
+      expect(find.text('Load Backend Data'), findsOneWidget);
     });
+
+    testWidgets(
+      'opens a second mini-program screen and pops back by screenId',
+      (tester) async {
+        final source = _FakeMiniProgramSource(
+          manifest: _buildManifest(),
+          screenJsonById: const <String, Map<String, dynamic>>{
+            'profile/home': _openDetailsScreenJson,
+            'profile/details': _detailsScreenJson,
+          },
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MiniProgramHost(
+              miniProgramId: 'profile_center',
+              sdkVersion: '1.1.0',
+              source: source,
+              hostBridge: _FakeHostBridge(),
+              capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+              manifestCache: InMemoryManifestCache(),
+              screenCache: InMemoryScreenCache(),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.text('Open details'), findsOneWidget);
+
+        await tester.tap(find.text('Open details'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Portable details screen'), findsOneWidget);
+        expect(find.text('Open details'), findsNothing);
+
+        await tester.tap(find.text('Back to first screen'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Open details'), findsOneWidget);
+        expect(find.text('Portable details screen'), findsNothing);
+      },
+    );
 
     testWidgets('replaces the current mini-program screen by screenId', (
       tester,
@@ -692,6 +759,23 @@ class _FakeHostBridge implements HostBridge {
   }
 }
 
+class _FakeBackendConnector implements MiniProgramBackendConnector {
+  final List<MiniProgramBackendRequest> calls = <MiniProgramBackendRequest>[];
+
+  @override
+  Future<MiniProgramBackendResult> call(
+    MiniProgramBackendRequest request,
+  ) async {
+    calls.add(request);
+    return MiniProgramBackendResult.success(
+      requestId: request.requestId,
+      endpoint: request.endpoint,
+      method: request.method,
+      data: const <String, dynamic>{'ok': true},
+    );
+  }
+}
+
 class _RejectAllFeatureFlags implements FeatureFlagEvaluator {
   const _RejectAllFeatureFlags();
 
@@ -766,6 +850,24 @@ const Map<String, dynamic> _secureApiScreenJson = <String, dynamic>{
   },
 };
 
+const Map<String, dynamic> _backendActionScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'center',
+    'child': <String, dynamic>{
+      'type': 'elevatedButton',
+      'onPressed': <String, dynamic>{
+        'actionType': 'miniProgramBackend',
+        'requestId': 'req-backend-1',
+        'endpoint': 'home/bootstrap',
+        'method': 'GET',
+        'cacheTtlSeconds': 60,
+      },
+      'child': <String, dynamic>{'type': 'text', 'data': 'Load Backend Data'},
+    },
+  },
+};
+
 const Map<String, dynamic> _openDetailsScreenJson = <String, dynamic>{
   'type': 'scaffold',
   'body': <String, dynamic>{
@@ -832,10 +934,7 @@ const Map<String, dynamic> _missingScreenActionJson = <String, dynamic>{
         'action': 'openMiniProgramScreen',
         'payload': <String, dynamic>{'screenId': 'profile/missing'},
       },
-      'child': <String, dynamic>{
-        'type': 'text',
-        'data': 'Open missing screen',
-      },
+      'child': <String, dynamic>{'type': 'text', 'data': 'Open missing screen'},
     },
   },
 };
@@ -848,10 +947,7 @@ const Map<String, dynamic> _detailsScreenJson = <String, dynamic>{
       'type': 'column',
       'mainAxisAlignment': 'center',
       'children': <Map<String, dynamic>>[
-        <String, dynamic>{
-          'type': 'text',
-          'data': 'Portable details screen',
-        },
+        <String, dynamic>{'type': 'text', 'data': 'Portable details screen'},
         <String, dynamic>{
           'type': 'elevatedButton',
           'onPressed': <String, dynamic>{
@@ -882,10 +978,7 @@ const Map<String, dynamic> _openConfirmScreenJson = <String, dynamic>{
         'action': 'openMiniProgramScreen',
         'payload': <String, dynamic>{'screenId': 'profile/confirm'},
       },
-      'child': <String, dynamic>{
-        'type': 'text',
-        'data': 'Open confirm screen',
-      },
+      'child': <String, dynamic>{'type': 'text', 'data': 'Open confirm screen'},
     },
   },
 };
@@ -898,10 +991,7 @@ const Map<String, dynamic> _popToRootScreenJson = <String, dynamic>{
       'type': 'column',
       'mainAxisAlignment': 'center',
       'children': <Map<String, dynamic>>[
-        <String, dynamic>{
-          'type': 'text',
-          'data': 'Portable confirm screen',
-        },
+        <String, dynamic>{'type': 'text', 'data': 'Portable confirm screen'},
         <String, dynamic>{
           'type': 'elevatedButton',
           'onPressed': <String, dynamic>{
@@ -910,10 +1000,7 @@ const Map<String, dynamic> _popToRootScreenJson = <String, dynamic>{
             'action': 'popToMiniProgramRoot',
             'payload': <String, dynamic>{},
           },
-          'child': <String, dynamic>{
-            'type': 'text',
-            'data': 'Pop to root',
-          },
+          'child': <String, dynamic>{'type': 'text', 'data': 'Pop to root'},
         },
       ],
     },
@@ -928,10 +1015,7 @@ const Map<String, dynamic> _popToDetailsScreenJson = <String, dynamic>{
       'type': 'column',
       'mainAxisAlignment': 'center',
       'children': <Map<String, dynamic>>[
-        <String, dynamic>{
-          'type': 'text',
-          'data': 'Portable confirm screen',
-        },
+        <String, dynamic>{'type': 'text', 'data': 'Portable confirm screen'},
         <String, dynamic>{
           'type': 'elevatedButton',
           'onPressed': <String, dynamic>{
@@ -940,10 +1024,7 @@ const Map<String, dynamic> _popToDetailsScreenJson = <String, dynamic>{
             'action': 'popToMiniProgramScreen',
             'payload': <String, dynamic>{'screenId': 'profile/details'},
           },
-          'child': <String, dynamic>{
-            'type': 'text',
-            'data': 'Pop to details',
-          },
+          'child': <String, dynamic>{'type': 'text', 'data': 'Pop to details'},
         },
       ],
     },

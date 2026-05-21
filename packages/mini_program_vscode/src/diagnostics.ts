@@ -313,6 +313,21 @@ async function buildHostAppChecks(
     })
     .filter(Boolean)
     .join(', ');
+  const endpointBackendSummaries = endpoints
+    .map((entry) => {
+      const endpoint = asRecord(entry);
+      const appId = asString(endpoint.appId);
+      const backendBaseUri = asString(endpoint.backendBaseUri);
+      return appId ? `${appId}:${backendBaseUri ? 'configured' : 'none'}` : '';
+    })
+    .filter(Boolean);
+  const endpointBackendIssues = endpoints
+    .map((entry) => asRecord(entry))
+    .filter((entry) => {
+      const backendBaseUri = asString(entry.backendBaseUri);
+      return backendBaseUri.length > 0 && !isAbsoluteUrl(backendBaseUri);
+    })
+    .map((entry) => asString(entry.appId, 'unknown'));
   const endpointAppIdsFromReport = endpoints
     .map((entry) => asString(asRecord(entry).appId))
     .filter((appId): appId is string => Boolean(appId));
@@ -395,6 +410,18 @@ async function buildHostAppChecks(
         : `Incomplete endpoint entries: ${endpointIssues.join(', ')}.`,
       endpointModeSummary || undefined,
       endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
+    ),
+    check(
+      'host_app.publisher_backend_endpoints',
+      'Publisher backend endpoints',
+      endpointBackendIssues.length === 0 ? 'ok' : 'error',
+      endpointBackendSummaries.length > 0
+        ? `Publisher backend configuration: ${endpointBackendSummaries.join(', ')}.`
+        : 'No endpoint metadata was available for publisher backend checks.',
+      undefined,
+      endpointBackendIssues.length === 0
+        ? undefined
+        : 'Re-add the endpoint with a valid absolute publisher backend URL.',
     ),
     check(
       'host_app.endpoint_routing',
@@ -817,6 +844,15 @@ async function readDartSources(
 function resolveEndpointUrl(apiBaseUri: string, relativePath: string): string {
   const normalizedBase = apiBaseUri.endsWith('/') ? apiBaseUri : `${apiBaseUri}/`;
   return new URL(relativePath, normalizedBase).toString();
+}
+
+function isAbsoluteUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return Boolean(parsed.protocol && parsed.host);
+  } catch {
+    return false;
+  }
 }
 
 async function getJsonObject(

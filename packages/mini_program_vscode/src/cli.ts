@@ -72,6 +72,7 @@ export interface HostEndpointAddArgsOptions {
   readonly appId: string;
   readonly title?: string;
   readonly apiBaseUrl: string;
+  readonly backendBaseUrl?: string;
   readonly accessKey?: string;
   readonly public?: boolean;
   readonly projectRoot: string;
@@ -185,6 +186,7 @@ export interface PartnerPackageArgsOptions {
   readonly public?: boolean;
   readonly envName?: string;
   readonly apiBaseUrl?: string;
+  readonly backendBaseUrl?: string;
   readonly outputPath?: string;
   readonly rootPath?: string;
 }
@@ -320,6 +322,9 @@ export function buildHostEndpointAddArgs(
   ];
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
+  }
+  if (options.backendBaseUrl?.trim()) {
+    args.push('--backend-base-url', options.backendBaseUrl.trim());
   }
   if (options.public) {
     args.push('--public');
@@ -532,6 +537,9 @@ export function buildPartnerPackageArgs(
   }
   if (options.apiBaseUrl?.trim()) {
     args.push('--api-base-url', options.apiBaseUrl.trim());
+  }
+  if (options.backendBaseUrl?.trim()) {
+    args.push('--backend-base-url', options.backendBaseUrl.trim());
   }
   if (options.outputPath?.trim()) {
     args.push('--output', options.outputPath.trim());

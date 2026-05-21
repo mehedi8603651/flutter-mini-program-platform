@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
@@ -73,6 +74,38 @@ void main() {
 
       expect(manifest.id, 'public_coupon_demo');
       expect(createdSources.single.endpoint.accessKey, isNull);
+    });
+
+    test('builds a backend connector from endpoint backend config', () async {
+      final connector = buildEndpointRoutingBackendConnector(
+        endpoints: <String, MiniProgramEndpoint>{
+          'coupon': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://delivery.example.com/api/'),
+            accessKey: 'mpk_live_coupon',
+            backend: MiniProgramBackendEndpoint(
+              baseUri: Uri.parse('https://publisher.example.com/api/'),
+              sendAccessKeyToBackend: true,
+            ),
+          ),
+          'public_demo': MiniProgramEndpoint.public(
+            apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+          ),
+        },
+        deliveryContext: _deliveryContext,
+        clientFactory: () => _BackendRecordingClient(),
+      );
+
+      expect(connector, isNotNull);
+
+      final result = await connector!.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'coupon',
+          endpoint: 'home/bootstrap',
+        ),
+      );
+
+      expect(result.isSuccess, isTrue);
+      (connector as DisposableMiniProgramBackendConnector).dispose();
     });
 
     test('rejects a blank protected access key', () {
@@ -211,4 +244,35 @@ class _ScreenCall {
   final String miniProgramId;
   final String version;
   final String screenId;
+}
+
+class _BackendRecordingClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    expect(
+      request.url.toString(),
+      'https://publisher.example.com/api/home/bootstrap',
+    );
+    expect(
+      request.headers[MiniProgramHttpHeaders.accessKey],
+      'mpk_live_coupon',
+    );
+    return http.StreamedResponse(
+      Stream<List<int>>.value(<int>[
+        123,
+        34,
+        111,
+        107,
+        34,
+        58,
+        116,
+        114,
+        117,
+        101,
+        125,
+      ]),
+      200,
+      request: request,
+    );
+  }
 }

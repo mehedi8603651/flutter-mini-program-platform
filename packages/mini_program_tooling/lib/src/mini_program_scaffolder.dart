@@ -453,6 +453,24 @@ StacOutlinedButton(
 )
 ```
 
+## Publisher backend helper
+
+Use `miniProgramBackendAction(...)` when this mini-program needs to call its own
+publisher-owned Firebase, AWS, or custom server through the host runtime:
+
+```dart
+miniProgramBackendAction(
+  requestId: '$miniProgramId-load-home',
+  endpoint: 'home/bootstrap',
+  method: 'GET',
+  cacheTtl: const Duration(seconds: 60),
+)
+```
+
+Keep `endpoint` relative. Do not put backend secrets in mini-program JSON,
+Flutter source, APK, IPA, or web JavaScript. Secrets stay on the publisher
+server; the host endpoint config only stores the publisher backend base URL.
+
 ## Build
 
 Before your first local build, verify prerequisites and initialize the local
@@ -824,6 +842,25 @@ StacAction hostCallSecureApiAction({
         'method': method,
         'body': body,
       },
+    },
+  );
+}
+
+StacAction miniProgramBackendAction({
+  required String requestId,
+  required String endpoint,
+  String method = 'GET',
+  Map<String, dynamic> body = const <String, dynamic>{},
+  Duration? cacheTtl,
+}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramBackend',
+      'requestId': requestId,
+      'endpoint': endpoint,
+      'method': method,
+      if (body.isNotEmpty) 'body': body,
+      if (cacheTtl != null) 'cacheTtlSeconds': cacheTtl.inSeconds,
     },
   );
 }

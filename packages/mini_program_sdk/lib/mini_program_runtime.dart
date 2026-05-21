@@ -4,6 +4,7 @@ import 'cache/mini_program_cache_bundle.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
+import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 
@@ -17,6 +18,7 @@ class MiniProgramRuntime {
     required this.hostBridge,
     required this.capabilityRegistry,
     required this.cacheBundle,
+    this.backendConnector,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
     this.disposeSource = false,
@@ -26,6 +28,7 @@ class MiniProgramRuntime {
   final MiniProgramSource source;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final MiniProgramBackendConnector? backendConnector;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle cacheBundle;
   final SdkLogger logger;
@@ -36,6 +39,7 @@ class MiniProgramRuntime {
     MiniProgramSource? source,
     HostBridge? hostBridge,
     CapabilityRegistry? capabilityRegistry,
+    MiniProgramBackendConnector? backendConnector,
     FeatureFlagEvaluator? featureFlagEvaluator,
     MiniProgramCacheBundle? cacheBundle,
     SdkLogger? logger,
@@ -46,6 +50,7 @@ class MiniProgramRuntime {
       source: source ?? this.source,
       hostBridge: hostBridge ?? this.hostBridge,
       capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
+      backendConnector: backendConnector ?? this.backendConnector,
       featureFlagEvaluator: featureFlagEvaluator ?? this.featureFlagEvaluator,
       cacheBundle: cacheBundle ?? this.cacheBundle,
       logger: logger ?? this.logger,
@@ -56,6 +61,10 @@ class MiniProgramRuntime {
   void dispose() {
     if (disposeSource && source is DisposableMiniProgramSource) {
       (source as DisposableMiniProgramSource).dispose();
+    }
+    final connector = backendConnector;
+    if (connector is DisposableMiniProgramBackendConnector) {
+      connector.dispose();
     }
   }
 }
@@ -97,6 +106,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.source != oldWidget.runtime.source ||
         runtime.hostBridge != oldWidget.runtime.hostBridge ||
         runtime.capabilityRegistry != oldWidget.runtime.capabilityRegistry ||
+        runtime.backendConnector != oldWidget.runtime.backendConnector ||
         runtime.featureFlagEvaluator !=
             oldWidget.runtime.featureFlagEvaluator ||
         runtime.cacheBundle != oldWidget.runtime.cacheBundle ||

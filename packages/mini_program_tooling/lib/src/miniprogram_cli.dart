@@ -1526,6 +1526,11 @@ class MiniprogramCli {
             'Mini-program delivery API base URL. If omitted, the active cloud environment output is used.',
       )
       ..addOption(
+        'backend-base-url',
+        help:
+            'Optional publisher-owned business API base URL to include in the partner handoff.',
+      )
+      ..addOption(
         'access-key',
         help: 'MiniProgram access key issued for the host company or partner.',
       )
@@ -1592,6 +1597,9 @@ class MiniprogramCli {
             : _defaultTitleForAppId(appId),
         apiBaseUri: Uri.parse(apiBaseUrl),
         accessKey: isPublic ? null : accessKey,
+        backendBaseUri: _parseOptionalAbsoluteUri(
+          results.option('backend-base-url'),
+        ),
         outputPath: results.option('output'),
       ),
     );
@@ -1856,6 +1864,11 @@ class MiniprogramCli {
             'Mini-program delivery API base URL, for example https://api.example.com/prod/api/.',
       )
       ..addOption(
+        'backend-base-url',
+        help:
+            'Optional publisher-owned business API base URL, for example https://publisher.example.com/api/.',
+      )
+      ..addOption(
         'title',
         help:
             'Display title to write into mini_program_registry.dart. Defaults to a title-cased appId.',
@@ -1904,6 +1917,19 @@ class MiniprogramCli {
       );
     }
     final accessKey = results.option('access-key')?.trim() ?? '';
+    final rawBackendBaseUrl = results.option('backend-base-url')?.trim() ?? '';
+    final backendBaseUri = rawBackendBaseUrl.isEmpty
+        ? null
+        : Uri.tryParse(rawBackendBaseUrl);
+    if (rawBackendBaseUrl.isNotEmpty &&
+        (backendBaseUri == null ||
+            !backendBaseUri.hasScheme ||
+            backendBaseUri.host.isEmpty)) {
+      throw FormatException(
+        'host endpoint add expected an absolute --backend-base-url, got: '
+        '$rawBackendBaseUrl',
+      );
+    }
     final isPublic = results.flag('public');
     if (accessKey.isEmpty && !isPublic) {
       throw const FormatException(
@@ -1926,6 +1952,7 @@ class MiniprogramCli {
         title: results.option('title'),
         apiBaseUri: apiBaseUri,
         accessKey: isPublic ? null : accessKey,
+        backendBaseUri: backendBaseUri,
         force: results.flag('force'),
       ),
     );
@@ -1977,6 +2004,7 @@ class MiniprogramCli {
         title: handoff.title,
         apiBaseUri: handoff.apiBaseUri,
         accessKey: handoff.accessKey,
+        backendBaseUri: handoff.backendBaseUri,
         force: results.flag('force'),
       ),
     );
@@ -3006,6 +3034,14 @@ class MiniprogramCli {
     return trimmedValue.replaceFirst(RegExp(r'/+$'), '');
   }
 
+  Uri? _parseOptionalAbsoluteUri(String? rawValue) {
+    final trimmed = rawValue?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return Uri.parse(_normalizeAbsoluteUrl(trimmed));
+  }
+
   String _defaultTitleForAppId(String appId) {
     final words = appId
         .trim()
@@ -3059,9 +3095,9 @@ Commands:
   cloud app list|info|disable|delete [options]
   cloud outputs [--format text|dart-define]
   workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-  partner package <mini-program-id> (--access-key <key>|--public) [--env <env-name>]
+  partner package <mini-program-id> (--access-key <key>|--public) [--env <env-name>] [--backend-base-url <url>]
   host run -d <device> [--env <env-name>]
-  host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public)
+  host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>]
   host endpoint import <partner-package.json>
   embed init [--project-root <path>] [--with-demo]
   embed cloud configure [--env <env-name>]
@@ -3761,6 +3797,8 @@ Commands:
       'Title: ${result.handoff.title}',
       'Access mode: ${result.handoff.accessMode}',
       'API base URL: ${result.handoff.apiBaseUri}',
+      if (result.handoff.backendBaseUri != null)
+        'Backend base URL: ${result.handoff.backendBaseUri}',
       'Generated at UTC: ${result.handoff.generatedAtUtc}',
       'Host import command:',
       'miniprogram host endpoint import ${result.filePath}',
@@ -3781,6 +3819,8 @@ Commands:
       'Title: ${result.title}',
       'Access mode: ${result.accessMode}',
       'API base URL: ${result.apiBaseUri}',
+      if (result.backendBaseUri != null)
+        'Backend base URL: ${result.backendBaseUri}',
       'Endpoint count: ${result.endpointCount}',
       'Registry count: ${result.registryCount}',
       'Use it from MiniProgramScope:',
@@ -3807,6 +3847,8 @@ Commands:
       'Title: ${handoff.title}',
       'Access mode: ${handoff.accessMode}',
       'API base URL: ${handoff.apiBaseUri}',
+      if (handoff.backendBaseUri != null)
+        'Backend base URL: ${handoff.backendBaseUri}',
       'Endpoint count: ${endpointResult.endpointCount}',
       'Registry count: ${endpointResult.registryCount}',
       'Open from app UI by appId only:',

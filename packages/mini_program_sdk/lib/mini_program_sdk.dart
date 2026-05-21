@@ -19,6 +19,7 @@ export 'mini_program_scope.dart';
 export 'network/asset_resolver.dart';
 export 'network/http_mini_program_source.dart';
 export 'network/local_backend_defaults.dart';
+export 'network/mini_program_backend_connector.dart';
 export 'network/mini_program_endpoint.dart';
 export 'network/mini_program_delivery_context.dart';
 export 'network/mini_program_source.dart';

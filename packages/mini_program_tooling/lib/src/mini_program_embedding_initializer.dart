@@ -67,7 +67,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.3.2';
+  static const String _miniProgramSdkConstraint = '^0.3.3';
   static const String _miniProgramContractsConstraint = '^0.1.1';
   static const String _publicDemoAppId = 'profile';
   static const String _publicDemoTitle = 'Public Demo';
@@ -587,6 +587,12 @@ MiniProgramConfig buildMiniProgramConfig({
     source: source,
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
+    backendConnector: endpoints.isEmpty
+        ? null
+        : buildEndpointRoutingBackendConnector(
+            endpoints: endpoints,
+            deliveryContext: deliveryContext,
+          ),
     cacheBundle: MiniProgramCacheBundle.inMemory(),
   );
 }
@@ -916,6 +922,7 @@ Manual host entry is also available:
 ```bash
 miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 miniprogram host endpoint add public_coupon_demo --api-base-url https://user.github.io/repo/public_mini_program/ --public
+miniprogram host endpoint add rewards --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --backend-base-url https://publisher.example.com/api/
 ```
 
 ```dart
@@ -944,6 +951,13 @@ For protected cloud delivery, the backend should validate the
 `X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
 revoking one partner key does not affect other partners using the same
 mini-program.
+
+If a mini-program needs its publisher-owned Firebase/AWS/custom backend, pass
+`--backend-base-url` in the partner package or host endpoint command. Generated
+runtime setup wires that backend lazily, and generated mini-program helpers can
+call it with `miniProgramBackendAction(endpoint: 'home/bootstrap', ...)`.
+Backend secrets must stay on the publisher server; never put them in JSON,
+source, APK, IPA, or web JavaScript.
 
 This package does not own your Flutter app. It only provides mini-program
 capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,

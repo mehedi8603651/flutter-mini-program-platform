@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.16
+
+- Add optional publisher backend URL prompts to host endpoint add and partner
+  package creation workflows.
+- Show publisher backend endpoint status in the sidebar and diagnostics without
+  exposing delivery access keys.
+- Validate partner package `backendBaseUrl` shape when present and pass
+  `--backend-base-url` through to the installed MiniProgram CLI.
+
 ## 0.1.15
 
 - Prompt for a display title when adding host endpoints manually and pass it

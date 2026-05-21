@@ -72,9 +72,9 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--output <file>]
+miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
-miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public)
+miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>]
 miniprogram host endpoint import <partner-package.json>
 miniprogram embed init [--project-root <path>] [--force] [--with-demo]
 miniprogram embed cloud configure [--env <env-name>]
@@ -440,6 +440,14 @@ For public/static delivery, create a public handoff package without a key:
 miniprogram partner package public_coupon_demo --title "Public Coupon Demo" --public --api-base-url https://user.github.io/repo/public_mini_program/ --output public_coupon_demo.partner.json
 ```
 
+If the mini-program also calls its publisher-owned business backend, include a
+separate backend base URL. This is not the delivery API URL and it should not
+contain backend secrets:
+
+```bash
+miniprogram partner package aws_coupon_demo --title "AWS Coupon Demo" --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --env my-aws-prod --backend-base-url https://publisher.example.com/api/ --output aws_coupon_demo.partner.json
+```
+
 The host app team imports that package from the Flutter app root:
 
 ```bash
@@ -453,7 +461,11 @@ Generate or update a host-owned endpoint file:
 cd my_mini_host
 miniprogram host endpoint add aws_coupon_demo --title "AWS Coupon Demo" --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 miniprogram host endpoint add public_coupon_demo --title "Public Coupon Demo" --api-base-url https://user.github.io/repo/public_mini_program/ --public
+miniprogram host endpoint add rewards --title "Rewards" --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --backend-base-url https://publisher.example.com/api/
 ```
+
+The generated host runtime wires publisher backend endpoints lazily. No
+publisher backend HTTP client or request is created at app startup.
 
 Then wire it once:
 
@@ -473,6 +485,31 @@ Buttons remain clean:
 openAppMiniProgram(context, appId: 'aws_coupon_demo', title: 'AWS Coupon Demo');
 openAppMiniProgram(context, appId: 'public_coupon_demo', title: 'Public Coupon Demo');
 ```
+
+### Publisher-owned backend
+
+Use publisher backend endpoints when the mini-program company owns its Firebase,
+AWS, or custom server. Delivery still comes from `--api-base-url`; business API
+calls use `--backend-base-url` and the generated `miniProgramBackendAction(...)`
+helper in `lib/host_action_helpers.dart`.
+
+```dart
+miniProgramBackendAction(
+  requestId: 'load-home',
+  endpoint: 'home/bootstrap',
+  method: 'GET',
+  cacheTtl: const Duration(seconds: 60),
+)
+```
+
+Rules:
+
+- backend action endpoints must be relative, such as `home/bootstrap`
+- default cache is off; cache is only for explicit `GET` TTLs
+- MiniProgram access keys protect delivery, not user identity
+- backend secrets must stay on the publisher server, not in JSON, source, APK,
+  IPA, or web JavaScript
+- use batch APIs, short timeouts, paginated responses, and CDN image URLs
 
 Current cloud support in this phase:
 

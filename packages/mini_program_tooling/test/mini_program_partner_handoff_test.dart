@@ -30,6 +30,7 @@ void main() {
           appId: 'aws_coupon_demo',
           title: 'AWS Coupon Demo',
           apiBaseUri: Uri.parse('https://api.example.com/prod/api/'),
+          backendBaseUri: Uri.parse('https://publisher.example.com/api/'),
           accessKey: 'mpk_live_company_a_12345678901234567890',
           outputPath: outputPath,
           generatedAtUtc: DateTime.utc(2026, 5, 14),
@@ -43,6 +44,7 @@ void main() {
       expect(decoded['schemaVersion'], 2);
       expect(decoded['type'], MiniProgramPartnerHandoff.documentType);
       expect(decoded['apiBaseUrl'], 'https://api.example.com/prod/api');
+      expect(decoded['backendBaseUrl'], 'https://publisher.example.com/api');
       expect(
         decoded['accessMode'],
         MiniProgramPartnerHandoff.accessModeProtected,
@@ -52,6 +54,10 @@ void main() {
       expect(handoff.appId, 'aws_coupon_demo');
       expect(handoff.title, 'AWS Coupon Demo');
       expect(handoff.apiBaseUri.toString(), 'https://api.example.com/prod/api');
+      expect(
+        handoff.backendBaseUri?.toString(),
+        'https://publisher.example.com/api',
+      );
       expect(handoff.accessKey, 'mpk_live_company_a_12345678901234567890');
     });
 

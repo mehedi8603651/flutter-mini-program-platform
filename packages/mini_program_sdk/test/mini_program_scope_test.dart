@@ -170,7 +170,11 @@ void main() {
     tester,
   ) async {
     final source = _DisposableMiniProgramSource();
-    final config = _buildConfig(source: source);
+    final backendConnector = _DisposableBackendConnector();
+    final config = _buildConfig(
+      source: source,
+      backendConnector: backendConnector,
+    );
 
     await tester.pumpWidget(
       MiniProgramScope(
@@ -184,6 +188,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
 
     expect(source.disposeCount, 1);
+    expect(backendConnector.disposeCount, 1);
   });
 
   testWidgets('injected controller is not disposed by MiniProgramScope', (
@@ -446,7 +451,10 @@ void main() {
   });
 }
 
-MiniProgramConfig _buildConfig({MiniProgramSource? source}) {
+MiniProgramConfig _buildConfig({
+  MiniProgramSource? source,
+  MiniProgramBackendConnector? backendConnector,
+}) {
   return MiniProgramConfig(
     sdkVersion: '1.0.0',
     source:
@@ -458,6 +466,7 @@ MiniProgramConfig _buildConfig({MiniProgramSource? source}) {
     capabilityRegistry: CapabilityRegistry(const <Capability>[
       Capability.analytics,
     ]),
+    backendConnector: backendConnector,
   );
 }
 
@@ -599,6 +608,27 @@ class _DisposableMiniProgramSource extends _FakeMiniProgramSource
       );
 
   int disposeCount = 0;
+
+  @override
+  void dispose() {
+    disposeCount++;
+  }
+}
+
+class _DisposableBackendConnector
+    implements DisposableMiniProgramBackendConnector {
+  int disposeCount = 0;
+
+  @override
+  Future<MiniProgramBackendResult> call(
+    MiniProgramBackendRequest request,
+  ) async {
+    return MiniProgramBackendResult.success(
+      requestId: request.requestId,
+      endpoint: request.endpoint,
+      method: request.method,
+    );
+  }
 
   @override
   void dispose() {

@@ -262,6 +262,8 @@ class MiniProgramWorkflowStatusController {
               'apiBaseUri': entry.value['apiBaseUri'],
               'accessMode': entry.value['accessMode'],
               'hasAccessKey': entry.value['hasAccessKey'],
+              'backendBaseUri': entry.value['backendBaseUri'],
+              'backendConfigured': entry.value['backendConfigured'],
             },
           )
           .toList(),
@@ -628,6 +630,9 @@ class MiniProgramWorkflowStatusController {
           'appId': json?['appId']?.toString(),
           'title': json?['title']?.toString(),
           'apiBaseUrl': json?['apiBaseUrl']?.toString(),
+          'backendBaseUrl': json?['backendBaseUrl']?.toString(),
+          'backendConfigured':
+              json?['backendBaseUrl']?.toString().trim().isNotEmpty ?? false,
           'accessMode':
               json?['accessMode']?.toString() ??
               ((json?['accessKey']?.toString().isNotEmpty ?? false)
@@ -672,6 +677,9 @@ class MiniProgramWorkflowStatusController {
         'apiBaseUri': record['apiBaseUri']?.toString(),
         'accessMode': accessMode,
         'hasAccessKey': hasAccessKey,
+        'backendBaseUri': record['backendBaseUri']?.toString(),
+        'backendConfigured':
+            record['backendBaseUri']?.toString().trim().isNotEmpty ?? false,
       });
     });
   }

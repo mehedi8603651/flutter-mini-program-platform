@@ -11,6 +11,7 @@ import 'host_bridge.dart';
 import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
 import 'network/asset_resolver.dart';
+import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'network/mini_program_source_exception.dart';
 import 'observability/sdk_logger.dart';
@@ -32,6 +33,7 @@ class MiniProgramHost extends StatefulWidget {
     required this.source,
     required this.hostBridge,
     required this.capabilityRegistry,
+    this.backendConnector,
     this.assetCache,
     this.manifestCache,
     this.screenCache,
@@ -46,6 +48,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramSource source;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final MiniProgramBackendConnector? backendConnector;
   final AssetCache? assetCache;
   final ManifestCache? manifestCache;
   final ScreenCache? screenCache;
@@ -84,6 +87,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.source != oldWidget.source ||
         widget.hostBridge != oldWidget.hostBridge ||
         widget.capabilityRegistry != oldWidget.capabilityRegistry ||
+        widget.backendConnector != oldWidget.backendConnector ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
         widget.screenCache != oldWidget.screenCache ||
@@ -337,10 +341,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     return HostActionResult.success(
       requestId: requestId,
       actionName: ActionNames.popToMiniProgramRoot,
-      message:
-          didPop
-              ? 'Returned to the root mini-program screen.'
-              : 'Mini-program is already showing the root screen.',
+      message: didPop
+          ? 'Returned to the root mini-program screen.'
+          : 'Mini-program is already showing the root screen.',
       data: <String, dynamic>{'screenId': rootScreen.screenId},
     );
   }
@@ -375,10 +378,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     return HostActionResult.success(
       requestId: requestId,
       actionName: ActionNames.popToMiniProgramScreen,
-      message:
-          didPop
-              ? 'Returned to mini-program screen "${payload.screenId}".'
-              : 'Mini-program is already showing screen "${payload.screenId}".',
+      message: didPop
+          ? 'Returned to mini-program screen "${payload.screenId}".'
+          : 'Mini-program is already showing screen "${payload.screenId}".',
       data: <String, dynamic>{'screenId': payload.screenId},
     );
   }
@@ -463,6 +465,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           miniProgramId: manifest.id,
           hostBridge: widget.hostBridge,
           capabilityRegistry: widget.capabilityRegistry,
+          backendConnector: widget.backendConnector,
           featureFlagEvaluator: widget.featureFlagEvaluator,
           logger: widget.logger,
           openMiniProgramScreen: _openMiniProgramScreen,
@@ -484,7 +487,10 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
                   return _buildError(context, currentScreen.failure!);
                 }
 
-                final rendered = Stac.fromJson(currentScreen.screenJson!, context);
+                final rendered = Stac.fromJson(
+                  currentScreen.screenJson!,
+                  context,
+                );
                 if (rendered == null) {
                   final failure = MiniProgramFailure(
                     errorCode: MiniProgramErrorCodes.manifestParseFailure,
@@ -564,10 +570,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       },
     );
     return MiniProgramFailure(
-      message:
-          screenId == null
-              ? 'Failed to load mini-program "${widget.miniProgramId}".'
-              : 'Failed to load screen "$screenId" for mini-program "${manifest?.id ?? widget.miniProgramId}".',
+      message: screenId == null
+          ? 'Failed to load mini-program "${widget.miniProgramId}".'
+          : 'Failed to load screen "$screenId" for mini-program "${manifest?.id ?? widget.miniProgramId}".',
       fallback: manifest?.fallback,
       cause: error,
       stackTrace: stackTrace,

@@ -21,7 +21,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.2
+  mini_program_sdk: ^0.3.3
   mini_program_contracts: ^0.1.1
 ```
 
@@ -177,7 +177,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.2` while the runtime compatibility version remains
+the package can be `0.3.3` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints
@@ -238,6 +238,71 @@ hosting, Cloudflare Pages, Netlify, or Vercel static hosting, use
 header and has no delivery access control, so do not use it for private or
 business-only mini-programs. Prefer GitHub Pages or a CDN over
 `raw.githubusercontent.com` for real usage.
+
+## Publisher-Owned Backend
+
+Delivery and business APIs are separate. `MiniProgramEndpoint.apiBaseUri` loads
+manifest/screen JSON. A publisher-owned backend is optional and is used only
+when the mini-program sends a `miniProgramBackend` action.
+
+```dart
+final deliveryContext = MiniProgramDeliveryContext(
+  hostApp: 'sample_host',
+  sdkVersion: '1.0.0',
+  hostVersion: '1.0.0',
+  capabilities: <Capability>{Capability.analytics},
+);
+
+final endpoints = <String, MiniProgramEndpoint>{
+  'aws_coupon_demo': MiniProgramEndpoint(
+    apiBaseUri: Uri.parse('https://publisher.example.com/delivery/'),
+    accessKey: 'mpk_live_partner_delivery_key',
+    backend: MiniProgramBackendEndpoint(
+      baseUri: Uri.parse('https://publisher.example.com/api/'),
+      requestTimeout: Duration(seconds: 8),
+    ),
+  ),
+};
+
+final config = MiniProgramConfig(
+  sdkVersion: '1.0.0',
+  source: EndpointRoutingMiniProgramSource(
+    endpoints: endpoints,
+    deliveryContext: deliveryContext,
+  ),
+  backendConnector: buildEndpointRoutingBackendConnector(
+    endpoints: endpoints,
+    deliveryContext: deliveryContext,
+  ),
+  hostBridge: const NoopHostBridge(),
+  capabilityRegistry: CapabilityRegistry(
+    const <Capability>[Capability.analytics],
+  ),
+);
+```
+
+Generated host adapters from `miniprogram embed init` wire this connector for
+you. Backend calls are lazy: no HTTP client or request is created until a
+mini-program action calls the publisher backend.
+
+Security rules:
+
+- backend secrets stay on the publisher server; never put Firebase/AWS/custom
+  server secrets in mini-program JSON, host app source, APK, IPA, or web JS
+- action endpoints must be relative, such as `home/bootstrap`; absolute URLs
+  are rejected
+- the MiniProgram delivery access key is not user auth and is not sent to the
+  publisher backend unless `sendAccessKeyToBackend: true` is set explicitly
+- use JWT/OAuth/session tokens through your own backend when user identity is
+  required
+
+Performance rules:
+
+- keep backend actions lazy and action-driven
+- prefer batch endpoints like `/home/bootstrap`
+- use explicit cache TTL only for safe `GET` responses
+- keep timeouts short and paginate large results
+- serve images from a CDN
 
 Generated host apps usually pass the backend URL at build or run time:
 

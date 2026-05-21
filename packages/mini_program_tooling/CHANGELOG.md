@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.18
+
+- add publisher-owned backend endpoint metadata to host endpoint add/import and
+  partner handoff packages with optional `--backend-base-url`
+- generate `MiniProgramBackendEndpoint` config in host endpoint maps and wire
+  generated runtime setup to the lazy endpoint-routing backend connector
+- generate `miniProgramBackendAction(...)` in mini-program helper code and
+  report backend configuration in workflow status without printing secrets
+
 ## 0.3.17
 
 - fix standalone mini-program path resolution so commands run from a

@@ -18,12 +18,16 @@ class MiniProgramPartnerHandoff {
     required String appId,
     required String title,
     required Uri apiBaseUri,
+    Uri? backendBaseUri,
     String? accessMode,
     String? accessKey,
     required String generatedAtUtc,
   }) : appId = appId.trim(),
        title = title.trim(),
        apiBaseUri = _normalizeApiBaseUri(apiBaseUri),
+       backendBaseUri = backendBaseUri == null
+           ? null
+           : _normalizeApiBaseUri(backendBaseUri),
        accessMode = _normalizeAccessMode(accessMode, accessKey),
        accessKey = _normalizeOptionalAccessKey(accessKey),
        generatedAtUtc = generatedAtUtc.trim() {
@@ -82,6 +86,7 @@ class MiniProgramPartnerHandoff {
       appId: _readString(decoded, 'appId'),
       title: _readString(decoded, 'title'),
       apiBaseUri: apiBaseUri,
+      backendBaseUri: _readOptionalUri(decoded, 'backendBaseUrl'),
       accessMode: accessMode,
       accessKey: accessMode == accessModePublic
           ? _readOptionalString(decoded, 'accessKey')
@@ -99,6 +104,7 @@ class MiniProgramPartnerHandoff {
   final String appId;
   final String title;
   final Uri apiBaseUri;
+  final Uri? backendBaseUri;
   final String accessMode;
   final String? accessKey;
   final String generatedAtUtc;
@@ -112,6 +118,7 @@ class MiniProgramPartnerHandoff {
       'appId': appId,
       'title': title,
       'apiBaseUrl': apiBaseUri.toString(),
+      if (backendBaseUri != null) 'backendBaseUrl': backendBaseUri.toString(),
       'accessMode': accessMode,
       if (accessKey != null) 'accessKey': accessKey,
       'generatedAtUtc': generatedAtUtc,
@@ -143,6 +150,20 @@ class MiniProgramPartnerHandoff {
     }
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  static Uri? _readOptionalUri(Map<dynamic, dynamic> decoded, String key) {
+    final value = _readOptionalString(decoded, key);
+    if (value == null) {
+      return null;
+    }
+    final uri = Uri.tryParse(value);
+    if (uri == null) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff $key is invalid.',
+      );
+    }
+    return uri;
   }
 
   static int _readInt(Map<dynamic, dynamic> decoded, String key) {
@@ -226,6 +247,7 @@ class MiniProgramPartnerPackageRequest {
     required this.title,
     required this.apiBaseUri,
     this.accessKey,
+    this.backendBaseUri,
     this.outputPath,
     this.generatedAtUtc,
   });
@@ -234,6 +256,7 @@ class MiniProgramPartnerPackageRequest {
   final String title;
   final Uri apiBaseUri;
   final String? accessKey;
+  final Uri? backendBaseUri;
   final String? outputPath;
   final DateTime? generatedAtUtc;
 }
@@ -258,6 +281,7 @@ class MiniProgramPartnerHandoffController {
       appId: request.appId.trim(),
       title: request.title.trim(),
       apiBaseUri: request.apiBaseUri,
+      backendBaseUri: request.backendBaseUri,
       accessKey: request.accessKey?.trim(),
       generatedAtUtc: (request.generatedAtUtc ?? DateTime.now().toUtc())
           .toIso8601String(),

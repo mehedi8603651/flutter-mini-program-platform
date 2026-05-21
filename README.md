@@ -930,6 +930,12 @@ Generated host-app structure:
 - protected cloud backends should validate `X-Mini-Program-Access-Key` against
   per-mini-program access-key metadata so one partner key can be revoked
   without changing the appId or breaking other partners
+- publisher-owned business backends are configured separately with
+  `MiniProgramEndpoint.backend` / `--backend-base-url`; they are lazy,
+  action-driven, and should use relative `miniProgramBackendAction` endpoints
+  such as `home/bootstrap`
+- publisher backend secrets stay on the publisher server, not in mini-program
+  JSON, host source, APK, IPA, or web JavaScript
 - `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the
   scope with a new key when switching environments.
 - Android release builds need internet access to load cloud mini-programs.

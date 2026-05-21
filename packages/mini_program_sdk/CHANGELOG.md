@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.3
+
+- add lazy publisher-owned backend connector APIs for mini-program server calls
+  without putting publisher backend secrets in the host app
+- extend `MiniProgramEndpoint` with optional `backend` configuration and
+  route `miniProgramBackend` Stac actions by the current mini-program appId
+- keep backend HTTP clients lazy, cache GET calls only with explicit TTL, reject
+  absolute action URLs, and send delivery access keys to publisher backends only
+  when explicitly enabled
+
 ## 0.3.2
 
 - add the MiniProgram Tools VS Code Marketplace link and install command to

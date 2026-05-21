@@ -591,6 +591,7 @@ async function addHostEndpoint(
     }
     accessKey = value.trim();
   }
+  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
   const force = await chooseForce('Replace an unrecognized endpoint file?');
   if (force === undefined) {
     return;
@@ -602,6 +603,7 @@ async function addHostEndpoint(
       appId: appId.trim(),
       title: title.trim(),
       apiBaseUrl: apiBaseUrl.trim(),
+      backendBaseUrl,
       accessKey,
       public: accessMode === 'public',
       projectRoot,
@@ -1276,6 +1278,8 @@ async function createPartnerPackage(
     apiBaseUrl = value.trim();
   }
 
+  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
+
   const outputPath = await choosePartnerPackageOutputPath(workspacePath, appId);
   if (!outputPath) {
     return;
@@ -1290,6 +1294,7 @@ async function createPartnerPackage(
       public: accessMode === 'public',
       envName,
       apiBaseUrl,
+      backendBaseUrl,
       outputPath,
       rootPath: workspacePath,
     }),
@@ -1349,6 +1354,7 @@ async function validatePartnerPackageFile(
     output.appendLine(`App ID: ${decoded.appId}`);
     output.appendLine(`Title: ${decoded.title ?? ''}`);
     output.appendLine(`API base URL: ${decoded.apiBaseUrl}`);
+    output.appendLine(`Publisher backend URL: ${decoded.backendBaseUrl ?? 'not configured'}`);
     output.appendLine(`Access mode: ${decoded.accessMode ?? 'protected'}`);
     output.appendLine(`Access key: ${decoded.accessKey ? '<redacted>' : 'not required'}`);
     vscode.window.showInformationMessage('Partner package looks valid.');
@@ -2449,6 +2455,7 @@ async function promptHostEndpointInputs(): Promise<
       readonly appId: string;
       readonly title: string;
       readonly apiBaseUrl: string;
+      readonly backendBaseUrl?: string;
       readonly accessKey?: string;
       readonly public?: boolean;
     }
@@ -2501,10 +2508,12 @@ async function promptHostEndpointInputs(): Promise<
     }
     accessKey = value.trim();
   }
+  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
   return {
     appId: appId.trim(),
     title: title.trim(),
     apiBaseUrl: apiBaseUrl.trim(),
+    backendBaseUrl,
     accessKey,
     public: accessMode === 'public',
   };
@@ -2928,6 +2937,16 @@ async function chooseEndpointAccessMode(): Promise<'protected' | 'public' | unde
   return choice?.value;
 }
 
+async function promptOptionalPublisherBackendBaseUrl(): Promise<string | undefined> {
+  const value = await vscode.window.showInputBox({
+    prompt: 'Optional publisher-owned backend base URL',
+    placeHolder: 'https://publisher.example.com/api/ (leave blank for none)',
+    ignoreFocusOut: true,
+    validateInput: validateOptionalAbsoluteUrl,
+  });
+  return value?.trim() || undefined;
+}
+
 async function chooseBackendRoot(
   workspacePath: string,
   options: {
@@ -3071,6 +3090,13 @@ function validatePartnerPackageJson(decoded: unknown): string[] {
   }
   if (typeof object.apiBaseUrl !== 'string' || validateAbsoluteUrl(object.apiBaseUrl)) {
     errors.push('apiBaseUrl must be an absolute URL.');
+  }
+  if (
+    object.backendBaseUrl !== undefined &&
+    (typeof object.backendBaseUrl !== 'string' ||
+      validateAbsoluteUrl(object.backendBaseUrl))
+  ) {
+    errors.push('backendBaseUrl must be an absolute URL when present.');
   }
   const accessMode = object.schemaVersion === 1
     ? 'protected'

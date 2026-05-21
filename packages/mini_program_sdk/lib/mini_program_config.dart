@@ -5,6 +5,7 @@ import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
 import 'mini_program_runtime.dart';
+import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 
@@ -15,6 +16,7 @@ class MiniProgramConfig {
     required this.source,
     required this.hostBridge,
     required this.capabilityRegistry,
+    this.backendConnector,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.cacheBundle,
     this.logger = const DebugPrintSdkLogger(),
@@ -30,6 +32,7 @@ class MiniProgramConfig {
   final MiniProgramSource source;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final MiniProgramBackendConnector? backendConnector;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle? cacheBundle;
   final SdkLogger logger;
@@ -41,6 +44,7 @@ class MiniProgramConfig {
       source: source,
       hostBridge: hostBridge,
       capabilityRegistry: capabilityRegistry,
+      backendConnector: backendConnector,
       featureFlagEvaluator: featureFlagEvaluator,
       cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
       logger: logger,
@@ -51,6 +55,10 @@ class MiniProgramConfig {
   void disposeOwnedResources() {
     if (disposeSource && source is DisposableMiniProgramSource) {
       (source as DisposableMiniProgramSource).dispose();
+    }
+    final connector = backendConnector;
+    if (connector is DisposableMiniProgramBackendConnector) {
+      connector.dispose();
     }
   }
 }

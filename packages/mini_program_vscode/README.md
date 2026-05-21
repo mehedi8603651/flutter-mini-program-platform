@@ -8,8 +8,9 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.16 or newer for endpoint/registry sync,
-public demo generation, public/static endpoint support, and
+Requires `mini_program_tooling` 0.3.18 or newer for endpoint/registry sync,
+public demo generation, public/static endpoint support, publisher backend
+endpoint metadata, and
 `miniprogram workflow status --json`.
 
 Install or upgrade the CLI first:
@@ -38,7 +39,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.15.vsix
+code --install-extension mini-program-tools-0.1.16.vsix
 ```
 
 ## Features
@@ -164,6 +165,13 @@ delivery access control. Manual endpoint add asks for a display title and the
 CLI writes both `mini_program_endpoints.dart` and
 `mini_program_registry.dart`, so host UI code can use
 `MiniPrograms.<name>.appId` and `MiniPrograms.<name>.title`.
+
+Endpoint add and partner package creation can also include an optional
+publisher-owned backend base URL. That backend is for business API calls from
+`miniProgramBackend` actions, not for manifest/screen delivery. Backend secrets
+must stay on the publisher server; the host app stores only the public base URL
+and optional delivery access key. Diagnostics show whether a publisher backend
+is configured and never print access-key values.
 
 Host diagnostics check public endpoints by loading:
 

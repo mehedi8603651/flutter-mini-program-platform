@@ -1119,6 +1119,8 @@ void main() {
             'AWS Coupon Demo',
             '--api-base-url',
             'https://api.example.com/prod/api/',
+            '--backend-base-url',
+            'https://publisher.example.com/api/',
             '--access-key',
             'mpk_live_company_a_12345678901234567890',
           ]);
@@ -1133,6 +1135,12 @@ void main() {
       expect(endpointSource, contains('MiniPrograms.awsCouponDemo.appId'));
       expect(endpointSource, contains('MiniProgramEndpoint('));
       expect(endpointSource, contains('https://api.example.com/prod/api'));
+      expect(
+        endpointSource,
+        contains('"backendBaseUri":"https://publisher.example.com/api"'),
+      );
+      expect(endpointSource, contains('MiniProgramBackendEndpoint('));
+      expect(endpointSource, contains('https://publisher.example.com/api'));
       final registryFile = File(
         p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
       );
@@ -1233,6 +1241,8 @@ void main() {
             'AWS Coupon Demo',
             '--api-base-url',
             'https://api.example.com/prod/api/',
+            '--backend-base-url',
+            'https://publisher.example.com/api/',
             '--access-key',
             'mpk_live_company_a_12345678901234567890',
             '--output',
@@ -1248,6 +1258,7 @@ void main() {
       expect(decoded['appId'], 'aws_coupon_demo');
       expect(decoded['title'], 'AWS Coupon Demo');
       expect(decoded['apiBaseUrl'], 'https://api.example.com/prod/api');
+      expect(decoded['backendBaseUrl'], 'https://publisher.example.com/api');
       expect(decoded['accessMode'], 'protected');
       expect(decoded['accessKey'], 'mpk_live_company_a_12345678901234567890');
       expect(
@@ -1343,6 +1354,7 @@ void main() {
         appId: 'gcp_rewards',
         title: 'GCP Rewards',
         apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+        backendBaseUri: Uri.parse('https://publisher.example.com/api/'),
         accessKey: 'mpk_live_company_b_12345678901234567890',
         generatedAtUtc: DateTime.utc(2026, 5, 14).toIso8601String(),
       );
@@ -1363,6 +1375,8 @@ void main() {
       final endpointSource = await endpointFile.readAsString();
       expect(endpointSource, contains('"gcp_rewards"'));
       expect(endpointSource, contains('https://gcp.example.com/api'));
+      expect(endpointSource, contains('https://publisher.example.com/api'));
+      expect(endpointSource, contains('MiniProgramBackendEndpoint('));
       expect(
         endpointSource,
         contains('mpk_live_company_b_12345678901234567890'),
@@ -1461,6 +1475,7 @@ void main() {
             'appId': 'coupon_center',
             'title': 'Coupon Center',
             'apiBaseUrl': 'https://api.example.com/api',
+            'backendBaseUrl': 'https://publisher.example.com/api',
             'accessKey': 'mpk_live_secret_should_not_print_123456',
             'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
           }),
@@ -1492,6 +1507,10 @@ void main() {
           json['miniProgram']['partnerPackages'][0]['accessMode'],
           'protected',
         );
+        expect(
+          json['miniProgram']['partnerPackages'][0]['backendConfigured'],
+          isTrue,
+        );
         expect(json['remote']['checked'], isFalse);
         expect(cloudController.lastStatusRequest, isNull);
         expect(cloudController.lastAppInfoRequest, isNull);
@@ -1507,7 +1526,7 @@ void main() {
       );
       await endpointFile.writeAsString('''
 // BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","accessMode":"protected","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessMode":"public"}}
+// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","backendBaseUri":"https://publisher.example.com/api","accessMode":"protected","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessMode":"public"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 ''');
       final stdoutBuffer = StringBuffer();
@@ -1526,9 +1545,18 @@ void main() {
       expect(json['workspace']['type'], 'host_app');
       expect(json['hostApp']['endpointCount'], 2);
       expect(json['hostApp']['endpointAppIds'], contains('coupon_center'));
-      expect(json['hostApp']['endpoints'][0]['hasAccessKey'], isTrue);
-      expect(json['hostApp']['endpoints'][0]['accessMode'], 'protected');
-      expect(json['hostApp']['endpoints'][1]['accessMode'], 'public');
+      final endpoints = (json['hostApp']['endpoints'] as List)
+          .cast<Map<String, dynamic>>();
+      final couponEndpoint = endpoints.singleWhere(
+        (endpoint) => endpoint['appId'] == 'coupon_center',
+      );
+      final rewardsEndpoint = endpoints.singleWhere(
+        (endpoint) => endpoint['appId'] == 'rewards',
+      );
+      expect(couponEndpoint['hasAccessKey'], isTrue);
+      expect(couponEndpoint['accessMode'], 'protected');
+      expect(couponEndpoint['backendConfigured'], isTrue);
+      expect(rewardsEndpoint['accessMode'], 'public');
     });
 
     test(
@@ -2295,7 +2323,7 @@ dependencies:
       );
       expect(
         await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-        contains('mini_program_sdk: ^0.3.2'),
+        contains('mini_program_sdk: ^0.3.3'),
       );
     });
 

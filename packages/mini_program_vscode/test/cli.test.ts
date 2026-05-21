@@ -211,6 +211,7 @@ test('builds host app command arguments', () => {
       appId: 'coupon_demo',
       title: 'Coupon Demo',
       apiBaseUrl: 'https://api.example.com/prod/api',
+      backendBaseUrl: 'https://publisher.example.com/api',
       accessKey: 'mpk_live_secret',
       projectRoot: 'D:/host',
       force: true,
@@ -224,6 +225,8 @@ test('builds host app command arguments', () => {
       'https://api.example.com/prod/api',
       '--title',
       'Coupon Demo',
+      '--backend-base-url',
+      'https://publisher.example.com/api',
       '--access-key',
       'mpk_live_secret',
       '--project-root',
@@ -516,6 +519,7 @@ test('builds partner package command arguments', () => {
       appId: 'gcp_rewards',
       accessKey: 'mpk_live_secret',
       apiBaseUrl: 'https://api.example.com/api',
+      backendBaseUrl: 'https://publisher.example.com/api',
     }),
     [
       'partner',
@@ -525,6 +529,8 @@ test('builds partner package command arguments', () => {
       'mpk_live_secret',
       '--api-base-url',
       'https://api.example.com/api',
+      '--backend-base-url',
+      'https://publisher.example.com/api',
     ],
   );
   assert.deepEqual(

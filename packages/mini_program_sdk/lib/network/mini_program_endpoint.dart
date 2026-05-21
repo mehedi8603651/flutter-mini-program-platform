@@ -5,6 +5,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 
 import 'http_mini_program_source.dart';
 import 'mini_program_delivery_context.dart';
+import 'mini_program_backend_connector.dart';
 import 'mini_program_source.dart';
 import 'mini_program_source_exception.dart';
 
@@ -28,6 +29,7 @@ class MiniProgramEndpoint {
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
+    this.backend,
   });
 
   /// Creates a public/static mini-program endpoint.
@@ -40,6 +42,7 @@ class MiniProgramEndpoint {
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
+    this.backend,
   }) : accessKey = null;
 
   final Uri apiBaseUri;
@@ -47,6 +50,38 @@ class MiniProgramEndpoint {
   final Map<String, String> headers;
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
+  final MiniProgramBackendEndpoint? backend;
+}
+
+MiniProgramBackendConnector? buildEndpointRoutingBackendConnector({
+  required Map<String, MiniProgramEndpoint> endpoints,
+  required MiniProgramDeliveryContext deliveryContext,
+  MiniProgramBackendHttpClientFactory? clientFactory,
+}) {
+  final backends = <String, MiniProgramBackendEndpoint>{};
+  final accessKeys = <String, String>{};
+  for (final entry in EndpointRoutingMiniProgramSource._normalizeEndpoints(
+    endpoints,
+  ).entries) {
+    final backend = entry.value.backend;
+    if (backend == null) {
+      continue;
+    }
+    backends[entry.key] = backend;
+    final accessKey = entry.value.accessKey;
+    if (accessKey != null) {
+      accessKeys[entry.key] = accessKey.trim();
+    }
+  }
+  if (backends.isEmpty) {
+    return null;
+  }
+  return EndpointRoutingMiniProgramBackendConnector(
+    backends: backends,
+    accessKeys: accessKeys,
+    deliveryContext: deliveryContext,
+    clientFactory: clientFactory,
+  );
 }
 
 /// Routes manifest and screen requests to per-app delivery endpoints.

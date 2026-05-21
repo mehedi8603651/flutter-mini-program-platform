@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
+import 'network/mini_program_backend_connector.dart';
 import 'observability/sdk_logger.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 
@@ -45,6 +46,7 @@ class MiniProgramSdkScope extends InheritedWidget {
     required this.miniProgramId,
     required this.hostBridge,
     required this.capabilityRegistry,
+    this.backendConnector,
     required this.featureFlagEvaluator,
     required this.logger,
     required this.openMiniProgramScreen,
@@ -58,6 +60,7 @@ class MiniProgramSdkScope extends InheritedWidget {
   final String miniProgramId;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final MiniProgramBackendConnector? backendConnector;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
   final MiniProgramOpenScreenHandler openMiniProgramScreen;
@@ -82,6 +85,7 @@ class MiniProgramSdkScope extends InheritedWidget {
     return miniProgramId != oldWidget.miniProgramId ||
         hostBridge != oldWidget.hostBridge ||
         capabilityRegistry != oldWidget.capabilityRegistry ||
+        backendConnector != oldWidget.backendConnector ||
         featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
         logger != oldWidget.logger ||
         openMiniProgramScreen != oldWidget.openMiniProgramScreen ||
