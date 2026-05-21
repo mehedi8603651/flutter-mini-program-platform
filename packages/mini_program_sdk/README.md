@@ -289,6 +289,16 @@ Mini-programs can also load backend JSON into local mini-program state and bind
 simple UI text to that state. Generated mini-program scaffolds include helper
 functions for this:
 
+```bash
+miniprogram create coupon_app --title "Coupon App" --with-backend mock
+cd coupon_app
+miniprogram publisher-backend run --port 9090
+```
+
+The mock publisher backend is a local HTTP JSON server for development. It is
+not a production backend and it does not add Firebase, AWS, or other backend SDK
+dependencies to this Flutter SDK.
+
 ```dart
 miniProgramBackendBuilder(
   requestId: 'home',

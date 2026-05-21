@@ -29,6 +29,11 @@ import {
   buildHostRunArgs,
   buildPartnerPackageArgs,
   buildPreviewArgs,
+  buildPublisherBackendRunArgs,
+  buildPublisherBackendScaffoldArgs,
+  buildPublisherBackendStatusArgs,
+  buildPublisherBackendStopArgs,
+  buildPublisherBackendUrlsArgs,
   buildPublishArgs,
   buildValidateArgs,
   buildWorkflowStatusArgs,
@@ -201,6 +206,21 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.backendStatus', () =>
       backendStatus(output),
     ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendSetup', () =>
+      publisherBackendSetup(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendRun', () =>
+      publisherBackendRun(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendStop', () =>
+      publisherBackendStop(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendStatus', () =>
+      publisherBackendStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.copyPublisherBackendUrls', () =>
+      copyPublisherBackendUrls(output),
+    ),
     vscode.commands.registerCommand('miniProgramTools.createAccessKey', () =>
       createAccessKey(output, refreshStatus),
     ),
@@ -337,8 +357,17 @@ async function createMiniProgram(output: vscode.OutputChannel): Promise<void> {
     return;
   }
 
+  const backendChoice = await chooseMiniProgramBackendStarter();
+  if (!backendChoice) {
+    return;
+  }
   const outputRoot = resolveCreateOutputRoot(parentFolder, appId);
-  const args = buildCreateArgs({ appId, title, outputRoot });
+  const args = buildCreateArgs({
+    appId,
+    title,
+    outputRoot,
+    backendTemplate: backendChoice.backendTemplate,
+  });
   const ok = await runCliCommand('Create MiniProgram', args, parentFolder, output);
   if (!ok) {
     return;
@@ -1040,6 +1069,137 @@ async function backendStatus(output: vscode.OutputChannel): Promise<void> {
   );
 }
 
+async function publisherBackendSetup(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const force = await chooseForce(
+    'Overwrite scaffold-managed publisher backend files?',
+  );
+  if (force === undefined) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend Setup',
+    buildPublisherBackendScaffoldArgs({
+      miniProgramRoot: workspacePath,
+      template: 'mock',
+      force,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(false);
+  }
+}
+
+async function publisherBackendRun(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const port = await vscode.window.showInputBox({
+    prompt: 'Publisher backend local port',
+    value: '9090',
+    ignoreFocusOut: true,
+    validateInput: validatePort,
+  });
+  if (!port) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend Run',
+    buildPublisherBackendRunArgs({
+      miniProgramRoot: workspacePath,
+      port: port.trim(),
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(false);
+  }
+}
+
+async function publisherBackendStop(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend Stop',
+    buildPublisherBackendStopArgs({ miniProgramRoot: workspacePath }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+  if (ok) {
+    await refreshStatus(false);
+  }
+}
+
+async function publisherBackendStatus(output: vscode.OutputChannel): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Status',
+    buildPublisherBackendStatusArgs({
+      miniProgramRoot: workspacePath,
+      json: true,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function copyPublisherBackendUrls(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const port = await vscode.window.showInputBox({
+    prompt: 'Publisher backend local port',
+    value: '9090',
+    ignoreFocusOut: true,
+    validateInput: validatePort,
+  });
+  if (!port) {
+    return;
+  }
+  const result = await runCliCapture(
+    'Publisher Backend URLs',
+    buildPublisherBackendUrlsArgs({ port: port.trim() }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: false },
+  );
+  if (!result) {
+    return;
+  }
+  const text = result.stdout.trim();
+  await vscode.env.clipboard.writeText(text);
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(text);
+  vscode.window.showInformationMessage('Publisher backend URLs copied.');
+}
+
 async function createAccessKey(
   output: vscode.OutputChannel,
   refreshStatus: (remote: boolean) => Promise<void>,
@@ -1551,6 +1711,10 @@ async function guidedSetupNewMiniProgram(
   if (title === undefined) {
     return false;
   }
+  const backendChoice = await chooseMiniProgramBackendStarter();
+  if (!backendChoice) {
+    return false;
+  }
 
   const outputRoot = resolveCreateOutputRoot(parentFolder, appId.trim());
   if (!(await runGuidedCliStep(
@@ -1559,6 +1723,7 @@ async function guidedSetupNewMiniProgram(
       appId: appId.trim(),
       title: title.trim() || undefined,
       outputRoot,
+      backendTemplate: backendChoice.backendTemplate,
     }),
     parentFolder,
     output,
@@ -2353,6 +2518,43 @@ async function runCliCommand(
   }
 }
 
+async function runCliCapture(
+  label: string,
+  args: readonly string[],
+  cwd: string,
+  output: vscode.OutputChannel,
+  options: { readonly allowNonZeroExit?: boolean } = {},
+): Promise<{ readonly stdout: string; readonly stderr: string } | undefined> {
+  const cliPath = configuredCliPath();
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(`> ${formatRedactedCommandLine(cliPath, args)}`);
+  try {
+    const result = await runCli(cliPath, args, {
+      cwd,
+      timeoutMs: 120000,
+    });
+    if (result.stdout.trim()) {
+      output.append(result.stdout);
+    }
+    if (result.stderr.trim()) {
+      output.append(result.stderr);
+    }
+    if (result.exitCode !== 0 && !options.allowNonZeroExit) {
+      vscode.window.showErrorMessage(
+        `${label} failed with exit code ${result.exitCode}.`,
+      );
+      return undefined;
+    }
+    return { stdout: result.stdout, stderr: result.stderr };
+  } catch (error) {
+    const message = errorMessage(error);
+    output.appendLine(message);
+    vscode.window.showErrorMessage(message);
+    return undefined;
+  }
+}
+
 function configuredCliPath(): string {
   return resolveCliPath(
     vscode.workspace.getConfiguration('miniProgram').get<string>('cliPath'),
@@ -2435,6 +2637,29 @@ async function promptAppId(): Promise<string | undefined> {
     validateInput: validateAppId,
   });
   return appId?.trim() || undefined;
+}
+
+async function chooseMiniProgramBackendStarter(): Promise<
+  { readonly backendTemplate?: 'mock' } | undefined
+> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Normal mini-program',
+        description: 'No publisher backend starter',
+        backendTemplate: undefined,
+      },
+      {
+        label: 'Mini-program with mock backend',
+        description: 'Generate backend/mock and backend-bound starter UI',
+        backendTemplate: 'mock' as const,
+      },
+    ],
+    { title: 'Publisher backend starter', ignoreFocusOut: true },
+  );
+  return choice
+    ? { backendTemplate: choice.backendTemplate }
+    : undefined;
 }
 
 async function promptKeyId(

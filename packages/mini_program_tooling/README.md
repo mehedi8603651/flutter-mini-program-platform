@@ -44,7 +44,7 @@ the source of truth.
 ## CLI surface
 
 ```text
-miniprogram create <mini-program-id>
+miniprogram create <mini-program-id> [--with-backend mock]
 miniprogram doctor [--json]
 miniprogram backend init
 miniprogram env init
@@ -72,6 +72,11 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
+miniprogram publisher-backend scaffold --template mock [--mini-program-root <path>] [--force]
+miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
+miniprogram publisher-backend status [--mini-program-root <path>] [--json]
+miniprogram publisher-backend stop [--mini-program-root <path>]
+miniprogram publisher-backend urls [--port 9090]
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>]
@@ -125,6 +130,16 @@ Create a standalone mini-program in the current directory:
 
 ```bash
 miniprogram create coupon_center
+```
+
+Create a mini-program with a local mock publisher backend and backend-driven
+starter UI:
+
+```bash
+miniprogram create coupon_center --title "Coupon Center" --with-backend mock
+cd coupon_center
+miniprogram publisher-backend run --port 9090
+miniprogram publisher-backend urls --port 9090
 ```
 
 The default scaffold uses only `analytics`, so it opens in a minimal generated
@@ -485,6 +500,75 @@ Buttons remain clean:
 openAppMiniProgram(context, appId: 'aws_coupon_demo', title: 'AWS Coupon Demo');
 openAppMiniProgram(context, appId: 'public_coupon_demo', title: 'Public Coupon Demo');
 ```
+
+### Publisher backend starter
+
+Use the publisher backend starter when you want mini-program UI that already
+loads mock backend JSON, binds images and list data, and shows fake session/auth
+data during local development:
+
+```bash
+miniprogram create coupon_app --title "Coupon App" --with-backend mock
+cd coupon_app
+miniprogram publisher-backend run --port 9090
+```
+
+This creates:
+
+```text
+backend/
+  mock/
+    pubspec.yaml
+    README.md
+    bin/server.dart
+    data/home_bootstrap.json
+    data/coupons_list.json
+    data/session.json
+```
+
+The mock backend serves:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+- `OPTIONS *` for browser CORS
+
+Print the target URLs with:
+
+```bash
+miniprogram publisher-backend urls --port 9090
+```
+
+Use `http://127.0.0.1:9090/` for Chrome, Windows, macOS, Linux, and iOS
+simulator host runs on the same machine. Use `http://10.0.2.2:9090/` for
+Android emulator host runs.
+
+Host endpoint setup still has two URLs:
+
+- `--api-base-url` is delivery: manifest and screen JSON
+- `--backend-base-url` is publisher business data: coupons, session, lists, and
+  other JSON API calls
+
+Example for a public static delivery mini-program with a local mock business
+backend:
+
+```bash
+miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-base-url http://127.0.0.1:9090/
+```
+
+For Android emulator host testing, use:
+
+```bash
+miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-base-url http://10.0.2.2:9090/
+```
+
+The mock backend is local development only. Production backends can later be
+AWS Lambda, Firebase Functions, GCP, or any HTTP JSON server with the same route
+shape. Firebase/AWS/custom SDKs belong on the publisher server, not in
+`mini_program_sdk` or the host app. Keep backend secrets on the publisher
+server.
 
 ### Publisher-owned backend
 

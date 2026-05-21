@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -181,6 +181,31 @@
         "command": "miniProgramTools.backendStatus",
         "title": "MiniProgram: Backend Status",
         "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendSetup",
+        "title": "MiniProgram: Setup Publisher Backend",
+        "icon": "$(server-process)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendRun",
+        "title": "MiniProgram: Run Publisher Backend",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendStop",
+        "title": "MiniProgram: Stop Publisher Backend",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendStatus",
+        "title": "MiniProgram: Publisher Backend Status",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.copyPublisherBackendUrls",
+        "title": "MiniProgram: Copy Publisher Backend URLs",
+        "icon": "$(copy)"
       },
       {
         "command": "miniProgramTools.createAccessKey",
@@ -369,6 +394,21 @@
           "command": "miniProgramTools.backendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendRun",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.1"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.2"
+        },
+        {
+          "command": "miniProgramTools.copyPublisherBackendUrls",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.3"
         },
         {
           "command": "miniProgramTools.createAccessKey",

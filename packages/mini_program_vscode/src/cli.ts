@@ -32,6 +32,7 @@ export interface CreateArgsOptions {
   readonly appId: string;
   readonly title?: string;
   readonly outputRoot: string;
+  readonly backendTemplate?: 'mock';
 }
 
 export interface PublishArgsOptions {
@@ -154,6 +155,30 @@ export interface BackendStatusArgsOptions {
   readonly json?: boolean;
 }
 
+export interface PublisherBackendScaffoldArgsOptions {
+  readonly miniProgramRoot?: string;
+  readonly template?: 'mock';
+  readonly force?: boolean;
+}
+
+export interface PublisherBackendRunArgsOptions {
+  readonly miniProgramRoot?: string;
+  readonly port?: number | string;
+}
+
+export interface PublisherBackendStatusArgsOptions {
+  readonly miniProgramRoot?: string;
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendStopArgsOptions {
+  readonly miniProgramRoot?: string;
+}
+
+export interface PublisherBackendUrlsArgsOptions {
+  readonly port?: number | string;
+}
+
 export interface AccessKeyCreateArgsOptions {
   readonly appId: string;
   readonly keyId: string;
@@ -227,6 +252,9 @@ export function buildCreateArgs(options: CreateArgsOptions): string[] {
   const args = ['create', '--output-root', options.outputRoot];
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
+  }
+  if (options.backendTemplate?.trim()) {
+    args.push('--with-backend', options.backendTemplate.trim());
   }
   args.push(options.appId);
   return args;
@@ -462,6 +490,58 @@ export function buildBackendStatusArgs(options: BackendStatusArgsOptions = {}): 
     args.push('--json');
   }
   return withRootPath(args, options.backendRoot);
+}
+
+export function buildPublisherBackendScaffoldArgs(
+  options: PublisherBackendScaffoldArgsOptions = {},
+): string[] {
+  const args = ['publisher-backend', 'scaffold'];
+  args.push('--template', options.template ?? 'mock');
+  withMiniProgramRoot(args, options.miniProgramRoot);
+  if (options.force) {
+    args.push('--force');
+  }
+  return args;
+}
+
+export function buildPublisherBackendRunArgs(
+  options: PublisherBackendRunArgsOptions = {},
+): string[] {
+  const args = ['publisher-backend', 'run'];
+  withMiniProgramRoot(args, options.miniProgramRoot);
+  if (options.port !== undefined && `${options.port}`.trim()) {
+    args.push('--port', `${options.port}`.trim());
+  }
+  return args;
+}
+
+export function buildPublisherBackendStatusArgs(
+  options: PublisherBackendStatusArgsOptions = {},
+): string[] {
+  const args = ['publisher-backend', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withMiniProgramRoot(args, options.miniProgramRoot);
+}
+
+export function buildPublisherBackendStopArgs(
+  options: PublisherBackendStopArgsOptions = {},
+): string[] {
+  return withMiniProgramRoot(
+    ['publisher-backend', 'stop'],
+    options.miniProgramRoot,
+  );
+}
+
+export function buildPublisherBackendUrlsArgs(
+  options: PublisherBackendUrlsArgsOptions = {},
+): string[] {
+  const args = ['publisher-backend', 'urls'];
+  if (options.port !== undefined && `${options.port}`.trim()) {
+    args.push('--port', `${options.port}`.trim());
+  }
+  return args;
 }
 
 export function buildAccessKeyCreateArgs(

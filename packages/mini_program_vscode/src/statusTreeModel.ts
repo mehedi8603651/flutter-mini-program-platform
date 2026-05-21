@@ -56,6 +56,7 @@ export function buildStatusTreeSections(
     const build = asRecord(miniProgram.build);
     const validation = asRecord(miniProgram.validation);
     const backendUsage = asRecord(miniProgram.backendUsage);
+    const publisherBackendStarter = asRecord(miniProgram.publisherBackendStarter);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
       ? miniProgram.partnerPackages.length
       : 0;
@@ -79,6 +80,12 @@ export function buildStatusTreeSections(
             ? asBoolean(backendUsage.usesBackendState)
               ? 'query/state'
               : 'action'
+            : 'none',
+        ),
+        row(
+          'Backend starter',
+          asBoolean(publisherBackendStarter.detected)
+            ? asString(publisherBackendStarter.template, 'mock')
             : 'none',
         ),
       ]),

@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:path/path.dart' as p;
 
+import 'publisher_backend_starter.dart';
+
 class MiniProgramScaffoldRequest {
   const MiniProgramScaffoldRequest({
     required this.miniProgramId,
@@ -12,6 +14,7 @@ class MiniProgramScaffoldRequest {
     this.title,
     this.description,
     this.capabilities = const <String>{'analytics'},
+    this.backendTemplate,
     this.force = false,
   });
 
@@ -21,6 +24,7 @@ class MiniProgramScaffoldRequest {
   final String? title;
   final String? description;
   final Set<String> capabilities;
+  final String? backendTemplate;
   final bool force;
 }
 
@@ -90,6 +94,8 @@ class MiniProgramScaffolder {
     }
 
     final orderedCapabilities = _normalizeCapabilities(request.capabilities);
+    final backendTemplate = _normalizeBackendTemplate(request.backendTemplate);
+    final withMockBackend = backendTemplate == 'mock';
     final title = _normalizeTitle(request.title, miniProgramId);
     final description = _normalizeDescription(request.description, title);
     final miniProgramRootPath = await _resolveMiniProgramRootPath(
@@ -129,6 +135,7 @@ class MiniProgramScaffolder {
         capabilities: orderedCapabilities,
         entryScreenId: entryScreenId,
         isStandalone: request.outputRootPath != null,
+        withMockBackend: withMockBackend,
       ),
       p.join(miniProgramRootPath, 'pubspec.yaml'): _buildPubspec(
         packageName: packageName,
@@ -152,6 +159,7 @@ class MiniProgramScaffolder {
         detailsScreenId: detailsScreenId,
         screenFunctionName: screenFunctionName,
         packageName: packageName,
+        withMockBackend: withMockBackend,
       ),
       p.join(
         miniProgramRootPath,
@@ -170,6 +178,15 @@ class MiniProgramScaffolder {
       p.join(miniProgramRootPath, 'stac', 'theme', '.gitkeep'): '',
       p.join(miniProgramRootPath, 'assets', '.gitkeep'): '',
     };
+    if (withMockBackend) {
+      managedFiles.addAll(
+        _buildMockBackendFiles(
+          miniProgramRootPath: miniProgramRootPath,
+          miniProgramId: miniProgramId,
+          title: title,
+        ),
+      );
+    }
 
     final createdPaths = <String>[];
     for (final entry in managedFiles.entries) {
@@ -254,6 +271,19 @@ class MiniProgramScaffolder {
         .toList();
 
     return ordered;
+  }
+
+  String? _normalizeBackendTemplate(String? rawTemplate) {
+    final template = rawTemplate?.trim();
+    if (template == null || template.isEmpty) {
+      return null;
+    }
+    if (template != 'mock') {
+      throw MiniProgramScaffoldException(
+        'Unsupported backend starter template: $rawTemplate',
+      );
+    }
+    return template;
   }
 
   String _normalizeTitle(String? rawTitle, String miniProgramId) {
@@ -374,6 +404,7 @@ StacOptions get defaultStacOptions => const StacOptions(
     required List<String> capabilities,
     required String entryScreenId,
     required bool isStandalone,
+    required bool withMockBackend,
   }) {
     final notes = <String>[
       '- edit `manifest.json` before publish',
@@ -383,6 +414,14 @@ StacOptions get defaultStacOptions => const StacOptions(
       '- advanced portable route helpers stay in `lib/host_action_helpers.dart` and are shown as commented examples in the generated screens and below in this README',
       '- add reusable UI blocks under `stac/components/` as the flow grows',
     ];
+
+    if (withMockBackend) {
+      notes.add(
+        '- mock publisher backend starter is enabled; run '
+        '`miniprogram publisher-backend run --port 9090` and connect hosts '
+        'with `--backend-base-url http://127.0.0.1:9090/`',
+      );
+    }
 
     if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
       notes.add(
@@ -426,6 +465,7 @@ ${notes.join('\n')}
 - `stac/screens/${miniProgramId}_details.dart`
 - `stac/components/`
 - `stac/theme/`
+${withMockBackend ? '- `backend/mock/` local publisher backend starter' : ''}
 
 ## Portable route helpers
 
@@ -586,6 +626,7 @@ miniprogram embed init --project-root <existing-flutter-app>
     required String detailsScreenId,
     required String screenFunctionName,
     required String packageName,
+    required bool withMockBackend,
   }) {
     final widgets = <String>[
       '''
@@ -621,6 +662,7 @@ miniprogram embed init --project-root <existing-flutter-app>
               ),
             ),
             StacSizedBox(height: 20),
+${withMockBackend ? _buildMockBackendUiSection() : ''}
 ${_buildStarterProfileCard(title)}
             StacSizedBox(height: 16),
 ${_buildStarterChecklistCard()}
@@ -668,6 +710,128 @@ ${widgets.join()}
 }
 ''';
   }
+
+  Map<String, String> _buildMockBackendFiles({
+    required String miniProgramRootPath,
+    required String miniProgramId,
+    required String title,
+  }) {
+    return buildMockPublisherBackendFiles(
+      miniProgramRootPath: miniProgramRootPath,
+      miniProgramId: miniProgramId,
+      title: title,
+    ).map(
+      (relativePath, contents) => MapEntry(
+        p.join(miniProgramRootPath, 'backend', 'mock', relativePath),
+        contents,
+      ),
+    );
+  }
+
+  String _buildMockBackendUiSection() => '''
+            StacText(
+              data: 'Publisher backend data',
+              style: StacCustomTextStyle(
+                fontSize: 20,
+                fontWeight: StacFontWeight.w700,
+                color: '#1A202C',
+              ),
+            ),
+            StacSizedBox(height: 8),
+            miniProgramBackendBuilder(
+              requestId: 'home',
+              endpoint: 'home/bootstrap',
+              cacheTtl: const Duration(seconds: 60),
+              loading: StacText(data: 'Loading backend home data...'),
+              error: StacText(data: '{{backend.home.message}}'),
+              child: StacContainer(
+                padding: StacEdgeInsets.all(14),
+                decoration: StacBoxDecoration(
+                  color: '#F8FAFC',
+                  border: StacBorder.all(color: '#D7E3DD'),
+                  borderRadius: StacBorderRadius.all(16),
+                ),
+                child: StacColumn(
+                  crossAxisAlignment: StacCrossAxisAlignment.start,
+                  children: [
+                    StacText(
+                      data: '{{backend.home.data.title}}',
+                      style: StacCustomTextStyle(
+                        fontSize: 18,
+                        fontWeight: StacFontWeight.w700,
+                        color: '#0F172A',
+                      ),
+                    ),
+                    StacSizedBox(height: 6),
+                    StacText(data: '{{backend.home.data.subtitle}}'),
+                    StacSizedBox(height: 6),
+                    StacText(
+                      data:
+                          'Signed in as {{backend.home.data.user.name}} · {{backend.home.data.user.tier}}',
+                    ),
+                    StacSizedBox(height: 12),
+                    StacOutlinedButton(
+                      onPressed: miniProgramBackendQueryAction(
+                        requestId: 'home',
+                        endpoint: 'home/bootstrap',
+                        forceRefresh: true,
+                      ),
+                      child: StacText(data: 'Refresh backend data'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            StacSizedBox(height: 16),
+            miniProgramBackendBuilder(
+              requestId: 'coupons',
+              endpoint: 'coupons/list',
+              itemsPath: 'data.coupons',
+              cacheTtl: const Duration(seconds: 60),
+              loading: StacText(data: 'Loading coupons...'),
+              error: StacText(data: '{{backend.coupons.message}}'),
+              empty: StacText(data: 'No coupons yet'),
+              itemTemplate: StacContainer(
+                margin: StacEdgeInsets.only(bottom: 10),
+                padding: StacEdgeInsets.all(12),
+                decoration: StacBoxDecoration(
+                  color: '#FFFFFF',
+                  border: StacBorder.all(color: '#E2E8F0'),
+                  borderRadius: StacBorderRadius.all(14),
+                ),
+                child: StacRow(
+                  crossAxisAlignment: StacCrossAxisAlignment.start,
+                  spacing: 12,
+                  children: [
+                    StacImage.network(
+                      '{{item.imageUrl}}',
+                      width: 86,
+                      height: 64,
+                      fit: StacBoxFit.cover,
+                    ),
+                    StacExpanded(
+                      child: StacColumn(
+                        crossAxisAlignment: StacCrossAxisAlignment.start,
+                        children: [
+                          StacText(
+                            data: '{{item.title}}',
+                            style: StacCustomTextStyle(
+                              fontSize: 16,
+                              fontWeight: StacFontWeight.w700,
+                              color: '#111827',
+                            ),
+                          ),
+                          StacSizedBox(height: 4),
+                          StacText(data: '{{item.description}}'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            StacSizedBox(height: 20),
+''';
 
   String _buildDetailsScreen({
     required String miniProgramId,

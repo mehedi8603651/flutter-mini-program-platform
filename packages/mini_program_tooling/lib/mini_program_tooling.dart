@@ -22,3 +22,4 @@ export 'src/mini_program_publisher.dart';
 export 'src/miniprogram_cli.dart';
 export 'src/mini_program_scaffolder.dart';
 export 'src/mini_program_static_publisher.dart';
+export 'src/publisher_backend_starter.dart';

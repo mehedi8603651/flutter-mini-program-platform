@@ -413,6 +413,41 @@ void main() {
       },
     );
 
+    test('creates mock backend starter when requested', () async {
+      final result = await const MiniProgramScaffolder().scaffold(
+        MiniProgramScaffoldRequest(
+          repoRootPath: tempDir.path,
+          miniProgramId: 'coupon_backend',
+          backendTemplate: 'mock',
+        ),
+      );
+
+      final root = result.miniProgramRootPath;
+      final screenSource = await File(
+        p.join(root, 'stac', 'screens', 'coupon_backend_home.dart'),
+      ).readAsString();
+      final readmeSource = await File(p.join(root, 'README.md')).readAsString();
+
+      expect(screenSource, contains('miniProgramBackendBuilder('));
+      expect(screenSource, contains("endpoint: 'home/bootstrap'"));
+      expect(screenSource, contains("itemsPath: 'data.coupons'"));
+      expect(screenSource, contains('{{item.imageUrl}}'));
+      expect(screenSource, contains('miniProgramBackendQueryAction('));
+      expect(readmeSource, contains('backend/mock/'));
+      expect(
+        await File(
+          p.join(root, 'backend', 'mock', 'bin', 'server.dart'),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          p.join(root, 'backend', 'mock', 'data', 'coupons_list.json'),
+        ).exists(),
+        isTrue,
+      );
+    });
+
     test('fails on unknown capability values', () async {
       expect(
         () => const MiniProgramScaffolder().scaffold(

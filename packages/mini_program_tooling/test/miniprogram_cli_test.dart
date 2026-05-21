@@ -114,6 +114,10 @@ void main() {
         stdoutBuffer.toString(),
         contains('embed cloud configure [--env <env-name>]'),
       );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher-backend scaffold --template mock'),
+      );
     });
 
     test(
@@ -128,6 +132,7 @@ void main() {
           'host',
           'embed',
           'backend',
+          'publisher-backend',
         ]) {
           final stdoutBuffer = StringBuffer();
           final stderrBuffer = StringBuffer();
@@ -247,6 +252,50 @@ void main() {
         stdoutBuffer.toString(),
         contains('Created mini-program scaffold'),
       );
+    });
+
+    test('create can scaffold the mock publisher backend starter', () async {
+      final stdoutBuffer = StringBuffer();
+      final stderrBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: stderrBuffer,
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'create',
+        'coupon_backend',
+        '--with-backend',
+        'mock',
+      ]);
+
+      expect(exitCode, 0);
+      expect(stderrBuffer.toString(), isEmpty);
+      expect(
+        await File(
+          p.join(
+            tempDir.path,
+            'coupon_backend',
+            'backend',
+            'mock',
+            'bin',
+            'server.dart',
+          ),
+        ).exists(),
+        isTrue,
+      );
+      final screenSource = await File(
+        p.join(
+          tempDir.path,
+          'coupon_backend',
+          'stac',
+          'screens',
+          'coupon_backend_home.dart',
+        ),
+      ).readAsString();
+      expect(screenSource, contains('miniProgramBackendBuilder('));
     });
 
     test('doctor dispatches to the diagnostics helper', () async {
@@ -1492,6 +1541,21 @@ miniProgramBackendQueryAction(
   endpoint: 'home/bootstrap',
 );
 ''');
+        await File(
+          p.join(miniProgramRoot, 'backend', 'mock', 'bin', 'server.dart'),
+        ).create(recursive: true);
+        await Directory(
+          p.join(miniProgramRoot, 'backend', 'mock', 'data'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            miniProgramRoot,
+            'backend',
+            'mock',
+            'data',
+            'home_bootstrap.json',
+          ),
+        ).writeAsString('{}');
         await _writeAwsEnvironmentState(stateStore, miniProgramRoot);
         final cloudController = _FakeMiniProgramCloudController();
         final stdoutBuffer = StringBuffer();
@@ -1534,6 +1598,14 @@ miniProgramBackendQueryAction(
         expect(
           json['miniProgram']['backendUsage']['requestIds'],
           contains('home'),
+        );
+        expect(
+          json['miniProgram']['publisherBackendStarter']['detected'],
+          isTrue,
+        );
+        expect(
+          json['miniProgram']['publisherBackendStarter']['template'],
+          'mock',
         );
         expect(json['remote']['checked'], isFalse);
         expect(cloudController.lastStatusRequest, isNull);

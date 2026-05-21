@@ -172,6 +172,9 @@ class MiniProgramWorkflowStatusController {
         : await File(entryScreenPath).exists();
     final partnerPackages = await _findPartnerPackages(workspacePath);
     final backendUsage = await _detectMiniProgramBackendUsage(workspacePath);
+    final publisherBackendStarter = await _inspectPublisherBackendStarter(
+      workspacePath,
+    );
 
     return <String, Object?>{
       'detected': true,
@@ -194,6 +197,7 @@ class MiniProgramWorkflowStatusController {
       },
       'partnerPackages': partnerPackages,
       'backendUsage': backendUsage,
+      'publisherBackendStarter': publisherBackendStarter,
     };
   }
 
@@ -769,6 +773,44 @@ class MiniProgramWorkflowStatusController {
       'usesBackendState': usesQueryAction || usesBuilder,
       'usesPublisherBackend': usesAction || usesQueryAction || usesBuilder,
       'requestIds': requestIds.toList()..sort(),
+    };
+  }
+
+  Future<Map<String, Object?>> _inspectPublisherBackendStarter(
+    String workspacePath,
+  ) async {
+    final backendRootPath = p.join(workspacePath, 'backend', 'mock');
+    final serverPath = p.join(backendRootPath, 'bin', 'server.dart');
+    final dataRootPath = p.join(backendRootPath, 'data');
+    final dataFiles = <String>[
+      'home_bootstrap.json',
+      'coupons_list.json',
+      'session.json',
+    ];
+    final existingDataFiles = <String>[];
+    for (final dataFile in dataFiles) {
+      final file = File(p.join(dataRootPath, dataFile));
+      if (await file.exists()) {
+        existingDataFiles.add(dataFile);
+      }
+    }
+    final detected =
+        await File(serverPath).exists() &&
+        await Directory(dataRootPath).exists();
+    return <String, Object?>{
+      'detected': detected,
+      'template': detected ? 'mock' : null,
+      'backendRootPath': backendRootPath,
+      'serverPath': serverPath,
+      'dataRootPath': dataRootPath,
+      'dataFiles': existingDataFiles,
+      'expectedRoutes': <String>[
+        'GET /health',
+        'GET /home/bootstrap',
+        'GET /coupons/list',
+        'GET /auth/session',
+        'POST /coupon/redeem',
+      ],
     };
   }
 }

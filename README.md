@@ -46,6 +46,8 @@ Already shipped:
 - host-app embedding flow for Flutter apps
 - opt-in `miniprogram embed init --with-demo` flow for a public jsDelivr demo
   endpoint without AWS or access keys
+- opt-in mock publisher backend starter with backend-bound starter UI for local
+  business API testing
 - AWS cloud publishing through S3
 - AWS API Gateway + Lambda cloud backend deployment
 - host-app cloud binding and `host run`
@@ -217,7 +219,7 @@ Older wrappers may still exist, but `miniprogram ...` is the preferred path.
 Current command map:
 
 ```powershell
-miniprogram create <mini-program-id>
+miniprogram create <mini-program-id> [--with-backend mock]
 miniprogram doctor
 miniprogram env init
 miniprogram env configure <env-name> --provider aws --bucket <bucket> --region <region> [--aws-profile <profile>] [--require-access-keys]
@@ -227,7 +229,12 @@ miniprogram env status
 miniprogram build [mini-program-id]
 miniprogram preview -d <device> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud] [--env <env-name>]
+miniprogram publish [mini-program-id] [--target local|cloud|static] [--env <env-name>]
+miniprogram publisher-backend scaffold --template mock
+miniprogram publisher-backend run --port 9090
+miniprogram publisher-backend status
+miniprogram publisher-backend stop
+miniprogram publisher-backend urls
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
@@ -252,6 +259,21 @@ Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 cd D:\
 miniprogram create my_coupon_app
 ```
+
+For backend-focused local development, scaffold the mini-program with a mock
+publisher backend:
+
+```powershell
+cd D:\
+miniprogram create my_coupon_app --title "My Coupon App" --with-backend mock
+cd my_coupon_app
+miniprogram publisher-backend run --port 9090
+miniprogram publisher-backend urls --port 9090
+```
+
+That mock backend is only for local business API testing. Real Firebase, AWS,
+GCP, or custom SDKs should run on the publisher server; the Flutter host app
+only receives the publisher backend base URL.
 
 The default scaffold uses only `analytics`, so it opens in a minimal generated
 host app without native-route wiring. Add `native_navigation` only when your

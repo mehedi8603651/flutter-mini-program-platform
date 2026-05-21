@@ -23,6 +23,7 @@ import 'mini_program_publisher.dart';
 import 'mini_program_scaffolder.dart';
 import 'mini_program_static_publisher.dart';
 import 'mini_program_workflow_status.dart';
+import 'publisher_backend_starter.dart';
 
 const List<String> _supportedPublishTargets = <String>[
   'local',
@@ -54,6 +55,8 @@ class MiniprogramCli {
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
+    PublisherBackendStarter publisherBackendStarter =
+        const PublisherBackendStarter(),
     StringSink? stdoutSink,
     StringSink? stderrSink,
     String? workingDirectory,
@@ -73,6 +76,7 @@ class MiniprogramCli {
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
+       _publisherBackendStarter = publisherBackendStarter,
        _stdout = stdoutSink ?? stdout,
        _stderr = stderrSink ?? stderr,
        _workingDirectory = workingDirectory;
@@ -93,6 +97,7 @@ class MiniprogramCli {
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
+  final PublisherBackendStarter _publisherBackendStarter;
   final StringSink _stdout;
   final StringSink _stderr;
   final String? _workingDirectory;
@@ -136,6 +141,8 @@ class MiniprogramCli {
           return await _runEmbed(arguments.sublist(1));
         case 'backend':
           return await _runBackend(arguments.sublist(1));
+        case 'publisher-backend':
+          return await _runPublisherBackend(arguments.sublist(1));
         default:
           _stderr.writeln('Unknown command: ${arguments.first}');
           _stderr.writeln(_rootUsage());
@@ -177,6 +184,9 @@ class MiniprogramCli {
     } on LocalBackendControlException catch (error) {
       _stderr.writeln(error.message);
       return 1;
+    } on PublisherBackendException catch (error) {
+      _stderr.writeln(error.message);
+      return 1;
     }
   }
 
@@ -206,6 +216,12 @@ class MiniprogramCli {
         'capabilities',
         defaultsTo: 'analytics',
         help: 'Comma-separated capability wire values.',
+      )
+      ..addOption(
+        'with-backend',
+        allowed: const <String>['mock'],
+        help:
+            'Scaffold an opt-in publisher-owned backend starter. Currently supports: mock.',
       )
       ..addFlag(
         'force',
@@ -241,6 +257,7 @@ class MiniprogramCli {
         title: results.option('title'),
         description: results.option('description'),
         capabilities: _parseCapabilities(results.option('capabilities')!),
+        backendTemplate: results.option('with-backend'),
         force: results.flag('force'),
       ),
     );
@@ -2684,6 +2701,220 @@ class MiniprogramCli {
     return 0;
   }
 
+  Future<int> _runPublisherBackend(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_publisherBackendUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_publisherBackendUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'scaffold':
+        return _runPublisherBackendScaffold(arguments.sublist(1));
+      case 'run':
+        return _runPublisherBackendRun(arguments.sublist(1));
+      case 'status':
+        return _runPublisherBackendStatus(arguments.sublist(1));
+      case 'stop':
+        return _runPublisherBackendStop(arguments.sublist(1));
+      case 'urls':
+        return _runPublisherBackendUrls(arguments.sublist(1));
+      default:
+        _stderr.writeln(
+          'Unknown publisher-backend command: ${arguments.first}',
+        );
+        _stderr.writeln(_publisherBackendUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runPublisherBackendScaffold(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'template',
+        defaultsTo: 'mock',
+        allowed: const <String>['mock'],
+        help: 'Publisher backend starter template.',
+      )
+      ..addOption(
+        'mini-program-root',
+        help: 'Exact mini-program root. Defaults to the current directory.',
+      )
+      ..addFlag(
+        'force',
+        negatable: false,
+        help: 'Overwrite scaffold-managed publisher backend files.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend scaffold [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'publisher-backend scaffold does not accept positional arguments.',
+      );
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final result = await _publisherBackendStarter.scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: miniProgramRootPath,
+        template: results.option('template')!,
+        force: results.flag('force'),
+      ),
+    );
+    _stdout.writeln(_formatPublisherBackendScaffoldResult(result));
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendRun(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'mini-program-root',
+        help: 'Exact mini-program root. Defaults to the current directory.',
+      )
+      ..addOption(
+        'port',
+        defaultsTo: '9090',
+        help: 'Port to bind for the mock publisher backend.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram publisher-backend run [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final port = int.tryParse(results.option('port')!);
+    if (port == null || port <= 0 || port > 65535) {
+      throw const FormatException(
+        'publisher-backend run --port must be 1-65535.',
+      );
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final result = await _publisherBackendStarter.run(
+      miniProgramRootPath: miniProgramRootPath,
+      port: port,
+    );
+    _stdout.writeln(_formatPublisherBackendRunResult(result));
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendStatus(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption(
+        'mini-program-root',
+        help: 'Exact mini-program root. Defaults to the current directory.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram publisher-backend status [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final result = await _publisherBackendStarter.status(
+      miniProgramRootPath: miniProgramRootPath,
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendStatusJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendStatusResult(result));
+    }
+    return result.healthy ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendStop(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'mini-program-root',
+        help: 'Exact mini-program root. Defaults to the current directory.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram publisher-backend stop [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final result = await _publisherBackendStarter.stop(
+      miniProgramRootPath: miniProgramRootPath,
+    );
+    _stdout.writeln(_formatPublisherBackendStopResult(result));
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendUrls(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'port',
+        defaultsTo: '9090',
+        help: 'Port to use in generated local URLs.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram publisher-backend urls [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final port = int.tryParse(results.option('port')!);
+    if (port == null || port <= 0 || port > 65535) {
+      throw const FormatException(
+        'publisher-backend urls --port must be 1-65535.',
+      );
+    }
+    _stdout.writeln(
+      _formatPublisherBackendUrlsResult(
+        _publisherBackendStarter.urls(port: port),
+      ),
+    );
+    return 0;
+  }
+
   Set<String> _parseCapabilities(String rawCapabilities) => rawCapabilities
       .split(',')
       .map((value) => value.trim())
@@ -3068,6 +3299,27 @@ class MiniprogramCli {
   String _currentWorkingDirectory() =>
       p.normalize(p.absolute(_workingDirectory ?? Directory.current.path));
 
+  Future<String> _resolveCurrentMiniProgramRootPath({
+    required String? explicitMiniProgramRootPath,
+  }) async {
+    final miniProgramId = await _pathResolver.inferMiniProgramId(
+      miniProgramRootPath: explicitMiniProgramRootPath,
+      currentWorkingDirectory: _currentWorkingDirectory(),
+    );
+    if (miniProgramId == null || miniProgramId.trim().isEmpty) {
+      throw const MiniProgramPathResolutionException(
+        'Could not infer the mini-program id. Open the mini-program root or '
+        'pass --mini-program-root.',
+      );
+    }
+    final resolved = await _pathResolver.resolve(
+      miniProgramId: miniProgramId,
+      miniProgramRootPath: explicitMiniProgramRootPath,
+      currentWorkingDirectory: _currentWorkingDirectory(),
+    );
+    return resolved.miniProgramRootPath;
+  }
+
   bool _isGroupHelpRequest(List<String> arguments) {
     if (arguments.length != 1) {
       return false;
@@ -3081,7 +3333,7 @@ class MiniprogramCli {
 Usage: miniprogram <command> [arguments]
 
 Commands:
-  create <mini-program-id>
+  create <mini-program-id> [--with-backend mock]
   doctor [--json]
   env init|list|status
   env configure <env-name> --provider aws --bucket <bucket> --region <region>
@@ -3106,6 +3358,11 @@ Commands:
   backend stop
   backend status [--json]
   backend reset-local --yes
+  publisher-backend scaffold --template mock
+  publisher-backend run --port 9090
+  publisher-backend status [--json]
+  publisher-backend stop
+  publisher-backend urls
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -3116,6 +3373,17 @@ Usage: miniprogram workflow <command> [arguments]
 
 Commands:
   status [--workspace <path>] [--env <env-name>] [--remote] [--json]
+''';
+
+  String _publisherBackendUsage() => '''
+Usage: miniprogram publisher-backend <command> [arguments]
+
+Commands:
+  scaffold [--template mock] [--mini-program-root <path>] [--force]
+  run [--mini-program-root <path>] [--port 9090]
+  status [--mini-program-root <path>] [--json]
+  stop [--mini-program-root <path>]
+  urls [--port 9090]
 ''';
 
   String _partnerUsage() => '''
@@ -4063,6 +4331,127 @@ Commands:
       lines.addAll(result.removedPaths.map((path) => '- $path'));
     }
     return lines.join('\n');
+  }
+
+  String _formatPublisherBackendScaffoldResult(
+    PublisherBackendScaffoldResult result,
+  ) {
+    final lines = <String>[
+      'Scaffolded publisher backend starter.',
+      'Template: ${result.template}',
+      'Mini-program root: ${result.miniProgramRootPath}',
+      'Backend root: ${result.backendRootPath}',
+      'Created files: ${result.createdPaths.length}',
+    ];
+    lines.addAll(result.createdPaths.map((filePath) => '- $filePath'));
+    lines.addAll(<String>[
+      '',
+      'Run locally:',
+      'miniprogram publisher-backend run --mini-program-root "${result.miniProgramRootPath}" --port 9090',
+    ]);
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendRunResult(PublisherBackendRunResult result) {
+    final state = result.state;
+    return <String>[
+      result.alreadyRunning
+          ? 'Publisher backend was already running.'
+          : 'Started publisher backend.',
+      'Mini-program root: ${state.miniProgramRootPath}',
+      'Backend root: ${state.backendRootPath}',
+      'PID: ${state.pid}',
+      'Health: ${state.healthCheckUrl}',
+      ..._formatPublisherBackendTargetUrls(state.port),
+      'stdout log: ${state.stdoutLogPath}',
+      'stderr log: ${state.stderrLogPath}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendStatusResult(
+    PublisherBackendStatusResult result,
+  ) {
+    if (!result.hasState) {
+      return 'Publisher backend is not running. No publisher_backend.local.json state was found.';
+    }
+    final state = result.state!;
+    return <String>[
+      'Publisher backend state found.',
+      'Mini-program root: ${state.miniProgramRootPath}',
+      'Backend root: ${state.backendRootPath}',
+      'PID: ${state.pid}',
+      'Process alive: ${result.processAlive}',
+      'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      ..._formatPublisherBackendTargetUrls(state.port),
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendStopResult(PublisherBackendStopResult result) {
+    if (!result.hadState) {
+      return 'No publisher backend state was found.';
+    }
+    if (result.clearedStaleState) {
+      return 'Cleared stale publisher backend state. The recorded process was already gone.';
+    }
+    if (result.stopped) {
+      return 'Stopped the publisher backend and cleared publisher_backend.local.json.';
+    }
+    return 'Publisher backend was not running.';
+  }
+
+  String _formatPublisherBackendUrlsResult(PublisherBackendUrlsResult result) {
+    return <String>[
+      'Publisher backend local URLs:',
+      ..._formatPublisherBackendTargetUrls(result.port),
+      '',
+      'Host endpoint example:',
+      'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.desktopBaseUrl}',
+    ].join('\n');
+  }
+
+  List<String> _formatPublisherBackendTargetUrls(int port) {
+    final urls = PublisherBackendUrlsResult(port: port);
+    return <String>[
+      'Desktop/web host: ${urls.desktopBaseUrl}',
+      'Android emulator host: ${urls.androidEmulatorBaseUrl}',
+      'Android USB via adb reverse: ${urls.androidUsbBaseUrl}',
+    ];
+  }
+
+  Map<String, Object?> _publisherBackendStatusJson(
+    PublisherBackendStatusResult result,
+  ) {
+    final state = result.state;
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend status',
+      'hasState': result.hasState,
+      'processAlive': result.processAlive,
+      'healthy': result.healthy,
+      'healthStatusCode': result.healthStatusCode,
+      'healthError': result.healthError,
+      if (state != null) ...<String, Object?>{
+        'miniProgramRootPath': state.miniProgramRootPath,
+        'backendRootPath': state.backendRootPath,
+        'pid': state.pid,
+        'port': state.port,
+        'healthCheckUrl': state.healthCheckUrl,
+        'urls': <String, Object?>{
+          'desktopWeb': PublisherBackendUrlsResult(
+            port: state.port,
+          ).desktopBaseUrl,
+          'androidEmulator': PublisherBackendUrlsResult(
+            port: state.port,
+          ).androidEmulatorBaseUrl,
+          'androidUsb': PublisherBackendUrlsResult(
+            port: state.port,
+          ).androidUsbBaseUrl,
+        },
+      },
+    };
   }
 
   Future<void> _requireEmbeddedHostProject(String projectRootPath) async {

@@ -27,6 +27,11 @@ import {
   buildHostRunArgs,
   buildPartnerPackageArgs,
   buildPreviewArgs,
+  buildPublisherBackendRunArgs,
+  buildPublisherBackendScaffoldArgs,
+  buildPublisherBackendStatusArgs,
+  buildPublisherBackendStopArgs,
+  buildPublisherBackendUrlsArgs,
   buildPublishArgs,
   buildValidateArgs,
   buildWorkflowStatusArgs,
@@ -87,6 +92,24 @@ test('builds core workflow command arguments', () => {
       'D:/work/coupon_demo',
       '--title',
       'Coupon Demo',
+      'coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildCreateArgs({
+      appId: 'coupon_demo',
+      title: 'Coupon Demo',
+      outputRoot: 'D:/work/coupon_demo',
+      backendTemplate: 'mock',
+    }),
+    [
+      'create',
+      '--output-root',
+      'D:/work/coupon_demo',
+      '--title',
+      'Coupon Demo',
+      '--with-backend',
+      'mock',
       'coupon_demo',
     ],
   );
@@ -416,6 +439,64 @@ test('builds backend command arguments', () => {
     '--json',
     '--root',
     'D:/backend',
+  ]);
+  assert.deepEqual(
+    buildPublisherBackendScaffoldArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      force: true,
+    }),
+    [
+      'publisher-backend',
+      'scaffold',
+      '--template',
+      'mock',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+      '--force',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendRunArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      port: 9091,
+    }),
+    [
+      'publisher-backend',
+      'run',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+      '--port',
+      '9091',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendStatusArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'status',
+      '--json',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendStopArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'stop',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(buildPublisherBackendUrlsArgs({ port: 9091 }), [
+    'publisher-backend',
+    'urls',
+    '--port',
+    '9091',
   ]);
 });
 

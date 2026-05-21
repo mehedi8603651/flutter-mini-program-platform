@@ -8,9 +8,10 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.19 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.20 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
-endpoint metadata, backend query/state diagnostics, and
+endpoint metadata, backend query/state diagnostics, mock publisher backend
+starter commands, and
 `miniprogram workflow status --json`.
 
 Install or upgrade the CLI first:
@@ -39,7 +40,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.17.vsix
+code --install-extension mini-program-tools-0.1.18.vsix
 ```
 
 ## Features
@@ -70,6 +71,11 @@ code --install-extension mini-program-tools-0.1.17.vsix
   - `MiniProgram: Backend Start`
   - `MiniProgram: Backend Stop`
   - `MiniProgram: Backend Status`
+  - `MiniProgram: Setup Publisher Backend`
+  - `MiniProgram: Run Publisher Backend`
+  - `MiniProgram: Stop Publisher Backend`
+  - `MiniProgram: Publisher Backend Status`
+  - `MiniProgram: Copy Publisher Backend URLs`
   - `MiniProgram: Create Access Key`
   - `MiniProgram: List Access Keys`
   - `MiniProgram: Revoke Access Key`
@@ -139,6 +145,45 @@ and `MiniProgram: Cloud Outputs` prints the backend API URL or a Flutter
 Local backend commands are also available for development: initialize the backend
 workspace, start/stop the local backend, and inspect backend status without
 leaving VS Code.
+
+## Publisher backend starter
+
+The publisher backend starter is separate from the delivery backend. It is a
+local mock business API for mini-program data, images, and fake session/auth
+responses.
+
+From VS Code:
+
+1. Run `MiniProgram: Setup New MiniProgram`.
+2. Choose **Mini-program with mock backend**.
+3. Open the created mini-program folder.
+4. Run `MiniProgram: Run Publisher Backend`.
+5. Run `MiniProgram: Copy Publisher Backend URLs`.
+
+For an existing mini-program, run `MiniProgram: Setup Publisher Backend`.
+
+The generated mock server is local-only and lives under:
+
+```text
+backend/mock/
+```
+
+It serves:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+
+Use the copied backend URL when adding the mini-program to a host endpoint with
+`MiniProgram: Add Host Endpoint`. Use `http://127.0.0.1:9090/` for Chrome,
+Windows, macOS, and Linux on the same machine. Use `http://10.0.2.2:9090/` for
+Android emulator host runs.
+
+The mock backend is for local development only. Firebase, AWS, GCP, or custom
+server SDKs belong on publisher backend servers, not in the Flutter host app or
+`mini_program_sdk`.
 
 ## Partner handoff workflow
 

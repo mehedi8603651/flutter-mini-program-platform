@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.18
+
+- Add publisher backend starter commands for setup, run, stop, status, and
+  local URL copying.
+- Let mini-program creation and guided setup choose a mock publisher backend
+  starter that uses `miniprogram create --with-backend mock`.
+- Show publisher backend starter presence in the sidebar and diagnostics.
+- Update docs for `mini_program_tooling` 0.3.20 mock backend starter flows.
+
 ## 0.1.17
 
 - Show mini-program publisher backend action/query/builder usage in sidebar

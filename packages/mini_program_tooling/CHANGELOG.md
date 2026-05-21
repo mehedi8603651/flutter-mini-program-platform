@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.20
+
+- add opt-in mock publisher backend starter with
+  `miniprogram create --with-backend mock`
+- add `miniprogram publisher-backend scaffold|run|status|stop|urls` for local
+  business API testing beside a mini-program
+- generate backend-driven starter UI using `miniProgramBackendBuilder(...)`,
+  list item bindings, mock auth/session data, and image URLs
+- report publisher backend starter presence in `workflow status --json`
+
 ## 0.3.19
 
 - generate `miniProgramBackendQueryAction(...)` and

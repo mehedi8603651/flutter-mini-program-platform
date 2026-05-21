@@ -173,6 +173,7 @@ async function buildMiniProgramChecks(
   const build = asRecord(miniProgram.build);
   const validation = asRecord(miniProgram.validation);
   const backendUsage = asRecord(miniProgram.backendUsage);
+  const publisherBackendStarter = asRecord(miniProgram.publisherBackendStarter);
   const partnerPackages = Array.isArray(miniProgram.partnerPackages)
     ? miniProgram.partnerPackages.length
     : 0;
@@ -189,6 +190,8 @@ async function buildMiniProgramChecks(
     asBoolean(backendUsage.usesBackendQueryAction) ||
     asBoolean(backendUsage.usesBackendState);
   const backendRequestIds = asStringList(backendUsage.requestIds);
+  const hasPublisherBackendStarter = asBoolean(publisherBackendStarter.detected);
+  const publisherBackendTemplate = asString(publisherBackendStarter.template, 'mock');
 
   return [
     check(
@@ -274,6 +277,22 @@ async function buildMiniProgramChecks(
       usesPublisherBackend
         ? 'When adding this mini-program to a host, include --backend-base-url in the partner package or host endpoint.'
         : undefined,
+    ),
+    check(
+      'mini_program.publisher_backend_starter',
+      'Publisher backend starter',
+      hasPublisherBackendStarter || !usesBackendState ? 'ok' : 'warning',
+      hasPublisherBackendStarter
+        ? `Mock publisher backend starter found: ${publisherBackendTemplate}.`
+        : usesBackendState
+          ? 'Backend query/state helpers are used, but no local publisher backend starter was found.'
+          : 'No local publisher backend starter was detected.',
+      asString(publisherBackendStarter.backendRootPath),
+      hasPublisherBackendStarter
+        ? 'Run MiniProgram: Run Publisher Backend, then add host endpoints with --backend-base-url.'
+        : usesBackendState
+          ? 'Run MiniProgram: Setup Publisher Backend or connect a real publisher API with --backend-base-url.'
+          : undefined,
     ),
   ];
 }
