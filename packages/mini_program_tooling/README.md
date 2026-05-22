@@ -80,7 +80,7 @@ miniprogram publisher-backend urls [--port 9090]
 miniprogram publisher-backend aws deploy --env <env-name> [--mini-program-root <path>]
 miniprogram publisher-backend aws status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws outputs --env <env-name> [--mini-program-root <path>] [--json]
-miniprogram publisher-backend aws smoke --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
 miniprogram publisher-backend aws seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws data status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
@@ -632,20 +632,25 @@ Useful AWS backend commands:
 miniprogram publisher-backend aws status --env my-aws-prod --json
 miniprogram publisher-backend aws outputs --env my-aws-prod --json
 miniprogram publisher-backend aws smoke --env my-aws-prod
+miniprogram publisher-backend aws smoke --env my-aws-prod --include-write --write-coupon-id coupon-10 --write-user-id smoke-user
 miniprogram publisher-backend aws seed --env my-aws-prod
 miniprogram publisher-backend aws data status --env my-aws-prod --json
 miniprogram publisher-backend aws logs --env my-aws-prod --since 1h
 miniprogram publisher-backend aws destroy --env my-aws-prod --yes
 ```
 
-Use `smoke` for a read-only check of `/health`, `/home/bootstrap`,
-`/coupons/list`, and `/auth/session` after deploy.
+Deploy waits for API Gateway/Lambda health with cold-start-aware retries before
+reporting failure. Use `smoke` for a read-only check of `/health`,
+`/home/bootstrap`, `/coupons/list`, and `/auth/session` after deploy. Add
+`--include-write` only when you want to verify `POST /coupon/redeem`; this
+mutates backend data by writing or reusing a redemption record.
 
 Use `aws seed` after deploying a `--storage dynamodb` backend to upsert the
 starter home, session, and coupon records into the generated DynamoDB table.
-Use `aws data status` to check the table status, app record count, and
-redemption count. `aws destroy --yes` deletes the stack-owned DynamoDB table and
-its data, so export or migrate production data before destroying a stack.
+Seed retries unprocessed DynamoDB batch writes. Use `aws data status` to check
+the table status, app record count, and redemption count across paginated query
+results. `aws destroy --yes` deletes the stack-owned DynamoDB table and its
+data, so export or migrate production data before destroying a stack.
 
 This AWS backend is separate from the mini-program delivery AWS stack. It is for
 publisher business APIs only. AWS credentials, Firebase Admin credentials,

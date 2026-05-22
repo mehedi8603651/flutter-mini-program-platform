@@ -2966,6 +2966,21 @@ class MiniprogramCli {
   Future<int> _runPublisherBackendAwsSmoke(List<String> arguments) async {
     final parser = _publisherBackendAwsCommandParser()
       ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addFlag(
+        'include-write',
+        negatable: false,
+        help: 'Also verify POST /coupon/redeem. This mutates backend data.',
+      )
+      ..addOption(
+        'write-coupon-id',
+        defaultsTo: 'coupon-10',
+        help: 'Coupon ID used with --include-write.',
+      )
+      ..addOption(
+        'write-user-id',
+        defaultsTo: 'smoke-user',
+        help: 'User ID used with --include-write.',
+      )
       ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
       ..addOption('stage-name', help: 'Optional API Gateway stage name.')
       ..addOption(
@@ -2980,6 +2995,23 @@ class MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
+    final includeWrite = results.flag('include-write');
+    if (!includeWrite &&
+        (results.wasParsed('write-coupon-id') ||
+            results.wasParsed('write-user-id'))) {
+      _stderr.writeln(
+        '--write-coupon-id and --write-user-id require --include-write.',
+      );
+      return 64;
+    }
+    final writeCouponId = results.option('write-coupon-id')?.trim() ?? '';
+    final writeUserId = results.option('write-user-id')?.trim() ?? '';
+    if (includeWrite && (writeCouponId.isEmpty || writeUserId.isEmpty)) {
+      _stderr.writeln(
+        '--write-coupon-id and --write-user-id must not be empty.',
+      );
+      return 64;
+    }
     final resolved = await _resolvePublisherBackendAwsInputs(results);
     final result = await _publisherBackendStarter.awsSmoke(
       PublisherBackendAwsSmokeRequest(
@@ -2988,6 +3020,9 @@ class MiniprogramCli {
         stackName: results.option('stack-name'),
         stageName: results.option('stage-name'),
         samS3Bucket: results.option('sam-s3-bucket'),
+        includeWrite: includeWrite,
+        writeCouponId: writeCouponId,
+        writeUserId: writeUserId,
       ),
     );
     if (results.flag('json')) {
@@ -3811,7 +3846,7 @@ Commands:
   aws deploy --env <env-name> [--mini-program-root <path>]
   aws status --env <env-name> [--mini-program-root <path>] [--json]
   aws outputs --env <env-name> [--mini-program-root <path>] [--json]
-  aws smoke --env <env-name> [--mini-program-root <path>] [--json]
+  aws smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   aws seed --env <env-name> [--mini-program-root <path>] [--json]
   aws data status --env <env-name> [--mini-program-root <path>] [--json]
   aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
@@ -3825,7 +3860,7 @@ Commands:
   deploy --env <env-name> [--mini-program-root <path>] [--stack-name <name>] [--stage-name <stage>] [--sam-s3-bucket <bucket>]
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
-  smoke --env <env-name> [--mini-program-root <path>] [--json]
+  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
   logs --env <env-name> [--mini-program-root <path>] [--since 1h]
@@ -4905,9 +4940,31 @@ Commands:
         '',
         'Host endpoint command:',
         'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.backendBaseUrl}',
+        '',
+        'Next commands:',
+        if (result.outputs['PublisherBackendStorageMode'] == 'dynamodb')
+          'miniprogram publisher-backend aws seed --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+        if (result.outputs['PublisherBackendStorageMode'] == 'dynamodb')
+          'miniprogram publisher-backend aws data status --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+        'miniprogram publisher-backend aws smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+        'miniprogram publisher-backend aws logs --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --since 1h',
       ]);
     }
     return lines.join('\n');
+  }
+
+  String _publisherBackendRootOption(String? miniProgramRootPath) {
+    if (miniProgramRootPath == null || miniProgramRootPath.trim().isEmpty) {
+      return '';
+    }
+    return ' --mini-program-root ${_quoteCommandArgument(miniProgramRootPath)}';
+  }
+
+  String _quoteCommandArgument(String value) {
+    if (!value.contains(RegExp(r'\s'))) {
+      return value;
+    }
+    return "'${value.replaceAll("'", "''")}'";
   }
 
   String _formatPublisherBackendAwsStatusResult(
@@ -4968,6 +5025,7 @@ Commands:
       if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
       if (result.backendBaseUrl != null)
         'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Write smoke: ${result.includeWrite}',
       'Passed: ${result.passed}',
       if (result.error != null) 'Detail: ${result.error}',
     ];
@@ -4979,7 +5037,10 @@ Commands:
             : route.passed
             ? '${route.statusCode} OK'
             : '${route.statusCode} FAIL';
-        lines.add('${route.method} ${route.path}: $status');
+        final responseStatus = route.responseStatus == null
+            ? ''
+            : ' (${route.responseStatus})';
+        lines.add('${route.method} ${route.path}: $status$responseStatus');
         if (route.error != null) {
           lines.add('  ${route.error}');
         }
@@ -5167,6 +5228,7 @@ Commands:
       'stackExists': result.stackExists,
       'stackStatus': result.stackStatus,
       'backendBaseUrl': result.backendBaseUrl,
+      'includeWrite': result.includeWrite,
       'passed': result.passed,
       'error': result.error,
       'routes': result.routes
@@ -5176,6 +5238,7 @@ Commands:
               'path': route.path,
               'uri': route.uri.toString(),
               'statusCode': route.statusCode,
+              'responseStatus': route.responseStatus,
               'passed': route.passed,
               'error': route.error,
             },

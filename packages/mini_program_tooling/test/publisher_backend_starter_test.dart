@@ -205,6 +205,15 @@ void main() {
       final readme = await File(
         p.join(miniProgramRoot.path, 'backend', 'aws_lambda', 'README.md'),
       ).readAsString();
+      final handler = await File(
+        p.join(
+          miniProgramRoot.path,
+          'backend',
+          'aws_lambda',
+          'src',
+          'handler.mjs',
+        ),
+      ).readAsString();
 
       expect(template, contains('AWS::DynamoDB::Table'));
       expect(template, contains('BillingMode: PAY_PER_REQUEST'));
@@ -216,6 +225,8 @@ void main() {
       expect(packageJson, contains('@aws-sdk/client-dynamodb'));
       expect(packageJson, contains('@aws-sdk/lib-dynamodb'));
       expect(readme, contains('Storage mode: DynamoDB'));
+      expect(handler, contains('ConsistentRead: true'));
+      expect(handler, contains('LastEvaluatedKey'));
     });
 
     test(
@@ -404,6 +415,83 @@ console.log(JSON.stringify({
       );
     });
 
+    test('deploy waits through cold-start health failures', () async {
+      final commands = <String>[];
+      var healthCalls = 0;
+      var now = DateTime.utc(2026, 5, 22, 12);
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          commands.add('$executable ${arguments.join(' ')}');
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJson(), '');
+          }
+          return ProcessResult(0, 0, '{}', '');
+        },
+        healthGetter: (uri) async {
+          healthCalls++;
+          return healthCalls == 1
+              ? http.Response('warming', 503)
+              : http.Response('{"ok":true}', 200);
+        },
+        clock: () => now,
+        delay: (duration) async {
+          now = now.add(duration);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+        ),
+      );
+
+      final result = await starter.awsDeploy(
+        PublisherBackendAwsDeployRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.healthy, isTrue);
+      expect(result.healthStatusCode, 200);
+      expect(healthCalls, 2);
+      expect(commands, contains(contains('sam deploy')));
+    });
+
+    test('deploy reports unhealthy after the retry window', () async {
+      var now = DateTime.utc(2026, 5, 22, 12);
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJson(), '');
+          }
+          return ProcessResult(0, 0, '{}', '');
+        },
+        healthGetter: (uri) async => http.Response('warming', 503),
+        clock: () => now,
+        delay: (duration) async {
+          now = now.add(const Duration(seconds: 46));
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+        ),
+      );
+
+      final result = await starter.awsDeploy(
+        PublisherBackendAwsDeployRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.healthy, isFalse);
+      expect(result.healthStatusCode, 503);
+      expect(result.healthError, contains('503'));
+    });
+
     test('AWS status reports missing stack without failing', () async {
       final starter = PublisherBackendStarter(
         shellRunner: (executable, arguments, {workingDirectory}) async {
@@ -451,6 +539,7 @@ console.log(JSON.stringify({
 
       expect(result.stackExists, isTrue);
       expect(result.passed, isTrue);
+      expect(result.includeWrite, isFalse);
       expect(result.backendBaseUrl, endsWith('/prod/'));
       expect(
         result.routes.map((route) => '${route.method} ${route.path}'),
@@ -467,6 +556,108 @@ console.log(JSON.stringify({
         '/prod/coupons/list',
         '/prod/auth/session',
       ]);
+    });
+
+    test('AWS smoke optionally verifies coupon redeem writes', () async {
+      for (final responseStatus in <String>['redeemed', 'already_redeemed']) {
+        final requestedPosts = <Uri>[];
+        final requestBodies = <Object?>[];
+        final starter = PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, _stackDescribeJson(), '');
+          },
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            requestedPosts.add(uri);
+            requestBodies.add(body);
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'status': responseStatus,
+                'couponId': 'coupon-20',
+                'userId': 'smoke-user',
+              }),
+              200,
+            );
+          },
+        );
+
+        final result = await starter.awsSmoke(
+          PublisherBackendAwsSmokeRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _awsEnvironment(),
+            includeWrite: true,
+            writeCouponId: 'coupon-20',
+            writeUserId: 'smoke-user',
+          ),
+        );
+
+        expect(result.includeWrite, isTrue);
+        expect(result.passed, isTrue);
+        final writeRoute = result.routes.last;
+        expect(writeRoute.method, 'POST');
+        expect(writeRoute.path, '/coupon/redeem');
+        expect(writeRoute.statusCode, 200);
+        expect(writeRoute.responseStatus, responseStatus);
+        expect(requestedPosts.single.path, '/prod/coupon/redeem');
+        expect(
+          jsonDecode(requestBodies.single.toString()),
+          containsPair('couponId', 'coupon-20'),
+        );
+      }
+    });
+
+    test('AWS write smoke fails on malformed success bodies', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+        healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        postRequester: (uri, {headers, body}) async {
+          return http.Response('not json', 200);
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          includeWrite: true,
+        ),
+      );
+
+      expect(result.passed, isFalse);
+      final writeRoute = result.routes.last;
+      expect(writeRoute.statusCode, 200);
+      expect(writeRoute.responseStatus, isNull);
+      expect(writeRoute.error, contains('redeemed status'));
+    });
+
+    test('AWS write smoke fails on non-200 redeem responses', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+        healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        postRequester: (uri, {headers, body}) async {
+          return http.Response(
+            jsonEncode(<String, Object?>{'errorCode': 'coupon_not_found'}),
+            404,
+          );
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          includeWrite: true,
+        ),
+      );
+
+      expect(result.passed, isFalse);
+      final writeRoute = result.routes.last;
+      expect(writeRoute.statusCode, 404);
+      expect(writeRoute.error, contains('404'));
     });
 
     test('AWS smoke fails when a route returns non-200', () async {
@@ -598,6 +789,118 @@ console.log(JSON.stringify({
       expect(keys, contains('APP#coupon_app COUPON#coupon-20'));
     });
 
+    test('AWS seed retries unprocessed DynamoDB writes', () async {
+      var batchWriteCalls = 0;
+      var delayCalls = 0;
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          batchWriteCalls++;
+          if (batchWriteCalls == 1) {
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{
+                'UnprocessedItems': <String, Object?>{
+                  'coupon-data-table': <Object?>[
+                    <String, Object?>{
+                      'PutRequest': <String, Object?>{
+                        'Item': <String, Object?>{
+                          'pk': <String, Object?>{'S': 'APP#coupon_app'},
+                          'sk': <String, Object?>{'S': 'HOME#bootstrap'},
+                        },
+                      },
+                    },
+                  ],
+                },
+              }),
+              '',
+            );
+          }
+          return ProcessResult(
+            0,
+            0,
+            jsonEncode(<String, Object?>{
+              'UnprocessedItems': <String, Object?>{},
+            }),
+            '',
+          );
+        },
+        delay: (duration) async {
+          delayCalls++;
+        },
+        clock: () => DateTime.utc(2026, 5, 23, 12),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+          storageMode: 'dynamodb',
+        ),
+      );
+
+      final result = await starter.awsSeed(
+        PublisherBackendAwsSeedRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.seeded, isTrue);
+      expect(batchWriteCalls, 2);
+      expect(delayCalls, 1);
+    });
+
+    test('AWS seed fails when DynamoDB leaves unprocessed writes', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          return ProcessResult(
+            0,
+            0,
+            jsonEncode(<String, Object?>{
+              'UnprocessedItems': <String, Object?>{
+                'coupon-data-table': <Object?>[
+                  <String, Object?>{
+                    'PutRequest': <String, Object?>{
+                      'Item': <String, Object?>{
+                        'pk': <String, Object?>{'S': 'APP#coupon_app'},
+                        'sk': <String, Object?>{'S': 'HOME#bootstrap'},
+                      },
+                    },
+                  },
+                ],
+              },
+            }),
+            '',
+          );
+        },
+        delay: (duration) async {},
+        clock: () => DateTime.utc(2026, 5, 23, 12),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+          storageMode: 'dynamodb',
+        ),
+      );
+
+      expect(
+        () => starter.awsSeed(
+          PublisherBackendAwsSeedRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _awsEnvironment(),
+          ),
+        ),
+        throwsA(isA<PublisherBackendException>()),
+      );
+    });
+
     test('AWS seed fails when data table output is missing', () async {
       final starter = PublisherBackendStarter(
         shellRunner: (executable, arguments, {workingDirectory}) async {
@@ -617,6 +920,7 @@ console.log(JSON.stringify({
     });
 
     test('AWS data status describes table and counts records', () async {
+      final queryCommands = <List<String>>[];
       final starter = PublisherBackendStarter(
         shellRunner: (executable, arguments, {workingDirectory}) async {
           if (arguments.contains('describe-stacks')) {
@@ -633,11 +937,33 @@ console.log(JSON.stringify({
             );
           }
           final joined = arguments.join(' ');
-          final count = joined.contains('APP#coupon_app#REDEMPTIONS') ? 1 : 4;
+          queryCommands.add(arguments);
+          if (joined.contains('APP#coupon_app#REDEMPTIONS')) {
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{'Count': 1}),
+              '',
+            );
+          }
+          if (!arguments.contains('--exclusive-start-key')) {
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{
+                'Count': 2,
+                'LastEvaluatedKey': <String, Object?>{
+                  'pk': <String, Object?>{'S': 'APP#coupon_app'},
+                  'sk': <String, Object?>{'S': 'COUPON#coupon-10'},
+                },
+              }),
+              '',
+            );
+          }
           return ProcessResult(
             0,
             0,
-            jsonEncode(<String, Object?>{'Count': count}),
+            jsonEncode(<String, Object?>{'Count': 2}),
             '',
           );
         },
@@ -655,6 +981,17 @@ console.log(JSON.stringify({
       expect(result.tableStatus, 'ACTIVE');
       expect(result.appRecordCount, 4);
       expect(result.redemptionCount, 1);
+      expect(queryCommands, hasLength(3));
+      expect(
+        queryCommands.every((command) => command.contains('--consistent-read')),
+        isTrue,
+      );
+      expect(
+        queryCommands.any(
+          (command) => command.contains('--exclusive-start-key'),
+        ),
+        isTrue,
+      );
     });
 
     test('AWS data status fails when data table output is missing', () async {

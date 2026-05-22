@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.27
+
+- improve AWS DynamoDB publisher backend reliability with cold-start-aware
+  deploy health checks, retried seed batch writes, paginated data status counts,
+  consistent Lambda reads, and opt-in write smoke testing
+
 ## 0.3.26
 
 - add opt-in DynamoDB storage for scaffolded AWS Lambda publisher backends,

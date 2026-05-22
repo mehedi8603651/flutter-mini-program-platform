@@ -20,7 +20,14 @@ typedef PublisherBackendProcessStarter =
       required String workingDirectory,
     });
 typedef PublisherBackendHealthGetter = Future<http.Response> Function(Uri uri);
+typedef PublisherBackendPostRequester =
+    Future<http.Response> Function(
+      Uri uri, {
+      Map<String, String>? headers,
+      Object? body,
+    });
 typedef PublisherBackendClock = DateTime Function();
+typedef PublisherBackendDelay = Future<void> Function(Duration duration);
 
 const List<String> _publisherBackendAwsSmokeRoutePaths = <String>[
   '/health',
@@ -28,6 +35,11 @@ const List<String> _publisherBackendAwsSmokeRoutePaths = <String>[
   '/coupons/list',
   '/auth/session',
 ];
+
+const Duration _awsDeployHealthWaitTimeout = Duration(seconds: 45);
+const Duration _awsDeployHealthAttemptTimeout = Duration(seconds: 5);
+const Duration _awsDeployHealthRetryDelay = Duration(seconds: 1);
+const int _dynamoDbBatchWriteMaxAttempts = 5;
 
 const String _publisherBackendStorageBundled = 'bundled';
 const String _publisherBackendStorageDynamoDb = 'dynamodb';
@@ -99,6 +111,7 @@ class PublisherBackendAwsDeployResult {
     required this.backendRootPath,
     required this.outputs,
     required this.deployedAtUtc,
+    this.miniProgramRootPath,
     this.backendBaseUrl,
     this.healthUrl,
     this.healthy,
@@ -113,6 +126,7 @@ class PublisherBackendAwsDeployResult {
   final String region;
   final String samS3Bucket;
   final String backendRootPath;
+  final String? miniProgramRootPath;
   final Map<String, String> outputs;
   final String deployedAtUtc;
   final String? backendBaseUrl;
@@ -213,6 +227,9 @@ class PublisherBackendAwsSmokeRequest {
     this.stackName,
     this.stageName,
     this.samS3Bucket,
+    this.includeWrite = false,
+    this.writeCouponId = 'coupon-10',
+    this.writeUserId = 'smoke-user',
   });
 
   final String miniProgramRootPath;
@@ -220,6 +237,9 @@ class PublisherBackendAwsSmokeRequest {
   final String? stackName;
   final String? stageName;
   final String? samS3Bucket;
+  final bool includeWrite;
+  final String writeCouponId;
+  final String writeUserId;
 }
 
 class PublisherBackendAwsSmokeRouteResult {
@@ -229,6 +249,7 @@ class PublisherBackendAwsSmokeRouteResult {
     required this.uri,
     required this.passed,
     this.statusCode,
+    this.responseStatus,
     this.error,
   });
 
@@ -237,6 +258,7 @@ class PublisherBackendAwsSmokeRouteResult {
   final Uri uri;
   final bool passed;
   final int? statusCode;
+  final String? responseStatus;
   final String? error;
 }
 
@@ -250,6 +272,7 @@ class PublisherBackendAwsSmokeResult {
     required this.stackExists,
     required this.passed,
     required this.routes,
+    required this.includeWrite,
     this.backendBaseUrl,
     this.stackStatus,
     this.error,
@@ -263,6 +286,7 @@ class PublisherBackendAwsSmokeResult {
   final bool stackExists;
   final bool passed;
   final List<PublisherBackendAwsSmokeRouteResult> routes;
+  final bool includeWrite;
   final String? backendBaseUrl;
   final String? stackStatus;
   final String? error;
@@ -665,16 +689,22 @@ class PublisherBackendStarter {
     PublisherBackendShellRunner shellRunner = _defaultShellRunner,
     PublisherBackendProcessStarter processStarter = _defaultProcessStarter,
     PublisherBackendHealthGetter healthGetter = http.get,
+    PublisherBackendPostRequester postRequester = _defaultPostRequester,
     PublisherBackendClock clock = _defaultClock,
+    PublisherBackendDelay delay = _defaultDelay,
   }) : _shellRunner = shellRunner,
        _processStarter = processStarter,
        _healthGetter = healthGetter,
-       _clock = clock;
+       _postRequester = postRequester,
+       _clock = clock,
+       _delay = delay;
 
   final PublisherBackendShellRunner _shellRunner;
   final PublisherBackendProcessStarter _processStarter;
   final PublisherBackendHealthGetter _healthGetter;
+  final PublisherBackendPostRequester _postRequester;
   final PublisherBackendClock _clock;
+  final PublisherBackendDelay _delay;
 
   Future<PublisherBackendScaffoldResult> scaffold(
     PublisherBackendScaffoldRequest request,
@@ -975,7 +1005,12 @@ class PublisherBackendStarter {
     final healthUrl = outputs['PublisherBackendHealthUrl'];
     final health = healthUrl == null || healthUrl.trim().isEmpty
         ? const _PublisherBackendHealth(healthy: false)
-        : await _probeHealth(Uri.parse(healthUrl));
+        : await _waitForHealthCheck(
+            Uri.parse(healthUrl),
+            timeout: _awsDeployHealthWaitTimeout,
+            attemptTimeout: _awsDeployHealthAttemptTimeout,
+            retryDelay: _awsDeployHealthRetryDelay,
+          );
     final deployedAtUtc = _clock().toUtc().toIso8601String();
     final state = PublisherBackendAwsState(
       schemaVersion: 1,
@@ -998,6 +1033,7 @@ class PublisherBackendStarter {
       region: settings.region,
       samS3Bucket: settings.samS3Bucket,
       backendRootPath: settings.backendRootPath,
+      miniProgramRootPath: rootPath,
       outputs: outputs,
       backendBaseUrl: outputs['PublisherBackendBaseUrl'],
       healthUrl: outputs['PublisherBackendHealthUrl'],
@@ -1106,6 +1142,7 @@ class PublisherBackendStarter {
         stackExists: false,
         passed: false,
         routes: const <PublisherBackendAwsSmokeRouteResult>[],
+        includeWrite: request.includeWrite,
         error:
             'AWS publisher backend stack "${settings.stackName}" was not found.',
       );
@@ -1125,6 +1162,7 @@ class PublisherBackendStarter {
         backendBaseUrl: backendBaseUrl,
         passed: false,
         routes: const <PublisherBackendAwsSmokeRouteResult>[],
+        includeWrite: request.includeWrite,
         error: 'PublisherBackendBaseUrl output is missing.',
       );
     }
@@ -1140,6 +1178,15 @@ class PublisherBackendStarter {
         ),
       );
     }
+    if (request.includeWrite) {
+      routes.add(
+        await _probeSmokeWriteRoute(
+          uri: _resolveBackendRoute(baseUri, '/coupon/redeem'),
+          couponId: request.writeCouponId,
+          userId: request.writeUserId,
+        ),
+      );
+    }
     final passed = routes.every((route) => route.passed);
     return PublisherBackendAwsSmokeResult(
       provider: request.environment.provider,
@@ -1152,6 +1199,7 @@ class PublisherBackendStarter {
       backendBaseUrl: backendBaseUrl,
       passed: passed,
       routes: routes,
+      includeWrite: request.includeWrite,
     );
   }
 
@@ -1847,7 +1895,7 @@ class PublisherBackendStarter {
   }) async {
     for (var index = 0; index < items.length; index += 25) {
       final chunk = items.skip(index).take(25).toList();
-      final requestItems = <String, Object?>{
+      var requestItems = <String, Object?>{
         tableName: chunk
             .map(
               (item) => <String, Object?>{
@@ -1861,20 +1909,49 @@ class PublisherBackendStarter {
             )
             .toList(),
       };
-      final response = await _runAwsJsonCommand(settings, <String>[
-        'dynamodb',
-        'batch-write-item',
-        '--request-items',
-        jsonEncode(requestItems),
-      ]);
-      final unprocessed = response['UnprocessedItems'];
-      if (unprocessed is Map && unprocessed.isNotEmpty) {
-        throw PublisherBackendException(
-          'DynamoDB seed left unprocessed items for table "$tableName". '
-          'Retry `miniprogram publisher-backend aws seed`.',
-        );
+      for (
+        var attempt = 1;
+        attempt <= _dynamoDbBatchWriteMaxAttempts;
+        attempt++
+      ) {
+        final response = await _runAwsJsonCommand(settings, <String>[
+          'dynamodb',
+          'batch-write-item',
+          '--request-items',
+          jsonEncode(requestItems),
+        ]);
+        final unprocessed = _dynamoDbRequestItems(response['UnprocessedItems']);
+        if (!_hasDynamoDbRequestItems(unprocessed)) {
+          break;
+        }
+        if (attempt == _dynamoDbBatchWriteMaxAttempts) {
+          throw PublisherBackendException(
+            'DynamoDB seed left unprocessed items for table "$tableName" after '
+            '$_dynamoDbBatchWriteMaxAttempts attempts.',
+          );
+        }
+        requestItems = unprocessed;
+        await _delay(Duration(milliseconds: 200 * (1 << (attempt - 1))));
       }
     }
+  }
+
+  Map<String, Object?> _dynamoDbRequestItems(Object? value) {
+    if (value is! Map) {
+      return const <String, Object?>{};
+    }
+    return value.map((key, nestedValue) {
+      return MapEntry(key.toString(), nestedValue);
+    });
+  }
+
+  bool _hasDynamoDbRequestItems(Map<String, Object?> requestItems) {
+    for (final value in requestItems.values) {
+      if (value is List && value.isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<Map<String, dynamic>> _describeDynamoDbTable(
@@ -1901,28 +1978,48 @@ class PublisherBackendStarter {
     required String tableName,
     required String partitionKey,
   }) async {
-    final response = await _runAwsJsonCommand(settings, <String>[
-      'dynamodb',
-      'query',
-      '--table-name',
-      tableName,
-      '--key-condition-expression',
-      'pk = :pk',
-      '--expression-attribute-values',
-      jsonEncode(<String, Object?>{
-        ':pk': <String, Object?>{'S': partitionKey},
-      }),
-      '--select',
-      'COUNT',
-    ]);
-    final count = response['Count'];
-    if (count is int) {
-      return count;
+    var total = 0;
+    Map<String, Object?>? exclusiveStartKey;
+    do {
+      final arguments = <String>[
+        'dynamodb',
+        'query',
+        '--table-name',
+        tableName,
+        '--key-condition-expression',
+        'pk = :pk',
+        '--expression-attribute-values',
+        jsonEncode(<String, Object?>{
+          ':pk': <String, Object?>{'S': partitionKey},
+        }),
+        '--select',
+        'COUNT',
+        '--consistent-read',
+        if (exclusiveStartKey != null) ...<String>[
+          '--exclusive-start-key',
+          jsonEncode(exclusiveStartKey),
+        ],
+      ];
+      final response = await _runAwsJsonCommand(settings, arguments);
+      total += _dynamoDbCountValue(response['Count']);
+      final lastEvaluatedKey = response['LastEvaluatedKey'];
+      exclusiveStartKey = lastEvaluatedKey is Map && lastEvaluatedKey.isNotEmpty
+          ? lastEvaluatedKey.map(
+              (key, value) => MapEntry(key.toString(), value),
+            )
+          : null;
+    } while (exclusiveStartKey != null);
+    return total;
+  }
+
+  int _dynamoDbCountValue(Object? value) {
+    if (value is int) {
+      return value;
     }
-    if (count is num) {
-      return count.toInt();
+    if (value is num) {
+      return value.toInt();
     }
-    return int.tryParse(count?.toString() ?? '') ?? 0;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   Map<String, Object?> _toDynamoDbAttributeValue(Object? value) {
@@ -2095,6 +2192,72 @@ class PublisherBackendStarter {
     }
   }
 
+  Future<PublisherBackendAwsSmokeRouteResult> _probeSmokeWriteRoute({
+    required Uri uri,
+    required String couponId,
+    required String userId,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    const path = '/coupon/redeem';
+    try {
+      final response = await _postRequester(
+        uri,
+        headers: const <String, String>{'Content-Type': 'application/json'},
+        body: jsonEncode(<String, String>{
+          'couponId': couponId,
+          'userId': userId,
+        }),
+      ).timeout(timeout);
+      final responseStatus = _responseStatus(response.body);
+      final passed =
+          response.statusCode == 200 &&
+          (responseStatus == 'redeemed' ||
+              responseStatus == 'already_redeemed');
+      return PublisherBackendAwsSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: passed,
+        statusCode: response.statusCode,
+        responseStatus: responseStatus,
+        error: passed
+            ? null
+            : response.statusCode == 200
+            ? 'Write route returned 200 without redeemed status.'
+            : 'Route returned ${response.statusCode}.',
+      );
+    } on TimeoutException {
+      return PublisherBackendAwsSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendAwsSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: '$error',
+      );
+    }
+  }
+
+  String? _responseStatus(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) {
+        final status = decoded['status']?.toString().trim();
+        return status == null || status.isEmpty ? null : status;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
   Uri _resolveBackendRoute(Uri baseUri, String path) {
     final baseUrl = baseUri.toString();
     final normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
@@ -2105,6 +2268,8 @@ class PublisherBackendStarter {
   Future<_PublisherBackendHealth> _waitForHealthCheck(
     Uri uri, {
     required Duration timeout,
+    Duration attemptTimeout = const Duration(seconds: 1),
+    Duration retryDelay = const Duration(milliseconds: 250),
   }) async {
     final deadline = _clock().add(timeout);
     _PublisherBackendHealth lastResult = const _PublisherBackendHealth(
@@ -2112,11 +2277,11 @@ class PublisherBackendStarter {
       error: 'Health check did not start responding yet.',
     );
     while (_clock().isBefore(deadline)) {
-      lastResult = await _probeHealth(uri, timeout: const Duration(seconds: 1));
+      lastResult = await _probeHealth(uri, timeout: attemptTimeout);
       if (lastResult.healthy) {
         return lastResult;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+      await _delay(retryDelay);
     }
     return lastResult;
   }
@@ -2134,7 +2299,7 @@ class PublisherBackendStarter {
       if (!result.healthy) {
         return true;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+      await _delay(const Duration(milliseconds: 250));
     }
     final finalProbe = await _probeHealth(
       uri,
@@ -2188,7 +2353,19 @@ class PublisherBackendStarter {
     return StartedPublisherBackendProcess(pid: process.pid);
   }
 
+  static Future<http.Response> _defaultPostRequester(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    return http.post(uri, headers: headers, body: body);
+  }
+
   static DateTime _defaultClock() => DateTime.now();
+
+  static Future<void> _defaultDelay(Duration duration) {
+    return Future<void>.delayed(duration);
+  }
 }
 
 class _PublisherBackendHealth {
@@ -2697,10 +2874,12 @@ After deploying the stack, seed the starter data into DynamoDB:
 ```powershell
 miniprogram publisher-backend aws seed --env <env-name>
 miniprogram publisher-backend aws data status --env <env-name>
+miniprogram publisher-backend aws smoke --env <env-name> --include-write
 ```
 
 The DynamoDB table is owned by this SAM stack. `aws destroy --yes` deletes the
-stack-owned table and its data.
+stack-owned table and its data. Seed retries unprocessed DynamoDB batch writes;
+data status counts paginated app and redemption records.
 '''
       : '''
 Storage mode: bundled JSON.
@@ -2735,6 +2914,10 @@ Deploy from the mini-program root:
 ```powershell
 miniprogram publisher-backend aws deploy --env <env-name>
 ```
+
+Deploy waits for the health endpoint with cold-start-aware retries. The default
+smoke command is read-only; add `--include-write` only when you want to verify
+`POST /coupon/redeem`.
 
 After deploy, connect a host endpoint with:
 
@@ -2949,17 +3132,25 @@ class DynamoDbStore {
   }
 
   async couponsList() {
-    const response = await this.docClient.send(
-      new this.QueryCommand({
-        TableName: this.tableName,
-        KeyConditionExpression: 'pk = :pk AND begins_with(sk, :prefix)',
-        ExpressionAttributeValues: {
-          ':pk': this.appPk,
-          ':prefix': 'COUPON#',
-        },
-      }),
-    );
-    const coupons = (response.Items ?? [])
+    const items = [];
+    let exclusiveStartKey;
+    do {
+      const response = await this.docClient.send(
+        new this.QueryCommand({
+          TableName: this.tableName,
+          KeyConditionExpression: 'pk = :pk AND begins_with(sk, :prefix)',
+          ExpressionAttributeValues: {
+            ':pk': this.appPk,
+            ':prefix': 'COUPON#',
+          },
+          ConsistentRead: true,
+          ExclusiveStartKey: exclusiveStartKey,
+        }),
+      );
+      items.push(...(response.Items ?? []));
+      exclusiveStartKey = response.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+    const coupons = items
       .sort((left, right) => (left.sortIndex ?? 0) - (right.sortIndex ?? 0))
       .map((item) => item.payload)
       .filter((item) => item != null);
@@ -3053,6 +3244,7 @@ class DynamoDbStore {
           pk: this.appPk,
           sk,
         },
+        ConsistentRead: true,
       }),
     );
     return response.Item?.payload ?? null;

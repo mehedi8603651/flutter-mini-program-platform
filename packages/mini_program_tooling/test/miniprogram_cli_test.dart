@@ -954,6 +954,55 @@ void main() {
       expect(stdoutBuffer.toString(), contains('GET /auth/session: 200 OK'));
     });
 
+    test('publisher-backend aws smoke prints write route checks', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+          },
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            return http.Response(
+              jsonEncode(<String, Object?>{'status': 'redeemed'}),
+              200,
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'smoke',
+        '--env',
+        'my-aws-prod',
+        '--include-write',
+        '--write-coupon-id',
+        'coupon-20',
+        '--write-user-id',
+        'smoke-user',
+      ]);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('Write smoke: true'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('POST /coupon/redeem: 200 OK (redeemed)'),
+      );
+    });
+
     test('publisher-backend aws smoke prints JSON', () async {
       final standaloneRoot = p.join(tempDir.path, 'coupon_center');
       await _writeMiniProgramFixture(
@@ -992,9 +1041,58 @@ void main() {
       expect(json['command'], 'publisher-backend aws smoke');
       expect(json['passed'], isTrue);
       expect(json['backendBaseUrl'], contains('/prod/'));
+      expect(json['includeWrite'], isFalse);
       final routes = json['routes'] as List<Object?>;
       expect(routes, hasLength(4));
       expect(routes.first, containsPair('path', '/health'));
+    });
+
+    test('publisher-backend aws smoke prints write JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+          },
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            return http.Response(
+              jsonEncode(<String, Object?>{'status': 'already_redeemed'}),
+              200,
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'smoke',
+        '--env',
+        'my-aws-prod',
+        '--include-write',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['includeWrite'], isTrue);
+      final routes = json['routes'] as List<Object?>;
+      final writeRoute = routes.last as Map<String, dynamic>;
+      expect(writeRoute['method'], 'POST');
+      expect(writeRoute['path'], '/coupon/redeem');
+      expect(writeRoute['responseStatus'], 'already_redeemed');
     });
 
     test('publisher-backend aws smoke returns 1 when a route fails', () async {
@@ -1036,6 +1134,118 @@ void main() {
       expect(stdoutBuffer.toString(), contains('Passed: false'));
       expect(stdoutBuffer.toString(), contains('GET /auth/session: 500 FAIL'));
     });
+
+    test(
+      'publisher-backend aws smoke rejects write options without write smoke',
+      () async {
+        final stdoutBuffer = StringBuffer();
+        final stderrBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: stderrBuffer,
+          workingDirectory: tempDir.path,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'aws',
+          'smoke',
+          '--env',
+          'my-aws-prod',
+          '--write-coupon-id',
+          'coupon-20',
+        ]);
+
+        expect(exitCode, 64);
+        expect(stderrBuffer.toString(), contains('require --include-write'));
+        expect(stdoutBuffer.toString(), isEmpty);
+      },
+    );
+
+    test('publisher-backend aws smoke help includes write options', () async {
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: tempDir.path,
+      ).run(<String>['publisher-backend', 'aws', 'smoke', '--help']);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('--include-write'));
+      expect(stdoutBuffer.toString(), contains('--write-coupon-id'));
+      expect(stdoutBuffer.toString(), contains('--write-user-id'));
+    });
+
+    test(
+      'publisher-backend aws deploy prints DynamoDB next commands',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'aws-lambda',
+            storageMode: 'dynamodb',
+          ),
+        );
+        await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          publisherBackendStarter: PublisherBackendStarter(
+            shellRunner: (executable, arguments, {workingDirectory}) async {
+              if (arguments.contains('describe-stacks')) {
+                return ProcessResult(
+                  0,
+                  0,
+                  _publisherBackendStackJsonWithDataTable(),
+                  '',
+                );
+              }
+              return ProcessResult(0, 0, '{}', '');
+            },
+            healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          ),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'aws',
+          'deploy',
+          '--env',
+          'my-aws-prod',
+        ]);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Next commands:'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('publisher-backend aws seed --env my-aws-prod'),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains('publisher-backend aws data status --env my-aws-prod'),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains('publisher-backend aws smoke --env my-aws-prod'),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains('publisher-backend aws logs --env my-aws-prod'),
+        );
+      },
+    );
 
     test('publisher-backend scaffold help includes storage', () async {
       final stdoutBuffer = StringBuffer();
