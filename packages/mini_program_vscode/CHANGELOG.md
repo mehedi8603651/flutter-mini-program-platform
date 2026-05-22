@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.20
+
+- Add AWS Lambda publisher backend commands for setup, deploy, status, logs, and
+  host command copying.
+- Let `MiniProgram: Setup Publisher Backend` choose between mock local and AWS
+  Lambda templates.
+- Show AWS publisher backend scaffold/deploy state in sidebar and diagnostics.
+- Update docs for `mini_program_tooling` 0.3.23 publisher backend AWS flows.
+
 ## 0.1.19
 
 - Add local mock backend mode to `MiniProgram: Add Host Endpoint`, backed by

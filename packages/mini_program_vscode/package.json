@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -201,6 +201,26 @@
         "command": "miniProgramTools.publisherBackendStatus",
         "title": "MiniProgram: Publisher Backend Status",
         "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsDeploy",
+        "title": "MiniProgram: Deploy Publisher Backend to AWS",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsStatus",
+        "title": "MiniProgram: Publisher Backend AWS Status",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsLogs",
+        "title": "MiniProgram: Publisher Backend AWS Logs",
+        "icon": "$(output)"
+      },
+      {
+        "command": "miniProgramTools.copyAwsBackendHostCommand",
+        "title": "MiniProgram: Copy AWS Backend Host Command",
+        "icon": "$(copy)"
       },
       {
         "command": "miniProgramTools.copyPublisherBackendUrls",
@@ -411,6 +431,16 @@
           "group": "navigation@12.2"
         },
         {
+          "command": "miniProgramTools.publisherBackendAwsDeploy",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.25"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.26"
+        },
+        {
           "command": "miniProgramTools.copyPublisherBackendUrls",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.3"
@@ -419,6 +449,16 @@
           "command": "miniProgramTools.copyMockBackendHostCommand",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.4"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsLogs",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.5"
+        },
+        {
+          "command": "miniProgramTools.copyAwsBackendHostCommand",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.6"
         },
         {
           "command": "miniProgramTools.createAccessKey",

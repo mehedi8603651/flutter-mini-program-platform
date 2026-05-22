@@ -159,7 +159,7 @@ export interface BackendStatusArgsOptions {
 
 export interface PublisherBackendScaffoldArgsOptions {
   readonly miniProgramRoot?: string;
-  readonly template?: 'mock';
+  readonly template?: 'mock' | 'aws-lambda';
   readonly force?: boolean;
 }
 
@@ -179,6 +179,34 @@ export interface PublisherBackendStopArgsOptions {
 
 export interface PublisherBackendUrlsArgsOptions {
   readonly port?: number | string;
+}
+
+export interface PublisherBackendAwsBaseArgsOptions {
+  readonly envName: string;
+  readonly miniProgramRoot?: string;
+  readonly stackName?: string;
+  readonly stageName?: string;
+  readonly samS3Bucket?: string;
+}
+
+export interface PublisherBackendAwsStatusArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendAwsOutputsArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendAwsLogsArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly since?: string;
+}
+
+export interface PublisherBackendAwsDestroyArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly yes?: boolean;
 }
 
 export interface AccessKeyCreateArgsOptions {
@@ -552,6 +580,55 @@ export function buildPublisherBackendUrlsArgs(
   return args;
 }
 
+export function buildPublisherBackendAwsDeployArgs(
+  options: PublisherBackendAwsBaseArgsOptions,
+): string[] {
+  return withPublisherBackendAwsOptions(
+    ['publisher-backend', 'aws', 'deploy'],
+    options,
+  );
+}
+
+export function buildPublisherBackendAwsStatusArgs(
+  options: PublisherBackendAwsStatusArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsOutputsArgs(
+  options: PublisherBackendAwsOutputsArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'outputs'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsLogsArgs(
+  options: PublisherBackendAwsLogsArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'logs'];
+  if (options.since?.trim()) {
+    args.push('--since', options.since.trim());
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsDestroyArgs(
+  options: PublisherBackendAwsDestroyArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'destroy'];
+  if (options.yes) {
+    args.push('--yes');
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
 export function buildAccessKeyCreateArgs(
   options: AccessKeyCreateArgsOptions,
 ): string[] {
@@ -745,6 +822,24 @@ function withOptionalEnv(args: string[], envName?: string): string[] {
 function withRootPath(args: string[], rootPath?: string): string[] {
   if (rootPath?.trim()) {
     args.push('--root', rootPath.trim());
+  }
+  return args;
+}
+
+function withPublisherBackendAwsOptions(
+  args: string[],
+  options: PublisherBackendAwsBaseArgsOptions,
+): string[] {
+  args.push('--env', options.envName.trim());
+  withMiniProgramRoot(args, options.miniProgramRoot);
+  if (options.stackName?.trim()) {
+    args.push('--stack-name', options.stackName.trim());
+  }
+  if (options.stageName?.trim()) {
+    args.push('--stage-name', options.stageName.trim());
+  }
+  if (options.samS3Bucket?.trim()) {
+    args.push('--sam-s3-bucket', options.samS3Bucket.trim());
   }
   return args;
 }

@@ -192,6 +192,8 @@ async function buildMiniProgramChecks(
   const backendRequestIds = asStringList(backendUsage.requestIds);
   const hasPublisherBackendStarter = asBoolean(publisherBackendStarter.detected);
   const publisherBackendTemplate = asString(publisherBackendStarter.template, 'mock');
+  const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
+  const awsBackendBaseUrl = asString(awsPublisherBackend.backendBaseUrl);
 
   return [
     check(
@@ -283,13 +285,18 @@ async function buildMiniProgramChecks(
       'Publisher backend starter',
       hasPublisherBackendStarter || !usesBackendState ? 'ok' : 'warning',
       hasPublisherBackendStarter
-        ? `Mock publisher backend starter found: ${publisherBackendTemplate}.`
+        ? `Publisher backend starter found: ${publisherBackendTemplate}.`
         : usesBackendState
           ? 'Backend query/state helpers are used, but no local publisher backend starter was found.'
           : 'No local publisher backend starter was detected.',
-      asString(publisherBackendStarter.backendRootPath),
+      [
+        asString(publisherBackendStarter.backendRootPath),
+        awsBackendBaseUrl ? `AWS backend base URL: ${awsBackendBaseUrl}` : '',
+      ].filter(Boolean).join('\n') || undefined,
       hasPublisherBackendStarter
-        ? 'Run MiniProgram: Run Publisher Backend, then add host endpoints with --backend-base-url.'
+        ? publisherBackendTemplate === 'aws-lambda'
+          ? 'Run MiniProgram: Deploy Publisher Backend to AWS, then copy the AWS backend host command.'
+          : 'Run MiniProgram: Run Publisher Backend, then add host endpoints with --backend-base-url.'
         : usesBackendState
           ? 'Run MiniProgram: Setup Publisher Backend or connect a real publisher API with --backend-base-url.'
           : undefined,

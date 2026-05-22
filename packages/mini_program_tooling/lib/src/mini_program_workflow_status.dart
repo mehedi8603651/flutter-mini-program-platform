@@ -790,9 +790,9 @@ class MiniProgramWorkflowStatusController {
   Future<Map<String, Object?>> _inspectPublisherBackendStarter(
     String workspacePath,
   ) async {
-    final backendRootPath = p.join(workspacePath, 'backend', 'mock');
-    final serverPath = p.join(backendRootPath, 'bin', 'server.dart');
-    final dataRootPath = p.join(backendRootPath, 'data');
+    final mockBackendRootPath = p.join(workspacePath, 'backend', 'mock');
+    final serverPath = p.join(mockBackendRootPath, 'bin', 'server.dart');
+    final dataRootPath = p.join(mockBackendRootPath, 'data');
     final dataFiles = <String>[
       'home_bootstrap.json',
       'coupons_list.json',
@@ -805,16 +805,69 @@ class MiniProgramWorkflowStatusController {
         existingDataFiles.add(dataFile);
       }
     }
-    final detected =
+    final mockDetected =
         await File(serverPath).exists() &&
         await Directory(dataRootPath).exists();
+    final awsBackendRootPath = p.join(workspacePath, 'backend', 'aws_lambda');
+    final awsTemplatePath = p.join(awsBackendRootPath, 'template.yaml');
+    final awsHandlerPath = p.join(awsBackendRootPath, 'src', 'handler.mjs');
+    final awsDetected =
+        await File(awsTemplatePath).exists() &&
+        await File(awsHandlerPath).exists();
+    final awsStatePath = p.join(
+      workspacePath,
+      '.mini_program',
+      'publisher_backend.aws.json',
+    );
+    final awsState = await _tryReadJsonObject(File(awsStatePath));
     return <String, Object?>{
-      'detected': detected,
-      'template': detected ? 'mock' : null,
-      'backendRootPath': backendRootPath,
+      'detected': mockDetected || awsDetected,
+      'template': awsDetected
+          ? 'aws-lambda'
+          : mockDetected
+          ? 'mock'
+          : null,
+      'backendRootPath': awsDetected ? awsBackendRootPath : mockBackendRootPath,
       'serverPath': serverPath,
       'dataRootPath': dataRootPath,
       'dataFiles': existingDataFiles,
+      'mock': <String, Object?>{
+        'detected': mockDetected,
+        'backendRootPath': mockBackendRootPath,
+        'serverPath': serverPath,
+        'dataRootPath': dataRootPath,
+        'dataFiles': existingDataFiles,
+      },
+      'aws': <String, Object?>{
+        'detected': awsDetected,
+        'backendRootPath': awsBackendRootPath,
+        'templatePath': awsTemplatePath,
+        'handlerPath': awsHandlerPath,
+        'statePath': awsStatePath,
+        'stateExists': awsState != null,
+        if (awsState != null) ...<String, Object?>{
+          'environmentName': awsState['environmentName'],
+          'stackName': awsState['stackName'],
+          'stageName': awsState['stageName'],
+          'region': awsState['region'],
+          'deployedAtUtc': awsState['deployedAtUtc'],
+          'backendBaseUrl': _stringOutput(
+            awsState,
+            'outputs',
+            'PublisherBackendBaseUrl',
+          ),
+          'healthUrl': _stringOutput(
+            awsState,
+            'outputs',
+            'PublisherBackendHealthUrl',
+          ),
+          'functionName': _stringOutput(
+            awsState,
+            'outputs',
+            'PublisherBackendFunctionName',
+          ),
+        },
+      },
       'expectedRoutes': <String>[
         'GET /health',
         'GET /home/bootstrap',
@@ -824,6 +877,30 @@ class MiniProgramWorkflowStatusController {
       ],
     };
   }
+
+  Future<Map<String, dynamic>?> _tryReadJsonObject(File file) async {
+    try {
+      if (!await file.exists()) {
+        return null;
+      }
+      return await _readJsonObject(file);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+String? _stringOutput(
+  Map<String, dynamic> state,
+  String parentKey,
+  String outputKey,
+) {
+  final parent = state[parentKey];
+  if (parent is! Map) {
+    return null;
+  }
+  final value = parent[outputKey]?.toString().trim();
+  return value == null || value.isEmpty ? null : value;
 }
 
 Map<String, Object?> miniProgramWorkflowStatusBackendJson(

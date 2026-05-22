@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.23
+
+- add `publisher-backend scaffold --template aws-lambda` for a publisher-owned
+  AWS Lambda + API Gateway business API starter
+- add `publisher-backend aws deploy|status|outputs|logs|destroy` using the
+  configured AWS environment for region/profile/SAM bucket defaults
+- write `.mini_program/publisher_backend.aws.json` with last deploy outputs and
+  report AWS publisher backend state in `workflow status --json`
+- keep AWS publisher backend separate from mini-program delivery; host apps only
+  need the resulting `--backend-base-url`
+
 ## 0.3.22
 
 - add `host endpoint add --backend-local-mock` and

@@ -57,6 +57,7 @@ export function buildStatusTreeSections(
     const validation = asRecord(miniProgram.validation);
     const backendUsage = asRecord(miniProgram.backendUsage);
     const publisherBackendStarter = asRecord(miniProgram.publisherBackendStarter);
+    const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
       ? miniProgram.partnerPackages.length
       : 0;
@@ -86,6 +87,12 @@ export function buildStatusTreeSections(
           'Backend starter',
           asBoolean(publisherBackendStarter.detected)
             ? asString(publisherBackendStarter.template, 'mock')
+            : 'none',
+        ),
+        row(
+          'AWS backend',
+          asBoolean(awsPublisherBackend.detected)
+            ? asString(awsPublisherBackend.backendBaseUrl, 'scaffolded')
             : 'none',
         ),
       ]),

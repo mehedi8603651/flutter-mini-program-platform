@@ -91,6 +91,209 @@ void main() {
       expect(await readme.readAsString(), contains('mock publisher backend'));
     });
 
+    test('scaffolds AWS Lambda backend files and respects force', () async {
+      final starter = const PublisherBackendStarter();
+      final result = await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+        ),
+      );
+
+      expect(result.template, 'aws-lambda');
+      expect(
+        await File(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'aws_lambda',
+            'template.yaml',
+          ),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'aws_lambda',
+            'src',
+            'handler.mjs',
+          ),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'aws_lambda',
+            'src',
+            'data',
+            'coupons_list.json',
+          ),
+        ).exists(),
+        isTrue,
+      );
+
+      final readme = File(
+        p.join(miniProgramRoot.path, 'backend', 'aws_lambda', 'README.md'),
+      );
+      await readme.writeAsString('custom');
+      expect(
+        () => starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'aws-lambda',
+          ),
+        ),
+        throwsA(isA<PublisherBackendException>()),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+          force: true,
+        ),
+      );
+      expect(
+        await readme.readAsString(),
+        contains('AWS Lambda publisher backend'),
+      );
+    });
+
+    test('deploys AWS Lambda backend with SAM and records outputs', () async {
+      final commands = <String>[];
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          commands.add('$executable ${arguments.join(' ')}');
+          if (executable == 'aws' &&
+              arguments.contains('cloudformation') &&
+              arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJson(), '');
+          }
+          return ProcessResult(0, 0, '{}', '');
+        },
+        healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        clock: () => DateTime.utc(2026, 5, 22, 12),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+        ),
+      );
+      final environment = _awsEnvironment();
+
+      final result = await starter.awsDeploy(
+        PublisherBackendAwsDeployRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: environment,
+        ),
+      );
+
+      expect(
+        result.backendBaseUrl,
+        'https://abc.execute-api.ap-south-1.amazonaws.com/prod/',
+      );
+      expect(result.healthy, isTrue);
+      expect(commands, contains(contains('sam build --template-file')));
+      expect(
+        commands,
+        contains(
+          allOf(
+            contains('sam deploy'),
+            contains(
+              '--stack-name mini-program-publisher-backend-coupon-app-my-aws-prod',
+            ),
+            contains('--s3-bucket sam-artifacts'),
+            contains('--profile my-aws'),
+          ),
+        ),
+      );
+      final stateFile = File(
+        p.join(
+          miniProgramRoot.path,
+          '.mini_program',
+          'publisher_backend.aws.json',
+        ),
+      );
+      expect(await stateFile.exists(), isTrue);
+      expect(
+        await stateFile.readAsString(),
+        contains('PublisherBackendBaseUrl'),
+      );
+    });
+
+    test('AWS status reports missing stack without failing', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(
+            0,
+            255,
+            '',
+            'ValidationError: Stack with id test does not exist',
+          );
+        },
+      );
+
+      final result = await starter.awsStatus(
+        PublisherBackendAwsStatusRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.stackExists, isFalse);
+      expect(
+        result.stackName,
+        'mini-program-publisher-backend-coupon-app-my-aws-prod',
+      );
+    });
+
+    test(
+      'AWS logs resolves Lambda function before tailing CloudWatch',
+      () async {
+        final commands = <String>[];
+        final starter = PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            commands.add('$executable ${arguments.join(' ')}');
+            if (arguments.contains('describe-stack-resources')) {
+              return ProcessResult(
+                0,
+                0,
+                jsonEncode(<String, Object?>{
+                  'StackResources': <Object?>[
+                    <String, Object?>{
+                      'ResourceType': 'AWS::Lambda::Function',
+                      'PhysicalResourceId': 'coupon-function',
+                    },
+                  ],
+                }),
+                '',
+              );
+            }
+            return ProcessResult(0, 0, 'log line', '');
+          },
+        );
+
+        final result = await starter.awsLogs(
+          PublisherBackendAwsLogsRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _awsEnvironment(),
+            since: '30m',
+          ),
+        );
+
+        expect(result.lambdaFunctionName, 'coupon-function');
+        expect(result.stdoutText, 'log line');
+        expect(commands.last, contains('/aws/lambda/coupon-function'));
+        expect(commands.last, contains('--since 30m'));
+      },
+    );
+
     test('runs, serves mock routes, reports status, and stops', () async {
       final starter = const PublisherBackendStarter();
       await starter.scaffold(
@@ -149,6 +352,45 @@ void main() {
     });
   });
 }
+
+CloudEnvironmentConfiguration _awsEnvironment() {
+  return CloudEnvironmentConfiguration(
+    name: 'my-aws-prod',
+    provider: 'aws',
+    values: <String, dynamic>{
+      'bucket': 'delivery-bucket',
+      'region': 'ap-south-1',
+      'samS3Bucket': 'sam-artifacts',
+      'awsProfile': 'my-aws',
+    },
+    configuredAtUtc: DateTime.utc(2026).toIso8601String(),
+    updatedAtUtc: DateTime.utc(2026).toIso8601String(),
+  );
+}
+
+String _stackDescribeJson() => jsonEncode(<String, Object?>{
+  'Stacks': <Object?>[
+    <String, Object?>{
+      'StackStatus': 'CREATE_COMPLETE',
+      'Outputs': <Object?>[
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendBaseUrl',
+          'OutputValue':
+              'https://abc.execute-api.ap-south-1.amazonaws.com/prod/',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendHealthUrl',
+          'OutputValue':
+              'https://abc.execute-api.ap-south-1.amazonaws.com/prod/health',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendFunctionName',
+          'OutputValue': 'coupon-function',
+        },
+      ],
+    },
+  ],
+});
 
 Future<int> _freePort() async {
   final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);

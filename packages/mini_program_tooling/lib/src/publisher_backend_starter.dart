@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'local_cli_state.dart';
+
 typedef PublisherBackendShellRunner =
     Future<ProcessResult> Function(
       String executable,
@@ -53,6 +55,212 @@ class PublisherBackendScaffoldResult {
   final String backendRootPath;
   final String template;
   final List<String> createdPaths;
+}
+
+class PublisherBackendAwsDeployRequest {
+  const PublisherBackendAwsDeployRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsDeployResult {
+  const PublisherBackendAwsDeployResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.samS3Bucket,
+    required this.backendRootPath,
+    required this.outputs,
+    required this.deployedAtUtc,
+    this.backendBaseUrl,
+    this.healthUrl,
+    this.healthy,
+    this.healthStatusCode,
+    this.healthError,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final String samS3Bucket;
+  final String backendRootPath;
+  final Map<String, String> outputs;
+  final String deployedAtUtc;
+  final String? backendBaseUrl;
+  final String? healthUrl;
+  final bool? healthy;
+  final int? healthStatusCode;
+  final String? healthError;
+}
+
+class PublisherBackendAwsStatusRequest {
+  const PublisherBackendAwsStatusRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsStatusResult {
+  const PublisherBackendAwsStatusResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.outputs,
+    this.state,
+    this.stackStatus,
+    this.stackStatusReason,
+    this.backendBaseUrl,
+    this.healthUrl,
+    this.healthy,
+    this.healthStatusCode,
+    this.healthError,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final PublisherBackendAwsState? state;
+  final String? stackStatus;
+  final String? stackStatusReason;
+  final Map<String, String> outputs;
+  final String? backendBaseUrl;
+  final String? healthUrl;
+  final bool? healthy;
+  final int? healthStatusCode;
+  final String? healthError;
+}
+
+class PublisherBackendAwsOutputsRequest {
+  const PublisherBackendAwsOutputsRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsOutputsResult {
+  const PublisherBackendAwsOutputsResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.region,
+    required this.outputs,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String region;
+  final Map<String, String> outputs;
+}
+
+class PublisherBackendAwsLogsRequest {
+  const PublisherBackendAwsLogsRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+    this.since = '1h',
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+  final String since;
+}
+
+class PublisherBackendAwsLogsResult {
+  const PublisherBackendAwsLogsResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.region,
+    required this.lambdaFunctionName,
+    required this.since,
+    required this.stdoutText,
+    required this.stderrText,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String region;
+  final String lambdaFunctionName;
+  final String since;
+  final String stdoutText;
+  final String stderrText;
+}
+
+class PublisherBackendAwsDestroyRequest {
+  const PublisherBackendAwsDestroyRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsDestroyResult {
+  const PublisherBackendAwsDestroyResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.region,
+    required this.deletedAtUtc,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String region;
+  final String deletedAtUtc;
 }
 
 class PublisherBackendRunResult {
@@ -185,6 +393,90 @@ class PublisherBackendState {
   }
 }
 
+class PublisherBackendAwsState {
+  const PublisherBackendAwsState({
+    required this.schemaVersion,
+    required this.miniProgramRootPath,
+    required this.backendRootPath,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.samS3Bucket,
+    required this.outputs,
+    required this.deployedAtUtc,
+  });
+
+  final int schemaVersion;
+  final String miniProgramRootPath;
+  final String backendRootPath;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final String samS3Bucket;
+  final Map<String, String> outputs;
+  final String deployedAtUtc;
+
+  String? get backendBaseUrl => outputs['PublisherBackendBaseUrl'];
+  String? get healthUrl => outputs['PublisherBackendHealthUrl'];
+  String? get functionName => outputs['PublisherBackendFunctionName'];
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'schemaVersion': schemaVersion,
+    'miniProgramRootPath': miniProgramRootPath,
+    'backendRootPath': backendRootPath,
+    'environmentName': environmentName,
+    'stackName': stackName,
+    'stageName': stageName,
+    'region': region,
+    'samS3Bucket': samS3Bucket,
+    'outputs': outputs,
+    'deployedAtUtc': deployedAtUtc,
+  };
+
+  static PublisherBackendAwsState fromJson(Map<String, Object?> json) {
+    final schemaVersion = json['schemaVersion'];
+    final miniProgramRootPath = json['miniProgramRootPath'];
+    final backendRootPath = json['backendRootPath'];
+    final environmentName = json['environmentName'];
+    final stackName = json['stackName'];
+    final stageName = json['stageName'];
+    final region = json['region'];
+    final samS3Bucket = json['samS3Bucket'];
+    final outputs = json['outputs'];
+    final deployedAtUtc = json['deployedAtUtc'];
+    if (schemaVersion is! int ||
+        miniProgramRootPath is! String ||
+        backendRootPath is! String ||
+        environmentName is! String ||
+        stackName is! String ||
+        stageName is! String ||
+        region is! String ||
+        samS3Bucket is! String ||
+        outputs is! Map ||
+        deployedAtUtc is! String) {
+      throw const PublisherBackendException(
+        'publisher_backend.aws.json is missing required fields.',
+      );
+    }
+    return PublisherBackendAwsState(
+      schemaVersion: schemaVersion,
+      miniProgramRootPath: p.normalize(p.absolute(miniProgramRootPath)),
+      backendRootPath: p.normalize(p.absolute(backendRootPath)),
+      environmentName: environmentName,
+      stackName: stackName,
+      stageName: stageName,
+      region: region,
+      samS3Bucket: samS3Bucket,
+      outputs: outputs.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      ),
+      deployedAtUtc: deployedAtUtc,
+    );
+  }
+}
+
 class StartedPublisherBackendProcess {
   const StartedPublisherBackendProcess({required this.pid});
 
@@ -210,7 +502,7 @@ class PublisherBackendStarter {
   Future<PublisherBackendScaffoldResult> scaffold(
     PublisherBackendScaffoldRequest request,
   ) async {
-    if (request.template != 'mock') {
+    if (!const <String>['mock', 'aws-lambda'].contains(request.template)) {
       throw PublisherBackendException(
         'Unsupported publisher backend template: ${request.template}',
       );
@@ -218,11 +510,19 @@ class PublisherBackendStarter {
     final miniProgramRootPath = await _requireMiniProgramRoot(
       request.miniProgramRootPath,
     );
-    final backendRootPath = p.join(miniProgramRootPath, 'backend', 'mock');
-    final createdPaths = <String>[];
-    final files = buildMockPublisherBackendFiles(
-      miniProgramRootPath: miniProgramRootPath,
+    final backendRootPath = p.join(
+      miniProgramRootPath,
+      'backend',
+      request.template == 'mock' ? 'mock' : 'aws_lambda',
     );
+    final createdPaths = <String>[];
+    final files = request.template == 'mock'
+        ? buildMockPublisherBackendFiles(
+            miniProgramRootPath: miniProgramRootPath,
+          )
+        : buildAwsLambdaPublisherBackendFiles(
+            miniProgramRootPath: miniProgramRootPath,
+          );
     for (final entry in files.entries) {
       await _writeManagedFile(
         filePath: p.join(backendRootPath, entry.key),
@@ -434,6 +734,239 @@ class PublisherBackendStarter {
     return PublisherBackendUrlsResult(port: port);
   }
 
+  Future<PublisherBackendAwsDeployResult> awsDeploy(
+    PublisherBackendAwsDeployRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    await _assertAwsBackendPaths(settings.backendRootPath);
+    await _runSamCommand(settings, <String>[
+      'build',
+      '--template-file',
+      p.join(settings.backendRootPath, 'template.yaml'),
+    ], workingDirectory: settings.backendRootPath);
+    await _runSamCommand(settings, <String>[
+      'deploy',
+      '--template-file',
+      p.join(settings.backendRootPath, 'template.yaml'),
+      '--stack-name',
+      settings.stackName,
+      '--region',
+      settings.region,
+      '--capabilities',
+      'CAPABILITY_IAM',
+      '--s3-bucket',
+      settings.samS3Bucket,
+      '--parameter-overrides',
+      'StageName=${settings.stageName}',
+      '--no-confirm-changeset',
+      '--no-fail-on-empty-changeset',
+    ], workingDirectory: settings.backendRootPath);
+
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      throw const PublisherBackendException(
+        'SAM deploy finished but the publisher backend stack could not be described.',
+      );
+    }
+    final outputs = _extractStackOutputs(stack);
+    final healthUrl = outputs['PublisherBackendHealthUrl'];
+    final health = healthUrl == null || healthUrl.trim().isEmpty
+        ? const _PublisherBackendHealth(healthy: false)
+        : await _probeHealth(Uri.parse(healthUrl));
+    final deployedAtUtc = _clock().toUtc().toIso8601String();
+    final state = PublisherBackendAwsState(
+      schemaVersion: 1,
+      miniProgramRootPath: rootPath,
+      backendRootPath: settings.backendRootPath,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      samS3Bucket: settings.samS3Bucket,
+      outputs: outputs,
+      deployedAtUtc: deployedAtUtc,
+    );
+    await _writeAwsState(rootPath, state);
+    return PublisherBackendAwsDeployResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      samS3Bucket: settings.samS3Bucket,
+      backendRootPath: settings.backendRootPath,
+      outputs: outputs,
+      backendBaseUrl: outputs['PublisherBackendBaseUrl'],
+      healthUrl: outputs['PublisherBackendHealthUrl'],
+      healthy: health.healthy,
+      healthStatusCode: health.statusCode,
+      healthError: health.error,
+      deployedAtUtc: deployedAtUtc,
+    );
+  }
+
+  Future<PublisherBackendAwsStatusResult> awsStatus(
+    PublisherBackendAwsStatusRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final state = await _readAwsState(rootPath);
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsStatusResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        state: state,
+        outputs: const <String, String>{},
+      );
+    }
+    final outputs = _extractStackOutputs(stack);
+    final healthUrl = outputs['PublisherBackendHealthUrl'];
+    final health = healthUrl == null || healthUrl.trim().isEmpty
+        ? const _PublisherBackendHealth(healthy: false)
+        : await _probeHealth(Uri.parse(healthUrl));
+    return PublisherBackendAwsStatusResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      state: state,
+      stackStatus: stack['StackStatus']?.toString(),
+      stackStatusReason: stack['StackStatusReason']?.toString(),
+      outputs: outputs,
+      backendBaseUrl: outputs['PublisherBackendBaseUrl'],
+      healthUrl: outputs['PublisherBackendHealthUrl'],
+      healthy: health.healthy,
+      healthStatusCode: health.statusCode,
+      healthError: health.error,
+    );
+  }
+
+  Future<PublisherBackendAwsOutputsResult> awsOutputs(
+    PublisherBackendAwsOutputsRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      throw PublisherBackendException(
+        'AWS publisher backend stack "${settings.stackName}" was not found in '
+        'region "${settings.region}". Run `miniprogram publisher-backend aws deploy` first.',
+      );
+    }
+    return PublisherBackendAwsOutputsResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      region: settings.region,
+      outputs: _extractStackOutputs(stack),
+    );
+  }
+
+  Future<PublisherBackendAwsLogsResult> awsLogs(
+    PublisherBackendAwsLogsRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final functionName = await _resolveLambdaFunctionName(settings);
+    if (functionName == null) {
+      throw PublisherBackendException(
+        'No Lambda function resource was found for publisher backend stack '
+        '"${settings.stackName}". Run `miniprogram publisher-backend aws deploy` first.',
+      );
+    }
+    final arguments = <String>[
+      ..._awsGlobalArguments(settings),
+      'logs',
+      'tail',
+      '/aws/lambda/$functionName',
+      '--since',
+      request.since,
+    ];
+    final result = await _shellRunner('aws', arguments);
+    _requireSuccess(
+      executable: 'aws',
+      arguments: arguments,
+      result: result,
+      toolLabel: 'AWS CLI',
+    );
+    return PublisherBackendAwsLogsResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      region: settings.region,
+      lambdaFunctionName: functionName,
+      since: request.since,
+      stdoutText: '${result.stdout}'.trim(),
+      stderrText: '${result.stderr}'.trim(),
+    );
+  }
+
+  Future<PublisherBackendAwsDestroyResult> awsDestroy(
+    PublisherBackendAwsDestroyRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    await _runAwsJsonCommand(settings, <String>[
+      'cloudformation',
+      'delete-stack',
+      '--stack-name',
+      settings.stackName,
+    ], allowEmptyJsonOutput: true);
+    await _runAwsCommand(settings, <String>[
+      'cloudformation',
+      'wait',
+      'stack-delete-complete',
+      '--stack-name',
+      settings.stackName,
+    ]);
+    await _clearAwsState(rootPath);
+    return PublisherBackendAwsDestroyResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      region: settings.region,
+      deletedAtUtc: _clock().toUtc().toIso8601String(),
+    );
+  }
+
   Future<String> _requireMiniProgramRoot(String rawRootPath) async {
     final rootPath = p.normalize(p.absolute(rawRootPath));
     final manifestFile = File(p.join(rootPath, 'manifest.json'));
@@ -452,6 +985,17 @@ class PublisherBackendStarter {
       throw PublisherBackendException(
         'Publisher mock backend was not found. Run '
         '`miniprogram publisher-backend scaffold --template mock` first.',
+      );
+    }
+  }
+
+  Future<void> _assertAwsBackendPaths(String backendRootPath) async {
+    final templateFile = File(p.join(backendRootPath, 'template.yaml'));
+    final handlerFile = File(p.join(backendRootPath, 'src', 'handler.mjs'));
+    if (!await templateFile.exists() || !await handlerFile.exists()) {
+      throw const PublisherBackendException(
+        'AWS Lambda publisher backend was not found. Run '
+        '`miniprogram publisher-backend scaffold --template aws-lambda` first.',
       );
     }
   }
@@ -561,6 +1105,252 @@ class PublisherBackendStarter {
     if (await file.exists()) {
       await file.delete();
     }
+  }
+
+  String _awsStatePath(String miniProgramRootPath) => p.join(
+    miniProgramRootPath,
+    '.mini_program',
+    'publisher_backend.aws.json',
+  );
+
+  Future<PublisherBackendAwsState?> _readAwsState(
+    String miniProgramRootPath,
+  ) async {
+    final file = File(_awsStatePath(miniProgramRootPath));
+    if (!await file.exists()) {
+      return null;
+    }
+    final decoded = jsonDecode(await file.readAsString());
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'publisher_backend.aws.json must contain a JSON object.',
+      );
+    }
+    return PublisherBackendAwsState.fromJson(
+      decoded.map((key, value) => MapEntry(key.toString(), value)),
+    );
+  }
+
+  Future<void> _writeAwsState(
+    String miniProgramRootPath,
+    PublisherBackendAwsState state,
+  ) async {
+    final directory = await _ensureStateDirectory(miniProgramRootPath);
+    final file = File(p.join(directory.path, 'publisher_backend.aws.json'));
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
+  Future<void> _clearAwsState(String miniProgramRootPath) async {
+    final file = File(_awsStatePath(miniProgramRootPath));
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
+  Future<void> _runSamCommand(
+    _PublisherBackendAwsSettings settings,
+    List<String> commandArguments, {
+    required String workingDirectory,
+  }) async {
+    final arguments = <String>[
+      ...commandArguments,
+      if (settings.awsProfile != null) '--profile',
+      if (settings.awsProfile != null) settings.awsProfile!,
+    ];
+    final result = await _shellRunner(
+      'sam',
+      arguments,
+      workingDirectory: workingDirectory,
+    );
+    _requireSuccess(
+      executable: 'sam',
+      arguments: arguments,
+      result: result,
+      toolLabel: 'AWS SAM CLI',
+    );
+  }
+
+  Future<void> _runAwsCommand(
+    _PublisherBackendAwsSettings settings,
+    List<String> commandArguments,
+  ) async {
+    final arguments = <String>[
+      ..._awsGlobalArguments(settings),
+      ...commandArguments,
+    ];
+    final result = await _shellRunner('aws', arguments);
+    _requireSuccess(
+      executable: 'aws',
+      arguments: arguments,
+      result: result,
+      toolLabel: 'AWS CLI',
+    );
+  }
+
+  Future<Map<String, dynamic>> _runAwsJsonCommand(
+    _PublisherBackendAwsSettings settings,
+    List<String> commandArguments, {
+    bool allowEmptyJsonOutput = false,
+  }) async {
+    final arguments = <String>[
+      ..._awsGlobalArguments(settings),
+      ...commandArguments,
+      '--output',
+      'json',
+    ];
+    final result = await _shellRunner('aws', arguments);
+    _requireSuccess(
+      executable: 'aws',
+      arguments: arguments,
+      result: result,
+      toolLabel: 'AWS CLI',
+    );
+    final stdoutText = '${result.stdout}'.trim();
+    if (stdoutText.isEmpty) {
+      if (allowEmptyJsonOutput) {
+        return <String, dynamic>{};
+      }
+      throw PublisherBackendException(
+        'AWS CLI returned no JSON output for command: aws ${arguments.join(' ')}',
+      );
+    }
+    final decoded = jsonDecode(stdoutText);
+    if (decoded is! Map) {
+      throw PublisherBackendException(
+        'AWS CLI returned non-object JSON for command: aws ${arguments.join(' ')}',
+      );
+    }
+    return decoded.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Future<Map<String, dynamic>?> _describeStack(
+    _PublisherBackendAwsSettings settings,
+  ) async {
+    final arguments = <String>[
+      ..._awsGlobalArguments(settings),
+      'cloudformation',
+      'describe-stacks',
+      '--stack-name',
+      settings.stackName,
+      '--output',
+      'json',
+    ];
+    final result = await _shellRunner('aws', arguments);
+    if (result.exitCode != 0) {
+      final stderrText = '${result.stderr}'.trim();
+      if (stderrText.contains('does not exist') ||
+          stderrText.contains('Stack with id') ||
+          stderrText.contains('ValidationError')) {
+        return null;
+      }
+      _requireSuccess(
+        executable: 'aws',
+        arguments: arguments,
+        result: result,
+        toolLabel: 'AWS CLI',
+      );
+    }
+    final stdoutText = '${result.stdout}'.trim();
+    if (stdoutText.isEmpty) {
+      return null;
+    }
+    final decoded = jsonDecode(stdoutText);
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'AWS CLI returned non-object JSON for stack describe command.',
+      );
+    }
+    final stacks = decoded['Stacks'];
+    if (stacks is! List || stacks.isEmpty || stacks.first is! Map) {
+      return null;
+    }
+    return (stacks.first as Map).map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+  }
+
+  Future<String?> _resolveLambdaFunctionName(
+    _PublisherBackendAwsSettings settings,
+  ) async {
+    final response = await _runAwsJsonCommand(settings, <String>[
+      'cloudformation',
+      'describe-stack-resources',
+      '--stack-name',
+      settings.stackName,
+    ]);
+    final resources = response['StackResources'];
+    if (resources is! List) {
+      return null;
+    }
+    for (final resource in resources) {
+      if (resource is! Map) {
+        continue;
+      }
+      final mapped = resource.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      if (mapped['ResourceType'] == 'AWS::Lambda::Function') {
+        final physicalId = mapped['PhysicalResourceId']?.toString().trim();
+        if (physicalId != null && physicalId.isNotEmpty) {
+          return physicalId;
+        }
+      }
+    }
+    return null;
+  }
+
+  Map<String, String> _extractStackOutputs(Map<String, dynamic> stack) {
+    final outputs = <String, String>{};
+    final rawOutputs = stack['Outputs'];
+    if (rawOutputs is! List) {
+      return outputs;
+    }
+    for (final output in rawOutputs) {
+      if (output is! Map) {
+        continue;
+      }
+      final mapped = output.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final key = mapped['OutputKey']?.toString().trim();
+      final value = mapped['OutputValue']?.toString().trim();
+      if (key == null || key.isEmpty || value == null || value.isEmpty) {
+        continue;
+      }
+      outputs[key] = value;
+    }
+    final sortedKeys = outputs.keys.toList()..sort();
+    return <String, String>{for (final key in sortedKeys) key: outputs[key]!};
+  }
+
+  List<String> _awsGlobalArguments(_PublisherBackendAwsSettings settings) {
+    final arguments = <String>['--region', settings.region];
+    if (settings.awsProfile case final profile?
+        when profile.trim().isNotEmpty) {
+      arguments.addAll(<String>['--profile', profile]);
+    }
+    return arguments;
+  }
+
+  void _requireSuccess({
+    required String executable,
+    required List<String> arguments,
+    required ProcessResult result,
+    required String toolLabel,
+  }) {
+    if (result.exitCode == 0) {
+      return;
+    }
+    final stdoutText = '${result.stdout}'.trim();
+    final stderrText = '${result.stderr}'.trim();
+    throw PublisherBackendException(
+      '$toolLabel command failed.\n'
+      'Command: $executable ${arguments.join(' ')}\n'
+      'stdout: ${stdoutText.isEmpty ? '(empty)' : stdoutText}\n'
+      'stderr: ${stderrText.isEmpty ? '(empty)' : stderrText}',
+    );
   }
 
   Future<bool> _isProcessAlive(int pid) async {
@@ -715,6 +1505,119 @@ class _PublisherBackendHealth {
   final bool healthy;
   final int? statusCode;
   final String? error;
+}
+
+class _PublisherBackendAwsSettings {
+  const _PublisherBackendAwsSettings({
+    required this.environmentName,
+    required this.backendRootPath,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.samS3Bucket,
+    this.awsProfile,
+  });
+
+  final String environmentName;
+  final String backendRootPath;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final String samS3Bucket;
+  final String? awsProfile;
+
+  static _PublisherBackendAwsSettings fromEnvironment({
+    required CloudEnvironmentConfiguration environment,
+    required String miniProgramRootPath,
+    String? stackNameOverride,
+    String? stageNameOverride,
+    String? samS3BucketOverride,
+  }) {
+    if (environment.provider != 'aws') {
+      throw PublisherBackendException(
+        'Cloud environment "${environment.name}" is not an aws environment.',
+      );
+    }
+
+    String requiredValue(String key) {
+      final rawValue = environment.values[key];
+      final value = rawValue?.toString().trim() ?? '';
+      if (value.isEmpty) {
+        throw PublisherBackendException(
+          'Cloud environment "${environment.name}" is missing required aws '
+          'setting "$key". Run `miniprogram env configure ${environment.name} '
+          '--provider aws ...` again.',
+        );
+      }
+      return value;
+    }
+
+    String optionalValue(String? explicit, String key, String fallback) {
+      if (explicit != null && explicit.trim().isNotEmpty) {
+        return explicit.trim();
+      }
+      final rawValue = environment.values[key];
+      final value = rawValue?.toString().trim() ?? '';
+      return value.isEmpty ? fallback : value;
+    }
+
+    final appId = _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
+    final region = requiredValue('region');
+    final bucket = requiredValue('bucket');
+    final stageName = optionalValue(stageNameOverride, 'stageName', 'prod');
+    final samS3Bucket = optionalValue(
+      samS3BucketOverride,
+      'samS3Bucket',
+      bucket,
+    );
+    final stackName = stackNameOverride?.trim().isNotEmpty == true
+        ? stackNameOverride!.trim()
+        : _defaultAwsPublisherBackendStackName(appId, environment.name);
+    final awsProfile =
+        environment.values['awsProfile']?.toString().trim().isEmpty == true
+        ? null
+        : environment.values['awsProfile']?.toString().trim();
+
+    return _PublisherBackendAwsSettings(
+      environmentName: environment.name,
+      backendRootPath: p.join(miniProgramRootPath, 'backend', 'aws_lambda'),
+      stackName: stackName,
+      stageName: stageName,
+      region: region,
+      samS3Bucket: samS3Bucket,
+      awsProfile: awsProfile,
+    );
+  }
+}
+
+Map<String, String> buildAwsLambdaPublisherBackendFiles({
+  required String miniProgramRootPath,
+  String? miniProgramId,
+  String? title,
+}) {
+  final appId = miniProgramId?.trim().isNotEmpty == true
+      ? miniProgramId!.trim()
+      : _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
+  final displayTitle = title?.trim().isNotEmpty == true
+      ? title!.trim()
+      : _titleFromAppId(appId);
+  final sampleFiles = buildMockPublisherBackendFiles(
+    miniProgramRootPath: miniProgramRootPath,
+    miniProgramId: appId,
+    title: displayTitle,
+  );
+  return <String, String>{
+    'template.yaml': _awsLambdaTemplateYaml(displayTitle),
+    'README.md': _awsLambdaReadme(appId, displayTitle),
+    p.join('src', 'package.json'): _awsLambdaPackageJson(appId),
+    p.join('src', 'handler.mjs'): _awsLambdaHandlerSource(),
+    p.join('src', 'data', 'home_bootstrap.json'):
+        sampleFiles[p.join('data', 'home_bootstrap.json')]!,
+    p.join('src', 'data', 'coupons_list.json'):
+        sampleFiles[p.join('data', 'coupons_list.json')]!,
+    p.join('src', 'data', 'session.json'):
+        sampleFiles[p.join('data', 'session.json')]!,
+  };
 }
 
 Map<String, String> buildMockPublisherBackendFiles({
@@ -937,6 +1840,254 @@ String? _option(List<String> arguments, String name) {
   return null;
 }
 ''';
+
+String _awsLambdaTemplateYaml(String title) =>
+    '''
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Publisher-owned business API backend for $title.
+
+Parameters:
+  StageName:
+    Type: String
+    Default: prod
+    Description: API Gateway stage name.
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Timeout: 8
+    MemorySize: 256
+    Architectures:
+      - arm64
+
+Resources:
+  PublisherBackendHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - content-type
+          - x-mini-program-access-key
+          - x-mini-program-app-id
+          - x-mini-program-host-app
+          - x-mini-program-host-version
+          - x-mini-program-id
+          - x-mini-program-sdk-version
+          - x-mini-program-platform
+          - x-mini-program-locale
+
+  PublisherBackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handler.handler
+      Description: Publisher-owned mini-program business API.
+      Events:
+        ProxyApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref PublisherBackendHttpApi
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  PublisherBackendBaseUrl:
+    Description: Base URL for MiniProgramBackendEndpoint.baseUri.
+    Value: !Sub 'https://\${PublisherBackendHttpApi}.execute-api.\${AWS::Region}.amazonaws.com/\${StageName}/'
+  PublisherBackendHealthUrl:
+    Description: Publisher backend health URL.
+    Value: !Sub 'https://\${PublisherBackendHttpApi}.execute-api.\${AWS::Region}.amazonaws.com/\${StageName}/health'
+  PublisherBackendFunctionName:
+    Description: Publisher backend Lambda function name.
+    Value: !Ref PublisherBackendFunction
+  PublisherBackendStackName:
+    Description: Publisher backend CloudFormation stack name.
+    Value: !Ref AWS::StackName
+''';
+
+String _awsLambdaReadme(String appId, String title) =>
+    '''
+# $title AWS Lambda publisher backend
+
+This backend is for publisher-owned business APIs. It is not the mini-program
+delivery backend. Host apps only receive the resulting `backendBaseUrl`; AWS
+secrets and future database credentials stay on the publisher server.
+
+Routes:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+- `OPTIONS *`
+
+Deploy from the mini-program root:
+
+```powershell
+miniprogram publisher-backend aws deploy --env <env-name>
+```
+
+After deploy, connect a host endpoint with:
+
+```powershell
+miniprogram host endpoint add $appId `
+  --api-base-url <delivery-url> `
+  --public `
+  --backend-base-url <PublisherBackendBaseUrl>
+```
+
+The sample Lambda returns bundled JSON. Replace the route implementation with
+Firebase Admin, DynamoDB, S3, Secrets Manager, or any server-side API later.
+Do not put publisher backend secrets in mini-program JSON, host source, APK,
+IPA, or web JavaScript.
+''';
+
+String _awsLambdaPackageJson(String appId) =>
+    '''
+{
+  "name": "${appId}_aws_publisher_backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AWS Lambda publisher backend starter for $appId"
+}
+''';
+
+String _awsLambdaHandlerSource() => r'''
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
+const dataRoot = join(currentDir, 'data');
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-headers':
+    'content-type, x-mini-program-access-key, x-mini-program-app-id, x-mini-program-host-app, x-mini-program-host-version, x-mini-program-id, x-mini-program-sdk-version, x-mini-program-platform, x-mini-program-locale',
+  'content-type': 'application/json; charset=utf-8',
+};
+
+export async function handler(event) {
+  const method = event.requestContext?.http?.method ?? event.httpMethod ?? 'GET';
+  const path = normalizePath(event.rawPath ?? event.path ?? '/');
+
+  if (method === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers: corsHeaders,
+      body: '',
+    };
+  }
+
+  if (method === 'GET' && path === '/health') {
+    return json(200, {
+      status: 'ok',
+      service: 'mini_program_aws_publisher_backend',
+      generatedAtUtc: new Date().toISOString(),
+    });
+  }
+
+  if (method === 'GET' && path === '/home/bootstrap') {
+    return dataFile('home_bootstrap.json');
+  }
+
+  if (method === 'GET' && path === '/coupons/list') {
+    return dataFile('coupons_list.json');
+  }
+
+  if (method === 'GET' && path === '/auth/session') {
+    return dataFile('session.json');
+  }
+
+  if (method === 'POST' && path === '/coupon/redeem') {
+    const body = parseJsonBody(event.body, event.isBase64Encoded);
+    return json(200, {
+      status: 'redeemed',
+      couponId: body?.couponId ?? null,
+      message:
+        'AWS sample redeem succeeded. Replace this route on your real publisher backend.',
+    });
+  }
+
+  return json(404, {
+    errorCode: 'not_found',
+    message: `No publisher backend route matches ${path}.`,
+  });
+}
+
+async function dataFile(fileName) {
+  try {
+    const raw = await readFile(join(dataRoot, fileName), 'utf8');
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: raw,
+    };
+  } catch (error) {
+    return json(404, {
+      errorCode: 'backend_data_missing',
+      message: `Backend data file was not found: ${fileName}`,
+    });
+  }
+}
+
+function parseJsonBody(rawBody, isBase64Encoded) {
+  if (!rawBody) {
+    return {};
+  }
+  const decoded = isBase64Encoded
+    ? Buffer.from(rawBody, 'base64').toString('utf8')
+    : rawBody;
+  try {
+    return JSON.parse(decoded);
+  } catch (_) {
+    return {};
+  }
+}
+
+function normalizePath(rawPath) {
+  const value = rawPath.replace(/\/+$/g, '');
+  return value.length === 0 ? '/' : value;
+}
+
+function json(statusCode, body) {
+  return {
+    statusCode,
+    headers: corsHeaders,
+    body: JSON.stringify(body, null, 2),
+  };
+}
+''';
+
+String _defaultAwsPublisherBackendStackName(
+  String appId,
+  String environmentName,
+) {
+  final safeAppId = _safeAwsSegment(appId);
+  final safeEnv = _safeAwsSegment(environmentName);
+  return 'mini-program-publisher-backend-$safeAppId-$safeEnv';
+}
+
+String _safeAwsSegment(String value) {
+  final normalized = value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9-]+'), '-')
+      .replaceAll(RegExp(r'-+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return normalized.isEmpty ? 'default' : normalized;
+}
 
 String? _readManifestIdSync(String miniProgramRootPath) {
   try {

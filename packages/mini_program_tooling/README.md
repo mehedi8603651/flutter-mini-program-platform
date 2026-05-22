@@ -72,11 +72,16 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-miniprogram publisher-backend scaffold --template mock [--mini-program-root <path>] [--force]
+miniprogram publisher-backend scaffold --template mock|aws-lambda [--mini-program-root <path>] [--force]
 miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
 miniprogram publisher-backend status [--mini-program-root <path>] [--json]
 miniprogram publisher-backend stop [--mini-program-root <path>]
 miniprogram publisher-backend urls [--port 9090]
+miniprogram publisher-backend aws deploy --env <env-name> [--mini-program-root <path>]
+miniprogram publisher-backend aws status --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws outputs --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
+miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root <path>] --yes
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
@@ -577,6 +582,50 @@ AWS Lambda, Firebase Functions, GCP, or any HTTP JSON server with the same route
 shape. Firebase/AWS/custom SDKs belong on the publisher server, not in
 `mini_program_sdk` or the host app. Keep backend secrets on the publisher
 server.
+
+#### AWS Lambda publisher backend
+
+When the mock routes are working locally, scaffold the AWS Lambda starter:
+
+```bash
+miniprogram publisher-backend scaffold --template aws-lambda
+```
+
+This creates `backend/aws_lambda/` with a SAM template, Node.js Lambda handler,
+and the same sample JSON routes as the mock backend:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+
+Deploy it with an existing AWS environment:
+
+```bash
+miniprogram publisher-backend aws deploy --env my-aws-prod
+```
+
+The deploy output includes `PublisherBackendBaseUrl`. Connect that URL to a
+host endpoint:
+
+```bash
+miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-base-url https://abc.execute-api.ap-south-1.amazonaws.com/prod/
+```
+
+Useful AWS backend commands:
+
+```bash
+miniprogram publisher-backend aws status --env my-aws-prod --json
+miniprogram publisher-backend aws outputs --env my-aws-prod --json
+miniprogram publisher-backend aws logs --env my-aws-prod --since 1h
+miniprogram publisher-backend aws destroy --env my-aws-prod --yes
+```
+
+This AWS backend is separate from the mini-program delivery AWS stack. It is for
+publisher business APIs only. AWS credentials, Firebase Admin credentials,
+database secrets, and payment secrets belong in Lambda/server configuration, not
+in mini-program JSON, host app source, APK, IPA, or web JavaScript.
 
 ### Publisher-owned backend
 

@@ -28,6 +28,11 @@ import {
   buildPartnerPackageArgs,
   buildPreviewArgs,
   buildPublisherBackendRunArgs,
+  buildPublisherBackendAwsDeployArgs,
+  buildPublisherBackendAwsDestroyArgs,
+  buildPublisherBackendAwsLogsArgs,
+  buildPublisherBackendAwsOutputsArgs,
+  buildPublisherBackendAwsStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
   buildPublisherBackendStopArgs,
@@ -525,6 +530,111 @@ test('builds backend command arguments', () => {
     '--port',
     '9091',
   ]);
+  assert.deepEqual(
+    buildPublisherBackendScaffoldArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      template: 'aws-lambda',
+    }),
+    [
+      'publisher-backend',
+      'scaffold',
+      '--template',
+      'aws-lambda',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsDeployArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      stackName: 'publisher-stack',
+      stageName: 'dev',
+      samS3Bucket: 'sam-bucket',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'deploy',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+      '--stack-name',
+      'publisher-stack',
+      '--stage-name',
+      'dev',
+      '--sam-s3-bucket',
+      'sam-bucket',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsStatusArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'status',
+      '--json',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsOutputsArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'outputs',
+      '--json',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsLogsArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      since: '30m',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'logs',
+      '--since',
+      '30m',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsDestroyArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      yes: true,
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'destroy',
+      '--yes',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
 });
 
 test('builds access-key command arguments', () => {

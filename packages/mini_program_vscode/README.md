@@ -75,6 +75,10 @@ code --install-extension mini-program-tools-0.1.19.vsix
   - `MiniProgram: Run Publisher Backend`
   - `MiniProgram: Stop Publisher Backend`
   - `MiniProgram: Publisher Backend Status`
+  - `MiniProgram: Deploy Publisher Backend to AWS`
+  - `MiniProgram: Publisher Backend AWS Status`
+  - `MiniProgram: Publisher Backend AWS Logs`
+  - `MiniProgram: Copy AWS Backend Host Command`
   - `MiniProgram: Copy Publisher Backend URLs`
   - `MiniProgram: Create Access Key`
   - `MiniProgram: List Access Keys`
@@ -148,9 +152,9 @@ leaving VS Code.
 
 ## Publisher backend starter
 
-The publisher backend starter is separate from the delivery backend. It is a
-local mock business API for mini-program data, images, and fake session/auth
-responses.
+The publisher backend starter is separate from the delivery backend. It can
+create a local mock business API for development or an AWS Lambda + API Gateway
+starter for production-style publisher APIs.
 
 From VS Code:
 
@@ -160,7 +164,8 @@ From VS Code:
 4. Run `MiniProgram: Run Publisher Backend`.
 5. Run `MiniProgram: Copy Publisher Backend URLs`.
 
-For an existing mini-program, run `MiniProgram: Setup Publisher Backend`.
+For an existing mini-program, run `MiniProgram: Setup Publisher Backend` and
+choose **Mock local** or **AWS Lambda**.
 
 The generated mock server is local-only and lives under:
 
@@ -189,6 +194,27 @@ for developers who want to paste it into a terminal.
 The mock backend is for local development only. Firebase, AWS, GCP, or custom
 server SDKs belong on publisher backend servers, not in the Flutter host app or
 `mini_program_sdk`.
+
+### AWS Lambda publisher backend
+
+Choose **AWS Lambda** in `MiniProgram: Setup Publisher Backend` to scaffold
+`backend/aws_lambda/`. It uses the same route shape as the mock backend:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+
+Deploy with `MiniProgram: Deploy Publisher Backend to AWS`, then inspect it with
+`MiniProgram: Publisher Backend AWS Status` or
+`MiniProgram: Publisher Backend AWS Logs`.
+
+`MiniProgram: Copy AWS Backend Host Command` reads the deployed
+`PublisherBackendBaseUrl` and copies a host endpoint command that uses
+`--backend-base-url`. The host app does not need AWS credentials or AWS SDKs.
+AWS/Firebase/database secrets stay in Lambda/server configuration, never in
+mini-program JSON, host source, APK, IPA, or web JavaScript.
 
 ## Partner handoff workflow
 

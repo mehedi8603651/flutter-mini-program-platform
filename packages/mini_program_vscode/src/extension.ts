@@ -30,6 +30,10 @@ import {
   buildPartnerPackageArgs,
   buildPreviewArgs,
   buildPublisherBackendRunArgs,
+  buildPublisherBackendAwsDeployArgs,
+  buildPublisherBackendAwsLogsArgs,
+  buildPublisherBackendAwsOutputsArgs,
+  buildPublisherBackendAwsStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
   buildPublisherBackendStopArgs,
@@ -217,6 +221,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendStatus', () =>
       publisherBackendStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDeploy', () =>
+      publisherBackendAwsDeploy(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsStatus', () =>
+      publisherBackendAwsStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsLogs', () =>
+      publisherBackendAwsLogs(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.copyAwsBackendHostCommand', () =>
+      copyAwsBackendHostCommand(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.copyPublisherBackendUrls', () =>
       copyPublisherBackendUrls(output),
@@ -1085,6 +1101,24 @@ async function publisherBackendSetup(
   if (!workspacePath) {
     return;
   }
+  const templateChoice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Mock local',
+        value: 'mock' as const,
+        description: 'Local JSON API starter for development',
+      },
+      {
+        label: 'AWS Lambda',
+        value: 'aws-lambda' as const,
+        description: 'API Gateway + Lambda starter for publisher business APIs',
+      },
+    ],
+    { title: 'Publisher backend template', ignoreFocusOut: true },
+  );
+  if (!templateChoice) {
+    return;
+  }
   const force = await chooseForce(
     'Overwrite scaffold-managed publisher backend files?',
   );
@@ -1095,7 +1129,7 @@ async function publisherBackendSetup(
     'Publisher Backend Setup',
     buildPublisherBackendScaffoldArgs({
       miniProgramRoot: workspacePath,
-      template: 'mock',
+      template: templateChoice.value,
       force,
     }),
     workspacePath,
@@ -1172,6 +1206,166 @@ async function publisherBackendStatus(output: vscode.OutputChannel): Promise<voi
     output,
     { allowNonZeroExit: true },
   );
+}
+
+async function publisherBackendAwsDeploy(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const envName = await promptRequiredEnvName('AWS environment name');
+  if (!envName) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend AWS Deploy',
+    buildPublisherBackendAwsDeployArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+  }
+}
+
+async function publisherBackendAwsStatus(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const envName = await promptRequiredEnvName('AWS environment name');
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS Status',
+    buildPublisherBackendAwsStatusArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: true,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendAwsLogs(output: vscode.OutputChannel): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const envName = await promptRequiredEnvName('AWS environment name');
+  if (!envName) {
+    return;
+  }
+  const since = await vscode.window.showInputBox({
+    prompt: 'CloudWatch log time range',
+    value: '1h',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Time range is required.',
+  });
+  if (!since) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS Logs',
+    buildPublisherBackendAwsLogsArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      since: since.trim(),
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function copyAwsBackendHostCommand(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const envName = await promptRequiredEnvName('AWS environment name');
+  if (!envName) {
+    return;
+  }
+  const appId = await promptAppId();
+  if (!appId) {
+    return;
+  }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program display title',
+    value: hostTitleFromAppId(appId),
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
+  });
+  if (!title) {
+    return;
+  }
+  const apiBaseUrl = await vscode.window.showInputBox({
+    prompt: 'Mini-program delivery API base URL',
+    placeHolder: 'https://cdn.example.com/public_mini_program/',
+    ignoreFocusOut: true,
+    validateInput: validateAbsoluteUrl,
+  });
+  if (!apiBaseUrl) {
+    return;
+  }
+  const result = await runCliCapture(
+    'Publisher Backend AWS Outputs',
+    buildPublisherBackendAwsOutputsArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: true,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: false },
+  );
+  if (!result) {
+    return;
+  }
+  const json = parseJsonObject(result.stdout);
+  const outputs = json.outputs && typeof json.outputs === 'object'
+    ? (json.outputs as Record<string, unknown>)
+    : {};
+  const backendBaseUrl =
+    stringValue(json.backendBaseUrl) ??
+    stringValue(outputs.PublisherBackendBaseUrl);
+  if (!backendBaseUrl) {
+    vscode.window.showErrorMessage(
+      'PublisherBackendBaseUrl was not found. Deploy the AWS publisher backend first.',
+    );
+    return;
+  }
+  const args = buildHostEndpointAddArgs({
+    appId,
+    title: title.trim(),
+    apiBaseUrl: apiBaseUrl.trim(),
+    public: true,
+    backendBaseUrl,
+    projectRoot: '.',
+  }).filter((arg, index, all) => {
+    return !(arg === '--project-root' || all[index - 1] === '--project-root');
+  });
+  const command = formatCommandLine(configuredCliPath(), args);
+  await vscode.env.clipboard.writeText(command);
+  output.show(true);
+  output.appendLine('');
+  output.appendLine('Copied AWS publisher backend host command:');
+  output.appendLine(command);
+  vscode.window.showInformationMessage('AWS backend host command copied.');
 }
 
 async function copyPublisherBackendUrls(
@@ -2998,6 +3192,16 @@ async function promptOptionalEnvName(): Promise<string | undefined> {
   return envName === undefined ? undefined : envName.trim() || '';
 }
 
+async function promptRequiredEnvName(prompt: string): Promise<string | undefined> {
+  const envName = await vscode.window.showInputBox({
+    prompt,
+    placeHolder: 'my-aws-prod',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
+  });
+  return envName === undefined ? undefined : envName.trim();
+}
+
 function diagnosticCommandTitle(scope: DiagnosticScope): string {
   switch (scope) {
     case 'miniProgram':
@@ -3021,6 +3225,10 @@ function parseJsonObject(rawOutput: string): Record<string, unknown> {
     throw new Error('Command did not return a JSON object.');
   }
   return decoded as Record<string, unknown>;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 async function choosePartnerPackageOutputPath(

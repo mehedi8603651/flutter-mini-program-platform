@@ -2759,6 +2759,8 @@ class MiniprogramCli {
         return _runPublisherBackendStop(arguments.sublist(1));
       case 'urls':
         return _runPublisherBackendUrls(arguments.sublist(1));
+      case 'aws':
+        return _runPublisherBackendAws(arguments.sublist(1));
       default:
         _stderr.writeln(
           'Unknown publisher-backend command: ${arguments.first}',
@@ -2779,7 +2781,7 @@ class MiniprogramCli {
       ..addOption(
         'template',
         defaultsTo: 'mock',
-        allowed: const <String>['mock'],
+        allowed: const <String>['mock', 'aws-lambda'],
         help: 'Publisher backend starter template.',
       )
       ..addOption(
@@ -2816,6 +2818,251 @@ class MiniprogramCli {
     );
     _stdout.writeln(_formatPublisherBackendScaffoldResult(result));
     return 0;
+  }
+
+  Future<int> _runPublisherBackendAws(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_publisherBackendAwsUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_publisherBackendAwsUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'deploy':
+        return _runPublisherBackendAwsDeploy(arguments.sublist(1));
+      case 'status':
+        return _runPublisherBackendAwsStatus(arguments.sublist(1));
+      case 'outputs':
+        return _runPublisherBackendAwsOutputs(arguments.sublist(1));
+      case 'logs':
+        return _runPublisherBackendAwsLogs(arguments.sublist(1));
+      case 'destroy':
+        return _runPublisherBackendAwsDestroy(arguments.sublist(1));
+      default:
+        _stderr.writeln(
+          'Unknown publisher-backend aws command: ${arguments.first}',
+        );
+        _stderr.writeln(_publisherBackendAwsUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runPublisherBackendAwsDeploy(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws deploy [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsDeploy(
+      PublisherBackendAwsDeployRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    _stdout.writeln(_formatPublisherBackendAwsDeployResult(result));
+    return result.healthy == false ? 1 : 0;
+  }
+
+  Future<int> _runPublisherBackendAwsStatus(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws status [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsStatus(
+      PublisherBackendAwsStatusRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsStatusJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsStatusResult(result));
+    }
+    return !result.stackExists || result.healthy == false ? 1 : 0;
+  }
+
+  Future<int> _runPublisherBackendAwsOutputs(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws outputs [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsOutputs(
+      PublisherBackendAwsOutputsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsOutputsJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsOutputsResult(result));
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendAwsLogs(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      )
+      ..addOption('since', defaultsTo: '1h', help: 'CloudWatch tail window.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws logs [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsLogs(
+      PublisherBackendAwsLogsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+        since: results.option('since') ?? '1h',
+      ),
+    );
+    _stdout.writeln(_formatPublisherBackendAwsLogsResult(result));
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendAwsDestroy(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      )
+      ..addFlag(
+        'yes',
+        negatable: false,
+        help: 'Required confirmation for stack deletion.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws destroy [options] --yes',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (!results.flag('yes')) {
+      throw const FormatException(
+        'publisher-backend aws destroy is destructive and requires --yes.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsDestroy(
+      PublisherBackendAwsDestroyRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    _stdout.writeln(_formatPublisherBackendAwsDestroyResult(result));
+    return 0;
+  }
+
+  ArgParser _publisherBackendAwsCommandParser() => ArgParser()
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      negatable: false,
+      help: 'Show usage information.',
+    )
+    ..addOption('env', help: 'Named AWS cloud environment override.')
+    ..addOption(
+      'mini-program-root',
+      help: 'Exact mini-program root. Defaults to the current directory.',
+    );
+
+  Future<_PublisherBackendAwsInputs> _resolvePublisherBackendAwsInputs(
+    ArgResults results,
+  ) async {
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'publisher-backend aws commands do not accept positional arguments.',
+      );
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final resolvedEnvironment = await _requireEnvironmentState(
+      additionalSearchRoots: <String>[miniProgramRootPath],
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolvedEnvironment.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    if (environment.provider != 'aws') {
+      throw FormatException(
+        'publisher-backend aws requires an aws environment. '
+        'Environment "${environment.name}" uses provider "${environment.provider}".',
+      );
+    }
+    return _PublisherBackendAwsInputs(
+      miniProgramRootPath: miniProgramRootPath,
+      environment: environment,
+    );
   }
 
   Future<int> _runPublisherBackendRun(List<String> arguments) async {
@@ -3395,11 +3642,12 @@ Commands:
   backend stop
   backend status [--json]
   backend reset-local --yes
-  publisher-backend scaffold --template mock
+  publisher-backend scaffold --template mock|aws-lambda
   publisher-backend run --port 9090
   publisher-backend status [--json]
   publisher-backend stop
   publisher-backend urls
+  publisher-backend aws deploy|status|outputs|logs|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -3416,11 +3664,27 @@ Commands:
 Usage: miniprogram publisher-backend <command> [arguments]
 
 Commands:
-  scaffold [--template mock] [--mini-program-root <path>] [--force]
+  scaffold [--template mock|aws-lambda] [--mini-program-root <path>] [--force]
   run [--mini-program-root <path>] [--port 9090]
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
   urls [--port 9090]
+  aws deploy --env <env-name> [--mini-program-root <path>]
+  aws status --env <env-name> [--mini-program-root <path>] [--json]
+  aws outputs --env <env-name> [--mini-program-root <path>] [--json]
+  aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
+  aws destroy --env <env-name> [--mini-program-root <path>] --yes
+''';
+
+  String _publisherBackendAwsUsage() => '''
+Usage: miniprogram publisher-backend aws <command> [arguments]
+
+Commands:
+  deploy --env <env-name> [--mini-program-root <path>] [--stack-name <name>] [--stage-name <stage>] [--sam-s3-bucket <bucket>]
+  status --env <env-name> [--mini-program-root <path>] [--json]
+  outputs --env <env-name> [--mini-program-root <path>] [--json]
+  logs --env <env-name> [--mini-program-root <path>] [--since 1h]
+  destroy --env <env-name> [--mini-program-root <path>] --yes
 ''';
 
   String _partnerUsage() => '''
@@ -4455,6 +4719,117 @@ Commands:
     ].join('\n');
   }
 
+  String _formatPublisherBackendAwsDeployResult(
+    PublisherBackendAwsDeployResult result,
+  ) {
+    final lines = <String>[
+      'Deployed AWS Lambda publisher backend.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'SAM bucket: ${result.samS3Bucket}',
+      'Backend root: ${result.backendRootPath}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
+      if (result.healthy != null) 'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      'Deployed at UTC: ${result.deployedAtUtc}',
+    ];
+    if (result.outputs.isNotEmpty) {
+      lines
+        ..add('Outputs:')
+        ..addAll(
+          result.outputs.entries.map((entry) => '${entry.key}: ${entry.value}'),
+        );
+    }
+    if (result.backendBaseUrl != null) {
+      lines.addAll(<String>[
+        '',
+        'Host endpoint command:',
+        'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.backendBaseUrl}',
+      ]);
+    }
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendAwsStatusResult(
+    PublisherBackendAwsStatusResult result,
+  ) {
+    final lines = <String>[
+      'AWS Lambda publisher backend status.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.stackStatusReason != null)
+        'Stack reason: ${result.stackStatusReason}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
+      if (result.healthy != null) 'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+    ];
+    if (result.state != null) {
+      lines.add('Last deploy state: ${result.state!.deployedAtUtc}');
+    }
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendAwsOutputsResult(
+    PublisherBackendAwsOutputsResult result,
+  ) {
+    final lines = <String>[
+      'AWS Lambda publisher backend outputs.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Region: ${result.region}',
+    ];
+    lines.addAll(
+      result.outputs.entries.map((entry) => '${entry.key}: ${entry.value}'),
+    );
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendAwsLogsResult(
+    PublisherBackendAwsLogsResult result,
+  ) {
+    return <String>[
+      'AWS Lambda publisher backend logs.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Region: ${result.region}',
+      'Function: ${result.lambdaFunctionName}',
+      'Since: ${result.since}',
+      if (result.stdoutText.isNotEmpty) result.stdoutText,
+      if (result.stderrText.isNotEmpty) 'stderr:\n${result.stderrText}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendAwsDestroyResult(
+    PublisherBackendAwsDestroyResult result,
+  ) {
+    return <String>[
+      'Deleted AWS Lambda publisher backend stack.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Region: ${result.region}',
+      'Deleted at UTC: ${result.deletedAtUtc}',
+    ].join('\n');
+  }
+
   List<String> _formatPublisherBackendTargetUrls(int port) {
     final urls = PublisherBackendUrlsResult(port: port);
     return <String>[
@@ -4494,6 +4869,54 @@ Commands:
           ).androidUsbBaseUrl,
         },
       },
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsStatusJson(
+    PublisherBackendAwsStatusResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws status',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'stackStatusReason': result.stackStatusReason,
+      'backendBaseUrl': result.backendBaseUrl,
+      'healthUrl': result.healthUrl,
+      'healthy': result.healthy,
+      'healthStatusCode': result.healthStatusCode,
+      'healthError': result.healthError,
+      'outputs': result.outputs,
+      'lastDeploy': result.state == null
+          ? null
+          : <String, Object?>{
+              'deployedAtUtc': result.state!.deployedAtUtc,
+              'backendRootPath': result.state!.backendRootPath,
+              'stackName': result.state!.stackName,
+              'backendBaseUrl': result.state!.backendBaseUrl,
+            },
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsOutputsJson(
+    PublisherBackendAwsOutputsResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws outputs',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'region': result.region,
+      'outputs': result.outputs,
+      'backendBaseUrl': result.outputs['PublisherBackendBaseUrl'],
+      'healthUrl': result.outputs['PublisherBackendHealthUrl'],
+      'functionName': result.outputs['PublisherBackendFunctionName'],
     };
   }
 
@@ -4853,4 +5276,14 @@ Commands:
     );
     return await apiRoot.exists() && await serverEntrypoint.exists();
   }
+}
+
+class _PublisherBackendAwsInputs {
+  const _PublisherBackendAwsInputs({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
 }
