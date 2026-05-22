@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.20 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.22 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, and
@@ -40,7 +40,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.18.vsix
+code --install-extension mini-program-tools-0.1.19.vsix
 ```
 
 ## Features
@@ -176,10 +176,15 @@ It serves:
 - `GET /auth/session`
 - `POST /coupon/redeem`
 
-Use the copied backend URL when adding the mini-program to a host endpoint with
-`MiniProgram: Add Host Endpoint`. Use `http://127.0.0.1:9090/` for Chrome,
-Windows, macOS, and Linux on the same machine. Use `http://10.0.2.2:9090/` for
-Android emulator host runs.
+Use `MiniProgram: Add Host Endpoint` and choose **Local mock backend**. It
+writes `--backend-local-mock`, which stores `http://127.0.0.1:9090/` in host
+config. With `mini_program_sdk` 0.3.5 or newer, the SDK falls back between
+`127.0.0.1` / `localhost` and Android emulator `10.0.2.2`, so the same host
+config works for Chrome, desktop, and Android emulator. Real devices may need
+a LAN IP URL or `adb reverse`.
+
+`MiniProgram: Copy Mock Backend Host Command` copies the equivalent CLI command
+for developers who want to paste it into a terminal.
 
 The mock backend is for local development only. Firebase, AWS, GCP, or custom
 server SDKs belong on publisher backend servers, not in the Flutter host app or

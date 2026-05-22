@@ -73,6 +73,7 @@ class MiniProgramHostEndpointAddRequest {
     this.title,
     this.accessKey,
     this.backendBaseUri,
+    this.backendMode,
     this.force = false,
   });
 
@@ -82,6 +83,7 @@ class MiniProgramHostEndpointAddRequest {
   final String? title;
   final String? accessKey;
   final Uri? backendBaseUri;
+  final String? backendMode;
   final bool force;
 }
 
@@ -94,6 +96,7 @@ class MiniProgramHostEndpointAddResult {
     required this.title,
     required this.apiBaseUri,
     this.backendBaseUri,
+    required this.backendMode,
     required this.accessMode,
     required this.endpointCount,
     required this.registryCount,
@@ -108,6 +111,7 @@ class MiniProgramHostEndpointAddResult {
   final String title;
   final Uri apiBaseUri;
   final Uri? backendBaseUri;
+  final String backendMode;
   final String accessMode;
   final int endpointCount;
   final int registryCount;
@@ -218,6 +222,10 @@ class MiniProgramHostController {
       );
     }
     final backendBaseUri = request.backendBaseUri;
+    final backendMode = _normalizeBackendMode(
+      request.backendMode,
+      hasBackendBaseUri: backendBaseUri != null,
+    );
     if (backendBaseUri != null &&
         (!backendBaseUri.hasScheme || backendBaseUri.host.isEmpty)) {
       throw MiniProgramHostException(
@@ -255,6 +263,7 @@ class MiniProgramHostController {
       backendBaseUri: backendBaseUri == null
           ? null
           : _normalizeUri(backendBaseUri),
+      backendMode: backendMode,
     );
 
     final registryCreated = !await registryFile.exists();
@@ -309,6 +318,7 @@ class MiniProgramHostController {
       title: title,
       apiBaseUri: request.apiBaseUri,
       backendBaseUri: backendBaseUri,
+      backendMode: backendMode,
       accessMode: normalizedAccessKey == null ? 'public' : 'protected',
       endpointCount: endpoints.length,
       registryCount: registry.length,
@@ -348,6 +358,10 @@ class MiniProgramHostController {
               : 'public');
       final accessKey = value['accessKey']?.toString().trim();
       final backendBaseUri = value['backendBaseUri']?.toString().trim();
+      final backendMode = _normalizeBackendMode(
+        value['backendMode']?.toString(),
+        hasBackendBaseUri: backendBaseUri != null && backendBaseUri.isNotEmpty,
+      );
       if (apiBaseUri.isEmpty ||
           (accessMode == 'protected' &&
               (accessKey == null || accessKey.isEmpty)) ||
@@ -364,6 +378,7 @@ class MiniProgramHostController {
           backendBaseUri: backendBaseUri == null || backendBaseUri.isEmpty
               ? null
               : backendBaseUri,
+          backendMode: backendMode,
         ),
       );
     });
@@ -415,6 +430,7 @@ class MiniProgramHostController {
           if (entry.value.accessKey != null) 'accessKey': entry.value.accessKey,
           if (entry.value.backendBaseUri != null)
             'backendBaseUri': entry.value.backendBaseUri,
+          'backendMode': entry.value.backendMode,
         },
     });
     final buffer = StringBuffer()
@@ -528,6 +544,28 @@ class MiniProgramHostController {
 
   String _normalizeUri(Uri uri) =>
       uri.toString().replaceFirst(RegExp(r'/+$'), '');
+
+  String _normalizeBackendMode(
+    String? rawMode, {
+    required bool hasBackendBaseUri,
+  }) {
+    final mode = rawMode?.trim().toLowerCase();
+    if (mode == null || mode.isEmpty) {
+      return hasBackendBaseUri ? 'remote' : 'none';
+    }
+    if (mode == 'none' || mode == 'remote' || mode == 'local_mock') {
+      if (mode == 'none' && hasBackendBaseUri) {
+        return 'remote';
+      }
+      if (mode != 'none' && !hasBackendBaseUri) {
+        return 'none';
+      }
+      return mode;
+    }
+    throw MiniProgramHostException(
+      'Unsupported mini-program backend mode: $rawMode',
+    );
+  }
 
   String _dartString(String value) => jsonEncode(value);
 
@@ -711,11 +749,13 @@ class _EndpointRecord {
     required this.apiBaseUri,
     this.accessKey,
     this.backendBaseUri,
+    required this.backendMode,
   });
 
   final String apiBaseUri;
   final String? accessKey;
   final String? backendBaseUri;
+  final String backendMode;
 
   bool get isPublic => accessKey == null;
 

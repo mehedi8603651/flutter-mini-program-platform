@@ -360,7 +360,8 @@ async function buildHostAppChecks(
       const endpoint = asRecord(entry);
       const appId = asString(endpoint.appId);
       const backendBaseUri = asString(endpoint.backendBaseUri);
-      return appId ? `${appId}:${backendBaseUri ? 'configured' : 'none'}` : '';
+      const backendMode = asString(endpoint.backendMode, backendBaseUri ? 'remote' : 'none');
+      return appId ? `${appId}:${backendMode}` : '';
     })
     .filter(Boolean);
   const endpointBackendIssues = endpoints
@@ -370,6 +371,10 @@ async function buildHostAppChecks(
       return backendBaseUri.length > 0 && !isAbsoluteUrl(backendBaseUri);
     })
     .map((entry) => asString(entry.appId, 'unknown'));
+  const usesLocalMockBackend = endpoints
+    .map((entry) => asRecord(entry))
+    .some((entry) => asString(entry.backendMode) === 'local_mock');
+  const localMockSdkSupported = !usesLocalMockBackend || sdkSupportsLocalMockFallback(pubspec);
   const endpointAppIdsFromReport = endpoints
     .map((entry) => asString(asRecord(entry).appId))
     .filter((appId): appId is string => Boolean(appId));
@@ -464,6 +469,18 @@ async function buildHostAppChecks(
       endpointBackendIssues.length === 0
         ? undefined
         : 'Re-add the endpoint with a valid absolute publisher backend URL.',
+    ),
+    check(
+      'host_app.local_mock_backend_sdk',
+      'Local mock backend SDK',
+      localMockSdkSupported ? 'ok' : 'warning',
+      usesLocalMockBackend
+        ? localMockSdkSupported
+          ? 'Local mock backend endpoint uses an SDK version with loopback fallback support.'
+          : 'Local mock backend endpoint may need mini_program_sdk 0.3.5 or newer for Android emulator fallback.'
+        : 'No local mock backend endpoint is configured.',
+      undefined,
+      localMockSdkSupported ? undefined : 'Run flutter pub upgrade mini_program_sdk or update pubspec.yaml to mini_program_sdk: ^0.3.5.',
     ),
     check(
       'host_app.endpoint_routing',
@@ -838,6 +855,19 @@ async function readText(filePath: string): Promise<string> {
 
 async function fileContains(filePath: string, pattern: string): Promise<boolean> {
   return (await readText(filePath)).includes(pattern);
+}
+
+function sdkSupportsLocalMockFallback(pubspec: string): boolean {
+  if (/mini_program_sdk\s*:\s*\^?0\.3\.(?:[5-9]|\d{2,})\b/.test(pubspec)) {
+    return true;
+  }
+  if (/mini_program_sdk\s*:\s*\^?0\.(?:[4-9]|\d{2,})\./.test(pubspec)) {
+    return true;
+  }
+  if (/mini_program_sdk\s*:\s*\n\s*(path|git)\s*:/.test(pubspec)) {
+    return true;
+  }
+  return !/mini_program_sdk\s*:/.test(pubspec);
 }
 
 async function countJsonFiles(directoryPath: string): Promise<number> {

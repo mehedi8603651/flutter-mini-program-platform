@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.19
+
+- Add local mock backend mode to `MiniProgram: Add Host Endpoint`, backed by
+  `miniprogram host endpoint add --backend-local-mock`.
+- Add `MiniProgram: Copy Mock Backend Host Command` for quick local host setup.
+- Show endpoint backend mode in sidebar/diagnostics.
+- Update docs for `mini_program_tooling` 0.3.22 and `mini_program_sdk` 0.3.5
+  loopback fallback.
+
 ## 0.1.18
 
 - Add publisher backend starter commands for setup, run, stop, status, and

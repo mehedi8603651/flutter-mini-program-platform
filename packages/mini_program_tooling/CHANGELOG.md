@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.22
+
+- add `host endpoint add --backend-local-mock` and
+  `--backend-local-mock-port` for local publisher backend host config
+- write endpoint `backendMode` metadata for diagnostics and IDE workflows
+- update generated host and preview dependency constraints to
+  `mini_program_sdk: ^0.3.5`
+- clarify mock backend URL guidance for Chrome, desktop, Android emulator, and
+  real devices
+
 ## 0.3.21
 
 - fix generated `mini_program_registry.dart` so `byAppId` uses literal string

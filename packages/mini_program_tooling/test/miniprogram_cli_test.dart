@@ -1188,6 +1188,7 @@ void main() {
         endpointSource,
         contains('"backendBaseUri":"https://publisher.example.com/api"'),
       );
+      expect(endpointSource, contains('"backendMode":"remote"'));
       expect(endpointSource, contains('MiniProgramBackendEndpoint('));
       expect(endpointSource, contains('https://publisher.example.com/api'));
       final registryFile = File(
@@ -1236,6 +1237,7 @@ void main() {
       );
       final endpointSource = await endpointFile.readAsString();
       expect(endpointSource, contains('"accessMode":"public"'));
+      expect(endpointSource, contains('"backendMode":"none"'));
       expect(endpointSource, contains('MiniProgramEndpoint.public('));
       expect(endpointSource, contains('MiniPrograms.publicCouponDemo.appId'));
       expect(endpointSource, isNot(contains('accessKey:')));
@@ -1246,6 +1248,122 @@ void main() {
       expect(registrySource, contains('static const publicCouponDemo'));
       expect(registrySource, contains('title: "Public Coupon Demo"'));
     });
+
+    test('host endpoint add supports local mock backend shortcut', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: StringBuffer(),
+            workingDirectory: hostRoot,
+          ).run(<String>[
+            'host',
+            'endpoint',
+            'add',
+            'coupon_app',
+            '--title',
+            'Coupon App',
+            '--api-base-url',
+            'https://user.github.io/repo/public_mini_program/',
+            '--public',
+            '--backend-local-mock',
+          ]);
+
+      expect(exitCode, 0);
+      final endpointSource = await File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      ).readAsString();
+      expect(endpointSource, contains('"backendMode":"local_mock"'));
+      expect(
+        endpointSource,
+        contains('"backendBaseUri":"http://127.0.0.1:9090"'),
+      );
+      expect(endpointSource, contains('MiniProgramBackendEndpoint('));
+      expect(endpointSource, contains('Uri.parse("http://127.0.0.1:9090")'));
+    });
+
+    test(
+      'host endpoint add supports a custom local mock backend port',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeEmbeddedHostFixture(hostRoot);
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              workingDirectory: hostRoot,
+            ).run(<String>[
+              'host',
+              'endpoint',
+              'add',
+              'coupon_app',
+              '--title',
+              'Coupon App',
+              '--api-base-url',
+              'https://user.github.io/repo/public_mini_program/',
+              '--public',
+              '--backend-local-mock',
+              '--backend-local-mock-port',
+              '9091',
+            ]);
+
+        expect(exitCode, 0);
+        final endpointSource = await File(
+          p.join(
+            hostRoot,
+            'lib',
+            'mini_program',
+            'mini_program_endpoints.dart',
+          ),
+        ).readAsString();
+        expect(
+          endpointSource,
+          contains('"backendBaseUri":"http://127.0.0.1:9091"'),
+        );
+        expect(endpointSource, contains('Uri.parse("http://127.0.0.1:9091")'));
+      },
+    );
+
+    test(
+      'host endpoint add rejects local mock and explicit backend URL together',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeEmbeddedHostFixture(hostRoot);
+        final stderrBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: stderrBuffer,
+              workingDirectory: hostRoot,
+            ).run(<String>[
+              'host',
+              'endpoint',
+              'add',
+              'coupon_app',
+              '--api-base-url',
+              'https://user.github.io/repo/public_mini_program/',
+              '--public',
+              '--backend-local-mock',
+              '--backend-base-url',
+              'https://publisher.example.com/api/',
+            ]);
+
+        expect(exitCode, 64);
+        expect(
+          stderrBuffer.toString(),
+          contains(
+            'cannot use both --backend-local-mock and --backend-base-url',
+          ),
+        );
+      },
+    );
 
     test('host endpoint add requires access key or public mode', () async {
       final hostRoot = p.join(tempDir.path, 'host_app');
@@ -1624,7 +1742,7 @@ miniProgramBackendQueryAction(
       );
       await endpointFile.writeAsString('''
 // BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","backendBaseUri":"https://publisher.example.com/api","accessMode":"protected","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessMode":"public"}}
+// {"coupon_center":{"apiBaseUri":"https://api.example.com/api","backendBaseUri":"https://publisher.example.com/api","backendMode":"remote","accessMode":"protected","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessMode":"public","backendMode":"none"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 ''');
       final stdoutBuffer = StringBuffer();
@@ -1654,7 +1772,9 @@ miniProgramBackendQueryAction(
       expect(couponEndpoint['hasAccessKey'], isTrue);
       expect(couponEndpoint['accessMode'], 'protected');
       expect(couponEndpoint['backendConfigured'], isTrue);
+      expect(couponEndpoint['backendMode'], 'remote');
       expect(rewardsEndpoint['accessMode'], 'public');
+      expect(rewardsEndpoint['backendMode'], 'none');
     });
 
     test(
@@ -2421,7 +2541,7 @@ dependencies:
       );
       expect(
         await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-        contains('mini_program_sdk: ^0.3.4'),
+        contains('mini_program_sdk: ^0.3.5'),
       );
     });
 

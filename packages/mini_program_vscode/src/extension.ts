@@ -221,6 +221,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.copyPublisherBackendUrls', () =>
       copyPublisherBackendUrls(output),
     ),
+    vscode.commands.registerCommand('miniProgramTools.copyMockBackendHostCommand', () =>
+      copyMockBackendHostCommand(),
+    ),
     vscode.commands.registerCommand('miniProgramTools.createAccessKey', () =>
       createAccessKey(output, refreshStatus),
     ),
@@ -620,7 +623,10 @@ async function addHostEndpoint(
     }
     accessKey = value.trim();
   }
-  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
+  const backend = await choosePublisherBackendMode();
+  if (!backend) {
+    return;
+  }
   const force = await chooseForce('Replace an unrecognized endpoint file?');
   if (force === undefined) {
     return;
@@ -632,7 +638,9 @@ async function addHostEndpoint(
       appId: appId.trim(),
       title: title.trim(),
       apiBaseUrl: apiBaseUrl.trim(),
-      backendBaseUrl,
+      backendBaseUrl: backend.kind === 'remote' ? backend.backendBaseUrl : undefined,
+      backendLocalMock: backend.kind === 'local_mock',
+      backendLocalMockPort: backend.kind === 'local_mock' ? backend.port : undefined,
       accessKey,
       public: accessMode === 'public',
       projectRoot,
@@ -1198,6 +1206,60 @@ async function copyPublisherBackendUrls(
   output.appendLine('');
   output.appendLine(text);
   vscode.window.showInformationMessage('Publisher backend URLs copied.');
+}
+
+async function copyMockBackendHostCommand(): Promise<void> {
+  const appId = await vscode.window.showInputBox({
+    prompt: 'Mini-program appId',
+    placeHolder: 'coupon_app',
+    ignoreFocusOut: true,
+    validateInput: validateAppId,
+  });
+  if (!appId) {
+    return;
+  }
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program display title',
+    value: hostTitleFromAppId(appId.trim()),
+    placeHolder: 'Coupon App',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
+  });
+  if (!title) {
+    return;
+  }
+  const apiBaseUrl = await vscode.window.showInputBox({
+    prompt: 'Mini-program delivery API base URL',
+    placeHolder: 'https://cdn.example.com/public_mini_program/',
+    ignoreFocusOut: true,
+    validateInput: validateAbsoluteUrl,
+  });
+  if (!apiBaseUrl) {
+    return;
+  }
+  const port = await vscode.window.showInputBox({
+    prompt: 'Publisher mock backend port',
+    value: '9090',
+    ignoreFocusOut: true,
+    validateInput: validatePort,
+  });
+  if (!port) {
+    return;
+  }
+  const args = buildHostEndpointAddArgs({
+    appId: appId.trim(),
+    title: title.trim(),
+    apiBaseUrl: apiBaseUrl.trim(),
+    public: true,
+    backendLocalMock: true,
+    backendLocalMockPort: port.trim(),
+    projectRoot: '.',
+  }).filter((arg, index, all) => {
+    return !(arg === '--project-root' || all[index - 1] === '--project-root');
+  });
+  const command = formatCommandLine(configuredCliPath(), args);
+  await vscode.env.clipboard.writeText(command);
+  vscode.window.showInformationMessage('Mock backend host command copied.');
 }
 
 async function createAccessKey(
@@ -2681,6 +2743,8 @@ async function promptHostEndpointInputs(): Promise<
       readonly title: string;
       readonly apiBaseUrl: string;
       readonly backendBaseUrl?: string;
+      readonly backendLocalMock?: boolean;
+      readonly backendLocalMockPort?: string;
       readonly accessKey?: string;
       readonly public?: boolean;
     }
@@ -2733,12 +2797,17 @@ async function promptHostEndpointInputs(): Promise<
     }
     accessKey = value.trim();
   }
-  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
+  const backend = await choosePublisherBackendMode();
+  if (!backend) {
+    return undefined;
+  }
   return {
     appId: appId.trim(),
     title: title.trim(),
     apiBaseUrl: apiBaseUrl.trim(),
-    backendBaseUrl,
+    backendBaseUrl: backend.kind === 'remote' ? backend.backendBaseUrl : undefined,
+    backendLocalMock: backend.kind === 'local_mock',
+    backendLocalMockPort: backend.kind === 'local_mock' ? backend.port : undefined,
     accessKey,
     public: accessMode === 'public',
   };
@@ -3170,6 +3239,51 @@ async function promptOptionalPublisherBackendBaseUrl(): Promise<string | undefin
     validateInput: validateOptionalAbsoluteUrl,
   });
   return value?.trim() || undefined;
+}
+
+type PublisherBackendMode =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'local_mock'; readonly port: string }
+  | { readonly kind: 'remote'; readonly backendBaseUrl: string };
+
+async function choosePublisherBackendMode(): Promise<PublisherBackendMode | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'No backend',
+        description: 'Only configure manifest/screen delivery',
+        value: 'none' as const,
+      },
+      {
+        label: 'Local mock backend',
+        description: 'Use miniprogram publisher-backend run, default port 9090',
+        value: 'local_mock' as const,
+      },
+      {
+        label: 'Remote publisher backend',
+        description: 'Use a real HTTPS publisher-owned API base URL',
+        value: 'remote' as const,
+      },
+    ],
+    { title: 'Publisher backend mode', ignoreFocusOut: true },
+  );
+  if (!choice) {
+    return undefined;
+  }
+  if (choice.value === 'none') {
+    return { kind: 'none' };
+  }
+  if (choice.value === 'local_mock') {
+    const port = await vscode.window.showInputBox({
+      prompt: 'Publisher mock backend port',
+      value: '9090',
+      ignoreFocusOut: true,
+      validateInput: validatePort,
+    });
+    return port ? { kind: 'local_mock', port: port.trim() } : undefined;
+  }
+  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
+  return backendBaseUrl ? { kind: 'remote', backendBaseUrl } : undefined;
 }
 
 async function chooseBackendRoot(

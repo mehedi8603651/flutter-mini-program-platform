@@ -108,8 +108,11 @@ export function buildStatusTreeSections(
       .map((entry) => {
         const endpoint = asRecord(entry);
         const appId = asString(endpoint.appId);
-        const configured = asBoolean(endpoint.backendConfigured);
-        return appId ? `${appId}:${configured ? 'backend' : 'none'}` : '';
+        const mode = asString(
+          endpoint.backendMode,
+          asBoolean(endpoint.backendConfigured) ? 'remote' : 'none',
+        );
+        return appId ? `${appId}:${mode}` : '';
       })
       .filter(Boolean)
       .join(', ');

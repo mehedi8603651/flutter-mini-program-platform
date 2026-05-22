@@ -157,6 +157,101 @@ void main() {
       expect(result.data['requestTimeoutMs'], 10);
     });
 
+    test(
+      'falls back from localhost backend URL to Android emulator host',
+      () async {
+        final requestedUrls = <String>[];
+        final connector = EndpointRoutingMiniProgramBackendConnector(
+          backends: <String, MiniProgramBackendEndpoint>{
+            'coupon': MiniProgramBackendEndpoint(
+              baseUri: Uri.parse('http://127.0.0.1:9090/'),
+            ),
+          },
+          deliveryContext: _deliveryContext,
+          clientFactory: () => _RecordingClient((request) async {
+            requestedUrls.add(request.url.toString());
+            if (request.url.host == '127.0.0.1') {
+              throw http.ClientException('Connection refused', request.url);
+            }
+            return http.Response('{"ok":true}', 200);
+          }),
+        );
+
+        final result = await connector.call(
+          const MiniProgramBackendRequest(
+            miniProgramId: 'coupon',
+            endpoint: 'home/bootstrap',
+          ),
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(requestedUrls, <String>[
+          'http://127.0.0.1:9090/home/bootstrap',
+          'http://10.0.2.2:9090/home/bootstrap',
+        ]);
+      },
+    );
+
+    test(
+      'does not fall back when local loopback fallback is disabled',
+      () async {
+        final requestedUrls = <String>[];
+        final connector = EndpointRoutingMiniProgramBackendConnector(
+          backends: <String, MiniProgramBackendEndpoint>{
+            'coupon': MiniProgramBackendEndpoint(
+              baseUri: Uri.parse('http://127.0.0.1:9090/'),
+              enableLocalLoopbackFallback: false,
+            ),
+          },
+          deliveryContext: _deliveryContext,
+          clientFactory: () => _RecordingClient((request) async {
+            requestedUrls.add(request.url.toString());
+            throw http.ClientException('Connection refused', request.url);
+          }),
+        );
+
+        final result = await connector.call(
+          const MiniProgramBackendRequest(
+            miniProgramId: 'coupon',
+            endpoint: 'home/bootstrap',
+          ),
+        );
+
+        expect(result.isFailure, isTrue);
+        expect(result.errorCode, 'publisher_backend_unreachable');
+        expect(requestedUrls, <String>['http://127.0.0.1:9090/home/bootstrap']);
+      },
+    );
+
+    test(
+      'does not try fallback URL when configured local URL succeeds',
+      () async {
+        final requestedUrls = <String>[];
+        final connector = EndpointRoutingMiniProgramBackendConnector(
+          backends: <String, MiniProgramBackendEndpoint>{
+            'coupon': MiniProgramBackendEndpoint(
+              baseUri: Uri.parse('http://127.0.0.1:9090/'),
+            ),
+          },
+          deliveryContext: _deliveryContext,
+          clientFactory: () => _RecordingClient((request) async {
+            requestedUrls.add(request.url.toString());
+            return http.Response('{"ok":true}', 200);
+          }),
+        );
+
+        final result = await connector.call(
+          const MiniProgramBackendRequest(
+            miniProgramId: 'coupon',
+            endpoint: 'home/bootstrap',
+          ),
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(requestedUrls, <String>['http://127.0.0.1:9090/home/bootstrap']);
+      },
+    );
+
     test('caches GET calls only when cache TTL is explicit', () async {
       var requests = 0;
       final connector = EndpointRoutingMiniProgramBackendConnector(

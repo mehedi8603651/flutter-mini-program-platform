@@ -21,7 +21,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.4
+  mini_program_sdk: ^0.3.5
   mini_program_contracts: ^0.1.1
 ```
 
@@ -177,7 +177,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.4` while the runtime compatibility version remains
+the package can be `0.3.5` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints

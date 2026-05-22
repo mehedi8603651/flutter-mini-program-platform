@@ -79,7 +79,7 @@ miniprogram publisher-backend stop [--mini-program-root <path>]
 miniprogram publisher-backend urls [--port 9090]
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
-miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>]
+miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
 miniprogram host endpoint import <partner-package.json>
 miniprogram embed init [--project-root <path>] [--force] [--with-demo]
 miniprogram embed cloud configure [--env <env-name>]
@@ -541,9 +541,11 @@ Print the target URLs with:
 miniprogram publisher-backend urls --port 9090
 ```
 
-Use `http://127.0.0.1:9090/` for Chrome, Windows, macOS, Linux, and iOS
-simulator host runs on the same machine. Use `http://10.0.2.2:9090/` for
-Android emulator host runs.
+Use `http://127.0.0.1:9090/` in generated host config for local mock backend
+testing. With `mini_program_sdk` 0.3.5 or newer, the SDK can fall back between
+`127.0.0.1` / `localhost` and Android emulator `10.0.2.2`, so one host config
+works for Chrome, desktop, and Android emulator. Real devices may need your
+computer LAN IP or `adb reverse`.
 
 Host endpoint setup still has two URLs:
 
@@ -558,10 +560,16 @@ backend:
 miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-base-url http://127.0.0.1:9090/
 ```
 
-For Android emulator host testing, use:
+Preferred local mock shortcut:
 
 ```bash
-miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-base-url http://10.0.2.2:9090/
+miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-local-mock
+```
+
+Use a custom mock port with:
+
+```bash
+miniprogram host endpoint add coupon_app --title "Coupon App" --api-base-url https://user.github.io/repo/public_mini_program/ --public --backend-local-mock --backend-local-mock-port 9091
 ```
 
 The mock backend is local development only. Production backends can later be

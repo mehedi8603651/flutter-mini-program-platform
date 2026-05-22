@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5
+
+- make `MiniProgramBackendEndpoint.enableLocalLoopbackFallback` active for
+  publisher backend calls so local mock backend URLs can fall back between
+  `127.0.0.1` / `localhost` and Android emulator `10.0.2.2`
+
 ## 0.3.4
 
 - add `MiniProgramBackendStore`, `MiniProgramBackendSnapshot`,

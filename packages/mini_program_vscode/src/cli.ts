@@ -74,6 +74,8 @@ export interface HostEndpointAddArgsOptions {
   readonly title?: string;
   readonly apiBaseUrl: string;
   readonly backendBaseUrl?: string;
+  readonly backendLocalMock?: boolean;
+  readonly backendLocalMockPort?: string;
   readonly accessKey?: string;
   readonly public?: boolean;
   readonly projectRoot: string;
@@ -353,6 +355,12 @@ export function buildHostEndpointAddArgs(
   }
   if (options.backendBaseUrl?.trim()) {
     args.push('--backend-base-url', options.backendBaseUrl.trim());
+  }
+  if (options.backendLocalMock) {
+    args.push('--backend-local-mock');
+    if (options.backendLocalMockPort?.trim()) {
+      args.push('--backend-local-mock-port', options.backendLocalMockPort.trim());
+    }
   }
   if (options.public) {
     args.push('--public');

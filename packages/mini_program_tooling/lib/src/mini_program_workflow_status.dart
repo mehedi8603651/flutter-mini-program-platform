@@ -270,6 +270,7 @@ class MiniProgramWorkflowStatusController {
               'hasAccessKey': entry.value['hasAccessKey'],
               'backendBaseUri': entry.value['backendBaseUri'],
               'backendConfigured': entry.value['backendConfigured'],
+              'backendMode': entry.value['backendMode'],
             },
           )
           .toList(),
@@ -686,8 +687,18 @@ class MiniProgramWorkflowStatusController {
         'backendBaseUri': record['backendBaseUri']?.toString(),
         'backendConfigured':
             record['backendBaseUri']?.toString().trim().isNotEmpty ?? false,
+        'backendMode': _readBackendMode(record),
       });
     });
+  }
+
+  String _readBackendMode(Map<Object?, Object?> record) {
+    final mode = record['backendMode']?.toString().trim().toLowerCase();
+    if (mode == 'local_mock' || mode == 'remote' || mode == 'none') {
+      return mode!;
+    }
+    final backendBaseUri = record['backendBaseUri']?.toString().trim() ?? '';
+    return backendBaseUri.isEmpty ? 'none' : 'remote';
   }
 
   Future<Map<String, String>> _readRegistryMetadata(File file) async {

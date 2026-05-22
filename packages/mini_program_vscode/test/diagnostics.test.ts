@@ -183,6 +183,7 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
               apiBaseUri: 'https://api.example.com/api',
               backendBaseUri: 'https://publisher.example.com/api',
               backendConfigured: true,
+              backendMode: 'remote',
               accessMode: 'protected',
               hasAccessKey: true,
             },
@@ -198,10 +199,62 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
     assert.match(text, /not opened from host UI: profile/);
     assert.match(text, /MiniProgram: Copy Demo Host Button/);
     assert.match(text, /Endpoint routing is active/);
-    assert.match(text, /profile:configured/);
+    assert.match(text, /profile:remote/);
     assert.match(text, /default backend URL is only a fallback/);
     assert.match(text, /delivery access only/);
     assert.doesNotMatch(text, /mpk_live_secret/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('host app warns when local mock backend uses old SDK constraint', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-host-local-mock-');
+  try {
+    await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
+    await writeFile(
+      path.join(workspacePath, 'pubspec.yaml'),
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.4\n',
+    );
+    await writeFile(
+      path.join(workspacePath, 'lib', 'main.dart'),
+      "import 'package:mini_program_sdk/mini_program_sdk.dart';\nvoid main() { MiniProgramScope; openAppMiniProgram(null, appId: 'coupon_app'); }\n",
+    );
+
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'hostApp',
+      workflowReport: {
+        schemaVersion: 1,
+        command: 'workflow status',
+        workspace: { type: 'host_app', path: workspacePath },
+        hostApp: {
+          detected: true,
+          runtimeSetupExists: true,
+          launcherExists: true,
+          endpointMapExists: true,
+          endpointCount: 1,
+          endpoints: [
+            {
+              appId: 'coupon_app',
+              apiBaseUri: 'https://cdn.example.com/public_mini_program/',
+              accessMode: 'public',
+              hasAccessKey: false,
+              backendBaseUri: 'http://127.0.0.1:9090',
+              backendConfigured: true,
+              backendMode: 'local_mock',
+            },
+          ],
+        },
+        environment: { configured: false },
+        backend: { configured: false },
+        remote: { checked: false },
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /coupon_app:local_mock/);
+    assert.match(text, /mini_program_sdk 0\.3\.5 or newer/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

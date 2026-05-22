@@ -277,6 +277,33 @@ test('builds host app command arguments', () => {
     ],
   );
   assert.deepEqual(
+    buildHostEndpointAddArgs({
+      appId: 'coupon_app',
+      title: 'Coupon App',
+      apiBaseUrl: 'https://cdn.example.com/public_mini_program',
+      public: true,
+      backendLocalMock: true,
+      backendLocalMockPort: '9091',
+      projectRoot: 'D:/host',
+    }),
+    [
+      'host',
+      'endpoint',
+      'add',
+      'coupon_app',
+      '--api-base-url',
+      'https://cdn.example.com/public_mini_program',
+      '--title',
+      'Coupon App',
+      '--backend-local-mock',
+      '--backend-local-mock-port',
+      '9091',
+      '--public',
+      '--project-root',
+      'D:/host',
+    ],
+  );
+  assert.deepEqual(
     buildHostRunArgs({
       deviceId: 'emulator-5554',
       projectRoot: 'D:/host',

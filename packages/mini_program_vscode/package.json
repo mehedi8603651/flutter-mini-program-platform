@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -208,6 +208,11 @@
         "icon": "$(copy)"
       },
       {
+        "command": "miniProgramTools.copyMockBackendHostCommand",
+        "title": "MiniProgram: Copy Mock Backend Host Command",
+        "icon": "$(copy)"
+      },
+      {
         "command": "miniProgramTools.createAccessKey",
         "title": "MiniProgram: Create Access Key",
         "icon": "$(key)"
@@ -409,6 +414,11 @@
           "command": "miniProgramTools.copyPublisherBackendUrls",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.3"
+        },
+        {
+          "command": "miniProgramTools.copyMockBackendHostCommand",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.4"
         },
         {
           "command": "miniProgramTools.createAccessKey",

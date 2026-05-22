@@ -1885,6 +1885,18 @@ class MiniprogramCli {
         help:
             'Optional publisher-owned business API base URL, for example https://publisher.example.com/api/.',
       )
+      ..addFlag(
+        'backend-local-mock',
+        negatable: false,
+        help:
+            'Use the local mock publisher backend at http://127.0.0.1:<port>/.',
+      )
+      ..addOption(
+        'backend-local-mock-port',
+        defaultsTo: '9090',
+        help:
+            'Local mock publisher backend port used with --backend-local-mock.',
+      )
       ..addOption(
         'title',
         help:
@@ -1935,7 +1947,27 @@ class MiniprogramCli {
     }
     final accessKey = results.option('access-key')?.trim() ?? '';
     final rawBackendBaseUrl = results.option('backend-base-url')?.trim() ?? '';
-    final backendBaseUri = rawBackendBaseUrl.isEmpty
+    final useLocalMockBackend = results.flag('backend-local-mock');
+    if (useLocalMockBackend && rawBackendBaseUrl.isNotEmpty) {
+      throw const FormatException(
+        'host endpoint add cannot use both --backend-local-mock and '
+        '--backend-base-url.',
+      );
+    }
+    final rawLocalMockPort =
+        results.option('backend-local-mock-port')?.trim() ?? '9090';
+    final localMockPort = int.tryParse(rawLocalMockPort);
+    if (useLocalMockBackend &&
+        (localMockPort == null ||
+            localMockPort <= 0 ||
+            localMockPort > 65535)) {
+      throw const FormatException(
+        'host endpoint add --backend-local-mock-port must be 1-65535.',
+      );
+    }
+    final backendBaseUri = useLocalMockBackend
+        ? Uri.parse('http://127.0.0.1:$localMockPort/')
+        : rawBackendBaseUrl.isEmpty
         ? null
         : Uri.tryParse(rawBackendBaseUrl);
     if (rawBackendBaseUrl.isNotEmpty &&
@@ -1970,6 +2002,11 @@ class MiniprogramCli {
         apiBaseUri: apiBaseUri,
         accessKey: isPublic ? null : accessKey,
         backendBaseUri: backendBaseUri,
+        backendMode: useLocalMockBackend
+            ? 'local_mock'
+            : backendBaseUri == null
+            ? 'none'
+            : 'remote',
         force: results.flag('force'),
       ),
     );
@@ -3349,7 +3386,7 @@ Commands:
   workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
   partner package <mini-program-id> (--access-key <key>|--public) [--env <env-name>] [--backend-base-url <url>]
   host run -d <device> [--env <env-name>]
-  host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>]
+  host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
   host endpoint import <partner-package.json>
   embed init [--project-root <path>] [--with-demo]
   embed cloud configure [--env <env-name>]
@@ -4087,6 +4124,7 @@ Commands:
       'Title: ${result.title}',
       'Access mode: ${result.accessMode}',
       'API base URL: ${result.apiBaseUri}',
+      'Backend mode: ${result.backendMode}',
       if (result.backendBaseUri != null)
         'Backend base URL: ${result.backendBaseUri}',
       'Endpoint count: ${result.endpointCount}',
@@ -4408,7 +4446,12 @@ Commands:
       ..._formatPublisherBackendTargetUrls(result.port),
       '',
       'Host endpoint example:',
+      'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-local-mock',
       'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.desktopBaseUrl}',
+      '',
+      'Use --backend-local-mock for generated host config. With mini_program_sdk 0.3.5+,',
+      'the SDK falls back between 127.0.0.1/localhost and Android emulator 10.0.2.2.',
+      'Real Android/iOS devices need a LAN IP URL or adb reverse.',
     ].join('\n');
   }
 
