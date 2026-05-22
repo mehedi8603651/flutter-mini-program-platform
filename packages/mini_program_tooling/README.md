@@ -80,6 +80,7 @@ miniprogram publisher-backend urls [--port 9090]
 miniprogram publisher-backend aws deploy --env <env-name> [--mini-program-root <path>]
 miniprogram publisher-backend aws status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws outputs --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws smoke --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
 miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root <path>] --yes
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
@@ -618,9 +619,13 @@ Useful AWS backend commands:
 ```bash
 miniprogram publisher-backend aws status --env my-aws-prod --json
 miniprogram publisher-backend aws outputs --env my-aws-prod --json
+miniprogram publisher-backend aws smoke --env my-aws-prod
 miniprogram publisher-backend aws logs --env my-aws-prod --since 1h
 miniprogram publisher-backend aws destroy --env my-aws-prod --yes
 ```
+
+Use `smoke` for a read-only check of `/health`, `/home/bootstrap`,
+`/coupons/list`, and `/auth/session` after deploy.
 
 This AWS backend is separate from the mini-program delivery AWS stack. It is for
 publisher business APIs only. AWS credentials, Firebase Admin credentials,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
 import 'package:mini_program_tooling/mini_program_tooling.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -117,6 +118,10 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher-backend scaffold --template mock'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher-backend aws deploy|status|outputs|smoke|logs'),
       );
     });
 
@@ -902,6 +907,133 @@ void main() {
         );
       },
     );
+
+    test('publisher-backend aws smoke prints route checks', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final stderrBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: stderrBuffer,
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+          },
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'smoke',
+        '--env',
+        'my-aws-prod',
+      ]);
+
+      expect(exitCode, 0);
+      expect(stderrBuffer.toString(), isEmpty);
+      expect(
+        stdoutBuffer.toString(),
+        contains('AWS Lambda publisher backend smoke test.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Passed: true'));
+      expect(stdoutBuffer.toString(), contains('GET /health: 200 OK'));
+      expect(stdoutBuffer.toString(), contains('GET /home/bootstrap: 200 OK'));
+      expect(stdoutBuffer.toString(), contains('GET /coupons/list: 200 OK'));
+      expect(stdoutBuffer.toString(), contains('GET /auth/session: 200 OK'));
+    });
+
+    test('publisher-backend aws smoke prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+          },
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'smoke',
+        '--env',
+        'my-aws-prod',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final decoded = jsonDecode(stdoutBuffer.toString());
+      expect(decoded, isA<Map<String, Object?>>());
+      final json = decoded as Map<String, Object?>;
+      expect(json['command'], 'publisher-backend aws smoke');
+      expect(json['passed'], isTrue);
+      expect(json['backendBaseUrl'], contains('/prod/'));
+      final routes = json['routes'] as List<Object?>;
+      expect(routes, hasLength(4));
+      expect(routes.first, containsPair('path', '/health'));
+    });
+
+    test('publisher-backend aws smoke returns 1 when a route fails', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+          },
+          healthGetter: (uri) async {
+            if (uri.path.endsWith('/auth/session')) {
+              return http.Response('nope', 500);
+            }
+            return http.Response('{"ok":true}', 200);
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'smoke',
+        '--env',
+        'my-aws-prod',
+      ]);
+
+      expect(exitCode, 1);
+      expect(stdoutBuffer.toString(), contains('Passed: false'));
+      expect(stdoutBuffer.toString(), contains('GET /auth/session: 500 FAIL'));
+    });
 
     test(
       'publish --target static writes to the selected output folder',
@@ -3648,6 +3780,26 @@ Future<void> _writeStaleLocalBackendWorkspaceState(
     ),
   );
 }
+
+String _publisherBackendStackJson() => jsonEncode(<String, Object?>{
+  'Stacks': <Object?>[
+    <String, Object?>{
+      'StackStatus': 'CREATE_COMPLETE',
+      'Outputs': <Object?>[
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendBaseUrl',
+          'OutputValue':
+              'https://abc.execute-api.us-east-1.amazonaws.com/prod/',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendHealthUrl',
+          'OutputValue':
+              'https://abc.execute-api.us-east-1.amazonaws.com/prod/health',
+        },
+      ],
+    },
+  ],
+});
 
 const String _fakeStacCliSource = r'''
 import 'dart:convert';

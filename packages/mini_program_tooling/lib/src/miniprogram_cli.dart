@@ -2837,6 +2837,8 @@ class MiniprogramCli {
         return _runPublisherBackendAwsStatus(arguments.sublist(1));
       case 'outputs':
         return _runPublisherBackendAwsOutputs(arguments.sublist(1));
+      case 'smoke':
+        return _runPublisherBackendAwsSmoke(arguments.sublist(1));
       case 'logs':
         return _runPublisherBackendAwsLogs(arguments.sublist(1));
       case 'destroy':
@@ -2948,6 +2950,41 @@ class MiniprogramCli {
       _stdout.writeln(_formatPublisherBackendAwsOutputsResult(result));
     }
     return 0;
+  }
+
+  Future<int> _runPublisherBackendAwsSmoke(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws smoke [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsSmoke(
+      PublisherBackendAwsSmokeRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsSmokeJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsSmokeResult(result));
+    }
+    return result.passed ? 0 : 1;
   }
 
   Future<int> _runPublisherBackendAwsLogs(List<String> arguments) async {
@@ -3647,7 +3684,7 @@ Commands:
   publisher-backend status [--json]
   publisher-backend stop
   publisher-backend urls
-  publisher-backend aws deploy|status|outputs|logs|destroy --env <env-name>
+  publisher-backend aws deploy|status|outputs|smoke|logs|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -3672,6 +3709,7 @@ Commands:
   aws deploy --env <env-name> [--mini-program-root <path>]
   aws status --env <env-name> [--mini-program-root <path>] [--json]
   aws outputs --env <env-name> [--mini-program-root <path>] [--json]
+  aws smoke --env <env-name> [--mini-program-root <path>] [--json]
   aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
   aws destroy --env <env-name> [--mini-program-root <path>] --yes
 ''';
@@ -3683,6 +3721,7 @@ Commands:
   deploy --env <env-name> [--mini-program-root <path>] [--stack-name <name>] [--stage-name <stage>] [--sam-s3-bucket <bucket>]
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
+  smoke --env <env-name> [--mini-program-root <path>] [--json]
   logs --env <env-name> [--mini-program-root <path>] [--since 1h]
   destroy --env <env-name> [--mini-program-root <path>] --yes
 ''';
@@ -4801,6 +4840,40 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatPublisherBackendAwsSmokeResult(
+    PublisherBackendAwsSmokeResult result,
+  ) {
+    final lines = <String>[
+      'AWS Lambda publisher backend smoke test.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Passed: ${result.passed}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ];
+    if (result.routes.isNotEmpty) {
+      lines.add('');
+      for (final route in result.routes) {
+        final status = route.statusCode == null
+            ? 'failed'
+            : route.passed
+            ? '${route.statusCode} OK'
+            : '${route.statusCode} FAIL';
+        lines.add('${route.method} ${route.path}: $status');
+        if (route.error != null) {
+          lines.add('  ${route.error}');
+        }
+      }
+    }
+    return lines.join('\n');
+  }
+
   String _formatPublisherBackendAwsLogsResult(
     PublisherBackendAwsLogsResult result,
   ) {
@@ -4917,6 +4990,37 @@ Commands:
       'backendBaseUrl': result.outputs['PublisherBackendBaseUrl'],
       'healthUrl': result.outputs['PublisherBackendHealthUrl'],
       'functionName': result.outputs['PublisherBackendFunctionName'],
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsSmokeJson(
+    PublisherBackendAwsSmokeResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws smoke',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'backendBaseUrl': result.backendBaseUrl,
+      'passed': result.passed,
+      'error': result.error,
+      'routes': result.routes
+          .map(
+            (route) => <String, Object?>{
+              'method': route.method,
+              'path': route.path,
+              'uri': route.uri.toString(),
+              'statusCode': route.statusCode,
+              'passed': route.passed,
+              'error': route.error,
+            },
+          )
+          .toList(),
     };
   }
 

@@ -22,6 +22,13 @@ typedef PublisherBackendProcessStarter =
 typedef PublisherBackendHealthGetter = Future<http.Response> Function(Uri uri);
 typedef PublisherBackendClock = DateTime Function();
 
+const List<String> _publisherBackendAwsSmokeRoutePaths = <String>[
+  '/health',
+  '/home/bootstrap',
+  '/coupons/list',
+  '/auth/session',
+];
+
 class PublisherBackendException implements Exception {
   const PublisherBackendException(this.message);
 
@@ -189,6 +196,68 @@ class PublisherBackendAwsOutputsResult {
   final String stackName;
   final String region;
   final Map<String, String> outputs;
+}
+
+class PublisherBackendAwsSmokeRequest {
+  const PublisherBackendAwsSmokeRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsSmokeRouteResult {
+  const PublisherBackendAwsSmokeRouteResult({
+    required this.method,
+    required this.path,
+    required this.uri,
+    required this.passed,
+    this.statusCode,
+    this.error,
+  });
+
+  final String method;
+  final String path;
+  final Uri uri;
+  final bool passed;
+  final int? statusCode;
+  final String? error;
+}
+
+class PublisherBackendAwsSmokeResult {
+  const PublisherBackendAwsSmokeResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.passed,
+    required this.routes,
+    this.backendBaseUrl,
+    this.stackStatus,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final bool passed;
+  final List<PublisherBackendAwsSmokeRouteResult> routes;
+  final String? backendBaseUrl;
+  final String? stackStatus;
+  final String? error;
 }
 
 class PublisherBackendAwsLogsRequest {
@@ -888,6 +957,77 @@ class PublisherBackendStarter {
     );
   }
 
+  Future<PublisherBackendAwsSmokeResult> awsSmoke(
+    PublisherBackendAwsSmokeRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsSmokeResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        passed: false,
+        routes: const <PublisherBackendAwsSmokeRouteResult>[],
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+
+    final outputs = _extractStackOutputs(stack);
+    final backendBaseUrl = outputs['PublisherBackendBaseUrl']?.trim();
+    if (backendBaseUrl == null || backendBaseUrl.isEmpty) {
+      return PublisherBackendAwsSmokeResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: true,
+        stackStatus: stack['StackStatus']?.toString(),
+        backendBaseUrl: backendBaseUrl,
+        passed: false,
+        routes: const <PublisherBackendAwsSmokeRouteResult>[],
+        error: 'PublisherBackendBaseUrl output is missing.',
+      );
+    }
+
+    final baseUri = Uri.parse(backendBaseUrl);
+    final routes = <PublisherBackendAwsSmokeRouteResult>[];
+    for (final path in _publisherBackendAwsSmokeRoutePaths) {
+      routes.add(
+        await _probeSmokeRoute(
+          method: 'GET',
+          path: path,
+          uri: _resolveBackendRoute(baseUri, path),
+        ),
+      );
+    }
+    final passed = routes.every((route) => route.passed);
+    return PublisherBackendAwsSmokeResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      stackStatus: stack['StackStatus']?.toString(),
+      backendBaseUrl: backendBaseUrl,
+      passed: passed,
+      routes: routes,
+    );
+  }
+
   Future<PublisherBackendAwsLogsResult> awsLogs(
     PublisherBackendAwsLogsRequest request,
   ) async {
@@ -1404,6 +1544,49 @@ class PublisherBackendStarter {
     } catch (error) {
       return _PublisherBackendHealth(healthy: false, error: '$error');
     }
+  }
+
+  Future<PublisherBackendAwsSmokeRouteResult> _probeSmokeRoute({
+    required String method,
+    required String path,
+    required Uri uri,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    try {
+      final response = await _healthGetter(uri).timeout(timeout);
+      final passed = response.statusCode == 200;
+      return PublisherBackendAwsSmokeRouteResult(
+        method: method,
+        path: path,
+        uri: uri,
+        passed: passed,
+        statusCode: response.statusCode,
+        error: passed ? null : 'Route returned ${response.statusCode}.',
+      );
+    } on TimeoutException {
+      return PublisherBackendAwsSmokeRouteResult(
+        method: method,
+        path: path,
+        uri: uri,
+        passed: false,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendAwsSmokeRouteResult(
+        method: method,
+        path: path,
+        uri: uri,
+        passed: false,
+        error: '$error',
+      );
+    }
+  }
+
+  Uri _resolveBackendRoute(Uri baseUri, String path) {
+    final baseUrl = baseUri.toString();
+    final normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    final relativePath = path.startsWith('/') ? path.substring(1) : path;
+    return Uri.parse(normalizedBaseUrl).resolve(relativePath);
   }
 
   Future<_PublisherBackendHealth> _waitForHealthCheck(

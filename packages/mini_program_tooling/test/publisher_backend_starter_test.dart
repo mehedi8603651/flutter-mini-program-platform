@@ -253,6 +253,119 @@ void main() {
       );
     });
 
+    test('AWS smoke checks read-only backend routes', () async {
+      final requestedUris = <Uri>[];
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+        healthGetter: (uri) async {
+          requestedUris.add(uri);
+          return http.Response('{"ok":true}', 200);
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.stackExists, isTrue);
+      expect(result.passed, isTrue);
+      expect(result.backendBaseUrl, endsWith('/prod/'));
+      expect(
+        result.routes.map((route) => '${route.method} ${route.path}'),
+        <String>[
+          'GET /health',
+          'GET /home/bootstrap',
+          'GET /coupons/list',
+          'GET /auth/session',
+        ],
+      );
+      expect(requestedUris.map((uri) => uri.path), <String>[
+        '/prod/health',
+        '/prod/home/bootstrap',
+        '/prod/coupons/list',
+        '/prod/auth/session',
+      ]);
+    });
+
+    test('AWS smoke fails when a route returns non-200', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+        healthGetter: (uri) async {
+          if (uri.path.endsWith('/coupons/list')) {
+            return http.Response('unavailable', 503);
+          }
+          return http.Response('{"ok":true}', 200);
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.passed, isFalse);
+      final coupons = result.routes.singleWhere(
+        (route) => route.path == '/coupons/list',
+      );
+      expect(coupons.statusCode, 503);
+      expect(coupons.passed, isFalse);
+    });
+
+    test('AWS smoke reports missing stack', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(
+            0,
+            255,
+            '',
+            'ValidationError: Stack with id test does not exist',
+          );
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.stackExists, isFalse);
+      expect(result.passed, isFalse);
+      expect(result.routes, isEmpty);
+      expect(result.error, contains('was not found'));
+    });
+
+    test('AWS smoke fails when backend base URL output is missing', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJsonWithoutBaseUrl(), '');
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.stackExists, isTrue);
+      expect(result.backendBaseUrl, isNull);
+      expect(result.passed, isFalse);
+      expect(result.routes, isEmpty);
+      expect(result.error, contains('PublisherBackendBaseUrl'));
+    });
+
     test(
       'AWS logs resolves Lambda function before tailing CloudWatch',
       () async {
@@ -386,6 +499,21 @@ String _stackDescribeJson() => jsonEncode(<String, Object?>{
         <String, Object?>{
           'OutputKey': 'PublisherBackendFunctionName',
           'OutputValue': 'coupon-function',
+        },
+      ],
+    },
+  ],
+});
+
+String _stackDescribeJsonWithoutBaseUrl() => jsonEncode(<String, Object?>{
+  'Stacks': <Object?>[
+    <String, Object?>{
+      'StackStatus': 'CREATE_COMPLETE',
+      'Outputs': <Object?>[
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendHealthUrl',
+          'OutputValue':
+              'https://abc.execute-api.ap-south-1.amazonaws.com/prod/health',
         },
       ],
     },

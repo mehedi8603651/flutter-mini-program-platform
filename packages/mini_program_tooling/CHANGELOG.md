@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.25
+
+- add `publisher-backend aws smoke` to verify deployed AWS publisher backend
+  read-only routes in one command
+
 ## 0.3.24
 
 - fix generated AWS publisher backend Lambda handlers so API Gateway stage
