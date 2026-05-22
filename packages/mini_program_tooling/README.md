@@ -72,7 +72,7 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-miniprogram publisher-backend scaffold --template mock|aws-lambda [--mini-program-root <path>] [--force]
+miniprogram publisher-backend scaffold --template mock|aws-lambda [--storage bundled|dynamodb] [--mini-program-root <path>] [--force]
 miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
 miniprogram publisher-backend status [--mini-program-root <path>] [--json]
 miniprogram publisher-backend stop [--mini-program-root <path>]
@@ -81,6 +81,8 @@ miniprogram publisher-backend aws deploy --env <env-name> [--mini-program-root <
 miniprogram publisher-backend aws status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws smoke --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws seed --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws data status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
 miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root <path>] --yes
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
@@ -593,7 +595,17 @@ miniprogram publisher-backend scaffold --template aws-lambda
 ```
 
 This creates `backend/aws_lambda/` with a SAM template, Node.js Lambda handler,
-and the same sample JSON routes as the mock backend:
+and the same sample JSON routes as the mock backend. By default the Lambda reads
+bundled JSON from `src/data/` so simple demos do not create a database.
+
+For persistent AWS storage, opt in to DynamoDB:
+
+```bash
+miniprogram publisher-backend scaffold --template aws-lambda --storage dynamodb
+```
+
+The DynamoDB scaffold adds a stack-owned table, Lambda environment variables,
+and a least-scope DynamoDB policy for the generated function.
 
 - `GET /health`
 - `GET /home/bootstrap`
@@ -620,12 +632,20 @@ Useful AWS backend commands:
 miniprogram publisher-backend aws status --env my-aws-prod --json
 miniprogram publisher-backend aws outputs --env my-aws-prod --json
 miniprogram publisher-backend aws smoke --env my-aws-prod
+miniprogram publisher-backend aws seed --env my-aws-prod
+miniprogram publisher-backend aws data status --env my-aws-prod --json
 miniprogram publisher-backend aws logs --env my-aws-prod --since 1h
 miniprogram publisher-backend aws destroy --env my-aws-prod --yes
 ```
 
 Use `smoke` for a read-only check of `/health`, `/home/bootstrap`,
 `/coupons/list`, and `/auth/session` after deploy.
+
+Use `aws seed` after deploying a `--storage dynamodb` backend to upsert the
+starter home, session, and coupon records into the generated DynamoDB table.
+Use `aws data status` to check the table status, app record count, and
+redemption count. `aws destroy --yes` deletes the stack-owned DynamoDB table and
+its data, so export or migrate production data before destroying a stack.
 
 This AWS backend is separate from the mini-program delivery AWS stack. It is for
 publisher business APIs only. AWS credentials, Firebase Admin credentials,

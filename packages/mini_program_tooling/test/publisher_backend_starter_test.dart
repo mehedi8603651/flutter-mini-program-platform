@@ -137,6 +137,22 @@ void main() {
         ).exists(),
         isTrue,
       );
+      final template = await File(
+        p.join(miniProgramRoot.path, 'backend', 'aws_lambda', 'template.yaml'),
+      ).readAsString();
+      final packageJson = await File(
+        p.join(
+          miniProgramRoot.path,
+          'backend',
+          'aws_lambda',
+          'src',
+          'package.json',
+        ),
+      ).readAsString();
+      expect(template, contains('PublisherBackendStorageMode'));
+      expect(template, contains('Value: bundled'));
+      expect(template, isNot(contains('AWS::DynamoDB::Table')));
+      expect(packageJson, isNot(contains('@aws-sdk/client-dynamodb')));
 
       final readme = File(
         p.join(miniProgramRoot.path, 'backend', 'aws_lambda', 'README.md'),
@@ -163,6 +179,167 @@ void main() {
         contains('AWS Lambda publisher backend'),
       );
     });
+
+    test('scaffolds AWS Lambda DynamoDB storage files', () async {
+      final starter = const PublisherBackendStarter();
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+          storageMode: 'dynamodb',
+        ),
+      );
+
+      final template = await File(
+        p.join(miniProgramRoot.path, 'backend', 'aws_lambda', 'template.yaml'),
+      ).readAsString();
+      final packageJson = await File(
+        p.join(
+          miniProgramRoot.path,
+          'backend',
+          'aws_lambda',
+          'src',
+          'package.json',
+        ),
+      ).readAsString();
+      final readme = await File(
+        p.join(miniProgramRoot.path, 'backend', 'aws_lambda', 'README.md'),
+      ).readAsString();
+
+      expect(template, contains('AWS::DynamoDB::Table'));
+      expect(template, contains('BillingMode: PAY_PER_REQUEST'));
+      expect(template, contains('PUBLISHER_BACKEND_STORAGE: dynamodb'));
+      expect(template, contains('PUBLISHER_BACKEND_TABLE_NAME'));
+      expect(template, contains('MINI_PROGRAM_ID: coupon_app'));
+      expect(template, contains('DynamoDBCrudPolicy'));
+      expect(template, contains('PublisherBackendDataTableName'));
+      expect(packageJson, contains('@aws-sdk/client-dynamodb'));
+      expect(packageJson, contains('@aws-sdk/lib-dynamodb'));
+      expect(readme, contains('Storage mode: DynamoDB'));
+    });
+
+    test(
+      'generated bundled Lambda handler serves read and redeem routes',
+      () async {
+        final nodeVersion = await Process.run('node', <String>['--version']);
+        if (nodeVersion.exitCode != 0) {
+          markTestSkipped('Node.js is not available.');
+        }
+        final starter = const PublisherBackendStarter();
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'aws-lambda',
+          ),
+        );
+        final handlerUri = Uri.file(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'aws_lambda',
+            'src',
+            'handler.mjs',
+          ),
+        ).toString();
+
+        final result = await _runNodeScript(tempDir, '''
+import { handler } from '$handlerUri';
+
+const event = (method, path, body) => ({
+  rawPath: `/prod\${path}`,
+  requestContext: { stage: 'prod', http: { method } },
+  body: body == null ? undefined : JSON.stringify(body),
+});
+
+const home = await handler(event('GET', '/home/bootstrap'));
+const coupons = await handler(event('GET', '/coupons/list'));
+const session = await handler(event('GET', '/auth/session'));
+const redeemed = await handler(event('POST', '/coupon/redeem', { couponId: 'coupon-10' }));
+console.log(JSON.stringify({
+  homeStatus: home.statusCode,
+  homeTitle: JSON.parse(home.body).title,
+  couponsStatus: coupons.statusCode,
+  couponCount: JSON.parse(coupons.body).coupons.length,
+  sessionStatus: session.statusCode,
+  redeemStatus: redeemed.statusCode,
+  redeemBody: JSON.parse(redeemed.body),
+}));
+''');
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final decoded =
+            jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+        expect(decoded['homeStatus'], 200);
+        expect(decoded['homeTitle'], contains('Coupon App'));
+        expect(decoded['couponCount'], 2);
+        expect(decoded['sessionStatus'], 200);
+        expect(decoded['redeemStatus'], 200);
+        expect(decoded['redeemBody']['status'], 'redeemed');
+      },
+    );
+
+    test(
+      'generated Lambda handler supports an injected DynamoDB store',
+      () async {
+        final nodeVersion = await Process.run('node', <String>['--version']);
+        if (nodeVersion.exitCode != 0) {
+          markTestSkipped('Node.js is not available.');
+        }
+        final starter = const PublisherBackendStarter();
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'aws-lambda',
+            storageMode: 'dynamodb',
+          ),
+        );
+        final handlerUri = Uri.file(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'aws_lambda',
+            'src',
+            'handler.mjs',
+          ),
+        ).toString();
+
+        final result = await _runNodeScript(tempDir, '''
+import { handler, setPublisherBackendStoreForTesting } from '$handlerUri';
+
+setPublisherBackendStoreForTesting({
+  homeBootstrap: async () => ({ title: 'Dynamo home' }),
+  couponsList: async () => ({ coupons: [{ id: 'coupon-10', title: 'Ten' }] }),
+  authSession: async () => ({ authenticated: true }),
+  redeemCoupon: async (body) => body?.couponId
+    ? { statusCode: 200, body: { status: 'redeemed', couponId: body.couponId } }
+    : { statusCode: 400, body: { errorCode: 'missing_coupon_id' } },
+});
+
+const event = (method, path, body) => ({
+  rawPath: `/prod\${path}`,
+  requestContext: { stage: 'prod', http: { method } },
+  body: body == null ? undefined : JSON.stringify(body),
+});
+const home = await handler(event('GET', '/home/bootstrap'));
+const redeemed = await handler(event('POST', '/coupon/redeem', { couponId: 'coupon-10' }));
+const missing = await handler(event('POST', '/coupon/redeem', {}));
+console.log(JSON.stringify({
+  home: JSON.parse(home.body),
+  redeemedStatus: redeemed.statusCode,
+  redeemed: JSON.parse(redeemed.body),
+  missingStatus: missing.statusCode,
+}));
+''');
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final decoded =
+            jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+        expect(decoded['home']['title'], 'Dynamo home');
+        expect(decoded['redeemedStatus'], 200);
+        expect(decoded['redeemed']['couponId'], 'coupon-10');
+        expect(decoded['missingStatus'], 400);
+      },
+    );
 
     test('deploys AWS Lambda backend with SAM and records outputs', () async {
       final commands = <String>[];
@@ -366,6 +543,138 @@ void main() {
       expect(result.error, contains('PublisherBackendBaseUrl'));
     });
 
+    test('AWS seed writes DynamoDB starter records', () async {
+      final commands = <List<String>>[];
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          commands.add(arguments);
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          return ProcessResult(
+            0,
+            0,
+            jsonEncode(<String, Object?>{
+              'UnprocessedItems': <String, Object?>{},
+            }),
+            '',
+          );
+        },
+        clock: () => DateTime.utc(2026, 5, 23, 12),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'aws-lambda',
+          storageMode: 'dynamodb',
+        ),
+      );
+
+      final result = await starter.awsSeed(
+        PublisherBackendAwsSeedRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.seeded, isTrue);
+      expect(result.tableName, 'coupon-data-table');
+      expect(result.itemCount, 4);
+      final batchCommand = commands.singleWhere(
+        (arguments) => arguments.contains('batch-write-item'),
+      );
+      final requestItemsJson =
+          batchCommand[batchCommand.indexOf('--request-items') + 1];
+      final requestItems = jsonDecode(requestItemsJson) as Map<String, dynamic>;
+      final writes = requestItems['coupon-data-table'] as List<dynamic>;
+      expect(writes, hasLength(4));
+      final keys = writes
+          .map((write) => ((write as Map)['PutRequest'] as Map)['Item'] as Map)
+          .map((item) => '${item['pk']['S']} ${item['sk']['S']}')
+          .toList();
+      expect(keys, contains('APP#coupon_app HOME#bootstrap'));
+      expect(keys, contains('APP#coupon_app SESSION#demo'));
+      expect(keys, contains('APP#coupon_app COUPON#coupon-10'));
+      expect(keys, contains('APP#coupon_app COUPON#coupon-20'));
+    });
+
+    test('AWS seed fails when data table output is missing', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+      );
+
+      final result = await starter.awsSeed(
+        PublisherBackendAwsSeedRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.seeded, isFalse);
+      expect(result.error, contains('PublisherBackendDataTableName'));
+    });
+
+    test('AWS data status describes table and counts records', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          if (arguments.contains('describe-table')) {
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{
+                'Table': <String, Object?>{'TableStatus': 'ACTIVE'},
+              }),
+              '',
+            );
+          }
+          final joined = arguments.join(' ');
+          final count = joined.contains('APP#coupon_app#REDEMPTIONS') ? 1 : 4;
+          return ProcessResult(
+            0,
+            0,
+            jsonEncode(<String, Object?>{'Count': count}),
+            '',
+          );
+        },
+      );
+
+      final result = await starter.awsDataStatus(
+        PublisherBackendAwsDataStatusRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.available, isTrue);
+      expect(result.tableName, 'coupon-data-table');
+      expect(result.tableStatus, 'ACTIVE');
+      expect(result.appRecordCount, 4);
+      expect(result.redemptionCount, 1);
+    });
+
+    test('AWS data status fails when data table output is missing', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+      );
+
+      final result = await starter.awsDataStatus(
+        PublisherBackendAwsDataStatusRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.available, isFalse);
+      expect(result.error, contains('PublisherBackendDataTableName'));
+    });
+
     test(
       'AWS logs resolves Lambda function before tailing CloudWatch',
       () async {
@@ -519,6 +828,44 @@ String _stackDescribeJsonWithoutBaseUrl() => jsonEncode(<String, Object?>{
     },
   ],
 });
+
+String _stackDescribeJsonWithDataTable() => jsonEncode(<String, Object?>{
+  'Stacks': <Object?>[
+    <String, Object?>{
+      'StackStatus': 'CREATE_COMPLETE',
+      'Outputs': <Object?>[
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendBaseUrl',
+          'OutputValue':
+              'https://abc.execute-api.ap-south-1.amazonaws.com/prod/',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendHealthUrl',
+          'OutputValue':
+              'https://abc.execute-api.ap-south-1.amazonaws.com/prod/health',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendFunctionName',
+          'OutputValue': 'coupon-function',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendStorageMode',
+          'OutputValue': 'dynamodb',
+        },
+        <String, Object?>{
+          'OutputKey': 'PublisherBackendDataTableName',
+          'OutputValue': 'coupon-data-table',
+        },
+      ],
+    },
+  ],
+});
+
+Future<ProcessResult> _runNodeScript(Directory tempDir, String source) async {
+  final script = File(p.join(tempDir.path, 'node_handler_test.mjs'));
+  await script.writeAsString(source);
+  return Process.run('node', <String>[script.path]);
+}
 
 Future<int> _freePort() async {
   final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);

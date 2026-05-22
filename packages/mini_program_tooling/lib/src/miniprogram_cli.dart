@@ -2785,6 +2785,12 @@ class MiniprogramCli {
         help: 'Publisher backend starter template.',
       )
       ..addOption(
+        'storage',
+        defaultsTo: 'bundled',
+        allowed: const <String>['bundled', 'dynamodb'],
+        help: 'AWS Lambda storage mode. Only used with --template aws-lambda.',
+      )
+      ..addOption(
         'mini-program-root',
         help: 'Exact mini-program root. Defaults to the current directory.',
       )
@@ -2813,6 +2819,7 @@ class MiniprogramCli {
       PublisherBackendScaffoldRequest(
         miniProgramRootPath: miniProgramRootPath,
         template: results.option('template')!,
+        storageMode: results.option('storage')!,
         force: results.flag('force'),
       ),
     );
@@ -2839,6 +2846,10 @@ class MiniprogramCli {
         return _runPublisherBackendAwsOutputs(arguments.sublist(1));
       case 'smoke':
         return _runPublisherBackendAwsSmoke(arguments.sublist(1));
+      case 'seed':
+        return _runPublisherBackendAwsSeed(arguments.sublist(1));
+      case 'data':
+        return _runPublisherBackendAwsData(arguments.sublist(1));
       case 'logs':
         return _runPublisherBackendAwsLogs(arguments.sublist(1));
       case 'destroy':
@@ -2985,6 +2996,97 @@ class MiniprogramCli {
       _stdout.writeln(_formatPublisherBackendAwsSmokeResult(result));
     }
     return result.passed ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendAwsSeed(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws seed [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsSeed(
+      PublisherBackendAwsSeedRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsSeedJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsSeedResult(result));
+    }
+    return result.seeded ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendAwsData(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_publisherBackendAwsDataUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_publisherBackendAwsDataUsage());
+      return 64;
+    }
+    switch (arguments.first) {
+      case 'status':
+        return _runPublisherBackendAwsDataStatus(arguments.sublist(1));
+      default:
+        _stderr.writeln(
+          'Unknown publisher-backend aws data command: ${arguments.first}',
+        );
+        _stderr.writeln(_publisherBackendAwsDataUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runPublisherBackendAwsDataStatus(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws data status [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsDataStatus(
+      PublisherBackendAwsDataStatusRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsDataStatusJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsDataStatusResult(result));
+    }
+    return result.available ? 0 : 1;
   }
 
   Future<int> _runPublisherBackendAwsLogs(List<String> arguments) async {
@@ -3679,12 +3781,12 @@ Commands:
   backend stop
   backend status [--json]
   backend reset-local --yes
-  publisher-backend scaffold --template mock|aws-lambda
+  publisher-backend scaffold --template mock|aws-lambda [--storage bundled|dynamodb]
   publisher-backend run --port 9090
   publisher-backend status [--json]
   publisher-backend stop
   publisher-backend urls
-  publisher-backend aws deploy|status|outputs|smoke|logs|destroy --env <env-name>
+  publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -3701,7 +3803,7 @@ Commands:
 Usage: miniprogram publisher-backend <command> [arguments]
 
 Commands:
-  scaffold [--template mock|aws-lambda] [--mini-program-root <path>] [--force]
+  scaffold [--template mock|aws-lambda] [--storage bundled|dynamodb] [--mini-program-root <path>] [--force]
   run [--mini-program-root <path>] [--port 9090]
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
@@ -3710,6 +3812,8 @@ Commands:
   aws status --env <env-name> [--mini-program-root <path>] [--json]
   aws outputs --env <env-name> [--mini-program-root <path>] [--json]
   aws smoke --env <env-name> [--mini-program-root <path>] [--json]
+  aws seed --env <env-name> [--mini-program-root <path>] [--json]
+  aws data status --env <env-name> [--mini-program-root <path>] [--json]
   aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
   aws destroy --env <env-name> [--mini-program-root <path>] --yes
 ''';
@@ -3722,8 +3826,17 @@ Commands:
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
   smoke --env <env-name> [--mini-program-root <path>] [--json]
+  seed --env <env-name> [--mini-program-root <path>] [--json]
+  data status --env <env-name> [--mini-program-root <path>] [--json]
   logs --env <env-name> [--mini-program-root <path>] [--since 1h]
   destroy --env <env-name> [--mini-program-root <path>] --yes
+''';
+
+  String _publisherBackendAwsDataUsage() => '''
+Usage: miniprogram publisher-backend aws data <command> [arguments]
+
+Commands:
+  status --env <env-name> [--mini-program-root <path>] [--json]
 ''';
 
   String _partnerUsage() => '''
@@ -4680,6 +4793,7 @@ Commands:
     final lines = <String>[
       'Scaffolded publisher backend starter.',
       'Template: ${result.template}',
+      if (result.storageMode != null) 'Storage: ${result.storageMode}',
       'Mini-program root: ${result.miniProgramRootPath}',
       'Backend root: ${result.backendRootPath}',
       'Created files: ${result.createdPaths.length}',
@@ -4874,6 +4988,52 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatPublisherBackendAwsSeedResult(
+    PublisherBackendAwsSeedResult result,
+  ) {
+    return <String>[
+      'AWS DynamoDB publisher backend seed.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.storageMode != null) 'Storage mode: ${result.storageMode}',
+      if (result.tableName != null) 'DynamoDB table: ${result.tableName}',
+      'Seeded: ${result.seeded}',
+      'Items written: ${result.itemCount}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendAwsDataStatusResult(
+    PublisherBackendAwsDataStatusResult result,
+  ) {
+    return <String>[
+      'AWS DynamoDB publisher backend data status.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.storageMode != null) 'Storage mode: ${result.storageMode}',
+      if (result.tableName != null) 'DynamoDB table: ${result.tableName}',
+      if (result.tableStatus != null) 'Table status: ${result.tableStatus}',
+      if (result.appRecordCount != null)
+        'App records: ${result.appRecordCount}',
+      if (result.redemptionCount != null)
+        'Redemptions: ${result.redemptionCount}',
+      'Available: ${result.available}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
   String _formatPublisherBackendAwsLogsResult(
     PublisherBackendAwsLogsResult result,
   ) {
@@ -5021,6 +5181,52 @@ Commands:
             },
           )
           .toList(),
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsSeedJson(
+    PublisherBackendAwsSeedResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws seed',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'miniProgramId': result.miniProgramId,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'storageMode': result.storageMode,
+      'tableName': result.tableName,
+      'seeded': result.seeded,
+      'itemCount': result.itemCount,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsDataStatusJson(
+    PublisherBackendAwsDataStatusResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws data status',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'miniProgramId': result.miniProgramId,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'storageMode': result.storageMode,
+      'tableName': result.tableName,
+      'tableStatus': result.tableStatus,
+      'appRecordCount': result.appRecordCount,
+      'redemptionCount': result.redemptionCount,
+      'available': result.available,
+      'error': result.error,
     };
   }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.26
+
+- add opt-in DynamoDB storage for scaffolded AWS Lambda publisher backends,
+  including `publisher-backend aws seed` and `publisher-backend aws data status`
+
 ## 0.3.25
 
 - add `publisher-backend aws smoke` to verify deployed AWS publisher backend

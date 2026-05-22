@@ -29,6 +29,10 @@ const List<String> _publisherBackendAwsSmokeRoutePaths = <String>[
   '/auth/session',
 ];
 
+const String _publisherBackendStorageBundled = 'bundled';
+const String _publisherBackendStorageDynamoDb = 'dynamodb';
+const String _awsSdkJavaScriptV3Version = '^3.1052.0';
+
 class PublisherBackendException implements Exception {
   const PublisherBackendException(this.message);
 
@@ -42,11 +46,13 @@ class PublisherBackendScaffoldRequest {
   const PublisherBackendScaffoldRequest({
     required this.miniProgramRootPath,
     this.template = 'mock',
+    this.storageMode = 'bundled',
     this.force = false,
   });
 
   final String miniProgramRootPath;
   final String template;
+  final String storageMode;
   final bool force;
 }
 
@@ -56,12 +62,14 @@ class PublisherBackendScaffoldResult {
     required this.backendRootPath,
     required this.template,
     required this.createdPaths,
+    this.storageMode,
   });
 
   final String miniProgramRootPath;
   final String backendRootPath;
   final String template;
   final List<String> createdPaths;
+  final String? storageMode;
 }
 
 class PublisherBackendAwsDeployRequest {
@@ -257,6 +265,106 @@ class PublisherBackendAwsSmokeResult {
   final List<PublisherBackendAwsSmokeRouteResult> routes;
   final String? backendBaseUrl;
   final String? stackStatus;
+  final String? error;
+}
+
+class PublisherBackendAwsSeedRequest {
+  const PublisherBackendAwsSeedRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsSeedResult {
+  const PublisherBackendAwsSeedResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.seeded,
+    required this.itemCount,
+    required this.miniProgramId,
+    this.stackStatus,
+    this.storageMode,
+    this.tableName,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final bool seeded;
+  final int itemCount;
+  final String miniProgramId;
+  final String? stackStatus;
+  final String? storageMode;
+  final String? tableName;
+  final String? error;
+}
+
+class PublisherBackendAwsDataStatusRequest {
+  const PublisherBackendAwsDataStatusRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+}
+
+class PublisherBackendAwsDataStatusResult {
+  const PublisherBackendAwsDataStatusResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.available,
+    required this.miniProgramId,
+    this.stackStatus,
+    this.storageMode,
+    this.tableName,
+    this.tableStatus,
+    this.appRecordCount,
+    this.redemptionCount,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final bool available;
+  final String miniProgramId;
+  final String? stackStatus;
+  final String? storageMode;
+  final String? tableName;
+  final String? tableStatus;
+  final int? appRecordCount;
+  final int? redemptionCount;
   final String? error;
 }
 
@@ -576,6 +684,21 @@ class PublisherBackendStarter {
         'Unsupported publisher backend template: ${request.template}',
       );
     }
+    if (!const <String>[
+      _publisherBackendStorageBundled,
+      _publisherBackendStorageDynamoDb,
+    ].contains(request.storageMode)) {
+      throw PublisherBackendException(
+        'Unsupported publisher backend storage mode: ${request.storageMode}',
+      );
+    }
+    if (request.template != 'aws-lambda' &&
+        request.storageMode != _publisherBackendStorageBundled) {
+      throw const PublisherBackendException(
+        'publisher-backend scaffold --storage is only supported with '
+        '--template aws-lambda.',
+      );
+    }
     final miniProgramRootPath = await _requireMiniProgramRoot(
       request.miniProgramRootPath,
     );
@@ -591,6 +714,7 @@ class PublisherBackendStarter {
           )
         : buildAwsLambdaPublisherBackendFiles(
             miniProgramRootPath: miniProgramRootPath,
+            storageMode: request.storageMode,
           );
     for (final entry in files.entries) {
       await _writeManagedFile(
@@ -606,6 +730,9 @@ class PublisherBackendStarter {
       backendRootPath: backendRootPath,
       template: request.template,
       createdPaths: createdPaths,
+      storageMode: request.template == 'aws-lambda'
+          ? request.storageMode
+          : null,
     );
   }
 
@@ -1028,6 +1155,152 @@ class PublisherBackendStarter {
     );
   }
 
+  Future<PublisherBackendAwsSeedResult> awsSeed(
+    PublisherBackendAwsSeedRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsSeedResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        seeded: false,
+        itemCount: 0,
+        miniProgramId: settings.miniProgramId,
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+
+    final outputs = _extractStackOutputs(stack);
+    final tableName = outputs['PublisherBackendDataTableName']?.trim();
+    final storageMode = outputs['PublisherBackendStorageMode']?.trim();
+    if (tableName == null || tableName.isEmpty) {
+      return PublisherBackendAwsSeedResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: true,
+        stackStatus: stack['StackStatus']?.toString(),
+        storageMode: storageMode,
+        seeded: false,
+        itemCount: 0,
+        miniProgramId: settings.miniProgramId,
+        error: 'PublisherBackendDataTableName output is missing.',
+      );
+    }
+
+    final seedData = await _readAwsSeedData(settings);
+    final items = _buildDynamoDbSeedItems(settings, seedData);
+    await _batchWriteDynamoDbItems(
+      settings: settings,
+      tableName: tableName,
+      items: items,
+    );
+    return PublisherBackendAwsSeedResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      stackStatus: stack['StackStatus']?.toString(),
+      storageMode: storageMode,
+      tableName: tableName,
+      seeded: true,
+      itemCount: items.length,
+      miniProgramId: settings.miniProgramId,
+    );
+  }
+
+  Future<PublisherBackendAwsDataStatusResult> awsDataStatus(
+    PublisherBackendAwsDataStatusRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsDataStatusResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        available: false,
+        miniProgramId: settings.miniProgramId,
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+
+    final outputs = _extractStackOutputs(stack);
+    final tableName = outputs['PublisherBackendDataTableName']?.trim();
+    final storageMode = outputs['PublisherBackendStorageMode']?.trim();
+    if (tableName == null || tableName.isEmpty) {
+      return PublisherBackendAwsDataStatusResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: true,
+        stackStatus: stack['StackStatus']?.toString(),
+        storageMode: storageMode,
+        available: false,
+        miniProgramId: settings.miniProgramId,
+        error: 'PublisherBackendDataTableName output is missing.',
+      );
+    }
+
+    final table = await _describeDynamoDbTable(settings, tableName);
+    final appRecordCount = await _queryDynamoDbCount(
+      settings: settings,
+      tableName: tableName,
+      partitionKey: _appPartitionKey(settings.miniProgramId),
+    );
+    final redemptionCount = await _queryDynamoDbCount(
+      settings: settings,
+      tableName: tableName,
+      partitionKey: _redemptionsPartitionKey(settings.miniProgramId),
+    );
+    return PublisherBackendAwsDataStatusResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      stackStatus: stack['StackStatus']?.toString(),
+      storageMode: storageMode,
+      tableName: tableName,
+      tableStatus: table['TableStatus']?.toString(),
+      appRecordCount: appRecordCount,
+      redemptionCount: redemptionCount,
+      available: true,
+      miniProgramId: settings.miniProgramId,
+    );
+  }
+
   Future<PublisherBackendAwsLogsResult> awsLogs(
     PublisherBackendAwsLogsRequest request,
   ) async {
@@ -1441,6 +1714,246 @@ class PublisherBackendStarter {
     return null;
   }
 
+  Future<_PublisherBackendAwsSeedData> _readAwsSeedData(
+    _PublisherBackendAwsSettings settings,
+  ) async {
+    final dataRootPath = p.join(settings.backendRootPath, 'src', 'data');
+    final home = await _readJsonObjectFile(
+      p.join(dataRootPath, 'home_bootstrap.json'),
+      label: 'home_bootstrap.json',
+    );
+    final session = await _readJsonObjectFile(
+      p.join(dataRootPath, 'session.json'),
+      label: 'session.json',
+    );
+    final couponsRoot = await _readJsonObjectFile(
+      p.join(dataRootPath, 'coupons_list.json'),
+      label: 'coupons_list.json',
+    );
+    final rawCoupons = couponsRoot['coupons'];
+    if (rawCoupons is! List) {
+      throw const PublisherBackendException(
+        'coupons_list.json must contain a "coupons" list.',
+      );
+    }
+    final coupons = <Map<String, Object?>>[];
+    for (final rawCoupon in rawCoupons) {
+      if (rawCoupon is! Map) {
+        throw const PublisherBackendException(
+          'Every coupons_list.json coupon must be a JSON object.',
+        );
+      }
+      final coupon = rawCoupon.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final couponId = coupon['id']?.toString().trim();
+      if (couponId == null || couponId.isEmpty) {
+        throw const PublisherBackendException(
+          'Every coupons_list.json coupon must contain a non-empty "id".',
+        );
+      }
+      coupons.add(coupon);
+    }
+    return _PublisherBackendAwsSeedData(
+      home: home,
+      session: session,
+      coupons: coupons,
+    );
+  }
+
+  Future<Map<String, Object?>> _readJsonObjectFile(
+    String filePath, {
+    required String label,
+  }) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw PublisherBackendException(
+        'AWS publisher backend sample data is missing: $label',
+      );
+    }
+    final decoded = jsonDecode(await file.readAsString());
+    if (decoded is! Map) {
+      throw PublisherBackendException(
+        'AWS publisher backend sample data must be a JSON object: $label',
+      );
+    }
+    return decoded.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  List<Map<String, Object?>> _buildDynamoDbSeedItems(
+    _PublisherBackendAwsSettings settings,
+    _PublisherBackendAwsSeedData seedData,
+  ) {
+    final now = _clock().toUtc().toIso8601String();
+    final appPk = _appPartitionKey(settings.miniProgramId);
+    final items = <Map<String, Object?>>[
+      _dynamoDbSeedItem(
+        pk: appPk,
+        sk: 'HOME#bootstrap',
+        recordType: 'home',
+        payload: seedData.home,
+        updatedAtUtc: now,
+      ),
+      _dynamoDbSeedItem(
+        pk: appPk,
+        sk: 'SESSION#demo',
+        recordType: 'session',
+        payload: seedData.session,
+        updatedAtUtc: now,
+      ),
+    ];
+    for (var i = 0; i < seedData.coupons.length; i++) {
+      final coupon = seedData.coupons[i];
+      final couponId = coupon['id']!.toString();
+      items.add(
+        _dynamoDbSeedItem(
+          pk: appPk,
+          sk: 'COUPON#$couponId',
+          recordType: 'coupon',
+          payload: coupon,
+          updatedAtUtc: now,
+          extraAttributes: <String, Object?>{
+            'couponId': couponId,
+            'sortIndex': i,
+          },
+        ),
+      );
+    }
+    return items;
+  }
+
+  Map<String, Object?> _dynamoDbSeedItem({
+    required String pk,
+    required String sk,
+    required String recordType,
+    required Map<String, Object?> payload,
+    required String updatedAtUtc,
+    Map<String, Object?> extraAttributes = const <String, Object?>{},
+  }) {
+    return <String, Object?>{
+      'pk': pk,
+      'sk': sk,
+      'recordType': recordType,
+      'payload': payload,
+      'updatedAtUtc': updatedAtUtc,
+      ...extraAttributes,
+    };
+  }
+
+  Future<void> _batchWriteDynamoDbItems({
+    required _PublisherBackendAwsSettings settings,
+    required String tableName,
+    required List<Map<String, Object?>> items,
+  }) async {
+    for (var index = 0; index < items.length; index += 25) {
+      final chunk = items.skip(index).take(25).toList();
+      final requestItems = <String, Object?>{
+        tableName: chunk
+            .map(
+              (item) => <String, Object?>{
+                'PutRequest': <String, Object?>{
+                  'Item': item.map(
+                    (key, value) =>
+                        MapEntry(key, _toDynamoDbAttributeValue(value)),
+                  ),
+                },
+              },
+            )
+            .toList(),
+      };
+      final response = await _runAwsJsonCommand(settings, <String>[
+        'dynamodb',
+        'batch-write-item',
+        '--request-items',
+        jsonEncode(requestItems),
+      ]);
+      final unprocessed = response['UnprocessedItems'];
+      if (unprocessed is Map && unprocessed.isNotEmpty) {
+        throw PublisherBackendException(
+          'DynamoDB seed left unprocessed items for table "$tableName". '
+          'Retry `miniprogram publisher-backend aws seed`.',
+        );
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _describeDynamoDbTable(
+    _PublisherBackendAwsSettings settings,
+    String tableName,
+  ) async {
+    final response = await _runAwsJsonCommand(settings, <String>[
+      'dynamodb',
+      'describe-table',
+      '--table-name',
+      tableName,
+    ]);
+    final table = response['Table'];
+    if (table is! Map) {
+      throw PublisherBackendException(
+        'AWS CLI returned no DynamoDB table details for "$tableName".',
+      );
+    }
+    return table.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  Future<int> _queryDynamoDbCount({
+    required _PublisherBackendAwsSettings settings,
+    required String tableName,
+    required String partitionKey,
+  }) async {
+    final response = await _runAwsJsonCommand(settings, <String>[
+      'dynamodb',
+      'query',
+      '--table-name',
+      tableName,
+      '--key-condition-expression',
+      'pk = :pk',
+      '--expression-attribute-values',
+      jsonEncode(<String, Object?>{
+        ':pk': <String, Object?>{'S': partitionKey},
+      }),
+      '--select',
+      'COUNT',
+    ]);
+    final count = response['Count'];
+    if (count is int) {
+      return count;
+    }
+    if (count is num) {
+      return count.toInt();
+    }
+    return int.tryParse(count?.toString() ?? '') ?? 0;
+  }
+
+  Map<String, Object?> _toDynamoDbAttributeValue(Object? value) {
+    if (value == null) {
+      return const <String, Object?>{'NULL': true};
+    }
+    if (value is bool) {
+      return <String, Object?>{'BOOL': value};
+    }
+    if (value is num) {
+      return <String, Object?>{'N': value.toString()};
+    }
+    if (value is String) {
+      return <String, Object?>{'S': value};
+    }
+    if (value is List) {
+      return <String, Object?>{
+        'L': value.map(_toDynamoDbAttributeValue).toList(),
+      };
+    }
+    if (value is Map) {
+      return <String, Object?>{
+        'M': value.map(
+          (key, nestedValue) =>
+              MapEntry(key.toString(), _toDynamoDbAttributeValue(nestedValue)),
+        ),
+      };
+    }
+    return <String, Object?>{'S': value.toString()};
+  }
+
   Map<String, String> _extractStackOutputs(Map<String, dynamic> stack) {
     final outputs = <String, String>{};
     final rawOutputs = stack['Outputs'];
@@ -1690,9 +2203,22 @@ class _PublisherBackendHealth {
   final String? error;
 }
 
+class _PublisherBackendAwsSeedData {
+  const _PublisherBackendAwsSeedData({
+    required this.home,
+    required this.session,
+    required this.coupons,
+  });
+
+  final Map<String, Object?> home;
+  final Map<String, Object?> session;
+  final List<Map<String, Object?>> coupons;
+}
+
 class _PublisherBackendAwsSettings {
   const _PublisherBackendAwsSettings({
     required this.environmentName,
+    required this.miniProgramId,
     required this.backendRootPath,
     required this.stackName,
     required this.stageName,
@@ -1702,6 +2228,7 @@ class _PublisherBackendAwsSettings {
   });
 
   final String environmentName;
+  final String miniProgramId;
   final String backendRootPath;
   final String stackName;
   final String stageName;
@@ -1763,6 +2290,7 @@ class _PublisherBackendAwsSettings {
 
     return _PublisherBackendAwsSettings(
       environmentName: environment.name,
+      miniProgramId: appId,
       backendRootPath: p.join(miniProgramRootPath, 'backend', 'aws_lambda'),
       stackName: stackName,
       stageName: stageName,
@@ -1777,7 +2305,16 @@ Map<String, String> buildAwsLambdaPublisherBackendFiles({
   required String miniProgramRootPath,
   String? miniProgramId,
   String? title,
+  String storageMode = 'bundled',
 }) {
+  if (!const <String>[
+    _publisherBackendStorageBundled,
+    _publisherBackendStorageDynamoDb,
+  ].contains(storageMode)) {
+    throw PublisherBackendException(
+      'Unsupported AWS Lambda publisher backend storage mode: $storageMode',
+    );
+  }
   final appId = miniProgramId?.trim().isNotEmpty == true
       ? miniProgramId!.trim()
       : _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
@@ -1790,9 +2327,13 @@ Map<String, String> buildAwsLambdaPublisherBackendFiles({
     title: displayTitle,
   );
   return <String, String>{
-    'template.yaml': _awsLambdaTemplateYaml(displayTitle),
-    'README.md': _awsLambdaReadme(appId, displayTitle),
-    p.join('src', 'package.json'): _awsLambdaPackageJson(appId),
+    'template.yaml': _awsLambdaTemplateYaml(
+      displayTitle,
+      appId: appId,
+      storageMode: storageMode,
+    ),
+    'README.md': _awsLambdaReadme(appId, displayTitle, storageMode),
+    p.join('src', 'package.json'): _awsLambdaPackageJson(appId, storageMode),
     p.join('src', 'handler.mjs'): _awsLambdaHandlerSource(),
     p.join('src', 'data', 'home_bootstrap.json'):
         sampleFiles[p.join('data', 'home_bootstrap.json')]!,
@@ -2024,8 +2565,53 @@ String? _option(List<String> arguments, String name) {
 }
 ''';
 
-String _awsLambdaTemplateYaml(String title) =>
-    '''
+String _awsLambdaTemplateYaml(
+  String title, {
+  required String appId,
+  required String storageMode,
+}) {
+  final usesDynamoDb = storageMode == _publisherBackendStorageDynamoDb;
+  final dataTableResource = usesDynamoDb
+      ? '''
+  PublisherBackendDataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+
+'''
+      : '';
+  final functionEnvironment =
+      '''
+      Environment:
+        Variables:
+          PUBLISHER_BACKEND_STORAGE: $storageMode
+          MINI_PROGRAM_ID: $appId
+${usesDynamoDb ? '          PUBLISHER_BACKEND_TABLE_NAME: !Ref PublisherBackendDataTable\n' : ''}''';
+  final functionPolicies = usesDynamoDb
+      ? '''
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PublisherBackendDataTable
+'''
+      : '';
+  final dataTableOutput = usesDynamoDb
+      ? '''
+  PublisherBackendDataTableName:
+    Description: DynamoDB table used by the publisher backend.
+    Value: !Ref PublisherBackendDataTable
+'''
+      : '';
+  return '''
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Publisher-owned business API backend for $title.
@@ -2067,13 +2653,13 @@ Resources:
           - x-mini-program-platform
           - x-mini-program-locale
 
-  PublisherBackendFunction:
+$dataTableResource  PublisherBackendFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
       Handler: handler.handler
       Description: Publisher-owned mini-program business API.
-      Events:
+$functionEnvironment$functionPolicies      Events:
         ProxyApi:
           Type: HttpApi
           Properties:
@@ -2094,15 +2680,46 @@ Outputs:
   PublisherBackendStackName:
     Description: Publisher backend CloudFormation stack name.
     Value: !Ref AWS::StackName
-''';
+  PublisherBackendStorageMode:
+    Description: Publisher backend storage mode.
+    Value: $storageMode
+$dataTableOutput''';
+}
 
-String _awsLambdaReadme(String appId, String title) =>
-    '''
+String _awsLambdaReadme(String appId, String title, String storageMode) {
+  final usesDynamoDb = storageMode == _publisherBackendStorageDynamoDb;
+  final storageSection = usesDynamoDb
+      ? '''
+Storage mode: DynamoDB.
+
+After deploying the stack, seed the starter data into DynamoDB:
+
+```powershell
+miniprogram publisher-backend aws seed --env <env-name>
+miniprogram publisher-backend aws data status --env <env-name>
+```
+
+The DynamoDB table is owned by this SAM stack. `aws destroy --yes` deletes the
+stack-owned table and its data.
+'''
+      : '''
+Storage mode: bundled JSON.
+
+The sample Lambda returns bundled JSON from `src/data/`. To create a persistent
+DynamoDB starter instead, re-run scaffold with:
+
+```powershell
+miniprogram publisher-backend scaffold --template aws-lambda --storage dynamodb
+```
+''';
+  return '''
 # $title AWS Lambda publisher backend
 
 This backend is for publisher-owned business APIs. It is not the mini-program
 delivery backend. Host apps only receive the resulting `backendBaseUrl`; AWS
 secrets and future database credentials stay on the publisher server.
+
+$storageSection
 
 Routes:
 
@@ -2128,22 +2745,29 @@ miniprogram host endpoint add $appId `
   --backend-base-url <PublisherBackendBaseUrl>
 ```
 
-The sample Lambda returns bundled JSON. Replace the route implementation with
-Firebase Admin, DynamoDB, S3, Secrets Manager, or any server-side API later.
 Do not put publisher backend secrets in mini-program JSON, host source, APK,
 IPA, or web JavaScript.
 ''';
+}
 
-String _awsLambdaPackageJson(String appId) =>
-    '''
+String _awsLambdaPackageJson(String appId, String storageMode) {
+  final dependencies = storageMode == _publisherBackendStorageDynamoDb
+      ? ''',
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "$_awsSdkJavaScriptV3Version",
+    "@aws-sdk/lib-dynamodb": "$_awsSdkJavaScriptV3Version"
+  }'''
+      : '';
+  return '''
 {
   "name": "${appId}_aws_publisher_backend",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "AWS Lambda publisher backend starter for $appId"
+  "description": "AWS Lambda publisher backend starter for $appId"$dependencies
 }
 ''';
+}
 
 String _awsLambdaHandlerSource() => r'''
 import { readFile } from 'node:fs/promises';
@@ -2152,6 +2776,8 @@ import { fileURLToPath } from 'node:url';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const dataRoot = join(currentDir, 'data');
+const storageMode = process.env.PUBLISHER_BACKEND_STORAGE ?? 'bundled';
+const miniProgramId = process.env.MINI_PROGRAM_ID ?? 'mini_program';
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -2160,6 +2786,14 @@ const corsHeaders = {
     'content-type, x-mini-program-access-key, x-mini-program-app-id, x-mini-program-host-app, x-mini-program-host-version, x-mini-program-id, x-mini-program-sdk-version, x-mini-program-platform, x-mini-program-locale',
   'content-type': 'application/json; charset=utf-8',
 };
+
+let testStore = null;
+let cachedStore = null;
+
+export function setPublisherBackendStoreForTesting(store) {
+  testStore = store;
+  cachedStore = null;
+}
 
 export async function handler(event) {
   const method = event.requestContext?.http?.method ?? event.httpMethod ?? 'GET';
@@ -2176,34 +2810,33 @@ export async function handler(event) {
     };
   }
 
+  const store = await resolveStore();
+
   if (method === 'GET' && path === '/health') {
     return json(200, {
       status: 'ok',
       service: 'mini_program_aws_publisher_backend',
+      storageMode,
       generatedAtUtc: new Date().toISOString(),
     });
   }
 
   if (method === 'GET' && path === '/home/bootstrap') {
-    return dataFile('home_bootstrap.json');
+    return jsonFromStore(await store.homeBootstrap(), 'home/bootstrap');
   }
 
   if (method === 'GET' && path === '/coupons/list') {
-    return dataFile('coupons_list.json');
+    return jsonFromStore(await store.couponsList(), 'coupons/list');
   }
 
   if (method === 'GET' && path === '/auth/session') {
-    return dataFile('session.json');
+    return jsonFromStore(await store.authSession(), 'auth/session');
   }
 
   if (method === 'POST' && path === '/coupon/redeem') {
     const body = parseJsonBody(event.body, event.isBase64Encoded);
-    return json(200, {
-      status: 'redeemed',
-      couponId: body?.couponId ?? null,
-      message:
-        'AWS sample redeem succeeded. Replace this route on your real publisher backend.',
-    });
+    const result = await store.redeemCoupon(body);
+    return json(result.statusCode, result.body);
   }
 
   return json(404, {
@@ -2212,19 +2845,217 @@ export async function handler(event) {
   });
 }
 
-async function dataFile(fileName) {
-  try {
-    const raw = await readFile(join(dataRoot, fileName), 'utf8');
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: raw,
-    };
-  } catch (error) {
+async function resolveStore() {
+  if (testStore) {
+    return testStore;
+  }
+  if (cachedStore) {
+    return cachedStore;
+  }
+  cachedStore =
+    storageMode === 'dynamodb'
+      ? await createDynamoDbStore()
+      : new BundledJsonStore(dataRoot);
+  return cachedStore;
+}
+
+function jsonFromStore(body, label) {
+  if (body == null) {
     return json(404, {
       errorCode: 'backend_data_missing',
-      message: `Backend data file was not found: ${fileName}`,
+      message: `Backend data was not found: ${label}`,
     });
+  }
+  return json(200, body);
+}
+
+class BundledJsonStore {
+  constructor(root) {
+    this.root = root;
+  }
+
+  homeBootstrap() {
+    return this.dataFile('home_bootstrap.json');
+  }
+
+  couponsList() {
+    return this.dataFile('coupons_list.json');
+  }
+
+  authSession() {
+    return this.dataFile('session.json');
+  }
+
+  async redeemCoupon(body) {
+    return {
+      statusCode: body?.couponId ? 200 : 400,
+      body: body?.couponId
+        ? {
+            status: 'redeemed',
+            couponId: body.couponId,
+            message:
+              'AWS sample redeem succeeded. Use --storage dynamodb for persistent redemptions.',
+          }
+        : {
+            errorCode: 'missing_coupon_id',
+            message: 'couponId is required.',
+          },
+    };
+  }
+
+  async dataFile(fileName) {
+    try {
+      const raw = await readFile(join(this.root, fileName), 'utf8');
+      return JSON.parse(raw);
+    } catch (error) {
+      return null;
+    }
+  }
+}
+
+async function createDynamoDbStore() {
+  const tableName = process.env.PUBLISHER_BACKEND_TABLE_NAME;
+  if (!tableName) {
+    throw new Error('PUBLISHER_BACKEND_TABLE_NAME is required for DynamoDB storage.');
+  }
+  const [{ DynamoDBClient }, dynamodbLib] = await Promise.all([
+    import('@aws-sdk/client-dynamodb'),
+    import('@aws-sdk/lib-dynamodb'),
+  ]);
+  const docClient = dynamodbLib.DynamoDBDocumentClient.from(
+    new DynamoDBClient({}),
+  );
+  return new DynamoDbStore({
+    docClient,
+    tableName,
+    appId: miniProgramId,
+    commands: dynamodbLib,
+  });
+}
+
+class DynamoDbStore {
+  constructor({ docClient, tableName, appId, commands }) {
+    this.docClient = docClient;
+    this.tableName = tableName;
+    this.appPk = `APP#${appId}`;
+    this.redemptionsPk = `APP#${appId}#REDEMPTIONS`;
+    this.GetCommand = commands.GetCommand;
+    this.PutCommand = commands.PutCommand;
+    this.QueryCommand = commands.QueryCommand;
+  }
+
+  homeBootstrap() {
+    return this.payloadFor('HOME#bootstrap');
+  }
+
+  async couponsList() {
+    const response = await this.docClient.send(
+      new this.QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'pk = :pk AND begins_with(sk, :prefix)',
+        ExpressionAttributeValues: {
+          ':pk': this.appPk,
+          ':prefix': 'COUPON#',
+        },
+      }),
+    );
+    const coupons = (response.Items ?? [])
+      .sort((left, right) => (left.sortIndex ?? 0) - (right.sortIndex ?? 0))
+      .map((item) => item.payload)
+      .filter((item) => item != null);
+    return { coupons };
+  }
+
+  authSession() {
+    return this.payloadFor('SESSION#demo');
+  }
+
+  async redeemCoupon(body) {
+    const couponId = body?.couponId?.toString()?.trim();
+    if (!couponId) {
+      return {
+        statusCode: 400,
+        body: {
+          errorCode: 'missing_coupon_id',
+          message: 'couponId is required.',
+        },
+      };
+    }
+
+    const coupon = await this.payloadFor(`COUPON#${couponId}`);
+    if (coupon == null) {
+      return {
+        statusCode: 404,
+        body: {
+          errorCode: 'coupon_not_found',
+          couponId,
+          message: `Coupon was not found: ${couponId}`,
+        },
+      };
+    }
+
+    const userId =
+      body?.userId?.toString()?.trim() ||
+      body?.user?.id?.toString()?.trim() ||
+      'anonymous';
+    const redeemedAtUtc = new Date().toISOString();
+    const redemption = {
+      status: 'redeemed',
+      couponId,
+      userId,
+      redeemedAtUtc,
+    };
+
+    try {
+      await this.docClient.send(
+        new this.PutCommand({
+          TableName: this.tableName,
+          Item: {
+            pk: this.redemptionsPk,
+            sk: `USER#${userId}#COUPON#${couponId}`,
+            recordType: 'redemption',
+            couponId,
+            userId,
+            payload: redemption,
+            createdAtUtc: redeemedAtUtc,
+          },
+          ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
+        }),
+      );
+      return {
+        statusCode: 200,
+        body: {
+          ...redemption,
+          message: 'Coupon redeemed.',
+        },
+      };
+    } catch (error) {
+      if (error?.name === 'ConditionalCheckFailedException') {
+        return {
+          statusCode: 200,
+          body: {
+            status: 'already_redeemed',
+            couponId,
+            userId,
+            message: 'Coupon was already redeemed for this user.',
+          },
+        };
+      }
+      throw error;
+    }
+  }
+
+  async payloadFor(sk) {
+    const response = await this.docClient.send(
+      new this.GetCommand({
+        TableName: this.tableName,
+        Key: {
+          pk: this.appPk,
+          sk,
+        },
+      }),
+    );
+    return response.Item?.payload ?? null;
   }
 }
 
@@ -2272,6 +3103,10 @@ String _defaultAwsPublisherBackendStackName(
   final safeEnv = _safeAwsSegment(environmentName);
   return 'mini-program-publisher-backend-$safeAppId-$safeEnv';
 }
+
+String _appPartitionKey(String appId) => 'APP#$appId';
+
+String _redemptionsPartitionKey(String appId) => 'APP#$appId#REDEMPTIONS';
 
 String _safeAwsSegment(String value) {
   final normalized = value

@@ -117,11 +117,13 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
-        contains('publisher-backend scaffold --template mock'),
+        contains('publisher-backend scaffold --template mock|aws-lambda'),
       );
       expect(
         stdoutBuffer.toString(),
-        contains('publisher-backend aws deploy|status|outputs|smoke|logs'),
+        contains(
+          'publisher-backend aws deploy|status|outputs|smoke|seed|data|logs',
+        ),
       );
     });
 
@@ -1033,6 +1035,277 @@ void main() {
       expect(exitCode, 1);
       expect(stdoutBuffer.toString(), contains('Passed: false'));
       expect(stdoutBuffer.toString(), contains('GET /auth/session: 500 FAIL'));
+    });
+
+    test('publisher-backend scaffold help includes storage', () async {
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: tempDir.path,
+      ).run(<String>['publisher-backend', 'scaffold', '--help']);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('--storage'));
+      expect(stdoutBuffer.toString(), contains('bundled'));
+      expect(stdoutBuffer.toString(), contains('dynamodb'));
+    });
+
+    test('publisher-backend aws help includes seed and data status', () async {
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: tempDir.path,
+      ).run(<String>['publisher-backend', 'aws', '--help']);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('seed --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('data status --env <env-name>'));
+    });
+
+    test('publisher-backend aws seed prints text output', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'aws-lambda',
+          storageMode: 'dynamodb',
+        ),
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            if (arguments.contains('describe-stacks')) {
+              return ProcessResult(
+                0,
+                0,
+                _publisherBackendStackJsonWithDataTable(),
+                '',
+              );
+            }
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{
+                'UnprocessedItems': <String, Object?>{},
+              }),
+              '',
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'seed',
+        '--env',
+        'my-aws-prod',
+      ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('AWS DynamoDB publisher backend seed.'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('DynamoDB table: coupon-data-table'),
+      );
+      expect(stdoutBuffer.toString(), contains('Seeded: true'));
+      expect(stdoutBuffer.toString(), contains('Items written: 4'));
+    });
+
+    test('publisher-backend aws seed prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'aws-lambda',
+          storageMode: 'dynamodb',
+        ),
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            if (arguments.contains('describe-stacks')) {
+              return ProcessResult(
+                0,
+                0,
+                _publisherBackendStackJsonWithDataTable(),
+                '',
+              );
+            }
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{
+                'UnprocessedItems': <String, Object?>{},
+              }),
+              '',
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'seed',
+        '--env',
+        'my-aws-prod',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend aws seed');
+      expect(json['seeded'], isTrue);
+      expect(json['tableName'], 'coupon-data-table');
+      expect(json['itemCount'], 4);
+    });
+
+    test(
+      'publisher-backend aws seed returns 1 when table output is missing',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          publisherBackendStarter: PublisherBackendStarter(
+            shellRunner: (executable, arguments, {workingDirectory}) async {
+              return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+            },
+          ),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'aws',
+          'seed',
+          '--env',
+          'my-aws-prod',
+        ]);
+
+        expect(exitCode, 1);
+        expect(stdoutBuffer.toString(), contains('Seeded: false'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('PublisherBackendDataTableName'),
+        );
+      },
+    );
+
+    test('publisher-backend aws data status prints text output', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'status',
+        '--env',
+        'my-aws-prod',
+      ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('AWS DynamoDB publisher backend data status.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Table status: ACTIVE'));
+      expect(stdoutBuffer.toString(), contains('App records: 4'));
+      expect(stdoutBuffer.toString(), contains('Redemptions: 1'));
+    });
+
+    test('publisher-backend aws data status prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'status',
+        '--env',
+        'my-aws-prod',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend aws data status');
+      expect(json['available'], isTrue);
+      expect(json['tableName'], 'coupon-data-table');
+      expect(json['appRecordCount'], 4);
+      expect(json['redemptionCount'], 1);
     });
 
     test(
@@ -3800,6 +4073,59 @@ String _publisherBackendStackJson() => jsonEncode(<String, Object?>{
     },
   ],
 });
+
+String _publisherBackendStackJsonWithDataTable() =>
+    jsonEncode(<String, Object?>{
+      'Stacks': <Object?>[
+        <String, Object?>{
+          'StackStatus': 'CREATE_COMPLETE',
+          'Outputs': <Object?>[
+            <String, Object?>{
+              'OutputKey': 'PublisherBackendBaseUrl',
+              'OutputValue':
+                  'https://abc.execute-api.us-east-1.amazonaws.com/prod/',
+            },
+            <String, Object?>{
+              'OutputKey': 'PublisherBackendHealthUrl',
+              'OutputValue':
+                  'https://abc.execute-api.us-east-1.amazonaws.com/prod/health',
+            },
+            <String, Object?>{
+              'OutputKey': 'PublisherBackendStorageMode',
+              'OutputValue': 'dynamodb',
+            },
+            <String, Object?>{
+              'OutputKey': 'PublisherBackendDataTableName',
+              'OutputValue': 'coupon-data-table',
+            },
+          ],
+        },
+      ],
+    });
+
+Future<ProcessResult> _publisherBackendDataShellRunner(
+  String executable,
+  List<String> arguments, {
+  String? workingDirectory,
+}) async {
+  if (arguments.contains('describe-stacks')) {
+    return ProcessResult(0, 0, _publisherBackendStackJsonWithDataTable(), '');
+  }
+  if (arguments.contains('describe-table')) {
+    return ProcessResult(
+      0,
+      0,
+      jsonEncode(<String, Object?>{
+        'Table': <String, Object?>{'TableStatus': 'ACTIVE'},
+      }),
+      '',
+    );
+  }
+  final count = arguments.join(' ').contains('APP#coupon_center#REDEMPTIONS')
+      ? 1
+      : 4;
+  return ProcessResult(0, 0, jsonEncode(<String, Object?>{'Count': count}), '');
+}
 
 const String _fakeStacCliSource = r'''
 import 'dart:convert';
