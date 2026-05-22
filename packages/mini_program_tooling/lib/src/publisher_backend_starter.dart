@@ -1980,7 +1980,10 @@ const corsHeaders = {
 
 export async function handler(event) {
   const method = event.requestContext?.http?.method ?? event.httpMethod ?? 'GET';
-  const path = normalizePath(event.rawPath ?? event.path ?? '/');
+  const path = normalizePath(
+    event.rawPath ?? event.path ?? '/',
+    event.requestContext?.stage,
+  );
 
   if (method === 'OPTIONS') {
     return {
@@ -2056,8 +2059,16 @@ function parseJsonBody(rawBody, isBase64Encoded) {
   }
 }
 
-function normalizePath(rawPath) {
-  const value = rawPath.replace(/\/+$/g, '');
+function normalizePath(rawPath, stage) {
+  let value = rawPath.replace(/\/+$/g, '');
+  if (stage && stage !== '$default') {
+    const stagePrefix = `/${stage}`;
+    if (value === stagePrefix) {
+      value = '/';
+    } else if (value.startsWith(`${stagePrefix}/`)) {
+      value = value.substring(stagePrefix.length);
+    }
+  }
   return value.length === 0 ? '/' : value;
 }
 

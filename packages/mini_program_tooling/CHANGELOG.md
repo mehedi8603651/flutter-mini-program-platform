@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.24
+
+- fix generated AWS publisher backend Lambda handlers so API Gateway stage
+  prefixes such as `/prod` are stripped before route matching
+
 ## 0.3.23
 
 - add `publisher-backend scaffold --template aws-lambda` for a publisher-owned
