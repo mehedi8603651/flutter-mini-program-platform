@@ -427,6 +427,48 @@ test('diagnostic output redacts access-key secrets', async () => {
   }
 });
 
+test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-cli-old-');
+  try {
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'workspace',
+      cliCapabilities: {
+        checked: true,
+        supportsWriteSmoke: false,
+        detail: 'Configured CLI does not list --include-write.',
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /CLI AWS publisher backend commands/);
+    assert.match(text, /missing AWS DynamoDB smoke\/write support/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.27/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('diagnostics accept CLI with AWS write smoke support', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-cli-new-');
+  try {
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'workspace',
+      cliCapabilities: {
+        checked: true,
+        supportsWriteSmoke: true,
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /Configured CLI supports AWS DynamoDB smoke\/write actions/);
+    assert.doesNotMatch(text, /mini_program_tooling 0.3.27/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
 async function tempWorkspace(prefix: string): Promise<string> {
   return mkdtemp(path.join(tmpdir(), prefix));
 }

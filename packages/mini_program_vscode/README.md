@@ -8,10 +8,10 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.22 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.27 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
-starter commands, and
+starter commands, AWS Lambda/DynamoDB publisher backend workflows, and
 `miniprogram workflow status --json`.
 
 Install or upgrade the CLI first:
@@ -40,7 +40,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.19.vsix
+code --install-extension mini-program-tools-0.1.21.vsix
 ```
 
 ## Features
@@ -77,6 +77,11 @@ code --install-extension mini-program-tools-0.1.19.vsix
   - `MiniProgram: Publisher Backend Status`
   - `MiniProgram: Deploy Publisher Backend to AWS`
   - `MiniProgram: Publisher Backend AWS Status`
+  - `MiniProgram: Publisher Backend AWS Outputs`
+  - `MiniProgram: Smoke Test AWS Publisher Backend`
+  - `MiniProgram: Smoke Test AWS Publisher Backend With Write`
+  - `MiniProgram: Seed AWS Publisher DynamoDB`
+  - `MiniProgram: AWS Publisher DynamoDB Data Status`
   - `MiniProgram: Publisher Backend AWS Logs`
   - `MiniProgram: Copy AWS Backend Host Command`
   - `MiniProgram: Copy Publisher Backend URLs`
@@ -165,7 +170,8 @@ From VS Code:
 5. Run `MiniProgram: Copy Publisher Backend URLs`.
 
 For an existing mini-program, run `MiniProgram: Setup Publisher Backend` and
-choose **Mock local** or **AWS Lambda**.
+choose **Mock local**, **AWS Lambda bundled JSON**, or
+**AWS Lambda + DynamoDB**.
 
 The generated mock server is local-only and lives under:
 
@@ -197,8 +203,10 @@ server SDKs belong on publisher backend servers, not in the Flutter host app or
 
 ### AWS Lambda publisher backend
 
-Choose **AWS Lambda** in `MiniProgram: Setup Publisher Backend` to scaffold
-`backend/aws_lambda/`. It uses the same route shape as the mock backend:
+Choose **AWS Lambda bundled JSON** in `MiniProgram: Setup Publisher Backend` to
+scaffold `backend/aws_lambda/` with sample JSON files. Choose
+**AWS Lambda + DynamoDB** when you want persistent publisher backend storage.
+Both use the same route shape as the mock backend:
 
 - `GET /health`
 - `GET /home/bootstrap`
@@ -207,8 +215,25 @@ Choose **AWS Lambda** in `MiniProgram: Setup Publisher Backend` to scaffold
 - `POST /coupon/redeem`
 
 Deploy with `MiniProgram: Deploy Publisher Backend to AWS`, then inspect it with
-`MiniProgram: Publisher Backend AWS Status` or
+`MiniProgram: Publisher Backend AWS Status`,
+`MiniProgram: Publisher Backend AWS Outputs`, or
 `MiniProgram: Publisher Backend AWS Logs`.
+
+For DynamoDB scaffolds, use:
+
+- `MiniProgram: Seed AWS Publisher DynamoDB` to upsert starter records.
+- `MiniProgram: AWS Publisher DynamoDB Data Status` to inspect table status,
+  app records, and redemption count.
+- `MiniProgram: Smoke Test AWS Publisher Backend` for a read-only route check.
+- `MiniProgram: Smoke Test AWS Publisher Backend With Write` only when you want
+  to verify `POST /coupon/redeem`; this may create or reuse a redemption record.
+
+If the configured CLI is older than `mini_program_tooling` 0.3.27, the extension
+warns before running the new AWS DynamoDB actions. Upgrade with:
+
+```bash
+dart pub global activate mini_program_tooling 0.3.27
+```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed
 `PublisherBackendBaseUrl` and copies a host endpoint command that uses

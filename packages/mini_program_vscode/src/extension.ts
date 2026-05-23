@@ -31,8 +31,11 @@ import {
   buildPreviewArgs,
   buildPublisherBackendRunArgs,
   buildPublisherBackendAwsDeployArgs,
+  buildPublisherBackendAwsDataStatusArgs,
   buildPublisherBackendAwsLogsArgs,
   buildPublisherBackendAwsOutputsArgs,
+  buildPublisherBackendAwsSeedArgs,
+  buildPublisherBackendAwsSmokeArgs,
   buildPublisherBackendAwsStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
@@ -227,6 +230,21 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsStatus', () =>
       publisherBackendAwsStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsOutputs', () =>
+      publisherBackendAwsOutputs(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsSmoke', () =>
+      publisherBackendAwsSmoke(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsSmokeWrite', () =>
+      publisherBackendAwsSmokeWrite(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsSeed', () =>
+      publisherBackendAwsSeed(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataStatus', () =>
+      publisherBackendAwsDataStatus(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsLogs', () =>
       publisherBackendAwsLogs(output),
@@ -1106,12 +1124,20 @@ async function publisherBackendSetup(
       {
         label: 'Mock local',
         value: 'mock' as const,
+        storageMode: undefined,
         description: 'Local JSON API starter for development',
       },
       {
-        label: 'AWS Lambda',
+        label: 'AWS Lambda bundled JSON',
         value: 'aws-lambda' as const,
-        description: 'API Gateway + Lambda starter for publisher business APIs',
+        storageMode: 'bundled' as const,
+        description: 'API Gateway + Lambda starter with bundled sample JSON',
+      },
+      {
+        label: 'AWS Lambda + DynamoDB',
+        value: 'aws-lambda' as const,
+        storageMode: 'dynamodb' as const,
+        description: 'Persistent DynamoDB storage for publisher backend data',
       },
     ],
     { title: 'Publisher backend template', ignoreFocusOut: true },
@@ -1130,6 +1156,9 @@ async function publisherBackendSetup(
     buildPublisherBackendScaffoldArgs({
       miniProgramRoot: workspacePath,
       template: templateChoice.value,
+      storageMode: templateChoice.value === 'aws-lambda'
+        ? templateChoice.storageMode
+        : undefined,
       force,
     }),
     workspacePath,
@@ -1216,7 +1245,7 @@ async function publisherBackendAwsDeploy(
   if (!workspacePath) {
     return;
   }
-  const envName = await promptRequiredEnvName('AWS environment name');
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
   if (!envName) {
     return;
   }
@@ -1241,7 +1270,7 @@ async function publisherBackendAwsStatus(
   if (!workspacePath) {
     return;
   }
-  const envName = await promptRequiredEnvName('AWS environment name');
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
   if (!envName) {
     return;
   }
@@ -1258,12 +1287,171 @@ async function publisherBackendAwsStatus(
   );
 }
 
+async function publisherBackendAwsOutputs(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS Outputs',
+    buildPublisherBackendAwsOutputsArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: false,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendAwsSmoke(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli027(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS Smoke',
+    buildPublisherBackendAwsSmokeArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+}
+
+async function publisherBackendAwsSmokeWrite(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli027(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const couponId = await vscode.window.showInputBox({
+    prompt: 'Coupon ID for write smoke',
+    value: 'coupon-10',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Coupon ID is required.',
+  });
+  if (!couponId) {
+    return;
+  }
+  const userId = await vscode.window.showInputBox({
+    prompt: 'User ID for write smoke',
+    value: 'smoke-user',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'User ID is required.',
+  });
+  if (!userId) {
+    return;
+  }
+  const confirmation = await vscode.window.showWarningMessage(
+    'Write smoke calls POST /coupon/redeem and may create a DynamoDB redemption record.',
+    { modal: true },
+    'Run Write Smoke',
+  );
+  if (confirmation !== 'Run Write Smoke') {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS Write Smoke',
+    buildPublisherBackendAwsSmokeArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      includeWrite: true,
+      writeCouponId: couponId.trim(),
+      writeUserId: userId.trim(),
+    }),
+    workspacePath,
+    output,
+  );
+}
+
+async function publisherBackendAwsSeed(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli027(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend AWS DynamoDB Seed',
+    buildPublisherBackendAwsSeedArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+  }
+}
+
+async function publisherBackendAwsDataStatus(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli027(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS DynamoDB Data Status',
+    buildPublisherBackendAwsDataStatusArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: false,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
 async function publisherBackendAwsLogs(output: vscode.OutputChannel): Promise<void> {
   const workspacePath = await requireMiniProgramRoot();
   if (!workspacePath) {
     return;
   }
-  const envName = await promptRequiredEnvName('AWS environment name');
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
   if (!envName) {
     return;
   }
@@ -1296,7 +1484,7 @@ async function copyAwsBackendHostCommand(
   if (!workspacePath) {
     return;
   }
-  const envName = await promptRequiredEnvName('AWS environment name');
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
   if (!envName) {
     return;
   }
@@ -1874,12 +2062,18 @@ async function diagnoseWorkspace(
     }
   }
 
+  const cliCapabilities = await detectPublisherBackendAwsCli027(
+    workspacePath,
+    output,
+  );
+
   const report = await buildDiagnosticsReport({
     workspacePath,
     scope,
     workflowReport,
     remoteWorkflowReport,
     doctorReport,
+    cliCapabilities,
   });
   output.appendLine('');
   output.appendLine(formatDiagnosticsReport(report));
@@ -3200,6 +3394,103 @@ async function promptRequiredEnvName(prompt: string): Promise<string | undefined
     validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
   });
   return envName === undefined ? undefined : envName.trim();
+}
+
+async function promptPublisherBackendAwsEnvName(
+  workspacePath: string,
+): Promise<string | undefined> {
+  const defaultEnv = readPublisherBackendAwsStateValue(
+    workspacePath,
+    'environmentName',
+  );
+  const envName = await vscode.window.showInputBox({
+    prompt: 'AWS environment name',
+    value: defaultEnv,
+    placeHolder: 'my-aws-prod',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
+  });
+  return envName === undefined ? undefined : envName.trim();
+}
+
+function readPublisherBackendAwsStateValue(
+  workspacePath: string,
+  key: string,
+): string | undefined {
+  try {
+    const statePath = path.join(
+      workspacePath,
+      '.mini_program',
+      'publisher_backend.aws.json',
+    );
+    if (!fs.existsSync(statePath)) {
+      return undefined;
+    }
+    const decoded = JSON.parse(fs.readFileSync(statePath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    return stringValue(decoded[key]);
+  } catch {
+    return undefined;
+  }
+}
+
+interface PublisherBackendAwsCliCapability {
+  readonly checked: boolean;
+  readonly supportsWriteSmoke: boolean;
+  readonly detail?: string;
+}
+
+async function detectPublisherBackendAwsCli027(
+  workspacePath: string,
+  output?: vscode.OutputChannel,
+): Promise<PublisherBackendAwsCliCapability> {
+  const cliPath = configuredCliPath();
+  const args = ['publisher-backend', 'aws', 'smoke', '--help'];
+  output?.appendLine(`> ${formatRedactedCommandLine(cliPath, args)}`);
+  try {
+    const result = await runCli(cliPath, args, {
+      cwd: workspacePath,
+      timeoutMs: 30000,
+    });
+    const combined = `${result.stdout}\n${result.stderr}`;
+    const supportsWriteSmoke =
+      result.exitCode === 0 && combined.includes('--include-write');
+    return {
+      checked: true,
+      supportsWriteSmoke,
+      detail: supportsWriteSmoke
+        ? undefined
+        : 'Configured CLI does not list --include-write in publisher-backend aws smoke --help.',
+    };
+  } catch (error) {
+    return {
+      checked: true,
+      supportsWriteSmoke: false,
+      detail: errorMessage(error),
+    };
+  }
+}
+
+async function ensurePublisherBackendAwsCli027(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCli027(workspacePath, output);
+  if (capability.supportsWriteSmoke) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.27 or newer is required for AWS DynamoDB sidebar actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.27`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
 }
 
 function diagnosticCommandTitle(scope: DiagnosticScope): string {

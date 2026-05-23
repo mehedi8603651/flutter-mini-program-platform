@@ -160,6 +160,7 @@ export interface BackendStatusArgsOptions {
 export interface PublisherBackendScaffoldArgsOptions {
   readonly miniProgramRoot?: string;
   readonly template?: 'mock' | 'aws-lambda';
+  readonly storageMode?: 'bundled' | 'dynamodb';
   readonly force?: boolean;
 }
 
@@ -195,6 +196,24 @@ export interface PublisherBackendAwsStatusArgsOptions
 }
 
 export interface PublisherBackendAwsOutputsArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendAwsSmokeArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+  readonly includeWrite?: boolean;
+  readonly writeCouponId?: string;
+  readonly writeUserId?: string;
+}
+
+export interface PublisherBackendAwsSeedArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendAwsDataStatusArgsOptions
   extends PublisherBackendAwsBaseArgsOptions {
   readonly json?: boolean;
 }
@@ -533,6 +552,9 @@ export function buildPublisherBackendScaffoldArgs(
 ): string[] {
   const args = ['publisher-backend', 'scaffold'];
   args.push('--template', options.template ?? 'mock');
+  if (options.storageMode?.trim()) {
+    args.push('--storage', options.storageMode.trim());
+  }
   withMiniProgramRoot(args, options.miniProgramRoot);
   if (options.force) {
     args.push('--force');
@@ -603,6 +625,45 @@ export function buildPublisherBackendAwsOutputsArgs(
   options: PublisherBackendAwsOutputsArgsOptions,
 ): string[] {
   const args = ['publisher-backend', 'aws', 'outputs'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsSmokeArgs(
+  options: PublisherBackendAwsSmokeArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'smoke'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.includeWrite) {
+    args.push('--include-write');
+    if (options.writeCouponId?.trim()) {
+      args.push('--write-coupon-id', options.writeCouponId.trim());
+    }
+    if (options.writeUserId?.trim()) {
+      args.push('--write-user-id', options.writeUserId.trim());
+    }
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsSeedArgs(
+  options: PublisherBackendAwsSeedArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'seed'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsDataStatusArgs(
+  options: PublisherBackendAwsDataStatusArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'data', 'status'];
   if (options.json ?? true) {
     args.push('--json');
   }

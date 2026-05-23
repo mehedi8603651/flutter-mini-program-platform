@@ -53,6 +53,11 @@ export interface BuildDiagnosticsOptions {
   readonly workflowReport?: WorkflowStatusReport;
   readonly remoteWorkflowReport?: WorkflowStatusReport;
   readonly doctorReport?: Record<string, unknown>;
+  readonly cliCapabilities?: {
+    readonly checked: boolean;
+    readonly supportsWriteSmoke: boolean;
+    readonly detail?: string;
+  };
 }
 
 interface ManifestInfo {
@@ -114,6 +119,9 @@ export async function buildDiagnosticsReport(
   }
   if (options.doctorReport) {
     checks.push(buildDoctorCheck(options.doctorReport));
+  }
+  if (options.cliCapabilities?.checked) {
+    checks.push(buildCliCapabilityCheck(options.cliCapabilities));
   }
 
   return {
@@ -777,6 +785,24 @@ function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticChec
     `${ok} ok, ${warnings} warning, ${errors} error, ${skipped} skipped.`,
     undefined,
     errors > 0 || warnings > 0 ? 'Run miniprogram doctor --json and inspect the reported checks.' : undefined,
+  );
+}
+
+function buildCliCapabilityCheck(capability: {
+  readonly supportsWriteSmoke: boolean;
+  readonly detail?: string;
+}): DiagnosticCheck {
+  return check(
+    'cli.publisher_backend_aws_027',
+    'CLI AWS publisher backend commands',
+    capability.supportsWriteSmoke ? 'ok' : 'warning',
+    capability.supportsWriteSmoke
+      ? 'Configured CLI supports AWS DynamoDB smoke/write actions.'
+      : 'Configured CLI is missing AWS DynamoDB smoke/write support.',
+    capability.detail,
+    capability.supportsWriteSmoke
+      ? undefined
+      : 'Run `dart pub global activate mini_program_tooling 0.3.27` or update miniProgram.cliPath.',
   );
 }
 

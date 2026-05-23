@@ -29,9 +29,12 @@ import {
   buildPreviewArgs,
   buildPublisherBackendRunArgs,
   buildPublisherBackendAwsDeployArgs,
+  buildPublisherBackendAwsDataStatusArgs,
   buildPublisherBackendAwsDestroyArgs,
   buildPublisherBackendAwsLogsArgs,
   buildPublisherBackendAwsOutputsArgs,
+  buildPublisherBackendAwsSeedArgs,
+  buildPublisherBackendAwsSmokeArgs,
   buildPublisherBackendAwsStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
@@ -534,12 +537,15 @@ test('builds backend command arguments', () => {
     buildPublisherBackendScaffoldArgs({
       miniProgramRoot: 'D:/work/coupon_demo',
       template: 'aws-lambda',
+      storageMode: 'dynamodb',
     }),
     [
       'publisher-backend',
       'scaffold',
       '--template',
       'aws-lambda',
+      '--storage',
+      'dynamodb',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],
@@ -593,6 +599,76 @@ test('builds backend command arguments', () => {
       'publisher-backend',
       'aws',
       'outputs',
+      '--json',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsSmokeArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'smoke',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsSmokeArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      includeWrite: true,
+      writeCouponId: 'coupon-20',
+      writeUserId: 'smoke-0-1-21',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'smoke',
+      '--include-write',
+      '--write-coupon-id',
+      'coupon-20',
+      '--write-user-id',
+      'smoke-0-1-21',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsSeedArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'seed',
+      '--env',
+      'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendAwsDataStatusArgs({
+      envName: 'my-aws-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'aws',
+      'data',
+      'status',
       '--json',
       '--env',
       'my-aws-prod',

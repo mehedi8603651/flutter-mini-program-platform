@@ -95,6 +95,11 @@ export function buildStatusTreeSections(
             ? asString(awsPublisherBackend.backendBaseUrl, 'scaffolded')
             : 'none',
         ),
+        row('AWS env', asString(awsPublisherBackend.environmentName)),
+        row('AWS stack', asString(awsPublisherBackend.stackName)),
+        row('AWS region', asString(awsPublisherBackend.region)),
+        row('AWS health', asString(awsPublisherBackend.healthUrl)),
+        row('AWS function', asString(awsPublisherBackend.functionName)),
       ]),
     });
   }

@@ -47,6 +47,19 @@ test('renders mini-program and host status rows', () => {
         usesPublisherBackend: true,
         usesBackendState: true,
       },
+      publisherBackendStarter: {
+        detected: true,
+        template: 'aws-lambda',
+        aws: {
+          detected: true,
+          environmentName: 'my-aws-prod',
+          stackName: 'publisher-stack',
+          region: 'ap-south-1',
+          backendBaseUrl: 'https://api.example.com/prod/',
+          healthUrl: 'https://api.example.com/prod/health',
+          functionName: 'publisher-function',
+        },
+      },
     },
     environment: {
       configured: true,
@@ -63,6 +76,11 @@ test('renders mini-program and host status rows', () => {
   const text = flattenStatusSections(buildStatusTreeSections(report));
   assert.match(text, /Host app/);
   assert.match(text, /Backend usage: query\/state/);
+  assert.match(text, /AWS env: my-aws-prod/);
+  assert.match(text, /AWS stack: publisher-stack/);
+  assert.match(text, /AWS region: ap-south-1/);
+  assert.match(text, /AWS health: https:\/\/api.example.com\/prod\/health/);
+  assert.match(text, /AWS function: publisher-function/);
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);

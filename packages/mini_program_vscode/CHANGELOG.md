@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.21
+
+- Add AWS publisher backend smoke, write smoke, DynamoDB seed, DynamoDB data
+  status, and outputs commands backed by `mini_program_tooling` 0.3.27.
+- Let publisher backend setup scaffold AWS Lambda with bundled JSON or
+  DynamoDB storage.
+- Warn when the configured CLI is older than the 0.3.27 AWS smoke/write
+  workflow and show richer AWS publisher backend status rows.
+
 ## 0.1.20
 
 - Add AWS Lambda publisher backend commands for setup, deploy, status, logs, and

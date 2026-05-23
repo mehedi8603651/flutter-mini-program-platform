@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -211,6 +211,31 @@
         "command": "miniProgramTools.publisherBackendAwsStatus",
         "title": "MiniProgram: Publisher Backend AWS Status",
         "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsOutputs",
+        "title": "MiniProgram: Publisher Backend AWS Outputs",
+        "icon": "$(symbol-property)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsSmoke",
+        "title": "MiniProgram: Smoke Test AWS Publisher Backend",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsSmokeWrite",
+        "title": "MiniProgram: Smoke Test AWS Publisher Backend With Write",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsSeed",
+        "title": "MiniProgram: Seed AWS Publisher DynamoDB",
+        "icon": "$(database)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsDataStatus",
+        "title": "MiniProgram: AWS Publisher DynamoDB Data Status",
+        "icon": "$(graph)"
       },
       {
         "command": "miniProgramTools.publisherBackendAwsLogs",
@@ -439,6 +464,31 @@
           "command": "miniProgramTools.publisherBackendAwsStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.26"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsOutputs",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.27"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsSmoke",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.28"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsSmokeWrite",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.29"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsSeed",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.30"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsDataStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.31"
         },
         {
           "command": "miniProgramTools.copyPublisherBackendUrls",
