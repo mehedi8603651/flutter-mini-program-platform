@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.22
+
+- Add AWS DynamoDB production data workflows backed by `mini_program_tooling`
+  0.3.28: export, import dry-run, redemption listing, and guarded stack destroy.
+- Add a 0.3.28 CLI capability warning for DynamoDB data management actions.
+- Update README and command contributions for the new production data actions.
+
 ## 0.1.21
 
 - Add AWS publisher backend smoke, write smoke, DynamoDB seed, DynamoDB data

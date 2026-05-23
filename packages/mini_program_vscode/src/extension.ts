@@ -31,7 +31,11 @@ import {
   buildPreviewArgs,
   buildPublisherBackendRunArgs,
   buildPublisherBackendAwsDeployArgs,
+  buildPublisherBackendAwsDataExportArgs,
+  buildPublisherBackendAwsDataImportArgs,
+  buildPublisherBackendAwsDataRedemptionsArgs,
   buildPublisherBackendAwsDataStatusArgs,
+  buildPublisherBackendAwsDestroyArgs,
   buildPublisherBackendAwsLogsArgs,
   buildPublisherBackendAwsOutputsArgs,
   buildPublisherBackendAwsSeedArgs,
@@ -246,8 +250,20 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataStatus', () =>
       publisherBackendAwsDataStatus(output),
     ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataExport', () =>
+      publisherBackendAwsDataExport(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataImportDryRun', () =>
+      publisherBackendAwsDataImportDryRun(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataRedemptions', () =>
+      publisherBackendAwsDataRedemptions(output),
+    ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsLogs', () =>
       publisherBackendAwsLogs(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDestroy', () =>
+      publisherBackendAwsDestroy(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.copyAwsBackendHostCommand', () =>
       copyAwsBackendHostCommand(output),
@@ -1446,6 +1462,172 @@ async function publisherBackendAwsDataStatus(
   );
 }
 
+async function publisherBackendAwsDataExport(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli028(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const includeMode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'App records only',
+        description: 'Export home, session, and coupons.',
+        includeRedemptions: false,
+      },
+      {
+        label: 'Include redemptions',
+        description: 'Also export redemption history.',
+        includeRedemptions: true,
+      },
+    ],
+    {
+      title: 'Choose AWS DynamoDB export scope',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!includeMode) {
+    return;
+  }
+  const outputPath = await chooseAwsDataExportPath(workspacePath, envName);
+  if (!outputPath) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS DynamoDB Data Export',
+    buildPublisherBackendAwsDataExportArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      output: outputPath,
+      includeRedemptions: includeMode.includeRedemptions,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendAwsDataImportDryRun(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli028(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const inputPath = await chooseAwsDataImportFile(workspacePath);
+  if (!inputPath) {
+    return;
+  }
+  const includeMode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Skip redemptions',
+        description: 'Validate only app records from the export.',
+        includeRedemptions: false,
+      },
+      {
+        label: 'Include redemptions',
+        description: 'Validate redemption records too.',
+        includeRedemptions: true,
+      },
+    ],
+    {
+      title: 'Choose AWS DynamoDB import dry-run scope',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!includeMode) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS DynamoDB Import Dry Run',
+    buildPublisherBackendAwsDataImportArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      input: inputPath,
+      dryRun: true,
+      includeRedemptions: includeMode.includeRedemptions,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendAwsDataRedemptions(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli028(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const couponId = await vscode.window.showInputBox({
+    prompt: 'Optional coupon ID filter',
+    placeHolder: 'coupon-20',
+    ignoreFocusOut: true,
+  });
+  if (couponId === undefined) {
+    return;
+  }
+  const userId = await vscode.window.showInputBox({
+    prompt: 'Optional user ID filter',
+    placeHolder: 'smoke-user',
+    ignoreFocusOut: true,
+  });
+  if (userId === undefined) {
+    return;
+  }
+  const limit = await vscode.window.showInputBox({
+    prompt: 'Maximum redemption records to print',
+    value: '50',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      const parsed = Number.parseInt(value.trim(), 10);
+      return Number.isInteger(parsed) && parsed >= 1 && parsed <= 500
+        ? undefined
+        : 'Limit must be between 1 and 500.';
+    },
+  });
+  if (!limit) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend AWS DynamoDB Redemptions',
+    buildPublisherBackendAwsDataRedemptionsArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      couponId: couponId.trim(),
+      userId: userId.trim(),
+      limit: limit.trim(),
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
 async function publisherBackendAwsLogs(output: vscode.OutputChannel): Promise<void> {
   const workspacePath = await requireMiniProgramRoot();
   if (!workspacePath) {
@@ -1470,6 +1652,73 @@ async function publisherBackendAwsLogs(output: vscode.OutputChannel): Promise<vo
       envName,
       miniProgramRoot: workspacePath,
       since: since.trim(),
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendAwsDestroy(output: vscode.OutputChannel): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendAwsCli028(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const mode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Guarded delete',
+        description: 'Delete only if DynamoDB data guard allows it.',
+        confirmDataLoss: false,
+      },
+      {
+        label: 'Delete stack and DynamoDB data',
+        description: 'Pass --confirm-data-loss after extra confirmation.',
+        confirmDataLoss: true,
+      },
+    ],
+    {
+      title: 'Destroy AWS publisher backend stack',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!mode) {
+    return;
+  }
+  if (mode.confirmDataLoss) {
+    const typed = await vscode.window.showInputBox({
+      prompt: 'Type delete data to confirm stack and DynamoDB data deletion',
+      ignoreFocusOut: true,
+      validateInput: (value) =>
+        value.trim() === 'delete data' ? undefined : 'Type delete data to confirm.',
+    });
+    if (typed?.trim() !== 'delete data') {
+      return;
+    }
+  } else {
+    const confirmation = await vscode.window.showWarningMessage(
+      'This will request AWS stack deletion. The CLI will block deletion if stack-owned DynamoDB data exists.',
+      { modal: true },
+      'Run Guarded Delete',
+    );
+    if (confirmation !== 'Run Guarded Delete') {
+      return;
+    }
+  }
+  await runCliCommand(
+    'Publisher Backend AWS Destroy',
+    buildPublisherBackendAwsDestroyArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      yes: true,
+      confirmDataLoss: mode.confirmDataLoss,
     }),
     workspacePath,
     output,
@@ -3439,38 +3688,78 @@ function readPublisherBackendAwsStateValue(
 interface PublisherBackendAwsCliCapability {
   readonly checked: boolean;
   readonly supportsWriteSmoke: boolean;
+  readonly supportsDataManagement: boolean;
   readonly detail?: string;
+}
+
+async function detectPublisherBackendAwsCliCapabilities(
+  workspacePath: string,
+  output?: vscode.OutputChannel,
+): Promise<PublisherBackendAwsCliCapability> {
+  const cliPath = configuredCliPath();
+  const smokeArgs = ['publisher-backend', 'aws', 'smoke', '--help'];
+  const dataExportArgs = ['publisher-backend', 'aws', 'data', 'export', '--help'];
+  const redemptionsArgs = [
+    'publisher-backend',
+    'aws',
+    'data',
+    'redemptions',
+    '--help',
+  ];
+  output?.appendLine(`> ${formatRedactedCommandLine(cliPath, smokeArgs)}`);
+  try {
+    const smokeResult = await runCli(cliPath, smokeArgs, {
+      cwd: workspacePath,
+      timeoutMs: 30000,
+    });
+    const combined = `${smokeResult.stdout}\n${smokeResult.stderr}`;
+    const supportsWriteSmoke =
+      smokeResult.exitCode === 0 && combined.includes('--include-write');
+    output?.appendLine(`> ${formatRedactedCommandLine(cliPath, dataExportArgs)}`);
+    const dataExportResult = await runCli(cliPath, dataExportArgs, {
+      cwd: workspacePath,
+      timeoutMs: 30000,
+    });
+    output?.appendLine(`> ${formatRedactedCommandLine(cliPath, redemptionsArgs)}`);
+    const redemptionsResult = await runCli(cliPath, redemptionsArgs, {
+      cwd: workspacePath,
+      timeoutMs: 30000,
+    });
+    const dataCombined = `${dataExportResult.stdout}\n${dataExportResult.stderr}\n${redemptionsResult.stdout}\n${redemptionsResult.stderr}`;
+    const supportsDataManagement =
+      dataExportResult.exitCode === 0 &&
+      redemptionsResult.exitCode === 0 &&
+      dataCombined.includes('--include-redemptions') &&
+      dataCombined.includes('--coupon-id');
+    const details = [
+      supportsWriteSmoke
+        ? undefined
+        : 'Configured CLI does not list --include-write in publisher-backend aws smoke --help.',
+      supportsDataManagement
+        ? undefined
+        : 'Configured CLI does not expose AWS DynamoDB data export/redemptions help.',
+    ].filter((value): value is string => Boolean(value));
+    return {
+      checked: true,
+      supportsWriteSmoke,
+      supportsDataManagement,
+      detail: details.join(' '),
+    };
+  } catch (error) {
+    return {
+      checked: true,
+      supportsWriteSmoke: false,
+      supportsDataManagement: false,
+      detail: errorMessage(error),
+    };
+  }
 }
 
 async function detectPublisherBackendAwsCli027(
   workspacePath: string,
   output?: vscode.OutputChannel,
 ): Promise<PublisherBackendAwsCliCapability> {
-  const cliPath = configuredCliPath();
-  const args = ['publisher-backend', 'aws', 'smoke', '--help'];
-  output?.appendLine(`> ${formatRedactedCommandLine(cliPath, args)}`);
-  try {
-    const result = await runCli(cliPath, args, {
-      cwd: workspacePath,
-      timeoutMs: 30000,
-    });
-    const combined = `${result.stdout}\n${result.stderr}`;
-    const supportsWriteSmoke =
-      result.exitCode === 0 && combined.includes('--include-write');
-    return {
-      checked: true,
-      supportsWriteSmoke,
-      detail: supportsWriteSmoke
-        ? undefined
-        : 'Configured CLI does not list --include-write in publisher-backend aws smoke --help.',
-    };
-  } catch (error) {
-    return {
-      checked: true,
-      supportsWriteSmoke: false,
-      detail: errorMessage(error),
-    };
-  }
+  return detectPublisherBackendAwsCliCapabilities(workspacePath, output);
 }
 
 async function ensurePublisherBackendAwsCli027(
@@ -3478,13 +3767,39 @@ async function ensurePublisherBackendAwsCli027(
   output: vscode.OutputChannel,
 ): Promise<boolean> {
   output.show(true);
-  const capability = await detectPublisherBackendAwsCli027(workspacePath, output);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
   if (capability.supportsWriteSmoke) {
     return true;
   }
   const message =
     'MiniProgram CLI 0.3.27 or newer is required for AWS DynamoDB sidebar actions. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.27`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendAwsCli028(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (capability.supportsDataManagement) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.28 or newer is required for AWS DynamoDB data management actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.28`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -3520,6 +3835,109 @@ function parseJsonObject(rawOutput: string): Record<string, unknown> {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+async function chooseAwsDataExportPath(
+  workspacePath: string,
+  envName: string,
+): Promise<string | undefined> {
+  const appId = await readMiniProgramManifestId(workspacePath);
+  const timestamp = compactTimestamp(new Date());
+  const fileName = `${safeFileSegment(appId ?? path.basename(workspacePath))}-${safeFileSegment(envName)}-data-export-${timestamp}.json`;
+  const uri = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.file(
+      path.join(workspacePath, 'backend', 'aws_lambda', 'exports', fileName),
+    ),
+    filters: {
+      'AWS DynamoDB data export JSON': ['json'],
+    },
+    saveLabel: 'Export DynamoDB data',
+    title: 'Choose AWS DynamoDB data export file',
+  });
+  return uri?.fsPath;
+}
+
+async function chooseAwsDataImportFile(
+  workspacePath: string,
+): Promise<string | undefined> {
+  const exportFiles = await findAwsDataExportFiles(workspacePath);
+  if (exportFiles.length > 0) {
+    const selected = await vscode.window.showQuickPick(
+      [
+        ...exportFiles.map((filePath) => ({
+          label: path.basename(filePath),
+          description: path.dirname(filePath),
+          filePath,
+        })),
+        {
+          label: 'Choose another file...',
+          description: 'Select an AWS DynamoDB export JSON file',
+          filePath: '',
+        },
+      ],
+      { title: 'Choose AWS DynamoDB data export file', ignoreFocusOut: true },
+    );
+    if (!selected) {
+      return undefined;
+    }
+    if (selected.filePath) {
+      return selected.filePath;
+    }
+  }
+  const selectedFiles = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      'AWS DynamoDB data export JSON': ['json'],
+    },
+    openLabel: 'Choose export file',
+    title: 'Choose AWS DynamoDB data export file',
+    defaultUri: vscode.Uri.file(
+      path.join(workspacePath, 'backend', 'aws_lambda', 'exports'),
+    ),
+  });
+  return selectedFiles?.[0]?.fsPath;
+}
+
+async function findAwsDataExportFiles(workspacePath: string): Promise<string[]> {
+  const exportsRoot = path.join(workspacePath, 'backend', 'aws_lambda', 'exports');
+  try {
+    const entries = await fs.promises.readdir(exportsRoot, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => path.join(exportsRoot, entry.name))
+      .sort((left, right) => right.localeCompare(left))
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+async function readMiniProgramManifestId(
+  workspacePath: string,
+): Promise<string | undefined> {
+  try {
+    const manifestPath = path.join(workspacePath, 'manifest.json');
+    const decoded = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    return stringValue(decoded.id);
+  } catch {
+    return undefined;
+  }
+}
+
+function compactTimestamp(value: Date): string {
+  return value
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z');
+}
+
+function safeFileSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.-]+/g, '_') || 'mini_program';
 }
 
 async function choosePartnerPackageOutputPath(

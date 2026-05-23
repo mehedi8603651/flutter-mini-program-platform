@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.27 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.28 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, and
@@ -40,7 +40,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.21.vsix
+code --install-extension mini-program-tools-0.1.22.vsix
 ```
 
 ## Features
@@ -82,7 +82,11 @@ code --install-extension mini-program-tools-0.1.21.vsix
   - `MiniProgram: Smoke Test AWS Publisher Backend With Write`
   - `MiniProgram: Seed AWS Publisher DynamoDB`
   - `MiniProgram: AWS Publisher DynamoDB Data Status`
+  - `MiniProgram: Export AWS Publisher DynamoDB Data`
+  - `MiniProgram: Dry Run AWS Publisher DynamoDB Import`
+  - `MiniProgram: List AWS Publisher DynamoDB Redemptions`
   - `MiniProgram: Publisher Backend AWS Logs`
+  - `MiniProgram: Destroy AWS Publisher Backend Stack`
   - `MiniProgram: Copy AWS Backend Host Command`
   - `MiniProgram: Copy Publisher Backend URLs`
   - `MiniProgram: Create Access Key`
@@ -224,15 +228,24 @@ For DynamoDB scaffolds, use:
 - `MiniProgram: Seed AWS Publisher DynamoDB` to upsert starter records.
 - `MiniProgram: AWS Publisher DynamoDB Data Status` to inspect table status,
   app records, and redemption count.
+- `MiniProgram: Export AWS Publisher DynamoDB Data` before production changes
+  or stack cleanup. It can export app records only or include redemptions.
+- `MiniProgram: Dry Run AWS Publisher DynamoDB Import` to validate an export
+  without writing data. Redemptions are skipped unless explicitly included.
+- `MiniProgram: List AWS Publisher DynamoDB Redemptions` to inspect recent
+  redemption records with optional coupon/user filters.
 - `MiniProgram: Smoke Test AWS Publisher Backend` for a read-only route check.
 - `MiniProgram: Smoke Test AWS Publisher Backend With Write` only when you want
   to verify `POST /coupon/redeem`; this may create or reuse a redemption record.
+- `MiniProgram: Destroy AWS Publisher Backend Stack` for guarded stack cleanup.
+  The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
+  records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.27, the extension
-warns before running the new AWS DynamoDB actions. Upgrade with:
+If the configured CLI is older than `mini_program_tooling` 0.3.28, the extension
+warns before running the new AWS DynamoDB data actions. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.27
+dart pub global activate mini_program_tooling 0.3.28
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed

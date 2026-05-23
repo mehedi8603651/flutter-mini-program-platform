@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -238,9 +238,29 @@
         "icon": "$(graph)"
       },
       {
+        "command": "miniProgramTools.publisherBackendAwsDataExport",
+        "title": "MiniProgram: Export AWS Publisher DynamoDB Data",
+        "icon": "$(export)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsDataImportDryRun",
+        "title": "MiniProgram: Dry Run AWS Publisher DynamoDB Import",
+        "icon": "$(debug-step-over)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsDataRedemptions",
+        "title": "MiniProgram: List AWS Publisher DynamoDB Redemptions",
+        "icon": "$(list-unordered)"
+      },
+      {
         "command": "miniProgramTools.publisherBackendAwsLogs",
         "title": "MiniProgram: Publisher Backend AWS Logs",
         "icon": "$(output)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendAwsDestroy",
+        "title": "MiniProgram: Destroy AWS Publisher Backend Stack",
+        "icon": "$(trash)"
       },
       {
         "command": "miniProgramTools.copyAwsBackendHostCommand",
@@ -491,6 +511,21 @@
           "group": "navigation@12.31"
         },
         {
+          "command": "miniProgramTools.publisherBackendAwsDataExport",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.32"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsDataImportDryRun",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.33"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsDataRedemptions",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.34"
+        },
+        {
           "command": "miniProgramTools.copyPublisherBackendUrls",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.3"
@@ -509,6 +544,11 @@
           "command": "miniProgramTools.copyAwsBackendHostCommand",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.6"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendAwsDestroy",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.7"
         },
         {
           "command": "miniProgramTools.createAccessKey",

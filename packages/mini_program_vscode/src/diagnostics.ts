@@ -56,6 +56,7 @@ export interface BuildDiagnosticsOptions {
   readonly cliCapabilities?: {
     readonly checked: boolean;
     readonly supportsWriteSmoke: boolean;
+    readonly supportsDataManagement?: boolean;
     readonly detail?: string;
   };
 }
@@ -790,19 +791,22 @@ function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticChec
 
 function buildCliCapabilityCheck(capability: {
   readonly supportsWriteSmoke: boolean;
+  readonly supportsDataManagement?: boolean;
   readonly detail?: string;
 }): DiagnosticCheck {
+  const supportsDataManagement = capability.supportsDataManagement ?? false;
+  const supportsExpectedCli = capability.supportsWriteSmoke && supportsDataManagement;
   return check(
-    'cli.publisher_backend_aws_027',
+    'cli.publisher_backend_aws_028',
     'CLI AWS publisher backend commands',
-    capability.supportsWriteSmoke ? 'ok' : 'warning',
-    capability.supportsWriteSmoke
-      ? 'Configured CLI supports AWS DynamoDB smoke/write actions.'
-      : 'Configured CLI is missing AWS DynamoDB smoke/write support.',
+    supportsExpectedCli ? 'ok' : 'warning',
+    supportsExpectedCli
+      ? 'Configured CLI supports AWS DynamoDB smoke/write and data management actions.'
+      : 'Configured CLI is missing AWS DynamoDB 0.3.28 data management support.',
     capability.detail,
-    capability.supportsWriteSmoke
+    supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.27` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.28` or update miniProgram.cliPath.',
   );
 }
 

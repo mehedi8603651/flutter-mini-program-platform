@@ -24,13 +24,17 @@ test('package manifest exposes AWS DynamoDB publisher backend commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.1.21');
+  assert.equal(manifest.version, '0.1.22');
   for (const commandId of [
     'miniProgramTools.publisherBackendAwsOutputs',
     'miniProgramTools.publisherBackendAwsSmoke',
     'miniProgramTools.publisherBackendAwsSmokeWrite',
     'miniProgramTools.publisherBackendAwsSeed',
     'miniProgramTools.publisherBackendAwsDataStatus',
+    'miniProgramTools.publisherBackendAwsDataExport',
+    'miniProgramTools.publisherBackendAwsDataImportDryRun',
+    'miniProgramTools.publisherBackendAwsDataRedemptions',
+    'miniProgramTools.publisherBackendAwsDestroy',
   ]) {
     assert.equal(commandIds.has(commandId), true, `${commandId} is contributed`);
     assert.equal(titleMenuIds.has(commandId), true, `${commandId} is in sidebar`);

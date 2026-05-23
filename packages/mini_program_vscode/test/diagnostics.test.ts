@@ -436,20 +436,43 @@ test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
       cliCapabilities: {
         checked: true,
         supportsWriteSmoke: false,
+        supportsDataManagement: false,
         detail: 'Configured CLI does not list --include-write.',
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /CLI AWS publisher backend commands/);
-    assert.match(text, /missing AWS DynamoDB smoke\/write support/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.27/);
+    assert.match(text, /missing AWS DynamoDB 0.3.28 data management support/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.28/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('diagnostics accept CLI with AWS write smoke support', async () => {
+test('diagnostics warn when CLI lacks AWS data management support', async () => {
+  const workspacePath = await tempWorkspace('mini-program-diag-cli-027-');
+  try {
+    const report = await buildDiagnosticsReport({
+      workspacePath,
+      scope: 'workspace',
+      cliCapabilities: {
+        checked: true,
+        supportsWriteSmoke: true,
+        supportsDataManagement: false,
+        detail: 'Configured CLI does not expose AWS DynamoDB data export.',
+      },
+    });
+
+    const text = formatDiagnosticsReport(report);
+    assert.match(text, /missing AWS DynamoDB 0.3.28 data management support/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.28/);
+  } finally {
+    await rm(workspacePath, { recursive: true, force: true });
+  }
+});
+
+test('diagnostics accept CLI with AWS data management support', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-cli-new-');
   try {
     const report = await buildDiagnosticsReport({
@@ -458,12 +481,16 @@ test('diagnostics accept CLI with AWS write smoke support', async () => {
       cliCapabilities: {
         checked: true,
         supportsWriteSmoke: true,
+        supportsDataManagement: true,
       },
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /Configured CLI supports AWS DynamoDB smoke\/write actions/);
-    assert.doesNotMatch(text, /mini_program_tooling 0.3.27/);
+    assert.match(
+      text,
+      /Configured CLI supports AWS DynamoDB smoke\/write and data management actions/,
+    );
+    assert.doesNotMatch(text, /mini_program_tooling 0.3.28/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

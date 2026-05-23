@@ -218,6 +218,29 @@ export interface PublisherBackendAwsDataStatusArgsOptions
   readonly json?: boolean;
 }
 
+export interface PublisherBackendAwsDataExportArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+  readonly output?: string;
+  readonly includeRedemptions?: boolean;
+}
+
+export interface PublisherBackendAwsDataImportArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly input: string;
+  readonly json?: boolean;
+  readonly includeRedemptions?: boolean;
+  readonly dryRun?: boolean;
+}
+
+export interface PublisherBackendAwsDataRedemptionsArgsOptions
+  extends PublisherBackendAwsBaseArgsOptions {
+  readonly json?: boolean;
+  readonly couponId?: string;
+  readonly userId?: string;
+  readonly limit?: number | string;
+}
+
 export interface PublisherBackendAwsLogsArgsOptions
   extends PublisherBackendAwsBaseArgsOptions {
   readonly since?: string;
@@ -226,6 +249,7 @@ export interface PublisherBackendAwsLogsArgsOptions
 export interface PublisherBackendAwsDestroyArgsOptions
   extends PublisherBackendAwsBaseArgsOptions {
   readonly yes?: boolean;
+  readonly confirmDataLoss?: boolean;
 }
 
 export interface AccessKeyCreateArgsOptions {
@@ -670,6 +694,58 @@ export function buildPublisherBackendAwsDataStatusArgs(
   return withPublisherBackendAwsOptions(args, options);
 }
 
+export function buildPublisherBackendAwsDataExportArgs(
+  options: PublisherBackendAwsDataExportArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'data', 'export'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.includeRedemptions) {
+    args.push('--include-redemptions');
+  }
+  if (options.output?.trim()) {
+    args.push('--output', options.output.trim());
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsDataImportArgs(
+  options: PublisherBackendAwsDataImportArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'data', 'import'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.includeRedemptions) {
+    args.push('--include-redemptions');
+  }
+  if (options.dryRun ?? true) {
+    args.push('--dry-run');
+  }
+  args.push('--input', options.input.trim());
+  return withPublisherBackendAwsOptions(args, options);
+}
+
+export function buildPublisherBackendAwsDataRedemptionsArgs(
+  options: PublisherBackendAwsDataRedemptionsArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'aws', 'data', 'redemptions'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.couponId?.trim()) {
+    args.push('--coupon-id', options.couponId.trim());
+  }
+  if (options.userId?.trim()) {
+    args.push('--user-id', options.userId.trim());
+  }
+  if (options.limit !== undefined && `${options.limit}`.trim()) {
+    args.push('--limit', `${options.limit}`.trim());
+  }
+  return withPublisherBackendAwsOptions(args, options);
+}
+
 export function buildPublisherBackendAwsLogsArgs(
   options: PublisherBackendAwsLogsArgsOptions,
 ): string[] {
@@ -686,6 +762,9 @@ export function buildPublisherBackendAwsDestroyArgs(
   const args = ['publisher-backend', 'aws', 'destroy'];
   if (options.yes) {
     args.push('--yes');
+  }
+  if (options.confirmDataLoss) {
+    args.push('--confirm-data-loss');
   }
   return withPublisherBackendAwsOptions(args, options);
 }
