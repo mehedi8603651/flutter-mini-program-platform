@@ -392,6 +392,200 @@ class PublisherBackendAwsDataStatusResult {
   final String? error;
 }
 
+class PublisherBackendAwsDataExportRequest {
+  const PublisherBackendAwsDataExportRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+    this.outputPath,
+    this.includeRedemptions = false,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+  final String? outputPath;
+  final bool includeRedemptions;
+}
+
+class PublisherBackendAwsDataExportResult {
+  const PublisherBackendAwsDataExportResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.exported,
+    required this.miniProgramId,
+    required this.includeRedemptions,
+    required this.appRecordCount,
+    required this.redemptionCount,
+    required this.itemCount,
+    this.stackStatus,
+    this.storageMode,
+    this.tableName,
+    this.outputPath,
+    this.exportedAtUtc,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final bool exported;
+  final String miniProgramId;
+  final bool includeRedemptions;
+  final int appRecordCount;
+  final int redemptionCount;
+  final int itemCount;
+  final String? stackStatus;
+  final String? storageMode;
+  final String? tableName;
+  final String? outputPath;
+  final String? exportedAtUtc;
+  final String? error;
+}
+
+class PublisherBackendAwsDataImportRequest {
+  const PublisherBackendAwsDataImportRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    required this.inputPath,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+    this.includeRedemptions = false,
+    this.dryRun = false,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String inputPath;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+  final bool includeRedemptions;
+  final bool dryRun;
+}
+
+class PublisherBackendAwsDataImportResult {
+  const PublisherBackendAwsDataImportResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.succeeded,
+    required this.imported,
+    required this.dryRun,
+    required this.miniProgramId,
+    required this.includeRedemptions,
+    required this.appRecordCount,
+    required this.redemptionCount,
+    required this.skippedRedemptionCount,
+    required this.itemCount,
+    required this.inputPath,
+    this.stackStatus,
+    this.storageMode,
+    this.tableName,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final bool succeeded;
+  final bool imported;
+  final bool dryRun;
+  final String miniProgramId;
+  final bool includeRedemptions;
+  final int appRecordCount;
+  final int redemptionCount;
+  final int skippedRedemptionCount;
+  final int itemCount;
+  final String inputPath;
+  final String? stackStatus;
+  final String? storageMode;
+  final String? tableName;
+  final String? error;
+}
+
+class PublisherBackendAwsDataRedemptionsRequest {
+  const PublisherBackendAwsDataRedemptionsRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.stackName,
+    this.stageName,
+    this.samS3Bucket,
+    this.couponId,
+    this.userId,
+    this.limit = 50,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? stackName;
+  final String? stageName;
+  final String? samS3Bucket;
+  final String? couponId;
+  final String? userId;
+  final int limit;
+}
+
+class PublisherBackendAwsDataRedemptionsResult {
+  const PublisherBackendAwsDataRedemptionsResult({
+    required this.provider,
+    required this.environmentName,
+    required this.stackName,
+    required this.stageName,
+    required this.region,
+    required this.stackExists,
+    required this.available,
+    required this.miniProgramId,
+    required this.limit,
+    required this.matchedCount,
+    required this.returnedCount,
+    required this.records,
+    this.stackStatus,
+    this.storageMode,
+    this.tableName,
+    this.couponId,
+    this.userId,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String stackName;
+  final String stageName;
+  final String region;
+  final bool stackExists;
+  final bool available;
+  final String miniProgramId;
+  final int limit;
+  final int matchedCount;
+  final int returnedCount;
+  final List<Map<String, Object?>> records;
+  final String? stackStatus;
+  final String? storageMode;
+  final String? tableName;
+  final String? couponId;
+  final String? userId;
+  final String? error;
+}
+
 class PublisherBackendAwsLogsRequest {
   const PublisherBackendAwsLogsRequest({
     required this.miniProgramRootPath,
@@ -439,6 +633,7 @@ class PublisherBackendAwsDestroyRequest {
     this.stackName,
     this.stageName,
     this.samS3Bucket,
+    this.confirmDataLoss = false,
   });
 
   final String miniProgramRootPath;
@@ -446,6 +641,7 @@ class PublisherBackendAwsDestroyRequest {
   final String? stackName;
   final String? stageName;
   final String? samS3Bucket;
+  final bool confirmDataLoss;
 }
 
 class PublisherBackendAwsDestroyResult {
@@ -454,14 +650,28 @@ class PublisherBackendAwsDestroyResult {
     required this.environmentName,
     required this.stackName,
     required this.region,
-    required this.deletedAtUtc,
+    required this.deleted,
+    required this.dataLossConfirmed,
+    this.deletedAtUtc,
+    this.tableName,
+    this.appRecordCount,
+    this.redemptionCount,
+    this.blockedByData = false,
+    this.error,
   });
 
   final String provider;
   final String environmentName;
   final String stackName;
   final String region;
-  final String deletedAtUtc;
+  final bool deleted;
+  final bool dataLossConfirmed;
+  final String? deletedAtUtc;
+  final String? tableName;
+  final int? appRecordCount;
+  final int? redemptionCount;
+  final bool blockedByData;
+  final String? error;
 }
 
 class PublisherBackendRunResult {
@@ -1349,6 +1559,308 @@ class PublisherBackendStarter {
     );
   }
 
+  Future<PublisherBackendAwsDataExportResult> awsDataExport(
+    PublisherBackendAwsDataExportRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsDataExportResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        exported: false,
+        miniProgramId: settings.miniProgramId,
+        includeRedemptions: request.includeRedemptions,
+        appRecordCount: 0,
+        redemptionCount: 0,
+        itemCount: 0,
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+
+    final outputs = _extractStackOutputs(stack);
+    final tableName = outputs['PublisherBackendDataTableName']?.trim();
+    final storageMode = outputs['PublisherBackendStorageMode']?.trim();
+    if (tableName == null || tableName.isEmpty) {
+      return PublisherBackendAwsDataExportResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: true,
+        stackStatus: stack['StackStatus']?.toString(),
+        storageMode: storageMode,
+        exported: false,
+        miniProgramId: settings.miniProgramId,
+        includeRedemptions: request.includeRedemptions,
+        appRecordCount: 0,
+        redemptionCount: 0,
+        itemCount: 0,
+        error: 'PublisherBackendDataTableName output is missing.',
+      );
+    }
+
+    final appItems = await _queryDynamoDbItems(
+      settings: settings,
+      tableName: tableName,
+      partitionKey: _appPartitionKey(settings.miniProgramId),
+    );
+    final redemptionItems = request.includeRedemptions
+        ? await _queryDynamoDbItems(
+            settings: settings,
+            tableName: tableName,
+            partitionKey: _redemptionsPartitionKey(settings.miniProgramId),
+          )
+        : <Map<String, Object?>>[];
+    final exportedAtUtc = _clock().toUtc().toIso8601String();
+    final outputPath = _resolveAwsDataExportPath(settings, request.outputPath);
+    final items = <Map<String, Object?>>[
+      ..._sortedDynamoDbExportItems(appItems),
+      ..._sortedDynamoDbExportItems(redemptionItems),
+    ];
+    final exportFile = File(outputPath);
+    await exportFile.parent.create(recursive: true);
+    await exportFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+        'schemaVersion': 1,
+        'command': 'publisher-backend aws data export',
+        'provider': request.environment.provider,
+        'environmentName': request.environment.name,
+        'stackName': settings.stackName,
+        'region': settings.region,
+        'miniProgramId': settings.miniProgramId,
+        'storageMode': storageMode,
+        'tableName': tableName,
+        'exportedAtUtc': exportedAtUtc,
+        'includeRedemptions': request.includeRedemptions,
+        'appRecordCount': appItems.length,
+        'redemptionCount': redemptionItems.length,
+        'itemCount': items.length,
+        'items': items,
+      }),
+    );
+    return PublisherBackendAwsDataExportResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      stackStatus: stack['StackStatus']?.toString(),
+      storageMode: storageMode,
+      tableName: tableName,
+      exported: true,
+      miniProgramId: settings.miniProgramId,
+      includeRedemptions: request.includeRedemptions,
+      appRecordCount: appItems.length,
+      redemptionCount: redemptionItems.length,
+      itemCount: items.length,
+      outputPath: outputPath,
+      exportedAtUtc: exportedAtUtc,
+    );
+  }
+
+  Future<PublisherBackendAwsDataImportResult> awsDataImport(
+    PublisherBackendAwsDataImportRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final inputPath = p.normalize(p.absolute(request.inputPath));
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsDataImportResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        succeeded: false,
+        imported: false,
+        dryRun: request.dryRun,
+        miniProgramId: settings.miniProgramId,
+        includeRedemptions: request.includeRedemptions,
+        appRecordCount: 0,
+        redemptionCount: 0,
+        skippedRedemptionCount: 0,
+        itemCount: 0,
+        inputPath: inputPath,
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+
+    final outputs = _extractStackOutputs(stack);
+    final tableName = outputs['PublisherBackendDataTableName']?.trim();
+    final storageMode = outputs['PublisherBackendStorageMode']?.trim();
+    if (tableName == null || tableName.isEmpty) {
+      return PublisherBackendAwsDataImportResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: true,
+        stackStatus: stack['StackStatus']?.toString(),
+        storageMode: storageMode,
+        succeeded: false,
+        imported: false,
+        dryRun: request.dryRun,
+        miniProgramId: settings.miniProgramId,
+        includeRedemptions: request.includeRedemptions,
+        appRecordCount: 0,
+        redemptionCount: 0,
+        skippedRedemptionCount: 0,
+        itemCount: 0,
+        inputPath: inputPath,
+        error: 'PublisherBackendDataTableName output is missing.',
+      );
+    }
+
+    final importPlan = await _readAwsDataImportPlan(
+      settings: settings,
+      inputPath: inputPath,
+      includeRedemptions: request.includeRedemptions,
+    );
+    if (!request.dryRun && importPlan.items.isNotEmpty) {
+      await _batchWriteDynamoDbItems(
+        settings: settings,
+        tableName: tableName,
+        items: importPlan.items,
+      );
+    }
+    return PublisherBackendAwsDataImportResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      stackStatus: stack['StackStatus']?.toString(),
+      storageMode: storageMode,
+      tableName: tableName,
+      succeeded: true,
+      imported: !request.dryRun,
+      dryRun: request.dryRun,
+      miniProgramId: settings.miniProgramId,
+      includeRedemptions: request.includeRedemptions,
+      appRecordCount: importPlan.appRecordCount,
+      redemptionCount: importPlan.redemptionCount,
+      skippedRedemptionCount: importPlan.skippedRedemptionCount,
+      itemCount: importPlan.items.length,
+      inputPath: inputPath,
+    );
+  }
+
+  Future<PublisherBackendAwsDataRedemptionsResult> awsDataRedemptions(
+    PublisherBackendAwsDataRedemptionsRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendAwsSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+      stackNameOverride: request.stackName,
+      stageNameOverride: request.stageName,
+      samS3BucketOverride: request.samS3Bucket,
+    );
+    final stack = await _describeStack(settings);
+    if (stack == null) {
+      return PublisherBackendAwsDataRedemptionsResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: false,
+        available: false,
+        miniProgramId: settings.miniProgramId,
+        limit: request.limit,
+        matchedCount: 0,
+        returnedCount: 0,
+        records: const <Map<String, Object?>>[],
+        couponId: request.couponId,
+        userId: request.userId,
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+
+    final outputs = _extractStackOutputs(stack);
+    final tableName = outputs['PublisherBackendDataTableName']?.trim();
+    final storageMode = outputs['PublisherBackendStorageMode']?.trim();
+    if (tableName == null || tableName.isEmpty) {
+      return PublisherBackendAwsDataRedemptionsResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        stageName: settings.stageName,
+        region: settings.region,
+        stackExists: true,
+        stackStatus: stack['StackStatus']?.toString(),
+        storageMode: storageMode,
+        available: false,
+        miniProgramId: settings.miniProgramId,
+        limit: request.limit,
+        matchedCount: 0,
+        returnedCount: 0,
+        records: const <Map<String, Object?>>[],
+        couponId: request.couponId,
+        userId: request.userId,
+        error: 'PublisherBackendDataTableName output is missing.',
+      );
+    }
+
+    final records = await _queryDynamoDbItems(
+      settings: settings,
+      tableName: tableName,
+      partitionKey: _redemptionsPartitionKey(settings.miniProgramId),
+    );
+    final matched = _filterRedemptionRecords(
+      records,
+      couponId: request.couponId,
+      userId: request.userId,
+    );
+    final returned = matched.take(request.limit).toList();
+    return PublisherBackendAwsDataRedemptionsResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      stackName: settings.stackName,
+      stageName: settings.stageName,
+      region: settings.region,
+      stackExists: true,
+      stackStatus: stack['StackStatus']?.toString(),
+      storageMode: storageMode,
+      tableName: tableName,
+      available: true,
+      miniProgramId: settings.miniProgramId,
+      limit: request.limit,
+      matchedCount: matched.length,
+      returnedCount: returned.length,
+      records: returned,
+      couponId: request.couponId,
+      userId: request.userId,
+    );
+  }
+
   Future<PublisherBackendAwsLogsResult> awsLogs(
     PublisherBackendAwsLogsRequest request,
   ) async {
@@ -1405,6 +1917,76 @@ class PublisherBackendStarter {
       stageNameOverride: request.stageName,
       samS3BucketOverride: request.samS3Bucket,
     );
+    final stack = await _describeStack(settings);
+    String? tableName;
+    int? appRecordCount;
+    int? redemptionCount;
+    if (stack == null) {
+      return PublisherBackendAwsDestroyResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        stackName: settings.stackName,
+        region: settings.region,
+        deleted: false,
+        dataLossConfirmed: request.confirmDataLoss,
+        error:
+            'AWS publisher backend stack "${settings.stackName}" was not found.',
+      );
+    }
+    final outputs = _extractStackOutputs(stack);
+    tableName = outputs['PublisherBackendDataTableName']?.trim();
+    if (tableName != null && tableName.isNotEmpty) {
+      try {
+        appRecordCount = await _queryDynamoDbCount(
+          settings: settings,
+          tableName: tableName,
+          partitionKey: _appPartitionKey(settings.miniProgramId),
+        );
+        redemptionCount = await _queryDynamoDbCount(
+          settings: settings,
+          tableName: tableName,
+          partitionKey: _redemptionsPartitionKey(settings.miniProgramId),
+        );
+      } on Object catch (error) {
+        if (!request.confirmDataLoss) {
+          return PublisherBackendAwsDestroyResult(
+            provider: request.environment.provider,
+            environmentName: request.environment.name,
+            stackName: settings.stackName,
+            region: settings.region,
+            deleted: false,
+            dataLossConfirmed: false,
+            tableName: tableName,
+            appRecordCount: appRecordCount,
+            redemptionCount: redemptionCount,
+            blockedByData: true,
+            error:
+                'Could not inspect DynamoDB table "$tableName" before deletion. '
+                'Export data first or pass --confirm-data-loss to continue. '
+                'Detail: $error',
+          );
+        }
+      }
+      final totalRecords = (appRecordCount ?? 0) + (redemptionCount ?? 0);
+      if (totalRecords > 0 && !request.confirmDataLoss) {
+        return PublisherBackendAwsDestroyResult(
+          provider: request.environment.provider,
+          environmentName: request.environment.name,
+          stackName: settings.stackName,
+          region: settings.region,
+          deleted: false,
+          dataLossConfirmed: false,
+          tableName: tableName,
+          appRecordCount: appRecordCount,
+          redemptionCount: redemptionCount,
+          blockedByData: true,
+          error:
+              'DynamoDB table "$tableName" has $totalRecords record(s). '
+              'Run `miniprogram publisher-backend aws data export` first, '
+              'then pass --confirm-data-loss if you still want to delete it.',
+        );
+      }
+    }
     await _runAwsJsonCommand(settings, <String>[
       'cloudformation',
       'delete-stack',
@@ -1424,6 +2006,11 @@ class PublisherBackendStarter {
       environmentName: request.environment.name,
       stackName: settings.stackName,
       region: settings.region,
+      deleted: true,
+      dataLossConfirmed: request.confirmDataLoss,
+      tableName: tableName?.isEmpty == true ? null : tableName,
+      appRecordCount: appRecordCount,
+      redemptionCount: redemptionCount,
       deletedAtUtc: _clock().toUtc().toIso8601String(),
     );
   }
@@ -1888,6 +2475,189 @@ class PublisherBackendStarter {
     };
   }
 
+  Future<_PublisherBackendAwsDataImportPlan> _readAwsDataImportPlan({
+    required _PublisherBackendAwsSettings settings,
+    required String inputPath,
+    required bool includeRedemptions,
+  }) async {
+    final inputFile = File(inputPath);
+    if (!await inputFile.exists()) {
+      throw PublisherBackendException(
+        'AWS publisher backend data import file was not found: $inputPath',
+      );
+    }
+    final decoded = jsonDecode(await inputFile.readAsString());
+    if (decoded is! Map) {
+      throw PublisherBackendException(
+        'AWS publisher backend data import file must be a JSON object: '
+        '$inputPath',
+      );
+    }
+    final export = decoded.map((key, value) => MapEntry(key.toString(), value));
+    if (export['schemaVersion'] != 1) {
+      throw PublisherBackendException(
+        'AWS publisher backend data import file has an unsupported schemaVersion.',
+      );
+    }
+    final rawItems = export['items'];
+    if (rawItems is! List) {
+      throw PublisherBackendException(
+        'AWS publisher backend data import file is missing an items array.',
+      );
+    }
+
+    final appPk = _appPartitionKey(settings.miniProgramId);
+    final redemptionsPk = _redemptionsPartitionKey(settings.miniProgramId);
+    final items = <Map<String, Object?>>[];
+    var appRecordCount = 0;
+    var redemptionCount = 0;
+    var skippedRedemptionCount = 0;
+    for (final rawItem in rawItems) {
+      if (rawItem is! Map) {
+        throw PublisherBackendException(
+          'AWS publisher backend data import items must be JSON objects.',
+        );
+      }
+      final item = rawItem.map((key, value) => MapEntry(key.toString(), value));
+      final pk = item['pk']?.toString().trim() ?? '';
+      final sk = item['sk']?.toString().trim() ?? '';
+      if (pk.isEmpty || sk.isEmpty) {
+        throw PublisherBackendException(
+          'AWS publisher backend data import items must include pk and sk.',
+        );
+      }
+      if (pk == redemptionsPk) {
+        if (!includeRedemptions) {
+          skippedRedemptionCount++;
+          continue;
+        }
+        redemptionCount++;
+      } else if (pk == appPk) {
+        appRecordCount++;
+      } else {
+        throw PublisherBackendException(
+          'AWS publisher backend data import item "$pk $sk" does not belong '
+          'to mini-program "${settings.miniProgramId}".',
+        );
+      }
+      items.add(item);
+    }
+    return _PublisherBackendAwsDataImportPlan(
+      items: items,
+      appRecordCount: appRecordCount,
+      redemptionCount: redemptionCount,
+      skippedRedemptionCount: skippedRedemptionCount,
+    );
+  }
+
+  String _resolveAwsDataExportPath(
+    _PublisherBackendAwsSettings settings,
+    String? outputPath,
+  ) {
+    if (outputPath != null && outputPath.trim().isNotEmpty) {
+      return p.normalize(p.absolute(outputPath.trim()));
+    }
+    final timestamp = _compactUtcTimestamp(_clock().toUtc());
+    final fileName =
+        '${_safeFileSegment(settings.miniProgramId)}-'
+        '${_safeFileSegment(settings.environmentName)}-'
+        'data-export-$timestamp.json';
+    return p.normalize(
+      p.absolute(p.join(settings.backendRootPath, 'exports', fileName)),
+    );
+  }
+
+  String _compactUtcTimestamp(DateTime value) {
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${value.year}'
+        '${two(value.month)}'
+        '${two(value.day)}'
+        'T'
+        '${two(value.hour)}'
+        '${two(value.minute)}'
+        '${two(value.second)}'
+        'Z';
+  }
+
+  String _safeFileSegment(String value) {
+    final sanitized = value.replaceAll(RegExp(r'[^A-Za-z0-9_.-]+'), '_');
+    return sanitized.isEmpty ? 'mini_program' : sanitized;
+  }
+
+  List<Map<String, Object?>> _sortedDynamoDbExportItems(
+    List<Map<String, Object?>> items,
+  ) {
+    final sorted = items
+        .map((item) => Map<String, Object?>.from(item))
+        .toList();
+    sorted.sort((left, right) {
+      final pkCompare = (left['pk']?.toString() ?? '').compareTo(
+        right['pk']?.toString() ?? '',
+      );
+      if (pkCompare != 0) {
+        return pkCompare;
+      }
+      return (left['sk']?.toString() ?? '').compareTo(
+        right['sk']?.toString() ?? '',
+      );
+    });
+    return sorted;
+  }
+
+  List<Map<String, Object?>> _filterRedemptionRecords(
+    List<Map<String, Object?>> records, {
+    String? couponId,
+    String? userId,
+  }) {
+    final couponFilter = couponId?.trim();
+    final userFilter = userId?.trim();
+    final filtered = records
+        .where((record) {
+          if (couponFilter != null && couponFilter.isNotEmpty) {
+            final recordCouponId = _redemptionRecordValue(record, 'couponId');
+            if (recordCouponId != couponFilter) {
+              return false;
+            }
+          }
+          if (userFilter != null && userFilter.isNotEmpty) {
+            final recordUserId = _redemptionRecordValue(record, 'userId');
+            if (recordUserId != userFilter) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .map((record) => Map<String, Object?>.from(record))
+        .toList();
+    filtered.sort((left, right) {
+      final rightTime =
+          _redemptionRecordValue(right, 'createdAtUtc') ??
+          _redemptionRecordValue(right, 'redeemedAtUtc') ??
+          '';
+      final leftTime =
+          _redemptionRecordValue(left, 'createdAtUtc') ??
+          _redemptionRecordValue(left, 'redeemedAtUtc') ??
+          '';
+      return rightTime.compareTo(leftTime);
+    });
+    return filtered;
+  }
+
+  String? _redemptionRecordValue(Map<String, Object?> record, String key) {
+    final direct = record[key]?.toString();
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+    final payload = record['payload'];
+    if (payload is Map) {
+      final value = payload[key]?.toString();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
+
   Future<void> _batchWriteDynamoDbItems({
     required _PublisherBackendAwsSettings settings,
     required String tableName,
@@ -2012,6 +2782,48 @@ class PublisherBackendStarter {
     return total;
   }
 
+  Future<List<Map<String, Object?>>> _queryDynamoDbItems({
+    required _PublisherBackendAwsSettings settings,
+    required String tableName,
+    required String partitionKey,
+  }) async {
+    final items = <Map<String, Object?>>[];
+    Map<String, Object?>? exclusiveStartKey;
+    do {
+      final arguments = <String>[
+        'dynamodb',
+        'query',
+        '--table-name',
+        tableName,
+        '--key-condition-expression',
+        'pk = :pk',
+        '--expression-attribute-values',
+        jsonEncode(<String, Object?>{
+          ':pk': <String, Object?>{'S': partitionKey},
+        }),
+        '--consistent-read',
+        if (exclusiveStartKey != null) ...<String>[
+          '--exclusive-start-key',
+          jsonEncode(exclusiveStartKey),
+        ],
+      ];
+      final response = await _runAwsJsonCommand(settings, arguments);
+      final rawItems = response['Items'];
+      if (rawItems is List) {
+        for (final rawItem in rawItems) {
+          items.add(_fromDynamoDbItem(rawItem));
+        }
+      }
+      final lastEvaluatedKey = response['LastEvaluatedKey'];
+      exclusiveStartKey = lastEvaluatedKey is Map && lastEvaluatedKey.isNotEmpty
+          ? lastEvaluatedKey.map(
+              (key, value) => MapEntry(key.toString(), value),
+            )
+          : null;
+    } while (exclusiveStartKey != null);
+    return items;
+  }
+
   int _dynamoDbCountValue(Object? value) {
     if (value is int) {
       return value;
@@ -2020,6 +2832,84 @@ class PublisherBackendStarter {
       return value.toInt();
     }
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  Map<String, Object?> _fromDynamoDbItem(Object? rawItem) {
+    if (rawItem is! Map) {
+      throw const PublisherBackendException(
+        'AWS CLI returned a non-object DynamoDB item.',
+      );
+    }
+    return rawItem.map(
+      (key, value) =>
+          MapEntry(key.toString(), _fromDynamoDbAttributeValue(value)),
+    );
+  }
+
+  Object? _fromDynamoDbAttributeValue(Object? value) {
+    if (value is! Map) {
+      return value;
+    }
+    if (value.containsKey('S')) {
+      return value['S']?.toString();
+    }
+    if (value.containsKey('N')) {
+      return _fromDynamoDbNumber(value['N']);
+    }
+    if (value.containsKey('BOOL')) {
+      final raw = value['BOOL'];
+      return raw is bool ? raw : raw?.toString() == 'true';
+    }
+    if (value.containsKey('NULL')) {
+      return null;
+    }
+    if (value.containsKey('L')) {
+      final raw = value['L'];
+      if (raw is List) {
+        return raw.map(_fromDynamoDbAttributeValue).toList();
+      }
+      return const <Object?>[];
+    }
+    if (value.containsKey('M')) {
+      final raw = value['M'];
+      if (raw is Map) {
+        return raw.map(
+          (key, nestedValue) => MapEntry(
+            key.toString(),
+            _fromDynamoDbAttributeValue(nestedValue),
+          ),
+        );
+      }
+      return const <String, Object?>{};
+    }
+    if (value.containsKey('SS')) {
+      final raw = value['SS'];
+      return raw is List
+          ? raw.map((entry) => entry?.toString()).toList()
+          : const <String>[];
+    }
+    if (value.containsKey('NS')) {
+      final raw = value['NS'];
+      return raw is List
+          ? raw.map(_fromDynamoDbNumber).toList()
+          : const <num>[];
+    }
+    return value.map(
+      (key, nestedValue) =>
+          MapEntry(key.toString(), _fromDynamoDbAttributeValue(nestedValue)),
+    );
+  }
+
+  Object? _fromDynamoDbNumber(Object? value) {
+    final raw = value?.toString();
+    if (raw == null) {
+      return null;
+    }
+    final integer = int.tryParse(raw);
+    if (integer != null) {
+      return integer;
+    }
+    return double.tryParse(raw) ?? raw;
   }
 
   Map<String, Object?> _toDynamoDbAttributeValue(Object? value) {
@@ -2390,6 +3280,20 @@ class _PublisherBackendAwsSeedData {
   final Map<String, Object?> home;
   final Map<String, Object?> session;
   final List<Map<String, Object?>> coupons;
+}
+
+class _PublisherBackendAwsDataImportPlan {
+  const _PublisherBackendAwsDataImportPlan({
+    required this.items,
+    required this.appRecordCount,
+    required this.redemptionCount,
+    required this.skippedRedemptionCount,
+  });
+
+  final List<Map<String, Object?>> items;
+  final int appRecordCount;
+  final int redemptionCount;
+  final int skippedRedemptionCount;
 }
 
 class _PublisherBackendAwsSettings {
@@ -2874,12 +3778,17 @@ After deploying the stack, seed the starter data into DynamoDB:
 ```powershell
 miniprogram publisher-backend aws seed --env <env-name>
 miniprogram publisher-backend aws data status --env <env-name>
+miniprogram publisher-backend aws data export --env <env-name> --include-redemptions
+miniprogram publisher-backend aws data import --env <env-name> --input <export-file> --dry-run --include-redemptions
+miniprogram publisher-backend aws data redemptions --env <env-name> --coupon-id coupon-10
 miniprogram publisher-backend aws smoke --env <env-name> --include-write
 ```
 
-The DynamoDB table is owned by this SAM stack. `aws destroy --yes` deletes the
-stack-owned table and its data. Seed retries unprocessed DynamoDB batch writes;
-data status counts paginated app and redemption records.
+The DynamoDB table is owned by this SAM stack. `aws destroy --yes` checks for
+stack-owned DynamoDB data and requires `--confirm-data-loss` when app records or
+redemptions exist. Seed retries unprocessed DynamoDB batch writes; data status
+counts paginated app and redemption records. Export production data before stack
+cleanup or migration.
 '''
       : '''
 Storage mode: bundled JSON.

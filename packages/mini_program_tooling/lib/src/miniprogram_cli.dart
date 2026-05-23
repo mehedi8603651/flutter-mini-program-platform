@@ -3080,6 +3080,12 @@ class MiniprogramCli {
     switch (arguments.first) {
       case 'status':
         return _runPublisherBackendAwsDataStatus(arguments.sublist(1));
+      case 'export':
+        return _runPublisherBackendAwsDataExport(arguments.sublist(1));
+      case 'import':
+        return _runPublisherBackendAwsDataImport(arguments.sublist(1));
+      case 'redemptions':
+        return _runPublisherBackendAwsDataRedemptions(arguments.sublist(1));
       default:
         _stderr.writeln(
           'Unknown publisher-backend aws data command: ${arguments.first}',
@@ -3120,6 +3126,159 @@ class MiniprogramCli {
       _stdout.writeln(_prettyJson(_publisherBackendAwsDataStatusJson(result)));
     } else {
       _stdout.writeln(_formatPublisherBackendAwsDataStatusResult(result));
+    }
+    return result.available ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendAwsDataExport(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addFlag(
+        'include-redemptions',
+        negatable: false,
+        help: 'Include redemption records in the export file.',
+      )
+      ..addOption('output', help: 'Optional export JSON file path.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws data export [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsDataExport(
+      PublisherBackendAwsDataExportRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+        outputPath: results.option('output'),
+        includeRedemptions: results.flag('include-redemptions'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsDataExportJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsDataExportResult(result));
+    }
+    return result.exported ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendAwsDataImport(List<String> arguments) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addFlag(
+        'include-redemptions',
+        negatable: false,
+        help: 'Import redemption records from the export file.',
+      )
+      ..addFlag(
+        'dry-run',
+        negatable: false,
+        help: 'Validate and summarize the import without writing data.',
+      )
+      ..addOption('input', help: 'Required export JSON file path.')
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws data import --input <file> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final inputPath = results.option('input')?.trim();
+    if (inputPath == null || inputPath.isEmpty) {
+      throw const FormatException(
+        'publisher-backend aws data import requires --input <file>.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsDataImport(
+      PublisherBackendAwsDataImportRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+        inputPath: inputPath,
+        includeRedemptions: results.flag('include-redemptions'),
+        dryRun: results.flag('dry-run'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendAwsDataImportJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsDataImportResult(result));
+    }
+    return result.succeeded ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendAwsDataRedemptions(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendAwsCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addOption('coupon-id', help: 'Optional coupon ID filter.')
+      ..addOption('user-id', help: 'Optional user ID filter.')
+      ..addOption(
+        'limit',
+        defaultsTo: '50',
+        help: 'Maximum records to print. Default: 50. Max: 500.',
+      )
+      ..addOption('stack-name', help: 'Optional CloudFormation stack name.')
+      ..addOption('stage-name', help: 'Optional API Gateway stage name.')
+      ..addOption(
+        'sam-s3-bucket',
+        help: 'Optional S3 bucket for AWS SAM deployment artifacts.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend aws data redemptions [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final limit = int.tryParse(results.option('limit') ?? '');
+    if (limit == null || limit < 1 || limit > 500) {
+      throw const FormatException(
+        'publisher-backend aws data redemptions --limit must be between 1 and 500.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendAwsInputs(results);
+    final result = await _publisherBackendStarter.awsDataRedemptions(
+      PublisherBackendAwsDataRedemptionsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        stackName: results.option('stack-name'),
+        stageName: results.option('stage-name'),
+        samS3Bucket: results.option('sam-s3-bucket'),
+        couponId: results.option('coupon-id'),
+        userId: results.option('user-id'),
+        limit: limit,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendAwsDataRedemptionsJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendAwsDataRedemptionsResult(result));
     }
     return result.available ? 0 : 1;
   }
@@ -3168,6 +3327,11 @@ class MiniprogramCli {
         'yes',
         negatable: false,
         help: 'Required confirmation for stack deletion.',
+      )
+      ..addFlag(
+        'confirm-data-loss',
+        negatable: false,
+        help: 'Allow deleting a stack-owned DynamoDB table that contains data.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -3190,10 +3354,11 @@ class MiniprogramCli {
         stackName: results.option('stack-name'),
         stageName: results.option('stage-name'),
         samS3Bucket: results.option('sam-s3-bucket'),
+        confirmDataLoss: results.flag('confirm-data-loss'),
       ),
     );
     _stdout.writeln(_formatPublisherBackendAwsDestroyResult(result));
-    return 0;
+    return result.deleted ? 0 : 1;
   }
 
   ArgParser _publisherBackendAwsCommandParser() => ArgParser()
@@ -3849,8 +4014,11 @@ Commands:
   aws smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   aws seed --env <env-name> [--mini-program-root <path>] [--json]
   aws data status --env <env-name> [--mini-program-root <path>] [--json]
+  aws data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+  aws data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+  aws data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
   aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
-  aws destroy --env <env-name> [--mini-program-root <path>] --yes
+  aws destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
 ''';
 
   String _publisherBackendAwsUsage() => '''
@@ -3863,8 +4031,11 @@ Commands:
   smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
+  data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+  data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+  data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
   logs --env <env-name> [--mini-program-root <path>] [--since 1h]
-  destroy --env <env-name> [--mini-program-root <path>] --yes
+  destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
 ''';
 
   String _publisherBackendAwsDataUsage() => '''
@@ -3872,6 +4043,9 @@ Usage: miniprogram publisher-backend aws data <command> [arguments]
 
 Commands:
   status --env <env-name> [--mini-program-root <path>] [--json]
+  export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+  import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+  redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
 ''';
 
   String _partnerUsage() => '''
@@ -5095,6 +5269,115 @@ Commands:
     ].join('\n');
   }
 
+  String _formatPublisherBackendAwsDataExportResult(
+    PublisherBackendAwsDataExportResult result,
+  ) {
+    return <String>[
+      'AWS DynamoDB publisher backend data export.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.storageMode != null) 'Storage mode: ${result.storageMode}',
+      if (result.tableName != null) 'DynamoDB table: ${result.tableName}',
+      'Include redemptions: ${result.includeRedemptions}',
+      'Exported: ${result.exported}',
+      if (result.outputPath != null) 'Output file: ${result.outputPath}',
+      if (result.exportedAtUtc != null)
+        'Exported at UTC: ${result.exportedAtUtc}',
+      'App records: ${result.appRecordCount}',
+      'Redemptions: ${result.redemptionCount}',
+      'Items exported: ${result.itemCount}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendAwsDataImportResult(
+    PublisherBackendAwsDataImportResult result,
+  ) {
+    return <String>[
+      'AWS DynamoDB publisher backend data import.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Input file: ${result.inputPath}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.storageMode != null) 'Storage mode: ${result.storageMode}',
+      if (result.tableName != null) 'DynamoDB table: ${result.tableName}',
+      'Include redemptions: ${result.includeRedemptions}',
+      'Dry run: ${result.dryRun}',
+      'Succeeded: ${result.succeeded}',
+      'Imported: ${result.imported}',
+      'App records: ${result.appRecordCount}',
+      'Redemptions: ${result.redemptionCount}',
+      'Redemptions skipped: ${result.skippedRedemptionCount}',
+      'Items ready: ${result.itemCount}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendAwsDataRedemptionsResult(
+    PublisherBackendAwsDataRedemptionsResult result,
+  ) {
+    final lines = <String>[
+      'AWS DynamoDB publisher backend redemptions.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Stack: ${result.stackName}',
+      'Stage: ${result.stageName}',
+      'Region: ${result.region}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Stack exists: ${result.stackExists}',
+      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
+      if (result.storageMode != null) 'Storage mode: ${result.storageMode}',
+      if (result.tableName != null) 'DynamoDB table: ${result.tableName}',
+      if (result.couponId != null) 'Coupon filter: ${result.couponId}',
+      if (result.userId != null) 'User filter: ${result.userId}',
+      'Limit: ${result.limit}',
+      'Matched: ${result.matchedCount}',
+      'Returned: ${result.returnedCount}',
+      'Available: ${result.available}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ];
+    if (result.records.isNotEmpty) {
+      lines.add('');
+      for (final record in result.records) {
+        final couponId = _redemptionValue(record, 'couponId') ?? 'unknown';
+        final userId = _redemptionValue(record, 'userId') ?? 'unknown';
+        final status = _redemptionValue(record, 'status') ?? 'redemption';
+        final createdAt =
+            _redemptionValue(record, 'createdAtUtc') ??
+            _redemptionValue(record, 'redeemedAtUtc') ??
+            'unknown time';
+        lines.add('- $createdAt $status coupon=$couponId user=$userId');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  String? _redemptionValue(Map<String, Object?> record, String key) {
+    final direct = record[key]?.toString();
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+    final payload = record['payload'];
+    if (payload is Map) {
+      final nested = payload[key]?.toString();
+      if (nested != null && nested.isNotEmpty) {
+        return nested;
+      }
+    }
+    return null;
+  }
+
   String _formatPublisherBackendAwsLogsResult(
     PublisherBackendAwsLogsResult result,
   ) {
@@ -5115,12 +5398,23 @@ Commands:
     PublisherBackendAwsDestroyResult result,
   ) {
     return <String>[
-      'Deleted AWS Lambda publisher backend stack.',
+      result.deleted
+          ? 'Deleted AWS Lambda publisher backend stack.'
+          : 'AWS Lambda publisher backend stack was not deleted.',
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Stack: ${result.stackName}',
       'Region: ${result.region}',
-      'Deleted at UTC: ${result.deletedAtUtc}',
+      if (result.tableName != null) 'DynamoDB table: ${result.tableName}',
+      if (result.appRecordCount != null)
+        'App records: ${result.appRecordCount}',
+      if (result.redemptionCount != null)
+        'Redemptions: ${result.redemptionCount}',
+      'Data loss confirmed: ${result.dataLossConfirmed}',
+      'Blocked by data: ${result.blockedByData}',
+      'Deleted: ${result.deleted}',
+      if (result.deletedAtUtc != null) 'Deleted at UTC: ${result.deletedAtUtc}',
+      if (result.error != null) 'Detail: ${result.error}',
     ].join('\n');
   }
 
@@ -5289,6 +5583,89 @@ Commands:
       'appRecordCount': result.appRecordCount,
       'redemptionCount': result.redemptionCount,
       'available': result.available,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsDataExportJson(
+    PublisherBackendAwsDataExportResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws data export',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'miniProgramId': result.miniProgramId,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'storageMode': result.storageMode,
+      'tableName': result.tableName,
+      'includeRedemptions': result.includeRedemptions,
+      'exported': result.exported,
+      'outputPath': result.outputPath,
+      'exportedAtUtc': result.exportedAtUtc,
+      'appRecordCount': result.appRecordCount,
+      'redemptionCount': result.redemptionCount,
+      'itemCount': result.itemCount,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsDataImportJson(
+    PublisherBackendAwsDataImportResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws data import',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'miniProgramId': result.miniProgramId,
+      'inputPath': result.inputPath,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'storageMode': result.storageMode,
+      'tableName': result.tableName,
+      'includeRedemptions': result.includeRedemptions,
+      'dryRun': result.dryRun,
+      'succeeded': result.succeeded,
+      'imported': result.imported,
+      'appRecordCount': result.appRecordCount,
+      'redemptionCount': result.redemptionCount,
+      'skippedRedemptionCount': result.skippedRedemptionCount,
+      'itemCount': result.itemCount,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendAwsDataRedemptionsJson(
+    PublisherBackendAwsDataRedemptionsResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend aws data redemptions',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'stackName': result.stackName,
+      'stageName': result.stageName,
+      'region': result.region,
+      'miniProgramId': result.miniProgramId,
+      'stackExists': result.stackExists,
+      'stackStatus': result.stackStatus,
+      'storageMode': result.storageMode,
+      'tableName': result.tableName,
+      'couponId': result.couponId,
+      'userId': result.userId,
+      'limit': result.limit,
+      'matchedCount': result.matchedCount,
+      'returnedCount': result.returnedCount,
+      'available': result.available,
+      'records': result.records,
       'error': result.error,
     };
   }

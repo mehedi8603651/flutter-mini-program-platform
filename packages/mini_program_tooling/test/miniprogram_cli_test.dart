@@ -1518,6 +1518,352 @@ void main() {
       expect(json['redemptionCount'], 1);
     });
 
+    test('publisher-backend aws data export prints text output', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final outputPath = p.join(tempDir.path, 'coupon-export.json');
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+          clock: () => DateTime.utc(2026, 5, 23, 12),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'export',
+        '--env',
+        'my-aws-prod',
+        '--output',
+        outputPath,
+      ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('AWS DynamoDB publisher backend data export.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Exported: true'));
+      expect(stdoutBuffer.toString(), contains('Items exported: 2'));
+      expect(await File(outputPath).exists(), isTrue);
+    });
+
+    test('publisher-backend aws data export prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final outputPath = p.join(tempDir.path, 'coupon-export.json');
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+          clock: () => DateTime.utc(2026, 5, 23, 12),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'export',
+        '--env',
+        'my-aws-prod',
+        '--output',
+        outputPath,
+        '--include-redemptions',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend aws data export');
+      expect(json['includeRedemptions'], isTrue);
+      expect(json['exported'], isTrue);
+      expect(json['itemCount'], 3);
+      expect(json['redemptionCount'], 1);
+    });
+
+    test(
+      'publisher-backend aws data import dry-run prints text output',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+        final inputPath = p.join(tempDir.path, 'coupon-export.json');
+        await File(inputPath).writeAsString(
+          jsonEncode(<String, Object?>{
+            'schemaVersion': 1,
+            'items': <Object?>[
+              <String, Object?>{
+                'pk': 'APP#coupon_center',
+                'sk': 'HOME#bootstrap',
+                'recordType': 'home',
+                'payload': <String, Object?>{'title': 'Coupon Center'},
+              },
+              <String, Object?>{
+                'pk': 'APP#coupon_center#REDEMPTIONS',
+                'sk': 'USER#smoke-user#COUPON#coupon-20',
+                'recordType': 'redemption',
+                'payload': <String, Object?>{'couponId': 'coupon-20'},
+              },
+            ],
+          }),
+        );
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          publisherBackendStarter: PublisherBackendStarter(
+            shellRunner: _publisherBackendDataShellRunner,
+          ),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'aws',
+          'data',
+          'import',
+          '--env',
+          'my-aws-prod',
+          '--input',
+          inputPath,
+          '--dry-run',
+        ]);
+
+        expect(exitCode, 0);
+        expect(
+          stdoutBuffer.toString(),
+          contains('AWS DynamoDB publisher backend data import.'),
+        );
+        expect(stdoutBuffer.toString(), contains('Dry run: true'));
+        expect(stdoutBuffer.toString(), contains('Succeeded: true'));
+        expect(stdoutBuffer.toString(), contains('Redemptions skipped: 1'));
+      },
+    );
+
+    test('publisher-backend aws data import prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final inputPath = p.join(tempDir.path, 'coupon-export.json');
+      await File(inputPath).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'items': <Object?>[
+            <String, Object?>{
+              'pk': 'APP#coupon_center',
+              'sk': 'HOME#bootstrap',
+              'recordType': 'home',
+              'payload': <String, Object?>{'title': 'Coupon Center'},
+            },
+          ],
+        }),
+      );
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'import',
+        '--env',
+        'my-aws-prod',
+        '--input',
+        inputPath,
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend aws data import');
+      expect(json['succeeded'], isTrue);
+      expect(json['imported'], isTrue);
+      expect(json['itemCount'], 1);
+    });
+
+    test('publisher-backend aws data redemptions prints text output', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'redemptions',
+        '--env',
+        'my-aws-prod',
+        '--coupon-id',
+        'coupon-20',
+      ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('AWS DynamoDB publisher backend redemptions.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Matched: 1'));
+      expect(stdoutBuffer.toString(), contains('coupon=coupon-20'));
+    });
+
+    test('publisher-backend aws data redemptions prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'data',
+        'redemptions',
+        '--env',
+        'my-aws-prod',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend aws data redemptions');
+      expect(json['available'], isTrue);
+      expect(json['returnedCount'], 1);
+      expect(json['records'], isNotEmpty);
+    });
+
+    test('publisher-backend aws destroy blocks DynamoDB data', () async {
+      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'coupon_center',
+        version: '1.2.3',
+      );
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: _publisherBackendDataShellRunner,
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'aws',
+        'destroy',
+        '--env',
+        'my-aws-prod',
+        '--yes',
+      ]);
+
+      expect(exitCode, 1);
+      expect(stdoutBuffer.toString(), contains('was not deleted'));
+      expect(stdoutBuffer.toString(), contains('Blocked by data: true'));
+      expect(stdoutBuffer.toString(), contains('--confirm-data-loss'));
+    });
+
+    test(
+      'publisher-backend aws data help includes production commands',
+      () async {
+        final stdoutBuffer = StringBuffer();
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: tempDir.path,
+        ).run(<String>['publisher-backend', 'aws', 'data', '--help']);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('export --env'));
+        expect(stdoutBuffer.toString(), contains('import --env'));
+        expect(stdoutBuffer.toString(), contains('redemptions --env'));
+      },
+    );
+
+    test(
+      'publisher-backend aws destroy help includes data-loss confirmation',
+      () async {
+        final stdoutBuffer = StringBuffer();
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: tempDir.path,
+        ).run(<String>['publisher-backend', 'aws', 'destroy', '--help']);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('--confirm-data-loss'));
+      },
+    );
+
     test(
       'publish --target static writes to the selected output folder',
       () async {
@@ -4331,10 +4677,126 @@ Future<ProcessResult> _publisherBackendDataShellRunner(
       '',
     );
   }
+  if (arguments.contains('batch-write-item')) {
+    return ProcessResult(
+      0,
+      0,
+      jsonEncode(<String, Object?>{'UnprocessedItems': <String, Object?>{}}),
+      '',
+    );
+  }
+  if (arguments.contains('query') && !arguments.contains('--select')) {
+    final joined = arguments.join(' ');
+    final items = joined.contains('APP#coupon_center#REDEMPTIONS')
+        ? <Map<String, Object?>>[
+            _publisherBackendRedemptionItem(
+              appId: 'coupon_center',
+              couponId: 'coupon-20',
+              userId: 'smoke-user',
+              createdAtUtc: '2026-05-23T12:00:00.000Z',
+            ),
+          ]
+        : <Map<String, Object?>>[
+            _publisherBackendDynamoDbItem(
+              pk: 'APP#coupon_center',
+              sk: 'HOME#bootstrap',
+              recordType: 'home',
+              payload: <String, Object?>{'title': 'Coupon Center'},
+            ),
+            _publisherBackendDynamoDbItem(
+              pk: 'APP#coupon_center',
+              sk: 'SESSION#demo',
+              recordType: 'session',
+              payload: <String, Object?>{'userId': 'demo-user'},
+            ),
+          ];
+    return ProcessResult(0, 0, _publisherBackendDynamoDbItemsJson(items), '');
+  }
   final count = arguments.join(' ').contains('APP#coupon_center#REDEMPTIONS')
       ? 1
       : 4;
   return ProcessResult(0, 0, jsonEncode(<String, Object?>{'Count': count}), '');
+}
+
+Map<String, Object?> _publisherBackendDynamoDbItem({
+  required String pk,
+  required String sk,
+  required String recordType,
+  required Map<String, Object?> payload,
+}) {
+  return <String, Object?>{
+    'pk': pk,
+    'sk': sk,
+    'recordType': recordType,
+    'payload': payload,
+    'updatedAtUtc': '2026-05-23T12:00:00.000Z',
+  };
+}
+
+Map<String, Object?> _publisherBackendRedemptionItem({
+  required String appId,
+  required String couponId,
+  required String userId,
+  required String createdAtUtc,
+}) {
+  return <String, Object?>{
+    'pk': 'APP#$appId#REDEMPTIONS',
+    'sk': 'USER#$userId#COUPON#$couponId',
+    'recordType': 'redemption',
+    'couponId': couponId,
+    'userId': userId,
+    'payload': <String, Object?>{
+      'status': 'redeemed',
+      'couponId': couponId,
+      'userId': userId,
+      'redeemedAtUtc': createdAtUtc,
+    },
+    'createdAtUtc': createdAtUtc,
+  };
+}
+
+String _publisherBackendDynamoDbItemsJson(List<Map<String, Object?>> items) {
+  return jsonEncode(<String, Object?>{
+    'Items': items
+        .map(
+          (item) => item.map(
+            (key, value) =>
+                MapEntry(key, _publisherBackendDynamoDbAttribute(value)),
+          ),
+        )
+        .toList(),
+  });
+}
+
+Map<String, Object?> _publisherBackendDynamoDbAttribute(Object? value) {
+  if (value == null) {
+    return const <String, Object?>{'NULL': true};
+  }
+  if (value is bool) {
+    return <String, Object?>{'BOOL': value};
+  }
+  if (value is num) {
+    return <String, Object?>{'N': value.toString()};
+  }
+  if (value is String) {
+    return <String, Object?>{'S': value};
+  }
+  if (value is List) {
+    return <String, Object?>{
+      'L': value.map(_publisherBackendDynamoDbAttribute).toList(),
+    };
+  }
+  if (value is Map) {
+    return <String, Object?>{
+      'M': value.map(
+        (key, nestedValue) => MapEntry(
+          key.toString(),
+          _publisherBackendDynamoDbAttribute(nestedValue),
+        ),
+      ),
+    };
+  }
+  return <String, Object?>{'S': value.toString()};
 }
 
 const String _fakeStacCliSource = r'''

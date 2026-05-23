@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.28
+
+- add AWS DynamoDB publisher backend data export/import commands, redemption
+  inspection, and safer stack destroy checks that require explicit data-loss
+  confirmation when stack-owned DynamoDB data exists
+
 ## 0.3.27
 
 - improve AWS DynamoDB publisher backend reliability with cold-start-aware

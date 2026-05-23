@@ -83,8 +83,11 @@ miniprogram publisher-backend aws outputs --env <env-name> [--mini-program-root 
 miniprogram publisher-backend aws smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
 miniprogram publisher-backend aws seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws data status --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend aws data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+miniprogram publisher-backend aws data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+miniprogram publisher-backend aws data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
 miniprogram publisher-backend aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
-miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root <path>] --yes
+miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
@@ -635,8 +638,11 @@ miniprogram publisher-backend aws smoke --env my-aws-prod
 miniprogram publisher-backend aws smoke --env my-aws-prod --include-write --write-coupon-id coupon-10 --write-user-id smoke-user
 miniprogram publisher-backend aws seed --env my-aws-prod
 miniprogram publisher-backend aws data status --env my-aws-prod --json
+miniprogram publisher-backend aws data export --env my-aws-prod --include-redemptions
+miniprogram publisher-backend aws data import --env my-aws-prod --input backend/aws_lambda/exports/coupon_app-my-aws-prod-data-export-20260523T120000Z.json --dry-run --include-redemptions
+miniprogram publisher-backend aws data redemptions --env my-aws-prod --coupon-id coupon-10
 miniprogram publisher-backend aws logs --env my-aws-prod --since 1h
-miniprogram publisher-backend aws destroy --env my-aws-prod --yes
+miniprogram publisher-backend aws destroy --env my-aws-prod --yes --confirm-data-loss
 ```
 
 Deploy waits for API Gateway/Lambda health with cold-start-aware retries before
@@ -649,8 +655,16 @@ Use `aws seed` after deploying a `--storage dynamodb` backend to upsert the
 starter home, session, and coupon records into the generated DynamoDB table.
 Seed retries unprocessed DynamoDB batch writes. Use `aws data status` to check
 the table status, app record count, and redemption count across paginated query
-results. `aws destroy --yes` deletes the stack-owned DynamoDB table and its
-data, so export or migrate production data before destroying a stack.
+results. Use `aws data export` before production changes or stack cleanup; by
+default exports exclude redemptions, and `--include-redemptions` explicitly
+includes redemption history. `aws data import --dry-run` validates an export
+before upserting records, and redemptions are skipped unless
+`--include-redemptions` is set. Use `aws data redemptions` to inspect recent
+redemption records with coupon/user filters.
+
+`aws destroy --yes` now checks stack-owned DynamoDB data before deleting the
+stack. If app records or redemptions exist, it stops until you export or migrate
+the data and pass `--confirm-data-loss`.
 
 This AWS backend is separate from the mini-program delivery AWS stack. It is for
 publisher business APIs only. AWS credentials, Firebase Admin credentials,

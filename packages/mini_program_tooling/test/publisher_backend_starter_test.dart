@@ -1012,6 +1012,387 @@ console.log(JSON.stringify({
       expect(result.error, contains('PublisherBackendDataTableName'));
     });
 
+    test('AWS data export writes app records only by default', () async {
+      final queryCommands = <List<String>>[];
+      final outputPath = p.join(tempDir.path, 'exports', 'coupon-data.json');
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          queryCommands.add(arguments);
+          return ProcessResult(
+            0,
+            0,
+            _dynamoDbQueryItemsJson(<Map<String, Object?>>[
+              _dynamoDbItem(
+                pk: 'APP#coupon_app',
+                sk: 'HOME#bootstrap',
+                recordType: 'home',
+                payload: <String, Object?>{
+                  'title': 'Coupon App',
+                  'count': 2,
+                  'active': true,
+                  'tags': <Object?>['featured', null],
+                },
+              ),
+              _dynamoDbItem(
+                pk: 'APP#coupon_app',
+                sk: 'SESSION#demo',
+                recordType: 'session',
+                payload: <String, Object?>{'userId': 'demo-user'},
+              ),
+            ]),
+            '',
+          );
+        },
+        clock: () => DateTime.utc(2026, 5, 23, 12),
+      );
+
+      final result = await starter.awsDataExport(
+        PublisherBackendAwsDataExportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          outputPath: outputPath,
+        ),
+      );
+
+      expect(result.exported, isTrue);
+      expect(result.outputPath, p.normalize(p.absolute(outputPath)));
+      expect(result.appRecordCount, 2);
+      expect(result.redemptionCount, 0);
+      expect(queryCommands, hasLength(1));
+      expect(
+        queryCommands.single.join(' '),
+        isNot(contains('APP#coupon_app#REDEMPTIONS')),
+      );
+      final export =
+          jsonDecode(await File(outputPath).readAsString())
+              as Map<String, dynamic>;
+      expect(export['schemaVersion'], 1);
+      expect(export['includeRedemptions'], isFalse);
+      final items = export['items'] as List<dynamic>;
+      expect(items, hasLength(2));
+      final home = items.first as Map<String, dynamic>;
+      expect(home['pk'], 'APP#coupon_app');
+      expect((home['payload'] as Map<String, dynamic>)['active'], isTrue);
+      expect((home['payload'] as Map<String, dynamic>)['tags'], [
+        'featured',
+        null,
+      ]);
+    });
+
+    test('AWS data export includes redemptions when requested', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          final joined = arguments.join(' ');
+          if (joined.contains('APP#coupon_app#REDEMPTIONS')) {
+            return ProcessResult(
+              0,
+              0,
+              _dynamoDbQueryItemsJson(<Map<String, Object?>>[
+                _redemptionItem(
+                  couponId: 'coupon-10',
+                  userId: 'demo-user',
+                  createdAtUtc: '2026-05-23T12:00:00.000Z',
+                ),
+              ]),
+              '',
+            );
+          }
+          return ProcessResult(
+            0,
+            0,
+            _dynamoDbQueryItemsJson(<Map<String, Object?>>[
+              _dynamoDbItem(
+                pk: 'APP#coupon_app',
+                sk: 'HOME#bootstrap',
+                recordType: 'home',
+                payload: <String, Object?>{'title': 'Coupon App'},
+              ),
+            ]),
+            '',
+          );
+        },
+        clock: () => DateTime.utc(2026, 5, 23, 12),
+      );
+
+      final result = await starter.awsDataExport(
+        PublisherBackendAwsDataExportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          includeRedemptions: true,
+        ),
+      );
+
+      expect(result.exported, isTrue);
+      expect(result.appRecordCount, 1);
+      expect(result.redemptionCount, 1);
+      final export =
+          jsonDecode(await File(result.outputPath!).readAsString())
+              as Map<String, dynamic>;
+      expect(export['itemCount'], 2);
+      expect(
+        (export['items'] as List<dynamic>).map((item) => item['recordType']),
+        contains('redemption'),
+      );
+    });
+
+    test('AWS data import dry-run validates export without writing', () async {
+      final inputPath = p.join(tempDir.path, 'coupon-export.json');
+      await File(inputPath).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'items': <Object?>[
+            _plainExportItem(
+              pk: 'APP#coupon_app',
+              sk: 'HOME#bootstrap',
+              recordType: 'home',
+              payload: <String, Object?>{'title': 'Coupon App'},
+            ),
+            _plainExportItem(
+              pk: 'APP#coupon_app#REDEMPTIONS',
+              sk: 'USER#demo-user#COUPON#coupon-10',
+              recordType: 'redemption',
+              payload: <String, Object?>{'couponId': 'coupon-10'},
+            ),
+          ],
+        }),
+      );
+      var batchWriteCalls = 0;
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          if (arguments.contains('batch-write-item')) {
+            batchWriteCalls++;
+          }
+          return ProcessResult(
+            0,
+            0,
+            jsonEncode(<String, Object?>{
+              'UnprocessedItems': <String, Object?>{},
+            }),
+            '',
+          );
+        },
+      );
+
+      final result = await starter.awsDataImport(
+        PublisherBackendAwsDataImportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          inputPath: inputPath,
+          dryRun: true,
+        ),
+      );
+
+      expect(result.succeeded, isTrue);
+      expect(result.imported, isFalse);
+      expect(result.appRecordCount, 1);
+      expect(result.redemptionCount, 0);
+      expect(result.skippedRedemptionCount, 1);
+      expect(result.itemCount, 1);
+      expect(batchWriteCalls, 0);
+    });
+
+    test('AWS data import upserts redemptions only when included', () async {
+      final inputPath = p.join(tempDir.path, 'coupon-export.json');
+      await File(inputPath).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'items': <Object?>[
+            _plainExportItem(
+              pk: 'APP#coupon_app',
+              sk: 'COUPON#coupon-10',
+              recordType: 'coupon',
+              payload: <String, Object?>{'id': 'coupon-10'},
+            ),
+            _plainExportItem(
+              pk: 'APP#coupon_app#REDEMPTIONS',
+              sk: 'USER#demo-user#COUPON#coupon-10',
+              recordType: 'redemption',
+              payload: <String, Object?>{'couponId': 'coupon-10'},
+            ),
+          ],
+        }),
+      );
+      List<dynamic>? writes;
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          if (arguments.contains('batch-write-item')) {
+            final requestItems =
+                jsonDecode(arguments[arguments.indexOf('--request-items') + 1])
+                    as Map<String, dynamic>;
+            writes = requestItems['coupon-data-table'] as List<dynamic>;
+          }
+          return ProcessResult(
+            0,
+            0,
+            jsonEncode(<String, Object?>{
+              'UnprocessedItems': <String, Object?>{},
+            }),
+            '',
+          );
+        },
+      );
+
+      final result = await starter.awsDataImport(
+        PublisherBackendAwsDataImportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          inputPath: inputPath,
+          includeRedemptions: true,
+        ),
+      );
+
+      expect(result.succeeded, isTrue);
+      expect(result.imported, isTrue);
+      expect(result.appRecordCount, 1);
+      expect(result.redemptionCount, 1);
+      expect(writes, hasLength(2));
+      final keys = writes!
+          .map((write) => ((write as Map)['PutRequest'] as Map)['Item'] as Map)
+          .map((item) => '${item['pk']['S']} ${item['sk']['S']}')
+          .toList();
+      expect(
+        keys,
+        contains('APP#coupon_app#REDEMPTIONS USER#demo-user#COUPON#coupon-10'),
+      );
+    });
+
+    test('AWS data redemptions filters and limits records', () async {
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          return ProcessResult(
+            0,
+            0,
+            _dynamoDbQueryItemsJson(<Map<String, Object?>>[
+              _redemptionItem(
+                couponId: 'coupon-20',
+                userId: 'user-a',
+                createdAtUtc: '2026-05-23T12:00:00.000Z',
+              ),
+              _redemptionItem(
+                couponId: 'coupon-20',
+                userId: 'user-b',
+                createdAtUtc: '2026-05-23T12:05:00.000Z',
+              ),
+              _redemptionItem(
+                couponId: 'coupon-10',
+                userId: 'user-c',
+                createdAtUtc: '2026-05-23T12:10:00.000Z',
+              ),
+            ]),
+            '',
+          );
+        },
+      );
+
+      final result = await starter.awsDataRedemptions(
+        PublisherBackendAwsDataRedemptionsRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          couponId: 'coupon-20',
+          limit: 1,
+        ),
+      );
+
+      expect(result.available, isTrue);
+      expect(result.matchedCount, 2);
+      expect(result.returnedCount, 1);
+      expect(result.records.single['userId'], 'user-b');
+    });
+
+    test('AWS destroy blocks DynamoDB data without confirmation', () async {
+      final commands = <List<String>>[];
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          commands.add(arguments);
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          if (arguments.contains('query')) {
+            final count = arguments.join(' ').contains('REDEMPTIONS') ? 1 : 4;
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{'Count': count}),
+              '',
+            );
+          }
+          return ProcessResult(0, 0, '{}', '');
+        },
+      );
+
+      final result = await starter.awsDestroy(
+        PublisherBackendAwsDestroyRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+        ),
+      );
+
+      expect(result.deleted, isFalse);
+      expect(result.blockedByData, isTrue);
+      expect(result.appRecordCount, 4);
+      expect(result.redemptionCount, 1);
+      expect(
+        commands.any((command) => command.contains('delete-stack')),
+        isFalse,
+      );
+    });
+
+    test('AWS destroy proceeds with data confirmation', () async {
+      final commands = <List<String>>[];
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          commands.add(arguments);
+          if (arguments.contains('describe-stacks')) {
+            return ProcessResult(0, 0, _stackDescribeJsonWithDataTable(), '');
+          }
+          if (arguments.contains('query')) {
+            return ProcessResult(
+              0,
+              0,
+              jsonEncode(<String, Object?>{'Count': 1}),
+              '',
+            );
+          }
+          return ProcessResult(0, 0, '{}', '');
+        },
+        clock: () => DateTime.utc(2026, 5, 23, 12),
+      );
+
+      final result = await starter.awsDestroy(
+        PublisherBackendAwsDestroyRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          confirmDataLoss: true,
+        ),
+      );
+
+      expect(result.deleted, isTrue);
+      expect(result.dataLossConfirmed, isTrue);
+      expect(
+        commands.any((command) => command.contains('delete-stack')),
+        isTrue,
+      );
+      expect(
+        commands.any((command) => command.contains('stack-delete-complete')),
+        isTrue,
+      );
+    });
+
     test(
       'AWS logs resolves Lambda function before tailing CloudWatch',
       () async {
@@ -1197,6 +1578,96 @@ String _stackDescribeJsonWithDataTable() => jsonEncode(<String, Object?>{
     },
   ],
 });
+
+Map<String, Object?> _plainExportItem({
+  required String pk,
+  required String sk,
+  required String recordType,
+  required Map<String, Object?> payload,
+}) {
+  return <String, Object?>{
+    'pk': pk,
+    'sk': sk,
+    'recordType': recordType,
+    'payload': payload,
+    'updatedAtUtc': '2026-05-23T12:00:00.000Z',
+  };
+}
+
+Map<String, Object?> _redemptionItem({
+  required String couponId,
+  required String userId,
+  required String createdAtUtc,
+}) {
+  return <String, Object?>{
+    'pk': 'APP#coupon_app#REDEMPTIONS',
+    'sk': 'USER#$userId#COUPON#$couponId',
+    'recordType': 'redemption',
+    'couponId': couponId,
+    'userId': userId,
+    'payload': <String, Object?>{
+      'status': 'redeemed',
+      'couponId': couponId,
+      'userId': userId,
+      'redeemedAtUtc': createdAtUtc,
+    },
+    'createdAtUtc': createdAtUtc,
+  };
+}
+
+Map<String, Object?> _dynamoDbItem({
+  required String pk,
+  required String sk,
+  required String recordType,
+  required Map<String, Object?> payload,
+}) {
+  return <String, Object?>{
+    'pk': pk,
+    'sk': sk,
+    'recordType': recordType,
+    'payload': payload,
+    'updatedAtUtc': '2026-05-23T12:00:00.000Z',
+  };
+}
+
+String _dynamoDbQueryItemsJson(List<Map<String, Object?>> items) {
+  return jsonEncode(<String, Object?>{
+    'Items': items
+        .map(
+          (item) => item.map(
+            (key, value) => MapEntry(key, _toDynamoDbTestAttribute(value)),
+          ),
+        )
+        .toList(),
+  });
+}
+
+Map<String, Object?> _toDynamoDbTestAttribute(Object? value) {
+  if (value == null) {
+    return const <String, Object?>{'NULL': true};
+  }
+  if (value is bool) {
+    return <String, Object?>{'BOOL': value};
+  }
+  if (value is num) {
+    return <String, Object?>{'N': value.toString()};
+  }
+  if (value is String) {
+    return <String, Object?>{'S': value};
+  }
+  if (value is List) {
+    return <String, Object?>{'L': value.map(_toDynamoDbTestAttribute).toList()};
+  }
+  if (value is Map) {
+    return <String, Object?>{
+      'M': value.map(
+        (key, nestedValue) =>
+            MapEntry(key.toString(), _toDynamoDbTestAttribute(nestedValue)),
+      ),
+    };
+  }
+  return <String, Object?>{'S': value.toString()};
+}
 
 Future<ProcessResult> _runNodeScript(Directory tempDir, String source) async {
   final script = File(p.join(tempDir.path, 'node_handler_test.mjs'));
