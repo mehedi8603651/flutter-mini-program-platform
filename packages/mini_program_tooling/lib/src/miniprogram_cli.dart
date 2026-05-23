@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.30';
+const String _miniProgramToolingVersion = '0.3.31';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
@@ -45,6 +45,10 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.dynamodb.data.redemptions',
   'publisher_backend.aws.destroy.data_loss_guard',
   'publisher_backend.firebase_functions.scaffold',
+  'publisher_backend.firebase.deploy',
+  'publisher_backend.firebase.status',
+  'publisher_backend.firebase.outputs',
+  'publisher_backend.firebase.smoke',
 ];
 
 class MiniprogramCli {
@@ -2304,7 +2308,22 @@ class MiniprogramCli {
       ..addOption('bucket', help: 'AWS S3 bucket name for cloud artifacts.')
       ..addOption(
         'region',
-        help: 'AWS region for the S3 bucket and related services.',
+        help:
+            'AWS region for S3/SAM or Firebase Functions region. Firebase defaults to us-central1.',
+      )
+      ..addOption(
+        'project-id',
+        help: 'Firebase project id for Firebase publisher backend commands.',
+      )
+      ..addOption(
+        'function-name',
+        help:
+            'Firebase HTTPS function export name. Defaults to publisherBackend.',
+      )
+      ..addOption(
+        'function-url',
+        help:
+            'Optional Firebase HTTPS function URL override for status/outputs/smoke.',
       )
       ..addOption(
         'artifacts-prefix',
@@ -2391,14 +2410,14 @@ class MiniprogramCli {
       throw const FormatException('The environment name "local" is reserved.');
     }
 
-    if (provider != 'aws') {
-      throw MiniProgramPublishException(
+    final values = switch (provider) {
+      'aws' => _buildAwsEnvironmentValues(results),
+      'firebase' => _buildFirebaseEnvironmentValues(results),
+      _ => throw MiniProgramPublishException(
         'Provider "$provider" is not implemented yet. This phase currently '
-        'supports aws only.',
-      );
-    }
-
-    final values = _buildAwsEnvironmentValues(results);
+        'supports aws and firebase.',
+      ),
+    };
     final now = DateTime.now().toUtc().toIso8601String();
     final existingEnvironment = resolved.state.cloudEnvironmentNamed(
       environmentName,
@@ -2810,6 +2829,8 @@ class MiniprogramCli {
         return _runPublisherBackendUrls(arguments.sublist(1));
       case 'aws':
         return _runPublisherBackendAws(arguments.sublist(1));
+      case 'firebase':
+        return _runPublisherBackendFirebase(arguments.sublist(1));
       default:
         _stderr.writeln(
           'Unknown publisher-backend command: ${arguments.first}',
@@ -3454,6 +3475,184 @@ class MiniprogramCli {
     );
   }
 
+  Future<int> _runPublisherBackendFirebase(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_publisherBackendFirebaseUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_publisherBackendFirebaseUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'deploy':
+        return _runPublisherBackendFirebaseDeploy(arguments.sublist(1));
+      case 'status':
+        return _runPublisherBackendFirebaseStatus(arguments.sublist(1));
+      case 'outputs':
+        return _runPublisherBackendFirebaseOutputs(arguments.sublist(1));
+      case 'smoke':
+        return _runPublisherBackendFirebaseSmoke(arguments.sublist(1));
+      default:
+        _stderr.writeln(
+          'Unknown publisher-backend firebase command: ${arguments.first}',
+        );
+        _stderr.writeln(_publisherBackendFirebaseUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runPublisherBackendFirebaseDeploy(List<String> arguments) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase deploy [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseDeploy(
+      PublisherBackendFirebaseDeployRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendFirebaseDeployJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseDeployResult(result));
+    }
+    return result.healthy == false ? 1 : 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseStatus(List<String> arguments) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase status [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseStatus(
+      PublisherBackendFirebaseStatusRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendFirebaseStatusJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseStatusResult(result));
+    }
+    return !result.scaffoldExists || result.healthy == false ? 1 : 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseOutputs(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase outputs [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseOutputs(
+      PublisherBackendFirebaseOutputsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseOutputsJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseOutputsResult(result));
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseSmoke(List<String> arguments) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase smoke [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseSmoke(
+      PublisherBackendFirebaseSmokeRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(_publisherBackendFirebaseSmokeJson(result)));
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseSmokeResult(result));
+    }
+    return result.passed ? 0 : 1;
+  }
+
+  ArgParser _publisherBackendFirebaseCommandParser() => ArgParser()
+    ..addFlag(
+      'help',
+      abbr: 'h',
+      negatable: false,
+      help: 'Show usage information.',
+    )
+    ..addOption('env', help: 'Named Firebase cloud environment override.')
+    ..addOption(
+      'mini-program-root',
+      help: 'Exact mini-program root. Defaults to the current directory.',
+    );
+
+  Future<_PublisherBackendFirebaseInputs>
+  _resolvePublisherBackendFirebaseInputs(ArgResults results) async {
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase commands do not accept positional arguments.',
+      );
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final resolvedEnvironment = await _requireEnvironmentState(
+      additionalSearchRoots: <String>[miniProgramRootPath],
+    );
+    final environment = _resolveConfiguredCloudEnvironment(
+      state: resolvedEnvironment.state,
+      explicitEnvironmentName: results.option('env'),
+    );
+    if (environment.provider != 'firebase') {
+      throw FormatException(
+        'publisher-backend firebase requires a firebase environment. '
+        'Environment "${environment.name}" uses provider "${environment.provider}".',
+      );
+    }
+    return _PublisherBackendFirebaseInputs(
+      miniProgramRootPath: miniProgramRootPath,
+      environment: environment,
+    );
+  }
+
   Future<int> _runPublisherBackendRun(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -3680,6 +3879,55 @@ class MiniprogramCli {
     return values;
   }
 
+  Map<String, dynamic> _buildFirebaseEnvironmentValues(ArgResults results) {
+    final projectId = results.option('project-id')?.trim() ?? '';
+    if (projectId.isEmpty) {
+      throw const FormatException(
+        'env configure --provider firebase requires --project-id.',
+      );
+    }
+    if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9-]{2,62}$').hasMatch(projectId)) {
+      throw FormatException(
+        '--project-id must look like a Firebase project id: $projectId',
+      );
+    }
+
+    final region = results.option('region')?.trim().isNotEmpty == true
+        ? results.option('region')!.trim()
+        : 'us-central1';
+    if (!RegExp(r'^[a-z]+-[a-z0-9-]+[0-9]$').hasMatch(region)) {
+      throw FormatException(
+        '--region must look like a Firebase Functions region: $region',
+      );
+    }
+
+    final functionName =
+        results.option('function-name')?.trim().isNotEmpty == true
+        ? results.option('function-name')!.trim()
+        : 'publisherBackend';
+    if (!RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$').hasMatch(functionName)) {
+      throw FormatException(
+        '--function-name must be a valid JavaScript export name: $functionName',
+      );
+    }
+
+    final values = <String, dynamic>{
+      'projectId': projectId,
+      'region': region,
+      'functionName': functionName,
+    };
+    if (results.option('function-url') case final value?
+        when value.trim().isNotEmpty) {
+      final normalized = _normalizeAbsoluteUrl(value);
+      final uri = Uri.parse(normalized);
+      if (uri.scheme != 'https') {
+        throw const FormatException('--function-url must use https.');
+      }
+      values['functionUrl'] = normalized;
+    }
+    return values;
+  }
+
   ArgParser _accessKeyParser() => ArgParser()
     ..addFlag(
       'help',
@@ -3745,8 +3993,7 @@ class MiniprogramCli {
     )) {
       throw FormatException(
         'No configured cloud environment named "$normalizedName" was found. '
-        'Run `miniprogram env configure $normalizedName --provider aws ...` '
-        'first.',
+        'Run `miniprogram env configure $normalizedName --provider aws|firebase ...` first.',
       );
     }
     return normalizedName;
@@ -4010,7 +4257,7 @@ Commands:
   capabilities [--json]
   doctor [--json]
   env init|list|status
-  env configure <env-name> --provider aws --bucket <bucket> --region <region>
+  env configure <env-name> --provider aws|firebase [provider options]
   env use <local|env-name>
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
@@ -4038,6 +4285,7 @@ Commands:
   publisher-backend stop
   publisher-backend urls
   publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
+  publisher-backend firebase deploy|status|outputs|smoke --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -4070,6 +4318,10 @@ Commands:
   aws data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
   aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
   aws destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
+  firebase deploy --env <env-name> [--mini-program-root <path>] [--json]
+  firebase status --env <env-name> [--mini-program-root <path>] [--json]
+  firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
+  firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
 ''';
 
   String _publisherBackendAwsUsage() => '''
@@ -4087,6 +4339,16 @@ Commands:
   data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
   logs --env <env-name> [--mini-program-root <path>] [--since 1h]
   destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
+''';
+
+  String _publisherBackendFirebaseUsage() => '''
+Usage: miniprogram publisher-backend firebase <command> [arguments]
+
+Commands:
+  deploy --env <env-name> [--mini-program-root <path>] [--json]
+  status --env <env-name> [--mini-program-root <path>] [--json]
+  outputs --env <env-name> [--mini-program-root <path>] [--json]
+  smoke --env <env-name> [--mini-program-root <path>] [--json]
 ''';
 
   String _publisherBackendAwsDataUsage() => '''
@@ -4259,9 +4521,17 @@ Commands:
         'publisherBackendAwsDynamoDbDataRedemptions': true,
         'publisherBackendAwsDestroyDataLossGuard': true,
         'publisherBackendFirebaseFunctionsScaffold': true,
+        'publisherBackendFirebaseDeploy': true,
+        'publisherBackendFirebaseStatus': true,
+        'publisherBackendFirebaseOutputs': true,
+        'publisherBackendFirebaseSmoke': true,
       },
       'commands': <String>[
         'publisher-backend scaffold --template firebase-functions --storage firestore',
+        'publisher-backend firebase deploy',
+        'publisher-backend firebase status',
+        'publisher-backend firebase outputs',
+        'publisher-backend firebase smoke',
         'publisher-backend aws status',
         'publisher-backend aws outputs',
         'publisher-backend aws smoke',
@@ -5534,6 +5804,116 @@ Commands:
     ].join('\n');
   }
 
+  String _formatPublisherBackendFirebaseDeployResult(
+    PublisherBackendFirebaseDeployResult result,
+  ) {
+    final lines = <String>[
+      'Deployed Firebase Functions publisher backend.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Backend root: ${result.backendRootPath}',
+      'Functions root: ${result.functionsRootPath}',
+      'Installed dependencies: ${result.dependenciesInstalled}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Health URL: ${result.healthUrl}',
+      if (result.healthy != null) 'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      'Deployed at UTC: ${result.deployedAtUtc}',
+      '',
+      'Host endpoint command:',
+      'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.backendBaseUrl}',
+      '',
+      'Next commands:',
+      'miniprogram publisher-backend firebase status --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+      'miniprogram publisher-backend firebase smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+    ];
+    if (result.outputs.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('Outputs:')
+        ..addAll(
+          result.outputs.entries.map((entry) => '${entry.key}: ${entry.value}'),
+        );
+    }
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseStatusResult(
+    PublisherBackendFirebaseStatusResult result,
+  ) {
+    return <String>[
+      'Firebase Functions publisher backend status.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Backend root: ${result.backendRootPath}',
+      'Scaffold exists: ${result.scaffoldExists}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Health URL: ${result.healthUrl}',
+      if (result.healthy != null) 'Healthy: ${result.healthy}',
+      if (result.healthStatusCode != null)
+        'Health status: ${result.healthStatusCode}',
+      if (result.healthError != null) 'Health detail: ${result.healthError}',
+      if (result.state != null)
+        'Last deploy state: ${result.state!.deployedAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseOutputsResult(
+    PublisherBackendFirebaseOutputsResult result,
+  ) {
+    final lines = <String>[
+      'Firebase Functions publisher backend outputs.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+    ];
+    lines.addAll(
+      result.outputs.entries.map((entry) => '${entry.key}: ${entry.value}'),
+    );
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseSmokeResult(
+    PublisherBackendFirebaseSmokeResult result,
+  ) {
+    final lines = <String>[
+      'Firebase Functions publisher backend smoke test.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Passed: ${result.passed}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ];
+    if (result.routes.isNotEmpty) {
+      lines.add('');
+      for (final route in result.routes) {
+        final status = route.statusCode == null
+            ? 'failed'
+            : route.passed
+            ? '${route.statusCode} OK'
+            : '${route.statusCode} FAIL';
+        lines.add('${route.method} ${route.path}: $status');
+        if (route.error != null) {
+          lines.add('  ${route.error}');
+        }
+      }
+    }
+    return lines.join('\n');
+  }
+
   List<String> _formatPublisherBackendTargetUrls(int port) {
     final urls = PublisherBackendUrlsResult(port: port);
     return <String>[
@@ -5783,6 +6163,109 @@ Commands:
       'available': result.available,
       'records': result.records,
       'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseDeployJson(
+    PublisherBackendFirebaseDeployResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase deploy',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'backendRootPath': result.backendRootPath,
+      'functionsRootPath': result.functionsRootPath,
+      'backendBaseUrl': result.backendBaseUrl,
+      'healthUrl': result.healthUrl,
+      'healthy': result.healthy,
+      'healthStatusCode': result.healthStatusCode,
+      'healthError': result.healthError,
+      'dependenciesInstalled': result.dependenciesInstalled,
+      'outputs': result.outputs,
+      'deployedAtUtc': result.deployedAtUtc,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseStatusJson(
+    PublisherBackendFirebaseStatusResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase status',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'backendRootPath': result.backendRootPath,
+      'functionsRootPath': result.functionsRootPath,
+      'backendBaseUrl': result.backendBaseUrl,
+      'healthUrl': result.healthUrl,
+      'scaffoldExists': result.scaffoldExists,
+      'healthy': result.healthy,
+      'healthStatusCode': result.healthStatusCode,
+      'healthError': result.healthError,
+      'outputs': result.outputs,
+      'lastDeploy': result.state == null
+          ? null
+          : <String, Object?>{
+              'deployedAtUtc': result.state!.deployedAtUtc,
+              'backendRootPath': result.state!.backendRootPath,
+              'projectId': result.state!.projectId,
+              'region': result.state!.region,
+              'functionName': result.state!.functionName,
+              'backendBaseUrl': result.state!.backendBaseUrl,
+            },
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseOutputsJson(
+    PublisherBackendFirebaseOutputsResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase outputs',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'outputs': result.outputs,
+      'backendBaseUrl': result.outputs['PublisherBackendBaseUrl'],
+      'healthUrl': result.outputs['PublisherBackendHealthUrl'],
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseSmokeJson(
+    PublisherBackendFirebaseSmokeResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase smoke',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'backendBaseUrl': result.backendBaseUrl,
+      'passed': result.passed,
+      'error': result.error,
+      'routes': result.routes
+          .map(
+            (route) => <String, Object?>{
+              'method': route.method,
+              'path': route.path,
+              'uri': route.uri.toString(),
+              'statusCode': route.statusCode,
+              'passed': route.passed,
+              'error': route.error,
+            },
+          )
+          .toList(),
     };
   }
 
@@ -6146,6 +6629,16 @@ Commands:
 
 class _PublisherBackendAwsInputs {
   const _PublisherBackendAwsInputs({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class _PublisherBackendFirebaseInputs {
+  const _PublisherBackendFirebaseInputs({
     required this.miniProgramRootPath,
     required this.environment,
   });

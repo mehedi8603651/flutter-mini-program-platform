@@ -177,6 +177,7 @@ class CloudEnvironmentConfiguration {
 
   static const List<String> supportedProviders = <String>[
     'aws',
+    'firebase',
     'gcp',
     'custom-s3-compatible',
   ];

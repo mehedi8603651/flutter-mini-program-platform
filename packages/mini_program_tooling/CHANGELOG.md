@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.31
+
+- add Firebase publisher backend `deploy`, `status`, `outputs`, and read-only
+  `smoke` commands for scaffolded Cloud Functions v2 + Firestore backends
+- support `env configure --provider firebase` with project, region, function
+  name, and optional function URL settings
+
 ## 0.3.30
 
 - add `publisher-backend scaffold --template firebase-functions --storage firestore`

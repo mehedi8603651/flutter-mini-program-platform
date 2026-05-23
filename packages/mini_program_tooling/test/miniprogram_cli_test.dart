@@ -128,6 +128,10 @@ void main() {
           'publisher-backend aws deploy|status|outputs|smoke|seed|data|logs',
         ),
       );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher-backend firebase deploy|status|outputs|smoke'),
+      );
     });
 
     test('capabilities prints text output', () async {
@@ -148,7 +152,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.30'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.31'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -160,6 +164,10 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.firebase_functions.scaffold'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.smoke'),
       );
     });
 
@@ -180,7 +188,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.30');
+      expect(json['toolingVersion'], '0.3.31');
       expect(json['packageName'], 'mini_program_tooling');
       expect(
         json['capabilityIds'],
@@ -190,11 +198,21 @@ void main() {
         json['capabilityIds'],
         contains('publisher_backend.firebase_functions.scaffold'),
       );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.deploy'),
+      );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.smoke'),
+      );
       final features = json['features'] as Map<String, dynamic>;
       expect(features['publisherBackendAwsWriteSmoke'], isTrue);
       expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
       expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
       expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
+      expect(features['publisherBackendFirebaseDeploy'], isTrue);
+      expect(features['publisherBackendFirebaseSmoke'], isTrue);
     });
 
     test(
@@ -1384,6 +1402,302 @@ void main() {
         );
       },
     );
+
+    test('env configure supports Firebase publisher backend values', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await Directory(standaloneRoot).create(recursive: true);
+      await stateStore.writeEnvironmentState(
+        standaloneRoot,
+        LocalCliEnvironmentState(
+          schemaVersion: 2,
+          repoRootPath: null,
+          activeEnvironment: 'local',
+          cloudEnvironments: const <CloudEnvironmentConfiguration>[],
+          initializedAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
+        ),
+      );
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: StringBuffer(),
+            workingDirectory: standaloneRoot,
+          ).run(<String>[
+            'env',
+            'configure',
+            'my-firebase-prod',
+            '--provider',
+            'firebase',
+            '--project-id',
+            'coupon-prod',
+            '--region',
+            'asia-south1',
+            '--function-name',
+            'publisherBackend',
+            '--function-url',
+            'https://custom-functions.example.com/publisherBackend',
+          ]);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('Provider: firebase'));
+      expect(stdoutBuffer.toString(), contains('projectId: coupon-prod'));
+      final state = await stateStore.readEnvironmentState(standaloneRoot);
+      final environment = state!.cloudEnvironmentNamed('my-firebase-prod')!;
+      expect(environment.provider, 'firebase');
+      expect(environment.values['projectId'], 'coupon-prod');
+      expect(environment.values['region'], 'asia-south1');
+      expect(environment.values['functionName'], 'publisherBackend');
+      expect(
+        environment.values['functionUrl'],
+        'https://custom-functions.example.com/publisherBackend',
+      );
+    });
+
+    test('publisher-backend firebase deploy prints text output', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          shellRunner: (executable, arguments, {workingDirectory}) async {
+            return ProcessResult(0, 0, '', '');
+          },
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          clock: () => DateTime.utc(2026, 5, 24, 12),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'deploy',
+        '--env',
+        'my-firebase-prod',
+      ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Deployed Firebase Functions publisher backend.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Project: coupon-prod'));
+      expect(stdoutBuffer.toString(), contains('Healthy: true'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher-backend firebase smoke --env my-firebase-prod'),
+      );
+    });
+
+    test('publisher-backend firebase status prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'status',
+        '--env',
+        'my-firebase-prod',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend firebase status');
+      expect(json['projectId'], 'coupon-prod');
+      expect(json['scaffoldExists'], isTrue);
+      expect(json['healthy'], isTrue);
+    });
+
+    test('publisher-backend firebase outputs prints text output', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: StringBuffer(),
+            workingDirectory: standaloneRoot,
+          ).run(<String>[
+            'publisher-backend',
+            'firebase',
+            'outputs',
+            '--env',
+            'my-firebase-prod',
+          ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Firebase Functions publisher backend outputs.'),
+      );
+      expect(stdoutBuffer.toString(), contains('PublisherBackendBaseUrl:'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('PublisherBackendStorageMode: firestore'),
+      );
+    });
+
+    test('publisher-backend firebase smoke prints route checks', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'smoke',
+        '--env',
+        'my-firebase-prod',
+      ]);
+
+      expect(exitCode, 0);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Firebase Functions publisher backend smoke test.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Passed: true'));
+      expect(stdoutBuffer.toString(), contains('GET /health: 200 OK'));
+      expect(stdoutBuffer.toString(), contains('GET /home/bootstrap: 200 OK'));
+      expect(stdoutBuffer.toString(), contains('GET /coupons/list: 200 OK'));
+      expect(stdoutBuffer.toString(), contains('GET /auth/session: 200 OK'));
+    });
+
+    test(
+      'publisher-backend firebase smoke returns 1 when a route fails',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          publisherBackendStarter: PublisherBackendStarter(
+            healthGetter: (uri) async {
+              if (uri.path.endsWith('/auth/session')) {
+                return http.Response('nope', 500);
+              }
+              return http.Response('{"ok":true}', 200);
+            },
+          ),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'firebase',
+          'smoke',
+          '--env',
+          'my-firebase-prod',
+        ]);
+
+        expect(exitCode, 1);
+        expect(stdoutBuffer.toString(), contains('Passed: false'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('GET /auth/session: 500 FAIL'),
+        );
+      },
+    );
+
+    test('publisher-backend firebase help includes operations', () async {
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: tempDir.path,
+      ).run(<String>['publisher-backend', 'firebase', '--help']);
+
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), contains('deploy --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('status --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('outputs --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('smoke --env <env-name>'));
+    });
 
     test('publisher-backend aws help includes seed and data status', () async {
       final stdoutBuffer = StringBuffer();
@@ -4721,6 +5035,36 @@ Future<void> _writeAwsEnvironmentState(
       ],
       initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
       updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+    ),
+  );
+}
+
+Future<void> _writeFirebaseEnvironmentState(
+  LocalCliStateStore stateStore,
+  String rootPath, {
+  String environmentName = 'my-firebase-prod',
+}) async {
+  await stateStore.writeEnvironmentState(
+    rootPath,
+    LocalCliEnvironmentState(
+      schemaVersion: 2,
+      repoRootPath: null,
+      activeEnvironment: environmentName,
+      cloudEnvironments: <CloudEnvironmentConfiguration>[
+        CloudEnvironmentConfiguration(
+          name: environmentName,
+          provider: 'firebase',
+          values: <String, dynamic>{
+            'projectId': 'coupon-prod',
+            'region': 'asia-south1',
+            'functionName': 'publisherBackend',
+          },
+          configuredAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
+          updatedAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
+        ),
+      ],
+      initializedAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
+      updatedAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
     ),
   );
 }

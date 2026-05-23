@@ -50,6 +50,7 @@ miniprogram doctor [--json]
 miniprogram backend init
 miniprogram env init
 miniprogram env configure <env-name> --provider aws --bucket <unique-bucket-name> --region <aws-region> [--aws-profile <aws-profile>] [--require-access-keys]
+miniprogram env configure <env-name> --provider firebase --project-id <firebase-project-id> [--region us-central1] [--function-name publisherBackend] [--function-url <url>]
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status [--json]
@@ -89,6 +90,10 @@ miniprogram publisher-backend aws data import --env <env-name> [--mini-program-r
 miniprogram publisher-backend aws data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
 miniprogram publisher-backend aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
 miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
+miniprogram publisher-backend firebase deploy --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase status --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
@@ -286,6 +291,16 @@ Where those optional URLs come from:
   `https://<distribution-id>.cloudfront.net`
 - CloudFront is optional in the current AWS CLI flow; API Gateway + Lambda is
   enough for host-app testing
+
+Configure a named Firebase environment when you use the Firebase Functions
+publisher backend:
+
+```bash
+miniprogram env configure <env-name> --provider firebase --project-id <firebase-project-id> [--region us-central1] [--function-name publisherBackend] [--function-url https://<function-url>]
+```
+
+Use `--function-url` only when the derived Cloud Functions v2 HTTPS URL does
+not match your deployed function URL.
 
 Cloud publish then uses the active named cloud environment by default:
 
@@ -702,10 +717,31 @@ The generated Firestore model is:
 - `miniPrograms/<appId>/coupons/<couponId>`
 - `miniPrograms/<appId>/redemptions/<safeUserId_safeCouponId>`
 
-The Firebase scaffold is a foundation only in this release. Deploy/status,
-smoke, seed, export/import, and redemption inspection commands will be added in
-later Firebase tooling releases. For now, follow the generated README and use
-the Firebase CLI from `backend/firebase_functions/functions`.
+Configure a Firebase environment, deploy the function, and smoke-test the
+read-only publisher routes:
+
+```bash
+miniprogram env configure my-firebase-prod --provider firebase --project-id my-firebase-project --region us-central1
+miniprogram publisher-backend firebase deploy --env my-firebase-prod
+miniprogram publisher-backend firebase status --env my-firebase-prod --json
+miniprogram publisher-backend firebase outputs --env my-firebase-prod
+miniprogram publisher-backend firebase smoke --env my-firebase-prod
+```
+
+The deploy command runs `npm install` when `functions/node_modules` is missing,
+writes `FUNCTION_REGION` and `MINI_PROGRAM_ID` to `functions/.env`, runs
+`firebase deploy --only functions:<functionName> --project <projectId>`, and
+records `.mini_program/publisher_backend.firebase.json`.
+
+By default, the backend URL is derived as
+`https://<region>-<projectId>.cloudfunctions.net/<functionName>/`. If your
+Firebase project uses a different HTTPS function URL shape, pass
+`--function-url <url>` during `env configure`.
+
+Firebase smoke is read-only in this release and checks `GET /health`,
+`GET /home/bootstrap`, `GET /coupons/list`, and `GET /auth/session`. Firebase
+seed, data export/import, redemption inspection, logs, and write smoke are left
+for later Firebase tooling releases.
 
 Firebase Admin SDK dependencies are generated only inside the publisher backend.
 The Flutter host app and `mini_program_sdk` do not need Firebase SDKs unless the

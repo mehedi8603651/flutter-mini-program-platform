@@ -35,10 +35,15 @@ const List<String> _publisherBackendAwsSmokeRoutePaths = <String>[
   '/coupons/list',
   '/auth/session',
 ];
+const List<String> _publisherBackendFirebaseSmokeRoutePaths =
+    _publisherBackendAwsSmokeRoutePaths;
 
 const Duration _awsDeployHealthWaitTimeout = Duration(seconds: 45);
 const Duration _awsDeployHealthAttemptTimeout = Duration(seconds: 5);
 const Duration _awsDeployHealthRetryDelay = Duration(seconds: 1);
+const Duration _firebaseDeployHealthWaitTimeout = Duration(seconds: 45);
+const Duration _firebaseDeployHealthAttemptTimeout = Duration(seconds: 5);
+const Duration _firebaseDeployHealthRetryDelay = Duration(seconds: 1);
 const int _dynamoDbBatchWriteMaxAttempts = 5;
 
 const String _publisherBackendStorageBundled = 'bundled';
@@ -677,6 +682,180 @@ class PublisherBackendAwsDestroyResult {
   final String? error;
 }
 
+class PublisherBackendFirebaseDeployRequest {
+  const PublisherBackendFirebaseDeployRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseDeployResult {
+  const PublisherBackendFirebaseDeployResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.backendRootPath,
+    required this.functionsRootPath,
+    required this.backendBaseUrl,
+    required this.healthUrl,
+    required this.deployedAtUtc,
+    required this.dependenciesInstalled,
+    required this.outputs,
+    this.miniProgramRootPath,
+    this.healthy,
+    this.healthStatusCode,
+    this.healthError,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String backendRootPath;
+  final String functionsRootPath;
+  final String backendBaseUrl;
+  final String healthUrl;
+  final String deployedAtUtc;
+  final bool dependenciesInstalled;
+  final Map<String, String> outputs;
+  final String? miniProgramRootPath;
+  final bool? healthy;
+  final int? healthStatusCode;
+  final String? healthError;
+}
+
+class PublisherBackendFirebaseStatusRequest {
+  const PublisherBackendFirebaseStatusRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseStatusResult {
+  const PublisherBackendFirebaseStatusResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.backendRootPath,
+    required this.functionsRootPath,
+    required this.backendBaseUrl,
+    required this.healthUrl,
+    required this.scaffoldExists,
+    required this.outputs,
+    this.state,
+    this.healthy,
+    this.healthStatusCode,
+    this.healthError,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String backendRootPath;
+  final String functionsRootPath;
+  final String backendBaseUrl;
+  final String healthUrl;
+  final bool scaffoldExists;
+  final Map<String, String> outputs;
+  final PublisherBackendFirebaseState? state;
+  final bool? healthy;
+  final int? healthStatusCode;
+  final String? healthError;
+}
+
+class PublisherBackendFirebaseOutputsRequest {
+  const PublisherBackendFirebaseOutputsRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseOutputsResult {
+  const PublisherBackendFirebaseOutputsResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.outputs,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final Map<String, String> outputs;
+}
+
+class PublisherBackendFirebaseSmokeRequest {
+  const PublisherBackendFirebaseSmokeRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseSmokeRouteResult {
+  const PublisherBackendFirebaseSmokeRouteResult({
+    required this.method,
+    required this.path,
+    required this.uri,
+    required this.passed,
+    this.statusCode,
+    this.error,
+  });
+
+  final String method;
+  final String path;
+  final Uri uri;
+  final bool passed;
+  final int? statusCode;
+  final String? error;
+}
+
+class PublisherBackendFirebaseSmokeResult {
+  const PublisherBackendFirebaseSmokeResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.backendBaseUrl,
+    required this.passed,
+    required this.routes,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String backendBaseUrl;
+  final bool passed;
+  final List<PublisherBackendFirebaseSmokeRouteResult> routes;
+  final String? error;
+}
+
 class PublisherBackendRunResult {
   const PublisherBackendRunResult({
     required this.state,
@@ -883,6 +1062,98 @@ class PublisherBackendAwsState {
       stageName: stageName,
       region: region,
       samS3Bucket: samS3Bucket,
+      outputs: outputs.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      ),
+      deployedAtUtc: deployedAtUtc,
+    );
+  }
+}
+
+class PublisherBackendFirebaseState {
+  const PublisherBackendFirebaseState({
+    required this.schemaVersion,
+    required this.miniProgramRootPath,
+    required this.backendRootPath,
+    required this.functionsRootPath,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.functionUrl,
+    required this.outputs,
+    required this.deployedAtUtc,
+  });
+
+  final int schemaVersion;
+  final String miniProgramRootPath;
+  final String backendRootPath;
+  final String functionsRootPath;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String functionUrl;
+  final Map<String, String> outputs;
+  final String deployedAtUtc;
+
+  String get backendBaseUrl =>
+      outputs['PublisherBackendBaseUrl'] ?? functionUrl;
+  String get healthUrl =>
+      outputs['PublisherBackendHealthUrl'] ??
+      _firebaseHealthUrlFromFunctionUrl(functionUrl);
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'schemaVersion': schemaVersion,
+    'miniProgramRootPath': miniProgramRootPath,
+    'backendRootPath': backendRootPath,
+    'functionsRootPath': functionsRootPath,
+    'environmentName': environmentName,
+    'projectId': projectId,
+    'region': region,
+    'functionName': functionName,
+    'functionUrl': functionUrl,
+    'outputs': outputs,
+    'deployedAtUtc': deployedAtUtc,
+  };
+
+  static PublisherBackendFirebaseState fromJson(Map<String, Object?> json) {
+    final schemaVersion = json['schemaVersion'];
+    final miniProgramRootPath = json['miniProgramRootPath'];
+    final backendRootPath = json['backendRootPath'];
+    final functionsRootPath = json['functionsRootPath'];
+    final environmentName = json['environmentName'];
+    final projectId = json['projectId'];
+    final region = json['region'];
+    final functionName = json['functionName'];
+    final functionUrl = json['functionUrl'];
+    final outputs = json['outputs'];
+    final deployedAtUtc = json['deployedAtUtc'];
+    if (schemaVersion is! int ||
+        miniProgramRootPath is! String ||
+        backendRootPath is! String ||
+        functionsRootPath is! String ||
+        environmentName is! String ||
+        projectId is! String ||
+        region is! String ||
+        functionName is! String ||
+        functionUrl is! String ||
+        outputs is! Map ||
+        deployedAtUtc is! String) {
+      throw const PublisherBackendException(
+        'publisher_backend.firebase.json is missing required fields.',
+      );
+    }
+    return PublisherBackendFirebaseState(
+      schemaVersion: schemaVersion,
+      miniProgramRootPath: p.normalize(p.absolute(miniProgramRootPath)),
+      backendRootPath: p.normalize(p.absolute(backendRootPath)),
+      functionsRootPath: p.normalize(p.absolute(functionsRootPath)),
+      environmentName: environmentName,
+      projectId: projectId,
+      region: region,
+      functionName: functionName,
+      functionUrl: functionUrl,
       outputs: outputs.map(
         (key, value) => MapEntry(key.toString(), value.toString()),
       ),
@@ -1449,6 +1720,170 @@ class PublisherBackendStarter {
       passed: passed,
       routes: routes,
       includeWrite: request.includeWrite,
+    );
+  }
+
+  Future<PublisherBackendFirebaseDeployResult> firebaseDeploy(
+    PublisherBackendFirebaseDeployRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    await _assertFirebaseBackendPaths(settings.backendRootPath);
+    final dependenciesInstalled = await _ensureFirebaseDependencies(settings);
+    await _writeFirebaseEnvFile(settings);
+    await _runFirebaseCommand(<String>[
+      'deploy',
+      '--only',
+      'functions:${settings.functionName}',
+      '--project',
+      settings.projectId,
+    ], workingDirectory: settings.backendRootPath);
+
+    final outputs = settings.outputs;
+    final health = await _waitForHealthCheck(
+      Uri.parse(settings.healthUrl),
+      timeout: _firebaseDeployHealthWaitTimeout,
+      attemptTimeout: _firebaseDeployHealthAttemptTimeout,
+      retryDelay: _firebaseDeployHealthRetryDelay,
+    );
+    final deployedAtUtc = _clock().toUtc().toIso8601String();
+    final state = PublisherBackendFirebaseState(
+      schemaVersion: 1,
+      miniProgramRootPath: rootPath,
+      backendRootPath: settings.backendRootPath,
+      functionsRootPath: settings.functionsRootPath,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      functionUrl: settings.functionUrl,
+      outputs: outputs,
+      deployedAtUtc: deployedAtUtc,
+    );
+    await _writeFirebaseState(rootPath, state);
+    return PublisherBackendFirebaseDeployResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      backendRootPath: settings.backendRootPath,
+      functionsRootPath: settings.functionsRootPath,
+      miniProgramRootPath: rootPath,
+      backendBaseUrl: settings.functionUrl,
+      healthUrl: settings.healthUrl,
+      healthy: health.healthy,
+      healthStatusCode: health.statusCode,
+      healthError: health.error,
+      deployedAtUtc: deployedAtUtc,
+      dependenciesInstalled: dependenciesInstalled,
+      outputs: outputs,
+    );
+  }
+
+  Future<PublisherBackendFirebaseStatusResult> firebaseStatus(
+    PublisherBackendFirebaseStatusRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final state = await _readFirebaseState(rootPath);
+    final scaffoldExists = await _firebaseBackendPathsExist(
+      settings.backendRootPath,
+    );
+    final health = scaffoldExists
+        ? await _probeHealth(Uri.parse(settings.healthUrl))
+        : const _PublisherBackendHealth(
+            healthy: false,
+            error:
+                'Firebase Functions publisher backend scaffold was not found.',
+          );
+    return PublisherBackendFirebaseStatusResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      backendRootPath: settings.backendRootPath,
+      functionsRootPath: settings.functionsRootPath,
+      backendBaseUrl: settings.functionUrl,
+      healthUrl: settings.healthUrl,
+      scaffoldExists: scaffoldExists,
+      state: state,
+      healthy: health.healthy,
+      healthStatusCode: health.statusCode,
+      healthError: health.error,
+      outputs: settings.outputs,
+    );
+  }
+
+  Future<PublisherBackendFirebaseOutputsResult> firebaseOutputs(
+    PublisherBackendFirebaseOutputsRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    return PublisherBackendFirebaseOutputsResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      outputs: settings.outputs,
+    );
+  }
+
+  Future<PublisherBackendFirebaseSmokeResult> firebaseSmoke(
+    PublisherBackendFirebaseSmokeRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    if (!await _firebaseBackendPathsExist(settings.backendRootPath)) {
+      return PublisherBackendFirebaseSmokeResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        backendBaseUrl: settings.functionUrl,
+        passed: false,
+        routes: const <PublisherBackendFirebaseSmokeRouteResult>[],
+        error:
+            'Firebase Functions publisher backend was not found. Run '
+            '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+
+    final baseUri = Uri.parse(settings.functionUrl);
+    final routes = <PublisherBackendFirebaseSmokeRouteResult>[];
+    for (final path in _publisherBackendFirebaseSmokeRoutePaths) {
+      routes.add(
+        await _probeFirebaseSmokeRoute(
+          method: 'GET',
+          path: path,
+          uri: _resolveBackendRoute(baseUri, path),
+        ),
+      );
+    }
+    return PublisherBackendFirebaseSmokeResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      backendBaseUrl: settings.functionUrl,
+      passed: routes.every((route) => route.passed),
+      routes: routes,
     );
   }
 
@@ -2087,6 +2522,28 @@ class PublisherBackendStarter {
     }
   }
 
+  Future<bool> _firebaseBackendPathsExist(String backendRootPath) async {
+    final firebaseJsonFile = File(p.join(backendRootPath, 'firebase.json'));
+    final packageJsonFile = File(
+      p.join(backendRootPath, 'functions', 'package.json'),
+    );
+    final indexFile = File(p.join(backendRootPath, 'functions', 'index.js'));
+    final routerFile = File(p.join(backendRootPath, 'functions', 'router.js'));
+    return await firebaseJsonFile.exists() &&
+        await packageJsonFile.exists() &&
+        await indexFile.exists() &&
+        await routerFile.exists();
+  }
+
+  Future<void> _assertFirebaseBackendPaths(String backendRootPath) async {
+    if (!await _firebaseBackendPathsExist(backendRootPath)) {
+      throw const PublisherBackendException(
+        'Firebase Functions publisher backend was not found. Run '
+        '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+  }
+
   Future<void> _writeManagedFile({
     required String filePath,
     required String contents,
@@ -2236,6 +2693,43 @@ class PublisherBackendStarter {
     }
   }
 
+  String _firebaseStatePath(String miniProgramRootPath) => p.join(
+    miniProgramRootPath,
+    '.mini_program',
+    'publisher_backend.firebase.json',
+  );
+
+  Future<PublisherBackendFirebaseState?> _readFirebaseState(
+    String miniProgramRootPath,
+  ) async {
+    final file = File(_firebaseStatePath(miniProgramRootPath));
+    if (!await file.exists()) {
+      return null;
+    }
+    final decoded = jsonDecode(await file.readAsString());
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'publisher_backend.firebase.json must contain a JSON object.',
+      );
+    }
+    return PublisherBackendFirebaseState.fromJson(
+      decoded.map((key, value) => MapEntry(key.toString(), value)),
+    );
+  }
+
+  Future<void> _writeFirebaseState(
+    String miniProgramRootPath,
+    PublisherBackendFirebaseState state,
+  ) async {
+    final directory = await _ensureStateDirectory(miniProgramRootPath);
+    final file = File(
+      p.join(directory.path, 'publisher_backend.firebase.json'),
+    );
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(state.toJson()),
+    );
+  }
+
   Future<void> _runSamCommand(
     _PublisherBackendAwsSettings settings,
     List<String> commandArguments, {
@@ -2257,6 +2751,72 @@ class PublisherBackendStarter {
       result: result,
       toolLabel: 'AWS SAM CLI',
     );
+  }
+
+  Future<void> _runFirebaseCommand(
+    List<String> commandArguments, {
+    required String workingDirectory,
+  }) async {
+    final result = await _shellRunner(
+      'firebase',
+      commandArguments,
+      workingDirectory: workingDirectory,
+    );
+    _requireSuccess(
+      executable: 'firebase',
+      arguments: commandArguments,
+      result: result,
+      toolLabel: 'Firebase CLI',
+    );
+  }
+
+  Future<bool> _ensureFirebaseDependencies(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final nodeModulesDirectory = Directory(
+      p.join(settings.functionsRootPath, 'node_modules'),
+    );
+    if (await nodeModulesDirectory.exists()) {
+      return false;
+    }
+    final arguments = <String>['install'];
+    final result = await _shellRunner(
+      'npm',
+      arguments,
+      workingDirectory: settings.functionsRootPath,
+    );
+    _requireSuccess(
+      executable: 'npm',
+      arguments: arguments,
+      result: result,
+      toolLabel: 'npm',
+    );
+    return true;
+  }
+
+  Future<void> _writeFirebaseEnvFile(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final file = File(p.join(settings.functionsRootPath, '.env'));
+    final lines = <String>[];
+    if (await file.exists()) {
+      for (final line in const LineSplitter().convert(
+        await file.readAsString(),
+      )) {
+        final trimmed = line.trimLeft();
+        if (trimmed.startsWith('FUNCTION_REGION=') ||
+            trimmed.startsWith('MINI_PROGRAM_ID=')) {
+          continue;
+        }
+        lines.add(line);
+      }
+    } else {
+      await file.parent.create(recursive: true);
+    }
+    lines
+      ..add('FUNCTION_REGION=${settings.region}')
+      ..add('MINI_PROGRAM_ID=${settings.miniProgramId}');
+    await file.writeAsString('${lines.join('\n')}\n');
   }
 
   Future<void> _runAwsCommand(
@@ -3174,6 +3734,42 @@ class PublisherBackendStarter {
     }
   }
 
+  Future<PublisherBackendFirebaseSmokeRouteResult> _probeFirebaseSmokeRoute({
+    required String method,
+    required String path,
+    required Uri uri,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    try {
+      final response = await _healthGetter(uri).timeout(timeout);
+      final passed = response.statusCode == 200;
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: method,
+        path: path,
+        uri: uri,
+        passed: passed,
+        statusCode: response.statusCode,
+        error: passed ? null : 'Route returned ${response.statusCode}.',
+      );
+    } on TimeoutException {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: method,
+        path: path,
+        uri: uri,
+        passed: false,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: method,
+        path: path,
+        uri: uri,
+        passed: false,
+        error: '$error',
+      );
+    }
+  }
+
   String? _responseStatus(String body) {
     try {
       final decoded = jsonDecode(body);
@@ -3421,6 +4017,130 @@ class _PublisherBackendAwsSettings {
   }
 }
 
+class _PublisherBackendFirebaseSettings {
+  const _PublisherBackendFirebaseSettings({
+    required this.environmentName,
+    required this.miniProgramId,
+    required this.backendRootPath,
+    required this.functionsRootPath,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.functionUrl,
+  });
+
+  final String environmentName;
+  final String miniProgramId;
+  final String backendRootPath;
+  final String functionsRootPath;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String functionUrl;
+
+  String get healthUrl => _firebaseHealthUrlFromFunctionUrl(functionUrl);
+
+  Map<String, String> get outputs => <String, String>{
+    'PublisherBackendBaseUrl': functionUrl,
+    'PublisherBackendHealthUrl': healthUrl,
+    'PublisherBackendFunctionName': functionName,
+    'PublisherBackendProjectId': projectId,
+    'PublisherBackendRegion': region,
+    'PublisherBackendStorageMode': _publisherBackendStorageFirestore,
+  };
+
+  static _PublisherBackendFirebaseSettings fromEnvironment({
+    required CloudEnvironmentConfiguration environment,
+    required String miniProgramRootPath,
+  }) {
+    if (environment.provider != 'firebase') {
+      throw PublisherBackendException(
+        'Cloud environment "${environment.name}" is not a firebase environment.',
+      );
+    }
+
+    String requiredValue(String key) {
+      final rawValue = environment.values[key];
+      final value = rawValue?.toString().trim() ?? '';
+      if (value.isEmpty) {
+        throw PublisherBackendException(
+          'Cloud environment "${environment.name}" is missing required '
+          'firebase setting "$key". Run `miniprogram env configure '
+          '${environment.name} --provider firebase ...` again.',
+        );
+      }
+      return value;
+    }
+
+    String optionalValue(String key, String fallback) {
+      final rawValue = environment.values[key];
+      final value = rawValue?.toString().trim() ?? '';
+      return value.isEmpty ? fallback : value;
+    }
+
+    final appId = _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
+    final projectId = requiredValue('projectId');
+    final region = optionalValue('region', 'us-central1');
+    final functionName = optionalValue('functionName', 'publisherBackend');
+    final configuredFunctionUrl =
+        environment.values['functionUrl']?.toString().trim() ?? '';
+    final functionUrl = configuredFunctionUrl.isEmpty
+        ? _defaultFirebaseFunctionUrl(
+            projectId: projectId,
+            region: region,
+            functionName: functionName,
+          )
+        : _normalizeFirebaseFunctionUrl(configuredFunctionUrl);
+    final backendRootPath = p.join(
+      miniProgramRootPath,
+      'backend',
+      'firebase_functions',
+    );
+
+    return _PublisherBackendFirebaseSettings(
+      environmentName: environment.name,
+      miniProgramId: appId,
+      backendRootPath: backendRootPath,
+      functionsRootPath: p.join(backendRootPath, 'functions'),
+      projectId: projectId,
+      region: region,
+      functionName: functionName,
+      functionUrl: functionUrl,
+    );
+  }
+}
+
+String _defaultFirebaseFunctionUrl({
+  required String projectId,
+  required String region,
+  required String functionName,
+}) {
+  return _normalizeFirebaseFunctionUrl(
+    'https://$region-$projectId.cloudfunctions.net/$functionName',
+  );
+}
+
+String _normalizeFirebaseFunctionUrl(String rawUrl) {
+  final uri = Uri.parse(rawUrl.trim());
+  if (!uri.hasScheme || uri.host.isEmpty) {
+    throw PublisherBackendException(
+      'Firebase function URL must be an absolute HTTPS URL: $rawUrl',
+    );
+  }
+  if (uri.scheme != 'https') {
+    throw PublisherBackendException(
+      'Firebase function URL must use https: $rawUrl',
+    );
+  }
+  final withoutTrailingSlash = uri.toString().replaceFirst(RegExp(r'/+$'), '');
+  return '$withoutTrailingSlash/';
+}
+
+String _firebaseHealthUrlFromFunctionUrl(String functionUrl) {
+  final base = Uri.parse(_normalizeFirebaseFunctionUrl(functionUrl));
+  return base.resolve('health').toString();
+}
+
 Map<String, String> buildAwsLambdaPublisherBackendFiles({
   required String miniProgramRootPath,
   String? miniProgramId,
@@ -3611,14 +4331,20 @@ Firestore data model:
 - `miniPrograms/$appId/coupons/<couponId>`
 - `miniPrograms/$appId/redemptions/<safeUserId_safeCouponId>`
 
-Setup:
+Setup from the mini-program root:
 
 ```powershell
-copy .firebaserc.example .firebaserc
-# Edit .firebaserc and set your Firebase project id.
-cd functions
-npm install
-npm run deploy
+cd ../..
+miniprogram env init
+miniprogram env configure my-firebase-prod `
+  --provider firebase `
+  --project-id your-firebase-project-id `
+  --region us-central1
+
+miniprogram publisher-backend firebase deploy `
+  --env my-firebase-prod
+miniprogram publisher-backend firebase smoke `
+  --env my-firebase-prod
 ```
 
 Local emulator:
