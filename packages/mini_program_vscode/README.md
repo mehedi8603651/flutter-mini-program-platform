@@ -8,11 +8,11 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.28 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.29 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, and
-`miniprogram workflow status --json`.
+quiet CLI capability detection through `miniprogram capabilities --json`.
 
 Install or upgrade the CLI first:
 
@@ -40,7 +40,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.22.vsix
+code --install-extension mini-program-tools-0.1.23.vsix
 ```
 
 ## Features
@@ -241,11 +241,14 @@ For DynamoDB scaffolds, use:
   The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
   records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.28, the extension
-warns before running the new AWS DynamoDB data actions. Upgrade with:
+If the configured CLI is older than `mini_program_tooling` 0.3.29, the extension
+warns before running newer AWS DynamoDB actions or when quiet capability
+detection is unavailable. Version 0.1.23 calls `miniprogram capabilities --json`
+once per workspace and only falls back to older `--help` probes for older CLI
+installs. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.28
+dart pub global activate mini_program_tooling 0.3.29
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed

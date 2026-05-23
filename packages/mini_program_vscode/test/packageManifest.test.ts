@@ -24,7 +24,7 @@ test('package manifest exposes AWS DynamoDB publisher backend commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.1.22');
+  assert.equal(manifest.version, '0.1.23');
   for (const commandId of [
     'miniProgramTools.publisherBackendAwsOutputs',
     'miniProgramTools.publisherBackendAwsSmoke',

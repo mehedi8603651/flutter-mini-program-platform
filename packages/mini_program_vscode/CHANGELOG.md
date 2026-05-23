@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.23
+
+- Use `miniprogram capabilities --json` from `mini_program_tooling` 0.3.29
+  for AWS DynamoDB feature detection.
+- Cache CLI capability detection per workspace so sidebar actions stop running
+  repeated `aws ... --help` probes.
+- Keep the old help-probe detection as a fallback for older CLI installs.
+- Update diagnostics to recommend `mini_program_tooling` 0.3.29 when quiet
+  capability discovery is unavailable.
+
 ## 0.1.22
 
 - Add AWS DynamoDB production data workflows backed by `mini_program_tooling`

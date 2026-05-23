@@ -12,6 +12,7 @@ import {
   buildBackendStatusArgs,
   buildBackendStopArgs,
   buildBuildArgs,
+  buildCapabilitiesArgs,
   buildCloudAppInfoArgs,
   buildCloudDeployArgs,
   buildCloudOutputsArgs,
@@ -3689,14 +3690,69 @@ interface PublisherBackendAwsCliCapability {
   readonly checked: boolean;
   readonly supportsWriteSmoke: boolean;
   readonly supportsDataManagement: boolean;
+  readonly supportsCapabilityDiscovery?: boolean;
+  readonly toolingVersion?: string;
   readonly detail?: string;
 }
+
+const publisherBackendAwsCliCapabilityCache = new Map<
+  string,
+  Promise<PublisherBackendAwsCliCapability>
+>();
 
 async function detectPublisherBackendAwsCliCapabilities(
   workspacePath: string,
   output?: vscode.OutputChannel,
 ): Promise<PublisherBackendAwsCliCapability> {
   const cliPath = configuredCliPath();
+  const cacheKey = `${cliPath}\n${workspacePath}`;
+  const cached = publisherBackendAwsCliCapabilityCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const pending = detectPublisherBackendAwsCliCapabilitiesUncached(
+    workspacePath,
+    cliPath,
+    output,
+  );
+  publisherBackendAwsCliCapabilityCache.set(cacheKey, pending);
+  return pending;
+}
+
+async function detectPublisherBackendAwsCliCapabilitiesUncached(
+  workspacePath: string,
+  cliPath: string,
+  output?: vscode.OutputChannel,
+): Promise<PublisherBackendAwsCliCapability> {
+  const capabilitiesArgs = buildCapabilitiesArgs({ json: true });
+  output?.appendLine(`> ${formatRedactedCommandLine(cliPath, capabilitiesArgs)}`);
+  try {
+    const capabilitiesResult = await runCli(cliPath, capabilitiesArgs, {
+      cwd: workspacePath,
+      timeoutMs: 30000,
+    });
+    if (capabilitiesResult.exitCode === 0) {
+      const decoded = parseJsonObject(capabilitiesResult.stdout);
+      const capability = capabilityFromCliCapabilitiesJson(decoded);
+      if (capability.supportsWriteSmoke || capability.supportsDataManagement) {
+        return capability;
+      }
+    }
+  } catch {
+    // Older CLIs do not have the capabilities command. Fall back to help probes.
+  }
+  return detectPublisherBackendAwsCliCapabilitiesFromHelp(
+    workspacePath,
+    cliPath,
+    output,
+  );
+}
+
+async function detectPublisherBackendAwsCliCapabilitiesFromHelp(
+  workspacePath: string,
+  cliPath: string,
+  output?: vscode.OutputChannel,
+): Promise<PublisherBackendAwsCliCapability> {
   const smokeArgs = ['publisher-backend', 'aws', 'smoke', '--help'];
   const dataExportArgs = ['publisher-backend', 'aws', 'data', 'export', '--help'];
   const redemptionsArgs = [
@@ -3743,6 +3799,7 @@ async function detectPublisherBackendAwsCliCapabilities(
       checked: true,
       supportsWriteSmoke,
       supportsDataManagement,
+      supportsCapabilityDiscovery: false,
       detail: details.join(' '),
     };
   } catch (error) {
@@ -3750,9 +3807,47 @@ async function detectPublisherBackendAwsCliCapabilities(
       checked: true,
       supportsWriteSmoke: false,
       supportsDataManagement: false,
+      supportsCapabilityDiscovery: false,
       detail: errorMessage(error),
     };
   }
+}
+
+function capabilityFromCliCapabilitiesJson(
+  decoded: Record<string, unknown>,
+): PublisherBackendAwsCliCapability {
+  const features = recordValue(decoded.features) ?? {};
+  const capabilityIds = stringArrayValue(decoded.capabilityIds);
+  const hasCapability = (id: string): boolean => capabilityIds.includes(id);
+  const hasFeature = (key: string): boolean => features[key] === true;
+  const supportsWriteSmoke =
+    hasFeature('publisherBackendAwsWriteSmoke') ||
+    hasCapability('publisher_backend.aws.smoke.write');
+  const supportsDataManagement =
+    (hasFeature('publisherBackendAwsDynamoDbDataExport') &&
+      hasFeature('publisherBackendAwsDynamoDbDataImport') &&
+      hasFeature('publisherBackendAwsDynamoDbDataRedemptions') &&
+      hasFeature('publisherBackendAwsDestroyDataLossGuard')) ||
+    (hasCapability('publisher_backend.aws.dynamodb.data.export') &&
+      hasCapability('publisher_backend.aws.dynamodb.data.import') &&
+      hasCapability('publisher_backend.aws.dynamodb.data.redemptions') &&
+      hasCapability('publisher_backend.aws.destroy.data_loss_guard'));
+  const details = [
+    supportsWriteSmoke
+      ? undefined
+      : 'Configured CLI capabilities do not include publisher_backend.aws.smoke.write.',
+    supportsDataManagement
+      ? undefined
+      : 'Configured CLI capabilities do not include AWS DynamoDB export/import/redemptions and guarded destroy.',
+  ].filter((value): value is string => Boolean(value));
+  return {
+    checked: true,
+    supportsWriteSmoke,
+    supportsDataManagement,
+    supportsCapabilityDiscovery: true,
+    toolingVersion: stringValue(decoded.toolingVersion),
+    detail: details.join(' '),
+  };
 }
 
 async function detectPublisherBackendAwsCli027(
@@ -3775,8 +3870,8 @@ async function ensurePublisherBackendAwsCli027(
     return true;
   }
   const message =
-    'MiniProgram CLI 0.3.27 or newer is required for AWS DynamoDB sidebar actions. ' +
-    'Run `dart pub global activate mini_program_tooling 0.3.27`.';
+    'MiniProgram CLI 0.3.29 or newer is required for AWS DynamoDB sidebar actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.29`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -3798,8 +3893,8 @@ async function ensurePublisherBackendAwsCli028(
     return true;
   }
   const message =
-    'MiniProgram CLI 0.3.28 or newer is required for AWS DynamoDB data management actions. ' +
-    'Run `dart pub global activate mini_program_tooling 0.3.28`.';
+    'MiniProgram CLI 0.3.29 or newer is required for AWS DynamoDB data management actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.29`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -3835,6 +3930,18 @@ function parseJsonObject(rawOutput: string): Record<string, unknown> {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function stringArrayValue(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 async function chooseAwsDataExportPath(

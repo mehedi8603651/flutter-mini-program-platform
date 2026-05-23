@@ -28,6 +28,10 @@ export interface DoctorArgsOptions {
   readonly json?: boolean;
 }
 
+export interface CapabilitiesArgsOptions {
+  readonly json?: boolean;
+}
+
 export interface CreateArgsOptions {
   readonly appId: string;
   readonly title?: string;
@@ -315,6 +319,16 @@ export function buildWorkflowStatusArgs(
 
 export function buildDoctorArgs(options: DoctorArgsOptions = {}): string[] {
   const args = ['doctor'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return args;
+}
+
+export function buildCapabilitiesArgs(
+  options: CapabilitiesArgsOptions = {},
+): string[] {
+  const args = ['capabilities'];
   if (options.json ?? true) {
     args.push('--json');
   }

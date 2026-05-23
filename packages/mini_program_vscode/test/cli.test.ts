@@ -10,6 +10,7 @@ import {
   buildBackendStatusArgs,
   buildBackendStopArgs,
   buildBuildArgs,
+  buildCapabilitiesArgs,
   buildCloudDeployArgs,
   buildCloudAppInfoArgs,
   buildCloudOutputsArgs,
@@ -88,6 +89,11 @@ test('builds workflow status command arguments', () => {
 test('builds doctor command arguments', () => {
   assert.deepEqual(buildDoctorArgs(), ['doctor', '--json']);
   assert.deepEqual(buildDoctorArgs({ json: false }), ['doctor']);
+});
+
+test('builds capabilities command arguments', () => {
+  assert.deepEqual(buildCapabilitiesArgs(), ['capabilities', '--json']);
+  assert.deepEqual(buildCapabilitiesArgs({ json: false }), ['capabilities']);
 });
 
 test('builds core workflow command arguments', () => {
