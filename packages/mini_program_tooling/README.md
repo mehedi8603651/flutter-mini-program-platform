@@ -45,6 +45,7 @@ the source of truth.
 
 ```text
 miniprogram create <mini-program-id> [--with-backend mock]
+miniprogram capabilities [--json]
 miniprogram doctor [--json]
 miniprogram backend init
 miniprogram env init
@@ -102,6 +103,10 @@ miniprogram backend reset-local --yes
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+
+Use `miniprogram capabilities --json` when an editor extension, script, or CI
+job needs to detect supported CLI features without parsing multiple help
+screens.
 
 ## Workflow status
 

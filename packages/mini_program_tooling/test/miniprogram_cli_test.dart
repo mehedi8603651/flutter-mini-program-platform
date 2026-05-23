@@ -75,6 +75,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('publish [mini-program-id] [--target local|cloud|static]'),
       );
+      expect(stdoutBuffer.toString(), contains('capabilities [--json]'));
       expect(
         stdoutBuffer.toString(),
         contains('access-key create|list|revoke|rotate'),
@@ -125,6 +126,64 @@ void main() {
           'publisher-backend aws deploy|status|outputs|smoke|seed|data|logs',
         ),
       );
+    });
+
+    test('capabilities prints text output', () async {
+      final stdoutBuffer = StringBuffer();
+      final stderrBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: stderrBuffer,
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['capabilities']);
+
+      expect(exitCode, 0);
+      expect(stderrBuffer.toString(), isEmpty);
+      expect(
+        stdoutBuffer.toString(),
+        contains('MiniProgram tooling capabilities.'),
+      );
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.29'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.aws.dynamodb.data.export'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.aws.destroy.data_loss_guard'),
+      );
+    });
+
+    test('capabilities prints machine-readable JSON', () async {
+      final stdoutBuffer = StringBuffer();
+      final stderrBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: stderrBuffer,
+        workingDirectory: tempDir.path,
+      );
+
+      final exitCode = await cli.run(<String>['capabilities', '--json']);
+
+      expect(exitCode, 0);
+      expect(stderrBuffer.toString(), isEmpty);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['schemaVersion'], 1);
+      expect(json['command'], 'capabilities');
+      expect(json['toolingVersion'], '0.3.29');
+      expect(json['packageName'], 'mini_program_tooling');
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.aws.dynamodb.data.redemptions'),
+      );
+      final features = json['features'] as Map<String, dynamic>;
+      expect(features['publisherBackendAwsWriteSmoke'], isTrue);
+      expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
+      expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
     });
 
     test(

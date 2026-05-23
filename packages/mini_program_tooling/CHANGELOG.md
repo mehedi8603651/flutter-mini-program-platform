@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.29
+
+- add `miniprogram capabilities [--json]` so tools such as the VS Code
+  extension can detect supported AWS publisher backend workflows with one
+  stable command instead of repeated help probes
+
 ## 0.3.28
 
 - add AWS DynamoDB publisher backend data export/import commands, redemption

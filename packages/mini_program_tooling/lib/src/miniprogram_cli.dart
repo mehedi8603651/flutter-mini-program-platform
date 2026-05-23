@@ -31,6 +31,21 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
+const String _miniProgramToolingVersion = '0.3.29';
+
+const List<String> _capabilityIds = <String>[
+  'publisher_backend.aws.status',
+  'publisher_backend.aws.outputs',
+  'publisher_backend.aws.smoke',
+  'publisher_backend.aws.smoke.write',
+  'publisher_backend.aws.dynamodb.seed',
+  'publisher_backend.aws.dynamodb.data.status',
+  'publisher_backend.aws.dynamodb.data.export',
+  'publisher_backend.aws.dynamodb.data.import',
+  'publisher_backend.aws.dynamodb.data.redemptions',
+  'publisher_backend.aws.destroy.data_loss_guard',
+];
+
 class MiniprogramCli {
   MiniprogramCli({
     MiniProgramScaffolder scaffolder = const MiniProgramScaffolder(),
@@ -115,6 +130,8 @@ class MiniprogramCli {
       switch (arguments.first) {
         case 'create':
           return await _runCreate(arguments.sublist(1));
+        case 'capabilities':
+          return _runCapabilities(arguments.sublist(1));
         case 'doctor':
           return await _runDoctor(arguments.sublist(1));
         case 'env':
@@ -301,6 +318,37 @@ class MiniprogramCli {
       _stdout.writeln(_formatDoctorResult(result));
     }
     return result.hasErrors ? 1 : 0;
+  }
+
+  int _runCapabilities(List<String> arguments) {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln('Usage: miniprogram capabilities [options]');
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'capabilities does not accept positional arguments.',
+      );
+    }
+
+    final capabilities = _capabilitiesJson();
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(capabilities));
+    } else {
+      _stdout.writeln(_formatCapabilities(capabilities));
+    }
+    return 0;
   }
 
   Future<int> _runBuild(List<String> arguments) async {
@@ -3957,6 +4005,7 @@ Usage: miniprogram <command> [arguments]
 
 Commands:
   create <mini-program-id> [--with-backend mock]
+  capabilities [--json]
   doctor [--json]
   env init|list|status
   env configure <env-name> --provider aws --bucket <bucket> --region <region>
@@ -4189,6 +4238,40 @@ Commands:
     };
   }
 
+  Map<String, Object?> _capabilitiesJson() {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'capabilities',
+      'packageName': 'mini_program_tooling',
+      'toolingVersion': _miniProgramToolingVersion,
+      'capabilityIds': _capabilityIds,
+      'features': <String, bool>{
+        'publisherBackendAwsStatus': true,
+        'publisherBackendAwsOutputs': true,
+        'publisherBackendAwsSmoke': true,
+        'publisherBackendAwsWriteSmoke': true,
+        'publisherBackendAwsDynamoDbSeed': true,
+        'publisherBackendAwsDynamoDbDataStatus': true,
+        'publisherBackendAwsDynamoDbDataExport': true,
+        'publisherBackendAwsDynamoDbDataImport': true,
+        'publisherBackendAwsDynamoDbDataRedemptions': true,
+        'publisherBackendAwsDestroyDataLossGuard': true,
+      },
+      'commands': <String>[
+        'publisher-backend aws status',
+        'publisher-backend aws outputs',
+        'publisher-backend aws smoke',
+        'publisher-backend aws smoke --include-write',
+        'publisher-backend aws seed',
+        'publisher-backend aws data status',
+        'publisher-backend aws data export',
+        'publisher-backend aws data import',
+        'publisher-backend aws data redemptions',
+        'publisher-backend aws destroy --confirm-data-loss',
+      ],
+    };
+  }
+
   Map<String, Object?> _envStatusJson(
     ResolvedLocalCliEnvironmentState? resolved,
   ) {
@@ -4329,6 +4412,19 @@ Commands:
       'Summary: $okCount ok, $warningCount warning, '
       '$errorCount error, $skippedCount skipped',
     );
+    return lines.join('\n');
+  }
+
+  String _formatCapabilities(Map<String, Object?> capabilities) {
+    final lines = <String>[
+      'MiniProgram tooling capabilities.',
+      'Version: ${capabilities['toolingVersion']}',
+      'Package: ${capabilities['packageName']}',
+      'Capabilities:',
+    ];
+    for (final capabilityId in _capabilityIds) {
+      lines.add('- $capabilityId');
+    }
     return lines.join('\n');
   }
 
