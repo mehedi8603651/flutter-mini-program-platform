@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.30
+
+- add `publisher-backend scaffold --template firebase-functions --storage firestore`
+  for a Firebase Cloud Functions v2 + Firestore publisher backend foundation
+- report Firebase publisher backend scaffolds in `workflow status --json` and
+  expose the Firebase scaffold capability through `miniprogram capabilities`
+
 ## 0.3.29
 
 - add `miniprogram capabilities [--json]` so tools such as the VS Code

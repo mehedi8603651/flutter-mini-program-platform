@@ -43,7 +43,10 @@ const int _dynamoDbBatchWriteMaxAttempts = 5;
 
 const String _publisherBackendStorageBundled = 'bundled';
 const String _publisherBackendStorageDynamoDb = 'dynamodb';
+const String _publisherBackendStorageFirestore = 'firestore';
 const String _awsSdkJavaScriptV3Version = '^3.1052.0';
+const String _firebaseFunctionsVersion = '^7.2.5';
+const String _firebaseAdminVersion = '^13.10.0';
 
 class PublisherBackendException implements Exception {
   const PublisherBackendException(this.message);
@@ -919,7 +922,11 @@ class PublisherBackendStarter {
   Future<PublisherBackendScaffoldResult> scaffold(
     PublisherBackendScaffoldRequest request,
   ) async {
-    if (!const <String>['mock', 'aws-lambda'].contains(request.template)) {
+    if (!const <String>[
+      'mock',
+      'aws-lambda',
+      'firebase-functions',
+    ].contains(request.template)) {
       throw PublisherBackendException(
         'Unsupported publisher backend template: ${request.template}',
       );
@@ -927,16 +934,34 @@ class PublisherBackendStarter {
     if (!const <String>[
       _publisherBackendStorageBundled,
       _publisherBackendStorageDynamoDb,
+      _publisherBackendStorageFirestore,
     ].contains(request.storageMode)) {
       throw PublisherBackendException(
         'Unsupported publisher backend storage mode: ${request.storageMode}',
       );
     }
-    if (request.template != 'aws-lambda' &&
+    if (request.template == 'mock' &&
         request.storageMode != _publisherBackendStorageBundled) {
       throw const PublisherBackendException(
-        'publisher-backend scaffold --storage is only supported with '
-        '--template aws-lambda.',
+        'publisher-backend scaffold --storage is not supported with '
+        '--template mock.',
+      );
+    }
+    if (request.template == 'aws-lambda' &&
+        !const <String>[
+          _publisherBackendStorageBundled,
+          _publisherBackendStorageDynamoDb,
+        ].contains(request.storageMode)) {
+      throw const PublisherBackendException(
+        'publisher-backend scaffold --template aws-lambda supports '
+        '--storage bundled or --storage dynamodb.',
+      );
+    }
+    if (request.template == 'firebase-functions' &&
+        request.storageMode != _publisherBackendStorageFirestore) {
+      throw const PublisherBackendException(
+        'publisher-backend scaffold --template firebase-functions requires '
+        '--storage firestore.',
       );
     }
     final miniProgramRootPath = await _requireMiniProgramRoot(
@@ -945,17 +970,29 @@ class PublisherBackendStarter {
     final backendRootPath = p.join(
       miniProgramRootPath,
       'backend',
-      request.template == 'mock' ? 'mock' : 'aws_lambda',
+      switch (request.template) {
+        'mock' => 'mock',
+        'aws-lambda' => 'aws_lambda',
+        'firebase-functions' => 'firebase_functions',
+        _ => request.template,
+      },
     );
     final createdPaths = <String>[];
-    final files = request.template == 'mock'
-        ? buildMockPublisherBackendFiles(
-            miniProgramRootPath: miniProgramRootPath,
-          )
-        : buildAwsLambdaPublisherBackendFiles(
-            miniProgramRootPath: miniProgramRootPath,
-            storageMode: request.storageMode,
-          );
+    final files = switch (request.template) {
+      'mock' => buildMockPublisherBackendFiles(
+        miniProgramRootPath: miniProgramRootPath,
+      ),
+      'aws-lambda' => buildAwsLambdaPublisherBackendFiles(
+        miniProgramRootPath: miniProgramRootPath,
+        storageMode: request.storageMode,
+      ),
+      'firebase-functions' => buildFirebaseFunctionsPublisherBackendFiles(
+        miniProgramRootPath: miniProgramRootPath,
+      ),
+      _ => throw PublisherBackendException(
+        'Unsupported publisher backend template: ${request.template}',
+      ),
+    };
     for (final entry in files.entries) {
       await _writeManagedFile(
         filePath: p.join(backendRootPath, entry.key),
@@ -970,7 +1007,9 @@ class PublisherBackendStarter {
       backendRootPath: backendRootPath,
       template: request.template,
       createdPaths: createdPaths,
-      storageMode: request.template == 'aws-lambda'
+      storageMode:
+          request.template == 'aws-lambda' ||
+              request.template == 'firebase-functions'
           ? request.storageMode
           : null,
     );
@@ -3425,6 +3464,40 @@ Map<String, String> buildAwsLambdaPublisherBackendFiles({
   };
 }
 
+Map<String, String> buildFirebaseFunctionsPublisherBackendFiles({
+  required String miniProgramRootPath,
+  String? miniProgramId,
+  String? title,
+}) {
+  final appId = miniProgramId?.trim().isNotEmpty == true
+      ? miniProgramId!.trim()
+      : _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
+  final displayTitle = title?.trim().isNotEmpty == true
+      ? title!.trim()
+      : _titleFromAppId(appId);
+  final sampleFiles = buildMockPublisherBackendFiles(
+    miniProgramRootPath: miniProgramRootPath,
+    miniProgramId: appId,
+    title: displayTitle,
+  );
+  return <String, String>{
+    'firebase.json': _firebaseJson(),
+    '.firebaserc.example': _firebaseRcExample(),
+    'README.md': _firebaseFunctionsReadme(appId, displayTitle),
+    p.join('functions', 'package.json'): _firebaseFunctionsPackageJson(appId),
+    p.join('functions', 'index.js'): _firebaseFunctionsIndexSource(appId),
+    p.join('functions', 'router.js'): _firebaseFunctionsRouterSource(),
+    p.join('functions', 'firestore_store.js'):
+        _firebaseFunctionsFirestoreStoreSource(),
+    p.join('functions', 'data', 'home_bootstrap.json'):
+        sampleFiles[p.join('data', 'home_bootstrap.json')]!,
+    p.join('functions', 'data', 'coupons_list.json'):
+        sampleFiles[p.join('data', 'coupons_list.json')]!,
+    p.join('functions', 'data', 'session.json'):
+        sampleFiles[p.join('data', 'session.json')]!,
+  };
+}
+
 Map<String, String> buildMockPublisherBackendFiles({
   required String miniProgramRootPath,
   String? miniProgramId,
@@ -3478,6 +3551,395 @@ Map<String, String> buildMockPublisherBackendFiles({
     }),
   };
 }
+
+String _firebaseJson() => _prettyJson(<String, Object?>{
+  'functions': <String, Object?>{'source': 'functions'},
+  'emulators': <String, Object?>{
+    'functions': <String, Object?>{'port': 5001},
+    'firestore': <String, Object?>{'port': 8080},
+    'ui': <String, Object?>{'enabled': true},
+  },
+});
+
+String _firebaseRcExample() => _prettyJson(<String, Object?>{
+  'projects': <String, Object?>{'default': 'your-firebase-project-id'},
+});
+
+String _firebaseFunctionsPackageJson(
+  String appId,
+) => _prettyJson(<String, Object?>{
+  'name': '${_safeNodePackageSegment(appId)}-firebase-backend',
+  'private': true,
+  'type': 'module',
+  'main': 'index.js',
+  'engines': <String, Object?>{'node': '22'},
+  'scripts': <String, Object?>{
+    'serve':
+        'firebase emulators:start --config ../firebase.json --only functions,firestore',
+    'shell': 'firebase functions:shell --config ../firebase.json',
+    'deploy': 'firebase deploy --config ../firebase.json --only functions',
+    'logs': 'firebase functions:log',
+  },
+  'dependencies': <String, Object?>{
+    'firebase-admin': _firebaseAdminVersion,
+    'firebase-functions': _firebaseFunctionsVersion,
+  },
+});
+
+String _firebaseFunctionsReadme(String appId, String title) =>
+    '''
+# $title Firebase publisher backend
+
+This is a Firebase Cloud Functions v2 + Firestore publisher backend for
+mini-program business data. It is separate from mini-program delivery and keeps
+Firebase Admin SDK credentials on publisher-owned infrastructure.
+
+Storage mode: Firestore
+
+Generated routes:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+
+Firestore data model:
+
+- `miniPrograms/$appId/home/bootstrap`
+- `miniPrograms/$appId/sessions/demo`
+- `miniPrograms/$appId/coupons/<couponId>`
+- `miniPrograms/$appId/redemptions/<safeUserId_safeCouponId>`
+
+Setup:
+
+```powershell
+copy .firebaserc.example .firebaserc
+# Edit .firebaserc and set your Firebase project id.
+cd functions
+npm install
+npm run deploy
+```
+
+Local emulator:
+
+```powershell
+cd functions
+npm install
+npm run serve
+```
+
+After deploy, connect host apps with the HTTPS function URL as
+`--backend-base-url`. The host app does not need Firebase SDKs unless the host
+itself chooses to use Firebase features such as Firebase Auth.
+
+Firebase Auth is intentionally not included in this scaffold. `/auth/session`
+returns publisher-owned session data from Firestore; a later auth bridge can
+verify Firebase ID tokens on the server.
+''';
+
+String _firebaseFunctionsIndexSource(String appId) =>
+    '''
+import { onRequest } from 'firebase-functions/v2/https';
+import { getApps, initializeApp } from 'firebase-admin/app';
+import { createPublisherBackendHandler } from './router.js';
+import { createFirestorePublisherBackendStore } from './firestore_store.js';
+
+if (getApps().length === 0) {
+  initializeApp();
+}
+
+const appId = process.env.MINI_PROGRAM_ID || '$appId';
+const store = createFirestorePublisherBackendStore({ appId });
+const publisherBackendHandler = createPublisherBackendHandler({ store });
+
+export const publisherBackend = onRequest(
+  {
+    region: process.env.FUNCTION_REGION || 'us-central1',
+  },
+  publisherBackendHandler,
+);
+''';
+
+String _firebaseFunctionsRouterSource() => r'''
+export const expectedRoutes = [
+  'GET /health',
+  'GET /home/bootstrap',
+  'GET /coupons/list',
+  'GET /auth/session',
+  'POST /coupon/redeem',
+];
+
+export function createPublisherBackendHandler({
+  store,
+  clock = () => new Date(),
+} = {}) {
+  if (!store) {
+    throw new Error('createPublisherBackendHandler requires a store.');
+  }
+
+  return async function publisherBackendHandler(request, response) {
+    writeCorsHeaders(response);
+    if (request.method === 'OPTIONS') {
+      return endEmpty(response, 204);
+    }
+
+    const method = String(request.method || 'GET').toUpperCase();
+    const routePath = normalizePath(
+      request.path || request.url || request.originalUrl || '/',
+    );
+
+    try {
+      if (method === 'GET' && routePath === '/health') {
+        return writeJson(response, 200, {
+          status: 'ok',
+          service: 'mini_program_firebase_publisher_backend',
+          generatedAtUtc: clock().toISOString(),
+        });
+      }
+      if (method === 'GET' && routePath === '/home/bootstrap') {
+        const body = await store.homeBootstrap();
+        return body
+          ? writeJson(response, 200, body)
+          : writeJson(response, 404, {
+              errorCode: 'home_bootstrap_missing',
+              message: 'Home bootstrap document was not found.',
+            });
+      }
+      if (method === 'GET' && routePath === '/coupons/list') {
+        return writeJson(response, 200, await store.couponsList());
+      }
+      if (method === 'GET' && routePath === '/auth/session') {
+        const body = await store.authSession();
+        return body
+          ? writeJson(response, 200, body)
+          : writeJson(response, 404, {
+              errorCode: 'session_missing',
+              message: 'Session document was not found.',
+            });
+      }
+      if (method === 'POST' && routePath === '/coupon/redeem') {
+        const body = await readJsonBody(request);
+        const couponId = stringValue(body?.couponId);
+        if (!couponId) {
+          return writeJson(response, 400, {
+            errorCode: 'missing_coupon_id',
+            message: 'couponId is required.',
+          });
+        }
+        const userId = stringValue(body?.userId) || 'preview-user';
+        const result = await store.redeemCoupon({
+          couponId,
+          userId,
+          requestedAtUtc: clock().toISOString(),
+        });
+        return writeJson(response, result.statusCode || 200, result.body || result);
+      }
+
+      return writeJson(response, 404, {
+        errorCode: 'not_found',
+        message: 'No publisher backend route matches ' + method + ' ' + routePath + '.',
+      });
+    } catch (error) {
+      return writeJson(response, 500, {
+        errorCode: 'publisher_backend_error',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+}
+
+function normalizePath(value) {
+  let path = String(value || '/');
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    path = new URL(path).pathname;
+  }
+  path = path.split('?')[0].replace(/\/+$/g, '');
+  return path || '/';
+}
+
+async function readJsonBody(request) {
+  if (request.body && typeof request.body === 'object') {
+    return request.body;
+  }
+  if (typeof request.body === 'string') {
+    return request.body.trim() ? JSON.parse(request.body) : {};
+  }
+  if (request[Symbol.asyncIterator]) {
+    const chunks = [];
+    for await (const chunk of request) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const text = Buffer.concat(chunks).toString('utf8');
+    return text.trim() ? JSON.parse(text) : {};
+  }
+  return {};
+}
+
+function writeCorsHeaders(response) {
+  response.setHeader?.('access-control-allow-origin', '*');
+  response.setHeader?.('access-control-allow-methods', 'GET, POST, OPTIONS');
+  response.setHeader?.(
+    'access-control-allow-headers',
+    [
+      'content-type',
+      'x-mini-program-access-key',
+      'x-mini-program-app-id',
+      'x-mini-program-host-app',
+      'x-mini-program-host-version',
+      'x-mini-program-id',
+      'x-mini-program-sdk-version',
+      'x-mini-program-platform',
+      'x-mini-program-locale',
+    ].join(', '),
+  );
+}
+
+function writeJson(response, statusCode, body) {
+  if (typeof response.status === 'function') {
+    response.status(statusCode);
+  } else {
+    response.statusCode = statusCode;
+  }
+  response.setHeader?.('content-type', 'application/json; charset=utf-8');
+  if (typeof response.json === 'function') {
+    response.json(body);
+  } else {
+    response.end(JSON.stringify(body, null, 2));
+  }
+}
+
+function endEmpty(response, statusCode) {
+  if (typeof response.status === 'function') {
+    response.status(statusCode);
+  } else {
+    response.statusCode = statusCode;
+  }
+  response.end();
+}
+
+function stringValue(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  return String(value).trim();
+}
+''';
+
+String _firebaseFunctionsFirestoreStoreSource() => r'''
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+
+export function createFirestorePublisherBackendStore({
+  appId,
+  db = getFirestore(),
+} = {}) {
+  if (!appId) {
+    throw new Error('createFirestorePublisherBackendStore requires appId.');
+  }
+  const appRef = db.collection('miniPrograms').doc(appId);
+
+  return {
+    async homeBootstrap() {
+      return readDocument(appRef.collection('home').doc('bootstrap'));
+    },
+
+    async couponsList() {
+      const snapshot = await appRef.collection('coupons').get();
+      const coupons = snapshot.docs
+        .map((document) => ({
+          id: document.id,
+          ...document.data(),
+        }))
+        .sort(compareCoupons);
+      return { coupons };
+    },
+
+    async authSession() {
+      return readDocument(appRef.collection('sessions').doc('demo'));
+    },
+
+    async redeemCoupon({ couponId, userId, requestedAtUtc }) {
+      const couponRef = appRef.collection('coupons').doc(couponId);
+      const redemptionRef = appRef
+        .collection('redemptions')
+        .doc(safeDocumentId(userId) + '_' + safeDocumentId(couponId));
+
+      return db.runTransaction(async (transaction) => {
+        const couponSnapshot = await transaction.get(couponRef);
+        if (!couponSnapshot.exists) {
+          return {
+            statusCode: 404,
+            body: {
+              errorCode: 'coupon_not_found',
+              message: 'Coupon was not found.',
+              couponId,
+            },
+          };
+        }
+
+        const redemptionSnapshot = await transaction.get(redemptionRef);
+        if (redemptionSnapshot.exists) {
+          return {
+            statusCode: 200,
+            body: {
+              status: 'already_redeemed',
+              couponId,
+              userId,
+              redemption: redemptionSnapshot.data(),
+            },
+          };
+        }
+
+        const redemption = {
+          status: 'redeemed',
+          couponId,
+          userId,
+          redeemedAtUtc: requestedAtUtc,
+          createdAt: FieldValue.serverTimestamp(),
+        };
+        transaction.set(redemptionRef, redemption);
+        return {
+          statusCode: 200,
+          body: {
+            status: 'redeemed',
+            couponId,
+            userId,
+            redemption: {
+              ...redemption,
+              createdAt: null,
+            },
+          },
+        };
+      });
+    },
+  };
+}
+
+async function readDocument(reference) {
+  const snapshot = await reference.get();
+  return snapshot.exists ? snapshot.data() : null;
+}
+
+function compareCoupons(left, right) {
+  const leftSort = Number.isFinite(Number(left.sortIndex))
+    ? Number(left.sortIndex)
+    : Number.MAX_SAFE_INTEGER;
+  const rightSort = Number.isFinite(Number(right.sortIndex))
+    ? Number(right.sortIndex)
+    : Number.MAX_SAFE_INTEGER;
+  if (leftSort !== rightSort) {
+    return leftSort - rightSort;
+  }
+  return String(left.title || left.id).localeCompare(String(right.title || right.id));
+}
+
+function safeDocumentId(value) {
+  return String(value || 'unknown')
+    .trim()
+    .replace(/[^A-Za-z0-9_.-]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'unknown';
+}
+''';
 
 String _mockBackendPubspec(String appId) =>
     '''
@@ -4217,6 +4679,16 @@ String _safeAwsSegment(String value) {
       .replaceAll(RegExp(r'-+'), '-')
       .replaceAll(RegExp(r'^-+|-+$'), '');
   return normalized.isEmpty ? 'default' : normalized;
+}
+
+String _safeNodePackageSegment(String value) {
+  final normalized = value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9._-]+'), '-')
+      .replaceAll(RegExp(r'-+'), '-')
+      .replaceAll(RegExp(r'^[._-]+|[._-]+$'), '');
+  return normalized.isEmpty ? 'mini-program' : normalized;
 }
 
 String? _readManifestIdSync(String miniProgramRootPath) {

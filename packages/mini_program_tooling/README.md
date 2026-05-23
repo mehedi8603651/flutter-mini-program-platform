@@ -73,7 +73,7 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-miniprogram publisher-backend scaffold --template mock|aws-lambda [--storage bundled|dynamodb] [--mini-program-root <path>] [--force]
+miniprogram publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force]
 miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
 miniprogram publisher-backend status [--mini-program-root <path>] [--json]
 miniprogram publisher-backend stop [--mini-program-root <path>]
@@ -675,6 +675,41 @@ This AWS backend is separate from the mini-program delivery AWS stack. It is for
 publisher business APIs only. AWS credentials, Firebase Admin credentials,
 database secrets, and payment secrets belong in Lambda/server configuration, not
 in mini-program JSON, host app source, APK, IPA, or web JavaScript.
+
+#### Firebase Functions publisher backend
+
+To start a Firebase publisher-owned backend, scaffold the Firebase Functions
+starter:
+
+```bash
+miniprogram publisher-backend scaffold --template firebase-functions --storage firestore
+```
+
+This creates `backend/firebase_functions/` with Firebase Cloud Functions v2,
+Firestore store wiring, sample data, and the same publisher backend routes as
+the mock and AWS starters:
+
+- `GET /health`
+- `GET /home/bootstrap`
+- `GET /coupons/list`
+- `GET /auth/session`
+- `POST /coupon/redeem`
+
+The generated Firestore model is:
+
+- `miniPrograms/<appId>/home/bootstrap`
+- `miniPrograms/<appId>/sessions/demo`
+- `miniPrograms/<appId>/coupons/<couponId>`
+- `miniPrograms/<appId>/redemptions/<safeUserId_safeCouponId>`
+
+The Firebase scaffold is a foundation only in this release. Deploy/status,
+smoke, seed, export/import, and redemption inspection commands will be added in
+later Firebase tooling releases. For now, follow the generated README and use
+the Firebase CLI from `backend/firebase_functions/functions`.
+
+Firebase Admin SDK dependencies are generated only inside the publisher backend.
+The Flutter host app and `mini_program_sdk` do not need Firebase SDKs unless the
+host app itself chooses to use Firebase features such as Firebase Auth.
 
 ### Publisher-owned backend
 

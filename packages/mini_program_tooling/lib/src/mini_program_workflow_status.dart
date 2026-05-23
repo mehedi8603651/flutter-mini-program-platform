@@ -814,6 +814,38 @@ class MiniProgramWorkflowStatusController {
     final awsDetected =
         await File(awsTemplatePath).exists() &&
         await File(awsHandlerPath).exists();
+    final firebaseBackendRootPath = p.join(
+      workspacePath,
+      'backend',
+      'firebase_functions',
+    );
+    final firebaseConfigPath = p.join(firebaseBackendRootPath, 'firebase.json');
+    final firebaseIndexPath = p.join(
+      firebaseBackendRootPath,
+      'functions',
+      'index.js',
+    );
+    final firebaseRouterPath = p.join(
+      firebaseBackendRootPath,
+      'functions',
+      'router.js',
+    );
+    final firebaseDataRootPath = p.join(
+      firebaseBackendRootPath,
+      'functions',
+      'data',
+    );
+    final existingFirebaseDataFiles = <String>[];
+    for (final dataFile in dataFiles) {
+      final file = File(p.join(firebaseDataRootPath, dataFile));
+      if (await file.exists()) {
+        existingFirebaseDataFiles.add(dataFile);
+      }
+    }
+    final firebaseDetected =
+        await File(firebaseConfigPath).exists() &&
+        await File(firebaseIndexPath).exists() &&
+        await File(firebaseRouterPath).exists();
     final awsStatePath = p.join(
       workspacePath,
       '.mini_program',
@@ -821,13 +853,20 @@ class MiniProgramWorkflowStatusController {
     );
     final awsState = await _tryReadJsonObject(File(awsStatePath));
     return <String, Object?>{
-      'detected': mockDetected || awsDetected,
-      'template': awsDetected
+      'detected': mockDetected || awsDetected || firebaseDetected,
+      'template': firebaseDetected
+          ? 'firebase-functions'
+          : awsDetected
           ? 'aws-lambda'
           : mockDetected
           ? 'mock'
           : null,
-      'backendRootPath': awsDetected ? awsBackendRootPath : mockBackendRootPath,
+      'storageMode': firebaseDetected ? 'firestore' : null,
+      'backendRootPath': firebaseDetected
+          ? firebaseBackendRootPath
+          : awsDetected
+          ? awsBackendRootPath
+          : mockBackendRootPath,
       'serverPath': serverPath,
       'dataRootPath': dataRootPath,
       'dataFiles': existingDataFiles,
@@ -867,6 +906,16 @@ class MiniProgramWorkflowStatusController {
             'PublisherBackendFunctionName',
           ),
         },
+      },
+      'firebase': <String, Object?>{
+        'detected': firebaseDetected,
+        'backendRootPath': firebaseBackendRootPath,
+        'configPath': firebaseConfigPath,
+        'indexPath': firebaseIndexPath,
+        'routerPath': firebaseRouterPath,
+        'dataRootPath': firebaseDataRootPath,
+        'dataFiles': existingFirebaseDataFiles,
+        'storageMode': 'firestore',
       },
       'expectedRoutes': <String>[
         'GET /health',

@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.29';
+const String _miniProgramToolingVersion = '0.3.30';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
@@ -44,6 +44,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.dynamodb.data.import',
   'publisher_backend.aws.dynamodb.data.redemptions',
   'publisher_backend.aws.destroy.data_loss_guard',
+  'publisher_backend.firebase_functions.scaffold',
 ];
 
 class MiniprogramCli {
@@ -2829,14 +2830,15 @@ class MiniprogramCli {
       ..addOption(
         'template',
         defaultsTo: 'mock',
-        allowed: const <String>['mock', 'aws-lambda'],
+        allowed: const <String>['mock', 'aws-lambda', 'firebase-functions'],
         help: 'Publisher backend starter template.',
       )
       ..addOption(
         'storage',
         defaultsTo: 'bundled',
-        allowed: const <String>['bundled', 'dynamodb'],
-        help: 'AWS Lambda storage mode. Only used with --template aws-lambda.',
+        allowed: const <String>['bundled', 'dynamodb', 'firestore'],
+        help:
+            'Publisher backend storage mode. Use bundled|dynamodb for AWS Lambda or firestore for Firebase Functions.',
       )
       ..addOption(
         'mini-program-root',
@@ -4030,7 +4032,7 @@ Commands:
   backend stop
   backend status [--json]
   backend reset-local --yes
-  publisher-backend scaffold --template mock|aws-lambda [--storage bundled|dynamodb]
+  publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore]
   publisher-backend run --port 9090
   publisher-backend status [--json]
   publisher-backend stop
@@ -4052,7 +4054,7 @@ Commands:
 Usage: miniprogram publisher-backend <command> [arguments]
 
 Commands:
-  scaffold [--template mock|aws-lambda] [--storage bundled|dynamodb] [--mini-program-root <path>] [--force]
+  scaffold [--template mock|aws-lambda|firebase-functions] [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force]
   run [--mini-program-root <path>] [--port 9090]
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
@@ -4256,8 +4258,10 @@ Commands:
         'publisherBackendAwsDynamoDbDataImport': true,
         'publisherBackendAwsDynamoDbDataRedemptions': true,
         'publisherBackendAwsDestroyDataLossGuard': true,
+        'publisherBackendFirebaseFunctionsScaffold': true,
       },
       'commands': <String>[
+        'publisher-backend scaffold --template firebase-functions --storage firestore',
         'publisher-backend aws status',
         'publisher-backend aws outputs',
         'publisher-backend aws smoke',
@@ -5104,11 +5108,27 @@ Commands:
       'Created files: ${result.createdPaths.length}',
     ];
     lines.addAll(result.createdPaths.map((filePath) => '- $filePath'));
-    lines.addAll(<String>[
-      '',
-      'Run locally:',
-      'miniprogram publisher-backend run --mini-program-root "${result.miniProgramRootPath}" --port 9090',
-    ]);
+    if (result.template == 'mock') {
+      lines.addAll(<String>[
+        '',
+        'Run locally:',
+        'miniprogram publisher-backend run --mini-program-root "${result.miniProgramRootPath}" --port 9090',
+      ]);
+    } else if (result.template == 'aws-lambda') {
+      lines.addAll(<String>[
+        '',
+        'Next AWS step:',
+        'miniprogram publisher-backend aws deploy --env <env-name> --mini-program-root "${result.miniProgramRootPath}"',
+      ]);
+    } else if (result.template == 'firebase-functions') {
+      lines.addAll(<String>[
+        '',
+        'Next Firebase steps:',
+        'cd "${p.join(result.backendRootPath, 'functions')}"',
+        'npm install',
+        'npm run serve',
+      ]);
+    }
     return lines.join('\n');
   }
 

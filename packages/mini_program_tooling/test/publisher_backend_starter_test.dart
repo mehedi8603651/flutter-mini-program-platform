@@ -230,6 +230,239 @@ void main() {
     });
 
     test(
+      'scaffolds Firebase Functions Firestore files and respects force',
+      () async {
+        final starter = const PublisherBackendStarter();
+        final result = await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+
+        expect(result.template, 'firebase-functions');
+        expect(result.storageMode, 'firestore');
+        final backendRoot = p.join(
+          miniProgramRoot.path,
+          'backend',
+          'firebase_functions',
+        );
+        expect(
+          await File(p.join(backendRoot, 'firebase.json')).exists(),
+          isTrue,
+        );
+        expect(
+          await File(p.join(backendRoot, 'functions', 'index.js')).exists(),
+          isTrue,
+        );
+        expect(
+          await File(p.join(backendRoot, 'functions', 'router.js')).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
+            p.join(backendRoot, 'functions', 'firestore_store.js'),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
+            p.join(backendRoot, 'functions', 'data', 'coupons_list.json'),
+          ).exists(),
+          isTrue,
+        );
+
+        final firebaseJson = await File(
+          p.join(backendRoot, 'firebase.json'),
+        ).readAsString();
+        final packageJson = await File(
+          p.join(backendRoot, 'functions', 'package.json'),
+        ).readAsString();
+        final index = await File(
+          p.join(backendRoot, 'functions', 'index.js'),
+        ).readAsString();
+        final store = await File(
+          p.join(backendRoot, 'functions', 'firestore_store.js'),
+        ).readAsString();
+        final router = await File(
+          p.join(backendRoot, 'functions', 'router.js'),
+        ).readAsString();
+        final readme = File(p.join(backendRoot, 'README.md'));
+
+        expect(firebaseJson, contains('"functions"'));
+        expect(packageJson, contains('"node": "22"'));
+        expect(packageJson, contains('"firebase-functions": "^7.2.5"'));
+        expect(packageJson, contains('"firebase-admin": "^13.10.0"'));
+        expect(index, contains("firebase-functions/v2/https"));
+        expect(index, contains('createFirestorePublisherBackendStore'));
+        expect(store, contains("collection('miniPrograms')"));
+        expect(store, contains("collection('redemptions')"));
+        expect(router, contains('access-control-allow-origin'));
+        expect(
+          await readme.readAsString(),
+          contains('Storage mode: Firestore'),
+        );
+
+        await readme.writeAsString('custom');
+        expect(
+          () => starter.scaffold(
+            PublisherBackendScaffoldRequest(
+              miniProgramRootPath: miniProgramRoot.path,
+              template: 'firebase-functions',
+              storageMode: 'firestore',
+            ),
+          ),
+          throwsA(isA<PublisherBackendException>()),
+        );
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+            force: true,
+          ),
+        );
+        expect(
+          await readme.readAsString(),
+          contains('Firebase publisher backend'),
+        );
+      },
+    );
+
+    test('rejects invalid publisher backend storage combinations', () {
+      final starter = const PublisherBackendStarter();
+      expect(
+        () => starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'dynamodb',
+          ),
+        ),
+        throwsA(isA<PublisherBackendException>()),
+      );
+      expect(
+        () => starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'aws-lambda',
+            storageMode: 'firestore',
+          ),
+        ),
+        throwsA(isA<PublisherBackendException>()),
+      );
+      expect(
+        () => starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'mock',
+            storageMode: 'firestore',
+          ),
+        ),
+        throwsA(isA<PublisherBackendException>()),
+      );
+    });
+
+    test(
+      'generated Firebase router serves read and redeem routes with fake store',
+      () async {
+        final nodeVersion = await Process.run('node', <String>['--version']);
+        if (nodeVersion.exitCode != 0) {
+          markTestSkipped('Node.js is not available.');
+        }
+        final starter = const PublisherBackendStarter();
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        final routerUri = Uri.file(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'firebase_functions',
+            'functions',
+            'router.js',
+          ),
+        ).toString();
+
+        final result = await _runNodeScript(tempDir, '''
+import { createPublisherBackendHandler } from '$routerUri';
+
+const coupons = new Set(['coupon-10']);
+const redemptions = new Set();
+const handler = createPublisherBackendHandler({
+  clock: () => new Date('2026-05-23T12:00:00.000Z'),
+  store: {
+    homeBootstrap: async () => ({ title: 'Firebase home' }),
+    couponsList: async () => ({ coupons: [{ id: 'coupon-10', title: 'Ten' }] }),
+    authSession: async () => ({ authenticated: true }),
+    redeemCoupon: async ({ couponId, userId }) => {
+      if (!coupons.has(couponId)) {
+        return { statusCode: 404, body: { errorCode: 'coupon_not_found' } };
+      }
+      const key = userId + ':' + couponId;
+      if (redemptions.has(key)) {
+        return { statusCode: 200, body: { status: 'already_redeemed', couponId, userId } };
+      }
+      redemptions.add(key);
+      return { statusCode: 200, body: { status: 'redeemed', couponId, userId } };
+    },
+  },
+});
+
+async function call(method, path, body) {
+  const response = {
+    statusCode: 200,
+    headers: {},
+    setHeader(name, value) { this.headers[name] = value; },
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; },
+    end(body) { this.body = body ? JSON.parse(body) : null; },
+  };
+  await handler({ method, path, body }, response);
+  return { statusCode: response.statusCode, body: response.body };
+}
+
+const health = await call('GET', '/health');
+const home = await call('GET', '/home/bootstrap');
+const couponsList = await call('GET', '/coupons/list');
+const session = await call('GET', '/auth/session');
+const missingCouponId = await call('POST', '/coupon/redeem', {});
+const unknownCoupon = await call('POST', '/coupon/redeem', { couponId: 'missing' });
+const redeemed = await call('POST', '/coupon/redeem', { couponId: 'coupon-10', userId: 'user-1' });
+const duplicate = await call('POST', '/coupon/redeem', { couponId: 'coupon-10', userId: 'user-1' });
+
+console.log(JSON.stringify({
+  health,
+  home,
+  couponsList,
+  session,
+  missingCouponId,
+  unknownCoupon,
+  redeemed,
+  duplicate,
+}));
+''');
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final decoded =
+            jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+        expect(decoded['health']['statusCode'], 200);
+        expect(decoded['home']['body']['title'], 'Firebase home');
+        expect(decoded['couponsList']['body']['coupons'], hasLength(1));
+        expect(decoded['session']['body']['authenticated'], isTrue);
+        expect(decoded['missingCouponId']['statusCode'], 400);
+        expect(decoded['unknownCoupon']['statusCode'], 404);
+        expect(decoded['redeemed']['body']['status'], 'redeemed');
+        expect(decoded['duplicate']['body']['status'], 'already_redeemed');
+      },
+    );
+
+    test(
       'generated bundled Lambda handler serves read and redeem routes',
       () async {
         final nodeVersion = await Process.run('node', <String>['--version']);

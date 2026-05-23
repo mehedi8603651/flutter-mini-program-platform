@@ -118,7 +118,9 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
-        contains('publisher-backend scaffold --template mock|aws-lambda'),
+        contains(
+          'publisher-backend scaffold --template mock|aws-lambda|firebase-functions',
+        ),
       );
       expect(
         stdoutBuffer.toString(),
@@ -146,7 +148,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.29'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.30'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -154,6 +156,10 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.destroy.data_loss_guard'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase_functions.scaffold'),
       );
     });
 
@@ -174,16 +180,21 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.29');
+      expect(json['toolingVersion'], '0.3.30');
       expect(json['packageName'], 'mini_program_tooling');
       expect(
         json['capabilityIds'],
         contains('publisher_backend.aws.dynamodb.data.redemptions'),
       );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase_functions.scaffold'),
+      );
       final features = json['features'] as Map<String, dynamic>;
       expect(features['publisherBackendAwsWriteSmoke'], isTrue);
       expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
       expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
+      expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
     });
 
     test(
@@ -1320,7 +1331,59 @@ void main() {
       expect(stdoutBuffer.toString(), contains('--storage'));
       expect(stdoutBuffer.toString(), contains('bundled'));
       expect(stdoutBuffer.toString(), contains('dynamodb'));
+      expect(stdoutBuffer.toString(), contains('firebase-functions'));
+      expect(stdoutBuffer.toString(), contains('firestore'));
     });
+
+    test(
+      'publisher-backend scaffold prints Firebase template and storage',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        final stdoutBuffer = StringBuffer();
+        final stderrBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: stderrBuffer,
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'scaffold',
+              '--template',
+              'firebase-functions',
+              '--storage',
+              'firestore',
+            ]);
+
+        expect(exitCode, 0);
+        expect(stderrBuffer.toString(), isEmpty);
+        expect(
+          stdoutBuffer.toString(),
+          contains('Template: firebase-functions'),
+        );
+        expect(stdoutBuffer.toString(), contains('Storage: firestore'));
+        expect(stdoutBuffer.toString(), contains('Next Firebase steps:'));
+        expect(
+          await File(
+            p.join(
+              standaloneRoot,
+              'backend',
+              'firebase_functions',
+              'functions',
+              'router.js',
+            ),
+          ).exists(),
+          isTrue,
+        );
+      },
+    );
 
     test('publisher-backend aws help includes seed and data status', () async {
       final stdoutBuffer = StringBuffer();
@@ -2751,6 +2814,55 @@ miniProgramBackendQueryAction(
         expect(cloudController.lastStatusRequest, isNull);
         expect(cloudController.lastAppInfoRequest, isNull);
         expect(cloudController.lastAccessKeyListRequest, isNull);
+      },
+    );
+
+    test(
+      'workflow status reports Firebase publisher backend scaffold',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'workflow',
+              'status',
+              '--workspace',
+              standaloneRoot,
+              '--json',
+            ]);
+
+        expect(exitCode, 0);
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        final starter =
+            json['miniProgram']['publisherBackendStarter']
+                as Map<String, dynamic>;
+        expect(starter['detected'], isTrue);
+        expect(starter['template'], 'firebase-functions');
+        expect(starter['storageMode'], 'firestore');
+        expect(starter['backendRootPath'], contains('firebase_functions'));
+        final firebase = starter['firebase'] as Map<String, dynamic>;
+        expect(firebase['detected'], isTrue);
+        expect(firebase['storageMode'], 'firestore');
+        expect(firebase['dataFiles'], contains('home_bootstrap.json'));
       },
     );
 
