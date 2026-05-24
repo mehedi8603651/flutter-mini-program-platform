@@ -58,6 +58,13 @@ const int _dynamoDbBatchWriteMaxAttempts = 5;
 const String _publisherBackendStorageBundled = 'bundled';
 const String _publisherBackendStorageDynamoDb = 'dynamodb';
 const String _publisherBackendStorageFirestore = 'firestore';
+const String _firebaseCliClientId =
+    '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com';
+const String _firebaseCliClientSecret = 'j9iVZfS8kkCEFUPaAeJV0sAi';
+const List<String> _firebaseCliTokenScopes = <String>[
+  'https://www.googleapis.com/auth/cloud-platform',
+  'https://www.googleapis.com/auth/firebase',
+];
 const String _awsSdkJavaScriptV3Version = '^3.1052.0';
 const String _firebaseFunctionsVersion = '^7.2.5';
 const String _firebaseAdminVersion = '^13.10.0';
@@ -4493,7 +4500,8 @@ class PublisherBackendStarter {
   static Future<String?> _defaultFirebaseAccessTokenProvider() async {
     final environmentToken = Platform.environment['FIREBASE_TOKEN']?.trim();
     if (environmentToken != null && environmentToken.isNotEmpty) {
-      return environmentToken;
+      return await _exchangeFirebaseRefreshToken(environmentToken) ??
+          environmentToken;
     }
     for (final path in _firebaseCliConfigStoreCandidates()) {
       final file = File(path);
@@ -4509,6 +4517,13 @@ class PublisherBackendStarter {
         if (tokens is! Map) {
           continue;
         }
+        final refreshToken = tokens['refresh_token']?.toString().trim();
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          final accessToken = await _exchangeFirebaseRefreshToken(refreshToken);
+          if (accessToken != null && accessToken.isNotEmpty) {
+            return accessToken;
+          }
+        }
         final accessToken = tokens['access_token']?.toString().trim();
         if (accessToken != null && accessToken.isNotEmpty) {
           return accessToken;
@@ -4520,6 +4535,40 @@ class PublisherBackendStarter {
       }
     }
     return null;
+  }
+
+  static Future<String?> _exchangeFirebaseRefreshToken(
+    String refreshToken,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.https('www.googleapis.com', '/oauth2/v3/token'),
+        body: <String, String>{
+          'refresh_token': refreshToken,
+          'client_id': _firebaseCliClientId,
+          'client_secret': _firebaseCliClientSecret,
+          'grant_type': 'refresh_token',
+          'scope': _firebaseCliTokenScopes.join(' '),
+        },
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return null;
+      }
+      final accessToken = decoded['access_token']?.toString().trim();
+      return accessToken == null || accessToken.isEmpty ? null : accessToken;
+    } on FormatException {
+      return null;
+    } on http.ClientException {
+      return null;
+    } on SocketException {
+      return null;
+    } on TlsException {
+      return null;
+    }
   }
 
   static List<String> _firebaseCliConfigStoreCandidates() {

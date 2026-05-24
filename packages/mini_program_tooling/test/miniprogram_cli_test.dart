@@ -152,7 +152,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.32'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.33'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -188,7 +188,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.32');
+      expect(json['toolingVersion'], '0.3.33');
       expect(json['packageName'], 'mini_program_tooling');
       expect(
         json['capabilityIds'],

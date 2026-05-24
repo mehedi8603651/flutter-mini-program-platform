@@ -1,7 +1,10 @@
 name: mini_program_tooling
 description: Local developer and CI tooling for the Flutter mini-program platform.
-version: 0.3.32
+version: 0.3.33
 repository: https://github.com/mehedi8603651/flutter-mini-program-platform
+
+false_secrets:
+  - /lib/src/publisher_backend_starter.dart
 
 executables:
   miniprogram: miniprogram

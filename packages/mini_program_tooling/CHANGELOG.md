@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.33
+
+- fix Firebase Firestore seed/data status authentication by exchanging the
+  Firebase CLI refresh token for a fresh OAuth access token before calling the
+  Firestore REST API
+- continue accepting `FIREBASE_TOKEN` for CI, treating it as a Firebase CLI
+  refresh token when possible
+
 ## 0.3.32
 
 - improve Firebase publisher backend deploy reliability by avoiding reserved
