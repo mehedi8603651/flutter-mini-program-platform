@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.35';
+const String _miniProgramToolingVersion = '0.3.36';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
@@ -48,6 +48,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.deploy',
   'publisher_backend.firebase.status',
   'publisher_backend.firebase.outputs',
+  'publisher_backend.firebase.host_command',
   'publisher_backend.firebase.smoke',
   'publisher_backend.firebase.smoke.write',
   'publisher_backend.firebase.firestore.seed',
@@ -3500,6 +3501,8 @@ class MiniprogramCli {
         return _runPublisherBackendFirebaseStatus(arguments.sublist(1));
       case 'outputs':
         return _runPublisherBackendFirebaseOutputs(arguments.sublist(1));
+      case 'host-command':
+        return _runPublisherBackendFirebaseHostCommand(arguments.sublist(1));
       case 'smoke':
         return _runPublisherBackendFirebaseSmoke(arguments.sublist(1));
       case 'seed':
@@ -3602,6 +3605,144 @@ class MiniprogramCli {
       );
     } else {
       _stdout.writeln(_formatPublisherBackendFirebaseOutputsResult(result));
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseHostCommand(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addOption(
+        'api-base-url',
+        help: 'Mini-program delivery API base URL for manifests/screens.',
+      )
+      ..addOption(
+        'title',
+        help:
+            'Display title for the host registry. Defaults to the manifest title or appId.',
+      )
+      ..addOption(
+        'access-key',
+        help: 'MiniProgram delivery access key for protected delivery.',
+      )
+      ..addFlag(
+        'public',
+        negatable: false,
+        help: 'Generate a public/static host endpoint command.',
+      )
+      ..addOption(
+        'host-project-root',
+        help:
+            'Optional Flutter host app root to inspect for an existing matching endpoint.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase host-command --api-base-url <url> (--access-key <key>|--public) [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final rawDeliveryApiBaseUrl = results.option('api-base-url')?.trim() ?? '';
+    if (rawDeliveryApiBaseUrl.isEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase host-command requires --api-base-url <url>.',
+      );
+    }
+    final deliveryApiBaseUri = Uri.tryParse(rawDeliveryApiBaseUrl);
+    if (deliveryApiBaseUri == null ||
+        !deliveryApiBaseUri.hasScheme ||
+        deliveryApiBaseUri.host.isEmpty) {
+      throw FormatException(
+        'publisher-backend firebase host-command expected an absolute '
+        '--api-base-url, got: $rawDeliveryApiBaseUrl',
+      );
+    }
+
+    final accessKey = results.option('access-key')?.trim() ?? '';
+    final isPublic = results.flag('public');
+    if (accessKey.isEmpty && !isPublic) {
+      throw const FormatException(
+        'publisher-backend firebase host-command requires --access-key <key> '
+        'or --public.',
+      );
+    }
+    if (accessKey.isNotEmpty && isPublic) {
+      throw const FormatException(
+        'publisher-backend firebase host-command cannot use both '
+        '--access-key and --public.',
+      );
+    }
+
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final manifestInfo = await _readMiniProgramManifestInfo(
+      resolved.miniProgramRootPath,
+    );
+    final outputs = await _publisherBackendStarter.firebaseOutputs(
+      PublisherBackendFirebaseOutputsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    final backendBaseUrl =
+        outputs.outputs['PublisherBackendBaseUrl']?.trim() ?? '';
+    if (backendBaseUrl.isEmpty) {
+      throw PublisherBackendException(
+        'Firebase publisher backend output PublisherBackendBaseUrl is missing.',
+      );
+    }
+
+    final title = results.option('title')?.trim().isNotEmpty == true
+        ? results.option('title')!.trim()
+        : manifestInfo.title ?? _defaultTitleForAppId(manifestInfo.appId);
+    final hostProjectRootPath =
+        results.option('host-project-root')?.trim().isNotEmpty == true
+        ? p.normalize(p.absolute(results.option('host-project-root')!.trim()))
+        : null;
+    final accessMode = isPublic ? 'public' : 'protected';
+    final commandText = _buildFirebaseHostEndpointCommandText(
+      appId: manifestInfo.appId,
+      title: title,
+      deliveryApiBaseUrl: rawDeliveryApiBaseUrl,
+      backendBaseUrl: backendBaseUrl,
+      accessMode: accessMode,
+      accessKey: accessKey.isEmpty ? null : accessKey,
+      hostProjectRootPath: hostProjectRootPath,
+    );
+    final readiness = hostProjectRootPath == null
+        ? null
+        : await _inspectFirebaseHostEndpointReadiness(
+            hostProjectRootPath: hostProjectRootPath,
+            appId: manifestInfo.appId,
+            deliveryApiBaseUrl: rawDeliveryApiBaseUrl,
+            backendBaseUrl: backendBaseUrl,
+            accessMode: accessMode,
+          );
+    final result = _PublisherBackendFirebaseHostCommandResult(
+      provider: outputs.provider,
+      environmentName: outputs.environmentName,
+      projectId: outputs.projectId,
+      region: outputs.region,
+      functionName: outputs.functionName,
+      miniProgramRootPath: resolved.miniProgramRootPath,
+      miniProgramId: manifestInfo.appId,
+      title: title,
+      deliveryApiBaseUrl: rawDeliveryApiBaseUrl,
+      backendBaseUrl: backendBaseUrl,
+      accessMode: accessMode,
+      hostEndpointCommandText: commandText,
+      hostProjectRootPath: hostProjectRootPath,
+      readiness: readiness,
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseHostCommandJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseHostCommandResult(result));
     }
     return 0;
   }
@@ -4606,7 +4747,7 @@ Commands:
   publisher-backend stop
   publisher-backend urls
   publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-  publisher-backend firebase deploy|status|outputs|smoke|seed|data|destroy --env <env-name>
+  publisher-backend firebase deploy|status|outputs|host-command|smoke|seed|data|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -4642,6 +4783,7 @@ Commands:
   firebase deploy --env <env-name> [--mini-program-root <path>] [--json] [--no-public-invoker]
   firebase status --env <env-name> [--mini-program-root <path>] [--json]
   firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
+  firebase host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   firebase seed --env <env-name> [--mini-program-root <path>] [--json]
   firebase data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -4675,6 +4817,7 @@ Commands:
   deploy --env <env-name> [--mini-program-root <path>] [--json] [--no-public-invoker]
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
+  host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -4867,6 +5010,7 @@ Commands:
         'publisherBackendFirebaseDeploy': true,
         'publisherBackendFirebaseStatus': true,
         'publisherBackendFirebaseOutputs': true,
+        'publisherBackendFirebaseHostCommand': true,
         'publisherBackendFirebaseSmoke': true,
         'publisherBackendFirebaseWriteSmoke': true,
         'publisherBackendFirebaseFirestoreSeed': true,
@@ -4881,6 +5025,7 @@ Commands:
         'publisher-backend firebase deploy',
         'publisher-backend firebase status',
         'publisher-backend firebase outputs',
+        'publisher-backend firebase host-command',
         'publisher-backend firebase smoke',
         'publisher-backend firebase smoke --include-write',
         'publisher-backend firebase seed',
@@ -6193,8 +6338,8 @@ Commands:
       if (result.healthError != null) 'Health detail: ${result.healthError}',
       'Deployed at UTC: ${result.deployedAtUtc}',
       '',
-      'Host endpoint command:',
-      'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.backendBaseUrl}',
+      'Generate host endpoint command:',
+      'miniprogram publisher-backend firebase host-command --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --api-base-url <delivery-url> --public',
       '',
       'Next commands:',
       'miniprogram publisher-backend firebase seed --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
@@ -6422,6 +6567,54 @@ Commands:
     lines.addAll(
       result.outputs.entries.map((entry) => '${entry.key}: ${entry.value}'),
     );
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseHostCommandResult(
+    _PublisherBackendFirebaseHostCommandResult result,
+  ) {
+    final lines = <String>[
+      'Firebase host endpoint command.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program root: ${result.miniProgramRootPath}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Title: ${result.title}',
+      'Delivery API base URL: ${result.deliveryApiBaseUrl}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Access mode: ${result.accessMode}',
+    ];
+    if (result.hostProjectRootPath != null) {
+      final readiness = result.readiness;
+      lines.addAll(<String>[
+        'Host project root: ${result.hostProjectRootPath}',
+        'Host endpoint checked: true',
+        'Host endpoint ready: ${readiness?.ready ?? false}',
+        if (readiness?.endpointMapPath != null)
+          'Host endpoint map: ${readiness!.endpointMapPath}',
+        if (readiness?.apiBaseUrl != null)
+          'Host endpoint delivery API base URL: ${readiness!.apiBaseUrl}',
+        if (readiness?.backendBaseUrl != null)
+          'Host endpoint backend base URL: ${readiness!.backendBaseUrl}',
+        if (readiness?.accessMode != null)
+          'Host endpoint access mode: ${readiness!.accessMode}',
+      ]);
+      if (readiness != null && readiness.issues.isNotEmpty) {
+        lines
+          ..add('Host endpoint issues:')
+          ..addAll(readiness.issues.map((issue) => '- $issue'));
+      }
+    } else {
+      lines.add('Host endpoint checked: false');
+    }
+    lines.addAll(<String>[
+      '',
+      'Host endpoint command:',
+      result.hostEndpointCommandText,
+    ]);
     return lines.join('\n');
   }
 
@@ -6951,6 +7144,38 @@ Commands:
     };
   }
 
+  Map<String, Object?> _publisherBackendFirebaseHostCommandJson(
+    _PublisherBackendFirebaseHostCommandResult result,
+  ) {
+    final readiness = result.readiness;
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase host-command',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramRootPath': result.miniProgramRootPath,
+      'miniProgramId': result.miniProgramId,
+      'title': result.title,
+      'deliveryApiBaseUrl': result.deliveryApiBaseUrl,
+      'backendBaseUrl': result.backendBaseUrl,
+      'accessMode': result.accessMode,
+      'hostEndpointCommandText': result.hostEndpointCommandText,
+      'hostEndpointChecked': readiness != null,
+      'hostEndpointReady': readiness?.ready,
+      'hostProjectRootPath': result.hostProjectRootPath,
+      'hostEndpointMapPath': readiness?.endpointMapPath,
+      'hostEndpointFound': readiness?.endpointFound,
+      'hostEndpointDeliveryApiBaseUrl': readiness?.apiBaseUrl,
+      'hostEndpointBackendBaseUrl': readiness?.backendBaseUrl,
+      'hostEndpointAccessMode': readiness?.accessMode,
+      'hostEndpointBackendMode': readiness?.backendMode,
+      'hostEndpointIssues': readiness?.issues ?? const <String>[],
+    };
+  }
+
   Map<String, Object?> _publisherBackendFirebaseSmokeJson(
     PublisherBackendFirebaseSmokeResult result,
   ) {
@@ -6985,6 +7210,172 @@ Commands:
           )
           .toList(),
     };
+  }
+
+  Future<_MiniProgramManifestInfo> _readMiniProgramManifestInfo(
+    String miniProgramRootPath,
+  ) async {
+    final manifestFile = File(p.join(miniProgramRootPath, 'manifest.json'));
+    if (!await manifestFile.exists()) {
+      throw PublisherBackendException(
+        'Mini-program root is missing manifest.json: $miniProgramRootPath',
+      );
+    }
+    final decoded = jsonDecode(await manifestFile.readAsString());
+    if (decoded is! Map) {
+      throw PublisherBackendException(
+        'manifest.json must contain a JSON object: ${manifestFile.path}',
+      );
+    }
+    final appId = decoded['id']?.toString().trim() ?? '';
+    if (appId.isEmpty) {
+      throw PublisherBackendException(
+        'manifest.json is missing required id: ${manifestFile.path}',
+      );
+    }
+    final title = decoded['title']?.toString().trim();
+    return _MiniProgramManifestInfo(
+      appId: appId,
+      title: title == null || title.isEmpty ? null : title,
+    );
+  }
+
+  String _buildFirebaseHostEndpointCommandText({
+    required String appId,
+    required String title,
+    required String deliveryApiBaseUrl,
+    required String backendBaseUrl,
+    required String accessMode,
+    required String? accessKey,
+    required String? hostProjectRootPath,
+  }) {
+    final arguments = <String>[
+      'miniprogram',
+      'host',
+      'endpoint',
+      'add',
+      appId,
+      if (hostProjectRootPath != null) ...<String>[
+        '--project-root',
+        hostProjectRootPath,
+      ],
+      '--title',
+      title,
+      '--api-base-url',
+      deliveryApiBaseUrl,
+      if (accessMode == 'public')
+        '--public'
+      else ...<String>['--access-key', accessKey ?? ''],
+      '--backend-base-url',
+      backendBaseUrl,
+    ];
+    return arguments.map(_quoteCommandArgument).join(' ');
+  }
+
+  Future<_HostEndpointReadiness> _inspectFirebaseHostEndpointReadiness({
+    required String hostProjectRootPath,
+    required String appId,
+    required String deliveryApiBaseUrl,
+    required String backendBaseUrl,
+    required String accessMode,
+  }) async {
+    final endpointMapPath = p.join(
+      hostProjectRootPath,
+      'lib',
+      'mini_program',
+      'mini_program_endpoints.dart',
+    );
+    final endpointMapFile = File(endpointMapPath);
+    if (!await endpointMapFile.exists()) {
+      return _HostEndpointReadiness(
+        ready: false,
+        endpointFound: false,
+        endpointMapPath: endpointMapPath,
+        issues: const <String>[
+          'Host endpoint map was not found. Run the generated host endpoint command from the host app root.',
+        ],
+      );
+    }
+
+    final source = await endpointMapFile.readAsString();
+    final match = RegExp(
+      r'// BEGIN MINI_PROGRAM_ENDPOINTS_JSON\s*// ([\s\S]*?)\s*// END MINI_PROGRAM_ENDPOINTS_JSON',
+    ).firstMatch(source);
+    if (match == null) {
+      return _HostEndpointReadiness(
+        ready: false,
+        endpointFound: false,
+        endpointMapPath: endpointMapPath,
+        issues: const <String>[
+          'Host endpoint map exists but does not contain managed endpoint metadata.',
+        ],
+      );
+    }
+
+    final decoded = jsonDecode(match.group(1)!.trim());
+    if (decoded is! Map) {
+      return _HostEndpointReadiness(
+        ready: false,
+        endpointFound: false,
+        endpointMapPath: endpointMapPath,
+        issues: const <String>['Host endpoint metadata was not a JSON object.'],
+      );
+    }
+    final rawEndpoint = decoded[appId];
+    if (rawEndpoint is! Map) {
+      return _HostEndpointReadiness(
+        ready: false,
+        endpointFound: false,
+        endpointMapPath: endpointMapPath,
+        issues: <String>['Host endpoint for "$appId" was not found.'],
+      );
+    }
+
+    final apiBaseUrl = rawEndpoint['apiBaseUri']?.toString();
+    final endpointBackendBaseUrl = rawEndpoint['backendBaseUri']?.toString();
+    final endpointAccessMode = rawEndpoint['accessMode']?.toString();
+    final endpointBackendMode =
+        rawEndpoint['backendMode']?.toString() ??
+        ((endpointBackendBaseUrl?.trim().isEmpty ?? true) ? 'none' : 'remote');
+    final issues = <String>[];
+    if (!_urlsEquivalent(apiBaseUrl, deliveryApiBaseUrl)) {
+      issues.add(
+        'Delivery API base URL differs: expected "$deliveryApiBaseUrl", found "${apiBaseUrl ?? 'missing'}".',
+      );
+    }
+    if (!_urlsEquivalent(endpointBackendBaseUrl, backendBaseUrl)) {
+      issues.add(
+        'Publisher backend base URL differs: expected "$backendBaseUrl", found "${endpointBackendBaseUrl ?? 'missing'}".',
+      );
+    }
+    if (endpointAccessMode != accessMode) {
+      issues.add(
+        'Access mode differs: expected "$accessMode", found "${endpointAccessMode ?? 'missing'}".',
+      );
+    }
+    if (endpointBackendMode != 'remote') {
+      issues.add(
+        'Backend mode differs: expected "remote", found "$endpointBackendMode".',
+      );
+    }
+    return _HostEndpointReadiness(
+      ready: issues.isEmpty,
+      endpointFound: true,
+      endpointMapPath: endpointMapPath,
+      apiBaseUrl: apiBaseUrl,
+      backendBaseUrl: endpointBackendBaseUrl,
+      accessMode: endpointAccessMode,
+      backendMode: endpointBackendMode,
+      issues: issues,
+    );
+  }
+
+  bool _urlsEquivalent(String? first, String second) {
+    if (first == null || first.trim().isEmpty) {
+      return false;
+    }
+    return first.trim().replaceFirst(RegExp(r'/+$'), '') ==
+        second.trim().replaceFirst(RegExp(r'/+$'), '');
   }
 
   Future<void> _requireEmbeddedHostProject(String projectRootPath) async {
@@ -7363,4 +7754,67 @@ class _PublisherBackendFirebaseInputs {
 
   final String miniProgramRootPath;
   final CloudEnvironmentConfiguration environment;
+}
+
+class _MiniProgramManifestInfo {
+  const _MiniProgramManifestInfo({required this.appId, required this.title});
+
+  final String appId;
+  final String? title;
+}
+
+class _PublisherBackendFirebaseHostCommandResult {
+  const _PublisherBackendFirebaseHostCommandResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramRootPath,
+    required this.miniProgramId,
+    required this.title,
+    required this.deliveryApiBaseUrl,
+    required this.backendBaseUrl,
+    required this.accessMode,
+    required this.hostEndpointCommandText,
+    required this.hostProjectRootPath,
+    required this.readiness,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramRootPath;
+  final String miniProgramId;
+  final String title;
+  final String deliveryApiBaseUrl;
+  final String backendBaseUrl;
+  final String accessMode;
+  final String hostEndpointCommandText;
+  final String? hostProjectRootPath;
+  final _HostEndpointReadiness? readiness;
+}
+
+class _HostEndpointReadiness {
+  const _HostEndpointReadiness({
+    required this.ready,
+    required this.endpointFound,
+    required this.endpointMapPath,
+    required this.issues,
+    this.apiBaseUrl,
+    this.backendBaseUrl,
+    this.accessMode,
+    this.backendMode,
+  });
+
+  final bool ready;
+  final bool endpointFound;
+  final String endpointMapPath;
+  final List<String> issues;
+  final String? apiBaseUrl;
+  final String? backendBaseUrl;
+  final String? accessMode;
+  final String? backendMode;
 }

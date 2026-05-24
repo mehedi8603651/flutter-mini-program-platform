@@ -93,6 +93,7 @@ miniprogram publisher-backend aws destroy --env <env-name> [--mini-program-root 
 miniprogram publisher-backend firebase deploy --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase host-command --env <env-name> --api-base-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
 miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -720,7 +721,7 @@ The generated Firestore model is:
 - `miniPrograms/<appId>/redemptions/<safeUserId_safeCouponId>`
 
 Configure a Firebase environment, deploy the function, and smoke-test the
-read-only publisher routes:
+publisher routes:
 
 ```bash
 miniprogram env configure my-firebase-prod --provider firebase --project-id my-firebase-project --region us-central1
@@ -730,6 +731,7 @@ miniprogram publisher-backend firebase data status --env my-firebase-prod
 miniprogram publisher-backend firebase status --env my-firebase-prod --json
 miniprogram publisher-backend firebase outputs --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod
+miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write --write-coupon-id coupon-10 --write-user-id smoke-user
 ```
 
 The deploy command runs `npm install` when `functions/node_modules` is missing,
@@ -750,15 +752,53 @@ you can confirm that Firestore has the records needed for smoke tests. These
 Firestore data commands use your Firebase CLI login token, so run
 `firebase login` first or provide `FIREBASE_TOKEN` in CI.
 
+Use export/import and redemption inspection before risky changes:
+
+```bash
+miniprogram publisher-backend firebase data export --env my-firebase-prod --include-redemptions
+miniprogram publisher-backend firebase data import --env my-firebase-prod --input firebase-export.json --dry-run --include-redemptions
+miniprogram publisher-backend firebase data redemptions --env my-firebase-prod --coupon-id coupon-10
+```
+
+`firebase destroy --yes` deletes the Cloud Function only. It first checks
+Firestore and blocks when app records or redemptions exist unless
+`--confirm-data-loss` is passed.
+
 By default, the backend URL is derived as
 `https://<region>-<projectId>.cloudfunctions.net/<functionName>/`. If your
 Firebase project uses a different HTTPS function URL shape, pass
 `--function-url <url>` during `env configure`.
 
-Firebase smoke is read-only in this release and checks `GET /health`,
-`GET /home/bootstrap`, `GET /coupons/list`, and `GET /auth/session`. Firebase
-data export/import, redemption inspection, logs, and write smoke are left for
-later Firebase tooling releases.
+Firebase smoke checks `GET /health`, `GET /home/bootstrap`,
+`GET /coupons/list`, and `GET /auth/session` by default. Add
+`--include-write` to also call `POST /coupon/redeem` and verify that the
+expected Firestore redemption document exists.
+
+After the mini-program delivery URL is public or otherwise reachable, generate
+the exact host endpoint command:
+
+```bash
+miniprogram publisher-backend firebase host-command \
+  --env my-firebase-prod \
+  --api-base-url https://user.github.io/repo/public_mini_program/ \
+  --public
+```
+
+To check whether a Flutter host app is already wired to the same Firebase
+publisher backend, pass the host project root:
+
+```bash
+miniprogram publisher-backend firebase host-command \
+  --env my-firebase-prod \
+  --api-base-url https://user.github.io/repo/public_mini_program/ \
+  --public \
+  --host-project-root ../host_app
+```
+
+The command is read-only. It prints the `miniprogram host endpoint add ...`
+command with `--backend-base-url <Firebase Functions URL>` and reports whether
+the host endpoint map already matches the app id, delivery URL, remote backend
+URL, and access mode.
 
 Firebase Admin SDK dependencies are generated only inside the publisher backend.
 The Flutter host app and `mini_program_sdk` do not need Firebase SDKs unless the

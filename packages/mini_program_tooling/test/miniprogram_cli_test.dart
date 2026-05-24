@@ -130,7 +130,9 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
-        contains('publisher-backend firebase deploy|status|outputs|smoke'),
+        contains(
+          'publisher-backend firebase deploy|status|outputs|host-command|smoke',
+        ),
       );
     });
 
@@ -152,7 +154,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.35'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.36'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -164,6 +166,10 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.firebase_functions.scaffold'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.host_command'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -196,7 +202,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.35');
+      expect(json['toolingVersion'], '0.3.36');
       expect(json['packageName'], 'mini_program_tooling');
       expect(
         json['capabilityIds'],
@@ -209,6 +215,10 @@ void main() {
       expect(
         json['capabilityIds'],
         contains('publisher_backend.firebase.deploy'),
+      );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.host_command'),
       );
       expect(
         json['capabilityIds'],
@@ -232,6 +242,7 @@ void main() {
       expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
       expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
       expect(features['publisherBackendFirebaseDeploy'], isTrue);
+      expect(features['publisherBackendFirebaseHostCommand'], isTrue);
       expect(features['publisherBackendFirebaseSmoke'], isTrue);
       expect(features['publisherBackendFirebaseWriteSmoke'], isTrue);
       expect(features['publisherBackendFirebaseFirestoreDataExport'], isTrue);
@@ -1526,6 +1537,12 @@ void main() {
       expect(stdoutBuffer.toString(), contains('Healthy: true'));
       expect(
         stdoutBuffer.toString(),
+        contains(
+          'publisher-backend firebase host-command --env my-firebase-prod',
+        ),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('publisher-backend firebase smoke --env my-firebase-prod'),
       );
     });
@@ -1607,6 +1624,299 @@ void main() {
         stdoutBuffer.toString(),
         contains('PublisherBackendStorageMode: firestore'),
       );
+    });
+
+    test(
+      'publisher-backend firebase host-command prints public command',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'host-command',
+              '--env',
+              'my-firebase-prod',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+            ]);
+
+        expect(exitCode, 0);
+        expect(
+          stdoutBuffer.toString(),
+          contains('Firebase host endpoint command.'),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains('Mini-program ID: firebase_coupon'),
+        );
+        expect(stdoutBuffer.toString(), contains('Access mode: public'));
+        expect(
+          stdoutBuffer.toString(),
+          contains(
+            "miniprogram host endpoint add firebase_coupon --title 'Firebase Coupon' --api-base-url https://cdn.example.com/public_mini_program/ --public --backend-base-url https://asia-south1-coupon-prod.cloudfunctions.net/publisherBackend/",
+          ),
+        );
+      },
+    );
+
+    test(
+      'publisher-backend firebase host-command supports protected mode',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'host-command',
+              '--env',
+              'my-firebase-prod',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--access-key',
+              'mpk_live_partner_123',
+            ]);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Access mode: protected'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('--access-key mpk_live_partner_123'),
+        );
+        expect(stdoutBuffer.toString(), isNot(contains('--public')));
+      },
+    );
+
+    test(
+      'publisher-backend firebase host-command JSON reports host ready',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await _writeEmbeddedHostFixture(hostRoot);
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final hostAddExitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              workingDirectory: hostRoot,
+            ).run(<String>[
+              'host',
+              'endpoint',
+              'add',
+              'firebase_coupon',
+              '--title',
+              'Firebase Coupon',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+              '--backend-base-url',
+              'https://asia-south1-coupon-prod.cloudfunctions.net/publisherBackend/',
+            ]);
+        expect(hostAddExitCode, 0);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'host-command',
+              '--env',
+              'my-firebase-prod',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+              '--host-project-root',
+              hostRoot,
+              '--json',
+            ]);
+
+        expect(exitCode, 0);
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(json['command'], 'publisher-backend firebase host-command');
+        expect(json['miniProgramId'], 'firebase_coupon');
+        expect(json['accessMode'], 'public');
+        expect(json['hostEndpointChecked'], isTrue);
+        expect(json['hostEndpointReady'], isTrue);
+        expect(json['hostEndpointFound'], isTrue);
+        expect(json['hostEndpointIssues'], isEmpty);
+        expect(
+          json['hostEndpointCommandText'],
+          contains('--project-root ${p.normalize(p.absolute(hostRoot))}'),
+        );
+      },
+    );
+
+    test(
+      'publisher-backend firebase host-command reports host mismatch',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await _writeEmbeddedHostFixture(hostRoot);
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final hostAddExitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              workingDirectory: hostRoot,
+            ).run(<String>[
+              'host',
+              'endpoint',
+              'add',
+              'firebase_coupon',
+              '--title',
+              'Firebase Coupon',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+              '--backend-base-url',
+              'https://old.example.com/publisherBackend/',
+            ]);
+        expect(hostAddExitCode, 0);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'host-command',
+              '--env',
+              'my-firebase-prod',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+              '--host-project-root',
+              hostRoot,
+            ]);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Host endpoint ready: false'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('Publisher backend base URL differs'),
+        );
+      },
+    );
+
+    test('publisher-backend firebase host-command validates usage', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stderrBuffer = StringBuffer();
+
+      final missingModeExitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: stderrBuffer,
+            workingDirectory: standaloneRoot,
+          ).run(<String>[
+            'publisher-backend',
+            'firebase',
+            'host-command',
+            '--env',
+            'my-firebase-prod',
+            '--api-base-url',
+            'https://cdn.example.com/public_mini_program/',
+          ]);
+
+      expect(missingModeExitCode, 64);
+      expect(stderrBuffer.toString(), contains('requires --access-key'));
+
+      final badUrlExitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: stderrBuffer,
+            workingDirectory: standaloneRoot,
+          ).run(<String>[
+            'publisher-backend',
+            'firebase',
+            'host-command',
+            '--env',
+            'my-firebase-prod',
+            '--api-base-url',
+            'not-a-url',
+            '--public',
+          ]);
+
+      expect(badUrlExitCode, 64);
+      expect(stderrBuffer.toString(), contains('expected an absolute'));
+
+      final bothModesExitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: stderrBuffer,
+            workingDirectory: standaloneRoot,
+          ).run(<String>[
+            'publisher-backend',
+            'firebase',
+            'host-command',
+            '--env',
+            'my-firebase-prod',
+            '--api-base-url',
+            'https://cdn.example.com/public_mini_program/',
+            '--public',
+            '--access-key',
+            'mpk_live_partner_123',
+          ]);
+
+      expect(bothModesExitCode, 64);
+      expect(stderrBuffer.toString(), contains('cannot use both'));
     });
 
     test('publisher-backend firebase smoke prints route checks', () async {
@@ -2245,6 +2555,10 @@ void main() {
       expect(stdoutBuffer.toString(), contains('deploy --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('status --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('outputs --env <env-name>'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('host-command --env <env-name>'),
+      );
       expect(stdoutBuffer.toString(), contains('smoke --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('seed --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('data status --env <env-name>'));

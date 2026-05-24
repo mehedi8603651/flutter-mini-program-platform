@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.36
+
+- add `publisher-backend firebase host-command` to generate exact Flutter host
+  endpoint commands for Firebase publisher backends
+- optionally inspect a host app endpoint map with `--host-project-root` and
+  report whether delivery/backend URL/access mode are already wired correctly
+- expose the Firebase host-command capability through
+  `miniprogram capabilities --json`
+
 ## 0.3.35
 
 - add Firebase write smoke support through
