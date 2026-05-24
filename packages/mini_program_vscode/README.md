@@ -8,12 +8,12 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.34 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.35 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
 Functions/Firestore publisher backend workflows, Firebase Firestore production
-data management, and
+data management, Firebase write smoke, and
 quiet CLI capability detection through `miniprogram capabilities --json`.
 
 Install or upgrade the CLI first:
@@ -42,7 +42,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.25.vsix
+code --install-extension mini-program-tools-0.1.26.vsix
 ```
 
 ## Features
@@ -95,6 +95,7 @@ code --install-extension mini-program-tools-0.1.25.vsix
   - `MiniProgram: Publisher Backend Firebase Status`
   - `MiniProgram: Publisher Backend Firebase Outputs`
   - `MiniProgram: Smoke Test Firebase Publisher Backend`
+  - `MiniProgram: Smoke Test Firebase Publisher Backend With Write`
   - `MiniProgram: Seed Firebase Publisher Firestore`
   - `MiniProgram: Firebase Publisher Firestore Data Status`
   - `MiniProgram: Export Firebase Publisher Firestore Data`
@@ -254,14 +255,14 @@ For DynamoDB scaffolds, use:
   The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
   records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.34, the extension
+If the configured CLI is older than `mini_program_tooling` 0.3.35, the extension
 warns before running newer publisher backend actions or when quiet capability
-detection is unavailable. Version 0.1.25 calls `miniprogram capabilities --json`
+detection is unavailable. Version 0.1.26 calls `miniprogram capabilities --json`
 once per workspace and only falls back to older AWS `--help` probes for older
 CLI installs. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.34
+dart pub global activate mini_program_tooling 0.3.35
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed
@@ -304,12 +305,15 @@ After deploy, use:
   explicit data-loss guard override is confirmed; Firestore data is not deleted.
 - `MiniProgram: Smoke Test Firebase Publisher Backend` for the read-only route
   check.
+- `MiniProgram: Smoke Test Firebase Publisher Backend With Write` only when you
+  want to verify `POST /coupon/redeem`; it asks for a coupon/user ID and may
+  create a Firestore redemption document.
 
 Firebase deploy/status/smoke actions require `mini_program_tooling` 0.3.32 or
 newer. Firebase Firestore export/import/redemptions and guarded destroy require
-0.3.34 or newer. The extension uses `miniprogram capabilities --json` once per
-workspace to detect support and warns with an upgrade command if the configured
-CLI is too old.
+0.3.34 or newer. Firebase write smoke requires 0.3.35 or newer. The extension
+uses `miniprogram capabilities --json` once per workspace to detect support and
+warns with an upgrade command if the configured CLI is too old.
 
 ## Partner handoff workflow
 

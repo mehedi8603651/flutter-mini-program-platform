@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.26
+
+- Add `MiniProgram: Smoke Test Firebase Publisher Backend With Write`, backed by
+  `mini_program_tooling` 0.3.35.
+- Prompt for coupon/user IDs and require a modal confirmation before calling
+  Firebase `POST /coupon/redeem`.
+- Gate Firebase write smoke on the CLI capability map and update diagnostics to
+  recommend tooling 0.3.35 for the full Firebase workflow.
+- Update docs and package metadata for the Firebase write-smoke workflow.
+
 ## 0.1.25
 
 - Add Firebase Firestore production data commands backed by

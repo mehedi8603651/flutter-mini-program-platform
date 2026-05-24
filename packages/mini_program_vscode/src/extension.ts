@@ -292,6 +292,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmoke', () =>
       publisherBackendFirebaseSmoke(output),
     ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmokeWrite', () =>
+      publisherBackendFirebaseSmokeWrite(output),
+    ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSeed', () =>
       publisherBackendFirebaseSeed(output, refreshStatus),
     ),
@@ -1973,6 +1976,60 @@ async function publisherBackendFirebaseSmoke(
     buildPublisherBackendFirebaseSmokeArgs({
       envName,
       miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+}
+
+async function publisherBackendFirebaseSmokeWrite(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseWriteSmokeCli035(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const couponId = await vscode.window.showInputBox({
+    prompt: 'Coupon ID for Firebase write smoke',
+    value: 'coupon-10',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Coupon ID is required.',
+  });
+  if (!couponId) {
+    return;
+  }
+  const userId = await vscode.window.showInputBox({
+    prompt: 'User ID for Firebase write smoke',
+    value: 'smoke-user',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'User ID is required.',
+  });
+  if (!userId) {
+    return;
+  }
+  const confirmation = await vscode.window.showWarningMessage(
+    'Firebase write smoke calls POST /coupon/redeem and may create a Firestore redemption document.',
+    { modal: true },
+    'Run Write Smoke',
+  );
+  if (confirmation !== 'Run Write Smoke') {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Write Smoke',
+    buildPublisherBackendFirebaseSmokeArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      includeWrite: true,
+      writeCouponId: couponId.trim(),
+      writeUserId: userId.trim(),
     }),
     workspacePath,
     output,
@@ -4272,6 +4329,7 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsDataManagement: boolean;
   readonly supportsFirebaseScaffold?: boolean;
   readonly supportsFirebaseOperations?: boolean;
+  readonly supportsFirebaseWriteSmoke?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsFirebaseDataManagement?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
@@ -4322,6 +4380,7 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsWriteSmoke ||
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
+        capability.supportsFirebaseWriteSmoke ||
         capability.supportsFirebaseFirestoreData ||
         capability.supportsFirebaseDataManagement
       ) {
@@ -4434,6 +4493,9 @@ function capabilityFromCliCapabilitiesJson(
       hasCapability('publisher_backend.firebase.status') &&
       hasCapability('publisher_backend.firebase.outputs') &&
       hasCapability('publisher_backend.firebase.smoke'));
+  const supportsFirebaseWriteSmoke =
+    hasFeature('publisherBackendFirebaseWriteSmoke') ||
+    hasCapability('publisher_backend.firebase.smoke.write');
   const supportsFirebaseFirestoreData =
     (hasFeature('publisherBackendFirebaseFirestoreSeed') &&
       hasFeature('publisherBackendFirebaseFirestoreDataStatus')) ||
@@ -4461,6 +4523,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseOperations
       ? undefined
       : 'Configured CLI capabilities do not include Firebase deploy/status/outputs/smoke.',
+    supportsFirebaseWriteSmoke
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase write smoke.',
     supportsFirebaseFirestoreData
       ? undefined
       : 'Configured CLI capabilities do not include Firebase Firestore seed/data status.',
@@ -4474,6 +4539,7 @@ function capabilityFromCliCapabilitiesJson(
     supportsDataManagement,
     supportsFirebaseScaffold,
     supportsFirebaseOperations,
+    supportsFirebaseWriteSmoke,
     supportsFirebaseFirestoreData,
     supportsFirebaseDataManagement,
     supportsCapabilityDiscovery: true,
@@ -4603,6 +4669,32 @@ async function ensurePublisherBackendFirebaseDataManagementCli034(
   const message =
     'MiniProgram CLI 0.3.34 or newer is required for Firebase Firestore export/import/redemptions and guarded destroy actions. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.34`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseWriteSmokeCli035(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseWriteSmoke
+  ) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.35 or newer is required for Firebase write smoke. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.35`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);

@@ -288,6 +288,9 @@ export interface PublisherBackendFirebaseOutputsArgsOptions
 export interface PublisherBackendFirebaseSmokeArgsOptions
   extends PublisherBackendFirebaseBaseArgsOptions {
   readonly json?: boolean;
+  readonly includeWrite?: boolean;
+  readonly writeCouponId?: string;
+  readonly writeUserId?: string;
 }
 
 export interface PublisherBackendFirebaseSeedArgsOptions
@@ -917,6 +920,15 @@ export function buildPublisherBackendFirebaseSmokeArgs(
   const args = ['publisher-backend', 'firebase', 'smoke'];
   if (options.json ?? false) {
     args.push('--json');
+  }
+  if (options.includeWrite) {
+    args.push('--include-write');
+    if (options.writeCouponId?.trim()) {
+      args.push('--write-coupon-id', options.writeCouponId.trim());
+    }
+    if (options.writeUserId?.trim()) {
+      args.push('--write-user-id', options.writeUserId.trim());
+    }
   }
   return withPublisherBackendFirebaseOptions(args, options);
 }

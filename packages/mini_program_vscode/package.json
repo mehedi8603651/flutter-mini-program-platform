@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -285,6 +285,11 @@
       {
         "command": "miniProgramTools.publisherBackendFirebaseSmoke",
         "title": "MiniProgram: Smoke Test Firebase Publisher Backend",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseSmokeWrite",
+        "title": "MiniProgram: Smoke Test Firebase Publisher Backend With Write",
         "icon": "$(beaker)"
       },
       {
@@ -599,6 +604,11 @@
           "command": "miniProgramTools.publisherBackendFirebaseSmoke",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.38"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseSmokeWrite",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.385"
         },
         {
           "command": "miniProgramTools.publisherBackendFirebaseSeed",

@@ -908,6 +908,29 @@ test('builds backend command arguments', () => {
     ],
   );
   assert.deepEqual(
+    buildPublisherBackendFirebaseSmokeArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      includeWrite: true,
+      writeCouponId: ' coupon-20 ',
+      writeUserId: ' smoke-user ',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'smoke',
+      '--include-write',
+      '--write-coupon-id',
+      'coupon-20',
+      '--write-user-id',
+      'smoke-user',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
     buildPublisherBackendFirebaseSeedArgs({
       envName: 'my-firebase-prod',
       miniProgramRoot: 'D:/work/coupon_demo',
