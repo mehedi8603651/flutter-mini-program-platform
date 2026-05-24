@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.25
+
+- Add Firebase Firestore production data commands backed by
+  `mini_program_tooling` 0.3.34: export, import dry-run, redemption listing,
+  and guarded Firebase Function destroy.
+- Gate the new Firebase data-management actions on CLI capabilities so older
+  tooling gets a clear 0.3.34 upgrade prompt.
+- Show Firebase remote status/data counts from `workflow status --remote` in
+  the sidebar.
+- Update docs and packaging metadata for the Firebase production data workflow.
+
 ## 0.1.24
 
 - Add Firebase Functions + Firestore publisher backend workflows backed by

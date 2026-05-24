@@ -59,6 +59,7 @@ export interface BuildDiagnosticsOptions {
     readonly supportsDataManagement?: boolean;
     readonly supportsFirebaseOperations?: boolean;
     readonly supportsFirebaseFirestoreData?: boolean;
+    readonly supportsFirebaseDataManagement?: boolean;
     readonly supportsCapabilityDiscovery?: boolean;
     readonly toolingVersion?: string;
     readonly detail?: string;
@@ -798,6 +799,7 @@ function buildCliCapabilityCheck(capability: {
   readonly supportsDataManagement?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
+  readonly supportsFirebaseDataManagement?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
   readonly toolingVersion?: string;
   readonly detail?: string;
@@ -806,12 +808,15 @@ function buildCliCapabilityCheck(capability: {
   const supportsFirebaseOperations = capability.supportsFirebaseOperations ?? false;
   const supportsFirebaseFirestoreData =
     capability.supportsFirebaseFirestoreData ?? false;
+  const supportsFirebaseDataManagement =
+    capability.supportsFirebaseDataManagement ?? false;
   const supportsCapabilityDiscovery = capability.supportsCapabilityDiscovery ?? false;
   const supportsExpectedCli =
     capability.supportsWriteSmoke &&
     supportsDataManagement &&
     supportsFirebaseOperations &&
     supportsFirebaseFirestoreData &&
+    supportsFirebaseDataManagement &&
     supportsCapabilityDiscovery;
   const versionSuffix = capability.toolingVersion
     ? ` Version: ${capability.toolingVersion}.`
@@ -825,13 +830,14 @@ function buildCliCapabilityCheck(capability: {
       : capability.supportsWriteSmoke &&
           supportsDataManagement &&
           supportsFirebaseOperations &&
-          supportsFirebaseFirestoreData
+          supportsFirebaseFirestoreData &&
+          supportsFirebaseDataManagement
         ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
-        : 'Configured CLI is missing mini_program_tooling 0.3.32 publisher backend support.',
+        : 'Configured CLI is missing mini_program_tooling 0.3.34 publisher backend support.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.32` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.34` or update miniProgram.cliPath.',
   );
 }
 

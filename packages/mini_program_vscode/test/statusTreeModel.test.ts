@@ -79,7 +79,19 @@ test('renders mini-program and host status rows', () => {
       requireAccessKeys: true,
     },
     backend: { configured: true, statusChecked: true, healthy: true },
-    remote: { checked: false },
+    remote: {
+      checked: true,
+      provider: 'firebase',
+      errors: [],
+      firebase: {
+        status: { healthy: true },
+        dataStatus: {
+          available: true,
+          appRecordCount: 4,
+          redemptionCount: 2,
+        },
+      },
+    },
     nextActions: [],
   };
 
@@ -104,6 +116,11 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Routing: endpoint map active/);
   assert.match(text, /Backend fallback/);
   assert.match(text, /Access keys required: yes/);
+  assert.match(text, /Provider: firebase/);
+  assert.match(text, /Firebase healthy: yes/);
+  assert.match(text, /Firestore available: yes/);
+  assert.match(text, /Firestore app records: 4/);
+  assert.match(text, /Firestore redemptions: 2/);
 });
 
 test('does not render raw access-key secrets', () => {

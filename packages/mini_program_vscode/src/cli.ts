@@ -300,6 +300,35 @@ export interface PublisherBackendFirebaseDataStatusArgsOptions
   readonly json?: boolean;
 }
 
+export interface PublisherBackendFirebaseDataExportArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly output?: string;
+  readonly json?: boolean;
+  readonly includeRedemptions?: boolean;
+}
+
+export interface PublisherBackendFirebaseDataImportArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly input: string;
+  readonly json?: boolean;
+  readonly includeRedemptions?: boolean;
+  readonly dryRun?: boolean;
+}
+
+export interface PublisherBackendFirebaseDataRedemptionsArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+  readonly couponId?: string;
+  readonly userId?: string;
+  readonly limit?: number | string;
+}
+
+export interface PublisherBackendFirebaseDestroyArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly yes?: boolean;
+  readonly confirmDataLoss?: boolean;
+}
+
 export interface AccessKeyCreateArgsOptions {
   readonly appId: string;
   readonly keyId: string;
@@ -908,6 +937,71 @@ export function buildPublisherBackendFirebaseDataStatusArgs(
   const args = ['publisher-backend', 'firebase', 'data', 'status'];
   if (options.json ?? true) {
     args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseDataExportArgs(
+  options: PublisherBackendFirebaseDataExportArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'data', 'export'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.includeRedemptions) {
+    args.push('--include-redemptions');
+  }
+  if (options.output?.trim()) {
+    args.push('--output', options.output.trim());
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseDataImportArgs(
+  options: PublisherBackendFirebaseDataImportArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'data', 'import'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.includeRedemptions) {
+    args.push('--include-redemptions');
+  }
+  if (options.dryRun ?? true) {
+    args.push('--dry-run');
+  }
+  args.push('--input', options.input.trim());
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseDataRedemptionsArgs(
+  options: PublisherBackendFirebaseDataRedemptionsArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'data', 'redemptions'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.couponId?.trim()) {
+    args.push('--coupon-id', options.couponId.trim());
+  }
+  if (options.userId?.trim()) {
+    args.push('--user-id', options.userId.trim());
+  }
+  if (options.limit !== undefined && `${options.limit}`.trim()) {
+    args.push('--limit', `${options.limit}`.trim());
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseDestroyArgs(
+  options: PublisherBackendFirebaseDestroyArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'destroy'];
+  if (options.yes) {
+    args.push('--yes');
+  }
+  if (options.confirmDataLoss) {
+    args.push('--confirm-data-loss');
   }
   return withPublisherBackendFirebaseOptions(args, options);
 }

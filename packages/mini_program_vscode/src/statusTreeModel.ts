@@ -190,15 +190,23 @@ export function buildStatusTreeSections(
   const cloudStatus = asRecord(remote.cloudStatus);
   const app = asRecord(remote.app);
   const accessKeys = asRecord(remote.accessKeys);
+  const firebaseRemote = asRecord(remote.firebase);
+  const firebaseStatus = asRecord(firebaseRemote.status);
+  const firebaseDataStatus = asRecord(firebaseRemote.dataStatus);
   sections.push({
     label: 'Remote',
     icon: 'cloud',
     rows: compactRows([
       row('Checked', yesNo(asBoolean(remote.checked))),
+      row('Provider', asString(remote.provider)),
       row('Cloud healthy', optionalYesNo(cloudStatus.healthy)),
       row('Stack status', asString(cloudStatus.stackStatus)),
       row('Latest version', asString(app.latestVersion)),
       row('Active access keys', optionalNumber(accessKeys.activeCount)),
+      row('Firebase healthy', optionalYesNo(firebaseStatus.healthy)),
+      row('Firestore available', optionalYesNo(firebaseDataStatus.available)),
+      row('Firestore app records', optionalNumber(firebaseDataStatus.appRecordCount)),
+      row('Firestore redemptions', optionalNumber(firebaseDataStatus.redemptionCount)),
       row('Errors', asStringList(remote.errors).join('; ')),
     ]),
   });

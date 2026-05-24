@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -298,6 +298,26 @@
         "icon": "$(graph)"
       },
       {
+        "command": "miniProgramTools.publisherBackendFirebaseDataExport",
+        "title": "MiniProgram: Export Firebase Publisher Firestore Data",
+        "icon": "$(export)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseDataImportDryRun",
+        "title": "MiniProgram: Dry Run Firebase Publisher Firestore Import",
+        "icon": "$(debug-step-over)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseDataRedemptions",
+        "title": "MiniProgram: List Firebase Publisher Firestore Redemptions",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseDestroy",
+        "title": "MiniProgram: Destroy Firebase Publisher Backend Function",
+        "icon": "$(trash)"
+      },
+      {
         "command": "miniProgramTools.copyAwsBackendHostCommand",
         "title": "MiniProgram: Copy AWS Backend Host Command",
         "icon": "$(copy)"
@@ -589,6 +609,26 @@
           "command": "miniProgramTools.publisherBackendFirebaseDataStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.40"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseDataExport",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.41"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseDataImportDryRun",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.42"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseDataRedemptions",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.43"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseDestroy",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.44"
         },
         {
           "command": "miniProgramTools.copyPublisherBackendUrls",

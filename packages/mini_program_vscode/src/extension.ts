@@ -43,8 +43,12 @@ import {
   buildPublisherBackendAwsSeedArgs,
   buildPublisherBackendAwsSmokeArgs,
   buildPublisherBackendAwsStatusArgs,
+  buildPublisherBackendFirebaseDataExportArgs,
+  buildPublisherBackendFirebaseDataImportArgs,
+  buildPublisherBackendFirebaseDataRedemptionsArgs,
   buildPublisherBackendFirebaseDataStatusArgs,
   buildPublisherBackendFirebaseDeployArgs,
+  buildPublisherBackendFirebaseDestroyArgs,
   buildPublisherBackendFirebaseOutputsArgs,
   buildPublisherBackendFirebaseSeedArgs,
   buildPublisherBackendFirebaseSmokeArgs,
@@ -293,6 +297,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataStatus', () =>
       publisherBackendFirebaseDataStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataExport', () =>
+      publisherBackendFirebaseDataExport(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataImportDryRun', () =>
+      publisherBackendFirebaseDataImportDryRun(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataRedemptions', () =>
+      publisherBackendFirebaseDataRedemptions(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDestroy', () =>
+      publisherBackendFirebaseDestroy(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.copyAwsBackendHostCommand', () =>
       copyAwsBackendHostCommand(output),
@@ -2012,6 +2028,238 @@ async function publisherBackendFirebaseDataStatus(
       envName,
       miniProgramRoot: workspacePath,
       json: false,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseDataExport(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseDataManagementCli034(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const includeMode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'App records only',
+        description: 'Export home, session, and coupons.',
+        includeRedemptions: false,
+      },
+      {
+        label: 'Include redemptions',
+        description: 'Also export redemption history.',
+        includeRedemptions: true,
+      },
+    ],
+    {
+      title: 'Choose Firebase Firestore export scope',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!includeMode) {
+    return;
+  }
+  const outputPath = await chooseFirebaseDataExportPath(workspacePath, envName);
+  if (!outputPath) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Firestore Data Export',
+    buildPublisherBackendFirebaseDataExportArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      output: outputPath,
+      includeRedemptions: includeMode.includeRedemptions,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseDataImportDryRun(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseDataManagementCli034(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const inputPath = await chooseFirebaseDataImportFile(workspacePath);
+  if (!inputPath) {
+    return;
+  }
+  const includeMode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Skip redemptions',
+        description: 'Validate only app records from the export.',
+        includeRedemptions: false,
+      },
+      {
+        label: 'Include redemptions',
+        description: 'Validate redemption records too.',
+        includeRedemptions: true,
+      },
+    ],
+    {
+      title: 'Choose Firebase Firestore import dry-run scope',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!includeMode) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Firestore Import Dry Run',
+    buildPublisherBackendFirebaseDataImportArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      input: inputPath,
+      dryRun: true,
+      includeRedemptions: includeMode.includeRedemptions,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseDataRedemptions(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseDataManagementCli034(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const couponId = await vscode.window.showInputBox({
+    prompt: 'Optional coupon ID filter',
+    placeHolder: 'coupon-20',
+    ignoreFocusOut: true,
+  });
+  if (couponId === undefined) {
+    return;
+  }
+  const userId = await vscode.window.showInputBox({
+    prompt: 'Optional user ID filter',
+    placeHolder: 'smoke-user',
+    ignoreFocusOut: true,
+  });
+  if (userId === undefined) {
+    return;
+  }
+  const limit = await vscode.window.showInputBox({
+    prompt: 'Maximum redemption records to print',
+    value: '50',
+    ignoreFocusOut: true,
+    validateInput: validateRedemptionLimit,
+  });
+  if (!limit) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Firestore Redemptions',
+    buildPublisherBackendFirebaseDataRedemptionsArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      couponId: couponId.trim(),
+      userId: userId.trim(),
+      limit: limit.trim(),
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseDestroy(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseDataManagementCli034(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const mode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Guarded delete function',
+        description: 'Delete only if the Firestore data guard allows it.',
+        confirmDataLoss: false,
+      },
+      {
+        label: 'Delete function despite Firestore data',
+        description: 'Pass --confirm-data-loss after extra confirmation.',
+        confirmDataLoss: true,
+      },
+    ],
+    {
+      title: 'Destroy Firebase publisher backend function',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!mode) {
+    return;
+  }
+  if (mode.confirmDataLoss) {
+    const typed = await vscode.window.showInputBox({
+      prompt: 'Type delete function to confirm Firebase Function deletion with Firestore data guard override',
+      ignoreFocusOut: true,
+      validateInput: (value) =>
+        value.trim() === 'delete function'
+          ? undefined
+          : 'Type delete function to confirm.',
+    });
+    if (typed?.trim() !== 'delete function') {
+      return;
+    }
+  } else {
+    const confirmation = await vscode.window.showWarningMessage(
+      'This will request Firebase Function deletion. The CLI will block deletion if Firestore app records or redemptions exist. Firestore data is not deleted.',
+      { modal: true },
+      'Run Guarded Delete',
+    );
+    if (confirmation !== 'Run Guarded Delete') {
+      return;
+    }
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Destroy',
+    buildPublisherBackendFirebaseDestroyArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      yes: true,
+      confirmDataLoss: mode.confirmDataLoss,
     }),
     workspacePath,
     output,
@@ -4025,6 +4273,7 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsFirebaseScaffold?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
+  readonly supportsFirebaseDataManagement?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
   readonly toolingVersion?: string;
   readonly detail?: string;
@@ -4073,7 +4322,8 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsWriteSmoke ||
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
-        capability.supportsFirebaseFirestoreData
+        capability.supportsFirebaseFirestoreData ||
+        capability.supportsFirebaseDataManagement
       ) {
         return capability;
       }
@@ -4189,6 +4439,15 @@ function capabilityFromCliCapabilitiesJson(
       hasFeature('publisherBackendFirebaseFirestoreDataStatus')) ||
     (hasCapability('publisher_backend.firebase.firestore.seed') &&
       hasCapability('publisher_backend.firebase.firestore.data.status'));
+  const supportsFirebaseDataManagement =
+    (hasFeature('publisherBackendFirebaseFirestoreDataExport') &&
+      hasFeature('publisherBackendFirebaseFirestoreDataImport') &&
+      hasFeature('publisherBackendFirebaseFirestoreDataRedemptions') &&
+      hasFeature('publisherBackendFirebaseDestroyDataLossGuard')) ||
+    (hasCapability('publisher_backend.firebase.firestore.data.export') &&
+      hasCapability('publisher_backend.firebase.firestore.data.import') &&
+      hasCapability('publisher_backend.firebase.firestore.data.redemptions') &&
+      hasCapability('publisher_backend.firebase.destroy.data_loss_guard'));
   const details = [
     supportsWriteSmoke
       ? undefined
@@ -4205,6 +4464,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseFirestoreData
       ? undefined
       : 'Configured CLI capabilities do not include Firebase Firestore seed/data status.',
+    supportsFirebaseDataManagement
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase Firestore export/import/redemptions and guarded destroy.',
   ].filter((value): value is string => Boolean(value));
   return {
     checked: true,
@@ -4213,6 +4475,7 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseScaffold,
     supportsFirebaseOperations,
     supportsFirebaseFirestoreData,
+    supportsFirebaseDataManagement,
     supportsCapabilityDiscovery: true,
     toolingVersion: stringValue(decoded.toolingVersion),
     detail: details.join(' '),
@@ -4313,6 +4576,33 @@ async function ensurePublisherBackendFirebaseFirestoreCli032(
   const message =
     'MiniProgram CLI 0.3.32 or newer is required for Firebase Firestore seed/status actions. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.32`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseDataManagementCli034(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseFirestoreData &&
+    capability.supportsFirebaseDataManagement
+  ) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.34 or newer is required for Firebase Firestore export/import/redemptions and guarded destroy actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.34`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -4427,6 +4717,88 @@ async function chooseAwsDataImportFile(
 
 async function findAwsDataExportFiles(workspacePath: string): Promise<string[]> {
   const exportsRoot = path.join(workspacePath, 'backend', 'aws_lambda', 'exports');
+  try {
+    const entries = await fs.promises.readdir(exportsRoot, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => path.join(exportsRoot, entry.name))
+      .sort((left, right) => right.localeCompare(left))
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+async function chooseFirebaseDataExportPath(
+  workspacePath: string,
+  envName: string,
+): Promise<string | undefined> {
+  const appId = await readMiniProgramManifestId(workspacePath);
+  const timestamp = compactTimestamp(new Date());
+  const fileName = `${safeFileSegment(appId ?? path.basename(workspacePath))}-${safeFileSegment(envName)}-data-export-${timestamp}.json`;
+  const uri = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.file(
+      path.join(workspacePath, 'backend', 'firebase_functions', 'exports', fileName),
+    ),
+    filters: {
+      'Firebase Firestore data export JSON': ['json'],
+    },
+    saveLabel: 'Export Firestore data',
+    title: 'Choose Firebase Firestore data export file',
+  });
+  return uri?.fsPath;
+}
+
+async function chooseFirebaseDataImportFile(
+  workspacePath: string,
+): Promise<string | undefined> {
+  const exportFiles = await findFirebaseDataExportFiles(workspacePath);
+  if (exportFiles.length > 0) {
+    const selected = await vscode.window.showQuickPick(
+      [
+        ...exportFiles.map((filePath) => ({
+          label: path.basename(filePath),
+          description: path.dirname(filePath),
+          filePath,
+        })),
+        {
+          label: 'Choose another file...',
+          description: 'Select a Firebase Firestore export JSON file',
+          filePath: '',
+        },
+      ],
+      { title: 'Choose Firebase Firestore data export file', ignoreFocusOut: true },
+    );
+    if (!selected) {
+      return undefined;
+    }
+    if (selected.filePath) {
+      return selected.filePath;
+    }
+  }
+  const selectedFiles = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      'Firebase Firestore data export JSON': ['json'],
+    },
+    openLabel: 'Choose export file',
+    title: 'Choose Firebase Firestore data export file',
+    defaultUri: vscode.Uri.file(
+      path.join(workspacePath, 'backend', 'firebase_functions', 'exports'),
+    ),
+  });
+  return selectedFiles?.[0]?.fsPath;
+}
+
+async function findFirebaseDataExportFiles(workspacePath: string): Promise<string[]> {
+  const exportsRoot = path.join(
+    workspacePath,
+    'backend',
+    'firebase_functions',
+    'exports',
+  );
   try {
     const entries = await fs.promises.readdir(exportsRoot, { withFileTypes: true });
     return entries
@@ -4845,6 +5217,13 @@ function validatePort(value: string): string | undefined {
     return 'Port must be 1-65535.';
   }
   return undefined;
+}
+
+function validateRedemptionLimit(value: string): string | undefined {
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 500
+    ? undefined
+    : 'Limit must be between 1 and 500.';
 }
 
 function extractAccessKey(output: string): string | undefined {
