@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.33';
+const String _miniProgramToolingVersion = '0.3.34';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
@@ -51,6 +51,10 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.smoke',
   'publisher_backend.firebase.firestore.seed',
   'publisher_backend.firebase.firestore.data.status',
+  'publisher_backend.firebase.firestore.data.export',
+  'publisher_backend.firebase.firestore.data.import',
+  'publisher_backend.firebase.firestore.data.redemptions',
+  'publisher_backend.firebase.destroy.data_loss_guard',
 ];
 
 class MiniprogramCli {
@@ -2164,6 +2168,7 @@ class MiniprogramCli {
       validator: _validator,
       backendController: _backendController,
       cloudController: _cloudController,
+      publisherBackendStarter: _publisherBackendStarter,
     );
     final result = await controller.inspect(
       MiniProgramWorkflowStatusRequest(
@@ -3500,6 +3505,8 @@ class MiniprogramCli {
         return _runPublisherBackendFirebaseSeed(arguments.sublist(1));
       case 'data':
         return _runPublisherBackendFirebaseData(arguments.sublist(1));
+      case 'destroy':
+        return _runPublisherBackendFirebaseDestroy(arguments.sublist(1));
       default:
         _stderr.writeln(
           'Unknown publisher-backend firebase command: ${arguments.first}',
@@ -3663,6 +3670,14 @@ class MiniprogramCli {
     switch (arguments.first) {
       case 'status':
         return _runPublisherBackendFirebaseDataStatus(arguments.sublist(1));
+      case 'export':
+        return _runPublisherBackendFirebaseDataExport(arguments.sublist(1));
+      case 'import':
+        return _runPublisherBackendFirebaseDataImport(arguments.sublist(1));
+      case 'redemptions':
+        return _runPublisherBackendFirebaseDataRedemptions(
+          arguments.sublist(1),
+        );
       default:
         _stderr.writeln(
           'Unknown publisher-backend firebase data command: ${arguments.first}',
@@ -3700,6 +3715,184 @@ class MiniprogramCli {
       _stdout.writeln(_formatPublisherBackendFirebaseDataStatusResult(result));
     }
     return result.available ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendFirebaseDataExport(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag(
+        'include-redemptions',
+        negatable: false,
+        help: 'Include redemption records in the export file.',
+      )
+      ..addOption('output', help: 'Optional export JSON file path.')
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase data export [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseDataExport(
+      PublisherBackendFirebaseDataExportRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        outputPath: results.option('output'),
+        includeRedemptions: results.flag('include-redemptions'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseDataExportJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseDataExportResult(result));
+    }
+    return result.exported ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendFirebaseDataImport(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag(
+        'include-redemptions',
+        negatable: false,
+        help: 'Import redemption records from the export file.',
+      )
+      ..addFlag(
+        'dry-run',
+        negatable: false,
+        help: 'Validate and summarize the import without writing data.',
+      )
+      ..addOption('input', help: 'Required export JSON file path.')
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase data import --input <file> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.option('input')?.trim().isNotEmpty != true) {
+      throw const FormatException(
+        'publisher-backend firebase data import requires --input <file>.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseDataImport(
+      PublisherBackendFirebaseDataImportRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        inputPath: results.option('input')!,
+        includeRedemptions: results.flag('include-redemptions'),
+        dryRun: results.flag('dry-run'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseDataImportJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseDataImportResult(result));
+    }
+    return result.succeeded ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendFirebaseDataRedemptions(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addOption('coupon-id', help: 'Optional coupon id filter.')
+      ..addOption('user-id', help: 'Optional user id filter.')
+      ..addOption('limit', defaultsTo: '50', help: 'Maximum records to return.')
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase data redemptions [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final limit = int.tryParse(results.option('limit') ?? '');
+    if (limit == null || limit < 1 || limit > 500) {
+      throw const FormatException(
+        'publisher-backend firebase data redemptions --limit must be between 1 and 500.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseDataRedemptions(
+      PublisherBackendFirebaseDataRedemptionsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        couponId: results.option('coupon-id'),
+        userId: results.option('user-id'),
+        limit: limit,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseDataRedemptionsJson(result)),
+      );
+    } else {
+      _stdout.writeln(
+        _formatPublisherBackendFirebaseDataRedemptionsResult(result),
+      );
+    }
+    return result.available ? 0 : 1;
+  }
+
+  Future<int> _runPublisherBackendFirebaseDestroy(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addFlag(
+        'yes',
+        negatable: false,
+        help: 'Confirm deletion of the Firebase Function.',
+      )
+      ..addFlag(
+        'confirm-data-loss',
+        negatable: false,
+        help:
+            'Allow deleting the Firebase Function when Firestore app records or redemptions exist. Firestore data is not deleted.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase destroy [options] --yes',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (!results.flag('yes')) {
+      throw const FormatException(
+        'publisher-backend firebase destroy is destructive and requires --yes.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseDestroy(
+      PublisherBackendFirebaseDestroyRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        confirmDataLoss: results.flag('confirm-data-loss'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseDestroyJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseDestroyResult(result));
+    }
+    return result.deleted ? 0 : 1;
   }
 
   ArgParser _publisherBackendFirebaseCommandParser() => ArgParser()
@@ -4376,7 +4569,7 @@ Commands:
   publisher-backend stop
   publisher-backend urls
   publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-  publisher-backend firebase deploy|status|outputs|smoke|seed|data --env <env-name>
+  publisher-backend firebase deploy|status|outputs|smoke|seed|data|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -4415,6 +4608,10 @@ Commands:
   firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
   firebase seed --env <env-name> [--mini-program-root <path>] [--json]
   firebase data status --env <env-name> [--mini-program-root <path>] [--json]
+  firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+  firebase data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+  firebase data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
+  firebase destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
 ''';
 
   String _publisherBackendAwsUsage() => '''
@@ -4444,6 +4641,10 @@ Commands:
   smoke --env <env-name> [--mini-program-root <path>] [--json]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
+  data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+  data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+  data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
+  destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
 ''';
 
   String _publisherBackendFirebaseDataUsage() => '''
@@ -4451,6 +4652,9 @@ Usage: miniprogram publisher-backend firebase data <command> [arguments]
 
 Commands:
   status --env <env-name> [--mini-program-root <path>] [--json]
+  export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+  import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+  redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
 ''';
 
   String _publisherBackendAwsDataUsage() => '''
@@ -4629,6 +4833,10 @@ Commands:
         'publisherBackendFirebaseSmoke': true,
         'publisherBackendFirebaseFirestoreSeed': true,
         'publisherBackendFirebaseFirestoreDataStatus': true,
+        'publisherBackendFirebaseFirestoreDataExport': true,
+        'publisherBackendFirebaseFirestoreDataImport': true,
+        'publisherBackendFirebaseFirestoreDataRedemptions': true,
+        'publisherBackendFirebaseDestroyDataLossGuard': true,
       },
       'commands': <String>[
         'publisher-backend scaffold --template firebase-functions --storage firestore',
@@ -4638,6 +4846,10 @@ Commands:
         'publisher-backend firebase smoke',
         'publisher-backend firebase seed',
         'publisher-backend firebase data status',
+        'publisher-backend firebase data export',
+        'publisher-backend firebase data import',
+        'publisher-backend firebase data redemptions',
+        'publisher-backend firebase destroy --confirm-data-loss',
         'publisher-backend aws status',
         'publisher-backend aws outputs',
         'publisher-backend aws smoke',
@@ -5860,6 +6072,13 @@ Commands:
     if (direct != null && direct.isNotEmpty) {
       return direct;
     }
+    final data = record['data'];
+    if (data is Map) {
+      final nested = data[key]?.toString();
+      if (nested != null && nested.isNotEmpty) {
+        return nested;
+      }
+    }
     final payload = record['payload'];
     if (payload is Map) {
       final nested = payload[key]?.toString();
@@ -6003,6 +6222,125 @@ Commands:
       if (result.appRecordCount != null)
         'App records: ${result.appRecordCount}',
       'Available: ${result.available}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseDataExportResult(
+    PublisherBackendFirebaseDataExportResult result,
+  ) {
+    return <String>[
+      'Firebase Firestore publisher backend data export.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Storage mode: ${result.storageMode}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Include redemptions: ${result.includeRedemptions}',
+      'Exported: ${result.exported}',
+      if (result.outputPath != null) 'Output file: ${result.outputPath}',
+      if (result.exportedAtUtc != null)
+        'Exported at UTC: ${result.exportedAtUtc}',
+      'App records: ${result.appRecordCount}',
+      'Redemptions: ${result.redemptionCount}',
+      'Items exported: ${result.itemCount}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseDataImportResult(
+    PublisherBackendFirebaseDataImportResult result,
+  ) {
+    return <String>[
+      'Firebase Firestore publisher backend data import.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Storage mode: ${result.storageMode}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Input file: ${result.inputPath}',
+      'Include redemptions: ${result.includeRedemptions}',
+      'Dry run: ${result.dryRun}',
+      'Succeeded: ${result.succeeded}',
+      'Imported: ${result.imported}',
+      'App records: ${result.appRecordCount}',
+      'Redemptions: ${result.redemptionCount}',
+      'Redemptions skipped: ${result.skippedRedemptionCount}',
+      'Items ready: ${result.itemCount}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseDataRedemptionsResult(
+    PublisherBackendFirebaseDataRedemptionsResult result,
+  ) {
+    final lines = <String>[
+      'Firebase Firestore publisher backend redemptions.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Storage mode: ${result.storageMode}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      if (result.couponId != null) 'Coupon filter: ${result.couponId}',
+      if (result.userId != null) 'User filter: ${result.userId}',
+      'Limit: ${result.limit}',
+      'Matched: ${result.matchedCount}',
+      'Returned: ${result.returnedCount}',
+      'Available: ${result.available}',
+      if (result.error != null) 'Detail: ${result.error}',
+    ];
+    if (result.records.isNotEmpty) {
+      lines.add('');
+      for (final record in result.records) {
+        final couponId = _redemptionValue(record, 'couponId') ?? 'unknown';
+        final userId = _redemptionValue(record, 'userId') ?? 'unknown';
+        final status = _redemptionValue(record, 'status') ?? 'redemption';
+        final createdAt =
+            _redemptionValue(record, 'createdAt') ??
+            _redemptionValue(record, 'createdAtUtc') ??
+            _redemptionValue(record, 'redeemedAtUtc') ??
+            'unknown time';
+        lines.add('- $createdAt $status coupon=$couponId user=$userId');
+      }
+    }
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseDestroyResult(
+    PublisherBackendFirebaseDestroyResult result,
+  ) {
+    return <String>[
+      result.deleted
+          ? 'Deleted Firebase Functions publisher backend function.'
+          : 'Firebase Functions publisher backend function was not deleted.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      if (result.backendBaseUrl != null)
+        'Publisher backend base URL: ${result.backendBaseUrl}',
+      if (result.appRecordCount != null)
+        'App records: ${result.appRecordCount}',
+      if (result.redemptionCount != null)
+        'Redemptions: ${result.redemptionCount}',
+      'Data loss confirmed: ${result.dataLossConfirmed}',
+      'Blocked by data: ${result.blockedByData}',
+      'Deleted: ${result.deleted}',
+      if (result.deletedAtUtc != null) 'Deleted at UTC: ${result.deletedAtUtc}',
       if (result.error != null) 'Detail: ${result.error}',
     ].join('\n');
   }
@@ -6400,6 +6738,106 @@ Commands:
       'couponCount': result.couponCount,
       'redemptionCount': result.redemptionCount,
       'appRecordCount': result.appRecordCount,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseDataExportJson(
+    PublisherBackendFirebaseDataExportResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase data export',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'storageMode': result.storageMode,
+      'includeRedemptions': result.includeRedemptions,
+      'exported': result.exported,
+      'outputPath': result.outputPath,
+      'exportedAtUtc': result.exportedAtUtc,
+      'appRecordCount': result.appRecordCount,
+      'redemptionCount': result.redemptionCount,
+      'itemCount': result.itemCount,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseDataImportJson(
+    PublisherBackendFirebaseDataImportResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase data import',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'storageMode': result.storageMode,
+      'inputPath': result.inputPath,
+      'includeRedemptions': result.includeRedemptions,
+      'dryRun': result.dryRun,
+      'succeeded': result.succeeded,
+      'imported': result.imported,
+      'appRecordCount': result.appRecordCount,
+      'redemptionCount': result.redemptionCount,
+      'skippedRedemptionCount': result.skippedRedemptionCount,
+      'itemCount': result.itemCount,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseDataRedemptionsJson(
+    PublisherBackendFirebaseDataRedemptionsResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase data redemptions',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'storageMode': result.storageMode,
+      'couponId': result.couponId,
+      'userId': result.userId,
+      'limit': result.limit,
+      'matchedCount': result.matchedCount,
+      'returnedCount': result.returnedCount,
+      'available': result.available,
+      'records': result.records,
+      'error': result.error,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseDestroyJson(
+    PublisherBackendFirebaseDestroyResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase destroy',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'deleted': result.deleted,
+      'dataLossConfirmed': result.dataLossConfirmed,
+      'deletedAtUtc': result.deletedAtUtc,
+      'appRecordCount': result.appRecordCount,
+      'redemptionCount': result.redemptionCount,
+      'blockedByData': result.blockedByData,
       'error': result.error,
     };
   }

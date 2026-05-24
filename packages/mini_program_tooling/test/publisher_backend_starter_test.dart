@@ -1341,6 +1341,395 @@ console.log(JSON.stringify({
       expect(requestedPaths, hasLength(4));
     });
 
+    test('Firebase data export writes logical app records only', () async {
+      final starter = PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          if (uri.path.endsWith('/home')) {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'coupon_app',
+                'home',
+                <String, Map<String, Object?>>{
+                  'bootstrap': <String, Object?>{
+                    'title': 'Firebase home',
+                    'enabled': true,
+                    'count': 2,
+                    'price': 4.5,
+                    'tags': <Object?>['one', null],
+                    'meta': <String, Object?>{'tier': 'gold'},
+                    'nothing': null,
+                    'createdAt': _firestoreTimestamp('2026-05-24T12:00:00Z'),
+                  },
+                },
+              ),
+              200,
+            );
+          }
+          if (uri.path.endsWith('/sessions')) {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'coupon_app',
+                'sessions',
+                <String, Map<String, Object?>>{
+                  'demo': <String, Object?>{'authenticated': true},
+                },
+              ),
+              200,
+            );
+          }
+          if (uri.path.endsWith('/coupons')) {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'coupon_app',
+                'coupons',
+                <String, Map<String, Object?>>{
+                  'coupon-10': <String, Object?>{'id': 'coupon-10'},
+                  'coupon-20': <String, Object?>{'id': 'coupon-20'},
+                },
+              ),
+              200,
+            );
+          }
+          if (uri.path.endsWith('/redemptions')) {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'coupon_app',
+                'redemptions',
+                <String, Map<String, Object?>>{
+                  'user_coupon': <String, Object?>{'couponId': 'coupon-10'},
+                },
+              ),
+              200,
+            );
+          }
+          return http.Response('{}', 404);
+        },
+        clock: () => DateTime.utc(2026, 5, 24, 12),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      final outputPath = p.join(tempDir.path, 'firebase-export.json');
+
+      final result = await starter.firebaseDataExport(
+        PublisherBackendFirebaseDataExportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+          outputPath: outputPath,
+        ),
+      );
+
+      expect(result.exported, isTrue);
+      expect(result.appRecordCount, 4);
+      expect(result.redemptionCount, 0);
+      final export =
+          jsonDecode(await File(outputPath).readAsString())
+              as Map<String, dynamic>;
+      expect(export['command'], 'publisher-backend firebase data export');
+      expect(export['includeRedemptions'], isFalse);
+      final records = export['records'] as List<dynamic>;
+      expect(records, hasLength(4));
+      expect(
+        records.map((record) => record['collection']),
+        isNot(contains('redemptions')),
+      );
+      final home =
+          records.singleWhere((record) => record['collection'] == 'home')
+              as Map<String, dynamic>;
+      final data = home['data'] as Map<String, dynamic>;
+      expect(data['title'], 'Firebase home');
+      expect(data['enabled'], isTrue);
+      expect(data['count'], 2);
+      expect(data['price'], 4.5);
+      expect(data['tags'], <Object?>['one', null]);
+      expect(data['meta'], <String, Object?>{'tier': 'gold'});
+      expect(data['nothing'], isNull);
+      expect(data['createdAt'], '2026-05-24T12:00:00Z');
+    });
+
+    test('Firebase data export includes redemptions when requested', () async {
+      final starter = PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          if (uri.path.endsWith('/home') ||
+              uri.path.endsWith('/sessions') ||
+              uri.path.endsWith('/coupons')) {
+            return http.Response(_firestoreDocumentsJson(0), 200);
+          }
+          if (uri.path.endsWith('/redemptions')) {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'coupon_app',
+                'redemptions',
+                <String, Map<String, Object?>>{
+                  'preview-user_coupon-10': <String, Object?>{
+                    'status': 'redeemed',
+                    'couponId': 'coupon-10',
+                    'userId': 'preview-user',
+                    'redeemedAtUtc': '2026-05-24T12:00:00Z',
+                  },
+                },
+              ),
+              200,
+            );
+          }
+          return http.Response('{}', 404);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseDataExport(
+        PublisherBackendFirebaseDataExportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+          outputPath: p.join(tempDir.path, 'firebase-export.json'),
+          includeRedemptions: true,
+        ),
+      );
+
+      expect(result.exported, isTrue);
+      expect(result.redemptionCount, 1);
+      expect(result.itemCount, 1);
+    });
+
+    test(
+      'Firebase data import dry-run validates and skips redemptions',
+      () async {
+        final requests = <String>[];
+        final starter = PublisherBackendStarter(
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          httpRequester: (method, uri, {headers, body}) async {
+            requests.add(method);
+            return http.Response('{}', 200);
+          },
+        );
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        final inputPath = p.join(tempDir.path, 'firebase-export.json');
+        await File(inputPath).writeAsString(
+          jsonEncode(_firebaseExportFixture(includeRedemption: true)),
+        );
+
+        final result = await starter.firebaseDataImport(
+          PublisherBackendFirebaseDataImportRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _firebaseEnvironment(),
+            inputPath: inputPath,
+            dryRun: true,
+          ),
+        );
+
+        expect(result.succeeded, isTrue);
+        expect(result.imported, isFalse);
+        expect(result.appRecordCount, 1);
+        expect(result.redemptionCount, 0);
+        expect(result.skippedRedemptionCount, 1);
+        expect(requests, isEmpty);
+      },
+    );
+
+    test('Firebase data import upserts records and redemptions', () async {
+      final requests = <Map<String, Object?>>[];
+      final starter = PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          requests.add(<String, Object?>{
+            'method': method,
+            'uri': uri.toString(),
+            'body': body,
+          });
+          return http.Response('{}', 200);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      final inputPath = p.join(tempDir.path, 'firebase-export.json');
+      await File(inputPath).writeAsString(
+        jsonEncode(_firebaseExportFixture(includeRedemption: true)),
+      );
+
+      final result = await starter.firebaseDataImport(
+        PublisherBackendFirebaseDataImportRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+          inputPath: inputPath,
+          includeRedemptions: true,
+        ),
+      );
+
+      expect(result.imported, isTrue);
+      expect(result.itemCount, 2);
+      expect(
+        requests.map((request) => request['method']),
+        everyElement('PATCH'),
+      );
+      expect(
+        requests.map((request) => request['uri'].toString()),
+        contains(contains('/miniPrograms/coupon_app/redemptions/user_coupon')),
+      );
+      final body =
+          jsonDecode(requests.first['body']! as String) as Map<String, dynamic>;
+      expect(body['fields'], contains('title'));
+    });
+
+    test('Firebase data redemptions filters and limits records', () async {
+      final starter = PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          if (uri.path.endsWith('/redemptions')) {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'coupon_app',
+                'redemptions',
+                <String, Map<String, Object?>>{
+                  'a': <String, Object?>{
+                    'status': 'redeemed',
+                    'couponId': 'coupon-10',
+                    'userId': 'preview-user',
+                    'redeemedAtUtc': '2026-05-24T10:00:00Z',
+                  },
+                  'b': <String, Object?>{
+                    'status': 'redeemed',
+                    'couponId': 'coupon-10',
+                    'userId': 'preview-user',
+                    'redeemedAtUtc': '2026-05-24T12:00:00Z',
+                  },
+                  'c': <String, Object?>{
+                    'status': 'redeemed',
+                    'couponId': 'coupon-20',
+                    'userId': 'preview-user',
+                    'redeemedAtUtc': '2026-05-24T11:00:00Z',
+                  },
+                },
+              ),
+              200,
+            );
+          }
+          return http.Response('{}', 404);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseDataRedemptions(
+        PublisherBackendFirebaseDataRedemptionsRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+          couponId: 'coupon-10',
+          userId: 'preview-user',
+          limit: 1,
+        ),
+      );
+
+      expect(result.available, isTrue);
+      expect(result.matchedCount, 2);
+      expect(result.returnedCount, 1);
+      expect(
+        (result.records.single['data'] as Map)['redeemedAtUtc'],
+        '2026-05-24T12:00:00Z',
+      );
+    });
+
+    test('Firebase destroy blocks when Firestore data exists', () async {
+      var shellCalled = false;
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          shellCalled = true;
+          return ProcessResult(0, 0, '', '');
+        },
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          if (uri.path.endsWith('/home')) {
+            return http.Response(_firestoreDocumentsJson(1), 200);
+          }
+          return http.Response(_firestoreDocumentsJson(0), 200);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseDestroy(
+        PublisherBackendFirebaseDestroyRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+        ),
+      );
+
+      expect(result.deleted, isFalse);
+      expect(result.blockedByData, isTrue);
+      expect(result.error, contains('--confirm-data-loss'));
+      expect(shellCalled, isFalse);
+    });
+
+    test('Firebase destroy proceeds with data confirmation', () async {
+      final commands = <String>[];
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          commands.add('$executable ${arguments.join(' ')}');
+          return ProcessResult(0, 0, '', '');
+        },
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async =>
+            http.Response(_firestoreDocumentsJson(0), 200),
+        clock: () => DateTime.utc(2026, 5, 24, 12),
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseDestroy(
+        PublisherBackendFirebaseDestroyRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+          confirmDataLoss: true,
+        ),
+      );
+
+      expect(result.deleted, isTrue);
+      expect(result.deletedAtUtc, '2026-05-24T12:00:00.000Z');
+      expect(
+        commands,
+        contains(
+          'firebase functions:delete publisherBackend --region asia-south1 --project coupon-prod --force',
+        ),
+      );
+    });
+
     test('AWS seed writes DynamoDB starter records', () async {
       final commands = <List<String>>[];
       final starter = PublisherBackendStarter(
@@ -2276,6 +2665,111 @@ String _firestoreDocumentsJson(int count) {
       },
     ),
   });
+}
+
+String _firestoreDocumentsJsonFrom(
+  String appId,
+  String collection,
+  Map<String, Map<String, Object?>> documents,
+) {
+  return jsonEncode(<String, Object?>{
+    'documents': documents.entries
+        .map(
+          (entry) => <String, Object?>{
+            'name':
+                'projects/test/databases/(default)/documents/miniPrograms/$appId/$collection/${entry.key}',
+            'fields': entry.value.map(
+              (key, value) => MapEntry(key, _toFirestoreTestValue(value)),
+            ),
+          },
+        )
+        .toList(),
+  });
+}
+
+Map<String, Object?> _firebaseExportFixture({required bool includeRedemption}) {
+  return <String, Object?>{
+    'schemaVersion': 1,
+    'command': 'publisher-backend firebase data export',
+    'provider': 'firebase',
+    'environmentName': 'my-firebase-prod',
+    'projectId': 'coupon-prod',
+    'region': 'asia-south1',
+    'functionName': 'publisherBackend',
+    'miniProgramId': 'coupon_app',
+    'storageMode': 'firestore',
+    'includeRedemptions': includeRedemption,
+    'records': <Object?>[
+      <String, Object?>{
+        'recordType': 'home',
+        'collection': 'home',
+        'documentId': 'bootstrap',
+        'documentPath': 'miniPrograms/coupon_app/home/bootstrap',
+        'data': <String, Object?>{'title': 'Imported home'},
+      },
+      if (includeRedemption)
+        <String, Object?>{
+          'recordType': 'redemption',
+          'collection': 'redemptions',
+          'documentId': 'user_coupon',
+          'documentPath': 'miniPrograms/coupon_app/redemptions/user_coupon',
+          'data': <String, Object?>{
+            'status': 'redeemed',
+            'couponId': 'coupon-10',
+            'userId': 'preview-user',
+            'redeemedAtUtc': '2026-05-24T12:00:00Z',
+          },
+        },
+    ],
+  };
+}
+
+_TestFirestoreTimestamp _firestoreTimestamp(String value) =>
+    _TestFirestoreTimestamp(value);
+
+class _TestFirestoreTimestamp {
+  const _TestFirestoreTimestamp(this.value);
+
+  final String value;
+}
+
+Map<String, Object?> _toFirestoreTestValue(Object? value) {
+  if (value == null) {
+    return const <String, Object?>{'nullValue': null};
+  }
+  if (value is bool) {
+    return <String, Object?>{'booleanValue': value};
+  }
+  if (value is int) {
+    return <String, Object?>{'integerValue': value.toString()};
+  }
+  if (value is num) {
+    return <String, Object?>{'doubleValue': value};
+  }
+  if (value is String) {
+    return <String, Object?>{'stringValue': value};
+  }
+  if (value is _TestFirestoreTimestamp) {
+    return <String, Object?>{'timestampValue': value.value};
+  }
+  if (value is List) {
+    return <String, Object?>{
+      'arrayValue': <String, Object?>{
+        'values': value.map(_toFirestoreTestValue).toList(),
+      },
+    };
+  }
+  if (value is Map) {
+    return <String, Object?>{
+      'mapValue': <String, Object?>{
+        'fields': value.map(
+          (key, nestedValue) =>
+              MapEntry(key.toString(), _toFirestoreTestValue(nestedValue)),
+        ),
+      },
+    };
+  }
+  return <String, Object?>{'stringValue': value.toString()};
 }
 
 Map<String, Object?> _toDynamoDbTestAttribute(Object? value) {

@@ -152,7 +152,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.33'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.34'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -168,6 +168,10 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.firebase.smoke'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.firestore.data.export'),
       );
     });
 
@@ -188,7 +192,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.33');
+      expect(json['toolingVersion'], '0.3.34');
       expect(json['packageName'], 'mini_program_tooling');
       expect(
         json['capabilityIds'],
@@ -206,6 +210,14 @@ void main() {
         json['capabilityIds'],
         contains('publisher_backend.firebase.smoke'),
       );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.firestore.data.export'),
+      );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.destroy.data_loss_guard'),
+      );
       final features = json['features'] as Map<String, dynamic>;
       expect(features['publisherBackendAwsWriteSmoke'], isTrue);
       expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
@@ -213,6 +225,8 @@ void main() {
       expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
       expect(features['publisherBackendFirebaseDeploy'], isTrue);
       expect(features['publisherBackendFirebaseSmoke'], isTrue);
+      expect(features['publisherBackendFirebaseFirestoreDataExport'], isTrue);
+      expect(features['publisherBackendFirebaseDestroyDataLossGuard'], isTrue);
     });
 
     test(
@@ -1780,6 +1794,232 @@ void main() {
       expect(json['couponCount'], 2);
     });
 
+    test('publisher-backend firebase data export prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final outputPath = p.join(tempDir.path, 'firebase-export.json');
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          httpRequester: (method, uri, {headers, body}) async {
+            if (uri.path.endsWith('/home')) {
+              return http.Response(
+                _firestoreDocumentsJsonFrom(
+                  'firebase_coupon',
+                  'home',
+                  <String, Map<String, Object?>>{
+                    'bootstrap': <String, Object?>{'title': 'Home'},
+                  },
+                ),
+                200,
+              );
+            }
+            return http.Response(_firestoreDocumentsJson(0), 200);
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'data',
+        'export',
+        '--env',
+        'my-firebase-prod',
+        '--output',
+        outputPath,
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend firebase data export');
+      expect(json['exported'], isTrue);
+      expect(json['appRecordCount'], 1);
+      expect(await File(outputPath).exists(), isTrue);
+    });
+
+    test(
+      'publisher-backend firebase data import dry-run prints text',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final inputPath = p.join(tempDir.path, 'firebase-export.json');
+        await File(
+          inputPath,
+        ).writeAsString(jsonEncode(_firebaseExportFixture('firebase_coupon')));
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              publisherBackendStarter: PublisherBackendStarter(
+                firebaseAccessTokenProvider: () async => 'firebase-token',
+                httpRequester: (method, uri, {headers, body}) async =>
+                    http.Response('{}', 200),
+              ),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'data',
+              'import',
+              '--env',
+              'my-firebase-prod',
+              '--input',
+              inputPath,
+              '--dry-run',
+            ]);
+
+        expect(exitCode, 0);
+        expect(
+          stdoutBuffer.toString(),
+          contains('Firebase Firestore publisher backend data import.'),
+        );
+        expect(stdoutBuffer.toString(), contains('Dry run: true'));
+        expect(stdoutBuffer.toString(), contains('Imported: false'));
+      },
+    );
+
+    test('publisher-backend firebase data redemptions prints JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          httpRequester: (method, uri, {headers, body}) async {
+            return http.Response(
+              _firestoreDocumentsJsonFrom(
+                'firebase_coupon',
+                'redemptions',
+                <String, Map<String, Object?>>{
+                  'user_coupon': <String, Object?>{
+                    'status': 'redeemed',
+                    'couponId': 'coupon-10',
+                    'userId': 'preview-user',
+                    'redeemedAtUtc': '2026-05-24T12:00:00Z',
+                  },
+                },
+              ),
+              200,
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'data',
+        'redemptions',
+        '--env',
+        'my-firebase-prod',
+        '--coupon-id',
+        'coupon-10',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend firebase data redemptions');
+      expect(json['matchedCount'], 1);
+      expect(json['returnedCount'], 1);
+    });
+
+    test('publisher-backend firebase destroy blocks Firestore data', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: StringBuffer(),
+            publisherBackendStarter: PublisherBackendStarter(
+              firebaseAccessTokenProvider: () async => 'firebase-token',
+              httpRequester: (method, uri, {headers, body}) async {
+                if (uri.path.endsWith('/home')) {
+                  return http.Response(_firestoreDocumentsJson(1), 200);
+                }
+                return http.Response(_firestoreDocumentsJson(0), 200);
+              },
+            ),
+            workingDirectory: standaloneRoot,
+          ).run(<String>[
+            'publisher-backend',
+            'firebase',
+            'destroy',
+            '--env',
+            'my-firebase-prod',
+            '--yes',
+          ]);
+
+      expect(exitCode, 1);
+      expect(stdoutBuffer.toString(), contains('Blocked by data: true'));
+      expect(stdoutBuffer.toString(), contains('--confirm-data-loss'));
+    });
+
     test('publisher-backend firebase help includes operations', () async {
       final stdoutBuffer = StringBuffer();
 
@@ -1797,6 +2037,13 @@ void main() {
       expect(stdoutBuffer.toString(), contains('smoke --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('seed --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('data status --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('data export --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('data import --env <env-name>'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('data redemptions --env <env-name>'),
+      );
+      expect(stdoutBuffer.toString(), contains('destroy --env <env-name>'));
     });
 
     test('publisher-backend aws help includes seed and data status', () async {
@@ -3277,6 +3524,86 @@ miniProgramBackendQueryAction(
         expect(firebase['detected'], isTrue);
         expect(firebase['storageMode'], 'firestore');
         expect(firebase['dataFiles'], contains('home_bootstrap.json'));
+      },
+    );
+
+    test(
+      'workflow status remote checks Firebase without AWS cloud checks',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await Directory(
+          p.join(standaloneRoot, 'stac', '.build', 'screens'),
+        ).create(recursive: true);
+        await File(
+          p.join(
+            standaloneRoot,
+            'stac',
+            '.build',
+            'screens',
+            'firebase_coupon_home.json',
+          ),
+        ).writeAsString('{}');
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final cloudController = _FakeMiniProgramCloudController();
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              cloudController: cloudController,
+              publisherBackendStarter: PublisherBackendStarter(
+                firebaseAccessTokenProvider: () async => 'firebase-token',
+                healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+                httpRequester: (method, uri, {headers, body}) async {
+                  if (uri.path.endsWith('/home') ||
+                      uri.path.endsWith('/sessions')) {
+                    return http.Response(_firestoreDocumentsJson(1), 200);
+                  }
+                  if (uri.path.endsWith('/coupons')) {
+                    return http.Response(_firestoreDocumentsJson(2), 200);
+                  }
+                  return http.Response(_firestoreDocumentsJson(0), 200);
+                },
+              ),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'workflow',
+              'status',
+              '--workspace',
+              standaloneRoot,
+              '--env',
+              'my-firebase-prod',
+              '--remote',
+              '--json',
+            ]);
+
+        expect(exitCode, 0);
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(json['environment']['provider'], 'firebase');
+        expect(json['environment']['projectId'], 'coupon-prod');
+        expect(json['environment']['functionName'], 'publisherBackend');
+        expect(json['remote']['provider'], 'firebase');
+        expect(json['remote']['errors'], isEmpty);
+        expect(json['remote']['firebase']['status']['healthy'], isTrue);
+        expect(json['remote']['firebase']['dataStatus']['appRecordCount'], 4);
+        expect(cloudController.lastStatusRequest, isNull);
+        expect(cloudController.lastAppInfoRequest, isNull);
+        expect(cloudController.lastAccessKeyListRequest, isNull);
       },
     );
 
@@ -5392,6 +5719,88 @@ String _firestoreDocumentsJson(int count) {
       },
     ),
   });
+}
+
+String _firestoreDocumentsJsonFrom(
+  String appId,
+  String collection,
+  Map<String, Map<String, Object?>> documents,
+) {
+  return jsonEncode(<String, Object?>{
+    'documents': documents.entries
+        .map(
+          (entry) => <String, Object?>{
+            'name':
+                'projects/test/databases/(default)/documents/miniPrograms/$appId/$collection/${entry.key}',
+            'fields': entry.value.map(
+              (key, value) =>
+                  MapEntry(key, _publisherBackendFirestoreValue(value)),
+            ),
+          },
+        )
+        .toList(),
+  });
+}
+
+Map<String, Object?> _firebaseExportFixture(String appId) {
+  return <String, Object?>{
+    'schemaVersion': 1,
+    'command': 'publisher-backend firebase data export',
+    'provider': 'firebase',
+    'environmentName': 'my-firebase-prod',
+    'projectId': 'coupon-prod',
+    'region': 'asia-south1',
+    'functionName': 'publisherBackend',
+    'miniProgramId': appId,
+    'storageMode': 'firestore',
+    'records': <Object?>[
+      <String, Object?>{
+        'recordType': 'home',
+        'collection': 'home',
+        'documentId': 'bootstrap',
+        'documentPath': 'miniPrograms/$appId/home/bootstrap',
+        'data': <String, Object?>{'title': 'Imported home'},
+      },
+    ],
+  };
+}
+
+Map<String, Object?> _publisherBackendFirestoreValue(Object? value) {
+  if (value == null) {
+    return const <String, Object?>{'nullValue': null};
+  }
+  if (value is bool) {
+    return <String, Object?>{'booleanValue': value};
+  }
+  if (value is int) {
+    return <String, Object?>{'integerValue': value.toString()};
+  }
+  if (value is num) {
+    return <String, Object?>{'doubleValue': value};
+  }
+  if (value is String) {
+    return <String, Object?>{'stringValue': value};
+  }
+  if (value is List) {
+    return <String, Object?>{
+      'arrayValue': <String, Object?>{
+        'values': value.map(_publisherBackendFirestoreValue).toList(),
+      },
+    };
+  }
+  if (value is Map) {
+    return <String, Object?>{
+      'mapValue': <String, Object?>{
+        'fields': value.map(
+          (key, nestedValue) => MapEntry(
+            key.toString(),
+            _publisherBackendFirestoreValue(nestedValue),
+          ),
+        ),
+      },
+    };
+  }
+  return <String, Object?>{'stringValue': value.toString()};
 }
 
 Map<String, Object?> _publisherBackendDynamoDbAttribute(Object? value) {

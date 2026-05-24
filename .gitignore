@@ -20,6 +20,7 @@ Thumbs.db
 .env.*
 !.env.example
 .mini_program/
+CODEX_HANDOFF.md
 
 # Dart and Flutter generated state
 **/.dart_tool/

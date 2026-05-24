@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.34
+
+- fix `workflow status --remote` for Firebase environments so it reports
+  Firebase publisher backend status/data checks instead of AWS-only provider
+  mismatch errors
+- add Firebase Firestore data export/import/redemptions commands using a
+  provider-neutral logical record export format
+- add guarded Firebase Functions cleanup through
+  `publisher-backend firebase destroy --yes`, blocking when Firestore records
+  exist unless `--confirm-data-loss` is passed
+
 ## 0.3.33
 
 - fix Firebase Firestore seed/data status authentication by exchanging the

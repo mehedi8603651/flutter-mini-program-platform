@@ -58,6 +58,12 @@ const int _dynamoDbBatchWriteMaxAttempts = 5;
 const String _publisherBackendStorageBundled = 'bundled';
 const String _publisherBackendStorageDynamoDb = 'dynamodb';
 const String _publisherBackendStorageFirestore = 'firestore';
+const Set<String> _firebaseDataCollections = <String>{
+  'home',
+  'sessions',
+  'coupons',
+  'redemptions',
+};
 const String _firebaseCliClientId =
     '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com';
 const String _firebaseCliClientSecret = 'j9iVZfS8kkCEFUPaAeJV0sAi';
@@ -967,6 +973,216 @@ class PublisherBackendFirebaseDataStatusResult {
   final int? couponCount;
   final int? redemptionCount;
   final int? appRecordCount;
+  final String? error;
+}
+
+class PublisherBackendFirebaseDataExportRequest {
+  const PublisherBackendFirebaseDataExportRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.outputPath,
+    this.includeRedemptions = false,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? outputPath;
+  final bool includeRedemptions;
+}
+
+class PublisherBackendFirebaseDataExportResult {
+  const PublisherBackendFirebaseDataExportResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.storageMode,
+    required this.exported,
+    required this.includeRedemptions,
+    required this.appRecordCount,
+    required this.redemptionCount,
+    required this.itemCount,
+    this.backendBaseUrl,
+    this.outputPath,
+    this.exportedAtUtc,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String storageMode;
+  final bool exported;
+  final bool includeRedemptions;
+  final int appRecordCount;
+  final int redemptionCount;
+  final int itemCount;
+  final String? backendBaseUrl;
+  final String? outputPath;
+  final String? exportedAtUtc;
+  final String? error;
+}
+
+class PublisherBackendFirebaseDataImportRequest {
+  const PublisherBackendFirebaseDataImportRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    required this.inputPath,
+    this.includeRedemptions = false,
+    this.dryRun = false,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String inputPath;
+  final bool includeRedemptions;
+  final bool dryRun;
+}
+
+class PublisherBackendFirebaseDataImportResult {
+  const PublisherBackendFirebaseDataImportResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.storageMode,
+    required this.succeeded,
+    required this.imported,
+    required this.dryRun,
+    required this.includeRedemptions,
+    required this.appRecordCount,
+    required this.redemptionCount,
+    required this.skippedRedemptionCount,
+    required this.itemCount,
+    required this.inputPath,
+    this.backendBaseUrl,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String storageMode;
+  final bool succeeded;
+  final bool imported;
+  final bool dryRun;
+  final bool includeRedemptions;
+  final int appRecordCount;
+  final int redemptionCount;
+  final int skippedRedemptionCount;
+  final int itemCount;
+  final String inputPath;
+  final String? backendBaseUrl;
+  final String? error;
+}
+
+class PublisherBackendFirebaseDataRedemptionsRequest {
+  const PublisherBackendFirebaseDataRedemptionsRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.couponId,
+    this.userId,
+    this.limit = 50,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String? couponId;
+  final String? userId;
+  final int limit;
+}
+
+class PublisherBackendFirebaseDataRedemptionsResult {
+  const PublisherBackendFirebaseDataRedemptionsResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.storageMode,
+    required this.available,
+    required this.limit,
+    required this.matchedCount,
+    required this.returnedCount,
+    required this.records,
+    this.backendBaseUrl,
+    this.couponId,
+    this.userId,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String storageMode;
+  final bool available;
+  final int limit;
+  final int matchedCount;
+  final int returnedCount;
+  final List<Map<String, Object?>> records;
+  final String? backendBaseUrl;
+  final String? couponId;
+  final String? userId;
+  final String? error;
+}
+
+class PublisherBackendFirebaseDestroyRequest {
+  const PublisherBackendFirebaseDestroyRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    this.confirmDataLoss = false,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final bool confirmDataLoss;
+}
+
+class PublisherBackendFirebaseDestroyResult {
+  const PublisherBackendFirebaseDestroyResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.deleted,
+    required this.dataLossConfirmed,
+    this.backendBaseUrl,
+    this.deletedAtUtc,
+    this.appRecordCount,
+    this.redemptionCount,
+    this.blockedByData = false,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final bool deleted;
+  final bool dataLossConfirmed;
+  final String? backendBaseUrl;
+  final String? deletedAtUtc;
+  final int? appRecordCount;
+  final int? redemptionCount;
+  final bool blockedByData;
   final String? error;
 }
 
@@ -2154,6 +2370,326 @@ class PublisherBackendStarter {
     }
   }
 
+  Future<PublisherBackendFirebaseDataExportResult> firebaseDataExport(
+    PublisherBackendFirebaseDataExportRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    if (!await _firebaseBackendPathsExist(settings.backendRootPath)) {
+      return PublisherBackendFirebaseDataExportResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        exported: false,
+        includeRedemptions: request.includeRedemptions,
+        appRecordCount: 0,
+        redemptionCount: 0,
+        itemCount: 0,
+        error:
+            'Firebase Functions publisher backend was not found. Run '
+            '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+
+    final appRecords = <Map<String, Object?>>[
+      ...await _listFirestoreLogicalRecords(
+        settings: settings,
+        collection: 'home',
+        recordType: 'home',
+      ),
+      ...await _listFirestoreLogicalRecords(
+        settings: settings,
+        collection: 'sessions',
+        recordType: 'session',
+      ),
+      ...await _listFirestoreLogicalRecords(
+        settings: settings,
+        collection: 'coupons',
+        recordType: 'coupon',
+      ),
+    ];
+    final redemptionRecords = request.includeRedemptions
+        ? await _listFirestoreLogicalRecords(
+            settings: settings,
+            collection: 'redemptions',
+            recordType: 'redemption',
+          )
+        : <Map<String, Object?>>[];
+    final records = <Map<String, Object?>>[...appRecords, ...redemptionRecords]
+      ..sort(_compareFirestoreLogicalRecords);
+    final exportedAtUtc = _clock().toUtc().toIso8601String();
+    final outputPath = _resolveFirebaseDataExportPath(
+      settings,
+      request.outputPath,
+    );
+    final exportFile = File(outputPath);
+    await exportFile.parent.create(recursive: true);
+    await exportFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+        'schemaVersion': 1,
+        'command': 'publisher-backend firebase data export',
+        'provider': request.environment.provider,
+        'environmentName': request.environment.name,
+        'projectId': settings.projectId,
+        'region': settings.region,
+        'functionName': settings.functionName,
+        'miniProgramId': settings.miniProgramId,
+        'storageMode': _publisherBackendStorageFirestore,
+        'exportedAtUtc': exportedAtUtc,
+        'includeRedemptions': request.includeRedemptions,
+        'appRecordCount': appRecords.length,
+        'redemptionCount': redemptionRecords.length,
+        'itemCount': records.length,
+        'records': records,
+      }),
+    );
+    return PublisherBackendFirebaseDataExportResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      storageMode: _publisherBackendStorageFirestore,
+      backendBaseUrl: settings.functionUrl,
+      exported: true,
+      includeRedemptions: request.includeRedemptions,
+      appRecordCount: appRecords.length,
+      redemptionCount: redemptionRecords.length,
+      itemCount: records.length,
+      outputPath: outputPath,
+      exportedAtUtc: exportedAtUtc,
+    );
+  }
+
+  Future<PublisherBackendFirebaseDataImportResult> firebaseDataImport(
+    PublisherBackendFirebaseDataImportRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final inputPath = p.normalize(p.absolute(request.inputPath));
+    if (!await _firebaseBackendPathsExist(settings.backendRootPath)) {
+      return PublisherBackendFirebaseDataImportResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        succeeded: false,
+        imported: false,
+        dryRun: request.dryRun,
+        includeRedemptions: request.includeRedemptions,
+        appRecordCount: 0,
+        redemptionCount: 0,
+        skippedRedemptionCount: 0,
+        itemCount: 0,
+        inputPath: inputPath,
+        error:
+            'Firebase Functions publisher backend was not found. Run '
+            '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+
+    final importPlan = await _readFirebaseDataImportPlan(
+      settings: settings,
+      inputPath: inputPath,
+      includeRedemptions: request.includeRedemptions,
+    );
+    if (!request.dryRun) {
+      for (final record in importPlan.records) {
+        await _writeFirestoreDocument(
+          projectId: settings.projectId,
+          documentPath: record.documentPath,
+          document: record.data,
+        );
+      }
+    }
+    return PublisherBackendFirebaseDataImportResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      storageMode: _publisherBackendStorageFirestore,
+      backendBaseUrl: settings.functionUrl,
+      succeeded: true,
+      imported: !request.dryRun,
+      dryRun: request.dryRun,
+      includeRedemptions: request.includeRedemptions,
+      appRecordCount: importPlan.appRecordCount,
+      redemptionCount: importPlan.redemptionCount,
+      skippedRedemptionCount: importPlan.skippedRedemptionCount,
+      itemCount: importPlan.records.length,
+      inputPath: inputPath,
+    );
+  }
+
+  Future<PublisherBackendFirebaseDataRedemptionsResult> firebaseDataRedemptions(
+    PublisherBackendFirebaseDataRedemptionsRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    if (!await _firebaseBackendPathsExist(settings.backendRootPath)) {
+      return PublisherBackendFirebaseDataRedemptionsResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        available: false,
+        limit: request.limit,
+        matchedCount: 0,
+        returnedCount: 0,
+        records: const <Map<String, Object?>>[],
+        couponId: request.couponId,
+        userId: request.userId,
+        error:
+            'Firebase Functions publisher backend was not found. Run '
+            '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+
+    final records = await _listFirestoreLogicalRecords(
+      settings: settings,
+      collection: 'redemptions',
+      recordType: 'redemption',
+    );
+    final matched = _filterRedemptionRecords(
+      records,
+      couponId: request.couponId,
+      userId: request.userId,
+    );
+    final returned = matched.take(request.limit).toList();
+    return PublisherBackendFirebaseDataRedemptionsResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      storageMode: _publisherBackendStorageFirestore,
+      backendBaseUrl: settings.functionUrl,
+      available: true,
+      limit: request.limit,
+      matchedCount: matched.length,
+      returnedCount: returned.length,
+      records: returned,
+      couponId: request.couponId,
+      userId: request.userId,
+    );
+  }
+
+  Future<PublisherBackendFirebaseDestroyResult> firebaseDestroy(
+    PublisherBackendFirebaseDestroyRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    int? appRecordCount;
+    int? redemptionCount;
+    try {
+      final status = await firebaseDataStatus(
+        PublisherBackendFirebaseDataStatusRequest(
+          miniProgramRootPath: rootPath,
+          environment: request.environment,
+        ),
+      );
+      appRecordCount = status.appRecordCount;
+      redemptionCount = status.redemptionCount;
+    } on Object catch (error) {
+      if (!request.confirmDataLoss) {
+        return PublisherBackendFirebaseDestroyResult(
+          provider: request.environment.provider,
+          environmentName: request.environment.name,
+          projectId: settings.projectId,
+          region: settings.region,
+          functionName: settings.functionName,
+          miniProgramId: settings.miniProgramId,
+          backendBaseUrl: settings.functionUrl,
+          deleted: false,
+          dataLossConfirmed: false,
+          appRecordCount: appRecordCount,
+          redemptionCount: redemptionCount,
+          blockedByData: true,
+          error:
+              'Could not inspect Firestore data before deleting the Firebase '
+              'function. Export data first or pass --confirm-data-loss to '
+              'continue. Detail: $error',
+        );
+      }
+    }
+    final totalRecords = (appRecordCount ?? 0) + (redemptionCount ?? 0);
+    if (totalRecords > 0 && !request.confirmDataLoss) {
+      return PublisherBackendFirebaseDestroyResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        backendBaseUrl: settings.functionUrl,
+        deleted: false,
+        dataLossConfirmed: false,
+        appRecordCount: appRecordCount,
+        redemptionCount: redemptionCount,
+        blockedByData: true,
+        error:
+            'Firestore has $totalRecords publisher backend record(s). '
+            'Run `miniprogram publisher-backend firebase data export` first, '
+            'then pass --confirm-data-loss if you still want to delete the '
+            'Firebase function. Firestore data will not be deleted.',
+      );
+    }
+
+    await _runFirebaseCommand(<String>[
+      'functions:delete',
+      settings.functionName,
+      '--region',
+      settings.region,
+      '--project',
+      settings.projectId,
+      '--force',
+    ], workingDirectory: settings.backendRootPath);
+    await _clearFirebaseState(rootPath);
+    return PublisherBackendFirebaseDestroyResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      backendBaseUrl: settings.functionUrl,
+      deleted: true,
+      dataLossConfirmed: request.confirmDataLoss,
+      appRecordCount: appRecordCount,
+      redemptionCount: redemptionCount,
+      deletedAtUtc: _clock().toUtc().toIso8601String(),
+    );
+  }
+
   Future<PublisherBackendAwsSeedResult> awsSeed(
     PublisherBackendAwsSeedRequest request,
   ) async {
@@ -2997,6 +3533,13 @@ class PublisherBackendStarter {
     );
   }
 
+  Future<void> _clearFirebaseState(String miniProgramRootPath) async {
+    final file = File(_firebaseStatePath(miniProgramRootPath));
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
+
   Future<void> _runSamCommand(
     _PublisherBackendAwsSettings settings,
     List<String> commandArguments, {
@@ -3302,6 +3845,320 @@ class PublisherBackendStarter {
     return total;
   }
 
+  Future<List<Map<String, Object?>>> _listFirestoreLogicalRecords({
+    required _PublisherBackendFirebaseSettings settings,
+    required String collection,
+    required String recordType,
+  }) async {
+    final collectionPath = 'miniPrograms/${settings.miniProgramId}/$collection';
+    final documents = await _listFirestoreCollectionDocuments(
+      projectId: settings.projectId,
+      collectionPath: collectionPath,
+    );
+    return documents.map((document) {
+      final documentPath =
+          _firestoreDocumentPathFromName(document['name']?.toString()) ??
+          '$collectionPath/${_firestoreDocumentIdFromName(document['name']?.toString()) ?? ''}';
+      final documentId =
+          _firestoreDocumentIdFromName(document['name']?.toString()) ??
+          documentPath.split('/').last;
+      return <String, Object?>{
+        'recordType': recordType,
+        'collection': collection,
+        'documentId': documentId,
+        'documentPath': documentPath,
+        'data': _fromFirestoreDocument(document),
+      };
+    }).toList();
+  }
+
+  Future<List<Map<String, Object?>>> _listFirestoreCollectionDocuments({
+    required String projectId,
+    required String collectionPath,
+  }) async {
+    final results = <Map<String, Object?>>[];
+    String? pageToken;
+    do {
+      final query = <String, String>{'pageSize': '300'};
+      if (pageToken != null && pageToken.isNotEmpty) {
+        query['pageToken'] = pageToken;
+      }
+      final uri = _firestoreCollectionUri(
+        projectId: projectId,
+        collectionPath: collectionPath,
+        queryParameters: query,
+      );
+      final response = await _firebaseAuthorizedRequest('GET', uri);
+      if (response.statusCode == 404) {
+        return results;
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw PublisherBackendException(
+          'Firestore list failed for "$collectionPath" (${response.statusCode}).',
+        );
+      }
+      final decoded = response.body.trim().isEmpty
+          ? <String, Object?>{}
+          : jsonDecode(response.body);
+      if (decoded is! Map) {
+        throw const PublisherBackendException(
+          'Firestore list response was not a JSON object.',
+        );
+      }
+      final documents = decoded['documents'];
+      if (documents is List) {
+        results.addAll(
+          documents.whereType<Map>().map(
+            (document) =>
+                document.map((key, value) => MapEntry(key.toString(), value)),
+          ),
+        );
+      }
+      pageToken = decoded['nextPageToken']?.toString();
+    } while (pageToken != null && pageToken.isNotEmpty);
+    return results;
+  }
+
+  int _compareFirestoreLogicalRecords(
+    Map<String, Object?> left,
+    Map<String, Object?> right,
+  ) {
+    final collectionCompare = (left['collection']?.toString() ?? '').compareTo(
+      right['collection']?.toString() ?? '',
+    );
+    if (collectionCompare != 0) {
+      return collectionCompare;
+    }
+    return (left['documentId']?.toString() ?? '').compareTo(
+      right['documentId']?.toString() ?? '',
+    );
+  }
+
+  String? _firestoreDocumentPathFromName(String? name) {
+    if (name == null || name.trim().isEmpty) {
+      return null;
+    }
+    const marker = '/documents/';
+    final markerIndex = name.indexOf(marker);
+    if (markerIndex == -1) {
+      return null;
+    }
+    return name.substring(markerIndex + marker.length);
+  }
+
+  String? _firestoreDocumentIdFromName(String? name) {
+    final path = _firestoreDocumentPathFromName(name);
+    if (path == null || path.trim().isEmpty) {
+      return null;
+    }
+    return path.split('/').last;
+  }
+
+  Map<String, Object?> _fromFirestoreDocument(Map<String, Object?> document) {
+    final fields = document['fields'];
+    if (fields is! Map) {
+      return <String, Object?>{};
+    }
+    return fields.map(
+      (key, value) => MapEntry(
+        key.toString(),
+        value is Map
+            ? _fromFirestoreValue(
+                value.map((key, value) => MapEntry(key.toString(), value)),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Object? _fromFirestoreValue(Map<String, Object?> value) {
+    if (value.containsKey('nullValue')) {
+      return null;
+    }
+    if (value.containsKey('booleanValue')) {
+      return value['booleanValue'] == true;
+    }
+    if (value.containsKey('integerValue')) {
+      return int.tryParse(value['integerValue']?.toString() ?? '') ??
+          value['integerValue']?.toString();
+    }
+    if (value.containsKey('doubleValue')) {
+      final raw = value['doubleValue'];
+      return raw is num ? raw : num.tryParse(raw?.toString() ?? '');
+    }
+    if (value.containsKey('stringValue')) {
+      return value['stringValue']?.toString() ?? '';
+    }
+    if (value.containsKey('timestampValue')) {
+      return value['timestampValue']?.toString() ?? '';
+    }
+    if (value.containsKey('arrayValue')) {
+      final arrayValue = value['arrayValue'];
+      if (arrayValue is! Map) {
+        return <Object?>[];
+      }
+      final values = arrayValue['values'];
+      if (values is! List) {
+        return <Object?>[];
+      }
+      return values.map((nested) {
+        if (nested is! Map) {
+          return null;
+        }
+        return _fromFirestoreValue(
+          nested.map((key, value) => MapEntry(key.toString(), value)),
+        );
+      }).toList();
+    }
+    if (value.containsKey('mapValue')) {
+      final mapValue = value['mapValue'];
+      if (mapValue is! Map) {
+        return <String, Object?>{};
+      }
+      final fields = mapValue['fields'];
+      if (fields is! Map) {
+        return <String, Object?>{};
+      }
+      return fields.map((key, nested) {
+        if (nested is! Map) {
+          return MapEntry(key.toString(), null);
+        }
+        return MapEntry(
+          key.toString(),
+          _fromFirestoreValue(
+            nested.map((key, value) => MapEntry(key.toString(), value)),
+          ),
+        );
+      });
+    }
+    if (value.containsKey('referenceValue')) {
+      return value['referenceValue']?.toString() ?? '';
+    }
+    if (value.containsKey('bytesValue')) {
+      return value['bytesValue']?.toString() ?? '';
+    }
+    if (value.containsKey('geoPointValue')) {
+      final point = value['geoPointValue'];
+      return point is Map
+          ? point.map((key, value) => MapEntry(key.toString(), value))
+          : <String, Object?>{};
+    }
+    return null;
+  }
+
+  Future<_PublisherBackendFirebaseDataImportPlan> _readFirebaseDataImportPlan({
+    required _PublisherBackendFirebaseSettings settings,
+    required String inputPath,
+    required bool includeRedemptions,
+  }) async {
+    final inputFile = File(inputPath);
+    if (!await inputFile.exists()) {
+      throw PublisherBackendException(
+        'Firebase publisher backend data import file was not found: $inputPath',
+      );
+    }
+    final decoded = jsonDecode(await inputFile.readAsString());
+    if (decoded is! Map) {
+      throw PublisherBackendException(
+        'Firebase publisher backend data import file must be a JSON object: '
+        '$inputPath',
+      );
+    }
+    final export = decoded.map((key, value) => MapEntry(key.toString(), value));
+    if (export['schemaVersion'] != 1) {
+      throw const PublisherBackendException(
+        'Firebase publisher backend data import file has an unsupported schemaVersion.',
+      );
+    }
+    final miniProgramId = export['miniProgramId']?.toString().trim();
+    if (miniProgramId != settings.miniProgramId) {
+      throw PublisherBackendException(
+        'Firebase publisher backend data import file belongs to mini-program '
+        '"$miniProgramId", not "${settings.miniProgramId}".',
+      );
+    }
+    final rawRecords = export['records'];
+    if (rawRecords is! List) {
+      throw const PublisherBackendException(
+        'Firebase publisher backend data import file is missing a records array.',
+      );
+    }
+
+    final records = <_FirestoreImportRecord>[];
+    var appRecordCount = 0;
+    var redemptionCount = 0;
+    var skippedRedemptionCount = 0;
+    for (final rawRecord in rawRecords) {
+      if (rawRecord is! Map) {
+        throw const PublisherBackendException(
+          'Firebase publisher backend data import records must be JSON objects.',
+        );
+      }
+      final record = rawRecord.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final collection = record['collection']?.toString().trim() ?? '';
+      final documentId = record['documentId']?.toString().trim() ?? '';
+      if (!_firebaseDataCollections.contains(collection)) {
+        throw PublisherBackendException(
+          'Firebase publisher backend data import record has unsupported '
+          'collection "$collection".',
+        );
+      }
+      if (documentId.isEmpty || documentId.contains('/')) {
+        throw PublisherBackendException(
+          'Firebase publisher backend data import record has invalid documentId '
+          '"$documentId".',
+        );
+      }
+      final rawData = record['data'];
+      if (rawData is! Map) {
+        throw const PublisherBackendException(
+          'Firebase publisher backend data import records must contain data objects.',
+        );
+      }
+      if (collection == 'redemptions') {
+        if (!includeRedemptions) {
+          skippedRedemptionCount++;
+          continue;
+        }
+        redemptionCount++;
+      } else {
+        appRecordCount++;
+      }
+      records.add(
+        _FirestoreImportRecord(
+          documentPath:
+              'miniPrograms/${settings.miniProgramId}/$collection/$documentId',
+          data: rawData.map((key, value) => MapEntry(key.toString(), value)),
+        ),
+      );
+    }
+    return _PublisherBackendFirebaseDataImportPlan(
+      records: records,
+      appRecordCount: appRecordCount,
+      redemptionCount: redemptionCount,
+      skippedRedemptionCount: skippedRedemptionCount,
+    );
+  }
+
+  String _resolveFirebaseDataExportPath(
+    _PublisherBackendFirebaseSettings settings,
+    String? outputPath,
+  ) {
+    if (outputPath != null && outputPath.trim().isNotEmpty) {
+      return p.normalize(p.absolute(outputPath.trim()));
+    }
+    final timestamp = _compactUtcTimestamp(_clock().toUtc());
+    final fileName =
+        '${_safeFileSegment(settings.miniProgramId)}-'
+        '${_safeFileSegment(settings.environmentName)}-'
+        'data-export-$timestamp.json';
+    return p.normalize(
+      p.absolute(p.join(settings.backendRootPath, 'exports', fileName)),
+    );
+  }
+
   Future<http.Response> _firebaseAuthorizedRequest(
     String method,
     Uri uri, {
@@ -3314,15 +4171,30 @@ class PublisherBackendStarter {
         'FIREBASE_TOKEN for non-interactive environments.',
       );
     }
-    return _httpRequester(
-      method,
-      uri,
-      headers: <String, String>{
-        'authorization': 'Bearer ${token.trim()}',
-        if (body != null) 'content-type': 'application/json',
-      },
-      body: body,
-    );
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await _httpRequester(
+          method,
+          uri,
+          headers: <String, String>{
+            'authorization': 'Bearer ${token.trim()}',
+            if (body != null) 'content-type': 'application/json',
+          },
+          body: body,
+        );
+      } on http.ClientException catch (error) {
+        lastError = error;
+      } on SocketException catch (error) {
+        lastError = error;
+      } on TlsException catch (error) {
+        lastError = error;
+      }
+      if (attempt < 2) {
+        await _delay(Duration(milliseconds: 300 * (1 << attempt)));
+      }
+    }
+    throw PublisherBackendException('Firebase HTTP request failed: $lastError');
   }
 
   Uri _firestoreDocumentUri({
@@ -3839,6 +4711,13 @@ class PublisherBackendStarter {
     final direct = record[key]?.toString();
     if (direct != null && direct.isNotEmpty) {
       return direct;
+    }
+    final data = record['data'];
+    if (data is Map) {
+      final value = data[key]?.toString();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
     }
     final payload = record['payload'];
     if (payload is Map) {
@@ -4650,6 +5529,16 @@ class _FirestoreSeedRecord {
   final Map<String, Object?> document;
 }
 
+class _FirestoreImportRecord {
+  const _FirestoreImportRecord({
+    required this.documentPath,
+    required this.data,
+  });
+
+  final String documentPath;
+  final Map<String, Object?> data;
+}
+
 class _FirebasePublicInvokerResult {
   const _FirebasePublicInvokerResult({
     required this.configured,
@@ -4669,6 +5558,20 @@ class _PublisherBackendAwsDataImportPlan {
   });
 
   final List<Map<String, Object?>> items;
+  final int appRecordCount;
+  final int redemptionCount;
+  final int skippedRedemptionCount;
+}
+
+class _PublisherBackendFirebaseDataImportPlan {
+  const _PublisherBackendFirebaseDataImportPlan({
+    required this.records,
+    required this.appRecordCount,
+    required this.redemptionCount,
+    required this.skippedRedemptionCount,
+  });
+
+  final List<_FirestoreImportRecord> records;
   final int appRecordCount;
   final int redemptionCount;
   final int skippedRedemptionCount;
