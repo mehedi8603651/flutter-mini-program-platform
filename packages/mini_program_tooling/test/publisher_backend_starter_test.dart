@@ -1034,7 +1034,8 @@ console.log(JSON.stringify({
       );
       expect(await envFile.exists(), isTrue);
       final envText = await envFile.readAsString();
-      expect(envText, contains('FUNCTION_REGION=asia-south1'));
+      expect(envText, contains('PUBLISHER_BACKEND_REGION=asia-south1'));
+      expect(envText, isNot(contains('FUNCTION_REGION=')));
       expect(envText, contains('MINI_PROGRAM_ID=coupon_app'));
 
       final stateFile = File(
@@ -1081,7 +1082,7 @@ console.log(JSON.stringify({
         ),
       );
       await envFile.writeAsString(
-        'CUSTOM_VALUE=keep\nFUNCTION_REGION=old\nMINI_PROGRAM_ID=old\n',
+        'CUSTOM_VALUE=keep\nFUNCTION_REGION=old\nPUBLISHER_BACKEND_REGION=old\nMINI_PROGRAM_ID=old\n',
       );
 
       await starter.firebaseDeploy(
@@ -1093,9 +1094,10 @@ console.log(JSON.stringify({
 
       final envText = await envFile.readAsString();
       expect(envText, contains('CUSTOM_VALUE=keep'));
-      expect(envText, contains('FUNCTION_REGION=asia-south1'));
+      expect(envText, contains('PUBLISHER_BACKEND_REGION=asia-south1'));
       expect(envText, contains('MINI_PROGRAM_ID=coupon_app'));
       expect(envText, isNot(contains('FUNCTION_REGION=old')));
+      expect(envText, isNot(contains('PUBLISHER_BACKEND_REGION=old')));
       expect(envText, isNot(contains('MINI_PROGRAM_ID=old')));
     });
 
@@ -1239,6 +1241,104 @@ console.log(JSON.stringify({
       );
       expect(coupons.statusCode, 503);
       expect(coupons.passed, isFalse);
+    });
+
+    test('Firebase seed writes Firestore starter documents', () async {
+      final requests = <Map<String, Object?>>[];
+      final starter = PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          requests.add(<String, Object?>{
+            'method': method,
+            'uri': uri.toString(),
+            'headers': headers,
+            'body': body,
+          });
+          return http.Response('{}', 200);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseSeed(
+        PublisherBackendFirebaseSeedRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+        ),
+      );
+
+      expect(result.seeded, isTrue);
+      expect(result.itemCount, 4);
+      expect(result.couponCount, 2);
+      expect(
+        requests.map((request) => request['method']),
+        everyElement('PATCH'),
+      );
+      expect(
+        requests.map((request) => request['uri'].toString()),
+        contains(contains('/documents/miniPrograms/coupon_app/home/bootstrap')),
+      );
+      expect(
+        requests.map((request) => request['uri'].toString()),
+        contains(
+          contains('/documents/miniPrograms/coupon_app/coupons/coupon-10'),
+        ),
+      );
+      final firstBody =
+          jsonDecode(requests.first['body']! as String) as Map<String, dynamic>;
+      expect(firstBody['fields'], contains('title'));
+      final headers = requests.first['headers']! as Map<String, String>;
+      expect(headers['authorization'], 'Bearer firebase-token');
+    });
+
+    test('Firebase data status counts Firestore collections', () async {
+      final requestedPaths = <String>[];
+      final starter = PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          requestedPaths.add(uri.path);
+          if (uri.path.endsWith('/home')) {
+            return http.Response(_firestoreDocumentsJson(1), 200);
+          }
+          if (uri.path.endsWith('/sessions')) {
+            return http.Response(_firestoreDocumentsJson(1), 200);
+          }
+          if (uri.path.endsWith('/coupons')) {
+            return http.Response(_firestoreDocumentsJson(2), 200);
+          }
+          if (uri.path.endsWith('/redemptions')) {
+            return http.Response(_firestoreDocumentsJson(3), 200);
+          }
+          return http.Response('{}', 404);
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseDataStatus(
+        PublisherBackendFirebaseDataStatusRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+        ),
+      );
+
+      expect(result.available, isTrue);
+      expect(result.homeRecordCount, 1);
+      expect(result.authSessionCount, 1);
+      expect(result.couponCount, 2);
+      expect(result.redemptionCount, 3);
+      expect(result.appRecordCount, 4);
+      expect(requestedPaths, hasLength(4));
     });
 
     test('AWS seed writes DynamoDB starter records', () async {
@@ -2164,6 +2264,17 @@ String _dynamoDbQueryItemsJson(List<Map<String, Object?>> items) {
           ),
         )
         .toList(),
+  });
+}
+
+String _firestoreDocumentsJson(int count) {
+  return jsonEncode(<String, Object?>{
+    'documents': List<Object?>.generate(
+      count,
+      (index) => <String, Object?>{
+        'name': 'projects/test/databases/(default)/documents/doc-$index',
+      },
+    ),
   });
 }
 

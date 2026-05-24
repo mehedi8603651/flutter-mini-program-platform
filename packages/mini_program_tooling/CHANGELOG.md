@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.32
+
+- improve Firebase publisher backend deploy reliability by avoiding reserved
+  Firebase `.env` keys and reporting public invoker setup details
+- add Firebase Firestore starter data seeding and data status commands for
+  Cloud Functions v2 publisher backends
+
 ## 0.3.31
 
 - add Firebase publisher backend `deploy`, `status`, `outputs`, and read-only

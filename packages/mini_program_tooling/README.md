@@ -94,6 +94,8 @@ miniprogram publisher-backend firebase deploy --env <env-name> [--mini-program-r
 miniprogram publisher-backend firebase status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase seed --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase data status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
@@ -723,15 +725,30 @@ read-only publisher routes:
 ```bash
 miniprogram env configure my-firebase-prod --provider firebase --project-id my-firebase-project --region us-central1
 miniprogram publisher-backend firebase deploy --env my-firebase-prod
+miniprogram publisher-backend firebase seed --env my-firebase-prod
+miniprogram publisher-backend firebase data status --env my-firebase-prod
 miniprogram publisher-backend firebase status --env my-firebase-prod --json
 miniprogram publisher-backend firebase outputs --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod
 ```
 
 The deploy command runs `npm install` when `functions/node_modules` is missing,
-writes `FUNCTION_REGION` and `MINI_PROGRAM_ID` to `functions/.env`, runs
-`firebase deploy --only functions:<functionName> --project <projectId>`, and
-records `.mini_program/publisher_backend.firebase.json`.
+writes `PUBLISHER_BACKEND_REGION` and `MINI_PROGRAM_ID` to `functions/.env`,
+runs `firebase deploy --only functions:<functionName> --project <projectId>`,
+tries to grant public Cloud Run Invoker for the HTTPS function, and records
+`.mini_program/publisher_backend.firebase.json`. Use `--no-public-invoker` if
+you want to manage Cloud Run invoker permissions yourself.
+
+`firebase seed` upserts the generated starter JSON into Firestore:
+
+- `functions/data/home_bootstrap.json` -> `home/bootstrap`
+- `functions/data/session.json` -> `sessions/demo`
+- `functions/data/coupons_list.json` -> `coupons/<couponId>`
+
+`firebase data status` counts home, session, coupon, and redemption documents so
+you can confirm that Firestore has the records needed for smoke tests. These
+Firestore data commands use your Firebase CLI login token, so run
+`firebase login` first or provide `FIREBASE_TOKEN` in CI.
 
 By default, the backend URL is derived as
 `https://<region>-<projectId>.cloudfunctions.net/<functionName>/`. If your
@@ -740,8 +757,8 @@ Firebase project uses a different HTTPS function URL shape, pass
 
 Firebase smoke is read-only in this release and checks `GET /health`,
 `GET /home/bootstrap`, `GET /coupons/list`, and `GET /auth/session`. Firebase
-seed, data export/import, redemption inspection, logs, and write smoke are left
-for later Firebase tooling releases.
+data export/import, redemption inspection, logs, and write smoke are left for
+later Firebase tooling releases.
 
 Firebase Admin SDK dependencies are generated only inside the publisher backend.
 The Flutter host app and `mini_program_sdk` do not need Firebase SDKs unless the

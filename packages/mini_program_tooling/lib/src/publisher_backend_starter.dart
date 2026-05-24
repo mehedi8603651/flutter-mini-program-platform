@@ -26,6 +26,15 @@ typedef PublisherBackendPostRequester =
       Map<String, String>? headers,
       Object? body,
     });
+typedef PublisherBackendHttpRequester =
+    Future<http.Response> Function(
+      String method,
+      Uri uri, {
+      Map<String, String>? headers,
+      Object? body,
+    });
+typedef PublisherBackendFirebaseAccessTokenProvider =
+    Future<String?> Function();
 typedef PublisherBackendClock = DateTime Function();
 typedef PublisherBackendDelay = Future<void> Function(Duration duration);
 
@@ -686,10 +695,12 @@ class PublisherBackendFirebaseDeployRequest {
   const PublisherBackendFirebaseDeployRequest({
     required this.miniProgramRootPath,
     required this.environment,
+    this.configurePublicInvoker = true,
   });
 
   final String miniProgramRootPath;
   final CloudEnvironmentConfiguration environment;
+  final bool configurePublicInvoker;
 }
 
 class PublisherBackendFirebaseDeployResult {
@@ -705,8 +716,11 @@ class PublisherBackendFirebaseDeployResult {
     required this.healthUrl,
     required this.deployedAtUtc,
     required this.dependenciesInstalled,
+    required this.publicInvokerConfigured,
+    required this.publicInvokerChanged,
     required this.outputs,
     this.miniProgramRootPath,
+    this.publicInvokerError,
     this.healthy,
     this.healthStatusCode,
     this.healthError,
@@ -723,8 +737,11 @@ class PublisherBackendFirebaseDeployResult {
   final String healthUrl;
   final String deployedAtUtc;
   final bool dependenciesInstalled;
+  final bool publicInvokerConfigured;
+  final bool publicInvokerChanged;
   final Map<String, String> outputs;
   final String? miniProgramRootPath;
+  final String? publicInvokerError;
   final bool? healthy;
   final int? healthStatusCode;
   final String? healthError;
@@ -853,6 +870,96 @@ class PublisherBackendFirebaseSmokeResult {
   final String backendBaseUrl;
   final bool passed;
   final List<PublisherBackendFirebaseSmokeRouteResult> routes;
+  final String? error;
+}
+
+class PublisherBackendFirebaseSeedRequest {
+  const PublisherBackendFirebaseSeedRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseSeedResult {
+  const PublisherBackendFirebaseSeedResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.seeded,
+    required this.itemCount,
+    required this.appRecordCount,
+    required this.couponCount,
+    required this.authSessionCount,
+    required this.storageMode,
+    this.backendBaseUrl,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final bool seeded;
+  final int itemCount;
+  final int appRecordCount;
+  final int couponCount;
+  final int authSessionCount;
+  final String storageMode;
+  final String? backendBaseUrl;
+  final String? error;
+}
+
+class PublisherBackendFirebaseDataStatusRequest {
+  const PublisherBackendFirebaseDataStatusRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseDataStatusResult {
+  const PublisherBackendFirebaseDataStatusResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.storageMode,
+    required this.available,
+    this.backendBaseUrl,
+    this.homeRecordCount,
+    this.authSessionCount,
+    this.couponCount,
+    this.redemptionCount,
+    this.appRecordCount,
+    this.error,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String storageMode;
+  final bool available;
+  final String? backendBaseUrl;
+  final int? homeRecordCount;
+  final int? authSessionCount;
+  final int? couponCount;
+  final int? redemptionCount;
+  final int? appRecordCount;
   final String? error;
 }
 
@@ -1174,12 +1281,17 @@ class PublisherBackendStarter {
     PublisherBackendProcessStarter processStarter = _defaultProcessStarter,
     PublisherBackendHealthGetter healthGetter = http.get,
     PublisherBackendPostRequester postRequester = _defaultPostRequester,
+    PublisherBackendHttpRequester httpRequester = _defaultHttpRequester,
+    PublisherBackendFirebaseAccessTokenProvider firebaseAccessTokenProvider =
+        _defaultFirebaseAccessTokenProvider,
     PublisherBackendClock clock = _defaultClock,
     PublisherBackendDelay delay = _defaultDelay,
   }) : _shellRunner = shellRunner,
        _processStarter = processStarter,
        _healthGetter = healthGetter,
        _postRequester = postRequester,
+       _httpRequester = httpRequester,
+       _firebaseAccessTokenProvider = firebaseAccessTokenProvider,
        _clock = clock,
        _delay = delay;
 
@@ -1187,6 +1299,9 @@ class PublisherBackendStarter {
   final PublisherBackendProcessStarter _processStarter;
   final PublisherBackendHealthGetter _healthGetter;
   final PublisherBackendPostRequester _postRequester;
+  final PublisherBackendHttpRequester _httpRequester;
+  final PublisherBackendFirebaseAccessTokenProvider
+  _firebaseAccessTokenProvider;
   final PublisherBackendClock _clock;
   final PublisherBackendDelay _delay;
 
@@ -1742,6 +1857,19 @@ class PublisherBackendStarter {
       settings.projectId,
     ], workingDirectory: settings.backendRootPath);
 
+    var publicInvokerConfigured = false;
+    var publicInvokerChanged = false;
+    String? publicInvokerError;
+    if (request.configurePublicInvoker) {
+      try {
+        final publicInvoker = await _ensureFirebasePublicInvoker(settings);
+        publicInvokerConfigured = publicInvoker.configured;
+        publicInvokerChanged = publicInvoker.changed;
+      } on PublisherBackendException catch (error) {
+        publicInvokerError = error.message;
+      }
+    }
+
     final outputs = settings.outputs;
     final health = await _waitForHealthCheck(
       Uri.parse(settings.healthUrl),
@@ -1778,6 +1906,9 @@ class PublisherBackendStarter {
       healthy: health.healthy,
       healthStatusCode: health.statusCode,
       healthError: health.error,
+      publicInvokerConfigured: publicInvokerConfigured,
+      publicInvokerChanged: publicInvokerChanged,
+      publicInvokerError: publicInvokerError,
       deployedAtUtc: deployedAtUtc,
       dependenciesInstalled: dependenciesInstalled,
       outputs: outputs,
@@ -1885,6 +2016,135 @@ class PublisherBackendStarter {
       passed: routes.every((route) => route.passed),
       routes: routes,
     );
+  }
+
+  Future<PublisherBackendFirebaseSeedResult> firebaseSeed(
+    PublisherBackendFirebaseSeedRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    if (!await _firebaseBackendPathsExist(settings.backendRootPath)) {
+      return PublisherBackendFirebaseSeedResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        seeded: false,
+        itemCount: 0,
+        appRecordCount: 0,
+        couponCount: 0,
+        authSessionCount: 0,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        error:
+            'Firebase Functions publisher backend was not found. Run '
+            '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+
+    final seedData = await _readFirebaseSeedData(settings);
+    final records = _buildFirestoreSeedRecords(settings, seedData);
+    for (final record in records) {
+      await _writeFirestoreDocument(
+        projectId: settings.projectId,
+        documentPath: record.documentPath,
+        document: record.document,
+      );
+    }
+    return PublisherBackendFirebaseSeedResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      seeded: true,
+      itemCount: records.length,
+      appRecordCount: records.length,
+      couponCount: seedData.coupons.length,
+      authSessionCount: 1,
+      storageMode: _publisherBackendStorageFirestore,
+      backendBaseUrl: settings.functionUrl,
+    );
+  }
+
+  Future<PublisherBackendFirebaseDataStatusResult> firebaseDataStatus(
+    PublisherBackendFirebaseDataStatusRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    if (!await _firebaseBackendPathsExist(settings.backendRootPath)) {
+      return PublisherBackendFirebaseDataStatusResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        available: false,
+        error:
+            'Firebase Functions publisher backend was not found. Run '
+            '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+
+    try {
+      final homeCount = await _countFirestoreCollection(
+        projectId: settings.projectId,
+        collectionPath: 'miniPrograms/${settings.miniProgramId}/home',
+      );
+      final sessionCount = await _countFirestoreCollection(
+        projectId: settings.projectId,
+        collectionPath: 'miniPrograms/${settings.miniProgramId}/sessions',
+      );
+      final couponCount = await _countFirestoreCollection(
+        projectId: settings.projectId,
+        collectionPath: 'miniPrograms/${settings.miniProgramId}/coupons',
+      );
+      final redemptionCount = await _countFirestoreCollection(
+        projectId: settings.projectId,
+        collectionPath: 'miniPrograms/${settings.miniProgramId}/redemptions',
+      );
+      return PublisherBackendFirebaseDataStatusResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        available: true,
+        homeRecordCount: homeCount,
+        authSessionCount: sessionCount,
+        couponCount: couponCount,
+        redemptionCount: redemptionCount,
+        appRecordCount: homeCount + sessionCount + couponCount,
+      );
+    } on PublisherBackendException catch (error) {
+      return PublisherBackendFirebaseDataStatusResult(
+        provider: request.environment.provider,
+        environmentName: request.environment.name,
+        projectId: settings.projectId,
+        region: settings.region,
+        functionName: settings.functionName,
+        miniProgramId: settings.miniProgramId,
+        storageMode: _publisherBackendStorageFirestore,
+        backendBaseUrl: settings.functionUrl,
+        available: false,
+        error: error.message,
+      );
+    }
   }
 
   Future<PublisherBackendAwsSeedResult> awsSeed(
@@ -2805,6 +3065,7 @@ class PublisherBackendStarter {
       )) {
         final trimmed = line.trimLeft();
         if (trimmed.startsWith('FUNCTION_REGION=') ||
+            trimmed.startsWith('PUBLISHER_BACKEND_REGION=') ||
             trimmed.startsWith('MINI_PROGRAM_ID=')) {
           continue;
         }
@@ -2814,9 +3075,334 @@ class PublisherBackendStarter {
       await file.parent.create(recursive: true);
     }
     lines
-      ..add('FUNCTION_REGION=${settings.region}')
+      ..add('PUBLISHER_BACKEND_REGION=${settings.region}')
       ..add('MINI_PROGRAM_ID=${settings.miniProgramId}');
     await file.writeAsString('${lines.join('\n')}\n');
+  }
+
+  Future<_FirebasePublicInvokerResult> _ensureFirebasePublicInvoker(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final serviceName = _firebaseCloudRunServiceName(settings.functionName);
+    final baseUri = Uri.parse(
+      'https://run.googleapis.com/v2/projects/${settings.projectId}'
+      '/locations/${settings.region}/services/$serviceName',
+    );
+    final policyResponse = await _firebaseAuthorizedRequest(
+      'GET',
+      Uri.parse('$baseUri:getIamPolicy'),
+    );
+    if (policyResponse.statusCode >= 400) {
+      throw PublisherBackendException(
+        'Could not read Cloud Run IAM policy for Firebase function '
+        '"${settings.functionName}" (${policyResponse.statusCode}). '
+        'Deploy may have succeeded, but public smoke checks can return 403. '
+        'Grant Cloud Run Invoker to allUsers in the Firebase/Cloud console.',
+      );
+    }
+    final decoded = policyResponse.body.trim().isEmpty
+        ? <String, Object?>{}
+        : jsonDecode(policyResponse.body);
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'Cloud Run IAM policy response was not a JSON object.',
+      );
+    }
+    final policy = decoded.map((key, value) => MapEntry(key.toString(), value));
+    final bindings = _jsonObjectList(policy['bindings']);
+    final invokerBinding = bindings.firstWhere(
+      (binding) => binding['role'] == 'roles/run.invoker',
+      orElse: () => <String, Object?>{},
+    );
+    final rawMembers = invokerBinding['members'];
+    final members = rawMembers is List
+        ? rawMembers.map((member) => member.toString()).toList()
+        : <String>[];
+    if (members.contains('allUsers')) {
+      return const _FirebasePublicInvokerResult(
+        configured: true,
+        changed: false,
+      );
+    }
+    if (invokerBinding.isEmpty) {
+      bindings.add(<String, Object?>{
+        'role': 'roles/run.invoker',
+        'members': <String>['allUsers'],
+      });
+    } else {
+      invokerBinding['members'] = <String>[...members, 'allUsers'];
+    }
+    final body = jsonEncode(<String, Object?>{
+      'policy': <String, Object?>{
+        if (policy['etag'] != null) 'etag': policy['etag'],
+        'bindings': bindings,
+      },
+    });
+    final response = await _firebaseAuthorizedRequest(
+      'POST',
+      Uri.parse('$baseUri:setIamPolicy'),
+      body: body,
+    );
+    if (response.statusCode >= 400) {
+      throw PublisherBackendException(
+        'Could not grant public Cloud Run Invoker for Firebase function '
+        '"${settings.functionName}" (${response.statusCode}). '
+        'Smoke checks may return 403 until allUsers has roles/run.invoker.',
+      );
+    }
+    return const _FirebasePublicInvokerResult(configured: true, changed: true);
+  }
+
+  String _firebaseCloudRunServiceName(String functionName) {
+    return functionName
+        .replaceAll(RegExp(r'[^A-Za-z0-9-]+'), '-')
+        .toLowerCase();
+  }
+
+  Future<_PublisherBackendFirebaseSeedData> _readFirebaseSeedData(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final dataRootPath = p.join(settings.functionsRootPath, 'data');
+    final home = await _readJsonObjectFile(
+      p.join(dataRootPath, 'home_bootstrap.json'),
+      label: 'home_bootstrap.json',
+    );
+    final session = await _readJsonObjectFile(
+      p.join(dataRootPath, 'session.json'),
+      label: 'session.json',
+    );
+    final couponsRoot = await _readJsonObjectFile(
+      p.join(dataRootPath, 'coupons_list.json'),
+      label: 'coupons_list.json',
+    );
+    final rawCoupons = couponsRoot['coupons'];
+    if (rawCoupons is! List) {
+      throw const PublisherBackendException(
+        'coupons_list.json must contain a "coupons" list.',
+      );
+    }
+    final coupons = <Map<String, Object?>>[];
+    for (final rawCoupon in rawCoupons) {
+      if (rawCoupon is! Map) {
+        throw const PublisherBackendException(
+          'Every coupons_list.json coupon must be a JSON object.',
+        );
+      }
+      final coupon = rawCoupon.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final couponId = coupon['id']?.toString().trim();
+      if (couponId == null || couponId.isEmpty) {
+        throw const PublisherBackendException(
+          'Every coupons_list.json coupon must contain a non-empty "id".',
+        );
+      }
+      coupons.add(coupon);
+    }
+    return _PublisherBackendFirebaseSeedData(
+      home: home,
+      session: session,
+      coupons: coupons,
+    );
+  }
+
+  List<_FirestoreSeedRecord> _buildFirestoreSeedRecords(
+    _PublisherBackendFirebaseSettings settings,
+    _PublisherBackendFirebaseSeedData seedData,
+  ) {
+    final appPath = 'miniPrograms/${settings.miniProgramId}';
+    return <_FirestoreSeedRecord>[
+      _FirestoreSeedRecord(
+        documentPath: '$appPath/home/bootstrap',
+        document: seedData.home,
+      ),
+      _FirestoreSeedRecord(
+        documentPath: '$appPath/sessions/demo',
+        document: seedData.session,
+      ),
+      for (var index = 0; index < seedData.coupons.length; index++)
+        _FirestoreSeedRecord(
+          documentPath: '$appPath/coupons/${seedData.coupons[index]['id']}',
+          document: <String, Object?>{
+            ...seedData.coupons[index],
+            'sortIndex': index,
+          },
+        ),
+    ];
+  }
+
+  Future<void> _writeFirestoreDocument({
+    required String projectId,
+    required String documentPath,
+    required Map<String, Object?> document,
+  }) async {
+    final uri = _firestoreDocumentUri(
+      projectId: projectId,
+      documentPath: documentPath,
+    );
+    final response = await _firebaseAuthorizedRequest(
+      'PATCH',
+      uri,
+      body: jsonEncode(_toFirestoreDocument(document)),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw PublisherBackendException(
+        'Firestore seed failed for "$documentPath" (${response.statusCode}).',
+      );
+    }
+  }
+
+  Future<int> _countFirestoreCollection({
+    required String projectId,
+    required String collectionPath,
+  }) async {
+    var total = 0;
+    String? pageToken;
+    do {
+      final query = <String, String>{'pageSize': '300'};
+      if (pageToken != null && pageToken.isNotEmpty) {
+        query['pageToken'] = pageToken;
+      }
+      final uri = _firestoreCollectionUri(
+        projectId: projectId,
+        collectionPath: collectionPath,
+        queryParameters: query,
+      );
+      final response = await _firebaseAuthorizedRequest('GET', uri);
+      if (response.statusCode == 404) {
+        return 0;
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw PublisherBackendException(
+          'Firestore data status failed for "$collectionPath" '
+          '(${response.statusCode}).',
+        );
+      }
+      final decoded = response.body.trim().isEmpty
+          ? <String, Object?>{}
+          : jsonDecode(response.body);
+      if (decoded is! Map) {
+        throw const PublisherBackendException(
+          'Firestore data status response was not a JSON object.',
+        );
+      }
+      final documents = decoded['documents'];
+      if (documents is List) {
+        total += documents.length;
+      }
+      pageToken = decoded['nextPageToken']?.toString();
+    } while (pageToken != null && pageToken.isNotEmpty);
+    return total;
+  }
+
+  Future<http.Response> _firebaseAuthorizedRequest(
+    String method,
+    Uri uri, {
+    Object? body,
+  }) async {
+    final token = await _firebaseAccessTokenProvider();
+    if (token == null || token.trim().isEmpty) {
+      throw const PublisherBackendException(
+        'Firebase CLI access token was not found. Run `firebase login`, or set '
+        'FIREBASE_TOKEN for non-interactive environments.',
+      );
+    }
+    return _httpRequester(
+      method,
+      uri,
+      headers: <String, String>{
+        'authorization': 'Bearer ${token.trim()}',
+        if (body != null) 'content-type': 'application/json',
+      },
+      body: body,
+    );
+  }
+
+  Uri _firestoreDocumentUri({
+    required String projectId,
+    required String documentPath,
+  }) {
+    return Uri.https(
+      'firestore.googleapis.com',
+      '/v1/projects/$projectId/databases/(default)/documents/'
+          '${_encodeFirestorePath(documentPath)}',
+    );
+  }
+
+  Uri _firestoreCollectionUri({
+    required String projectId,
+    required String collectionPath,
+    Map<String, String> queryParameters = const <String, String>{},
+  }) {
+    return Uri.https(
+      'firestore.googleapis.com',
+      '/v1/projects/$projectId/databases/(default)/documents/'
+          '${_encodeFirestorePath(collectionPath)}',
+      queryParameters,
+    );
+  }
+
+  String _encodeFirestorePath(String path) {
+    return path
+        .split('/')
+        .map((segment) => Uri.encodeComponent(segment))
+        .join('/');
+  }
+
+  Map<String, Object?> _toFirestoreDocument(Map<String, Object?> document) {
+    return <String, Object?>{
+      'fields': document.map(
+        (key, value) => MapEntry(key, _toFirestoreValue(value)),
+      ),
+    };
+  }
+
+  Map<String, Object?> _toFirestoreValue(Object? value) {
+    if (value == null) {
+      return <String, Object?>{'nullValue': null};
+    }
+    if (value is bool) {
+      return <String, Object?>{'booleanValue': value};
+    }
+    if (value is int) {
+      return <String, Object?>{'integerValue': value.toString()};
+    }
+    if (value is num) {
+      return <String, Object?>{'doubleValue': value};
+    }
+    if (value is String) {
+      return <String, Object?>{'stringValue': value};
+    }
+    if (value is List) {
+      return <String, Object?>{
+        'arrayValue': <String, Object?>{
+          'values': value.map(_toFirestoreValue).toList(),
+        },
+      };
+    }
+    if (value is Map) {
+      return <String, Object?>{
+        'mapValue': <String, Object?>{
+          'fields': value.map(
+            (key, nestedValue) =>
+                MapEntry(key.toString(), _toFirestoreValue(nestedValue)),
+          ),
+        },
+      };
+    }
+    return <String, Object?>{'stringValue': value.toString()};
+  }
+
+  List<Map<String, Object?>> _jsonObjectList(Object? value) {
+    if (value is! List) {
+      return <Map<String, Object?>>[];
+    }
+    return value
+        .whereType<Map>()
+        .map(
+          (entry) => entry.map((key, value) => MapEntry(key.toString(), value)),
+        )
+        .toList();
   }
 
   Future<void> _runAwsCommand(
@@ -3002,13 +3588,13 @@ class PublisherBackendStarter {
     final file = File(filePath);
     if (!await file.exists()) {
       throw PublisherBackendException(
-        'AWS publisher backend sample data is missing: $label',
+        'Publisher backend sample data is missing: $label',
       );
     }
     final decoded = jsonDecode(await file.readAsString());
     if (decoded is! Map) {
       throw PublisherBackendException(
-        'AWS publisher backend sample data must be a JSON object: $label',
+        'Publisher backend sample data must be a JSON object: $label',
       );
     }
     return decoded.map((key, value) => MapEntry(key.toString(), value));
@@ -3886,6 +4472,82 @@ class PublisherBackendStarter {
     return http.post(uri, headers: headers, body: body);
   }
 
+  static Future<http.Response> _defaultHttpRequester(
+    String method,
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    return switch (method.toUpperCase()) {
+      'GET' => http.get(uri, headers: headers),
+      'POST' => http.post(uri, headers: headers, body: body),
+      'PATCH' => http.patch(uri, headers: headers, body: body),
+      'PUT' => http.put(uri, headers: headers, body: body),
+      'DELETE' => http.delete(uri, headers: headers, body: body),
+      _ => throw PublisherBackendException(
+        'Unsupported HTTP method for publisher backend request: $method',
+      ),
+    };
+  }
+
+  static Future<String?> _defaultFirebaseAccessTokenProvider() async {
+    final environmentToken = Platform.environment['FIREBASE_TOKEN']?.trim();
+    if (environmentToken != null && environmentToken.isNotEmpty) {
+      return environmentToken;
+    }
+    for (final path in _firebaseCliConfigStoreCandidates()) {
+      final file = File(path);
+      if (!await file.exists()) {
+        continue;
+      }
+      try {
+        final decoded = jsonDecode(await file.readAsString());
+        if (decoded is! Map) {
+          continue;
+        }
+        final tokens = decoded['tokens'];
+        if (tokens is! Map) {
+          continue;
+        }
+        final accessToken = tokens['access_token']?.toString().trim();
+        if (accessToken != null && accessToken.isNotEmpty) {
+          return accessToken;
+        }
+      } on FormatException {
+        continue;
+      } on FileSystemException {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  static List<String> _firebaseCliConfigStoreCandidates() {
+    final candidates = <String>{};
+    final env = Platform.environment;
+    void addCandidate(String? root) {
+      if (root == null || root.trim().isEmpty) {
+        return;
+      }
+      candidates.add(p.join(root, 'configstore', 'firebase-tools.json'));
+    }
+
+    addCandidate(env['XDG_CONFIG_HOME']);
+    addCandidate(env['APPDATA']);
+    addCandidate(env['HOME'] == null ? null : p.join(env['HOME']!, '.config'));
+    addCandidate(
+      env['USERPROFILE'] == null
+          ? null
+          : p.join(env['USERPROFILE']!, '.config'),
+    );
+    addCandidate(
+      env['USERPROFILE'] == null
+          ? null
+          : p.join(env['USERPROFILE']!, 'AppData', 'Roaming'),
+    );
+    return candidates.toList();
+  }
+
   static DateTime _defaultClock() => DateTime.now();
 
   static Future<void> _defaultDelay(Duration duration) {
@@ -3915,6 +4577,38 @@ class _PublisherBackendAwsSeedData {
   final Map<String, Object?> home;
   final Map<String, Object?> session;
   final List<Map<String, Object?>> coupons;
+}
+
+class _PublisherBackendFirebaseSeedData {
+  const _PublisherBackendFirebaseSeedData({
+    required this.home,
+    required this.session,
+    required this.coupons,
+  });
+
+  final Map<String, Object?> home;
+  final Map<String, Object?> session;
+  final List<Map<String, Object?>> coupons;
+}
+
+class _FirestoreSeedRecord {
+  const _FirestoreSeedRecord({
+    required this.documentPath,
+    required this.document,
+  });
+
+  final String documentPath;
+  final Map<String, Object?> document;
+}
+
+class _FirebasePublicInvokerResult {
+  const _FirebasePublicInvokerResult({
+    required this.configured,
+    required this.changed,
+  });
+
+  final bool configured;
+  final bool changed;
 }
 
 class _PublisherBackendAwsDataImportPlan {
@@ -4343,9 +5037,16 @@ miniprogram env configure my-firebase-prod `
 
 miniprogram publisher-backend firebase deploy `
   --env my-firebase-prod
+miniprogram publisher-backend firebase seed `
+  --env my-firebase-prod
+miniprogram publisher-backend firebase data status `
+  --env my-firebase-prod
 miniprogram publisher-backend firebase smoke `
   --env my-firebase-prod
 ```
+
+`firebase seed` and `firebase data status` use your Firebase CLI login token, so
+run `firebase login` first or provide `FIREBASE_TOKEN` in CI.
 
 Local emulator:
 
@@ -4381,7 +5082,7 @@ const publisherBackendHandler = createPublisherBackendHandler({ store });
 
 export const publisherBackend = onRequest(
   {
-    region: process.env.FUNCTION_REGION || 'us-central1',
+    region: process.env.PUBLISHER_BACKEND_REGION || 'us-central1',
   },
   publisherBackendHandler,
 );
