@@ -442,9 +442,9 @@ test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /CLI AWS publisher backend commands/);
-    assert.match(text, /missing AWS DynamoDB 0.3.29 data management support/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.29/);
+    assert.match(text, /CLI publisher backend commands/);
+    assert.match(text, /missing mini_program_tooling 0.3.32 publisher backend support/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.32/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -465,8 +465,8 @@ test('diagnostics warn when CLI lacks AWS data management support', async () => 
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /missing AWS DynamoDB 0.3.29 data management support/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.29/);
+    assert.match(text, /missing mini_program_tooling 0.3.32 publisher backend support/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.32/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -482,13 +482,15 @@ test('diagnostics warn when CLI lacks quiet capability discovery', async () => {
         checked: true,
         supportsWriteSmoke: true,
         supportsDataManagement: true,
+        supportsFirebaseOperations: true,
+        supportsFirebaseFirestoreData: true,
         supportsCapabilityDiscovery: false,
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /lacks 0.3.29 quiet capability discovery/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.29/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.32/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -504,18 +506,20 @@ test('diagnostics accept CLI with AWS data management support', async () => {
         checked: true,
         supportsWriteSmoke: true,
         supportsDataManagement: true,
+        supportsFirebaseOperations: true,
+        supportsFirebaseFirestoreData: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.3.29',
+        toolingVersion: '0.3.32',
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(
       text,
-      /Configured CLI supports AWS DynamoDB actions and quiet capability discovery/,
+      /Configured CLI supports AWS DynamoDB, Firebase Firestore, and quiet capability discovery/,
     );
-    assert.match(text, /Version: 0.3.29/);
-    assert.doesNotMatch(text, /mini_program_tooling 0.3.29/);
+    assert.match(text, /Version: 0.3.32/);
+    assert.doesNotMatch(text, /mini_program_tooling 0.3.32/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

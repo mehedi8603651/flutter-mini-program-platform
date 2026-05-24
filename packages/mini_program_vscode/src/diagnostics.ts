@@ -57,6 +57,8 @@ export interface BuildDiagnosticsOptions {
     readonly checked: boolean;
     readonly supportsWriteSmoke: boolean;
     readonly supportsDataManagement?: boolean;
+    readonly supportsFirebaseOperations?: boolean;
+    readonly supportsFirebaseFirestoreData?: boolean;
     readonly supportsCapabilityDiscovery?: boolean;
     readonly toolingVersion?: string;
     readonly detail?: string;
@@ -794,32 +796,42 @@ function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticChec
 function buildCliCapabilityCheck(capability: {
   readonly supportsWriteSmoke: boolean;
   readonly supportsDataManagement?: boolean;
+  readonly supportsFirebaseOperations?: boolean;
+  readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
   readonly toolingVersion?: string;
   readonly detail?: string;
 }): DiagnosticCheck {
   const supportsDataManagement = capability.supportsDataManagement ?? false;
+  const supportsFirebaseOperations = capability.supportsFirebaseOperations ?? false;
+  const supportsFirebaseFirestoreData =
+    capability.supportsFirebaseFirestoreData ?? false;
   const supportsCapabilityDiscovery = capability.supportsCapabilityDiscovery ?? false;
   const supportsExpectedCli =
     capability.supportsWriteSmoke &&
     supportsDataManagement &&
+    supportsFirebaseOperations &&
+    supportsFirebaseFirestoreData &&
     supportsCapabilityDiscovery;
   const versionSuffix = capability.toolingVersion
     ? ` Version: ${capability.toolingVersion}.`
     : '';
   return check(
     'cli.publisher_backend_aws_029',
-    'CLI AWS publisher backend commands',
+    'CLI publisher backend commands',
     supportsExpectedCli ? 'ok' : 'warning',
     supportsExpectedCli
-      ? `Configured CLI supports AWS DynamoDB actions and quiet capability discovery.${versionSuffix}`
-      : capability.supportsWriteSmoke && supportsDataManagement
-        ? 'Configured CLI supports AWS DynamoDB actions but lacks 0.3.29 quiet capability discovery.'
-        : 'Configured CLI is missing AWS DynamoDB 0.3.29 data management support.',
+      ? `Configured CLI supports AWS DynamoDB, Firebase Firestore, and quiet capability discovery.${versionSuffix}`
+      : capability.supportsWriteSmoke &&
+          supportsDataManagement &&
+          supportsFirebaseOperations &&
+          supportsFirebaseFirestoreData
+        ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
+        : 'Configured CLI is missing mini_program_tooling 0.3.32 publisher backend support.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.29` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.32` or update miniProgram.cliPath.',
   );
 }
 

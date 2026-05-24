@@ -20,6 +20,7 @@ import {
   buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
   buildEnvConfigureAwsArgs,
+  buildEnvConfigureFirebaseArgs,
   buildEnvInitArgs,
   buildEnvStatusArgs,
   buildEnvUseArgs,
@@ -40,6 +41,12 @@ import {
   buildPublisherBackendAwsSeedArgs,
   buildPublisherBackendAwsSmokeArgs,
   buildPublisherBackendAwsStatusArgs,
+  buildPublisherBackendFirebaseDataStatusArgs,
+  buildPublisherBackendFirebaseDeployArgs,
+  buildPublisherBackendFirebaseOutputsArgs,
+  buildPublisherBackendFirebaseSeedArgs,
+  buildPublisherBackendFirebaseSmokeArgs,
+  buildPublisherBackendFirebaseStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
   buildPublisherBackendStopArgs,
@@ -390,6 +397,33 @@ test('builds environment and cloud command arguments', () => {
     ],
   );
   assert.deepEqual(
+    buildEnvConfigureFirebaseArgs({
+      environmentName: 'my-firebase-prod',
+      rootPath: 'D:/work/coupon_demo',
+      projectId: 'miniprogram-backend-test',
+      region: 'us-central1',
+      functionName: 'publisherBackend',
+      functionUrl: 'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/',
+    }),
+    [
+      'env',
+      'configure',
+      'my-firebase-prod',
+      '--provider',
+      'firebase',
+      '--project-id',
+      'miniprogram-backend-test',
+      '--root',
+      'D:/work/coupon_demo',
+      '--region',
+      'us-central1',
+      '--function-name',
+      'publisherBackend',
+      '--function-url',
+      'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/',
+    ],
+  );
+  assert.deepEqual(
     buildEnvUseArgs({
       environmentName: 'my-aws-prod',
       rootPath: 'D:/work/coupon_demo',
@@ -555,6 +589,23 @@ test('builds backend command arguments', () => {
       'aws-lambda',
       '--storage',
       'dynamodb',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendScaffoldArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      template: 'firebase-functions',
+      storageMode: 'firestore',
+    }),
+    [
+      'publisher-backend',
+      'scaffold',
+      '--template',
+      'firebase-functions',
+      '--storage',
+      'firestore',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],
@@ -786,6 +837,100 @@ test('builds backend command arguments', () => {
       '--confirm-data-loss',
       '--env',
       'my-aws-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseDeployArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'deploy',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseStatusArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'status',
+      '--json',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseOutputsArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      json: false,
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'outputs',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseSmokeArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'smoke',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseSeedArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'seed',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseDataStatusArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'data',
+      'status',
+      '--json',
+      '--env',
+      'my-firebase-prod',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],

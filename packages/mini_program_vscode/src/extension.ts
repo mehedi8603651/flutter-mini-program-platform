@@ -22,6 +22,7 @@ import {
   buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
   buildEnvConfigureAwsArgs,
+  buildEnvConfigureFirebaseArgs,
   buildEnvInitArgs,
   buildEnvStatusArgs,
   buildEnvUseArgs,
@@ -42,6 +43,12 @@ import {
   buildPublisherBackendAwsSeedArgs,
   buildPublisherBackendAwsSmokeArgs,
   buildPublisherBackendAwsStatusArgs,
+  buildPublisherBackendFirebaseDataStatusArgs,
+  buildPublisherBackendFirebaseDeployArgs,
+  buildPublisherBackendFirebaseOutputsArgs,
+  buildPublisherBackendFirebaseSeedArgs,
+  buildPublisherBackendFirebaseSmokeArgs,
+  buildPublisherBackendFirebaseStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
   buildPublisherBackendStopArgs,
@@ -191,6 +198,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.configureAwsEnvironment', () =>
       configureAwsEnvironment(output, refreshStatus),
     ),
+    vscode.commands.registerCommand('miniProgramTools.configureFirebaseEnvironment', () =>
+      configureFirebaseEnvironment(output, refreshStatus),
+    ),
     vscode.commands.registerCommand('miniProgramTools.useEnvironment', () =>
       useEnvironment(output, refreshStatus),
     ),
@@ -265,6 +275,24 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDestroy', () =>
       publisherBackendAwsDestroy(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDeploy', () =>
+      publisherBackendFirebaseDeploy(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseStatus', () =>
+      publisherBackendFirebaseStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseOutputs', () =>
+      publisherBackendFirebaseOutputs(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmoke', () =>
+      publisherBackendFirebaseSmoke(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSeed', () =>
+      publisherBackendFirebaseSeed(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataStatus', () =>
+      publisherBackendFirebaseDataStatus(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.copyAwsBackendHostCommand', () =>
       copyAwsBackendHostCommand(output),
@@ -883,6 +911,99 @@ async function configureAwsEnvironment(
   }
 }
 
+async function configureFirebaseEnvironment(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireWorkspacePath();
+  if (!workspacePath) {
+    return;
+  }
+  const environmentName = await vscode.window.showInputBox({
+    prompt: 'Firebase environment name',
+    placeHolder: 'my-firebase-prod',
+    value: readPublisherBackendFirebaseStateValue(workspacePath, 'environmentName') ?? 'my-firebase-prod',
+    ignoreFocusOut: true,
+    validateInput: validateEnvironmentName,
+  });
+  if (!environmentName) {
+    return;
+  }
+  const projectId = await vscode.window.showInputBox({
+    prompt: 'Firebase project ID',
+    placeHolder: 'miniprogram-backend-test',
+    value: readPublisherBackendFirebaseStateValue(workspacePath, 'projectId'),
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Firebase project ID is required.',
+  });
+  if (!projectId) {
+    return;
+  }
+  const region = await vscode.window.showInputBox({
+    prompt: 'Firebase Functions region',
+    placeHolder: 'us-central1',
+    value: readPublisherBackendFirebaseStateValue(workspacePath, 'region') ?? 'us-central1',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Region is required.',
+  });
+  if (!region) {
+    return;
+  }
+  const functionName = await vscode.window.showInputBox({
+    prompt: 'Firebase function name',
+    placeHolder: 'publisherBackend',
+    value: readPublisherBackendFirebaseStateValue(workspacePath, 'functionName') ?? 'publisherBackend',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Function name is required.',
+  });
+  if (!functionName) {
+    return;
+  }
+  const functionUrl = await vscode.window.showInputBox({
+    prompt: 'Optional Firebase function URL override',
+    placeHolder: 'Leave blank to use the standard Cloud Functions URL',
+    value: readPublisherBackendFirebaseStateValue(workspacePath, 'functionUrl'),
+    ignoreFocusOut: true,
+    validateInput: validateOptionalAbsoluteUrl,
+  });
+  if (functionUrl === undefined) {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'Configure Firebase Environment',
+    buildEnvConfigureFirebaseArgs({
+      environmentName: environmentName.trim(),
+      rootPath: workspacePath,
+      projectId: projectId.trim(),
+      region: region.trim(),
+      functionName: functionName.trim(),
+      functionUrl: functionUrl.trim() || undefined,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    const useNow = await vscode.window.showInformationMessage(
+      `Configured Firebase environment ${environmentName.trim()}.`,
+      'Use Environment',
+    );
+    if (useNow === 'Use Environment') {
+      await runWorkspaceCliCommand(
+        'Use Environment',
+        buildEnvUseArgs({
+          environmentName: environmentName.trim(),
+          rootPath: workspacePath,
+        }),
+        output,
+        refreshStatus,
+      );
+      return;
+    }
+    await refreshStatus(false);
+  }
+}
+
 async function useEnvironment(
   output: vscode.OutputChannel,
   refreshStatus: (remote: boolean) => Promise<void>,
@@ -1156,6 +1277,12 @@ async function publisherBackendSetup(
         storageMode: 'dynamodb' as const,
         description: 'Persistent DynamoDB storage for publisher backend data',
       },
+      {
+        label: 'Firebase Functions + Firestore',
+        value: 'firebase-functions' as const,
+        storageMode: 'firestore' as const,
+        description: 'Cloud Functions v2 starter with Firestore storage',
+      },
     ],
     { title: 'Publisher backend template', ignoreFocusOut: true },
   );
@@ -1173,7 +1300,8 @@ async function publisherBackendSetup(
     buildPublisherBackendScaffoldArgs({
       miniProgramRoot: workspacePath,
       template: templateChoice.value,
-      storageMode: templateChoice.value === 'aws-lambda'
+      storageMode: templateChoice.value === 'aws-lambda' ||
+        templateChoice.value === 'firebase-functions'
         ? templateChoice.storageMode
         : undefined,
       force,
@@ -1720,6 +1848,170 @@ async function publisherBackendAwsDestroy(output: vscode.OutputChannel): Promise
       miniProgramRoot: workspacePath,
       yes: true,
       confirmDataLoss: mode.confirmDataLoss,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseDeploy(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseCli032(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend Firebase Deploy',
+    buildPublisherBackendFirebaseDeployArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+  }
+}
+
+async function publisherBackendFirebaseStatus(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseCli032(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Status',
+    buildPublisherBackendFirebaseStatusArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: true,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseOutputs(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseCli032(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Outputs',
+    buildPublisherBackendFirebaseOutputsArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: false,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+}
+
+async function publisherBackendFirebaseSmoke(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseCli032(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Smoke',
+    buildPublisherBackendFirebaseSmokeArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+}
+
+async function publisherBackendFirebaseSeed(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseFirestoreCli032(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const ok = await runCliCommand(
+    'Publisher Backend Firebase Firestore Seed',
+    buildPublisherBackendFirebaseSeedArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+  if (ok) {
+    await refreshStatus(true);
+  }
+}
+
+async function publisherBackendFirebaseDataStatus(
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseFirestoreCli032(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await runCliCommand(
+    'Publisher Backend Firebase Firestore Data Status',
+    buildPublisherBackendFirebaseDataStatusArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: false,
     }),
     workspacePath,
     output,
@@ -3663,6 +3955,23 @@ async function promptPublisherBackendAwsEnvName(
   return envName === undefined ? undefined : envName.trim();
 }
 
+async function promptPublisherBackendFirebaseEnvName(
+  workspacePath: string,
+): Promise<string | undefined> {
+  const defaultEnv = readPublisherBackendFirebaseStateValue(
+    workspacePath,
+    'environmentName',
+  );
+  const envName = await vscode.window.showInputBox({
+    prompt: 'Firebase environment name',
+    value: defaultEnv,
+    placeHolder: 'my-firebase-prod',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
+  });
+  return envName === undefined ? undefined : envName.trim();
+}
+
 function readPublisherBackendAwsStateValue(
   workspacePath: string,
   key: string,
@@ -3686,10 +3995,36 @@ function readPublisherBackendAwsStateValue(
   }
 }
 
+function readPublisherBackendFirebaseStateValue(
+  workspacePath: string,
+  key: string,
+): string | undefined {
+  try {
+    const statePath = path.join(
+      workspacePath,
+      '.mini_program',
+      'publisher_backend.firebase.json',
+    );
+    if (!fs.existsSync(statePath)) {
+      return undefined;
+    }
+    const decoded = JSON.parse(fs.readFileSync(statePath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    return stringValue(decoded[key]);
+  } catch {
+    return undefined;
+  }
+}
+
 interface PublisherBackendAwsCliCapability {
   readonly checked: boolean;
   readonly supportsWriteSmoke: boolean;
   readonly supportsDataManagement: boolean;
+  readonly supportsFirebaseScaffold?: boolean;
+  readonly supportsFirebaseOperations?: boolean;
+  readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
   readonly toolingVersion?: string;
   readonly detail?: string;
@@ -3734,7 +4069,12 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
     if (capabilitiesResult.exitCode === 0) {
       const decoded = parseJsonObject(capabilitiesResult.stdout);
       const capability = capabilityFromCliCapabilitiesJson(decoded);
-      if (capability.supportsWriteSmoke || capability.supportsDataManagement) {
+      if (
+        capability.supportsWriteSmoke ||
+        capability.supportsDataManagement ||
+        capability.supportsFirebaseOperations ||
+        capability.supportsFirebaseFirestoreData
+      ) {
         return capability;
       }
     }
@@ -3832,6 +4172,23 @@ function capabilityFromCliCapabilitiesJson(
       hasCapability('publisher_backend.aws.dynamodb.data.import') &&
       hasCapability('publisher_backend.aws.dynamodb.data.redemptions') &&
       hasCapability('publisher_backend.aws.destroy.data_loss_guard'));
+  const supportsFirebaseScaffold =
+    hasFeature('publisherBackendFirebaseFunctionsScaffold') ||
+    hasCapability('publisher_backend.firebase_functions.scaffold');
+  const supportsFirebaseOperations =
+    (hasFeature('publisherBackendFirebaseDeploy') &&
+      hasFeature('publisherBackendFirebaseStatus') &&
+      hasFeature('publisherBackendFirebaseOutputs') &&
+      hasFeature('publisherBackendFirebaseSmoke')) ||
+    (hasCapability('publisher_backend.firebase.deploy') &&
+      hasCapability('publisher_backend.firebase.status') &&
+      hasCapability('publisher_backend.firebase.outputs') &&
+      hasCapability('publisher_backend.firebase.smoke'));
+  const supportsFirebaseFirestoreData =
+    (hasFeature('publisherBackendFirebaseFirestoreSeed') &&
+      hasFeature('publisherBackendFirebaseFirestoreDataStatus')) ||
+    (hasCapability('publisher_backend.firebase.firestore.seed') &&
+      hasCapability('publisher_backend.firebase.firestore.data.status'));
   const details = [
     supportsWriteSmoke
       ? undefined
@@ -3839,11 +4196,23 @@ function capabilityFromCliCapabilitiesJson(
     supportsDataManagement
       ? undefined
       : 'Configured CLI capabilities do not include AWS DynamoDB export/import/redemptions and guarded destroy.',
+    supportsFirebaseScaffold
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase Functions scaffold.',
+    supportsFirebaseOperations
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase deploy/status/outputs/smoke.',
+    supportsFirebaseFirestoreData
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase Firestore seed/data status.',
   ].filter((value): value is string => Boolean(value));
   return {
     checked: true,
     supportsWriteSmoke,
     supportsDataManagement,
+    supportsFirebaseScaffold,
+    supportsFirebaseOperations,
+    supportsFirebaseFirestoreData,
     supportsCapabilityDiscovery: true,
     toolingVersion: stringValue(decoded.toolingVersion),
     detail: details.join(' '),
@@ -3895,6 +4264,55 @@ async function ensurePublisherBackendAwsCli028(
   const message =
     'MiniProgram CLI 0.3.29 or newer is required for AWS DynamoDB data management actions. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.29`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseCli032(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (capability.supportsFirebaseOperations) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.32 or newer is required for Firebase publisher backend actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.32`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseFirestoreCli032(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseFirestoreData
+  ) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.32 or newer is required for Firebase Firestore seed/status actions. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.32`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);

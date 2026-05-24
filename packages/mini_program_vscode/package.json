@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -138,6 +138,11 @@
         "icon": "$(cloud)"
       },
       {
+        "command": "miniProgramTools.configureFirebaseEnvironment",
+        "title": "MiniProgram: Configure Firebase Environment",
+        "icon": "$(cloud)"
+      },
+      {
         "command": "miniProgramTools.useEnvironment",
         "title": "MiniProgram: Use Environment",
         "icon": "$(checklist)"
@@ -261,6 +266,36 @@
         "command": "miniProgramTools.publisherBackendAwsDestroy",
         "title": "MiniProgram: Destroy AWS Publisher Backend Stack",
         "icon": "$(trash)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseDeploy",
+        "title": "MiniProgram: Deploy Publisher Backend to Firebase",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseStatus",
+        "title": "MiniProgram: Publisher Backend Firebase Status",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseOutputs",
+        "title": "MiniProgram: Publisher Backend Firebase Outputs",
+        "icon": "$(symbol-property)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseSmoke",
+        "title": "MiniProgram: Smoke Test Firebase Publisher Backend",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseSeed",
+        "title": "MiniProgram: Seed Firebase Publisher Firestore",
+        "icon": "$(database)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendFirebaseDataStatus",
+        "title": "MiniProgram: Firebase Publisher Firestore Data Status",
+        "icon": "$(graph)"
       },
       {
         "command": "miniProgramTools.copyAwsBackendHostCommand",
@@ -524,6 +559,36 @@
           "command": "miniProgramTools.publisherBackendAwsDataRedemptions",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.34"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseDeploy",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.35"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.36"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseOutputs",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.37"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseSmoke",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.38"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseSeed",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.39"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendFirebaseDataStatus",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.40"
         },
         {
           "command": "miniProgramTools.copyPublisherBackendUrls",

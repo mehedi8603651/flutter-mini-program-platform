@@ -58,6 +58,7 @@ export function buildStatusTreeSections(
     const backendUsage = asRecord(miniProgram.backendUsage);
     const publisherBackendStarter = asRecord(miniProgram.publisherBackendStarter);
     const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
+    const firebasePublisherBackend = asRecord(publisherBackendStarter.firebase);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
       ? miniProgram.partnerPackages.length
       : 0;
@@ -100,6 +101,18 @@ export function buildStatusTreeSections(
         row('AWS region', asString(awsPublisherBackend.region)),
         row('AWS health', asString(awsPublisherBackend.healthUrl)),
         row('AWS function', asString(awsPublisherBackend.functionName)),
+        row(
+          'Firebase backend',
+          asBoolean(firebasePublisherBackend.detected)
+            ? asString(firebasePublisherBackend.backendBaseUrl, 'scaffolded')
+            : 'none',
+        ),
+        row('Firebase env', asString(firebasePublisherBackend.environmentName)),
+        row('Firebase project', asString(firebasePublisherBackend.projectId)),
+        row('Firebase region', asString(firebasePublisherBackend.region)),
+        row('Firebase health', asString(firebasePublisherBackend.healthUrl)),
+        row('Firebase function', asString(firebasePublisherBackend.functionName)),
+        row('Firebase storage', asString(firebasePublisherBackend.storageMode)),
       ]),
     });
   }

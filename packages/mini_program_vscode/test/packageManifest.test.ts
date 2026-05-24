@@ -5,7 +5,7 @@ import test from 'node:test';
 
 const packageJsonPath = path.resolve(__dirname, '..', '..', 'package.json');
 
-test('package manifest exposes AWS DynamoDB publisher backend commands', () => {
+test('package manifest exposes cloud publisher backend commands', () => {
   const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
     readonly version: string;
     readonly contributes?: {
@@ -24,7 +24,7 @@ test('package manifest exposes AWS DynamoDB publisher backend commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.1.23');
+  assert.equal(manifest.version, '0.1.24');
   for (const commandId of [
     'miniProgramTools.publisherBackendAwsOutputs',
     'miniProgramTools.publisherBackendAwsSmoke',
@@ -35,8 +35,17 @@ test('package manifest exposes AWS DynamoDB publisher backend commands', () => {
     'miniProgramTools.publisherBackendAwsDataImportDryRun',
     'miniProgramTools.publisherBackendAwsDataRedemptions',
     'miniProgramTools.publisherBackendAwsDestroy',
+    'miniProgramTools.configureFirebaseEnvironment',
+    'miniProgramTools.publisherBackendFirebaseDeploy',
+    'miniProgramTools.publisherBackendFirebaseStatus',
+    'miniProgramTools.publisherBackendFirebaseOutputs',
+    'miniProgramTools.publisherBackendFirebaseSmoke',
+    'miniProgramTools.publisherBackendFirebaseSeed',
+    'miniProgramTools.publisherBackendFirebaseDataStatus',
   ]) {
     assert.equal(commandIds.has(commandId), true, `${commandId} is contributed`);
-    assert.equal(titleMenuIds.has(commandId), true, `${commandId} is in sidebar`);
+    if (commandId !== 'miniProgramTools.configureFirebaseEnvironment') {
+      assert.equal(titleMenuIds.has(commandId), true, `${commandId} is in sidebar`);
+    }
   }
 });

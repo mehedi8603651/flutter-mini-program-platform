@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.24
+
+- Add Firebase Functions + Firestore publisher backend workflows backed by
+  `mini_program_tooling` 0.3.32.
+- Let `MiniProgram: Setup Publisher Backend` scaffold Firebase Functions with
+  Firestore storage.
+- Add Firebase environment configuration, deploy, status, outputs, smoke, seed,
+  and Firestore data status commands.
+- Warn when the configured CLI is older than the 0.3.32 Firebase workflow and
+  show Firebase publisher backend rows in the sidebar when status reports them.
+
 ## 0.1.23
 
 - Use `miniprogram capabilities --json` from `mini_program_tooling` 0.3.29

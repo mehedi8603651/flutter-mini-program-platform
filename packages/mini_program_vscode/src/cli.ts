@@ -109,6 +109,15 @@ export interface EnvConfigureAwsArgsOptions {
   readonly requireAccessKeys?: boolean;
 }
 
+export interface EnvConfigureFirebaseArgsOptions {
+  readonly environmentName: string;
+  readonly rootPath?: string;
+  readonly projectId: string;
+  readonly region?: string;
+  readonly functionName?: string;
+  readonly functionUrl?: string;
+}
+
 export interface EnvUseArgsOptions {
   readonly environmentName: string;
   readonly rootPath?: string;
@@ -163,8 +172,8 @@ export interface BackendStatusArgsOptions {
 
 export interface PublisherBackendScaffoldArgsOptions {
   readonly miniProgramRoot?: string;
-  readonly template?: 'mock' | 'aws-lambda';
-  readonly storageMode?: 'bundled' | 'dynamodb';
+  readonly template?: 'mock' | 'aws-lambda' | 'firebase-functions';
+  readonly storageMode?: 'bundled' | 'dynamodb' | 'firestore';
   readonly force?: boolean;
 }
 
@@ -254,6 +263,41 @@ export interface PublisherBackendAwsDestroyArgsOptions
   extends PublisherBackendAwsBaseArgsOptions {
   readonly yes?: boolean;
   readonly confirmDataLoss?: boolean;
+}
+
+export interface PublisherBackendFirebaseBaseArgsOptions {
+  readonly envName: string;
+  readonly miniProgramRoot?: string;
+}
+
+export interface PublisherBackendFirebaseDeployArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseStatusArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseOutputsArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseSmokeArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseSeedArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseDataStatusArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
 }
 
 export interface AccessKeyCreateArgsOptions {
@@ -505,6 +549,31 @@ export function buildEnvConfigureAwsArgs(
   }
   if (options.requireAccessKeys) {
     args.push('--require-access-keys');
+  }
+  return args;
+}
+
+export function buildEnvConfigureFirebaseArgs(
+  options: EnvConfigureFirebaseArgsOptions,
+): string[] {
+  const args = [
+    'env',
+    'configure',
+    options.environmentName,
+    '--provider',
+    'firebase',
+    '--project-id',
+    options.projectId,
+  ];
+  withRootPath(args, options.rootPath);
+  if (options.region?.trim()) {
+    args.push('--region', options.region.trim());
+  }
+  if (options.functionName?.trim()) {
+    args.push('--function-name', options.functionName.trim());
+  }
+  if (options.functionUrl?.trim()) {
+    args.push('--function-url', options.functionUrl.trim());
   }
   return args;
 }
@@ -783,6 +852,66 @@ export function buildPublisherBackendAwsDestroyArgs(
   return withPublisherBackendAwsOptions(args, options);
 }
 
+export function buildPublisherBackendFirebaseDeployArgs(
+  options: PublisherBackendFirebaseDeployArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'deploy'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseStatusArgs(
+  options: PublisherBackendFirebaseStatusArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseOutputsArgs(
+  options: PublisherBackendFirebaseOutputsArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'outputs'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseSmokeArgs(
+  options: PublisherBackendFirebaseSmokeArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'smoke'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseSeedArgs(
+  options: PublisherBackendFirebaseSeedArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'seed'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseDataStatusArgs(
+  options: PublisherBackendFirebaseDataStatusArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'data', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
 export function buildAccessKeyCreateArgs(
   options: AccessKeyCreateArgsOptions,
 ): string[] {
@@ -996,6 +1125,14 @@ function withPublisherBackendAwsOptions(
     args.push('--sam-s3-bucket', options.samS3Bucket.trim());
   }
   return args;
+}
+
+function withPublisherBackendFirebaseOptions(
+  args: string[],
+  options: PublisherBackendFirebaseBaseArgsOptions,
+): string[] {
+  args.push('--env', options.envName.trim());
+  return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
 function redactSecretArgs(args: readonly string[]): string[] {

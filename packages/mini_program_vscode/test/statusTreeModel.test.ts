@@ -59,6 +59,16 @@ test('renders mini-program and host status rows', () => {
           healthUrl: 'https://api.example.com/prod/health',
           functionName: 'publisher-function',
         },
+        firebase: {
+          detected: true,
+          environmentName: 'my-firebase-prod',
+          projectId: 'miniprogram-backend-test',
+          region: 'us-central1',
+          backendBaseUrl: 'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/',
+          healthUrl: 'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/health',
+          functionName: 'publisherBackend',
+          storageMode: 'firestore',
+        },
       },
     },
     environment: {
@@ -81,6 +91,12 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /AWS region: ap-south-1/);
   assert.match(text, /AWS health: https:\/\/api.example.com\/prod\/health/);
   assert.match(text, /AWS function: publisher-function/);
+  assert.match(text, /Firebase env: my-firebase-prod/);
+  assert.match(text, /Firebase project: miniprogram-backend-test/);
+  assert.match(text, /Firebase region: us-central1/);
+  assert.match(text, /Firebase health: https:\/\/us-central1-miniprogram-backend-test\.cloudfunctions\.net\/publisherBackend\/health/);
+  assert.match(text, /Firebase function: publisherBackend/);
+  assert.match(text, /Firebase storage: firestore/);
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);

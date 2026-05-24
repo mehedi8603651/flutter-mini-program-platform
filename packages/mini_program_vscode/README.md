@@ -8,10 +8,11 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.29 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.32 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
-starter commands, AWS Lambda/DynamoDB publisher backend workflows, and
+starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
+Functions/Firestore publisher backend workflows, and
 quiet CLI capability detection through `miniprogram capabilities --json`.
 
 Install or upgrade the CLI first:
@@ -40,7 +41,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.23.vsix
+code --install-extension mini-program-tools-0.1.24.vsix
 ```
 
 ## Features
@@ -62,6 +63,7 @@ code --install-extension mini-program-tools-0.1.23.vsix
   - `MiniProgram: Run Host App`
   - `MiniProgram: Env Init`
   - `MiniProgram: Configure AWS Environment`
+  - `MiniProgram: Configure Firebase Environment`
   - `MiniProgram: Use Environment`
   - `MiniProgram: Environment Status`
   - `MiniProgram: Cloud Deploy`
@@ -88,6 +90,12 @@ code --install-extension mini-program-tools-0.1.23.vsix
   - `MiniProgram: Publisher Backend AWS Logs`
   - `MiniProgram: Destroy AWS Publisher Backend Stack`
   - `MiniProgram: Copy AWS Backend Host Command`
+  - `MiniProgram: Deploy Publisher Backend to Firebase`
+  - `MiniProgram: Publisher Backend Firebase Status`
+  - `MiniProgram: Publisher Backend Firebase Outputs`
+  - `MiniProgram: Smoke Test Firebase Publisher Backend`
+  - `MiniProgram: Seed Firebase Publisher Firestore`
+  - `MiniProgram: Firebase Publisher Firestore Data Status`
   - `MiniProgram: Copy Publisher Backend URLs`
   - `MiniProgram: Create Access Key`
   - `MiniProgram: List Access Keys`
@@ -174,8 +182,8 @@ From VS Code:
 5. Run `MiniProgram: Copy Publisher Backend URLs`.
 
 For an existing mini-program, run `MiniProgram: Setup Publisher Backend` and
-choose **Mock local**, **AWS Lambda bundled JSON**, or
-**AWS Lambda + DynamoDB**.
+choose **Mock local**, **AWS Lambda bundled JSON**, **AWS Lambda + DynamoDB**,
+or **Firebase Functions + Firestore**.
 
 The generated mock server is local-only and lives under:
 
@@ -241,14 +249,14 @@ For DynamoDB scaffolds, use:
   The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
   records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.29, the extension
-warns before running newer AWS DynamoDB actions or when quiet capability
-detection is unavailable. Version 0.1.23 calls `miniprogram capabilities --json`
-once per workspace and only falls back to older `--help` probes for older CLI
-installs. Upgrade with:
+If the configured CLI is older than `mini_program_tooling` 0.3.32, the extension
+warns before running newer publisher backend actions or when quiet capability
+detection is unavailable. Version 0.1.24 calls `miniprogram capabilities --json`
+once per workspace and only falls back to older AWS `--help` probes for older
+CLI installs. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.29
+dart pub global activate mini_program_tooling 0.3.32
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed
@@ -256,6 +264,36 @@ dart pub global activate mini_program_tooling 0.3.29
 `--backend-base-url`. The host app does not need AWS credentials or AWS SDKs.
 AWS/Firebase/database secrets stay in Lambda/server configuration, never in
 mini-program JSON, host source, APK, IPA, or web JavaScript.
+
+### Firebase Functions publisher backend
+
+Choose **Firebase Functions + Firestore** in `MiniProgram: Setup Publisher
+Backend` to scaffold `backend/firebase_functions/`. The generated Cloud
+Functions v2 backend uses Firestore on the publisher side and keeps Firebase
+SDKs out of the Flutter host app, MiniProgram SDK, mini-program JSON, APK, IPA,
+and web JavaScript.
+
+Configure the project with `MiniProgram: Configure Firebase Environment`, then
+deploy with `MiniProgram: Deploy Publisher Backend to Firebase`. The extension
+prompts for the Firebase project ID, region, function name, and optional
+function URL override.
+
+After deploy, use:
+
+- `MiniProgram: Publisher Backend Firebase Outputs` to print the backend and
+  health URLs.
+- `MiniProgram: Publisher Backend Firebase Status` to inspect deployment
+  metadata.
+- `MiniProgram: Seed Firebase Publisher Firestore` to upsert starter home,
+  session, and coupon documents.
+- `MiniProgram: Firebase Publisher Firestore Data Status` to count Firestore
+  app records and redemptions.
+- `MiniProgram: Smoke Test Firebase Publisher Backend` for the read-only route
+  check.
+
+Firebase actions require `mini_program_tooling` 0.3.32 or newer. The extension
+uses `miniprogram capabilities --json` once per workspace to detect support and
+warns with an upgrade command if the configured CLI is too old.
 
 ## Partner handoff workflow
 
