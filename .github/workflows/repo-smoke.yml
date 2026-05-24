@@ -81,7 +81,7 @@ jobs:
       - name: Super host analyze
         working-directory: .\hosts\super_app_host
         run: |
-          flutter analyze
+          dart analyze
 
       - name: Super host test
         working-directory: .\hosts\super_app_host
@@ -96,7 +96,7 @@ jobs:
       - name: Partner host analyze
         working-directory: .\hosts\partner_app_host
         run: |
-          flutter analyze
+          dart analyze
 
       - name: Partner host test
         working-directory: .\hosts\partner_app_host
