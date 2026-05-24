@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.27
+
+- Add `MiniProgram: Wire Firebase Publisher Backend Into Host App`, backed by
+  `mini_program_tooling` 0.3.36.
+- Guide Firebase host wiring through environment, host app root, delivery URL,
+  public/protected access mode, and exact generated command preview/run.
+- Show Firebase host endpoint readiness diagnostics in the sidebar after the
+  host-command check.
+- Gate Firebase host integration on the CLI capability map and update
+  diagnostics to recommend tooling 0.3.36 for the full Firebase workflow.
+
 ## 0.1.26
 
 - Add `MiniProgram: Smoke Test Firebase Publisher Backend With Write`, backed by

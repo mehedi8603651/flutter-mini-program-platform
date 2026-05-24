@@ -123,6 +123,54 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Firestore redemptions: 2/);
 });
 
+test('renders Firebase host endpoint readiness diagnostics', () => {
+  const report: WorkflowStatusReport = {
+    schemaVersion: 1,
+    command: 'workflow status',
+    workspace: { type: 'mini_program', path: 'D:/coupon' },
+    ready: true,
+    severity: 'ok',
+    miniProgram: {
+      detected: true,
+      appId: 'coupon_demo',
+      version: '1.0.0',
+      build: { exists: true, screenCount: 1 },
+      validation: { status: 'ok' },
+      partnerPackages: [],
+      backendUsage: { usesPublisherBackend: true },
+      publisherBackendStarter: { detected: true, template: 'firebase-functions' },
+    },
+    environment: { configured: true, provider: 'firebase' },
+    backend: { configured: false },
+    remote: { checked: false },
+    nextActions: [],
+  };
+
+  const text = flattenStatusSections(
+    buildStatusTreeSections(report, {
+      firebaseHostEndpoint: {
+        ready: false,
+        miniProgramId: 'coupon_demo',
+        hostProjectRootPath: 'D:/host',
+        hostEndpointMapPath: 'D:/host/lib/mini_program/mini_program_endpoints.dart',
+        deliveryApiBaseUrl: 'https://cdn.example.com/coupon_demo',
+        backendBaseUrl: 'https://firebase.example.com/publisherBackend',
+        accessMode: 'public',
+        hostEndpointBackendMode: 'remote',
+        hostEndpointIssues: ['Delivery URL differs'],
+      },
+    }),
+  );
+
+  assert.match(text, /Firebase host endpoint/);
+  assert.match(text, /Ready: no/);
+  assert.match(text, /App ID: coupon_demo/);
+  assert.match(text, /Host app: D:\/host/);
+  assert.match(text, /Delivery URL: https:\/\/cdn\.example\.com\/coupon_demo/);
+  assert.match(text, /Backend mode: remote/);
+  assert.match(text, /Issues: Delivery URL differs/);
+});
+
 test('does not render raw access-key secrets', () => {
   const secretA = 'mpk_live_secret_a_1234567890';
   const secretB = 'mpk_live_secret_b_1234567890';

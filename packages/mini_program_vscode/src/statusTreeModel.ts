@@ -19,10 +19,29 @@ export interface StatusTreeSection {
   readonly rows: StatusTreeRow[];
 }
 
+export interface FirebaseHostEndpointStatus {
+  readonly ready?: boolean;
+  readonly miniProgramId?: string;
+  readonly hostProjectRootPath?: string;
+  readonly hostEndpointMapPath?: string;
+  readonly deliveryApiBaseUrl?: string;
+  readonly backendBaseUrl?: string;
+  readonly accessMode?: string;
+  readonly hostEndpointBackendMode?: string;
+  readonly hostEndpointIssues?: readonly string[];
+}
+
 export function buildStatusTreeSections(
   report: WorkflowStatusReport | undefined,
+  options: {
+    readonly firebaseHostEndpoint?: FirebaseHostEndpointStatus;
+  } = {},
 ): StatusTreeSection[] {
+  const firebaseHostEndpoint = options.firebaseHostEndpoint;
   if (!report) {
+    if (firebaseHostEndpoint) {
+      return [firebaseHostEndpointSection(firebaseHostEndpoint)];
+    }
     return [
       {
         label: 'Workspace',
@@ -211,6 +230,10 @@ export function buildStatusTreeSections(
     ]),
   });
 
+  if (firebaseHostEndpoint) {
+    sections.push(firebaseHostEndpointSection(firebaseHostEndpoint));
+  }
+
   sections.push({
     label: 'Next actions',
     icon: 'list-ordered',
@@ -255,6 +278,26 @@ function optionalYesNo(value: unknown): string {
 
 function optionalNumber(value: unknown): string {
   return typeof value === 'number' ? String(value) : '';
+}
+
+function firebaseHostEndpointSection(
+  status: FirebaseHostEndpointStatus,
+): StatusTreeSection {
+  return {
+    label: 'Firebase host endpoint',
+    icon: status.ready ? 'pass' : 'warning',
+    rows: compactRows([
+      row('Ready', optionalYesNo(status.ready)),
+      row('App ID', status.miniProgramId ?? ''),
+      row('Host app', status.hostProjectRootPath ?? ''),
+      row('Endpoint map', status.hostEndpointMapPath ?? ''),
+      row('Delivery URL', status.deliveryApiBaseUrl ?? ''),
+      row('Backend URL', status.backendBaseUrl ?? ''),
+      row('Access mode', status.accessMode ?? ''),
+      row('Backend mode', status.hostEndpointBackendMode ?? ''),
+      row('Issues', (status.hostEndpointIssues ?? []).join('; ')),
+    ]),
+  };
 }
 
 function iconForSeverity(severity: string): string {

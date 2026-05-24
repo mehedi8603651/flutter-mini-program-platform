@@ -49,6 +49,7 @@ import {
   buildPublisherBackendFirebaseDataStatusArgs,
   buildPublisherBackendFirebaseDeployArgs,
   buildPublisherBackendFirebaseDestroyArgs,
+  buildPublisherBackendFirebaseHostCommandArgs,
   buildPublisherBackendFirebaseOutputsArgs,
   buildPublisherBackendFirebaseSeedArgs,
   buildPublisherBackendFirebaseSmokeArgs,
@@ -288,6 +289,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseOutputs', () =>
       publisherBackendFirebaseOutputs(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHostCommand', () =>
+      publisherBackendFirebaseHostCommand(output, statusProvider),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmoke', () =>
       publisherBackendFirebaseSmoke(output),
@@ -1955,6 +1959,178 @@ async function publisherBackendFirebaseOutputs(
     output,
     { allowNonZeroExit: true },
   );
+}
+
+async function publisherBackendFirebaseHostCommand(
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseHostCommandCli036(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const hostProjectRoot = await chooseHostProjectRootForFirebase();
+  if (!hostProjectRoot) {
+    return;
+  }
+  const manifest = await readMiniProgramManifestInfo(workspacePath);
+  const appId = manifest?.id ?? path.basename(workspacePath);
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program display title for the host registry',
+    value: manifest?.title ?? hostTitleFromAppId(appId),
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
+  });
+  if (!title) {
+    return;
+  }
+  const apiBaseUrl = await vscode.window.showInputBox({
+    prompt: 'Mini-program delivery API base URL',
+    placeHolder: 'https://cdn.jsdelivr.net/gh/owner/miniprogram-public@main/coupon_demo',
+    ignoreFocusOut: true,
+    validateInput: validateAbsoluteUrl,
+  });
+  if (!apiBaseUrl) {
+    return;
+  }
+  const accessMode = await chooseEndpointAccessMode();
+  if (!accessMode) {
+    return;
+  }
+  let accessKey: string | undefined;
+  if (accessMode === 'protected') {
+    const value = await vscode.window.showInputBox({
+      prompt: 'MiniProgram access key for protected delivery',
+      password: true,
+      placeHolder: 'mpk_live_...',
+      ignoreFocusOut: true,
+      validateInput: (input) =>
+        input.trim() ? undefined : 'Access key is required.',
+    });
+    if (!value) {
+      return;
+    }
+    accessKey = value.trim();
+  }
+
+  const hostCommandArgs = buildPublisherBackendFirebaseHostCommandArgs({
+    envName,
+    miniProgramRoot: workspacePath,
+    apiBaseUrl: apiBaseUrl.trim(),
+    title: title.trim(),
+    accessKey,
+    public: accessMode === 'public',
+    hostProjectRoot,
+    json: true,
+  });
+  const hostCommandResult = await runFirebaseHostCommandJson(
+    'Publisher Backend Firebase Host Command',
+    hostCommandArgs,
+    workspacePath,
+    output,
+  );
+  if (!hostCommandResult) {
+    return;
+  }
+  statusProvider.setFirebaseHostEndpointStatus(
+    firebaseHostEndpointStatusFromHostCommand(hostCommandResult),
+  );
+
+  const hostEndpointArgs = buildHostEndpointAddArgs({
+    appId: stringValue(hostCommandResult.miniProgramId) ?? appId,
+    title: stringValue(hostCommandResult.title) ?? title.trim(),
+    apiBaseUrl: stringValue(hostCommandResult.deliveryApiBaseUrl) ?? apiBaseUrl.trim(),
+    backendBaseUrl: stringValue(hostCommandResult.backendBaseUrl),
+    accessKey,
+    public: accessMode === 'public',
+    projectRoot: hostProjectRoot,
+  });
+  const redactedEndpointCommand = formatRedactedCommandLine(
+    configuredCliPath(),
+    hostEndpointArgs,
+  );
+  output.appendLine('');
+  output.appendLine('Generated Firebase host endpoint command:');
+  output.appendLine(redactedEndpointCommand);
+  output.appendLine(
+    `Host endpoint ready: ${hostCommandResult.hostEndpointReady === true ? 'yes' : 'no'}`,
+  );
+  const issues = stringArrayValue(hostCommandResult.hostEndpointIssues);
+  if (issues.length > 0) {
+    output.appendLine(`Host endpoint issues: ${issues.join('; ')}`);
+  }
+
+  const action = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Run generated command',
+        description: 'Update the selected host app endpoint map now.',
+        value: 'run' as const,
+      },
+      {
+        label: 'Copy command',
+        description: 'Copy the exact host endpoint command to the clipboard.',
+        value: 'copy' as const,
+      },
+      {
+        label: 'Preview only',
+        description: 'Leave files unchanged.',
+        value: 'preview' as const,
+      },
+    ],
+    {
+      title: 'Firebase host endpoint wiring',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!action) {
+    return;
+  }
+  if (action.value === 'copy') {
+    await vscode.env.clipboard.writeText(formatCommandLine(configuredCliPath(), hostEndpointArgs));
+    vscode.window.showInformationMessage('Firebase host endpoint command copied.');
+    return;
+  }
+  if (action.value === 'preview') {
+    return;
+  }
+
+  const ok = await runCliCommand(
+    'Wire Firebase Publisher Backend Into Host App',
+    hostEndpointArgs,
+    workspacePath,
+    output,
+  );
+  if (!ok) {
+    return;
+  }
+
+  const verificationResult = await runFirebaseHostCommandJson(
+    'Verify Firebase Host Endpoint',
+    hostCommandArgs,
+    workspacePath,
+    output,
+  );
+  if (!verificationResult) {
+    return;
+  }
+  statusProvider.setFirebaseHostEndpointStatus(
+    firebaseHostEndpointStatusFromHostCommand(verificationResult),
+  );
+  if (verificationResult.hostEndpointReady === true) {
+    vscode.window.showInformationMessage('Firebase host endpoint is ready.');
+  } else {
+    vscode.window.showWarningMessage(
+      'Firebase host endpoint was updated, but verification still reports issues. Check the MiniProgram sidebar.',
+    );
+  }
 }
 
 async function publisherBackendFirebaseSmoke(
@@ -3852,6 +4028,79 @@ async function runCliCapture(
   }
 }
 
+async function runFirebaseHostCommandJson(
+  label: string,
+  args: readonly string[],
+  cwd: string,
+  output: vscode.OutputChannel,
+): Promise<Record<string, unknown> | undefined> {
+  const cliPath = configuredCliPath();
+  output.show(true);
+  output.appendLine('');
+  output.appendLine(`> ${formatRedactedCommandLine(cliPath, args)}`);
+  try {
+    const result = await runCli(cliPath, args, {
+      cwd,
+      timeoutMs: 120000,
+    });
+    if (result.stderr.trim()) {
+      output.append(redactSecrets(result.stderr));
+    }
+    if (result.exitCode !== 0) {
+      const detail = redactSecrets((result.stderr || result.stdout).trim());
+      vscode.window.showErrorMessage(`${label} failed with exit code ${result.exitCode}.`);
+      if (detail) {
+        output.appendLine(detail);
+      }
+      return undefined;
+    }
+    const decoded = parseJsonObject(result.stdout);
+    output.appendLine(`${label} completed.`);
+    output.appendLine(
+      `Host endpoint ready: ${decoded.hostEndpointReady === true ? 'yes' : 'no'}`,
+    );
+    const issues = stringArrayValue(decoded.hostEndpointIssues);
+    if (issues.length > 0) {
+      output.appendLine(`Host endpoint issues: ${issues.join('; ')}`);
+    }
+    return decoded;
+  } catch (error) {
+    const message = errorMessage(error);
+    output.appendLine(message);
+    vscode.window.showErrorMessage(message);
+    return undefined;
+  }
+}
+
+function firebaseHostEndpointStatusFromHostCommand(
+  decoded: Record<string, unknown>,
+): {
+  readonly ready?: boolean;
+  readonly miniProgramId?: string;
+  readonly hostProjectRootPath?: string;
+  readonly hostEndpointMapPath?: string;
+  readonly deliveryApiBaseUrl?: string;
+  readonly backendBaseUrl?: string;
+  readonly accessMode?: string;
+  readonly hostEndpointBackendMode?: string;
+  readonly hostEndpointIssues?: readonly string[];
+} {
+  return {
+    ready:
+      typeof decoded.hostEndpointReady === 'boolean'
+        ? decoded.hostEndpointReady
+        : undefined,
+    miniProgramId: stringValue(decoded.miniProgramId),
+    hostProjectRootPath: stringValue(decoded.hostProjectRootPath),
+    hostEndpointMapPath: stringValue(decoded.hostEndpointMapPath),
+    deliveryApiBaseUrl: stringValue(decoded.deliveryApiBaseUrl),
+    backendBaseUrl: stringValue(decoded.backendBaseUrl),
+    accessMode: stringValue(decoded.accessMode),
+    hostEndpointBackendMode: stringValue(decoded.hostEndpointBackendMode),
+    hostEndpointIssues: stringArrayValue(decoded.hostEndpointIssues),
+  };
+}
+
 function configuredCliPath(): string {
   return resolveCliPath(
     vscode.workspace.getConfiguration('miniProgram').get<string>('cliPath'),
@@ -3896,6 +4145,29 @@ async function requireHostProjectRoot(): Promise<string | undefined> {
     return undefined;
   }
   return workspacePath;
+}
+
+async function chooseHostProjectRootForFirebase(): Promise<string | undefined> {
+  const workspacePath = getWorkspacePath();
+  const folders = await vscode.window.showOpenDialog({
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    defaultUri: workspacePath ? vscode.Uri.file(path.dirname(workspacePath)) : undefined,
+    openLabel: 'Use host app root',
+    title: 'Choose Flutter host app root',
+  });
+  const projectRoot = folders?.[0]?.fsPath;
+  if (!projectRoot) {
+    return undefined;
+  }
+  if (!fs.existsSync(path.join(projectRoot, 'pubspec.yaml'))) {
+    vscode.window.showWarningMessage(
+      'Choose the Flutter host app root folder that contains pubspec.yaml.',
+    );
+    return undefined;
+  }
+  return projectRoot;
 }
 
 async function requireMiniProgramRoot(): Promise<string | undefined> {
@@ -4329,6 +4601,7 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsDataManagement: boolean;
   readonly supportsFirebaseScaffold?: boolean;
   readonly supportsFirebaseOperations?: boolean;
+  readonly supportsFirebaseHostCommand?: boolean;
   readonly supportsFirebaseWriteSmoke?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsFirebaseDataManagement?: boolean;
@@ -4380,6 +4653,7 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsWriteSmoke ||
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
+        capability.supportsFirebaseHostCommand ||
         capability.supportsFirebaseWriteSmoke ||
         capability.supportsFirebaseFirestoreData ||
         capability.supportsFirebaseDataManagement
@@ -4496,6 +4770,9 @@ function capabilityFromCliCapabilitiesJson(
   const supportsFirebaseWriteSmoke =
     hasFeature('publisherBackendFirebaseWriteSmoke') ||
     hasCapability('publisher_backend.firebase.smoke.write');
+  const supportsFirebaseHostCommand =
+    hasFeature('publisherBackendFirebaseHostCommand') ||
+    hasCapability('publisher_backend.firebase.host_command');
   const supportsFirebaseFirestoreData =
     (hasFeature('publisherBackendFirebaseFirestoreSeed') &&
       hasFeature('publisherBackendFirebaseFirestoreDataStatus')) ||
@@ -4523,6 +4800,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseOperations
       ? undefined
       : 'Configured CLI capabilities do not include Firebase deploy/status/outputs/smoke.',
+    supportsFirebaseHostCommand
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase host-command.',
     supportsFirebaseWriteSmoke
       ? undefined
       : 'Configured CLI capabilities do not include Firebase write smoke.',
@@ -4539,6 +4819,7 @@ function capabilityFromCliCapabilitiesJson(
     supportsDataManagement,
     supportsFirebaseScaffold,
     supportsFirebaseOperations,
+    supportsFirebaseHostCommand,
     supportsFirebaseWriteSmoke,
     supportsFirebaseFirestoreData,
     supportsFirebaseDataManagement,
@@ -4695,6 +4976,32 @@ async function ensurePublisherBackendFirebaseWriteSmokeCli035(
   const message =
     'MiniProgram CLI 0.3.35 or newer is required for Firebase write smoke. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.35`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseHostCommandCli036(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseHostCommand
+  ) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.36 or newer is required for Firebase host integration. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.36`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -4903,19 +5210,28 @@ async function findFirebaseDataExportFiles(workspacePath: string): Promise<strin
   }
 }
 
-async function readMiniProgramManifestId(
+async function readMiniProgramManifestInfo(
   workspacePath: string,
-): Promise<string | undefined> {
+): Promise<{ readonly id?: string; readonly title?: string } | undefined> {
   try {
     const manifestPath = path.join(workspacePath, 'manifest.json');
     const decoded = JSON.parse(await fs.promises.readFile(manifestPath, 'utf8')) as Record<
       string,
       unknown
     >;
-    return stringValue(decoded.id);
+    return {
+      id: stringValue(decoded.id),
+      title: stringValue(decoded.title),
+    };
   } catch {
     return undefined;
   }
+}
+
+async function readMiniProgramManifestId(
+  workspacePath: string,
+): Promise<string | undefined> {
+  return (await readMiniProgramManifestInfo(workspacePath))?.id;
 }
 
 function compactTimestamp(value: Date): string {

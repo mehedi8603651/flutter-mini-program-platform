@@ -4230,17 +4230,18 @@ class PublisherBackendStarter {
     Uri uri, {
     Object? body,
   }) async {
-    final token = await _firebaseAccessTokenProvider();
-    if (token == null || token.trim().isEmpty) {
-      throw const PublisherBackendException(
-        'Firebase CLI access token was not found. Run `firebase login`, or set '
-        'FIREBASE_TOKEN for non-interactive environments.',
-      );
-    }
     Object? lastError;
+    var refreshedAfterUnauthorized = false;
     for (var attempt = 0; attempt < 3; attempt++) {
+      final token = await _firebaseAccessTokenProvider();
+      if (token == null || token.trim().isEmpty) {
+        throw const PublisherBackendException(
+          'Firebase CLI access token was not found. Run `firebase login`, or set '
+          'FIREBASE_TOKEN for non-interactive environments.',
+        );
+      }
       try {
-        return await _httpRequester(
+        final response = await _httpRequester(
           method,
           uri,
           headers: <String, String>{
@@ -4249,6 +4250,14 @@ class PublisherBackendStarter {
           },
           body: body,
         );
+        if (response.statusCode == 401 && !refreshedAfterUnauthorized) {
+          refreshedAfterUnauthorized = true;
+          if (attempt < 2) {
+            await _delay(const Duration(milliseconds: 300));
+            continue;
+          }
+        }
+        return response;
       } on http.ClientException catch (error) {
         lastError = error;
       } on SocketException catch (error) {

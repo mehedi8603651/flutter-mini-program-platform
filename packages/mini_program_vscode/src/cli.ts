@@ -285,6 +285,16 @@ export interface PublisherBackendFirebaseOutputsArgsOptions
   readonly json?: boolean;
 }
 
+export interface PublisherBackendFirebaseHostCommandArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly apiBaseUrl: string;
+  readonly title?: string;
+  readonly accessKey?: string;
+  readonly public?: boolean;
+  readonly hostProjectRoot?: string;
+  readonly json?: boolean;
+}
+
 export interface PublisherBackendFirebaseSmokeArgsOptions
   extends PublisherBackendFirebaseBaseArgsOptions {
   readonly json?: boolean;
@@ -910,6 +920,33 @@ export function buildPublisherBackendFirebaseOutputsArgs(
   const args = ['publisher-backend', 'firebase', 'outputs'];
   if (options.json ?? true) {
     args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseHostCommandArgs(
+  options: PublisherBackendFirebaseHostCommandArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'firebase',
+    'host-command',
+    '--api-base-url',
+    options.apiBaseUrl.trim(),
+  ];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  if (options.title?.trim()) {
+    args.push('--title', options.title.trim());
+  }
+  if (options.public) {
+    args.push('--public');
+  } else if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
+  if (options.hostProjectRoot?.trim()) {
+    args.push('--host-project-root', options.hostProjectRoot.trim());
   }
   return withPublisherBackendFirebaseOptions(args, options);
 }

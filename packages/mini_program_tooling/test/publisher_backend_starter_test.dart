@@ -1415,6 +1415,47 @@ console.log(JSON.stringify({
       expect(headers['authorization'], 'Bearer firebase-token');
     });
 
+    test(
+      'Firebase Firestore requests retry once after 401 with fresh token',
+      () async {
+        var tokenRequests = 0;
+        final authorizationHeaders = <String>[];
+        final starter = PublisherBackendStarter(
+          delay: (_) async {},
+          firebaseAccessTokenProvider: () async {
+            tokenRequests += 1;
+            return tokenRequests == 1 ? 'stale-token' : 'fresh-token';
+          },
+          httpRequester: (method, uri, {headers, body}) async {
+            authorizationHeaders.add(headers?['authorization'] ?? '');
+            if (headers?['authorization'] == 'Bearer stale-token') {
+              return http.Response('{}', 401);
+            }
+            return http.Response('{}', 200);
+          },
+        );
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+
+        final result = await starter.firebaseSeed(
+          PublisherBackendFirebaseSeedRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _firebaseEnvironment(),
+          ),
+        );
+
+        expect(result.seeded, isTrue);
+        expect(authorizationHeaders.first, 'Bearer stale-token');
+        expect(authorizationHeaders, contains('Bearer fresh-token'));
+        expect(tokenRequests, greaterThanOrEqualTo(2));
+      },
+    );
+
     test('Firebase data status counts Firestore collections', () async {
       final requestedPaths = <String>[];
       final starter = PublisherBackendStarter(

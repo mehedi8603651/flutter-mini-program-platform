@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.37
+
+- retry Firebase Firestore REST calls once after an HTTP 401 by requesting a
+  fresh Firebase CLI OAuth token before surfacing the failure
+- improves resilience for seed/status/export/import/redemption checks when a
+  cached access token expires during a real Firebase workflow
+
 ## 0.3.36
 
 - add `publisher-backend firebase host-command` to generate exact Flutter host
