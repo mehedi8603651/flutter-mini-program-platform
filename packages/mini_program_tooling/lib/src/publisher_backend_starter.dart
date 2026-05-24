@@ -838,10 +838,16 @@ class PublisherBackendFirebaseSmokeRequest {
   const PublisherBackendFirebaseSmokeRequest({
     required this.miniProgramRootPath,
     required this.environment,
+    this.includeWrite = false,
+    this.writeCouponId = 'coupon-10',
+    this.writeUserId = 'smoke-user',
   });
 
   final String miniProgramRootPath;
   final CloudEnvironmentConfiguration environment;
+  final bool includeWrite;
+  final String writeCouponId;
+  final String writeUserId;
 }
 
 class PublisherBackendFirebaseSmokeRouteResult {
@@ -851,6 +857,10 @@ class PublisherBackendFirebaseSmokeRouteResult {
     required this.uri,
     required this.passed,
     this.statusCode,
+    this.responseStatus,
+    this.redemptionVerified,
+    this.redemptionDocumentPath,
+    this.verificationError,
     this.error,
   });
 
@@ -859,6 +869,10 @@ class PublisherBackendFirebaseSmokeRouteResult {
   final Uri uri;
   final bool passed;
   final int? statusCode;
+  final String? responseStatus;
+  final bool? redemptionVerified;
+  final String? redemptionDocumentPath;
+  final String? verificationError;
   final String? error;
 }
 
@@ -872,6 +886,9 @@ class PublisherBackendFirebaseSmokeResult {
     required this.backendBaseUrl,
     required this.passed,
     required this.routes,
+    required this.includeWrite,
+    required this.writeCouponId,
+    required this.writeUserId,
     this.error,
   });
 
@@ -883,6 +900,9 @@ class PublisherBackendFirebaseSmokeResult {
   final String backendBaseUrl;
   final bool passed;
   final List<PublisherBackendFirebaseSmokeRouteResult> routes;
+  final bool includeWrite;
+  final String writeCouponId;
+  final String writeUserId;
   final String? error;
 }
 
@@ -2212,6 +2232,9 @@ class PublisherBackendStarter {
         backendBaseUrl: settings.functionUrl,
         passed: false,
         routes: const <PublisherBackendFirebaseSmokeRouteResult>[],
+        includeWrite: request.includeWrite,
+        writeCouponId: request.writeCouponId,
+        writeUserId: request.writeUserId,
         error:
             'Firebase Functions publisher backend was not found. Run '
             '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
@@ -2229,6 +2252,16 @@ class PublisherBackendStarter {
         ),
       );
     }
+    if (request.includeWrite) {
+      routes.add(
+        await _probeFirebaseSmokeWriteRoute(
+          settings: settings,
+          uri: _resolveBackendRoute(baseUri, '/coupon/redeem'),
+          couponId: request.writeCouponId,
+          userId: request.writeUserId,
+        ),
+      );
+    }
     return PublisherBackendFirebaseSmokeResult(
       provider: request.environment.provider,
       environmentName: request.environment.name,
@@ -2238,6 +2271,9 @@ class PublisherBackendStarter {
       backendBaseUrl: settings.functionUrl,
       passed: routes.every((route) => route.passed),
       routes: routes,
+      includeWrite: request.includeWrite,
+      writeCouponId: request.writeCouponId,
+      writeUserId: request.writeUserId,
     );
   }
 
@@ -3802,6 +3838,36 @@ class PublisherBackendStarter {
     }
   }
 
+  Future<Map<String, Object?>?> _readFirestoreDocument({
+    required String projectId,
+    required String documentPath,
+  }) async {
+    final uri = _firestoreDocumentUri(
+      projectId: projectId,
+      documentPath: documentPath,
+    );
+    final response = await _firebaseAuthorizedRequest('GET', uri);
+    if (response.statusCode == 404) {
+      return null;
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw PublisherBackendException(
+        'Firestore read failed for "$documentPath" (${response.statusCode}).',
+      );
+    }
+    final decoded = response.body.trim().isEmpty
+        ? <String, Object?>{}
+        : jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'Firestore read response was not a JSON object.',
+      );
+    }
+    return _fromFirestoreDocument(
+      decoded.map((key, value) => MapEntry(key.toString(), value)),
+    );
+  }
+
   Future<int> _countFirestoreCollection({
     required String projectId,
     required String collectionPath,
@@ -4648,6 +4714,23 @@ class PublisherBackendStarter {
     return sanitized.isEmpty ? 'mini_program' : sanitized;
   }
 
+  String _firebaseRedemptionDocumentPath({
+    required _PublisherBackendFirebaseSettings settings,
+    required String couponId,
+    required String userId,
+  }) {
+    return 'miniPrograms/${settings.miniProgramId}/redemptions/'
+        '${_safeFirestoreDocumentId(userId)}_${_safeFirestoreDocumentId(couponId)}';
+  }
+
+  String _safeFirestoreDocumentId(String value) {
+    final sanitized = value
+        .trim()
+        .replaceAll(RegExp(r'[^A-Za-z0-9_.-]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    return sanitized.isEmpty ? 'unknown' : sanitized;
+  }
+
   List<Map<String, Object?>> _sortedDynamoDbExportItems(
     List<Map<String, Object?>> items,
   ) {
@@ -5242,6 +5325,133 @@ class PublisherBackendStarter {
     }
   }
 
+  Future<PublisherBackendFirebaseSmokeRouteResult>
+  _probeFirebaseSmokeWriteRoute({
+    required _PublisherBackendFirebaseSettings settings,
+    required Uri uri,
+    required String couponId,
+    required String userId,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    const path = '/coupon/redeem';
+    final redemptionDocumentPath = _firebaseRedemptionDocumentPath(
+      settings: settings,
+      couponId: couponId,
+      userId: userId,
+    );
+    try {
+      final response = await _postRequester(
+        uri,
+        headers: const <String, String>{'Content-Type': 'application/json'},
+        body: jsonEncode(<String, String>{
+          'couponId': couponId,
+          'userId': userId,
+        }),
+      ).timeout(timeout);
+      final responseStatus = _responseStatus(response.body);
+      final routeAccepted =
+          response.statusCode == 200 &&
+          (responseStatus == 'redeemed' ||
+              responseStatus == 'already_redeemed');
+      if (!routeAccepted) {
+        return PublisherBackendFirebaseSmokeRouteResult(
+          method: 'POST',
+          path: path,
+          uri: uri,
+          passed: false,
+          statusCode: response.statusCode,
+          responseStatus: responseStatus,
+          redemptionVerified: false,
+          redemptionDocumentPath: redemptionDocumentPath,
+          error: response.statusCode == 200
+              ? 'Write route returned 200 without redeemed status.'
+              : 'Route returned ${response.statusCode}.',
+        );
+      }
+
+      final verification = await _verifyFirebaseRedemptionDocument(
+        settings: settings,
+        documentPath: redemptionDocumentPath,
+        couponId: couponId,
+        userId: userId,
+      );
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: verification.verified,
+        statusCode: response.statusCode,
+        responseStatus: responseStatus,
+        redemptionVerified: verification.verified,
+        redemptionDocumentPath: redemptionDocumentPath,
+        verificationError: verification.error,
+        error: verification.verified
+            ? null
+            : 'Write route succeeded but Firestore redemption verification failed.',
+      );
+    } on TimeoutException {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: false,
+        redemptionVerified: false,
+        redemptionDocumentPath: redemptionDocumentPath,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: false,
+        redemptionVerified: false,
+        redemptionDocumentPath: redemptionDocumentPath,
+        error: '$error',
+      );
+    }
+  }
+
+  Future<_FirebaseRedemptionVerification> _verifyFirebaseRedemptionDocument({
+    required _PublisherBackendFirebaseSettings settings,
+    required String documentPath,
+    required String couponId,
+    required String userId,
+  }) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final document = await _readFirestoreDocument(
+          projectId: settings.projectId,
+          documentPath: documentPath,
+        );
+        if (document == null) {
+          lastError = 'Firestore document was not found.';
+        } else {
+          final documentCouponId = document['couponId']?.toString();
+          final documentUserId = document['userId']?.toString();
+          final documentStatus = document['status']?.toString();
+          if (documentCouponId == couponId &&
+              documentUserId == userId &&
+              documentStatus == 'redeemed') {
+            return const _FirebaseRedemptionVerification(verified: true);
+          }
+          lastError =
+              'Firestore document did not match expected coupon/user/status.';
+        }
+      } on Object catch (error) {
+        lastError = error;
+      }
+      if (attempt < 2) {
+        await _delay(Duration(milliseconds: 250 * (1 << attempt)));
+      }
+    }
+    return _FirebaseRedemptionVerification(
+      verified: false,
+      error: '$lastError',
+    );
+  }
+
   String? _responseStatus(String body) {
     try {
       final decoded = jsonDecode(body);
@@ -5492,6 +5702,13 @@ class _PublisherBackendHealth {
 
   final bool healthy;
   final int? statusCode;
+  final String? error;
+}
+
+class _FirebaseRedemptionVerification {
+  const _FirebaseRedemptionVerification({required this.verified, this.error});
+
+  final bool verified;
   final String? error;
 }
 
@@ -5995,10 +6212,15 @@ miniprogram publisher-backend firebase data status `
   --env my-firebase-prod
 miniprogram publisher-backend firebase smoke `
   --env my-firebase-prod
+miniprogram publisher-backend firebase smoke `
+  --env my-firebase-prod `
+  --include-write
 ```
 
 `firebase seed` and `firebase data status` use your Firebase CLI login token, so
 run `firebase login` first or provide `FIREBASE_TOKEN` in CI.
+`firebase smoke --include-write` also uses that token to verify the written
+Firestore redemption document after `POST /coupon/redeem`.
 
 Local emulator:
 

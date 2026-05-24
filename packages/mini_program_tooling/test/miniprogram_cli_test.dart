@@ -152,7 +152,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.34'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.35'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -168,6 +168,10 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.firebase.smoke'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.smoke.write'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -192,7 +196,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.34');
+      expect(json['toolingVersion'], '0.3.35');
       expect(json['packageName'], 'mini_program_tooling');
       expect(
         json['capabilityIds'],
@@ -212,6 +216,10 @@ void main() {
       );
       expect(
         json['capabilityIds'],
+        contains('publisher_backend.firebase.smoke.write'),
+      );
+      expect(
+        json['capabilityIds'],
         contains('publisher_backend.firebase.firestore.data.export'),
       );
       expect(
@@ -225,6 +233,7 @@ void main() {
       expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
       expect(features['publisherBackendFirebaseDeploy'], isTrue);
       expect(features['publisherBackendFirebaseSmoke'], isTrue);
+      expect(features['publisherBackendFirebaseWriteSmoke'], isTrue);
       expect(features['publisherBackendFirebaseFirestoreDataExport'], isTrue);
       expect(features['publisherBackendFirebaseDestroyDataLossGuard'], isTrue);
     });
@@ -1647,6 +1656,161 @@ void main() {
     });
 
     test(
+      'publisher-backend firebase smoke prints write verification',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          publisherBackendStarter: PublisherBackendStarter(
+            healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+            postRequester: (uri, {headers, body}) async {
+              return http.Response(
+                jsonEncode(<String, Object?>{
+                  'status': 'redeemed',
+                  'couponId': 'coupon-20',
+                  'userId': 'preview-user',
+                }),
+                200,
+              );
+            },
+            firebaseAccessTokenProvider: () async => 'firebase-token',
+            httpRequester: (method, uri, {headers, body}) async {
+              return http.Response(
+                _firestoreDocumentJson(<String, Object?>{
+                  'status': 'redeemed',
+                  'couponId': 'coupon-20',
+                  'userId': 'preview-user',
+                }),
+                200,
+              );
+            },
+          ),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'firebase',
+          'smoke',
+          '--env',
+          'my-firebase-prod',
+          '--include-write',
+          '--write-coupon-id',
+          'coupon-20',
+          '--write-user-id',
+          'preview-user',
+        ]);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Write smoke: true'));
+        expect(stdoutBuffer.toString(), contains('Write coupon ID: coupon-20'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('Write user ID: preview-user'),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains(
+            'POST /coupon/redeem: 200 OK (redeemed) [Firestore verified]',
+          ),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains(
+            'miniPrograms/firebase_coupon/redemptions/preview-user_coupon-20',
+          ),
+        );
+      },
+    );
+
+    test('publisher-backend firebase smoke prints write JSON', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            return http.Response(
+              jsonEncode(<String, Object?>{'status': 'already_redeemed'}),
+              200,
+            );
+          },
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          httpRequester: (method, uri, {headers, body}) async {
+            return http.Response(
+              _firestoreDocumentJson(<String, Object?>{
+                'status': 'redeemed',
+                'couponId': 'coupon-10',
+                'userId': 'smoke-user',
+              }),
+              200,
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'smoke',
+        '--env',
+        'my-firebase-prod',
+        '--include-write',
+        '--json',
+      ]);
+
+      expect(exitCode, 0);
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['command'], 'publisher-backend firebase smoke');
+      expect(json['includeWrite'], isTrue);
+      expect(json['writeCouponId'], 'coupon-10');
+      expect(json['writeUserId'], 'smoke-user');
+      final routes = json['routes'] as List<Object?>;
+      final writeRoute = routes.last as Map<String, dynamic>;
+      expect(writeRoute['method'], 'POST');
+      expect(writeRoute['path'], '/coupon/redeem');
+      expect(writeRoute['responseStatus'], 'already_redeemed');
+      expect(writeRoute['redemptionVerified'], isTrue);
+      expect(
+        writeRoute['redemptionDocumentPath'],
+        'miniPrograms/firebase_coupon/redemptions/smoke-user_coupon-10',
+      );
+    });
+
+    test(
       'publisher-backend firebase smoke returns 1 when a route fails',
       () async {
         final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
@@ -1693,6 +1857,53 @@ void main() {
           stdoutBuffer.toString(),
           contains('GET /auth/session: 500 FAIL'),
         );
+      },
+    );
+
+    test(
+      'publisher-backend firebase smoke rejects write options without write smoke',
+      () async {
+        final stdoutBuffer = StringBuffer();
+        final stderrBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: stderrBuffer,
+          workingDirectory: tempDir.path,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'firebase',
+          'smoke',
+          '--env',
+          'my-firebase-prod',
+          '--write-coupon-id',
+          'coupon-20',
+        ]);
+
+        expect(exitCode, 64);
+        expect(stderrBuffer.toString(), contains('require --include-write'));
+        expect(stdoutBuffer.toString(), isEmpty);
+      },
+    );
+
+    test(
+      'publisher-backend firebase smoke help includes write options',
+      () async {
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode = await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: tempDir.path,
+        ).run(<String>['publisher-backend', 'firebase', 'smoke', '--help']);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('--include-write'));
+        expect(stdoutBuffer.toString(), contains('--write-coupon-id'));
+        expect(stdoutBuffer.toString(), contains('--write-user-id'));
       },
     );
 
@@ -5739,6 +5950,14 @@ String _firestoreDocumentsJsonFrom(
           },
         )
         .toList(),
+  });
+}
+
+String _firestoreDocumentJson(Map<String, Object?> fields) {
+  return jsonEncode(<String, Object?>{
+    'fields': fields.map(
+      (key, value) => MapEntry(key, _publisherBackendFirestoreValue(value)),
+    ),
   });
 }
 

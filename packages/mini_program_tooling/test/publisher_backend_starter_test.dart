@@ -1211,6 +1211,125 @@ console.log(JSON.stringify({
       ]);
     });
 
+    test(
+      'Firebase write smoke verifies Firestore redemption document',
+      () async {
+        final requestedPosts = <Uri>[];
+        final requestedFirestoreReads = <Uri>[];
+        final requestBodies = <Object?>[];
+        final starter = PublisherBackendStarter(
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            requestedPosts.add(uri);
+            requestBodies.add(body);
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'status': 'redeemed',
+                'couponId': 'coupon-20',
+                'userId': 'preview-user',
+              }),
+              200,
+            );
+          },
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          httpRequester: (method, uri, {headers, body}) async {
+            requestedFirestoreReads.add(uri);
+            return http.Response(
+              _firestoreDocumentJson(<String, Object?>{
+                'status': 'redeemed',
+                'couponId': 'coupon-20',
+                'userId': 'preview-user',
+                'redeemedAtUtc': '2026-05-24T12:00:00Z',
+              }),
+              200,
+            );
+          },
+        );
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+
+        final result = await starter.firebaseSmoke(
+          PublisherBackendFirebaseSmokeRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _firebaseEnvironment(),
+            includeWrite: true,
+            writeCouponId: 'coupon-20',
+            writeUserId: 'preview-user',
+          ),
+        );
+
+        expect(result.includeWrite, isTrue);
+        expect(result.passed, isTrue);
+        final writeRoute = result.routes.last;
+        expect(writeRoute.method, 'POST');
+        expect(writeRoute.path, '/coupon/redeem');
+        expect(writeRoute.statusCode, 200);
+        expect(writeRoute.responseStatus, 'redeemed');
+        expect(writeRoute.redemptionVerified, isTrue);
+        expect(
+          writeRoute.redemptionDocumentPath,
+          'miniPrograms/coupon_app/redemptions/preview-user_coupon-20',
+        );
+        expect(requestedPosts.single.path, '/publisherBackend/coupon/redeem');
+        expect(
+          jsonDecode(requestBodies.single.toString()),
+          containsPair('couponId', 'coupon-20'),
+        );
+        expect(
+          requestedFirestoreReads.single.path,
+          contains(
+            '/miniPrograms/coupon_app/redemptions/preview-user_coupon-20',
+          ),
+        );
+      },
+    );
+
+    test(
+      'Firebase write smoke fails when redemption verification fails',
+      () async {
+        final starter = PublisherBackendStarter(
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            return http.Response(
+              jsonEncode(<String, Object?>{'status': 'redeemed'}),
+              200,
+            );
+          },
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          httpRequester: (method, uri, {headers, body}) async =>
+              http.Response('{}', 404),
+          delay: (duration) async {},
+        );
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+
+        final result = await starter.firebaseSmoke(
+          PublisherBackendFirebaseSmokeRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            environment: _firebaseEnvironment(),
+            includeWrite: true,
+          ),
+        );
+
+        expect(result.passed, isFalse);
+        final writeRoute = result.routes.last;
+        expect(writeRoute.responseStatus, 'redeemed');
+        expect(writeRoute.redemptionVerified, isFalse);
+        expect(writeRoute.verificationError, contains('not found'));
+        expect(writeRoute.error, contains('verification failed'));
+      },
+    );
+
     test('Firebase smoke fails when a route returns non-200', () async {
       final starter = PublisherBackendStarter(
         healthGetter: (uri) async {
@@ -2684,6 +2803,14 @@ String _firestoreDocumentsJsonFrom(
           },
         )
         .toList(),
+  });
+}
+
+String _firestoreDocumentJson(Map<String, Object?> fields) {
+  return jsonEncode(<String, Object?>{
+    'fields': fields.map(
+      (key, value) => MapEntry(key, _toFirestoreTestValue(value)),
+    ),
   });
 }
 

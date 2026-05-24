@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.35
+
+- add Firebase write smoke support through
+  `publisher-backend firebase smoke --include-write`
+- verify write smoke redemptions by reading the expected Firestore redemption
+  document after `POST /coupon/redeem`
+- expose the Firebase write-smoke capability through
+  `miniprogram capabilities --json`
+
 ## 0.3.34
 
 - fix `workflow status --remote` for Firebase environments so it reports

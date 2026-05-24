@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.34';
+const String _miniProgramToolingVersion = '0.3.35';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
@@ -49,6 +49,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.status',
   'publisher_backend.firebase.outputs',
   'publisher_backend.firebase.smoke',
+  'publisher_backend.firebase.smoke.write',
   'publisher_backend.firebase.firestore.seed',
   'publisher_backend.firebase.firestore.data.status',
   'publisher_backend.firebase.firestore.data.export',
@@ -3607,7 +3608,23 @@ class MiniprogramCli {
 
   Future<int> _runPublisherBackendFirebaseSmoke(List<String> arguments) async {
     final parser = _publisherBackendFirebaseCommandParser()
-      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.')
+      ..addFlag(
+        'include-write',
+        negatable: false,
+        help:
+            'Also verify POST /coupon/redeem and the resulting Firestore redemption. This mutates backend data.',
+      )
+      ..addOption(
+        'write-coupon-id',
+        defaultsTo: 'coupon-10',
+        help: 'Coupon ID used with --include-write.',
+      )
+      ..addOption(
+        'write-user-id',
+        defaultsTo: 'smoke-user',
+        help: 'User ID used with --include-write.',
+      );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
@@ -3616,11 +3633,31 @@ class MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
+    final includeWrite = results.flag('include-write');
+    if (!includeWrite &&
+        (results.wasParsed('write-coupon-id') ||
+            results.wasParsed('write-user-id'))) {
+      _stderr.writeln(
+        '--write-coupon-id and --write-user-id require --include-write.',
+      );
+      return 64;
+    }
+    final writeCouponId = results.option('write-coupon-id')?.trim() ?? '';
+    final writeUserId = results.option('write-user-id')?.trim() ?? '';
+    if (includeWrite && (writeCouponId.isEmpty || writeUserId.isEmpty)) {
+      _stderr.writeln(
+        '--write-coupon-id and --write-user-id must not be empty.',
+      );
+      return 64;
+    }
     final resolved = await _resolvePublisherBackendFirebaseInputs(results);
     final result = await _publisherBackendStarter.firebaseSmoke(
       PublisherBackendFirebaseSmokeRequest(
         miniProgramRootPath: resolved.miniProgramRootPath,
         environment: resolved.environment,
+        includeWrite: includeWrite,
+        writeCouponId: writeCouponId,
+        writeUserId: writeUserId,
       ),
     );
     if (results.flag('json')) {
@@ -4605,7 +4642,7 @@ Commands:
   firebase deploy --env <env-name> [--mini-program-root <path>] [--json] [--no-public-invoker]
   firebase status --env <env-name> [--mini-program-root <path>] [--json]
   firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
-  firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
+  firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   firebase seed --env <env-name> [--mini-program-root <path>] [--json]
   firebase data status --env <env-name> [--mini-program-root <path>] [--json]
   firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
@@ -4638,7 +4675,7 @@ Commands:
   deploy --env <env-name> [--mini-program-root <path>] [--json] [--no-public-invoker]
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
-  smoke --env <env-name> [--mini-program-root <path>] [--json]
+  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
   data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
@@ -4831,6 +4868,7 @@ Commands:
         'publisherBackendFirebaseStatus': true,
         'publisherBackendFirebaseOutputs': true,
         'publisherBackendFirebaseSmoke': true,
+        'publisherBackendFirebaseWriteSmoke': true,
         'publisherBackendFirebaseFirestoreSeed': true,
         'publisherBackendFirebaseFirestoreDataStatus': true,
         'publisherBackendFirebaseFirestoreDataExport': true,
@@ -4844,6 +4882,7 @@ Commands:
         'publisher-backend firebase status',
         'publisher-backend firebase outputs',
         'publisher-backend firebase smoke',
+        'publisher-backend firebase smoke --include-write',
         'publisher-backend firebase seed',
         'publisher-backend firebase data status',
         'publisher-backend firebase data export',
@@ -6162,6 +6201,7 @@ Commands:
       'miniprogram publisher-backend firebase data status --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
       'miniprogram publisher-backend firebase status --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
       'miniprogram publisher-backend firebase smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+      'miniprogram publisher-backend firebase smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --include-write',
     ];
     if (result.outputs.isNotEmpty) {
       lines
@@ -6396,6 +6436,9 @@ Commands:
       'Region: ${result.region}',
       'Function: ${result.functionName}',
       'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Write smoke: ${result.includeWrite}',
+      if (result.includeWrite) 'Write coupon ID: ${result.writeCouponId}',
+      if (result.includeWrite) 'Write user ID: ${result.writeUserId}',
       'Passed: ${result.passed}',
       if (result.error != null) 'Detail: ${result.error}',
     ];
@@ -6407,7 +6450,23 @@ Commands:
             : route.passed
             ? '${route.statusCode} OK'
             : '${route.statusCode} FAIL';
-        lines.add('${route.method} ${route.path}: $status');
+        final responseStatus = route.responseStatus == null
+            ? ''
+            : ' (${route.responseStatus})';
+        final verificationStatus = route.redemptionVerified == null
+            ? ''
+            : route.redemptionVerified == true
+            ? ' [Firestore verified]'
+            : ' [Firestore verification failed]';
+        lines.add(
+          '${route.method} ${route.path}: $status$responseStatus$verificationStatus',
+        );
+        if (route.redemptionDocumentPath != null) {
+          lines.add('  Redemption: ${route.redemptionDocumentPath}');
+        }
+        if (route.verificationError != null) {
+          lines.add('  Verification detail: ${route.verificationError}');
+        }
         if (route.error != null) {
           lines.add('  ${route.error}');
         }
@@ -6904,6 +6963,9 @@ Commands:
       'region': result.region,
       'functionName': result.functionName,
       'backendBaseUrl': result.backendBaseUrl,
+      'includeWrite': result.includeWrite,
+      'writeCouponId': result.includeWrite ? result.writeCouponId : null,
+      'writeUserId': result.includeWrite ? result.writeUserId : null,
       'passed': result.passed,
       'error': result.error,
       'routes': result.routes
@@ -6913,6 +6975,10 @@ Commands:
               'path': route.path,
               'uri': route.uri.toString(),
               'statusCode': route.statusCode,
+              'responseStatus': route.responseStatus,
+              'redemptionVerified': route.redemptionVerified,
+              'redemptionDocumentPath': route.redemptionDocumentPath,
+              'verificationError': route.verificationError,
               'passed': route.passed,
               'error': route.error,
             },
