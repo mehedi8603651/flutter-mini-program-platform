@@ -11,7 +11,11 @@ concurrency:
 
 jobs:
   smoke:
-    runs-on: windows-latest
+    # Keep the smoke job on a stable Windows image. In May 2026 GitHub began
+    # redirecting windows-latest to the Windows 2025/VS 2026 image, which made
+    # the Flutter host analyze step fail even though the same checkout passes
+    # locally and on the established runner image.
+    runs-on: windows-2022
     timeout-minutes: 45
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
