@@ -158,6 +158,11 @@ test('renders Firebase host endpoint readiness diagnostics', () => {
         accessMode: 'public',
         hostEndpointBackendMode: 'remote',
         hostEndpointIssues: ['Delivery URL differs'],
+        hostingManifestReachable: true,
+        hostingCorsReady: false,
+        hostingManifestUrl:
+          'https://coupon-demo.web.app/manifests/coupon_demo/latest.json',
+        hostingDeliveryIssue: 'Missing Access-Control-Allow-Origin header.',
       },
     }),
   );
@@ -168,6 +173,9 @@ test('renders Firebase host endpoint readiness diagnostics', () => {
   assert.match(text, /Host app: D:\/host/);
   assert.match(text, /Delivery URL: https:\/\/cdn\.example\.com\/coupon_demo/);
   assert.match(text, /Backend mode: remote/);
+  assert.match(text, /Hosting manifest: yes/);
+  assert.match(text, /Hosting CORS: no/);
+  assert.match(text, /Missing Access-Control-Allow-Origin header/);
   assert.match(text, /Issues: Delivery URL differs/);
 });
 

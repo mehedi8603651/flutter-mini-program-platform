@@ -8,17 +8,19 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.39 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.42 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
 Functions/Firestore publisher backend workflows, Firebase Firestore production
 data management, Firebase write smoke, Firebase host integration, Firebase
-host handoff packages, and
+host handoff packages, Firebase Hosting publish with browser CORS headers, and
 quiet CLI capability detection through `miniprogram capabilities --json`.
 
-Use `mini_program_tooling` 0.3.39 or newer when testing real Firebase Firestore
-workflows so stale Firebase CLI OAuth tokens are retried automatically.
+Use `mini_program_tooling` 0.3.42 or newer when testing real Firebase Hosting
+workflows so web host apps can load manifests/screens from a different origin.
+Version 0.3.42 supersedes the first 0.3.41 publish, which included the CORS
+fix but reported stale CLI version metadata.
 
 Install or upgrade the CLI first:
 
@@ -143,10 +145,12 @@ the new version. The static target writes a folder that can be uploaded to
 GitHub Pages or a CDN and then used from a public endpoint.
 
 `MiniProgram: Publish MiniProgram to Firebase Hosting` wraps
-`miniprogram publish --target firebase-hosting` from tooling 0.3.40. It asks for
+`miniprogram publish --target firebase-hosting` from tooling 0.3.42. It asks for
 the Firebase env, Hosting public folder, optional site ID, cleanup preference,
 and deploy/dry-run mode. After publish it shows the Hosting delivery URL and can
-start `MiniProgram: Create Firebase Host Handoff Package` with that URL.
+start `MiniProgram: Create Firebase Host Handoff Package` with that URL. The
+0.3.42 tooling requirement matters because generated Firebase Hosting configs
+include CORS headers required by browser-based host apps.
 
 `MiniProgram: Embed Init` can also generate a public first-run demo endpoint.
 Choose **Add public demo endpoint** when prompted to create:
@@ -268,14 +272,14 @@ For DynamoDB scaffolds, use:
   The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
   records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.39, the extension
+If the configured CLI is older than `mini_program_tooling` 0.3.42, the extension
 warns before running newer publisher backend actions or when quiet capability
-detection is unavailable. Version 0.1.31 calls `miniprogram capabilities --json`
+detection is unavailable. Version 0.1.33 calls `miniprogram capabilities --json`
 once per workspace and only falls back to older AWS `--help` probes for older
 CLI installs. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.39
+dart pub global activate mini_program_tooling 0.3.42
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed
@@ -333,7 +337,8 @@ Firebase deploy/status/smoke actions require `mini_program_tooling` 0.3.32 or
 newer. Firebase Firestore export/import/redemptions and guarded destroy require
 0.3.34 or newer. Firebase write smoke requires 0.3.35 or newer. Firebase host
 integration requires 0.3.38 or newer. Firebase handoff packages require 0.3.39
-or newer. The extension uses
+or newer. Firebase Hosting publish requires 0.3.42 or newer for browser CORS
+headers. The extension uses
 `miniprogram capabilities --json` once per workspace to detect support and warns
 with an upgrade command if the configured CLI is too old.
 

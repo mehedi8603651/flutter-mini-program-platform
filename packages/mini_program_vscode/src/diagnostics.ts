@@ -55,6 +55,7 @@ export interface BuildDiagnosticsOptions {
   readonly doctorReport?: Record<string, unknown>;
   readonly cliCapabilities?: {
     readonly checked: boolean;
+    readonly supportsFirebaseHostingPublish?: boolean;
     readonly supportsWriteSmoke: boolean;
     readonly supportsDataManagement?: boolean;
     readonly supportsFirebaseOperations?: boolean;
@@ -623,6 +624,28 @@ async function buildPublicEndpointChecks(
           : 'Confirm GitHub Pages/CDN is deployed and the host endpoint base URL ends with the static output folder.',
       ),
     );
+    if (isFirebaseHostingUrl(apiBaseUri)) {
+      const allowOrigin = headerValue(
+        manifestResponse.headers,
+        'access-control-allow-origin',
+      );
+      checks.push(
+        check(
+          `host_app.firebase_hosting_cors.${appId}`,
+          `Firebase Hosting CORS: ${appId}`,
+          manifestResponse.ok && allowOrigin ? 'ok' : 'warning',
+          manifestResponse.ok && allowOrigin
+            ? 'Firebase Hosting manifest includes browser CORS headers.'
+            : 'Firebase Hosting manifest is missing browser CORS headers.',
+          manifestResponse.ok
+            ? `${manifestUrl}\nAccess-Control-Allow-Origin: ${allowOrigin || 'missing'}`
+            : `${manifestUrl} (${manifestResponse.error})`,
+          manifestResponse.ok && allowOrigin
+            ? undefined
+            : 'Republish with mini_program_tooling 0.3.42 or newer.',
+        ),
+      );
+    }
 
     const version = asString(manifestResponse.json?.version);
     const entry = asString(manifestResponse.json?.entry);
@@ -799,6 +822,7 @@ function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticChec
 
 function buildCliCapabilityCheck(capability: {
   readonly supportsWriteSmoke: boolean;
+  readonly supportsFirebaseHostingPublish?: boolean;
   readonly supportsDataManagement?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
@@ -811,6 +835,11 @@ function buildCliCapabilityCheck(capability: {
   readonly detail?: string;
 }): DiagnosticCheck {
   const supportsDataManagement = capability.supportsDataManagement ?? false;
+  const supportsFirebaseHostingPublish =
+    capability.supportsFirebaseHostingPublish ?? false;
+  const supportsFirebaseHostingCors =
+    supportsFirebaseHostingPublish &&
+    toolingVersionAtLeast(capability.toolingVersion, '0.3.42');
   const supportsFirebaseOperations = capability.supportsFirebaseOperations ?? false;
   const supportsFirebaseWriteSmoke = capability.supportsFirebaseWriteSmoke ?? false;
   const supportsFirebaseHostCommand = capability.supportsFirebaseHostCommand ?? false;
@@ -829,6 +858,7 @@ function buildCliCapabilityCheck(capability: {
     supportsFirebaseWriteSmoke &&
     supportsFirebaseFirestoreData &&
     supportsFirebaseDataManagement &&
+    supportsFirebaseHostingCors &&
     supportsCapabilityDiscovery;
   const versionSuffix = capability.toolingVersion
     ? ` Version: ${capability.toolingVersion}.`
@@ -838,7 +868,7 @@ function buildCliCapabilityCheck(capability: {
     'CLI publisher backend commands',
     supportsExpectedCli ? 'ok' : 'warning',
     supportsExpectedCli
-      ? `Configured CLI supports AWS DynamoDB, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase write smoke, and quiet capability discovery.${versionSuffix}`
+      ? `Configured CLI supports AWS DynamoDB, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery.${versionSuffix}`
       : capability.supportsWriteSmoke &&
           supportsDataManagement &&
           supportsFirebaseOperations &&
@@ -846,14 +876,50 @@ function buildCliCapabilityCheck(capability: {
           supportsFirebaseHandoff &&
           supportsFirebaseWriteSmoke &&
           supportsFirebaseFirestoreData &&
-          supportsFirebaseDataManagement
+          supportsFirebaseDataManagement &&
+          supportsFirebaseHostingCors
         ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
-        : 'Configured CLI is missing mini_program_tooling 0.3.39 publisher backend support.',
+        : supportsFirebaseHostingPublish && !supportsFirebaseHostingCors
+          ? 'Configured CLI supports Firebase Hosting publish but lacks the 0.3.42 CORS/version metadata fix.'
+        : 'Configured CLI is missing mini_program_tooling 0.3.42 Firebase Hosting/browser support.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.39` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.42` or update miniProgram.cliPath.',
   );
+}
+
+function toolingVersionAtLeast(
+  version: string | undefined,
+  minimum: string,
+): boolean {
+  if (!version) {
+    return false;
+  }
+  const currentParts = version
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((part) => Number.parseInt(part, 10));
+  const minimumParts = minimum
+    .split('.')
+    .slice(0, 3)
+    .map((part) => Number.parseInt(part, 10));
+  for (let index = 0; index < 3; index += 1) {
+    const current = Number.isFinite(currentParts[index])
+      ? currentParts[index]
+      : 0;
+    const required = Number.isFinite(minimumParts[index])
+      ? minimumParts[index]
+      : 0;
+    if (current > required) {
+      return true;
+    }
+    if (current < required) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function check(
@@ -1013,7 +1079,12 @@ function isAbsoluteUrl(value: string): boolean {
 async function getJsonObject(
   url: string,
   redirectCount = 0,
-): Promise<{ readonly ok: boolean; readonly json?: Record<string, unknown>; readonly error?: string }> {
+): Promise<{
+  readonly ok: boolean;
+  readonly json?: Record<string, unknown>;
+  readonly headers?: http.IncomingHttpHeaders;
+  readonly error?: string;
+}> {
   try {
     const response = await getText(url);
     if (
@@ -1025,13 +1096,25 @@ async function getJsonObject(
       return getJsonObject(new URL(response.location, url).toString(), redirectCount + 1);
     }
     if (response.statusCode !== 200) {
-      return { ok: false, error: `HTTP ${response.statusCode}` };
+      return {
+        ok: false,
+        headers: response.headers,
+        error: `HTTP ${response.statusCode}`,
+      };
     }
     const decoded = JSON.parse(response.body) as unknown;
     if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
-      return { ok: false, error: 'Response was not a JSON object' };
+      return {
+        ok: false,
+        headers: response.headers,
+        error: 'Response was not a JSON object',
+      };
     }
-    return { ok: true, json: decoded as Record<string, unknown> };
+    return {
+      ok: true,
+      json: decoded as Record<string, unknown>,
+      headers: response.headers,
+    };
   } catch (error) {
     return {
       ok: false,
@@ -1042,7 +1125,12 @@ async function getJsonObject(
 
 async function getText(
   url: string,
-): Promise<{ readonly statusCode: number; readonly body: string; readonly location?: string }> {
+): Promise<{
+  readonly statusCode: number;
+  readonly body: string;
+  readonly headers: http.IncomingHttpHeaders;
+  readonly location?: string;
+}> {
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https:') ? https : http;
     const request = client.get(url, { timeout: 5000 }, (response) => {
@@ -1056,6 +1144,7 @@ async function getText(
         resolve({
           statusCode: response.statusCode ?? 0,
           body,
+          headers: response.headers,
           location: Array.isArray(locationHeader)
             ? locationHeader[0]
             : locationHeader,
@@ -1067,4 +1156,24 @@ async function getText(
     });
     request.on('error', reject);
   });
+}
+
+function isFirebaseHostingUrl(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host.endsWith('.web.app') || host.endsWith('.firebaseapp.com');
+  } catch {
+    return false;
+  }
+}
+
+function headerValue(
+  headers: http.IncomingHttpHeaders | undefined,
+  headerName: string,
+): string | undefined {
+  const value = headers?.[headerName.toLowerCase()];
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  return value;
 }

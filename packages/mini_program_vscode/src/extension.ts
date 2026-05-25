@@ -1,5 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
 import * as vscode from 'vscode';
 
 import {
@@ -93,6 +95,7 @@ import {
   upsertRegistryEntry,
 } from './hostIntegration';
 import { MiniProgramStatusTreeProvider } from './statusTree';
+import { FirebaseHostEndpointStatus } from './statusTreeModel';
 import { parseWorkflowStatusJson } from './workflowStatus';
 
 const outputChannelName = 'MiniProgram';
@@ -597,7 +600,7 @@ async function publishFirebaseHostingMiniProgram(
   if (!workspacePath) {
     return;
   }
-  if (!(await ensureFirebaseHostingPublishCli040(workspacePath, output))) {
+  if (!(await ensureFirebaseHostingPublishCli042(workspacePath, output))) {
     return;
   }
   const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
@@ -654,6 +657,18 @@ async function publishFirebaseHostingMiniProgram(
   );
   if (deliveryUrl) {
     output.appendLine(`Delivery API base URL: ${deliveryUrl}`);
+    if (!dryRun) {
+      const deliveryStatus = await withFirebaseHostingDeliveryDiagnostics({
+        miniProgramId: stringValue(decoded.miniProgramId),
+        deliveryApiBaseUrl: deliveryUrl,
+      });
+      appendFirebaseHostingDeliveryDiagnostics(output, deliveryStatus);
+      if (deliveryStatus.hostingCorsReady === false) {
+        vscode.window.showWarningMessage(
+          'Firebase Hosting published, but browser CORS headers were not detected. Republish with mini_program_tooling 0.3.42 or newer.',
+        );
+      }
+    }
     output.appendLine('Next handoff step:');
     output.appendLine(
       `miniprogram publisher-backend firebase handoff --env ${envName} --delivery-url ${deliveryUrl} --public`,
@@ -2139,9 +2154,10 @@ async function publisherBackendFirebaseHostCommand(
   if (!hostCommandResult) {
     return;
   }
-  statusProvider.setFirebaseHostEndpointStatus(
+  const hostEndpointStatus = await withFirebaseHostingDeliveryDiagnostics(
     firebaseHostEndpointStatusFromHostCommand(hostCommandResult),
   );
+  statusProvider.setFirebaseHostEndpointStatus(hostEndpointStatus);
 
   const hostEndpointArgs = buildHostEndpointAddArgs({
     appId: stringValue(hostCommandResult.miniProgramId) ?? appId,
@@ -2162,6 +2178,7 @@ async function publisherBackendFirebaseHostCommand(
   output.appendLine(
     `Host endpoint ready: ${hostCommandResult.hostEndpointReady === true ? 'yes' : 'no'}`,
   );
+  appendFirebaseHostingDeliveryDiagnostics(output, hostEndpointStatus);
   const issues = stringArrayValue(hostCommandResult.hostEndpointIssues);
   if (issues.length > 0) {
     output.appendLine(`Host endpoint issues: ${issues.join('; ')}`);
@@ -2221,9 +2238,10 @@ async function publisherBackendFirebaseHostCommand(
   if (!verificationResult) {
     return;
   }
-  statusProvider.setFirebaseHostEndpointStatus(
+  const verificationStatus = await withFirebaseHostingDeliveryDiagnostics(
     firebaseHostEndpointStatusFromHostCommand(verificationResult),
   );
+  statusProvider.setFirebaseHostEndpointStatus(verificationStatus);
   if (verificationResult.hostEndpointReady === true) {
     vscode.window.showInformationMessage('Firebase host endpoint is ready.');
   } else {
@@ -4284,17 +4302,7 @@ async function runFirebaseHostCommandJson(
 
 function firebaseHostEndpointStatusFromHostCommand(
   decoded: Record<string, unknown>,
-): {
-  readonly ready?: boolean;
-  readonly miniProgramId?: string;
-  readonly hostProjectRootPath?: string;
-  readonly hostEndpointMapPath?: string;
-  readonly deliveryApiBaseUrl?: string;
-  readonly backendBaseUrl?: string;
-  readonly accessMode?: string;
-  readonly hostEndpointBackendMode?: string;
-  readonly hostEndpointIssues?: readonly string[];
-} {
+): FirebaseHostEndpointStatus {
   return {
     ready:
       typeof decoded.hostEndpointReady === 'boolean'
@@ -4309,6 +4317,115 @@ function firebaseHostEndpointStatusFromHostCommand(
     hostEndpointBackendMode: stringValue(decoded.hostEndpointBackendMode),
     hostEndpointIssues: stringArrayValue(decoded.hostEndpointIssues),
   };
+}
+
+async function withFirebaseHostingDeliveryDiagnostics(
+  status: FirebaseHostEndpointStatus,
+): Promise<FirebaseHostEndpointStatus> {
+  const deliveryUrl = status.deliveryApiBaseUrl;
+  const appId = status.miniProgramId;
+  if (!deliveryUrl || !appId || !isFirebaseHostingUrl(deliveryUrl)) {
+    return status;
+  }
+  const manifestUrl = resolveUrl(
+    deliveryUrl,
+    `manifests/${appId}/latest.json`,
+  );
+  try {
+    const response = await getTextResponse(manifestUrl);
+    const allowOrigin = headerValue(
+      response.headers,
+      'access-control-allow-origin',
+    );
+    return {
+      ...status,
+      hostingManifestReachable: response.statusCode === 200,
+      hostingCorsReady: Boolean(allowOrigin),
+      hostingManifestUrl: manifestUrl,
+      hostingCorsAllowOrigin: allowOrigin,
+      hostingDeliveryIssue:
+        response.statusCode === 200
+          ? allowOrigin
+            ? undefined
+            : 'Missing Access-Control-Allow-Origin header. Republish with mini_program_tooling 0.3.42 or newer.'
+          : `Manifest returned HTTP ${response.statusCode}.`,
+    };
+  } catch (error) {
+    return {
+      ...status,
+      hostingManifestReachable: false,
+      hostingCorsReady: false,
+      hostingManifestUrl: manifestUrl,
+      hostingDeliveryIssue: errorMessage(error),
+    };
+  }
+}
+
+function appendFirebaseHostingDeliveryDiagnostics(
+  output: vscode.OutputChannel,
+  status: FirebaseHostEndpointStatus,
+): void {
+  if (!status.hostingManifestUrl) {
+    return;
+  }
+  output.appendLine(
+    `Firebase Hosting manifest reachable: ${status.hostingManifestReachable === true ? 'yes' : 'no'}`,
+  );
+  output.appendLine(
+    `Firebase Hosting CORS ready: ${status.hostingCorsReady === true ? 'yes' : 'no'}`,
+  );
+  if (status.hostingDeliveryIssue) {
+    output.appendLine(`Firebase Hosting issue: ${status.hostingDeliveryIssue}`);
+  }
+}
+
+function isFirebaseHostingUrl(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host.endsWith('.web.app') || host.endsWith('.firebaseapp.com');
+  } catch {
+    return false;
+  }
+}
+
+function resolveUrl(baseUrl: string, relativePath: string): string {
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return new URL(relativePath, normalizedBase).toString();
+}
+
+async function getTextResponse(
+  url: string,
+): Promise<{
+  readonly statusCode: number;
+  readonly headers: http.IncomingHttpHeaders;
+}> {
+  return new Promise((resolve, reject) => {
+    const client = url.startsWith('https:') ? https : http;
+    const request = client.get(url, { timeout: 5000 }, (response) => {
+      response.resume();
+      response.on('end', () => {
+        resolve({
+          statusCode: response.statusCode ?? 0,
+          headers: response.headers,
+        });
+      });
+    });
+    request.on('timeout', () => {
+      request.destroy(new Error(`Request timed out: ${url}`));
+    });
+    request.on('error', reject);
+  });
+}
+
+function headerValue(
+  headers: http.IncomingHttpHeaders,
+  headerName: string,
+): string | undefined {
+  const value = headers[headerName.toLowerCase()];
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  return value;
 }
 
 function configuredCliPath(): string {
@@ -5264,7 +5381,7 @@ async function ensurePublisherBackendFirebaseHandoffCli039(
   return false;
 }
 
-async function ensureFirebaseHostingPublishCli040(
+async function ensureFirebaseHostingPublishCli042(
   workspacePath: string,
   output: vscode.OutputChannel,
 ): Promise<boolean> {
@@ -5273,18 +5390,67 @@ async function ensureFirebaseHostingPublishCli040(
     workspacePath,
     output,
   );
-  if (capability.supportsFirebaseHostingPublish) {
+  if (firebaseHostingPublishCliAccepted(capability)) {
     return true;
   }
+  const versionDetail = capability.toolingVersion
+    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
+    : '';
   const message =
-    'MiniProgram CLI 0.3.40 or newer is required for Firebase Hosting publish. ' +
-    'Run `dart pub global activate mini_program_tooling 0.3.40`.';
+    'MiniProgram CLI 0.3.42 or newer is required for Firebase Hosting publish. ' +
+    '0.3.42 adds Firebase Hosting CORS headers with reliable CLI version metadata. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.42`.';
   output.appendLine(message);
+  if (versionDetail) {
+    output.appendLine(versionDetail.trim());
+  }
   if (capability.detail) {
     output.appendLine(capability.detail);
   }
   vscode.window.showWarningMessage(message);
   return false;
+}
+
+function firebaseHostingPublishCliAccepted(
+  capability: PublisherBackendAwsCliCapability,
+): boolean {
+  if (!capability.supportsFirebaseHostingPublish) {
+    return false;
+  }
+  return toolingVersionAtLeast(capability.toolingVersion, '0.3.42');
+}
+
+function toolingVersionAtLeast(
+  version: string | undefined,
+  minimum: string,
+): boolean {
+  if (!version) {
+    return false;
+  }
+  const currentParts = version
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((part) => Number.parseInt(part, 10));
+  const minimumParts = minimum
+    .split('.')
+    .slice(0, 3)
+    .map((part) => Number.parseInt(part, 10));
+  for (let index = 0; index < 3; index += 1) {
+    const current = Number.isFinite(currentParts[index])
+      ? currentParts[index]
+      : 0;
+    const required = Number.isFinite(minimumParts[index])
+      ? minimumParts[index]
+      : 0;
+    if (current > required) {
+      return true;
+    }
+    if (current < required) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function diagnosticCommandTitle(scope: DiagnosticScope): string {

@@ -29,6 +29,11 @@ export interface FirebaseHostEndpointStatus {
   readonly accessMode?: string;
   readonly hostEndpointBackendMode?: string;
   readonly hostEndpointIssues?: readonly string[];
+  readonly hostingManifestReachable?: boolean;
+  readonly hostingCorsReady?: boolean;
+  readonly hostingManifestUrl?: string;
+  readonly hostingCorsAllowOrigin?: string;
+  readonly hostingDeliveryIssue?: string;
 }
 
 export function buildStatusTreeSections(
@@ -295,6 +300,11 @@ function firebaseHostEndpointSection(
       row('Backend URL', status.backendBaseUrl ?? ''),
       row('Access mode', status.accessMode ?? ''),
       row('Backend mode', status.hostEndpointBackendMode ?? ''),
+      row('Hosting manifest', optionalYesNo(status.hostingManifestReachable)),
+      row('Hosting CORS', optionalYesNo(status.hostingCorsReady)),
+      row('Hosting manifest URL', status.hostingManifestUrl ?? ''),
+      row('CORS allow origin', status.hostingCorsAllowOrigin ?? ''),
+      row('Hosting issue', status.hostingDeliveryIssue ?? ''),
       row('Issues', (status.hostEndpointIssues ?? []).join('; ')),
     ]),
   };

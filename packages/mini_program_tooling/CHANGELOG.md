@@ -1,4 +1,9 @@
 # Changelog
+## 0.3.42
+- fix CLI-reported version metadata for the Firebase Hosting CORS release so
+  `miniprogram capabilities --json` reports the published tooling version
+  reliably for VS Code and other integrations
+
 ## 0.3.41
 - add CORS headers to generated Firebase Hosting configs so browser-based host
   apps can load static mini-program manifests/screens from a different origin

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.33
+
+- Require `mini_program_tooling` 0.3.42 for Firebase Hosting publish so newly
+  published static delivery includes browser CORS headers and reliable CLI
+  version metadata.
+- Warn clearly when an older CLI is configured for Firebase Hosting publish.
+- Verify CORS on the delivery URL after publish.
+- Add Firebase Hosting manifest/CORS readiness rows to the Firebase host
+  endpoint sidebar diagnostics.
+
 ## 0.1.32
 
 - Add `MiniProgram: Publish MiniProgram to Firebase Hosting`, backed by
