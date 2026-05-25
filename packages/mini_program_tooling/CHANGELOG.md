@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.40
+
+- add `publish --target firebase-hosting` to build public static delivery
+  artifacts, write a Firebase Hosting config, and deploy through the Firebase
+  CLI
+- support Firebase Hosting dry-runs, optional site IDs, JSON output, and a
+  next-step handoff command using the deployed delivery URL
+- run Firebase Hosting deploy through the shell on Windows so `firebase.cmd`
+  is resolved like the existing Firebase Functions workflow
+- allow `host run` for Firebase endpoint-map host apps without requiring an
+  AWS cloud backend environment
+- expose the Firebase Hosting publish capability through
+  `miniprogram capabilities --json`
+
 ## 0.3.39
 
 - add `publisher-backend firebase handoff` to create provider-neutral

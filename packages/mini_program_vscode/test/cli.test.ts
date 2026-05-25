@@ -257,6 +257,34 @@ test('builds core workflow command arguments', () => {
       'D:/work/coupon_demo',
     ],
   );
+  assert.deepEqual(
+    buildPublishArgs({
+      target: 'firebase-hosting',
+      envName: 'my-firebase-prod',
+      outputPath: 'D:/work/coupon_demo/backend/firebase_hosting/public',
+      siteId: 'coupon-hosting',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      clean: true,
+      dryRun: true,
+      json: true,
+    }),
+    [
+      'publish',
+      '--target',
+      'firebase-hosting',
+      '--env',
+      'my-firebase-prod',
+      '--output',
+      'D:/work/coupon_demo/backend/firebase_hosting/public',
+      '--site',
+      'coupon-hosting',
+      '--clean',
+      '--dry-run',
+      '--json',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
 });
 
 test('builds host app command arguments', () => {

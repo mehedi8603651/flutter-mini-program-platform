@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.32
+
+- Add `MiniProgram: Publish MiniProgram to Firebase Hosting`, backed by
+  `mini_program_tooling` 0.3.40.
+- Guide Firebase publishers through env selection, Hosting public folder,
+  optional site ID, deploy/dry-run mode, and generated delivery URL.
+- Offer Firebase handoff-package creation after a successful Hosting publish.
+
 ## 0.1.31
 
 - Add `MiniProgram: Create Firebase Host Handoff Package`, backed by

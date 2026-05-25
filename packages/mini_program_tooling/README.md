@@ -4,7 +4,7 @@ Developer tooling for the portable Flutter mini-program platform.
 
 This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, preview with watch/rebuild/refresh, publish
-to local, public static, or AWS cloud delivery, deploy managed AWS and Firebase
+to local, public static, Firebase Hosting, or AWS cloud delivery, deploy managed AWS and Firebase
 publisher backends, initialize embedding adapters for existing Flutter apps,
 bind host apps to cloud environments, manage MiniProgram access keys, generate
 host endpoint maps, exchange partner handoff packages between publishers and
@@ -57,7 +57,7 @@ miniprogram env status [--json]
 miniprogram build [mini-program-id]
 miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>] [--clean]
+miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean] [--site <firebase-hosting-site>] [--dry-run] [--json]
 miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
 miniprogram access-key list <mini-program-id> [--env <env-name>] [--json]
 miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
@@ -372,6 +372,57 @@ public_mini_program/
 Public static delivery is unauthenticated. Do not publish private data or
 business-only mini-programs this way. Prefer GitHub Pages or a CDN over
 `raw.githubusercontent.com` for real usage.
+
+### Firebase Hosting static delivery
+
+Firebase publishers can host the same public static delivery layout on Firebase
+Hosting while keeping Firebase Functions and Firestore as the publisher-owned
+business backend.
+
+Configure Firebase once:
+
+```bash
+miniprogram env configure my-firebase-prod --provider firebase --project-id <firebase-project-id> --region us-central1 --function-name publisherBackend
+```
+
+Then publish static delivery to Firebase Hosting:
+
+```bash
+miniprogram publish --target firebase-hosting \
+  --env my-firebase-prod \
+  --clean
+```
+
+The default public folder is:
+
+```text
+backend/firebase_hosting/public
+```
+
+The command builds static artifacts, writes `backend/firebase_hosting/firebase.json`,
+runs `firebase deploy --only hosting`, and prints the delivery API base URL,
+usually:
+
+```text
+https://<firebase-project-id>.web.app/
+```
+
+Use `--dry-run` to generate the files without deploying, and `--site <site-id>`
+when the Firebase project uses a non-default Hosting site.
+
+After publish, create the provider-neutral package for the host developer:
+
+```bash
+miniprogram publisher-backend firebase handoff \
+  --env my-firebase-prod \
+  --delivery-url https://<firebase-project-id>.web.app/ \
+  --public \
+  --output <app>-my-firebase-prod.partner.json
+```
+
+The host imports the `.partner.json` package with `miniprogram host endpoint
+import`; the host does not need Firebase CLI login, Firebase project access, or
+Firebase SDKs for this delivery path.
 
 ### Public GitHub Pages delivery
 

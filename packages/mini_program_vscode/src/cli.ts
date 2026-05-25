@@ -42,11 +42,14 @@ export interface CreateArgsOptions {
 }
 
 export interface PublishArgsOptions {
-  readonly target: 'local' | 'cloud' | 'static';
+  readonly target: 'local' | 'cloud' | 'static' | 'firebase-hosting';
   readonly envName?: string;
   readonly miniProgramRoot?: string;
   readonly outputPath?: string;
+  readonly siteId?: string;
   readonly clean?: boolean;
+  readonly dryRun?: boolean;
+  readonly json?: boolean;
 }
 
 export interface PreviewArgsOptions {
@@ -472,8 +475,17 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
   if (options.outputPath?.trim()) {
     args.push('--output', options.outputPath.trim());
   }
+  if (options.siteId?.trim()) {
+    args.push('--site', options.siteId.trim());
+  }
   if (options.clean) {
     args.push('--clean');
+  }
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+  if (options.json) {
+    args.push('--json');
   }
   return withMiniProgramRoot(args, options.miniProgramRoot);
 }

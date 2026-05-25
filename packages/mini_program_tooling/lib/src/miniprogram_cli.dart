@@ -15,6 +15,7 @@ import 'mini_program_builder.dart';
 import 'mini_program_host_controller.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
+import 'mini_program_firebase_hosting_publisher.dart';
 import 'mini_program_path_resolver.dart';
 import 'mini_program_partner_handoff.dart';
 import 'mini_program_preview_controller.dart';
@@ -29,11 +30,13 @@ const List<String> _supportedPublishTargets = <String>[
   'local',
   'cloud',
   'static',
+  'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.3.39';
+const String _miniProgramToolingVersion = '0.3.40';
 
 const List<String> _capabilityIds = <String>[
+  'publish.firebase_hosting',
   'publisher_backend.aws.status',
   'publisher_backend.aws.outputs',
   'publisher_backend.aws.smoke',
@@ -77,6 +80,8 @@ class MiniprogramCli {
         const MiniProgramCloudPublisher(),
     MiniProgramStaticPublisher staticPublisher =
         const MiniProgramStaticPublisher(),
+    MiniProgramFirebaseHostingPublisher firebaseHostingPublisher =
+        const MiniProgramFirebaseHostingPublisher(),
     MiniProgramCloudController? cloudController,
     MiniProgramHostController? hostController,
     MiniProgramPartnerHandoffController partnerHandoffController =
@@ -99,6 +104,7 @@ class MiniprogramCli {
        _previewController = previewController,
        _cloudPublisher = cloudPublisher,
        _staticPublisher = staticPublisher,
+       _firebaseHostingPublisher = firebaseHostingPublisher,
        _cloudController = cloudController ?? MiniProgramCloudController(),
        _hostController = hostController ?? MiniProgramHostController(),
        _partnerHandoffController = partnerHandoffController,
@@ -120,6 +126,7 @@ class MiniprogramCli {
   final MiniProgramPreviewController _previewController;
   final MiniProgramCloudPublisher _cloudPublisher;
   final MiniProgramStaticPublisher _staticPublisher;
+  final MiniProgramFirebaseHostingPublisher _firebaseHostingPublisher;
   final MiniProgramCloudController _cloudController;
   final MiniProgramHostController _hostController;
   final MiniProgramPartnerHandoffController _partnerHandoffController;
@@ -620,18 +627,34 @@ class MiniprogramCli {
         'output',
         abbr: 'o',
         help:
-            'Output folder when --target static is selected, for example public_mini_program.',
+            'Output folder for --target static or firebase-hosting. Firebase Hosting defaults to backend/firebase_hosting/public.',
       )
       ..addFlag(
         'clean',
         negatable: false,
         help:
-            'When --target static is selected, remove generated static delivery output before writing the new version.',
+            'For static or firebase-hosting, remove generated delivery output before writing the new version.',
       )
       ..addOption(
         'env',
         help:
-            'Named cloud environment override used when --target cloud is selected.',
+            'Named cloud environment override used by cloud or firebase-hosting targets.',
+      )
+      ..addOption(
+        'site',
+        help:
+            'Optional Firebase Hosting site id when --target firebase-hosting is selected.',
+      )
+      ..addFlag(
+        'dry-run',
+        negatable: false,
+        help:
+            'For --target firebase-hosting, build static output and firebase.json without deploying.',
+      )
+      ..addFlag(
+        'json',
+        negatable: false,
+        help: 'Print machine-readable JSON for --target firebase-hosting.',
       );
 
     final results = parser.parse(arguments);
@@ -715,6 +738,33 @@ class MiniprogramCli {
         ),
       );
       _stdout.writeln(_formatStaticPublishResult(result));
+      return 0;
+    }
+
+    if (target == 'firebase-hosting') {
+      final environment = _resolveConfiguredCloudEnvironment(
+        state: activeEnvironment?.state,
+        explicitEnvironmentName: results.option('env'),
+      );
+      final result = await _firebaseHostingPublisher.publish(
+        MiniProgramFirebaseHostingPublishRequest(
+          repoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
+          environment: environment,
+          miniProgramId: miniProgramId,
+          miniProgramRootPath: resolved.miniProgramRootPath,
+          outputPath: results.option('output'),
+          siteId: results.option('site'),
+          stacCliScriptPath: results.option('stac-cli-script'),
+          skipBuildPubGet: results.flag('skip-build-pub-get'),
+          clean: results.flag('clean'),
+          dryRun: results.flag('dry-run'),
+        ),
+      );
+      if (results.flag('json')) {
+        _stdout.writeln(_prettyJson(result.toJson()));
+      } else {
+        _stdout.writeln(_formatFirebaseHostingPublishResult(result));
+      }
       return 0;
     }
 
@@ -4856,7 +4906,7 @@ Commands:
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
-  publish [mini-program-id] [--target local|cloud|static] [--env <env-name>] [--output <folder>] [--clean]
+  publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean]
   access-key create|list|revoke|rotate <mini-program-id> [--env <env-name>]
   cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
   cloud app list|info|disable|delete [options]
@@ -5130,6 +5180,7 @@ Commands:
       'toolingVersion': _miniProgramToolingVersion,
       'capabilityIds': _capabilityIds,
       'features': <String, bool>{
+        'firebaseHostingPublish': true,
         'publisherBackendAwsStatus': true,
         'publisherBackendAwsOutputs': true,
         'publisherBackendAwsSmoke': true,
@@ -5156,6 +5207,7 @@ Commands:
         'publisherBackendFirebaseDestroyDataLossGuard': true,
       },
       'commands': <String>[
+        'publish --target firebase-hosting',
         'publisher-backend scaffold --template firebase-functions --storage firestore',
         'publisher-backend firebase deploy',
         'publisher-backend firebase status',
@@ -5421,6 +5473,36 @@ Commands:
       'Published at UTC: ${result.publishedAtUtc}',
       'Host endpoint example:',
       'MiniProgramEndpoint.public(apiBaseUri: Uri.parse(\'https://your-cdn.example.com/public_mini_program/\'))',
+    ];
+    return lines.join('\n');
+  }
+
+  String _formatFirebaseHostingPublishResult(
+    MiniProgramFirebaseHostingPublishResult result,
+  ) {
+    final lines = <String>[
+      result.dryRun
+          ? 'Prepared Firebase Hosting static delivery.'
+          : 'Published mini-program to Firebase Hosting.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Site: ${result.siteId}',
+      'Mini-program ID: ${result.staticResult.miniProgramId}',
+      'Version: ${result.staticResult.version}',
+      'Hosting root: ${result.hostingRootPath}',
+      'Public folder: ${result.outputPath}',
+      'Firebase config: ${result.firebaseJsonPath}',
+      'Delivery API base URL: ${result.deliveryApiBaseUrl}',
+      'Cleaned generated output first: ${result.staticResult.cleaned}',
+      'Written files: ${result.staticResult.writtenFiles.length}',
+      'Deployed: ${result.deployed}',
+      'Dry run: ${result.dryRun}',
+      if (result.deployExitCode != null)
+        'Firebase CLI exit code: ${result.deployExitCode}',
+      'Published at UTC: ${result.staticResult.publishedAtUtc}',
+      'Next handoff step:',
+      'miniprogram publisher-backend firebase handoff --env ${result.environmentName} --delivery-url ${result.deliveryApiBaseUrl} --public',
     ];
     return lines.join('\n');
   }
@@ -5838,7 +5920,10 @@ Commands:
       'Project root: $projectRootPath',
       'Device: $deviceId',
       if (environmentName != null) 'Environment: $environmentName',
-      'Backend API base URL: $backendApiBaseUrl',
+      if (backendApiBaseUrl.trim().isEmpty)
+        'Backend API base URL: generated runtime default'
+      else
+        'Backend API base URL: $backendApiBaseUrl',
     ].join('\n');
   }
 
@@ -7633,17 +7718,11 @@ Commands:
         : hostConfiguration?.environmentName ??
               resolvedEnvironmentState?.state.activeEnvironment;
     if (requestedEnvironmentName == null || requestedEnvironmentName.isEmpty) {
-      throw const MiniProgramHostException(
-        'No cloud environment was selected for the host app. Pass '
-        '`--env <env-name>` or run `miniprogram embed cloud configure --env '
-        '<env-name>` first.',
-      );
+      return null;
     }
     if (requestedEnvironmentName == 'local' ||
         requestedEnvironmentName == 'cloud') {
-      throw const MiniProgramHostException(
-        'host run requires a named cloud environment such as my-aws-prod.',
-      );
+      return null;
     }
 
     final resolvedEnvironment = resolvedEnvironmentState?.state
@@ -7676,6 +7755,14 @@ Commands:
       if (configuredBackendApiBaseUrl != null &&
           configuredBackendApiBaseUrl.isNotEmpty) {
         return _normalizeAbsoluteUrl(configuredBackendApiBaseUrl);
+      }
+
+      if (environment.provider != 'aws') {
+        if (hostConfiguration != null &&
+            hostConfiguration.backendApiBaseUrl.trim().isNotEmpty) {
+          return _normalizeAbsoluteUrl(hostConfiguration.backendApiBaseUrl);
+        }
+        return '';
       }
 
       if (resolvedEnvironmentState != null) {
@@ -7712,11 +7799,7 @@ Commands:
       return _normalizeAbsoluteUrl(hostConfiguration.backendApiBaseUrl);
     }
 
-    throw const MiniProgramHostException(
-      'No cloud backend API base URL could be resolved for the host app. Run '
-      '`miniprogram cloud deploy` first, then `miniprogram embed cloud '
-      'configure --env <env-name>`.',
-    );
+    return '';
   }
 
   Future<ResolvedLocalCliEnvironmentState?> _discoverEnvironmentState({

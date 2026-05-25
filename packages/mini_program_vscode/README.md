@@ -61,6 +61,7 @@ code --install-extension mini-program-tools-0.1.31.vsix
   - `MiniProgram: Preview`
   - `MiniProgram: Publish`
   - `MiniProgram: Publish Public Static MiniProgram`
+  - `MiniProgram: Publish MiniProgram to Firebase Hosting`
   - `MiniProgram: Embed Init`
   - `MiniProgram: Configure Host Cloud`
   - `MiniProgram: Import Host Endpoint`
@@ -140,6 +141,12 @@ code --install-extension mini-program-tools-0.1.31.vsix
 directly and can pass `--clean` to remove generated static output before writing
 the new version. The static target writes a folder that can be uploaded to
 GitHub Pages or a CDN and then used from a public endpoint.
+
+`MiniProgram: Publish MiniProgram to Firebase Hosting` wraps
+`miniprogram publish --target firebase-hosting` from tooling 0.3.40. It asks for
+the Firebase env, Hosting public folder, optional site ID, cleanup preference,
+and deploy/dry-run mode. After publish it shows the Hosting delivery URL and can
+start `MiniProgram: Create Firebase Host Handoff Package` with that URL.
 
 `MiniProgram: Embed Init` can also generate a public first-run demo endpoint.
 Choose **Add public demo endpoint** when prompted to create:

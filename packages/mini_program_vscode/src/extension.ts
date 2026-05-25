@@ -183,6 +183,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publishPublicStaticMiniProgram', () =>
       publishPublicStaticMiniProgram(output, refreshStatus),
     ),
+    vscode.commands.registerCommand('miniProgramTools.publishFirebaseHostingMiniProgram', () =>
+      publishFirebaseHostingMiniProgram(output, () => refreshStatus(false)),
+    ),
     vscode.commands.registerCommand('miniProgramTools.embedInit', () =>
       embedInit(output, refreshStatus),
     ),
@@ -584,6 +587,99 @@ async function publishPublicStaticMiniProgram(
     output,
     refreshStatus,
   );
+}
+
+async function publishFirebaseHostingMiniProgram(
+  output: vscode.OutputChannel,
+  refreshStatus: () => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensureFirebaseHostingPublishCli040(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const outputPath = await chooseFirebaseHostingOutputFolder(workspacePath);
+  if (!outputPath) {
+    return;
+  }
+  const clean = await chooseStaticClean();
+  if (clean === undefined) {
+    return;
+  }
+  const siteIdInput = await vscode.window.showInputBox({
+    prompt: 'Optional Firebase Hosting site ID',
+    placeHolder: 'Leave blank to use the default project Hosting site',
+    ignoreFocusOut: true,
+    validateInput: validateOptionalSafeSegment,
+  });
+  if (siteIdInput === undefined) {
+    return;
+  }
+  const dryRun = await chooseFirebaseHostingDryRun();
+  if (dryRun === undefined) {
+    return;
+  }
+
+  const result = await runCliCapture(
+    'Publish MiniProgram to Firebase Hosting',
+    buildPublishArgs({
+      target: 'firebase-hosting',
+      envName,
+      outputPath,
+      siteId: siteIdInput.trim() || undefined,
+      clean,
+      dryRun,
+      json: true,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
+  if (!result) {
+    return;
+  }
+  const decoded = parseJsonObject(result.stdout);
+  const deliveryUrl = stringValue(decoded.deliveryApiBaseUrl);
+  output.appendLine('');
+  output.appendLine(
+    dryRun
+      ? 'Firebase Hosting static delivery prepared.'
+      : 'Firebase Hosting static delivery published.',
+  );
+  if (deliveryUrl) {
+    output.appendLine(`Delivery API base URL: ${deliveryUrl}`);
+    output.appendLine('Next handoff step:');
+    output.appendLine(
+      `miniprogram publisher-backend firebase handoff --env ${envName} --delivery-url ${deliveryUrl} --public`,
+    );
+  }
+  await refreshStatus();
+
+  const action = await vscode.window.showInformationMessage(
+    dryRun
+      ? 'Firebase Hosting dry-run completed.'
+      : 'Firebase Hosting publish completed.',
+    ...(deliveryUrl
+      ? ['Create handoff package', 'Copy delivery URL']
+      : ['Close']),
+  );
+  if (action === 'Copy delivery URL' && deliveryUrl) {
+    await vscode.env.clipboard.writeText(deliveryUrl);
+    vscode.window.showInformationMessage('Firebase Hosting delivery URL copied.');
+  }
+  if (action === 'Create handoff package' && deliveryUrl) {
+    await publisherBackendFirebaseHandoff(output, refreshStatus, {
+      envName,
+      deliveryUrl,
+      public: true,
+    });
+  }
 }
 
 async function embedInit(
@@ -2140,6 +2236,11 @@ async function publisherBackendFirebaseHostCommand(
 async function publisherBackendFirebaseHandoff(
   output: vscode.OutputChannel,
   refreshStatus: () => Promise<void>,
+  defaults: {
+    readonly envName?: string;
+    readonly deliveryUrl?: string;
+    readonly public?: boolean;
+  } = {},
 ): Promise<void> {
   const workspacePath = await requireMiniProgramRoot();
   if (!workspacePath) {
@@ -2148,7 +2249,9 @@ async function publisherBackendFirebaseHandoff(
   if (!(await ensurePublisherBackendFirebaseHandoffCli039(workspacePath, output))) {
     return;
   }
-  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  const envName =
+    defaults.envName?.trim() ||
+    (await promptPublisherBackendFirebaseEnvName(workspacePath));
   if (!envName) {
     return;
   }
@@ -2166,13 +2269,14 @@ async function publisherBackendFirebaseHandoff(
   const deliveryUrl = await vscode.window.showInputBox({
     prompt: 'Mini-program delivery API base URL',
     placeHolder: 'https://cdn.jsdelivr.net/gh/owner/miniprogram-public@main/coupon_demo',
+    value: defaults.deliveryUrl,
     ignoreFocusOut: true,
     validateInput: validateAbsoluteUrl,
   });
   if (!deliveryUrl) {
     return;
   }
-  const accessMode = await chooseEndpointAccessMode();
+  const accessMode = defaults.public ? 'public' : await chooseEndpointAccessMode();
   if (!accessMode) {
     return;
   }
@@ -4703,6 +4807,7 @@ function readPublisherBackendFirebaseStateValue(
 
 interface PublisherBackendAwsCliCapability {
   readonly checked: boolean;
+  readonly supportsFirebaseHostingPublish?: boolean;
   readonly supportsWriteSmoke: boolean;
   readonly supportsDataManagement: boolean;
   readonly supportsFirebaseScaffold?: boolean;
@@ -4757,6 +4862,7 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
       const decoded = parseJsonObject(capabilitiesResult.stdout);
       const capability = capabilityFromCliCapabilitiesJson(decoded);
       if (
+        capability.supportsFirebaseHostingPublish ||
         capability.supportsWriteSmoke ||
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
@@ -4863,6 +4969,9 @@ function capabilityFromCliCapabilitiesJson(
       hasCapability('publisher_backend.aws.dynamodb.data.import') &&
       hasCapability('publisher_backend.aws.dynamodb.data.redemptions') &&
       hasCapability('publisher_backend.aws.destroy.data_loss_guard'));
+  const supportsFirebaseHostingPublish =
+    hasFeature('firebaseHostingPublish') ||
+    hasCapability('publish.firebase_hosting');
   const supportsFirebaseScaffold =
     hasFeature('publisherBackendFirebaseFunctionsScaffold') ||
     hasCapability('publisher_backend.firebase_functions.scaffold');
@@ -4899,6 +5008,9 @@ function capabilityFromCliCapabilitiesJson(
       hasCapability('publisher_backend.firebase.firestore.data.redemptions') &&
       hasCapability('publisher_backend.firebase.destroy.data_loss_guard'));
   const details = [
+    supportsFirebaseHostingPublish
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase Hosting publish.',
     supportsWriteSmoke
       ? undefined
       : 'Configured CLI capabilities do not include publisher_backend.aws.smoke.write.',
@@ -4929,6 +5041,7 @@ function capabilityFromCliCapabilitiesJson(
   ].filter((value): value is string => Boolean(value));
   return {
     checked: true,
+    supportsFirebaseHostingPublish,
     supportsWriteSmoke,
     supportsDataManagement,
     supportsFirebaseScaffold,
@@ -5143,6 +5256,29 @@ async function ensurePublisherBackendFirebaseHandoffCli039(
   const message =
     'MiniProgram CLI 0.3.39 or newer is required for Firebase host handoff packages. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.39`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensureFirebaseHostingPublishCli040(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (capability.supportsFirebaseHostingPublish) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.40 or newer is required for Firebase Hosting publish. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.40`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -5558,6 +5694,23 @@ async function chooseStaticOutputFolder(): Promise<string | undefined> {
   return folders?.[0]?.fsPath;
 }
 
+async function chooseFirebaseHostingOutputFolder(
+  workspacePath: string,
+): Promise<string | undefined> {
+  const defaultUri = vscode.Uri.file(
+    path.join(workspacePath, 'backend', 'firebase_hosting', 'public'),
+  );
+  const folders = await vscode.window.showOpenDialog({
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    defaultUri,
+    openLabel: 'Use Firebase Hosting public folder',
+    title: 'Choose Firebase Hosting public folder',
+  });
+  return folders?.[0]?.fsPath;
+}
+
 async function chooseStaticClean(): Promise<boolean | undefined> {
   const choice = await vscode.window.showQuickPick(
     [
@@ -5573,6 +5726,25 @@ async function chooseStaticClean(): Promise<boolean | undefined> {
       },
     ],
     { title: 'Public static publish cleanup', ignoreFocusOut: true },
+  );
+  return choice?.value;
+}
+
+async function chooseFirebaseHostingDryRun(): Promise<boolean | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Deploy to Firebase Hosting',
+        description: 'Build static delivery and run firebase deploy',
+        value: false,
+      },
+      {
+        label: 'Dry run only',
+        description: 'Build static delivery and firebase.json without deploying',
+        value: true,
+      },
+    ],
+    { title: 'Firebase Hosting publish mode', ignoreFocusOut: true },
   );
   return choice?.value;
 }
@@ -5757,6 +5929,17 @@ function validateOptionalEnvironmentName(value: string): string | undefined {
   }
   if (!/^[a-z][a-z0-9_-]*$/.test(trimmed)) {
     return 'Use lowercase letters, numbers, underscores, or hyphens, starting with a letter.';
+  }
+  return undefined;
+}
+
+function validateOptionalSafeSegment(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(trimmed)) {
+    return 'Use a Firebase Hosting site id, such as lowercase letters, numbers, and hyphens.';
   }
   return undefined;
 }

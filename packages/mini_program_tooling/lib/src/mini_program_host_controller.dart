@@ -161,17 +161,13 @@ class MiniProgramHostController {
     }
 
     final trimmedBackendApiBaseUrl = request.backendApiBaseUrl.trim();
-    if (trimmedBackendApiBaseUrl.isEmpty) {
-      throw const MiniProgramHostException(
-        'A backend API base URL is required to run the embedded host app.',
-      );
-    }
 
     final invocation = <String>[
       'run',
       '-d',
       request.deviceId,
-      '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=$trimmedBackendApiBaseUrl',
+      if (trimmedBackendApiBaseUrl.isNotEmpty)
+        '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=$trimmedBackendApiBaseUrl',
     ];
     final exitCode = await _processRunner(
       'flutter',

@@ -54,6 +54,8 @@ Already shipped:
 - Firebase Functions + Firestore publisher backend scaffold, deploy, smoke,
   seed/data status, export/import/redemptions, guarded destroy, handoff
   packages, and host wiring
+- Firebase Hosting static delivery publish for Firebase-owned public
+  mini-program artifacts
 - host-app cloud binding and `host run`
 - VS Code Firebase host wiring and handoff workflows with `hostEndpointReady`
   diagnostics
@@ -270,7 +272,7 @@ miniprogram env status
 miniprogram build [mini-program-id]
 miniprogram preview -d <device> [mini-program-id]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud|static] [--env <env-name>]
+miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>]
 miniprogram publisher-backend scaffold --template mock
 miniprogram publisher-backend run --port 9090
 miniprogram publisher-backend status
@@ -587,13 +589,14 @@ Where those optional URLs come from:
 Current cloud support in this phase:
 
 - provider implementation shipped: `aws`
-- publisher backend implementation shipped: Firebase Functions + Firestore
+- Firebase delivery support shipped: Functions + Firestore publisher backend,
+  handoff packages, and Firebase Hosting static delivery publish
 - planned next providers: `gcp`
 - planned next providers: `custom-s3-compatible`
 
-Firebase support is currently focused on publisher-owned business backends, not
-static delivery hosting. The publisher deploys Cloud Functions and seeds or
-manages Firestore data with:
+Firebase support is publisher-owned: the mini-program publisher deploys Cloud
+Functions, manages Firestore data, publishes static delivery to Firebase
+Hosting, and hands the host app a provider-neutral `.partner.json` package:
 
 ```powershell
 miniprogram publisher-backend scaffold --template firebase-functions --storage firestore
@@ -602,7 +605,8 @@ miniprogram publisher-backend firebase deploy --env my-firebase-prod
 miniprogram publisher-backend firebase seed --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write
 miniprogram publisher-backend firebase data export --env my-firebase-prod --include-redemptions
-miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery-url <delivery-url> --public --output <app>.partner.json
+miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
+miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery-url https://<project-id>.web.app/ --public --output <app>.partner.json
 ```
 
 The Flutter host app receives only the delivery URL and optional publisher

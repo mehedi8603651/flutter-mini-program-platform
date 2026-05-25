@@ -73,7 +73,9 @@ void main() {
       expect(stderrBuffer.toString(), isEmpty);
       expect(
         stdoutBuffer.toString(),
-        contains('publish [mini-program-id] [--target local|cloud|static]'),
+        contains(
+          'publish [mini-program-id] [--target local|cloud|static|firebase-hosting]',
+        ),
       );
       expect(stdoutBuffer.toString(), contains('capabilities [--json]'));
       expect(
@@ -154,7 +156,8 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.39'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.40'));
+      expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.aws.dynamodb.data.export'),
@@ -206,8 +209,9 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.39');
+      expect(json['toolingVersion'], '0.3.40');
       expect(json['packageName'], 'mini_program_tooling');
+      expect(json['capabilityIds'], contains('publish.firebase_hosting'));
       expect(
         json['capabilityIds'],
         contains('publisher_backend.aws.dynamodb.data.redemptions'),
@@ -245,6 +249,7 @@ void main() {
         contains('publisher_backend.firebase.destroy.data_loss_guard'),
       );
       final features = json['features'] as Map<String, dynamic>;
+      expect(features['firebaseHostingPublish'], isTrue);
       expect(features['publisherBackendAwsWriteSmoke'], isTrue);
       expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
       expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
@@ -3468,6 +3473,194 @@ void main() {
     );
 
     test(
+      'publish --target firebase-hosting dry-run writes hosting config and JSON output',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final staticPublisher = _FakeMiniProgramStaticPublisher();
+        final stdoutBuffer = StringBuffer();
+        var deployCalled = false;
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              firebaseHostingPublisher: MiniProgramFirebaseHostingPublisher(
+                staticPublisher: staticPublisher,
+                shellRunner: (executable, arguments, {workingDirectory}) async {
+                  deployCalled = true;
+                  return ProcessResult(0, 0, '', '');
+                },
+              ),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publish',
+              '--target',
+              'firebase-hosting',
+              '--env',
+              'my-firebase-prod',
+              '--clean',
+              '--dry-run',
+              '--json',
+            ]);
+
+        expect(exitCode, 0);
+        expect(deployCalled, isFalse);
+        final expectedOutputPath = p.normalize(
+          p.absolute(
+            p.join(standaloneRoot, 'backend', 'firebase_hosting', 'public'),
+          ),
+        );
+        expect(staticPublisher.lastRequest, isNotNull);
+        expect(staticPublisher.lastRequest!.outputPath, expectedOutputPath);
+        expect(staticPublisher.lastRequest!.clean, isTrue);
+        final decoded =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(decoded['command'], 'publish firebase-hosting');
+        expect(decoded['projectId'], 'coupon-prod');
+        expect(decoded['siteId'], 'coupon-prod');
+        expect(decoded['deliveryApiBaseUrl'], 'https://coupon-prod.web.app/');
+        expect(decoded['dryRun'], isTrue);
+        expect(decoded['deployed'], isFalse);
+        final firebaseJson =
+            jsonDecode(
+                  await File(
+                    p.join(
+                      standaloneRoot,
+                      'backend',
+                      'firebase_hosting',
+                      'firebase.json',
+                    ),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>;
+        final hosting = firebaseJson['hosting'] as Map<String, dynamic>;
+        expect(hosting['public'], 'public');
+        expect(hosting.containsKey('site'), isFalse);
+      },
+    );
+
+    test(
+      'publish --target firebase-hosting deploys an optional site',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final staticPublisher = _FakeMiniProgramStaticPublisher();
+        final outputPath = p.join(tempDir.path, 'hosting', 'site_public');
+        String? capturedExecutable;
+        List<String>? capturedArguments;
+        String? capturedWorkingDirectory;
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              firebaseHostingPublisher: MiniProgramFirebaseHostingPublisher(
+                staticPublisher: staticPublisher,
+                shellRunner: (executable, arguments, {workingDirectory}) async {
+                  capturedExecutable = executable;
+                  capturedArguments = List<String>.from(arguments);
+                  capturedWorkingDirectory = workingDirectory;
+                  return ProcessResult(0, 0, 'deploy ok', '');
+                },
+              ),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publish',
+              '--target',
+              'firebase-hosting',
+              '--env',
+              'my-firebase-prod',
+              '--output',
+              outputPath,
+              '--site',
+              'coupon-hosting',
+            ]);
+
+        expect(exitCode, 0);
+        expect(capturedExecutable, 'firebase');
+        expect(capturedArguments, <String>[
+          'deploy',
+          '--only',
+          'hosting',
+          '--project',
+          'coupon-prod',
+          '--config',
+          p.join(
+            p.dirname(p.normalize(p.absolute(outputPath))),
+            'firebase.json',
+          ),
+        ]);
+        expect(
+          capturedWorkingDirectory,
+          p.dirname(p.normalize(p.absolute(outputPath))),
+        );
+        final firebaseJson =
+            jsonDecode(
+                  await File(
+                    p.join(
+                      p.dirname(p.normalize(p.absolute(outputPath))),
+                      'firebase.json',
+                    ),
+                  ).readAsString(),
+                )
+                as Map<String, dynamic>;
+        final hosting = firebaseJson['hosting'] as Map<String, dynamic>;
+        expect(hosting['public'], 'site_public');
+        expect(hosting['site'], 'coupon-hosting');
+      },
+    );
+
+    test(
+      'publish --target firebase-hosting rejects non-Firebase envs',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'coupon_center',
+          version: '1.2.3',
+        );
+        await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+        final stderrBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: stderrBuffer,
+              firebaseHostingPublisher: MiniProgramFirebaseHostingPublisher(
+                staticPublisher: _FakeMiniProgramStaticPublisher(),
+              ),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publish',
+              '--target',
+              'firebase-hosting',
+              '--env',
+              'my-aws-prod',
+            ]);
+
+        expect(exitCode, 1);
+        expect(
+          stderrBuffer.toString(),
+          contains('requires a Firebase environment'),
+        );
+      },
+    );
+
+    test(
       'cloud deploy uses the active named env and persists apiBaseUrl',
       () async {
         final standaloneRoot = p.join(tempDir.path, 'coupon_center');
@@ -4564,6 +4757,43 @@ miniProgramBackendQueryAction(
           hostController.lastRequest!.backendApiBaseUrl,
           'https://api.example.com/api',
         );
+      },
+    );
+
+    test(
+      'host run allows Firebase endpoint-map hosts without an AWS backend env',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeEmbeddedHostFixture(hostRoot);
+        await _writeFirebaseEnvironmentState(
+          stateStore,
+          hostRoot,
+          environmentName: 'my-firebase-prod',
+        );
+        final hostController = _FakeMiniProgramHostController();
+        final cloudController = _FakeMiniProgramCloudController();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              cloudController: cloudController,
+              hostController: hostController,
+              workingDirectory: hostRoot,
+            ).run(<String>[
+              'host',
+              'run',
+              '-d',
+              'chrome',
+              '--env',
+              'my-firebase-prod',
+            ]);
+
+        expect(exitCode, 0);
+        expect(hostController.lastRequest, isNotNull);
+        expect(hostController.lastRequest!.backendApiBaseUrl, isEmpty);
+        expect(cloudController.lastOutputsRequest, isNull);
       },
     );
 

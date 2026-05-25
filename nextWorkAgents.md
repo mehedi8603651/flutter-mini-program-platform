@@ -195,18 +195,21 @@ MiniProgramScope(
 
 ## Priority Roadmap
 
-### Immediate Firebase Hosting Delivery Work
+### Immediate Firebase Auth Design Work
 
 AWS publisher backend work is mature. Firebase publisher backend work now has
-the core production path plus publisher-to-host handoff:
+the core production path plus publisher-to-host handoff and Firebase Hosting
+static delivery:
 
 - Firebase Functions + Firestore scaffold
 - deploy/status/outputs
 - read and write smoke tests
 - Firestore seed/data status/export/import/redemptions
 - guarded function destroy
+- `publish --target firebase-hosting`
 - `publisher-backend firebase host-command`
 - `publisher-backend firebase handoff`
+- VS Code Firebase Hosting publish UI
 - VS Code Firebase host wiring UI with `hostEndpointReady` diagnostics
 - VS Code Firebase handoff package UI
 
@@ -218,28 +221,31 @@ The publisher/host split is now clear:
 - the host app developer should not need Firebase credentials, Firebase env
   state, Firebase SDKs, or publisher backend secrets
 
-#### mini_program_tooling 0.3.40: Firebase Hosting Static Delivery
+#### Done: mini_program_tooling 0.3.40 Firebase Hosting Static Delivery
 
-Add a Firebase Hosting path for static mini-program delivery artifacts.
+Firebase Hosting static delivery is now the recommended Firebase delivery path
+before creating a handoff package.
 
-Expected behavior:
+Implemented behavior:
 
 - publish built manifest/screen/assets to Firebase Hosting
 - return the delivery API base URL needed by `firebase handoff`
 - keep Firestore/Functions business backend separate from static delivery
 - support dry-run/preview output before deployment
 - preserve existing public/static publish behavior for GitHub/CDN workflows
+- keep `host run` usable for Firebase endpoint-map hosts without requiring an
+  AWS cloud backend environment
 
-#### mini_program_vscode 0.1.32: Firebase Hosting Publish UI
+#### Done: mini_program_vscode 0.1.32 Firebase Hosting Publish UI
 
-Expose Firebase Hosting delivery in VS Code:
+VS Code now exposes Firebase Hosting delivery:
 
 - publish current mini-program static delivery to Firebase Hosting
 - show generated delivery URL
 - offer "Create Firebase Host Handoff Package" as the next step
 - keep host import provider-neutral
 
-#### After Firebase Hosting: Firebase Auth
+#### Next: Firebase Auth
 
 Only start Firebase Auth once delivery/handoff is stable. The host should still
 own user auth unless a mini-program has an explicit publisher-owned auth use
@@ -494,7 +500,7 @@ Smaller future UX improvements that fit the current system:
     command execution for multi-word titles.
 19. Done through tooling `0.3.39`: Firebase publisher handoff package.
 20. Done through VS Code `0.1.31`: Firebase handoff package UI.
-21. Next: implement tooling `0.3.40` Firebase Hosting static delivery publish.
-22. Next: implement VS Code `0.1.32` Firebase Hosting publish UI.
-23. Later: design Firebase Auth integration after delivery/handoff is stable.
+21. Done through tooling `0.3.40`: Firebase Hosting static delivery publish.
+22. Done through VS Code `0.1.32`: Firebase Hosting publish UI with handoff next step.
+23. Next: design Firebase Auth integration after delivery/handoff is stable.
 24. Add optional auto-generated `requestId` support in author helpers.

@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -101,6 +101,11 @@
         "command": "miniProgramTools.publishPublicStaticMiniProgram",
         "title": "MiniProgram: Publish Public Static MiniProgram",
         "icon": "$(globe)"
+      },
+      {
+        "command": "miniProgramTools.publishFirebaseHostingMiniProgram",
+        "title": "MiniProgram: Publish MiniProgram to Firebase Hosting",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "miniProgramTools.embedInit",
@@ -704,6 +709,11 @@
           "command": "miniProgramTools.publishPublicStaticMiniProgram",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@16"
+        },
+        {
+          "command": "miniProgramTools.publishFirebaseHostingMiniProgram",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@16.1"
         }
       ]
     }
