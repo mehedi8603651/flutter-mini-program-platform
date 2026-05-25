@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'cache/mini_program_cache_bundle.dart';
+import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
@@ -19,6 +20,8 @@ class MiniProgramRuntime {
     required this.capabilityRegistry,
     required this.cacheBundle,
     this.backendConnector,
+    this.authController,
+    this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
     this.disposeSource = false,
@@ -29,6 +32,8 @@ class MiniProgramRuntime {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramAuthController? authController;
+  final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle cacheBundle;
   final SdkLogger logger;
@@ -40,6 +45,8 @@ class MiniProgramRuntime {
     HostBridge? hostBridge,
     CapabilityRegistry? capabilityRegistry,
     MiniProgramBackendConnector? backendConnector,
+    MiniProgramAuthController? authController,
+    bool? disposeAuthController,
     FeatureFlagEvaluator? featureFlagEvaluator,
     MiniProgramCacheBundle? cacheBundle,
     SdkLogger? logger,
@@ -51,6 +58,9 @@ class MiniProgramRuntime {
       hostBridge: hostBridge ?? this.hostBridge,
       capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
       backendConnector: backendConnector ?? this.backendConnector,
+      authController: authController ?? this.authController,
+      disposeAuthController:
+          disposeAuthController ?? this.disposeAuthController,
       featureFlagEvaluator: featureFlagEvaluator ?? this.featureFlagEvaluator,
       cacheBundle: cacheBundle ?? this.cacheBundle,
       logger: logger ?? this.logger,
@@ -65,6 +75,9 @@ class MiniProgramRuntime {
     final connector = backendConnector;
     if (connector is DisposableMiniProgramBackendConnector) {
       connector.dispose();
+    }
+    if (disposeAuthController) {
+      authController?.dispose();
     }
   }
 }
@@ -107,6 +120,9 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.hostBridge != oldWidget.runtime.hostBridge ||
         runtime.capabilityRegistry != oldWidget.runtime.capabilityRegistry ||
         runtime.backendConnector != oldWidget.runtime.backendConnector ||
+        runtime.authController != oldWidget.runtime.authController ||
+        runtime.disposeAuthController !=
+            oldWidget.runtime.disposeAuthController ||
         runtime.featureFlagEvaluator !=
             oldWidget.runtime.featureFlagEvaluator ||
         runtime.cacheBundle != oldWidget.runtime.cacheBundle ||

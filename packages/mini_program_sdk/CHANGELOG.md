@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.6
+
+- add publisher-owned email/password auth runtime APIs with per-mini-program
+  session caching
+- add secure auth session storage, SDK auth actions/builders, and native email
+  auth sheet support
+- attach bearer tokens to publisher backend calls without exposing auth tokens
+  through bindings or logs
+
 ## 0.3.5
 
 - make `MiniProgramBackendEndpoint.enableLocalLoopbackFallback` active for

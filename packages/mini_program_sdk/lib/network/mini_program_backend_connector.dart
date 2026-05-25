@@ -54,6 +54,7 @@ class MiniProgramBackendRequest {
     this.requestId,
     this.method = 'GET',
     this.body = const <String, dynamic>{},
+    this.headers = const <String, String>{},
     this.cachePolicy = const MiniProgramBackendCachePolicy.noCache(),
   });
 
@@ -62,7 +63,23 @@ class MiniProgramBackendRequest {
   final String? requestId;
   final String method;
   final Map<String, dynamic> body;
+  final Map<String, String> headers;
   final MiniProgramBackendCachePolicy cachePolicy;
+
+  MiniProgramBackendRequest copyWith({
+    Map<String, String>? headers,
+    MiniProgramBackendCachePolicy? cachePolicy,
+  }) {
+    return MiniProgramBackendRequest(
+      miniProgramId: miniProgramId,
+      endpoint: endpoint,
+      requestId: requestId,
+      method: method,
+      body: body,
+      headers: headers ?? this.headers,
+      cachePolicy: cachePolicy ?? this.cachePolicy,
+    );
+  }
 }
 
 enum MiniProgramBackendResultStatus { success, failed }
@@ -223,7 +240,13 @@ class EndpointRoutingMiniProgramBackendConnector
     }
 
     final uri = _resolve(backend.baseUri, normalizedEndpoint);
-    final cacheKey = _cacheKey(appId: appId, method: method, uri: uri);
+    final safeHeaders = _normalizeRequestHeaders(request.headers);
+    final cacheKey = _cacheKey(
+      appId: appId,
+      method: method,
+      uri: uri,
+      headers: safeHeaders,
+    );
     if (method == 'GET' && request.cachePolicy.isEnabled) {
       final cached = _cache[cacheKey];
       if (cached != null && !cached.isExpired) {
@@ -238,7 +261,7 @@ class EndpointRoutingMiniProgramBackendConnector
         uri: uri,
         method: method,
         body: request.body,
-        headers: _requestHeaders(appId, backend),
+        headers: _requestHeaders(appId, backend, safeHeaders),
       );
     } on TimeoutException {
       return MiniProgramBackendResult.failed(
@@ -378,6 +401,7 @@ class EndpointRoutingMiniProgramBackendConnector
   Map<String, String> _requestHeaders(
     String appId,
     MiniProgramBackendEndpoint backend,
+    Map<String, String> requestHeaders,
   ) {
     final headers = <String, String>{
       'accept': 'application/json',
@@ -391,6 +415,7 @@ class EndpointRoutingMiniProgramBackendConnector
       if (_deliveryContext.locale?.trim().isNotEmpty == true)
         MiniProgramBackendHttpHeaders.locale: _deliveryContext.locale!.trim(),
       ...backend.headers,
+      ...requestHeaders,
     };
     final accessKey = _accessKeys[appId];
     if (backend.sendAccessKeyToBackend &&
@@ -495,8 +520,29 @@ class EndpointRoutingMiniProgramBackendConnector
     required String appId,
     required String method,
     required Uri uri,
+    required Map<String, String> headers,
   }) {
-    return '$appId::$method::${uri.toString()}';
+    String? authHeader;
+    for (final entry in headers.entries) {
+      if (entry.key.toLowerCase() == 'authorization') {
+        authHeader = entry.value;
+        break;
+      }
+    }
+    return '$appId::$method::${uri.toString()}::auth=${authHeader ?? ''}';
+  }
+
+  Map<String, String> _normalizeRequestHeaders(Map<String, String> headers) {
+    final normalized = <String, String>{};
+    for (final entry in headers.entries) {
+      final name = entry.key.trim();
+      final value = entry.value.trim();
+      if (name.isEmpty || value.isEmpty) {
+        continue;
+      }
+      normalized[name] = value;
+    }
+    return normalized;
   }
 
   static Map<String, MiniProgramBackendEndpoint> _normalizeBackends(

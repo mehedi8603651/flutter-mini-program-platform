@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'capability_registry.dart';
+import 'auth/mini_program_auth.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
 import 'network/mini_program_backend_connector.dart';
@@ -48,6 +49,7 @@ class MiniProgramSdkScope extends InheritedWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.authController,
     required this.backendStore,
     required this.featureFlagEvaluator,
     required this.logger,
@@ -63,6 +65,7 @@ class MiniProgramSdkScope extends InheritedWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramAuthController? authController;
   final MiniProgramBackendStore backendStore;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
@@ -89,6 +92,7 @@ class MiniProgramSdkScope extends InheritedWidget {
         hostBridge != oldWidget.hostBridge ||
         capabilityRegistry != oldWidget.capabilityRegistry ||
         backendConnector != oldWidget.backendConnector ||
+        authController != oldWidget.authController ||
         backendStore != oldWidget.backendStore ||
         featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
         logger != oldWidget.logger ||

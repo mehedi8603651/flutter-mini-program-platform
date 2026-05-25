@@ -16,12 +16,14 @@ shared platform contracts.
 - host bridge dispatch for native actions
 - Stac-based rendering setup
 - in-memory cache helpers for manifests, screens, and assets
+- publisher-owned email/password auth runtime with per-mini-program cached
+  sessions
 
 ## Install
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.5
+  mini_program_sdk: ^0.3.6
   mini_program_contracts: ^0.1.1
 ```
 
@@ -177,7 +179,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.5` while the runtime compatibility version remains
+the package can be `0.3.6` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints
@@ -354,6 +356,55 @@ Supported bindings include:
 {{item.title}}
 ```
 
+### Publisher auth
+
+For publisher-owned email/password auth, configure an auth controller alongside
+the publisher backend connector. The host app does not need Firebase SDK config,
+Firebase project access, or publisher backend secrets.
+
+```dart
+final authController = MiniProgramAuthController.secure();
+
+final config = MiniProgramConfig(
+  sdkVersion: '1.0.0',
+  source: EndpointRoutingMiniProgramSource(
+    endpoints: endpoints,
+    deliveryContext: deliveryContext,
+  ),
+  backendConnector: buildEndpointRoutingBackendConnector(
+    endpoints: endpoints,
+    deliveryContext: deliveryContext,
+  ),
+  authController: authController,
+  disposeAuthController: true,
+  hostBridge: const NoopHostBridge(),
+  capabilityRegistry: CapabilityRegistry(
+    const <Capability>[Capability.analytics],
+  ),
+);
+```
+
+Mini-program JSON can use `miniProgramAuth` actions and
+`miniProgramAuthBuilder` widgets. The SDK shows the native email/password auth
+sheet for `showEmailAuth`, caches only backend-issued tokens, restores cached
+sessions on the next launch, and sends `Authorization: Bearer <idToken>` on
+publisher backend calls when the mini-program is signed in.
+
+```text
+{{auth.authenticated}}
+{{auth.loading}}
+{{auth.user.uid}}
+{{auth.user.email}}
+{{auth.errorCode}}
+{{auth.message}}
+```
+
+Auth sessions are stored per mini-program id. `SecureMiniProgramAuthStore` uses
+`flutter_secure_storage`; Android/iOS are the primary targets. Web persistence
+is supported by the dependency but should be treated as lower security and used
+only on HTTPS or localhost. The secure storage dependency currently requires
+Android min SDK 23 for its default encryption path.
+
 Security rules:
 
 - backend secrets stay on the publisher server; never put Firebase/AWS/custom
@@ -362,8 +413,8 @@ Security rules:
   are rejected
 - the MiniProgram delivery access key is not user auth and is not sent to the
   publisher backend unless `sendAccessKeyToBackend: true` is set explicitly
-- use JWT/OAuth/session tokens through your own backend when user identity is
-  required
+- publisher auth tokens are never exposed through bindings or action results;
+  only safe user/session state is available to mini-program UI
 
 Performance rules:
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'cache/mini_program_cache_bundle.dart';
+import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
@@ -17,6 +18,8 @@ class MiniProgramConfig {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.authController,
+    this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.cacheBundle,
     this.logger = const DebugPrintSdkLogger(),
@@ -33,6 +36,8 @@ class MiniProgramConfig {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramAuthController? authController;
+  final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle? cacheBundle;
   final SdkLogger logger;
@@ -45,6 +50,8 @@ class MiniProgramConfig {
       hostBridge: hostBridge,
       capabilityRegistry: capabilityRegistry,
       backendConnector: backendConnector,
+      authController: authController,
+      disposeAuthController: disposeAuthController,
       featureFlagEvaluator: featureFlagEvaluator,
       cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
       logger: logger,
@@ -59,6 +66,9 @@ class MiniProgramConfig {
     final connector = backendConnector;
     if (connector is DisposableMiniProgramBackendConnector) {
       connector.dispose();
+    }
+    if (disposeAuthController) {
+      authController?.dispose();
     }
   }
 }

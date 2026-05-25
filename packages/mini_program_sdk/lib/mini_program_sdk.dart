@@ -1,4 +1,5 @@
 export 'cache/asset_cache.dart';
+export 'auth/mini_program_auth.dart';
 export 'capability_registry.dart';
 export 'cache/manifest_cache.dart';
 export 'cache/mini_program_cache_bundle.dart';
@@ -32,5 +33,6 @@ export 'rendering/stac_initializer.dart';
 export 'sdk_context.dart';
 export 'version_validator.dart';
 export 'widgets/sdk_error_view.dart';
+export 'widgets/sdk_email_auth_sheet.dart';
 export 'widgets/sdk_loading_view.dart';
 export 'widgets/sdk_offline_notice.dart';

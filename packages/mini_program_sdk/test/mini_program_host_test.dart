@@ -574,6 +574,109 @@ void main() {
       expect(connector.calls, hasLength(2));
     });
 
+    testWidgets('auth builder renders restored cached session', (tester) async {
+      final authController = MiniProgramAuthController(
+        store: InMemoryMiniProgramAuthStore(),
+      );
+      await authController.signInEmail(
+        miniProgramId: 'profile_center',
+        connector: _FakeBackendConnector(
+          responder: (_) async => MiniProgramBackendResult.success(
+            data: <String, dynamic>{
+              'authenticated': true,
+              'user': <String, dynamic>{
+                'uid': 'user-1',
+                'email': 'user@example.com',
+              },
+              'idToken': 'id-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+            },
+          ),
+        ),
+        email: 'user@example.com',
+        password: 'secret123',
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _authBuilderScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: _FakeBackendConnector(),
+            authController: authController,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Signed in as user@example.com'), findsOneWidget);
+      expect(find.text('Please sign in'), findsNothing);
+    });
+
+    testWidgets('auth sign-out action updates auth builder', (tester) async {
+      final authController = MiniProgramAuthController(
+        store: InMemoryMiniProgramAuthStore(),
+      );
+      await authController.signInEmail(
+        miniProgramId: 'profile_center',
+        connector: _FakeBackendConnector(
+          responder: (_) async => MiniProgramBackendResult.success(
+            data: <String, dynamic>{
+              'authenticated': true,
+              'user': <String, dynamic>{
+                'uid': 'user-1',
+                'email': 'user@example.com',
+              },
+              'idToken': 'id-token',
+              'refreshToken': 'refresh-token',
+              'expiresIn': 3600,
+            },
+          ),
+        ),
+        email: 'user@example.com',
+        password: 'secret123',
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _authSignOutScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: _FakeBackendConnector(),
+            authController: authController,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Signed in as user@example.com'), findsOneWidget);
+
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Please sign in'), findsOneWidget);
+    });
+
     testWidgets('backend builder keeps previous data available after failure', (
       tester,
     ) async {
@@ -1166,6 +1269,50 @@ const Map<String, dynamic> _backendBuilderRefreshScreenJson = <String, dynamic>{
           'forceRefresh': true,
         },
         'child': <String, dynamic>{'type': 'text', 'data': 'Refresh backend'},
+      },
+    ],
+  },
+};
+
+const Map<String, dynamic> _authBuilderScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'miniProgramAuthBuilder',
+    'signedOut': <String, dynamic>{'type': 'text', 'data': 'Please sign in'},
+    'signedIn': <String, dynamic>{
+      'type': 'text',
+      'data': 'Signed in as {{auth.user.email}}',
+    },
+    'error': <String, dynamic>{
+      'type': 'text',
+      'data': 'Auth error: {{auth.message}}',
+    },
+  },
+};
+
+const Map<String, dynamic> _authSignOutScreenJson = <String, dynamic>{
+  'type': 'scaffold',
+  'body': <String, dynamic>{
+    'type': 'column',
+    'children': [
+      <String, dynamic>{
+        'type': 'miniProgramAuthBuilder',
+        'signedOut': <String, dynamic>{
+          'type': 'text',
+          'data': 'Please sign in',
+        },
+        'signedIn': <String, dynamic>{
+          'type': 'text',
+          'data': 'Signed in as {{auth.user.email}}',
+        },
+      },
+      <String, dynamic>{
+        'type': 'elevatedButton',
+        'onPressed': <String, dynamic>{
+          'actionType': 'miniProgramAuth',
+          'action': 'signOut',
+        },
+        'child': <String, dynamic>{'type': 'text', 'data': 'Sign out'},
       },
     ],
   },

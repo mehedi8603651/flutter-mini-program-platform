@@ -11,10 +11,12 @@ class MiniProgramBackendBindingResolver {
     dynamic template, {
     required MiniProgramBackendStore store,
     Map<String, dynamic>? item,
+    Map<String, dynamic> bindings = const <String, dynamic>{},
   }) {
     final data = <String, dynamic>{
       'backend': store.toBindingData(),
       if (item != null) 'item': item,
+      ...bindings,
     };
     return _resolveValue(template, data);
   }

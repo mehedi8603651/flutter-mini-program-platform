@@ -49,9 +49,15 @@ class SdkMiniProgramBackendParser
     }
 
     try {
-      return await connector.call(
-        model.toRequest(miniProgramId: scope.miniProgramId),
-      );
+      var request = model.toRequest(miniProgramId: scope.miniProgramId);
+      final authController = scope.authController;
+      if (authController != null) {
+        request = await authController.authorizeRequest(
+          request: request,
+          connector: connector,
+        );
+      }
+      return await connector.call(request);
     } catch (error, stackTrace) {
       scope.logger.error(
         'Unhandled mini-program backend parser failure.',

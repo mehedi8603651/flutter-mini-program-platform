@@ -44,6 +44,12 @@ class SdkMiniProgramBackendQueryParser
         connector: scope.backendConnector,
         miniProgramId: scope.miniProgramId,
         query: model.toQuery(),
+        requestInterceptor: scope.authController == null
+            ? null
+            : (request) => scope.authController!.authorizeRequest(
+                request: request,
+                connector: scope.backendConnector,
+              ),
       );
       return snapshot.toJson();
     } catch (error, stackTrace) {

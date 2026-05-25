@@ -366,6 +366,91 @@ void main() {
       expect(requestedHeaders, <String?>[null, 'mpk_live_trusted']);
     });
 
+    test(
+      'sends request authorization headers without access key leakage',
+      () async {
+        final requestedHeaders = <Map<String, String>>[];
+        final connector = EndpointRoutingMiniProgramBackendConnector(
+          backends: <String, MiniProgramBackendEndpoint>{
+            'coupon': MiniProgramBackendEndpoint(
+              baseUri: Uri.parse('https://publisher.example.com/api/'),
+            ),
+          },
+          accessKeys: const <String, String>{'coupon': 'mpk_live_coupon'},
+          deliveryContext: _deliveryContext,
+          clientFactory: () => _RecordingClient((request) async {
+            requestedHeaders.add(request.headers);
+            return http.Response('{"ok":true}', 200);
+          }),
+        );
+
+        final result = await connector.call(
+          const MiniProgramBackendRequest(
+            miniProgramId: 'coupon',
+            endpoint: 'profile',
+            headers: <String, String>{'authorization': 'Bearer id-token'},
+          ),
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(requestedHeaders.single['authorization'], 'Bearer id-token');
+        expect(
+          requestedHeaders.single[MiniProgramHttpHeaders.accessKey],
+          isNull,
+        );
+      },
+    );
+
+    test('partitions GET cache by authorization header', () async {
+      var requests = 0;
+      final connector = EndpointRoutingMiniProgramBackendConnector(
+        backends: <String, MiniProgramBackendEndpoint>{
+          'coupon': MiniProgramBackendEndpoint(
+            baseUri: Uri.parse('https://publisher.example.com/api/'),
+          ),
+        },
+        deliveryContext: _deliveryContext,
+        clientFactory: () => _RecordingClient((request) async {
+          requests++;
+          final auth = request.headers['authorization'] ?? '';
+          return http.Response('{"request":$requests,"auth":"$auth"}', 200);
+        }),
+      );
+
+      const cachePolicy = MiniProgramBackendCachePolicy(
+        ttl: Duration(minutes: 1),
+      );
+      final publicResult = await connector.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'coupon',
+          endpoint: 'profile',
+          cachePolicy: cachePolicy,
+        ),
+      );
+      final authResult = await connector.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'coupon',
+          endpoint: 'profile',
+          headers: <String, String>{'authorization': 'Bearer id-token'},
+          cachePolicy: cachePolicy,
+        ),
+      );
+      final authResultCached = await connector.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'coupon',
+          endpoint: 'profile',
+          headers: <String, String>{'authorization': 'Bearer id-token'},
+          cachePolicy: cachePolicy,
+        ),
+      );
+
+      expect(publicResult.data['request'], 1);
+      expect(authResult.data['request'], 2);
+      expect(authResultCached.data['request'], 2);
+      expect(authResultCached.fromCache, isTrue);
+      expect(requests, 2);
+    });
+
     test('disposes owned backend HTTP client', () async {
       late _RecordingClient client;
       final connector = EndpointRoutingMiniProgramBackendConnector(

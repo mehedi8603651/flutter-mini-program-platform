@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import 'mini_program_backend_connector.dart';
 
+typedef MiniProgramBackendRequestInterceptor =
+    Future<MiniProgramBackendRequest> Function(MiniProgramBackendRequest);
+
 enum MiniProgramBackendSnapshotStatus { idle, loading, success, failed }
 
 @immutable
@@ -160,6 +163,7 @@ class MiniProgramBackendStore extends ChangeNotifier {
     required MiniProgramBackendConnector? connector,
     required String miniProgramId,
     required MiniProgramBackendQuery query,
+    MiniProgramBackendRequestInterceptor? requestInterceptor,
   }) {
     final requestId = query.requestId.trim();
     if (requestId.isEmpty) {
@@ -179,6 +183,7 @@ class MiniProgramBackendStore extends ChangeNotifier {
       query: query,
       requestId: requestId,
       generation: _generation,
+      requestInterceptor: requestInterceptor,
     );
     _inFlight[requestId] = future;
     future.whenComplete(() {
@@ -208,6 +213,7 @@ class MiniProgramBackendStore extends ChangeNotifier {
     required MiniProgramBackendQuery query,
     required String requestId,
     required int generation,
+    MiniProgramBackendRequestInterceptor? requestInterceptor,
   }) async {
     final previous = _snapshots[requestId];
     _snapshots[requestId] = MiniProgramBackendSnapshot.loading(
@@ -236,9 +242,11 @@ class MiniProgramBackendStore extends ChangeNotifier {
       return snapshot;
     }
 
-    final result = await connector.call(
-      query.toRequest(miniProgramId: miniProgramId),
-    );
+    var request = query.toRequest(miniProgramId: miniProgramId);
+    if (requestInterceptor != null) {
+      request = await requestInterceptor(request);
+    }
+    final result = await connector.call(request);
     if (_disposed || generation != _generation) {
       return _snapshots[requestId] ??
           MiniProgramBackendSnapshot.idle(requestId);

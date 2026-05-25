@@ -5,6 +5,7 @@ import 'package:stac/stac.dart';
 import 'cache/asset_cache.dart';
 import 'cache/manifest_cache.dart';
 import 'cache/screen_cache.dart';
+import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
@@ -35,6 +36,7 @@ class MiniProgramHost extends StatefulWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.authController,
     this.assetCache,
     this.manifestCache,
     this.screenCache,
@@ -50,6 +52,7 @@ class MiniProgramHost extends StatefulWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramAuthController? authController;
   final AssetCache? assetCache;
   final ManifestCache? manifestCache;
   final ScreenCache? screenCache;
@@ -90,6 +93,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.hostBridge != oldWidget.hostBridge ||
         widget.capabilityRegistry != oldWidget.capabilityRegistry ||
         widget.backendConnector != oldWidget.backendConnector ||
+        widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
         widget.screenCache != oldWidget.screenCache ||
@@ -135,6 +139,15 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       cachedAssetCount: loadedMiniProgram.cachedAssetCount,
       downloadedAssetCount: loadedMiniProgram.downloadedAssetCount,
       failedAssetCount: loadedMiniProgram.failedAssetCount,
+    );
+
+    if (!mounted || generation != _loadGeneration) {
+      return;
+    }
+
+    await widget.authController?.restore(
+      miniProgramId: loadedMiniProgram.manifest.id,
+      connector: widget.backendConnector,
     );
 
     if (!mounted || generation != _loadGeneration) {
@@ -475,6 +488,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           hostBridge: widget.hostBridge,
           capabilityRegistry: widget.capabilityRegistry,
           backendConnector: widget.backendConnector,
+          authController: widget.authController,
           backendStore: _backendStore,
           featureFlagEvaluator: widget.featureFlagEvaluator,
           logger: widget.logger,

@@ -201,6 +201,12 @@ class _MiniProgramBackendBuilderState
         connector: activeScope.backendConnector,
         miniProgramId: activeScope.miniProgramId,
         query: model.toQuery(),
+        requestInterceptor: activeScope.authController == null
+            ? null
+            : (request) => activeScope.authController!.authorizeRequest(
+                request: request,
+                connector: activeScope.backendConnector,
+              ),
       );
     });
   }
@@ -213,38 +219,43 @@ class _MiniProgramBackendBuilderState
     }
 
     return AnimatedBuilder(
-      animation: scope.backendStore,
+      animation: scope.authController == null
+          ? scope.backendStore
+          : Listenable.merge(<Listenable>[
+              scope.backendStore,
+              scope.authController!,
+            ]),
       builder: (context, _) {
         final snapshot = scope.backendStore.snapshot(widget.model.requestId);
-        return _renderSnapshot(scope.backendStore, snapshot);
+        return _renderSnapshot(scope, snapshot);
       },
     );
   }
 
   Widget _renderSnapshot(
-    MiniProgramBackendStore store,
+    MiniProgramSdkScope scope,
     MiniProgramBackendSnapshot snapshot,
   ) {
     final model = widget.model;
     if ((snapshot.isIdle || snapshot.isLoading) && !snapshot.hasData) {
-      return _renderTemplate(store, model.loading) ?? const SizedBox.shrink();
+      return _renderTemplate(scope, model.loading) ?? const SizedBox.shrink();
     }
 
     if (snapshot.isFailure) {
-      return _renderTemplate(store, model.error) ??
-          _renderTemplate(store, model.child) ??
+      return _renderTemplate(scope, model.error) ??
+          _renderTemplate(scope, model.child) ??
           const SizedBox.shrink();
     }
 
     if (model.itemTemplate != null) {
-      return _renderItems(store, snapshot);
+      return _renderItems(scope, snapshot);
     }
 
-    return _renderTemplate(store, model.child) ?? const SizedBox.shrink();
+    return _renderTemplate(scope, model.child) ?? const SizedBox.shrink();
   }
 
   Widget _renderItems(
-    MiniProgramBackendStore store,
+    MiniProgramSdkScope scope,
     MiniProgramBackendSnapshot snapshot,
   ) {
     final model = widget.model;
@@ -253,18 +264,20 @@ class _MiniProgramBackendBuilderState
         ? snapshot.data['items']
         : _resolver.readPath(snapshot.toBindingData(), itemsPath);
     if (rawItems is! List || rawItems.isEmpty) {
-      return _renderTemplate(store, model.empty) ?? const SizedBox.shrink();
+      return _renderTemplate(scope, model.empty) ?? const SizedBox.shrink();
     }
 
     final widgets = <Widget>[];
+    final authBindings = _authBindings(scope);
     for (final rawItem in rawItems) {
       final item = rawItem is Map
           ? Map<String, dynamic>.from(rawItem)
           : <String, dynamic>{'value': rawItem};
       final resolved = _resolver.resolveTemplate(
         model.itemTemplate,
-        store: store,
+        store: scope.backendStore,
         item: item,
+        bindings: authBindings,
       );
       final rendered = _renderResolved(resolved);
       if (rendered != null) {
@@ -273,7 +286,7 @@ class _MiniProgramBackendBuilderState
     }
 
     if (widgets.isEmpty) {
-      return _renderTemplate(store, model.empty) ?? const SizedBox.shrink();
+      return _renderTemplate(scope, model.empty) ?? const SizedBox.shrink();
     }
 
     return Column(
@@ -283,13 +296,19 @@ class _MiniProgramBackendBuilderState
   }
 
   Widget? _renderTemplate(
-    MiniProgramBackendStore store,
+    MiniProgramSdkScope scope,
     Map<String, dynamic>? template,
   ) {
     if (template == null) {
       return null;
     }
-    return _renderResolved(_resolver.resolveTemplate(template, store: store));
+    return _renderResolved(
+      _resolver.resolveTemplate(
+        template,
+        store: scope.backendStore,
+        bindings: _authBindings(scope),
+      ),
+    );
   }
 
   Widget? _renderResolved(Object? resolved) {
@@ -302,5 +321,15 @@ class _MiniProgramBackendBuilderState
   String _queryKey(SdkMiniProgramBackendBuilderModel model) {
     return '${model.requestId}|${model.endpoint}|${model.method}|'
         '${model.cacheTtlSeconds}|${model.forceRefresh}|${model.body}';
+  }
+
+  Map<String, dynamic> _authBindings(MiniProgramSdkScope scope) {
+    final authController = scope.authController;
+    if (authController == null) {
+      return const <String, dynamic>{};
+    }
+    return <String, dynamic>{
+      'auth': authController.snapshot(scope.miniProgramId).toBindingData(),
+    };
   }
 }
