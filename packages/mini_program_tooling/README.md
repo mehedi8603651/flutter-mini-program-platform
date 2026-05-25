@@ -94,6 +94,7 @@ miniprogram publisher-backend firebase deploy --env <env-name> [--mini-program-r
 miniprogram publisher-backend firebase status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase host-command --env <env-name> --api-base-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
+miniprogram publisher-backend firebase handoff --env <env-name> --delivery-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
 miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--write-coupon-id <id>] [--write-user-id <id>]
 miniprogram publisher-backend firebase seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -530,12 +531,19 @@ miniprogram host endpoint add rewards --title "Rewards" --api-base-url https://a
 The generated host runtime wires publisher backend endpoints lazily. No
 publisher backend HTTP client or request is created at app startup.
 
-For Firebase publisher backends today, use
-`miniprogram publisher-backend firebase host-command` to generate or verify the
-equivalent `host endpoint add` command during local full-stack testing. The
-planned Firebase handoff command will package the same information into the
-existing `.partner.json` format so host developers can keep using
-`miniprogram host endpoint import`.
+For Firebase publisher backends, publishers can create a host handoff package
+without giving the host team Firebase project access:
+
+```bash
+miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery-url https://user.github.io/repo/public_mini_program/ --public --output firebase_coupon.partner.json
+```
+
+The package uses the same `.partner.json` format as `miniprogram partner
+package`, includes the Firebase Functions backend URL, and imports through
+`miniprogram host endpoint import`. Use
+`miniprogram publisher-backend firebase host-command` only when a full-stack
+developer wants to generate or verify an exact `host endpoint add` command
+against a local host app.
 
 Then wire it once:
 
@@ -798,7 +806,21 @@ Firebase smoke checks `GET /health`, `GET /home/bootstrap`,
 expected Firestore redemption document exists.
 
 After the mini-program delivery URL is public or otherwise reachable, generate
-the exact host endpoint command:
+the publisher-to-host handoff package:
+
+```bash
+miniprogram publisher-backend firebase handoff \
+  --env my-firebase-prod \
+  --delivery-url https://user.github.io/repo/public_mini_program/ \
+  --public \
+  --output firebase_coupon.partner.json
+```
+
+Give the `.partner.json` file to the host app developer. They import it with
+`miniprogram host endpoint import`; they do not need Firebase CLI login,
+Firebase project access, Firebase SDKs, or publisher backend secrets.
+
+For local full-stack testing, generate the exact host endpoint command:
 
 ```bash
 miniprogram publisher-backend firebase host-command \

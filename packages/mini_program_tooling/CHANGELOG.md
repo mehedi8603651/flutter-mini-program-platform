@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.39
+
+- add `publisher-backend firebase handoff` to create provider-neutral
+  `.partner.json` packages from a Firebase publisher backend environment and a
+  mini-program delivery URL
+- include the Firebase publisher backend URL in handoff packages while keeping
+  Firebase credentials, project access, and backend secrets out of host apps
+- expose the Firebase handoff capability through `miniprogram capabilities`
+
 ## 0.3.38
 
 - align the CLI-reported tooling version in `miniprogram capabilities --json`

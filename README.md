@@ -52,9 +52,11 @@ Already shipped:
 - AWS cloud publishing through S3
 - AWS API Gateway + Lambda cloud backend deployment
 - Firebase Functions + Firestore publisher backend scaffold, deploy, smoke,
-  seed/data status, export/import/redemptions, guarded destroy, and host wiring
+  seed/data status, export/import/redemptions, guarded destroy, handoff
+  packages, and host wiring
 - host-app cloud binding and `host run`
-- VS Code Firebase host wiring workflow with `hostEndpointReady` diagnostics
+- VS Code Firebase host wiring and handoff workflows with `hostEndpointReady`
+  diagnostics
 - target-aware local runtime defaults for:
   - Android emulator
   - Windows desktop
@@ -232,10 +234,9 @@ The handoff boundary should stay small:
 
 Host apps should not need Firebase login, Firebase project access, AWS
 credentials, Firebase Admin SDKs, or publisher backend secrets. Current tooling
-supports provider-neutral partner packages and host endpoint imports. The next
-Firebase-focused improvement is a publisher handoff command that packages
-Firebase backend outputs plus a delivery URL into that same host-importable
-format.
+supports provider-neutral partner packages and host endpoint imports, including
+Firebase handoff packages that combine Firebase backend outputs with a delivery
+URL in the same host-importable format.
 
 ## Preferred Developer Entry Point
 
@@ -277,7 +278,7 @@ miniprogram publisher-backend stop
 miniprogram publisher-backend urls
 miniprogram publisher-backend scaffold --template aws-lambda|firebase-functions [--storage dynamodb|firestore]
 miniprogram publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-miniprogram publisher-backend firebase deploy|status|outputs|host-command|smoke|seed|data|destroy --env <env-name>
+miniprogram publisher-backend firebase deploy|status|outputs|host-command|handoff|smoke|seed|data|destroy --env <env-name>
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
@@ -601,11 +602,13 @@ miniprogram publisher-backend firebase deploy --env my-firebase-prod
 miniprogram publisher-backend firebase seed --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write
 miniprogram publisher-backend firebase data export --env my-firebase-prod --include-redemptions
+miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery-url <delivery-url> --public --output <app>.partner.json
 ```
 
 The Flutter host app receives only the delivery URL and optional publisher
-backend URL. It does not need Firebase credentials or Firebase SDKs unless the
-host app itself chooses to use Firebase for unrelated host features.
+backend URL through the `.partner.json` package. It does not need Firebase
+credentials or Firebase SDKs unless the host app itself chooses to use Firebase
+for unrelated host features.
 
 One cloud environment can serve many mini-programs. The recommended layout is
 one bucket per environment, for example one production bucket and one staging

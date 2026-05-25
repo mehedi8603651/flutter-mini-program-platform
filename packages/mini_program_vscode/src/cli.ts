@@ -297,6 +297,16 @@ export interface PublisherBackendFirebaseHostCommandArgsOptions
   readonly json?: boolean;
 }
 
+export interface PublisherBackendFirebaseHandoffArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly deliveryUrl: string;
+  readonly title?: string;
+  readonly accessKey?: string;
+  readonly public?: boolean;
+  readonly outputPath?: string;
+  readonly json?: boolean;
+}
+
 export interface PublisherBackendFirebaseSmokeArgsOptions
   extends PublisherBackendFirebaseBaseArgsOptions {
   readonly json?: boolean;
@@ -949,6 +959,33 @@ export function buildPublisherBackendFirebaseHostCommandArgs(
   }
   if (options.hostProjectRoot?.trim()) {
     args.push('--host-project-root', options.hostProjectRoot.trim());
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseHandoffArgs(
+  options: PublisherBackendFirebaseHandoffArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'firebase',
+    'handoff',
+    '--delivery-url',
+    options.deliveryUrl.trim(),
+  ];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  if (options.title?.trim()) {
+    args.push('--title', options.title.trim());
+  }
+  if (options.public) {
+    args.push('--public');
+  } else if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
+  if (options.outputPath?.trim()) {
+    args.push('--output', options.outputPath.trim());
   }
   return withPublisherBackendFirebaseOptions(args, options);
 }

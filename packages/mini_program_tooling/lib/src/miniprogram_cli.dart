@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.38';
+const String _miniProgramToolingVersion = '0.3.39';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
@@ -49,6 +49,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.status',
   'publisher_backend.firebase.outputs',
   'publisher_backend.firebase.host_command',
+  'publisher_backend.firebase.handoff',
   'publisher_backend.firebase.smoke',
   'publisher_backend.firebase.smoke.write',
   'publisher_backend.firebase.firestore.seed',
@@ -3503,6 +3504,8 @@ class MiniprogramCli {
         return _runPublisherBackendFirebaseOutputs(arguments.sublist(1));
       case 'host-command':
         return _runPublisherBackendFirebaseHostCommand(arguments.sublist(1));
+      case 'handoff':
+        return _runPublisherBackendFirebaseHandoff(arguments.sublist(1));
       case 'smoke':
         return _runPublisherBackendFirebaseSmoke(arguments.sublist(1));
       case 'seed':
@@ -3743,6 +3746,135 @@ class MiniprogramCli {
       );
     } else {
       _stdout.writeln(_formatPublisherBackendFirebaseHostCommandResult(result));
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseHandoff(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addOption(
+        'delivery-url',
+        help: 'Mini-program delivery API base URL for manifest/screen JSON.',
+      )
+      ..addOption(
+        'title',
+        help:
+            'Human-readable mini-program title. Defaults to manifest title or app id.',
+      )
+      ..addOption(
+        'access-key',
+        help: 'MiniProgram delivery access key for protected delivery.',
+      )
+      ..addFlag(
+        'public',
+        negatable: false,
+        help: 'Create a public/static handoff package without an access key.',
+      )
+      ..addOption(
+        'output',
+        abbr: 'o',
+        help:
+            'Output partner package path. Defaults to <mini-program-root>/<appId>-<env>.partner.json.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase handoff --delivery-url <url> (--access-key <key>|--public) [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+
+    final rawDeliveryUrl = results.option('delivery-url')?.trim() ?? '';
+    if (rawDeliveryUrl.isEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase handoff requires --delivery-url <url>.',
+      );
+    }
+    final deliveryUri = Uri.tryParse(rawDeliveryUrl);
+    if (deliveryUri == null ||
+        !deliveryUri.hasScheme ||
+        deliveryUri.host.isEmpty) {
+      throw FormatException(
+        'publisher-backend firebase handoff expected an absolute '
+        '--delivery-url, got: $rawDeliveryUrl',
+      );
+    }
+
+    final accessKey = results.option('access-key')?.trim() ?? '';
+    final isPublic = results.flag('public');
+    if (accessKey.isEmpty && !isPublic) {
+      throw const FormatException(
+        'publisher-backend firebase handoff requires --access-key <key> '
+        'or --public.',
+      );
+    }
+    if (accessKey.isNotEmpty && isPublic) {
+      throw const FormatException(
+        'publisher-backend firebase handoff cannot use both --access-key '
+        'and --public.',
+      );
+    }
+
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final manifestInfo = await _readMiniProgramManifestInfo(
+      resolved.miniProgramRootPath,
+    );
+    final outputs = await _publisherBackendStarter.firebaseOutputs(
+      PublisherBackendFirebaseOutputsRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    final backendBaseUrl =
+        outputs.outputs['PublisherBackendBaseUrl']?.trim() ?? '';
+    if (backendBaseUrl.isEmpty) {
+      throw PublisherBackendException(
+        'Firebase publisher backend output PublisherBackendBaseUrl is missing.',
+      );
+    }
+
+    final title = results.option('title')?.trim().isNotEmpty == true
+        ? results.option('title')!.trim()
+        : manifestInfo.title ?? _defaultTitleForAppId(manifestInfo.appId);
+    final outputPath = results.option('output')?.trim().isNotEmpty == true
+        ? results.option('output')!.trim()
+        : p.join(
+            resolved.miniProgramRootPath,
+            '${manifestInfo.appId}-${resolved.environment.name}.partner.json',
+          );
+    final packageResult = await _partnerHandoffController.createPackage(
+      MiniProgramPartnerPackageRequest(
+        appId: manifestInfo.appId,
+        title: title,
+        apiBaseUri: deliveryUri,
+        backendBaseUri: Uri.parse(backendBaseUrl),
+        accessKey: isPublic ? null : accessKey,
+        outputPath: outputPath,
+      ),
+    );
+    final hostImportCommandText = _buildHostEndpointImportCommandText(
+      packageResult.filePath,
+    );
+    final result = _PublisherBackendFirebaseHandoffResult(
+      provider: outputs.provider,
+      environmentName: outputs.environmentName,
+      projectId: outputs.projectId,
+      region: outputs.region,
+      functionName: outputs.functionName,
+      miniProgramRootPath: resolved.miniProgramRootPath,
+      packageResult: packageResult,
+      hostImportCommandText: hostImportCommandText,
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseHandoffJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseHandoffResult(result));
     }
     return 0;
   }
@@ -4747,7 +4879,7 @@ Commands:
   publisher-backend stop
   publisher-backend urls
   publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-  publisher-backend firebase deploy|status|outputs|host-command|smoke|seed|data|destroy --env <env-name>
+  publisher-backend firebase deploy|status|outputs|host-command|handoff|smoke|seed|data|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -4784,6 +4916,7 @@ Commands:
   firebase status --env <env-name> [--mini-program-root <path>] [--json]
   firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
   firebase host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
+  firebase handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
   firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   firebase seed --env <env-name> [--mini-program-root <path>] [--json]
   firebase data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -4818,6 +4951,7 @@ Commands:
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
   host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
+  handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
   smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -5011,6 +5145,7 @@ Commands:
         'publisherBackendFirebaseStatus': true,
         'publisherBackendFirebaseOutputs': true,
         'publisherBackendFirebaseHostCommand': true,
+        'publisherBackendFirebaseHandoff': true,
         'publisherBackendFirebaseSmoke': true,
         'publisherBackendFirebaseWriteSmoke': true,
         'publisherBackendFirebaseFirestoreSeed': true,
@@ -5026,6 +5161,7 @@ Commands:
         'publisher-backend firebase status',
         'publisher-backend firebase outputs',
         'publisher-backend firebase host-command',
+        'publisher-backend firebase handoff',
         'publisher-backend firebase smoke',
         'publisher-backend firebase smoke --include-write',
         'publisher-backend firebase seed',
@@ -6340,6 +6476,7 @@ Commands:
       '',
       'Generate host endpoint command:',
       'miniprogram publisher-backend firebase host-command --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --api-base-url <delivery-url> --public',
+      'miniprogram publisher-backend firebase handoff --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --delivery-url <delivery-url> --public',
       '',
       'Next commands:',
       'miniprogram publisher-backend firebase seed --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
@@ -6616,6 +6753,33 @@ Commands:
       result.hostEndpointCommandText,
     ]);
     return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseHandoffResult(
+    _PublisherBackendFirebaseHandoffResult result,
+  ) {
+    final handoff = result.packageResult.handoff;
+    return <String>[
+      'Firebase publisher backend handoff package created.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program root: ${result.miniProgramRootPath}',
+      'Mini-program ID: ${handoff.appId}',
+      'Title: ${handoff.title}',
+      'Delivery API base URL: ${handoff.apiBaseUri}',
+      if (handoff.backendBaseUri != null)
+        'Publisher backend base URL: ${handoff.backendBaseUri}',
+      'Access mode: ${handoff.accessMode}',
+      'Access key included: ${handoff.accessKey != null}',
+      'Package file: ${result.packageResult.filePath}',
+      'Generated at UTC: ${handoff.generatedAtUtc}',
+      '',
+      'Host import command:',
+      result.hostImportCommandText,
+    ].join('\n');
   }
 
   String _formatPublisherBackendFirebaseSmokeResult(
@@ -7176,6 +7340,31 @@ Commands:
     };
   }
 
+  Map<String, Object?> _publisherBackendFirebaseHandoffJson(
+    _PublisherBackendFirebaseHandoffResult result,
+  ) {
+    final handoff = result.packageResult.handoff;
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase handoff',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramRootPath': result.miniProgramRootPath,
+      'miniProgramId': handoff.appId,
+      'title': handoff.title,
+      'deliveryApiBaseUrl': handoff.apiBaseUri.toString(),
+      'backendBaseUrl': handoff.backendBaseUri?.toString(),
+      'accessMode': handoff.accessMode,
+      'accessKeyIncluded': handoff.accessKey != null,
+      'packagePath': result.packageResult.filePath,
+      'generatedAtUtc': handoff.generatedAtUtc,
+      'hostImportCommandText': result.hostImportCommandText,
+    };
+  }
+
   Map<String, Object?> _publisherBackendFirebaseSmokeJson(
     PublisherBackendFirebaseSmokeResult result,
   ) {
@@ -7270,6 +7459,16 @@ Commands:
       backendBaseUrl,
     ];
     return arguments.map(_quoteCommandArgument).join(' ');
+  }
+
+  String _buildHostEndpointImportCommandText(String packagePath) {
+    return <String>[
+      'miniprogram',
+      'host',
+      'endpoint',
+      'import',
+      packagePath,
+    ].map(_quoteCommandArgument).join(' ');
   }
 
   Future<_HostEndpointReadiness> _inspectFirebaseHostEndpointReadiness({
@@ -7795,6 +7994,28 @@ class _PublisherBackendFirebaseHostCommandResult {
   final String hostEndpointCommandText;
   final String? hostProjectRootPath;
   final _HostEndpointReadiness? readiness;
+}
+
+class _PublisherBackendFirebaseHandoffResult {
+  const _PublisherBackendFirebaseHandoffResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramRootPath,
+    required this.packageResult,
+    required this.hostImportCommandText,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramRootPath;
+  final MiniProgramPartnerPackageResult packageResult;
+  final String hostImportCommandText;
 }
 
 class _HostEndpointReadiness {

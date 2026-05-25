@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.31
+
+- Add `MiniProgram: Create Firebase Host Handoff Package`, backed by
+  `mini_program_tooling` 0.3.39.
+- Guide publishers through Firebase env, delivery URL, access mode, and
+  `.partner.json` output without asking for a host app root.
+- Keep host wiring provider-neutral through the existing
+  `MiniProgram: Import Host Endpoint` command.
+
 ## 0.1.30
 
 - Fix Windows execution of the default `miniprogram` CLI by resolving the Dart

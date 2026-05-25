@@ -49,6 +49,7 @@ import {
   buildPublisherBackendFirebaseDataStatusArgs,
   buildPublisherBackendFirebaseDeployArgs,
   buildPublisherBackendFirebaseDestroyArgs,
+  buildPublisherBackendFirebaseHandoffArgs,
   buildPublisherBackendFirebaseHostCommandArgs,
   buildPublisherBackendFirebaseOutputsArgs,
   buildPublisherBackendFirebaseSeedArgs,
@@ -292,6 +293,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHostCommand', () =>
       publisherBackendFirebaseHostCommand(output, statusProvider),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHandoff', () =>
+      publisherBackendFirebaseHandoff(output, () => refreshStatus(false)),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmoke', () =>
       publisherBackendFirebaseSmoke(output),
@@ -2131,6 +2135,108 @@ async function publisherBackendFirebaseHostCommand(
       'Firebase host endpoint was updated, but verification still reports issues. Check the MiniProgram sidebar.',
     );
   }
+}
+
+async function publisherBackendFirebaseHandoff(
+  output: vscode.OutputChannel,
+  refreshStatus: () => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseHandoffCli039(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const manifest = await readMiniProgramManifestInfo(workspacePath);
+  const appId = manifest?.id ?? path.basename(workspacePath);
+  const title = await vscode.window.showInputBox({
+    prompt: 'Mini-program display title for the host package',
+    value: manifest?.title ?? hostTitleFromAppId(appId),
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
+  });
+  if (!title) {
+    return;
+  }
+  const deliveryUrl = await vscode.window.showInputBox({
+    prompt: 'Mini-program delivery API base URL',
+    placeHolder: 'https://cdn.jsdelivr.net/gh/owner/miniprogram-public@main/coupon_demo',
+    ignoreFocusOut: true,
+    validateInput: validateAbsoluteUrl,
+  });
+  if (!deliveryUrl) {
+    return;
+  }
+  const accessMode = await chooseEndpointAccessMode();
+  if (!accessMode) {
+    return;
+  }
+  let accessKey: string | undefined;
+  if (accessMode === 'protected') {
+    const value = await vscode.window.showInputBox({
+      prompt: 'MiniProgram access key for protected delivery',
+      password: true,
+      placeHolder: 'mpk_live_...',
+      ignoreFocusOut: true,
+      validateInput: (input) =>
+        input.trim() ? undefined : 'Access key is required.',
+    });
+    if (!value) {
+      return;
+    }
+    accessKey = value.trim();
+  }
+  const outputPath = await chooseFirebaseHandoffOutputPath(
+    workspacePath,
+    appId,
+    envName,
+  );
+  if (!outputPath) {
+    return;
+  }
+
+  const handoffArgs = buildPublisherBackendFirebaseHandoffArgs({
+    envName,
+    miniProgramRoot: workspacePath,
+    deliveryUrl: deliveryUrl.trim(),
+    title: title.trim(),
+    accessKey,
+    public: accessMode === 'public',
+    outputPath,
+    json: true,
+  });
+  const result = await runCliCapture(
+    'Publisher Backend Firebase Handoff',
+    handoffArgs,
+    workspacePath,
+    output,
+  );
+  if (!result) {
+    return;
+  }
+  const decoded = parseJsonObject(result.stdout);
+  const packagePath = stringValue(decoded.packagePath) ?? outputPath;
+  const hostImportCommand = stringValue(decoded.hostImportCommandText);
+  output.appendLine('');
+  output.appendLine('Firebase host handoff package created.');
+  output.appendLine(`Package file: ${packagePath}`);
+  if (hostImportCommand) {
+    output.appendLine('Host developer next step:');
+    output.appendLine(hostImportCommand);
+  } else {
+    output.appendLine('Host developer next step:');
+    output.appendLine(`miniprogram host endpoint import "${packagePath}"`);
+  }
+  output.appendLine(
+    'Host apps import this package; Firebase credentials stay with the publisher.',
+  );
+  await refreshStatus();
+  vscode.window.showInformationMessage('Firebase host handoff package created.');
 }
 
 async function publisherBackendFirebaseSmoke(
@@ -4602,6 +4708,7 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsFirebaseScaffold?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
+  readonly supportsFirebaseHandoff?: boolean;
   readonly supportsFirebaseWriteSmoke?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsFirebaseDataManagement?: boolean;
@@ -4654,6 +4761,7 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
         capability.supportsFirebaseHostCommand ||
+        capability.supportsFirebaseHandoff ||
         capability.supportsFirebaseWriteSmoke ||
         capability.supportsFirebaseFirestoreData ||
         capability.supportsFirebaseDataManagement
@@ -4773,6 +4881,9 @@ function capabilityFromCliCapabilitiesJson(
   const supportsFirebaseHostCommand =
     hasFeature('publisherBackendFirebaseHostCommand') ||
     hasCapability('publisher_backend.firebase.host_command');
+  const supportsFirebaseHandoff =
+    hasFeature('publisherBackendFirebaseHandoff') ||
+    hasCapability('publisher_backend.firebase.handoff');
   const supportsFirebaseFirestoreData =
     (hasFeature('publisherBackendFirebaseFirestoreSeed') &&
       hasFeature('publisherBackendFirebaseFirestoreDataStatus')) ||
@@ -4803,6 +4914,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseHostCommand
       ? undefined
       : 'Configured CLI capabilities do not include Firebase host-command.',
+    supportsFirebaseHandoff
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase handoff.',
     supportsFirebaseWriteSmoke
       ? undefined
       : 'Configured CLI capabilities do not include Firebase write smoke.',
@@ -4820,6 +4934,7 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseScaffold,
     supportsFirebaseOperations,
     supportsFirebaseHostCommand,
+    supportsFirebaseHandoff,
     supportsFirebaseWriteSmoke,
     supportsFirebaseFirestoreData,
     supportsFirebaseDataManagement,
@@ -5002,6 +5117,32 @@ async function ensurePublisherBackendFirebaseHostCommandCli036(
   const message =
     'MiniProgram CLI 0.3.38 or newer is required for Firebase host integration. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.38`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseHandoffCli039(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseHandoff
+  ) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.39 or newer is required for Firebase host handoff packages. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.39`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -5256,6 +5397,27 @@ async function choosePartnerPackageOutputPath(
     },
     saveLabel: 'Create partner package',
     title: 'Choose partner package output file',
+  });
+  return uri?.fsPath;
+}
+
+async function chooseFirebaseHandoffOutputPath(
+  workspacePath: string,
+  appId: string,
+  envName: string,
+): Promise<string | undefined> {
+  const uri = await vscode.window.showSaveDialog({
+    defaultUri: vscode.Uri.file(
+      path.join(
+        workspacePath,
+        `${safeFileSegment(appId)}-${safeFileSegment(envName)}.partner.json`,
+      ),
+    ),
+    filters: {
+      'Partner package JSON': ['json'],
+    },
+    saveLabel: 'Create Firebase handoff package',
+    title: 'Choose Firebase host handoff package output file',
   });
   return uri?.fsPath;
 }

@@ -59,6 +59,7 @@ export interface BuildDiagnosticsOptions {
     readonly supportsDataManagement?: boolean;
     readonly supportsFirebaseOperations?: boolean;
     readonly supportsFirebaseHostCommand?: boolean;
+    readonly supportsFirebaseHandoff?: boolean;
     readonly supportsFirebaseWriteSmoke?: boolean;
     readonly supportsFirebaseFirestoreData?: boolean;
     readonly supportsFirebaseDataManagement?: boolean;
@@ -801,6 +802,7 @@ function buildCliCapabilityCheck(capability: {
   readonly supportsDataManagement?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
+  readonly supportsFirebaseHandoff?: boolean;
   readonly supportsFirebaseWriteSmoke?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsFirebaseDataManagement?: boolean;
@@ -812,6 +814,7 @@ function buildCliCapabilityCheck(capability: {
   const supportsFirebaseOperations = capability.supportsFirebaseOperations ?? false;
   const supportsFirebaseWriteSmoke = capability.supportsFirebaseWriteSmoke ?? false;
   const supportsFirebaseHostCommand = capability.supportsFirebaseHostCommand ?? false;
+  const supportsFirebaseHandoff = capability.supportsFirebaseHandoff ?? false;
   const supportsFirebaseFirestoreData =
     capability.supportsFirebaseFirestoreData ?? false;
   const supportsFirebaseDataManagement =
@@ -822,6 +825,7 @@ function buildCliCapabilityCheck(capability: {
     supportsDataManagement &&
     supportsFirebaseOperations &&
     supportsFirebaseHostCommand &&
+    supportsFirebaseHandoff &&
     supportsFirebaseWriteSmoke &&
     supportsFirebaseFirestoreData &&
     supportsFirebaseDataManagement &&
@@ -834,20 +838,21 @@ function buildCliCapabilityCheck(capability: {
     'CLI publisher backend commands',
     supportsExpectedCli ? 'ok' : 'warning',
     supportsExpectedCli
-      ? `Configured CLI supports AWS DynamoDB, Firebase Firestore, Firebase host integration, Firebase write smoke, and quiet capability discovery.${versionSuffix}`
+      ? `Configured CLI supports AWS DynamoDB, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase write smoke, and quiet capability discovery.${versionSuffix}`
       : capability.supportsWriteSmoke &&
           supportsDataManagement &&
           supportsFirebaseOperations &&
           supportsFirebaseHostCommand &&
+          supportsFirebaseHandoff &&
           supportsFirebaseWriteSmoke &&
           supportsFirebaseFirestoreData &&
           supportsFirebaseDataManagement
         ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
-        : 'Configured CLI is missing mini_program_tooling 0.3.38 publisher backend support.',
+        : 'Configured CLI is missing mini_program_tooling 0.3.39 publisher backend support.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.38` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.39` or update miniProgram.cliPath.',
   );
 }
 
