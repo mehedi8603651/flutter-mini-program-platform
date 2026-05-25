@@ -4,11 +4,11 @@ Developer tooling for the portable Flutter mini-program platform.
 
 This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, preview with watch/rebuild/refresh, publish
-to local, public static, or AWS cloud delivery, deploy the managed AWS backend, initialize
-embedding adapters for existing Flutter apps, bind host apps to cloud
-environments, manage MiniProgram access keys, generate host endpoint maps,
-exchange partner handoff packages between publishers and host app teams, and
-manage the local backend lifecycle.
+to local, public static, or AWS cloud delivery, deploy managed AWS and Firebase
+publisher backends, initialize embedding adapters for existing Flutter apps,
+bind host apps to cloud environments, manage MiniProgram access keys, generate
+host endpoint maps, exchange partner handoff packages between publishers and
+host app teams, and manage the local backend lifecycle.
 
 ## Install
 
@@ -94,9 +94,13 @@ miniprogram publisher-backend firebase deploy --env <env-name> [--mini-program-r
 miniprogram publisher-backend firebase status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase host-command --env <env-name> --api-base-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
-miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--write-coupon-id <id>] [--write-user-id <id>]
 miniprogram publisher-backend firebase seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data status --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
+miniprogram publisher-backend firebase data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
+miniprogram publisher-backend firebase data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
+miniprogram publisher-backend firebase destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss] [--json]
 miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
@@ -132,7 +136,7 @@ host app, or an unknown folder. It checks local build output, generated host
 endpoint maps, local env configuration, backend workspace state, and nearby
 partner packages.
 
-Use `--remote` only when you want AWS/backend checks:
+Use `--remote` only when you want AWS/Firebase/backend checks:
 
 ```bash
 miniprogram workflow status --remote --json
@@ -476,6 +480,16 @@ One host app can include many mini-programs from many publishers and cloud
 providers. Keep button code appId-only, and keep API base URLs plus public or
 protected delivery mode in host runtime config.
 
+The publisher and host app developer can be different teams:
+
+- the mini-program publisher owns AWS/Firebase/custom backend deployment,
+  storage, data, logs, and secrets
+- the host app developer owns Flutter host code and endpoint registration
+- the host app should receive only delivery metadata, an optional MiniProgram
+  access key, and an optional publisher backend URL
+- the host app should not need Firebase CLI login, Firebase project access,
+  AWS credentials, Firebase Admin SDKs, or publisher backend secrets
+
 For partner handoff, the publisher can package the appId, title, API base URL,
 and one MiniProgram access key into a JSON file for protected delivery:
 
@@ -515,6 +529,13 @@ miniprogram host endpoint add rewards --title "Rewards" --api-base-url https://a
 
 The generated host runtime wires publisher backend endpoints lazily. No
 publisher backend HTTP client or request is created at app startup.
+
+For Firebase publisher backends today, use
+`miniprogram publisher-backend firebase host-command` to generate or verify the
+equivalent `host endpoint add` command during local full-stack testing. The
+planned Firebase handoff command will package the same information into the
+existing `.partner.json` format so host developers can keep using
+`miniprogram host endpoint import`.
 
 Then wire it once:
 
@@ -751,6 +772,8 @@ you want to manage Cloud Run invoker permissions yourself.
 you can confirm that Firestore has the records needed for smoke tests. These
 Firestore data commands use your Firebase CLI login token, so run
 `firebase login` first or provide `FIREBASE_TOKEN` in CI.
+If Firestore rejects a stale Firebase CLI access token, tooling exchanges the
+stored refresh token for a fresh OAuth token and retries the REST request once.
 
 Use export/import and redemption inspection before risky changes:
 

@@ -6,6 +6,7 @@ Portable mini-program platform built around:
 - a shared Flutter runtime SDK
 - Stac-authored portable UI
 - local and AWS cloud delivery
+- Firebase Functions publisher backend support
 - controlled host-native bridges
 
 The project goal is simple:
@@ -50,7 +51,10 @@ Already shipped:
   business API testing
 - AWS cloud publishing through S3
 - AWS API Gateway + Lambda cloud backend deployment
+- Firebase Functions + Firestore publisher backend scaffold, deploy, smoke,
+  seed/data status, export/import/redemptions, guarded destroy, and host wiring
 - host-app cloud binding and `host run`
+- VS Code Firebase host wiring workflow with `hostEndpointReady` diagnostics
 - target-aware local runtime defaults for:
   - Android emulator
   - Windows desktop
@@ -63,7 +67,8 @@ Already shipped:
   - Android Wi-Fi over LAN
 
 The current system is strongest for **local developer workflows**,
-**AWS-backed cloud delivery**, and **portable Flutter-hosted mini-programs**.
+**AWS-backed cloud delivery**, **Firebase publisher-owned business backends**,
+and **portable Flutter-hosted mini-programs**.
 
 Future-only roadmap is tracked in:
 
@@ -198,6 +203,40 @@ author -> build -> validate -> publish --target cloud -> cloud backend ->
 SDK load -> render -> action dispatch -> host-native execution when needed
 ```
 
+## Publisher And Host Developer Split
+
+Mini-program publishers and host app developers can be different teams.
+
+The publisher owns:
+
+- mini-program source and static delivery artifacts
+- AWS Lambda or Firebase Functions publisher backend
+- DynamoDB or Firestore data
+- backend logs, deployment, cleanup, and secrets
+- MiniProgram access keys when protected delivery is used
+
+The host app developer owns:
+
+- Flutter host app source
+- `MiniProgramScope`
+- endpoint registration/import
+- native bridge behavior such as payment, auth, navigation, and secure actions
+
+The handoff boundary should stay small:
+
+- `appId`
+- title
+- delivery API base URL for manifest/screen JSON
+- public/protected access mode and optional MiniProgram access key
+- optional publisher backend base URL for business data
+
+Host apps should not need Firebase login, Firebase project access, AWS
+credentials, Firebase Admin SDKs, or publisher backend secrets. Current tooling
+supports provider-neutral partner packages and host endpoint imports. The next
+Firebase-focused improvement is a publisher handoff command that packages
+Firebase backend outputs plus a delivery URL into that same host-importable
+format.
+
 ## Preferred Developer Entry Point
 
 Install the published CLI once:
@@ -223,6 +262,7 @@ miniprogram create <mini-program-id> [--with-backend mock]
 miniprogram doctor
 miniprogram env init
 miniprogram env configure <env-name> --provider aws --bucket <bucket> --region <region> [--aws-profile <profile>] [--require-access-keys]
+miniprogram env configure <env-name> --provider firebase --project-id <project-id> [--region us-central1] [--function-name publisherBackend]
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status
@@ -235,6 +275,9 @@ miniprogram publisher-backend run --port 9090
 miniprogram publisher-backend status
 miniprogram publisher-backend stop
 miniprogram publisher-backend urls
+miniprogram publisher-backend scaffold --template aws-lambda|firebase-functions [--storage dynamodb|firestore]
+miniprogram publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
+miniprogram publisher-backend firebase deploy|status|outputs|host-command|smoke|seed|data|destroy --env <env-name>
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
@@ -543,8 +586,26 @@ Where those optional URLs come from:
 Current cloud support in this phase:
 
 - provider implementation shipped: `aws`
+- publisher backend implementation shipped: Firebase Functions + Firestore
 - planned next providers: `gcp`
 - planned next providers: `custom-s3-compatible`
+
+Firebase support is currently focused on publisher-owned business backends, not
+static delivery hosting. The publisher deploys Cloud Functions and seeds or
+manages Firestore data with:
+
+```powershell
+miniprogram publisher-backend scaffold --template firebase-functions --storage firestore
+miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id> --region us-central1
+miniprogram publisher-backend firebase deploy --env my-firebase-prod
+miniprogram publisher-backend firebase seed --env my-firebase-prod
+miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write
+miniprogram publisher-backend firebase data export --env my-firebase-prod --include-redemptions
+```
+
+The Flutter host app receives only the delivery URL and optional publisher
+backend URL. It does not need Firebase credentials or Firebase SDKs unless the
+host app itself chooses to use Firebase for unrelated host features.
 
 One cloud environment can serve many mini-programs. The recommended layout is
 one bucket per environment, for example one production bucket and one staging
