@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.28
+
+- Update Firebase host integration diagnostics and documentation to recommend
+  `mini_program_tooling` 0.3.38.
+- Keep the existing Firebase host wiring UI from 0.1.27, but avoid pointing
+  developers at stale tooling versions after the 0.3.38 CLI version fix.
+
 ## 0.1.27
 
 - Add `MiniProgram: Wire Firebase Publisher Backend Into Host App`, backed by

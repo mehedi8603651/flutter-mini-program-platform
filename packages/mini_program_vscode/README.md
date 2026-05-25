@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.36 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.38 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
@@ -16,7 +16,7 @@ Functions/Firestore publisher backend workflows, Firebase Firestore production
 data management, Firebase write smoke, Firebase host integration, and
 quiet CLI capability detection through `miniprogram capabilities --json`.
 
-Use `mini_program_tooling` 0.3.37 or newer when testing real Firebase Firestore
+Use `mini_program_tooling` 0.3.38 or newer when testing real Firebase Firestore
 workflows so stale Firebase CLI OAuth tokens are retried automatically.
 
 Install or upgrade the CLI first:
@@ -45,7 +45,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.27.vsix
+code --install-extension mini-program-tools-0.1.28.vsix
 ```
 
 ## Features
@@ -259,14 +259,14 @@ For DynamoDB scaffolds, use:
   The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
   records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.36, the extension
+If the configured CLI is older than `mini_program_tooling` 0.3.38, the extension
 warns before running newer publisher backend actions or when quiet capability
-detection is unavailable. Version 0.1.27 calls `miniprogram capabilities --json`
+detection is unavailable. Version 0.1.28 calls `miniprogram capabilities --json`
 once per workspace and only falls back to older AWS `--help` probes for older
 CLI installs. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.36
+dart pub global activate mini_program_tooling 0.3.38
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed
@@ -319,7 +319,7 @@ After deploy, use:
 Firebase deploy/status/smoke actions require `mini_program_tooling` 0.3.32 or
 newer. Firebase Firestore export/import/redemptions and guarded destroy require
 0.3.34 or newer. Firebase write smoke requires 0.3.35 or newer. Firebase host
-integration requires 0.3.36 or newer. The extension uses
+integration requires 0.3.38 or newer. The extension uses
 `miniprogram capabilities --json` once per workspace to detect support and warns
 with an upgrade command if the configured CLI is too old.
 

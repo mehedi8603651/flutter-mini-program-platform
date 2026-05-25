@@ -5000,8 +5000,8 @@ async function ensurePublisherBackendFirebaseHostCommandCli036(
     return true;
   }
   const message =
-    'MiniProgram CLI 0.3.36 or newer is required for Firebase host integration. ' +
-    'Run `dart pub global activate mini_program_tooling 0.3.36`.';
+    'MiniProgram CLI 0.3.38 or newer is required for Firebase host integration. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.38`.';
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);

@@ -843,11 +843,11 @@ function buildCliCapabilityCheck(capability: {
           supportsFirebaseFirestoreData &&
           supportsFirebaseDataManagement
         ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
-        : 'Configured CLI is missing mini_program_tooling 0.3.36 publisher backend support.',
+        : 'Configured CLI is missing mini_program_tooling 0.3.38 publisher backend support.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.36` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.38` or update miniProgram.cliPath.',
   );
 }
 
