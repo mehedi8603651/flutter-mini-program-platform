@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.29
+
+- Fix Windows command launching so generated Firebase host wiring commands keep
+  multi-word titles as one CLI argument.
+
 ## 0.1.28
 
 - Update Firebase host integration diagnostics and documentation to recommend

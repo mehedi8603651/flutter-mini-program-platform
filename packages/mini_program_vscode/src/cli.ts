@@ -1164,9 +1164,10 @@ export function runCliStreaming(
 ): Promise<CliResult> {
   const commandLine = formatCommandLine(command, args);
   return new Promise((resolve, reject) => {
-    const child = spawn(command, [...args], {
+    const useShell = process.platform === 'win32';
+    const child = spawn(useShell ? commandLine : command, useShell ? [] : [...args], {
       cwd: options.cwd,
-      shell: process.platform === 'win32',
+      shell: useShell,
       windowsHide: true,
     });
     let stdout = '';

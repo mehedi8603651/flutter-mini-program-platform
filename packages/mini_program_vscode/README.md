@@ -45,7 +45,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.28.vsix
+code --install-extension mini-program-tools-0.1.29.vsix
 ```
 
 ## Features
@@ -261,7 +261,7 @@ For DynamoDB scaffolds, use:
 
 If the configured CLI is older than `mini_program_tooling` 0.3.38, the extension
 warns before running newer publisher backend actions or when quiet capability
-detection is unavailable. Version 0.1.28 calls `miniprogram capabilities --json`
+detection is unavailable. Version 0.1.29 calls `miniprogram capabilities --json`
 once per workspace and only falls back to older AWS `--help` probes for older
 CLI installs. Upgrade with:
 

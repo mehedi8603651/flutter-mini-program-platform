@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import {
   buildAccessKeyCreateArgs,
@@ -62,6 +65,7 @@ import {
   defaultCliPath,
   formatRedactedCommandLine,
   resolveCliPath,
+  runCli,
 } from '../src/cli';
 
 test('CLI path falls back to miniprogram', () => {
@@ -69,6 +73,28 @@ test('CLI path falls back to miniprogram', () => {
   assert.equal(resolveCliPath(''), defaultCliPath);
   assert.equal(resolveCliPath('   '), defaultCliPath);
   assert.equal(resolveCliPath('D:/tools/miniprogram.bat'), 'D:/tools/miniprogram.bat');
+});
+
+test('runCli preserves arguments with spaces', async () => {
+  const tempDir = mkdtempSync(path.join(tmpdir(), 'miniprogram-vscode-cli-'));
+  const scriptPath = path.join(tempDir, 'argv.js');
+  writeFileSync(
+    scriptPath,
+    "console.log(JSON.stringify(process.argv.slice(2)));\n",
+    'utf8',
+  );
+
+  const result = await runCli(
+    process.execPath,
+    [scriptPath, 'Firebase Live 20260524062333', 'd:\\backend_smoke_host'],
+    { timeoutMs: 30000 },
+  );
+
+  assert.equal(result.exitCode, 0);
+  assert.deepEqual(JSON.parse(result.stdout.trim()), [
+    'Firebase Live 20260524062333',
+    'd:\\backend_smoke_host',
+  ]);
 });
 
 test('builds workflow status command arguments', () => {
