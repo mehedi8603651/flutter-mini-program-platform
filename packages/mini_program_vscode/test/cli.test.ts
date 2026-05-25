@@ -65,6 +65,7 @@ import {
   defaultCliPath,
   formatRedactedCommandLine,
   resolveCliPath,
+  resolveCliInvocation,
   runCli,
 } from '../src/cli';
 
@@ -95,6 +96,32 @@ test('runCli preserves arguments with spaces', async () => {
     'Firebase Live 20260524062333',
     'd:\\backend_smoke_host',
   ]);
+});
+
+test('default Windows CLI invocation bypasses batch-file quoting', () => {
+  const invocation = resolveCliInvocation('miniprogram', [
+    'publisher-backend',
+    'firebase',
+    'host-command',
+    '--title',
+    'Firebase Live 20260524062333',
+  ]);
+
+  if (process.platform === 'win32') {
+    if (invocation.command.toLowerCase().endsWith('cmd.exe')) {
+      assert.equal(invocation.shell, false);
+      assert.deepEqual(invocation.args.slice(0, 3), ['/d', '/c', 'call']);
+      assert.match(String(invocation.args[3]), /miniprogram\.(bat|cmd|exe)$/i);
+      assert.equal(invocation.args.at(-1), 'Firebase Live 20260524062333');
+    } else {
+      assert.equal(invocation.command.includes('miniprogram'), true);
+      assert.equal(invocation.shell, true);
+    }
+  } else {
+    assert.equal(invocation.command, 'miniprogram');
+    assert.equal(invocation.shell, false);
+    assert.equal(invocation.args.at(-1), 'Firebase Live 20260524062333');
+  }
 });
 
 test('builds workflow status command arguments', () => {

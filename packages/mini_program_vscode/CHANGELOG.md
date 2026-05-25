@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.30
+
+- Fix Windows execution of the default `miniprogram` CLI by resolving the Dart
+  pub shim and invoking it through `cmd.exe /d /c call` with separate arguments.
+- Verified the Firebase host wiring command from the installed extension path
+  with a multi-word title and local tooling 0.3.38.
+
 ## 0.1.29
 
 - Fix Windows command launching so generated Firebase host wiring commands keep

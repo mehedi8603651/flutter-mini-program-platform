@@ -1,6 +1,8 @@
 /// <reference types="node" />
 
 import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 export const defaultCliPath = 'miniprogram';
 
@@ -1164,10 +1166,10 @@ export function runCliStreaming(
 ): Promise<CliResult> {
   const commandLine = formatCommandLine(command, args);
   return new Promise((resolve, reject) => {
-    const useShell = process.platform === 'win32';
-    const child = spawn(useShell ? commandLine : command, useShell ? [] : [...args], {
+    const invocation = resolveCliInvocation(command, args);
+    const child = spawn(invocation.command, invocation.args, {
       cwd: options.cwd,
-      shell: useShell,
+      shell: invocation.shell,
       windowsHide: true,
     });
     let stdout = '';
@@ -1216,6 +1218,58 @@ export function runCliStreaming(
       resolve({ exitCode, stdout, stderr, commandLine });
     });
   });
+}
+
+export function resolveCliInvocation(
+  command: string,
+  args: readonly string[],
+): {
+  readonly command: string;
+  readonly args: readonly string[];
+  readonly shell: boolean;
+} {
+  if (process.platform === 'win32' && command.trim().toLowerCase() === defaultCliPath) {
+    const miniprogramShim = findWindowsExecutable([
+      'miniprogram.bat',
+      'miniprogram.cmd',
+      'miniprogram.exe',
+    ]);
+    if (miniprogramShim) {
+      return {
+        command: process.env.ComSpec || 'cmd.exe',
+        args: ['/d', '/c', 'call', miniprogramShim, ...args],
+        shell: false,
+      };
+    }
+    const commandLine = formatCommandLine(command, args);
+    return {
+      command: commandLine,
+      args: [],
+      shell: true,
+    };
+  }
+  const useShell = process.platform === 'win32';
+  return {
+    command: useShell ? formatCommandLine(command, args) : command,
+    args: useShell ? [] : [...args],
+    shell: useShell,
+  };
+}
+
+function findWindowsExecutable(fileNames: readonly string[]): string | undefined {
+  const pathEntries = (process.env.PATH ?? '')
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  for (const entry of pathEntries) {
+    for (const fileName of fileNames) {
+      const candidate = path.join(entry, fileName);
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return undefined;
 }
 
 function shellQuote(value: string): string {
