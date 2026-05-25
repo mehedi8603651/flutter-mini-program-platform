@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.38
+
+- align the CLI-reported tooling version in `miniprogram capabilities --json`
+  and text output with the publishable package version
+- keeps VS Code capability checks from seeing a stale local CLI version after
+  Firebase host integration testing
+
 ## 0.3.37
 
 - retry Firebase Firestore REST calls once after an HTTP 401 by requesting a

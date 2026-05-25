@@ -31,7 +31,7 @@ const List<String> _supportedPublishTargets = <String>[
   'static',
 ];
 
-const String _miniProgramToolingVersion = '0.3.36';
+const String _miniProgramToolingVersion = '0.3.38';
 
 const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.status',
