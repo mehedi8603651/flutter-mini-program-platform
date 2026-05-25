@@ -1,4 +1,7 @@
 # Changelog
+## 0.3.41
+- add CORS headers to generated Firebase Hosting configs so browser-based host
+  apps can load static mini-program manifests/screens from a different origin
 
 ## 0.3.40
 

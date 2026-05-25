@@ -242,6 +242,25 @@ class MiniProgramFirebaseHostingPublisher {
       if (siteId != null) 'site': siteId,
       'public': publicDirectoryName,
       'ignore': <String>['firebase.json', '**/.*', '**/node_modules/**'],
+      'headers': <Object>[
+        <String, Object>{
+          'source': '**',
+          'headers': <Object>[
+            <String, String>{
+              'key': 'Access-Control-Allow-Origin',
+              'value': '*',
+            },
+            <String, String>{
+              'key': 'Access-Control-Allow-Methods',
+              'value': 'GET, HEAD, OPTIONS',
+            },
+            <String, String>{
+              'key': 'Access-Control-Allow-Headers',
+              'value': 'Content-Type, X-Mini-Program-Access-Key',
+            },
+          ],
+        },
+      ],
     };
     final json = <String, Object?>{'hosting': hosting};
     await File(

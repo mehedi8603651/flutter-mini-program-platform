@@ -3543,6 +3543,22 @@ void main() {
         final hosting = firebaseJson['hosting'] as Map<String, dynamic>;
         expect(hosting['public'], 'public');
         expect(hosting.containsKey('site'), isFalse);
+        final headers = hosting['headers'] as List<dynamic>;
+        expect(headers, hasLength(1));
+        expect(headers.first, {
+          'source': '**',
+          'headers': [
+            {'key': 'Access-Control-Allow-Origin', 'value': '*'},
+            {
+              'key': 'Access-Control-Allow-Methods',
+              'value': 'GET, HEAD, OPTIONS',
+            },
+            {
+              'key': 'Access-Control-Allow-Headers',
+              'value': 'Content-Type, X-Mini-Program-Access-Key',
+            },
+          ],
+        });
       },
     );
 
@@ -3620,6 +3636,7 @@ void main() {
         final hosting = firebaseJson['hosting'] as Map<String, dynamic>;
         expect(hosting['public'], 'site_public');
         expect(hosting['site'], 'coupon-hosting');
+        expect(hosting['headers'], isA<List<dynamic>>());
       },
     );
 
