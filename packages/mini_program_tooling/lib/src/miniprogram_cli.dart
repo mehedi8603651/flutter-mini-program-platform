@@ -6621,6 +6621,12 @@ Commands:
       'Public invoker changed: ${result.publicInvokerChanged}',
       if (result.publicInvokerError != null)
         'Public invoker detail: ${result.publicInvokerError}',
+      'Auth token creator configured: ${result.authTokenCreatorConfigured}',
+      'Auth token creator changed: ${result.authTokenCreatorChanged}',
+      if (result.authTokenCreatorServiceAccount != null)
+        'Auth token creator service account: ${result.authTokenCreatorServiceAccount}',
+      if (result.authTokenCreatorError != null)
+        'Auth token creator detail: ${result.authTokenCreatorError}',
       'Publisher backend base URL: ${result.backendBaseUrl}',
       'Health URL: ${result.healthUrl}',
       if (result.healthy != null) 'Healthy: ${result.healthy}',
@@ -7266,6 +7272,10 @@ Commands:
       'publicInvokerConfigured': result.publicInvokerConfigured,
       'publicInvokerChanged': result.publicInvokerChanged,
       'publicInvokerError': result.publicInvokerError,
+      'authTokenCreatorConfigured': result.authTokenCreatorConfigured,
+      'authTokenCreatorChanged': result.authTokenCreatorChanged,
+      'authTokenCreatorServiceAccount': result.authTokenCreatorServiceAccount,
+      'authTokenCreatorError': result.authTokenCreatorError,
       'outputs': result.outputs,
       'deployedAtUtc': result.deployedAtUtc,
     };

@@ -1333,7 +1333,7 @@ console.log(JSON.stringify({
         ),
       );
       await envFile.writeAsString(
-        'CUSTOM_VALUE=keep\nFUNCTION_REGION=old\nPUBLISHER_BACKEND_REGION=old\nMINI_PROGRAM_ID=old\nFIREBASE_AUTH_WEB_API_KEY=old\n',
+        'CUSTOM_VALUE=keep\nFUNCTION_REGION=old\nPUBLISHER_BACKEND_REGION=old\nMINI_PROGRAM_ID=old\nPUBLISHER_AUTH_WEB_API_KEY=older\nFIREBASE_AUTH_WEB_API_KEY=old\n',
       );
 
       await starter.firebaseDeploy(
@@ -1357,13 +1357,115 @@ console.log(JSON.stringify({
       expect(
         envText,
         contains(
-          'FIREBASE_AUTH_WEB_API_KEY=AIzaSyFakeFirebaseWebApiKey123456789',
+          'PUBLISHER_AUTH_WEB_API_KEY=AIzaSyFakeFirebaseWebApiKey123456789',
         ),
       );
       expect(envText, isNot(contains('FUNCTION_REGION=old')));
       expect(envText, isNot(contains('PUBLISHER_BACKEND_REGION=old')));
       expect(envText, isNot(contains('MINI_PROGRAM_ID=old')));
+      expect(envText, isNot(contains('PUBLISHER_AUTH_WEB_API_KEY=older')));
       expect(envText, isNot(contains('FIREBASE_AUTH_WEB_API_KEY=old')));
+    });
+
+    test('Firebase deploy grants auth token creator for email auth', () async {
+      final requests = <String>[];
+      Object? setIamPolicyBody;
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, '', '');
+        },
+        healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        httpRequester: (method, uri, {headers, body}) async {
+          requests.add('$method $uri');
+          if (uri.host == 'run.googleapis.com') {
+            return http.Response('{"bindings":[]}', 200);
+          }
+          if (uri.host == 'cloudfunctions.googleapis.com') {
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'serviceConfig': <String, Object?>{
+                  'serviceAccountEmail':
+                      '1056632163446-compute@developer.gserviceaccount.com',
+                },
+              }),
+              200,
+            );
+          }
+          if (uri.host == 'cloudresourcemanager.googleapis.com' &&
+              uri.path.endsWith(':getIamPolicy')) {
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'etag': 'etag-1',
+                'bindings': <Object?>[],
+              }),
+              200,
+            );
+          }
+          if (uri.host == 'cloudresourcemanager.googleapis.com' &&
+              uri.path.endsWith(':setIamPolicy')) {
+            setIamPolicyBody = body;
+            return http.Response('{}', 200);
+          }
+          fail('Unexpected Firebase HTTP request: $method $uri');
+        },
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await Directory(
+        p.join(
+          miniProgramRoot.path,
+          'backend',
+          'firebase_functions',
+          'functions',
+          'node_modules',
+        ),
+      ).create(recursive: true);
+
+      final result = await starter.firebaseDeploy(
+        PublisherBackendFirebaseDeployRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(
+            values: <String, dynamic>{
+              'projectId': 'coupon-prod',
+              'region': 'asia-south1',
+              'functionName': 'publisherBackend',
+              'authWebApiKey': 'AIzaSyFakeFirebaseWebApiKey123456789',
+            },
+          ),
+        ),
+      );
+
+      expect(result.authTokenCreatorConfigured, isTrue);
+      expect(result.authTokenCreatorChanged, isTrue);
+      expect(
+        result.authTokenCreatorServiceAccount,
+        '1056632163446-compute@developer.gserviceaccount.com',
+      );
+      expect(result.authTokenCreatorError, isNull);
+      expect(
+        requests,
+        contains(
+          startsWith(
+            'GET https://cloudfunctions.googleapis.com/v2/projects/coupon-prod/locations/asia-south1/functions/publisherBackend',
+          ),
+        ),
+      );
+      final decoded = jsonDecode(setIamPolicyBody.toString());
+      final bindings = decoded['policy']['bindings'] as List<Object?>;
+      final binding = bindings.single as Map<Object?, Object?>;
+      expect(binding['role'], 'roles/iam.serviceAccountTokenCreator');
+      expect(
+        binding['members'],
+        contains(
+          'serviceAccount:1056632163446-compute@developer.gserviceaccount.com',
+        ),
+      );
     });
 
     test('Firebase deploy fails when scaffold is missing', () async {

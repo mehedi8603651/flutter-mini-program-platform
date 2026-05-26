@@ -5,7 +5,10 @@
 - add Firebase auth smoke verification for sign-up/sign-in, refresh, protected
   session checks, and sign-out without printing raw auth tokens
 - support `--auth-web-api-key` on Firebase environments and write it to the
-  generated Functions `.env` during deploy while redacting it from CLI output
+  generated Functions `.env` during deploy as `PUBLISHER_AUTH_WEB_API_KEY`
+  while redacting it from CLI output
+- configure the Firebase Functions runtime service account for custom-token
+  signing when publisher-owned email auth is enabled
 
 ## 0.3.42
 - fix CLI-reported version metadata for the Firebase Hosting CORS release so

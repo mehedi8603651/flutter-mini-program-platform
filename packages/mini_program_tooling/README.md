@@ -822,7 +822,7 @@ miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-au
 
 The deploy command runs `npm install` when `functions/node_modules` is missing,
 writes `PUBLISHER_BACKEND_REGION`, `MINI_PROGRAM_ID`, and
-`FIREBASE_AUTH_WEB_API_KEY` when configured to `functions/.env`, runs
+`PUBLISHER_AUTH_WEB_API_KEY` when configured to `functions/.env`, runs
 `firebase deploy --only functions:<functionName> --project <projectId>`, tries
 to grant public Cloud Run Invoker for the HTTPS function, and records
 `.mini_program/publisher_backend.firebase.json`. Use `--no-public-invoker` if
@@ -831,6 +831,9 @@ you want to manage Cloud Run invoker permissions yourself.
 The Firebase Web API key is stored in the publisher environment and Functions
 `.env` so the publisher backend can call Firebase Auth REST endpoints. CLI text
 and JSON output redact the key, and handoff packages never include it.
+When email auth is configured, deploy also tries to grant the function runtime
+service account `roles/iam.serviceAccountTokenCreator` so the backend can mint
+Firebase custom tokens with publisher session claims.
 
 `firebase seed` upserts the generated starter JSON into Firestore:
 

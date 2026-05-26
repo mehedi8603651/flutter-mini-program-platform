@@ -736,6 +736,10 @@ class PublisherBackendFirebaseDeployResult {
     required this.publicInvokerChanged,
     required this.outputs,
     this.miniProgramRootPath,
+    this.authTokenCreatorConfigured = false,
+    this.authTokenCreatorChanged = false,
+    this.authTokenCreatorServiceAccount,
+    this.authTokenCreatorError,
     this.publicInvokerError,
     this.healthy,
     this.healthStatusCode,
@@ -755,8 +759,12 @@ class PublisherBackendFirebaseDeployResult {
   final bool dependenciesInstalled;
   final bool publicInvokerConfigured;
   final bool publicInvokerChanged;
+  final bool authTokenCreatorConfigured;
+  final bool authTokenCreatorChanged;
   final Map<String, String> outputs;
   final String? miniProgramRootPath;
+  final String? authTokenCreatorServiceAccount;
+  final String? authTokenCreatorError;
   final String? publicInvokerError;
   final bool? healthy;
   final int? healthStatusCode;
@@ -2130,6 +2138,21 @@ class PublisherBackendStarter {
       }
     }
 
+    var authTokenCreatorConfigured = false;
+    var authTokenCreatorChanged = false;
+    String? authTokenCreatorServiceAccount;
+    String? authTokenCreatorError;
+    if (settings.authWebApiKey?.trim().isNotEmpty == true) {
+      try {
+        final tokenCreator = await _ensureFirebaseAuthTokenCreator(settings);
+        authTokenCreatorConfigured = tokenCreator.configured;
+        authTokenCreatorChanged = tokenCreator.changed;
+        authTokenCreatorServiceAccount = tokenCreator.serviceAccountEmail;
+      } on PublisherBackendException catch (error) {
+        authTokenCreatorError = error.message;
+      }
+    }
+
     final outputs = settings.outputs;
     final health = await _waitForHealthCheck(
       Uri.parse(settings.healthUrl),
@@ -2169,6 +2192,10 @@ class PublisherBackendStarter {
       publicInvokerConfigured: publicInvokerConfigured,
       publicInvokerChanged: publicInvokerChanged,
       publicInvokerError: publicInvokerError,
+      authTokenCreatorConfigured: authTokenCreatorConfigured,
+      authTokenCreatorChanged: authTokenCreatorChanged,
+      authTokenCreatorServiceAccount: authTokenCreatorServiceAccount,
+      authTokenCreatorError: authTokenCreatorError,
       deployedAtUtc: deployedAtUtc,
       dependenciesInstalled: dependenciesInstalled,
       outputs: outputs,
@@ -3692,6 +3719,7 @@ class PublisherBackendStarter {
         if (trimmed.startsWith('FUNCTION_REGION=') ||
             trimmed.startsWith('PUBLISHER_BACKEND_REGION=') ||
             trimmed.startsWith('MINI_PROGRAM_ID=') ||
+            trimmed.startsWith('PUBLISHER_AUTH_WEB_API_KEY=') ||
             trimmed.startsWith('FIREBASE_AUTH_WEB_API_KEY=')) {
           continue;
         }
@@ -3704,7 +3732,7 @@ class PublisherBackendStarter {
       ..add('PUBLISHER_BACKEND_REGION=${settings.region}')
       ..add('MINI_PROGRAM_ID=${settings.miniProgramId}');
     if (settings.authWebApiKey?.trim().isNotEmpty == true) {
-      lines.add('FIREBASE_AUTH_WEB_API_KEY=${settings.authWebApiKey!.trim()}');
+      lines.add('PUBLISHER_AUTH_WEB_API_KEY=${settings.authWebApiKey!.trim()}');
     }
     await file.writeAsString('${lines.join('\n')}\n');
   }
@@ -3780,6 +3808,158 @@ class PublisherBackendStarter {
       );
     }
     return const _FirebasePublicInvokerResult(configured: true, changed: true);
+  }
+
+  Future<_FirebaseAuthTokenCreatorResult> _ensureFirebaseAuthTokenCreator(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final serviceAccountEmail =
+        await _firebaseFunctionServiceAccountEmail(settings) ??
+        await _firebaseDefaultComputeServiceAccountEmail(settings);
+    final member = 'serviceAccount:$serviceAccountEmail';
+    final baseUri = Uri.parse(
+      'https://cloudresourcemanager.googleapis.com/v1/projects/'
+      '${settings.projectId}',
+    );
+    final policyResponse = await _firebaseAuthorizedRequest(
+      'POST',
+      Uri.parse('$baseUri:getIamPolicy'),
+      body: jsonEncode(<String, Object?>{}),
+    );
+    if (policyResponse.statusCode >= 400) {
+      throw PublisherBackendException(
+        'Could not read project IAM policy for Firebase auth service account '
+        '"$serviceAccountEmail" (${policyResponse.statusCode}). '
+        'Publisher-owned email auth may fail until the service account can '
+        'sign custom tokens.',
+      );
+    }
+    final decoded = policyResponse.body.trim().isEmpty
+        ? <String, Object?>{}
+        : jsonDecode(policyResponse.body);
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'Service account IAM policy response was not a JSON object.',
+      );
+    }
+    final policy = decoded.map((key, value) => MapEntry(key.toString(), value));
+    final bindings = _jsonObjectList(policy['bindings']);
+    final tokenCreatorBinding = bindings.firstWhere(
+      (binding) => binding['role'] == 'roles/iam.serviceAccountTokenCreator',
+      orElse: () => <String, Object?>{},
+    );
+    final rawMembers = tokenCreatorBinding['members'];
+    final members = rawMembers is List
+        ? rawMembers.map((member) => member.toString()).toList()
+        : <String>[];
+    if (members.contains(member)) {
+      return _FirebaseAuthTokenCreatorResult(
+        configured: true,
+        changed: false,
+        serviceAccountEmail: serviceAccountEmail,
+      );
+    }
+    if (tokenCreatorBinding.isEmpty) {
+      bindings.add(<String, Object?>{
+        'role': 'roles/iam.serviceAccountTokenCreator',
+        'members': <String>[member],
+      });
+    } else {
+      tokenCreatorBinding['members'] = <String>[...members, member];
+    }
+    final body = jsonEncode(<String, Object?>{
+      'policy': <String, Object?>{
+        if (policy['etag'] != null) 'etag': policy['etag'],
+        'bindings': bindings,
+      },
+    });
+    final response = await _firebaseAuthorizedRequest(
+      'POST',
+      Uri.parse('$baseUri:setIamPolicy'),
+      body: body,
+    );
+    if (response.statusCode >= 400) {
+      throw PublisherBackendException(
+        'Could not grant roles/iam.serviceAccountTokenCreator to Firebase auth '
+        'service account "$serviceAccountEmail" (${response.statusCode}). '
+        'Grant this role to the service account before running auth '
+        'smoke.',
+      );
+    }
+    return _FirebaseAuthTokenCreatorResult(
+      configured: true,
+      changed: true,
+      serviceAccountEmail: serviceAccountEmail,
+    );
+  }
+
+  Future<String?> _firebaseFunctionServiceAccountEmail(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final response = await _firebaseAuthorizedRequest(
+      'GET',
+      Uri.parse(
+        'https://cloudfunctions.googleapis.com/v2/projects/${settings.projectId}'
+        '/locations/${settings.region}/functions/${settings.functionName}',
+      ),
+    );
+    if (response.statusCode == 404) {
+      return null;
+    }
+    if (response.statusCode >= 400) {
+      throw PublisherBackendException(
+        'Could not read Firebase function service account '
+        '(${response.statusCode}).',
+      );
+    }
+    final decoded = response.body.trim().isEmpty
+        ? <String, Object?>{}
+        : jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'Firebase function response was not a JSON object.',
+      );
+    }
+    final serviceConfig = decoded['serviceConfig'];
+    if (serviceConfig is Map) {
+      final email = serviceConfig['serviceAccountEmail']?.toString().trim();
+      if (email != null && email.isNotEmpty) {
+        return email;
+      }
+    }
+    return null;
+  }
+
+  Future<String> _firebaseDefaultComputeServiceAccountEmail(
+    _PublisherBackendFirebaseSettings settings,
+  ) async {
+    final response = await _firebaseAuthorizedRequest(
+      'GET',
+      Uri.parse(
+        'https://cloudresourcemanager.googleapis.com/v1/projects/'
+        '${settings.projectId}',
+      ),
+    );
+    if (response.statusCode >= 400) {
+      throw PublisherBackendException(
+        'Could not read Firebase project number (${response.statusCode}).',
+      );
+    }
+    final decoded = response.body.trim().isEmpty
+        ? <String, Object?>{}
+        : jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const PublisherBackendException(
+        'Firebase project response was not a JSON object.',
+      );
+    }
+    final projectNumber = decoded['projectNumber']?.toString().trim();
+    if (projectNumber == null || projectNumber.isEmpty) {
+      throw const PublisherBackendException(
+        'Firebase project response did not include projectNumber.',
+      );
+    }
+    return '$projectNumber-compute@developer.gserviceaccount.com';
   }
 
   String _firebaseCloudRunServiceName(String functionName) {
@@ -6174,6 +6354,18 @@ class _FirebasePublicInvokerResult {
   final bool changed;
 }
 
+class _FirebaseAuthTokenCreatorResult {
+  const _FirebaseAuthTokenCreatorResult({
+    required this.configured,
+    required this.changed,
+    required this.serviceAccountEmail,
+  });
+
+  final bool configured;
+  final bool changed;
+  final String serviceAccountEmail;
+}
+
 class _PublisherBackendAwsDataImportPlan {
   const _PublisherBackendAwsDataImportPlan({
     required this.items,
@@ -6943,7 +7135,7 @@ export function createFirebasePublisherAuthService({
   appId,
   store,
   auth = getAuth(),
-  apiKey = process.env.FIREBASE_AUTH_WEB_API_KEY,
+  apiKey = process.env.PUBLISHER_AUTH_WEB_API_KEY || process.env.FIREBASE_AUTH_WEB_API_KEY,
   fetchImpl = globalThis.fetch,
   clock = () => new Date(),
   refreshTokenTtlDays = Number(process.env.PUBLISHER_AUTH_REFRESH_TOKEN_TTL_DAYS || 30),
@@ -7302,7 +7494,7 @@ function authNotConfigured() {
   return failed(
     500,
     'auth_not_configured',
-    'FIREBASE_AUTH_WEB_API_KEY is required for publisher-owned email auth.',
+    'PUBLISHER_AUTH_WEB_API_KEY is required for publisher-owned email auth.',
   );
 }
 
