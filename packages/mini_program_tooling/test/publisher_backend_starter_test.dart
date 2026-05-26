@@ -268,6 +268,12 @@ void main() {
         );
         expect(
           await File(
+            p.join(backendRoot, 'functions', 'auth_service.js'),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
             p.join(backendRoot, 'functions', 'data', 'coupons_list.json'),
           ).exists(),
           isTrue,
@@ -285,6 +291,9 @@ void main() {
         final store = await File(
           p.join(backendRoot, 'functions', 'firestore_store.js'),
         ).readAsString();
+        final authService = await File(
+          p.join(backendRoot, 'functions', 'auth_service.js'),
+        ).readAsString();
         final router = await File(
           p.join(backendRoot, 'functions', 'router.js'),
         ).readAsString();
@@ -296,9 +305,16 @@ void main() {
         expect(packageJson, contains('"firebase-admin": "^13.10.0"'));
         expect(index, contains("firebase-functions/v2/https"));
         expect(index, contains('createFirestorePublisherBackendStore'));
+        expect(index, contains('createFirebasePublisherAuthService'));
         expect(store, contains("collection('miniPrograms')"));
         expect(store, contains("collection('redemptions')"));
+        expect(store, contains("collection('authSessions')"));
+        expect(authService, contains('signInWithPassword'));
+        expect(authService, contains('miniProgramSessionId'));
+        expect(authService, contains('hashToken'));
         expect(router, contains('access-control-allow-origin'));
+        expect(router, contains('POST /auth/email/sign-up'));
+        expect(router, contains('authorization'));
         expect(
           await readme.readAsString(),
           contains('Storage mode: Firestore'),
@@ -399,7 +415,6 @@ const handler = createPublisherBackendHandler({
   store: {
     homeBootstrap: async () => ({ title: 'Firebase home' }),
     couponsList: async () => ({ coupons: [{ id: 'coupon-10', title: 'Ten' }] }),
-    authSession: async () => ({ authenticated: true }),
     redeemCoupon: async ({ couponId, userId }) => {
       if (!coupons.has(couponId)) {
         return { statusCode: 404, body: { errorCode: 'coupon_not_found' } };
@@ -412,9 +427,46 @@ const handler = createPublisherBackendHandler({
       return { statusCode: 200, body: { status: 'redeemed', couponId, userId } };
     },
   },
+  authService: {
+    currentSession: async ({ authorizationHeader }) =>
+      authorizationHeader === 'Bearer valid-token'
+        ? { statusCode: 200, body: { authenticated: true, user: { uid: 'user-1', email: 'user@example.com' } } }
+        : { statusCode: 401, body: { errorCode: 'auth_required' } },
+    signUpEmail: async ({ email }) => ({
+      statusCode: 200,
+      body: {
+        authenticated: true,
+        user: { uid: 'user-1', email },
+        idToken: 'id-token-1',
+        refreshToken: 'refresh-token-1',
+        expiresIn: 3600,
+      },
+    }),
+    signInEmail: async ({ email }) => ({
+      statusCode: 200,
+      body: {
+        authenticated: true,
+        user: { uid: 'user-1', email },
+        idToken: 'id-token-2',
+        refreshToken: 'refresh-token-2',
+        expiresIn: 3600,
+      },
+    }),
+    refresh: async () => ({
+      statusCode: 200,
+      body: {
+        authenticated: true,
+        user: { uid: 'user-1', email: 'user@example.com' },
+        idToken: 'id-token-3',
+        refreshToken: 'refresh-token-3',
+        expiresIn: 3600,
+      },
+    }),
+    signOut: async () => ({ statusCode: 200, body: { status: 'signed_out' } }),
+  },
 });
 
-async function call(method, path, body) {
+async function call(method, path, body, headers = {}) {
   const response = {
     statusCode: 200,
     headers: {},
@@ -423,14 +475,19 @@ async function call(method, path, body) {
     json(body) { this.body = body; },
     end(body) { this.body = body ? JSON.parse(body) : null; },
   };
-  await handler({ method, path, body }, response);
+  await handler({ method, path, body, headers }, response);
   return { statusCode: response.statusCode, body: response.body };
 }
 
 const health = await call('GET', '/health');
 const home = await call('GET', '/home/bootstrap');
 const couponsList = await call('GET', '/coupons/list');
-const session = await call('GET', '/auth/session');
+const missingSession = await call('GET', '/auth/session');
+const session = await call('GET', '/auth/session', null, { authorization: 'Bearer valid-token' });
+const signUp = await call('POST', '/auth/email/sign-up', { email: 'user@example.com', password: 'secret123' });
+const signIn = await call('POST', '/auth/email/sign-in', { email: 'user@example.com', password: 'secret123' });
+const refreshed = await call('POST', '/auth/refresh', { refreshToken: 'refresh-token-2' });
+const signedOut = await call('POST', '/auth/sign-out', { refreshToken: 'refresh-token-3' });
 const missingCouponId = await call('POST', '/coupon/redeem', {});
 const unknownCoupon = await call('POST', '/coupon/redeem', { couponId: 'missing' });
 const redeemed = await call('POST', '/coupon/redeem', { couponId: 'coupon-10', userId: 'user-1' });
@@ -440,7 +497,12 @@ console.log(JSON.stringify({
   health,
   home,
   couponsList,
+  missingSession,
   session,
+  signUp,
+  signIn,
+  refreshed,
+  signedOut,
   missingCouponId,
   unknownCoupon,
   redeemed,
@@ -454,11 +516,200 @@ console.log(JSON.stringify({
         expect(decoded['health']['statusCode'], 200);
         expect(decoded['home']['body']['title'], 'Firebase home');
         expect(decoded['couponsList']['body']['coupons'], hasLength(1));
+        expect(decoded['missingSession']['statusCode'], 401);
         expect(decoded['session']['body']['authenticated'], isTrue);
+        expect(decoded['signUp']['body']['refreshToken'], isNotEmpty);
+        expect(decoded['signIn']['body']['idToken'], isNotEmpty);
+        expect(decoded['refreshed']['body']['refreshToken'], 'refresh-token-3');
+        expect(decoded['signedOut']['body']['status'], 'signed_out');
         expect(decoded['missingCouponId']['statusCode'], 400);
         expect(decoded['unknownCoupon']['statusCode'], 404);
         expect(decoded['redeemed']['body']['status'], 'redeemed');
         expect(decoded['duplicate']['body']['status'], 'already_redeemed');
+      },
+    );
+
+    test(
+      'generated Firebase auth service creates, refreshes, verifies, and signs out sessions',
+      () async {
+        final nodeVersion = await Process.run('node', <String>['--version']);
+        if (nodeVersion.exitCode != 0) {
+          markTestSkipped('Node.js is not available.');
+        }
+        final starter = const PublisherBackendStarter();
+        await starter.scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        final authServiceUri = Uri.file(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'firebase_functions',
+            'functions',
+            'auth_service.js',
+          ),
+        ).toString();
+        final fakeAdminPackageRoot = Directory(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'firebase_functions',
+            'functions',
+            'node_modules',
+            'firebase-admin',
+          ),
+        );
+        await fakeAdminPackageRoot.create(recursive: true);
+        await File(
+          p.join(fakeAdminPackageRoot.path, 'package.json'),
+        ).writeAsString(
+          jsonEncode(<String, Object?>{
+            'type': 'module',
+            'exports': <String, Object?>{'./auth': './auth.js'},
+          }),
+        );
+        await File(p.join(fakeAdminPackageRoot.path, 'auth.js')).writeAsString(
+          'export function getAuth() { throw new Error("inject auth"); }',
+        );
+
+        final result = await _runNodeScript(tempDir, '''
+import { createFirebasePublisherAuthService } from '$authServiceUri';
+
+const sessions = new Map();
+const issuedCustomTokens = new Map();
+const auth = {
+  createUser: async ({ email }) => ({ uid: 'uid-1', email, disabled: false }),
+  getUser: async (uid) => ({ uid, email: 'user@example.com', disabled: false }),
+  createCustomToken: async (uid, claims) => {
+    const token = 'custom-token-' + claims.miniProgramSessionId;
+    issuedCustomTokens.set(token, { uid, ...claims });
+    return token;
+  },
+  verifyIdToken: async (idToken) => {
+    const sessionId = idToken.replace('id-token-', '');
+    return {
+      uid: 'uid-1',
+      miniProgramId: 'firebase_coupon',
+      miniProgramSessionId: sessionId,
+    };
+  },
+};
+const store = {
+  createAuthSession: async (session) => {
+    sessions.set(session.sessionId, { ...session });
+  },
+  authSession: async (sessionId) => sessions.get(sessionId) ?? null,
+  authSessionByRefreshTokenHash: async (hash) => {
+    for (const session of sessions.values()) {
+      if (session.refreshTokenHash === hash) {
+        return { ...session };
+      }
+    }
+    return null;
+  },
+  updateAuthSession: async ({ sessionId, ...updates }) => {
+    sessions.set(sessionId, { ...sessions.get(sessionId), ...updates });
+  },
+  deleteAuthSession: async (sessionId) => {
+    sessions.delete(sessionId);
+  },
+};
+const fetchImpl = async (url, options) => {
+  const body = JSON.parse(options.body || '{}');
+  if (url.includes('accounts:signInWithPassword')) {
+    return response({ localId: 'uid-1', email: body.email });
+  }
+  if (url.includes('accounts:signInWithCustomToken')) {
+    const claims = issuedCustomTokens.get(body.token);
+    return response({
+      idToken: 'id-token-' + claims.miniProgramSessionId,
+      refreshToken: 'firebase-refresh-token-not-returned',
+      expiresIn: '3600',
+    });
+  }
+  return response({ error: { message: 'missing route' } }, 404);
+};
+function response(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async json() { return body; },
+  };
+}
+
+const service = createFirebasePublisherAuthService({
+  appId: 'firebase_coupon',
+  store,
+  auth,
+  apiKey: 'test-api-key',
+  fetchImpl,
+  clock: () => new Date('2026-05-24T12:00:00.000Z'),
+});
+
+const signUp = await service.signUpEmail({
+  email: 'user@example.com',
+  password: 'secret123',
+});
+const current = await service.currentSession({
+  authorizationHeader: 'Bearer ' + signUp.body.idToken,
+});
+const refresh = await service.refresh({
+  refreshToken: signUp.body.refreshToken,
+});
+const refreshedCurrent = await service.currentSession({
+  authorizationHeader: 'Bearer ' + refresh.body.idToken,
+});
+const signOut = await service.signOut({
+  refreshToken: refresh.body.refreshToken,
+});
+const revoked = await service.currentSession({
+  authorizationHeader: 'Bearer ' + refresh.body.idToken,
+});
+const signIn = await service.signInEmail({
+  email: 'user@example.com',
+  password: 'secret123',
+});
+
+console.log(JSON.stringify({
+  signUpStatus: signUp.statusCode,
+  signUpAuthenticated: signUp.body.authenticated,
+  signUpRefreshTokenLength: signUp.body.refreshToken.length,
+  currentStatus: current.statusCode,
+  refreshStatus: refresh.statusCode,
+  refreshRotated: refresh.body.refreshToken !== signUp.body.refreshToken,
+  refreshedCurrentStatus: refreshedCurrent.statusCode,
+  signOutStatus: signOut.statusCode,
+  signOutStatusText: signOut.body.status,
+  revokedStatus: revoked.statusCode,
+  revokedCode: revoked.body.errorCode,
+  signInStatus: signIn.statusCode,
+  signInHasFirebaseRawRefreshToken:
+    signIn.body.refreshToken === 'firebase-refresh-token-not-returned',
+  sessionCount: sessions.size,
+}));
+''');
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final decoded =
+            jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+        expect(decoded['signUpStatus'], 200);
+        expect(decoded['signUpAuthenticated'], isTrue);
+        expect(decoded['signUpRefreshTokenLength'], greaterThan(20));
+        expect(decoded['currentStatus'], 200);
+        expect(decoded['refreshStatus'], 200);
+        expect(decoded['refreshRotated'], isTrue);
+        expect(decoded['refreshedCurrentStatus'], 200);
+        expect(decoded['signOutStatus'], 200);
+        expect(decoded['signOutStatusText'], 'signed_out');
+        expect(decoded['revokedStatus'], 401);
+        expect(decoded['revokedCode'], 'auth_session_revoked');
+        expect(decoded['signInStatus'], 200);
+        expect(decoded['signInHasFirebaseRawRefreshToken'], isFalse);
+        expect(decoded['sessionCount'], 1);
       },
     );
 
@@ -1082,13 +1333,20 @@ console.log(JSON.stringify({
         ),
       );
       await envFile.writeAsString(
-        'CUSTOM_VALUE=keep\nFUNCTION_REGION=old\nPUBLISHER_BACKEND_REGION=old\nMINI_PROGRAM_ID=old\n',
+        'CUSTOM_VALUE=keep\nFUNCTION_REGION=old\nPUBLISHER_BACKEND_REGION=old\nMINI_PROGRAM_ID=old\nFIREBASE_AUTH_WEB_API_KEY=old\n',
       );
 
       await starter.firebaseDeploy(
         PublisherBackendFirebaseDeployRequest(
           miniProgramRootPath: miniProgramRoot.path,
-          environment: _firebaseEnvironment(),
+          environment: _firebaseEnvironment(
+            values: <String, dynamic>{
+              'projectId': 'coupon-prod',
+              'region': 'asia-south1',
+              'functionName': 'publisherBackend',
+              'authWebApiKey': 'AIzaSyFakeFirebaseWebApiKey123456789',
+            },
+          ),
         ),
       );
 
@@ -1096,9 +1354,16 @@ console.log(JSON.stringify({
       expect(envText, contains('CUSTOM_VALUE=keep'));
       expect(envText, contains('PUBLISHER_BACKEND_REGION=asia-south1'));
       expect(envText, contains('MINI_PROGRAM_ID=coupon_app'));
+      expect(
+        envText,
+        contains(
+          'FIREBASE_AUTH_WEB_API_KEY=AIzaSyFakeFirebaseWebApiKey123456789',
+        ),
+      );
       expect(envText, isNot(contains('FUNCTION_REGION=old')));
       expect(envText, isNot(contains('PUBLISHER_BACKEND_REGION=old')));
       expect(envText, isNot(contains('MINI_PROGRAM_ID=old')));
+      expect(envText, isNot(contains('FIREBASE_AUTH_WEB_API_KEY=old')));
     });
 
     test('Firebase deploy fails when scaffold is missing', () async {
@@ -1172,10 +1437,18 @@ console.log(JSON.stringify({
 
     test('Firebase smoke checks read-only backend routes', () async {
       final requestedUris = <Uri>[];
+      final requestedHttpUris = <Uri>[];
       final starter = PublisherBackendStarter(
         healthGetter: (uri) async {
           requestedUris.add(uri);
           return http.Response('{"ok":true}', 200);
+        },
+        httpRequester: (method, uri, {headers, body}) async {
+          requestedHttpUris.add(uri);
+          return http.Response(
+            jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+            401,
+          );
         },
       );
       await starter.scaffold(
@@ -1207,8 +1480,8 @@ console.log(JSON.stringify({
         '/publisherBackend/health',
         '/publisherBackend/home/bootstrap',
         '/publisherBackend/coupons/list',
-        '/publisherBackend/auth/session',
       ]);
+      expect(requestedHttpUris.single.path, '/publisherBackend/auth/session');
     });
 
     test(
@@ -1233,6 +1506,12 @@ console.log(JSON.stringify({
           },
           firebaseAccessTokenProvider: () async => 'firebase-token',
           httpRequester: (method, uri, {headers, body}) async {
+            if (uri.path.endsWith('/auth/session')) {
+              return http.Response(
+                jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+                401,
+              );
+            }
             requestedFirestoreReads.add(uri);
             return http.Response(
               _firestoreDocumentJson(<String, Object?>{
@@ -1265,7 +1544,9 @@ console.log(JSON.stringify({
 
         expect(result.includeWrite, isTrue);
         expect(result.passed, isTrue);
-        final writeRoute = result.routes.last;
+        final writeRoute = result.routes.singleWhere(
+          (route) => route.method == 'POST' && route.path == '/coupon/redeem',
+        );
         expect(writeRoute.method, 'POST');
         expect(writeRoute.path, '/coupon/redeem');
         expect(writeRoute.statusCode, 200);
@@ -1301,8 +1582,15 @@ console.log(JSON.stringify({
             );
           },
           firebaseAccessTokenProvider: () async => 'firebase-token',
-          httpRequester: (method, uri, {headers, body}) async =>
-              http.Response('{}', 404),
+          httpRequester: (method, uri, {headers, body}) async {
+            if (uri.path.endsWith('/auth/session')) {
+              return http.Response(
+                jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+                401,
+              );
+            }
+            return http.Response('{}', 404);
+          },
           delay: (duration) async {},
         );
         await starter.scaffold(
@@ -1322,7 +1610,9 @@ console.log(JSON.stringify({
         );
 
         expect(result.passed, isFalse);
-        final writeRoute = result.routes.last;
+        final writeRoute = result.routes.singleWhere(
+          (route) => route.method == 'POST' && route.path == '/coupon/redeem',
+        );
         expect(writeRoute.responseStatus, 'redeemed');
         expect(writeRoute.redemptionVerified, isFalse);
         expect(writeRoute.verificationError, contains('not found'));
@@ -1338,6 +1628,10 @@ console.log(JSON.stringify({
           }
           return http.Response('{"ok":true}', 200);
         },
+        httpRequester: (method, uri, {headers, body}) async => http.Response(
+          jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+          401,
+        ),
       );
       await starter.scaffold(
         PublisherBackendScaffoldRequest(

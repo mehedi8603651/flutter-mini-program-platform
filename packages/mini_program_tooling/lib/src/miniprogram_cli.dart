@@ -33,7 +33,7 @@ const List<String> _supportedPublishTargets = <String>[
   'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.3.42';
+const String _miniProgramToolingVersion = '0.3.43';
 
 const List<String> _capabilityIds = <String>[
   'publish.firebase_hosting',
@@ -53,8 +53,10 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.outputs',
   'publisher_backend.firebase.host_command',
   'publisher_backend.firebase.handoff',
+  'publisher_backend.firebase.auth.email',
   'publisher_backend.firebase.smoke',
   'publisher_backend.firebase.smoke.write',
+  'publisher_backend.firebase.smoke.auth',
   'publisher_backend.firebase.firestore.seed',
   'publisher_backend.firebase.firestore.data.status',
   'publisher_backend.firebase.firestore.data.export',
@@ -2386,6 +2388,11 @@ class MiniprogramCli {
             'Optional Firebase HTTPS function URL override for status/outputs/smoke.',
       )
       ..addOption(
+        'auth-web-api-key',
+        help:
+            'Optional Firebase Web API key used by publisher-owned email auth routes.',
+      )
+      ..addOption(
         'artifacts-prefix',
         defaultsTo: 'artifacts',
         help: 'Object prefix for immutable release artifacts.',
@@ -3938,6 +3945,12 @@ class MiniprogramCli {
         help:
             'Also verify POST /coupon/redeem and the resulting Firestore redemption. This mutates backend data.',
       )
+      ..addFlag(
+        'include-auth',
+        negatable: false,
+        help:
+            'Also verify publisher-owned Firebase email auth, refresh, protected session, and sign-out.',
+      )
       ..addOption(
         'write-coupon-id',
         defaultsTo: 'coupon-10',
@@ -3947,6 +3960,14 @@ class MiniprogramCli {
         'write-user-id',
         defaultsTo: 'smoke-user',
         help: 'User ID used with --include-write.',
+      )
+      ..addOption('auth-email', help: 'Email used with --include-auth.')
+      ..addOption('auth-password', help: 'Password used with --include-auth.')
+      ..addFlag(
+        'auth-create-user',
+        negatable: false,
+        help:
+            'Attempt auth/email/sign-up before sign-in. Existing users are accepted.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -3957,11 +3978,21 @@ class MiniprogramCli {
       return 0;
     }
     final includeWrite = results.flag('include-write');
+    final includeAuth = results.flag('include-auth');
     if (!includeWrite &&
         (results.wasParsed('write-coupon-id') ||
             results.wasParsed('write-user-id'))) {
       _stderr.writeln(
         '--write-coupon-id and --write-user-id require --include-write.',
+      );
+      return 64;
+    }
+    if (!includeAuth &&
+        (results.wasParsed('auth-email') ||
+            results.wasParsed('auth-password') ||
+            results.flag('auth-create-user'))) {
+      _stderr.writeln(
+        '--auth-email, --auth-password, and --auth-create-user require --include-auth.',
       );
       return 64;
     }
@@ -3973,6 +4004,12 @@ class MiniprogramCli {
       );
       return 64;
     }
+    final authEmail = results.option('auth-email')?.trim() ?? '';
+    final authPassword = results.option('auth-password')?.trim() ?? '';
+    if (includeAuth && (authEmail.isEmpty || authPassword.isEmpty)) {
+      _stderr.writeln('--auth-email and --auth-password are required.');
+      return 64;
+    }
     final resolved = await _resolvePublisherBackendFirebaseInputs(results);
     final result = await _publisherBackendStarter.firebaseSmoke(
       PublisherBackendFirebaseSmokeRequest(
@@ -3981,6 +4018,10 @@ class MiniprogramCli {
         includeWrite: includeWrite,
         writeCouponId: writeCouponId,
         writeUserId: writeUserId,
+        includeAuth: includeAuth,
+        authEmail: includeAuth ? authEmail : null,
+        authPassword: includeAuth ? authPassword : null,
+        authCreateUser: results.flag('auth-create-user'),
       ),
     );
     if (results.flag('json')) {
@@ -4569,6 +4610,16 @@ class MiniprogramCli {
       }
       values['functionUrl'] = normalized;
     }
+    if (results.option('auth-web-api-key') case final value?
+        when value.trim().isNotEmpty) {
+      final normalized = value.trim();
+      if (!RegExp(r'^[A-Za-z0-9_-]{8,}$').hasMatch(normalized)) {
+        throw const FormatException(
+          '--auth-web-api-key must be a non-empty Firebase Web API key.',
+        );
+      }
+      values['authWebApiKey'] = normalized;
+    }
     return values;
   }
 
@@ -4702,7 +4753,10 @@ class MiniprogramCli {
     final lines = <String>[];
     final sortedKeys = environment.values.keys.toList()..sort();
     for (final key in sortedKeys) {
-      lines.add('$key: ${environment.values[key]}');
+      final value = key == 'authWebApiKey'
+          ? '<configured>'
+          : environment.values[key];
+      lines.add('$key: $value');
     }
     return lines;
   }
@@ -4967,7 +5021,7 @@ Commands:
   firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
   firebase host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   firebase handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
-  firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
+  firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--include-auth]
   firebase seed --env <env-name> [--mini-program-root <path>] [--json]
   firebase data status --env <env-name> [--mini-program-root <path>] [--json]
   firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
@@ -5197,8 +5251,10 @@ Commands:
         'publisherBackendFirebaseOutputs': true,
         'publisherBackendFirebaseHostCommand': true,
         'publisherBackendFirebaseHandoff': true,
+        'publisherBackendFirebaseAuthEmail': true,
         'publisherBackendFirebaseSmoke': true,
         'publisherBackendFirebaseWriteSmoke': true,
+        'publisherBackendFirebaseSmokeAuth': true,
         'publisherBackendFirebaseFirestoreSeed': true,
         'publisherBackendFirebaseFirestoreDataStatus': true,
         'publisherBackendFirebaseFirestoreDataExport': true,
@@ -5214,8 +5270,10 @@ Commands:
         'publisher-backend firebase outputs',
         'publisher-backend firebase host-command',
         'publisher-backend firebase handoff',
+        'publisher-backend firebase auth email',
         'publisher-backend firebase smoke',
         'publisher-backend firebase smoke --include-write',
+        'publisher-backend firebase smoke --include-auth',
         'publisher-backend firebase seed',
         'publisher-backend firebase data status',
         'publisher-backend firebase data export',
@@ -5273,10 +5331,22 @@ Commands:
     return <String, Object?>{
       'name': environment.name,
       'provider': environment.provider,
-      'values': environment.values,
+      'values': _redactedCloudEnvironmentValues(environment.values),
+      if ((environment.values['authWebApiKey']?.toString().trim() ?? '')
+          .isNotEmpty)
+        'authWebApiKeyConfigured': true,
       'configuredAtUtc': environment.configuredAtUtc,
       'updatedAtUtc': environment.updatedAtUtc,
     };
+  }
+
+  Map<String, Object?> _redactedCloudEnvironmentValues(
+    Map<String, dynamic> values,
+  ) {
+    return values.map(
+      (key, value) =>
+          MapEntry(key, key == 'authWebApiKey' ? '<configured>' : value),
+    );
   }
 
   String _formatWorkflowStatusResult(MiniProgramWorkflowStatusResult result) {
@@ -6569,6 +6639,7 @@ Commands:
       'miniprogram publisher-backend firebase status --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
       'miniprogram publisher-backend firebase smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
       'miniprogram publisher-backend firebase smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --include-write',
+      'miniprogram publisher-backend firebase smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --include-auth --auth-email <email> --auth-password <password>',
     ];
     if (result.outputs.isNotEmpty) {
       lines
@@ -6881,6 +6952,10 @@ Commands:
       'Write smoke: ${result.includeWrite}',
       if (result.includeWrite) 'Write coupon ID: ${result.writeCouponId}',
       if (result.includeWrite) 'Write user ID: ${result.writeUserId}',
+      'Auth smoke: ${result.includeAuth}',
+      if (result.includeAuth && result.authEmail != null)
+        'Auth email: ${result.authEmail}',
+      if (result.includeAuth) 'Auth create user: ${result.authCreateUser}',
       'Passed: ${result.passed}',
       if (result.error != null) 'Detail: ${result.error}',
     ];
@@ -7465,6 +7540,9 @@ Commands:
       'includeWrite': result.includeWrite,
       'writeCouponId': result.includeWrite ? result.writeCouponId : null,
       'writeUserId': result.includeWrite ? result.writeUserId : null,
+      'includeAuth': result.includeAuth,
+      'authEmail': result.includeAuth ? result.authEmail : null,
+      'authCreateUser': result.includeAuth ? result.authCreateUser : null,
       'passed': result.passed,
       'error': result.error,
       'routes': result.routes

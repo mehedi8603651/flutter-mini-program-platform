@@ -95,7 +95,7 @@ miniprogram publisher-backend firebase status --env <env-name> [--mini-program-r
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase host-command --env <env-name> --api-base-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
 miniprogram publisher-backend firebase handoff --env <env-name> --delivery-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
-miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--write-coupon-id <id>] [--write-user-id <id>]
+miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--write-coupon-id <id>] [--write-user-id <id>] [--include-auth] [--auth-email <email>] [--auth-password <password>] [--auth-create-user]
 miniprogram publisher-backend firebase seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
@@ -784,13 +784,17 @@ miniprogram publisher-backend scaffold --template firebase-functions --storage f
 ```
 
 This creates `backend/firebase_functions/` with Firebase Cloud Functions v2,
-Firestore store wiring, sample data, and the same publisher backend routes as
-the mock and AWS starters:
+Firestore store wiring, sample data, publisher-owned email auth routes, and
+the same public publisher backend routes as the mock and AWS starters:
 
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
-- `GET /auth/session`
+- `GET /auth/session` (protected with `Authorization: Bearer <idToken>`)
+- `POST /auth/email/sign-up`
+- `POST /auth/email/sign-in`
+- `POST /auth/refresh`
+- `POST /auth/sign-out`
 - `POST /coupon/redeem`
 
 The generated Firestore model is:
@@ -798,13 +802,14 @@ The generated Firestore model is:
 - `miniPrograms/<appId>/home/bootstrap`
 - `miniPrograms/<appId>/sessions/demo`
 - `miniPrograms/<appId>/coupons/<couponId>`
+- `miniPrograms/<appId>/authSessions/<sessionId>`
 - `miniPrograms/<appId>/redemptions/<safeUserId_safeCouponId>`
 
 Configure a Firebase environment, deploy the function, and smoke-test the
 publisher routes:
 
 ```bash
-miniprogram env configure my-firebase-prod --provider firebase --project-id my-firebase-project --region us-central1
+miniprogram env configure my-firebase-prod --provider firebase --project-id my-firebase-project --region us-central1 --auth-web-api-key <firebase-web-api-key>
 miniprogram publisher-backend firebase deploy --env my-firebase-prod
 miniprogram publisher-backend firebase seed --env my-firebase-prod
 miniprogram publisher-backend firebase data status --env my-firebase-prod
@@ -812,14 +817,20 @@ miniprogram publisher-backend firebase status --env my-firebase-prod --json
 miniprogram publisher-backend firebase outputs --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write --write-coupon-id coupon-10 --write-user-id smoke-user
+miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-auth --auth-email test@example.com --auth-password "test-password" --auth-create-user
 ```
 
 The deploy command runs `npm install` when `functions/node_modules` is missing,
-writes `PUBLISHER_BACKEND_REGION` and `MINI_PROGRAM_ID` to `functions/.env`,
-runs `firebase deploy --only functions:<functionName> --project <projectId>`,
-tries to grant public Cloud Run Invoker for the HTTPS function, and records
+writes `PUBLISHER_BACKEND_REGION`, `MINI_PROGRAM_ID`, and
+`FIREBASE_AUTH_WEB_API_KEY` when configured to `functions/.env`, runs
+`firebase deploy --only functions:<functionName> --project <projectId>`, tries
+to grant public Cloud Run Invoker for the HTTPS function, and records
 `.mini_program/publisher_backend.firebase.json`. Use `--no-public-invoker` if
 you want to manage Cloud Run invoker permissions yourself.
+
+The Firebase Web API key is stored in the publisher environment and Functions
+`.env` so the publisher backend can call Firebase Auth REST endpoints. CLI text
+and JSON output redact the key, and handoff packages never include it.
 
 `firebase seed` upserts the generated starter JSON into Firestore:
 
@@ -852,9 +863,12 @@ Firebase project uses a different HTTPS function URL shape, pass
 `--function-url <url>` during `env configure`.
 
 Firebase smoke checks `GET /health`, `GET /home/bootstrap`,
-`GET /coupons/list`, and `GET /auth/session` by default. Add
+`GET /coupons/list`, and the protected `/auth/session` guard by default. Add
 `--include-write` to also call `POST /coupon/redeem` and verify that the
-expected Firestore redemption document exists.
+expected Firestore redemption document exists. Add `--include-auth` with a test
+email/password to verify sign-up/sign-in, refresh-token rotation, protected
+session access, and sign-out. Auth smoke redacts passwords, ID tokens, refresh
+tokens, and Authorization headers from text and JSON output.
 
 After the mini-program delivery URL is public or otherwise reachable, generate
 the publisher-to-host handoff package:

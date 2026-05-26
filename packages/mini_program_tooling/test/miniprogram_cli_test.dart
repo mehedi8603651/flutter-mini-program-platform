@@ -156,7 +156,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.42'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.43'));
       expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
       expect(
         stdoutBuffer.toString(),
@@ -180,11 +180,19 @@ void main() {
       );
       expect(
         stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.auth.email'),
+      );
+      expect(
+        stdoutBuffer.toString(),
         contains('publisher_backend.firebase.smoke'),
       );
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.firebase.smoke.write'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.smoke.auth'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -209,7 +217,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.42');
+      expect(json['toolingVersion'], '0.3.43');
       expect(json['packageName'], 'mini_program_tooling');
       expect(json['capabilityIds'], contains('publish.firebase_hosting'));
       expect(
@@ -234,11 +242,19 @@ void main() {
       );
       expect(
         json['capabilityIds'],
+        contains('publisher_backend.firebase.auth.email'),
+      );
+      expect(
+        json['capabilityIds'],
         contains('publisher_backend.firebase.smoke'),
       );
       expect(
         json['capabilityIds'],
         contains('publisher_backend.firebase.smoke.write'),
+      );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.smoke.auth'),
       );
       expect(
         json['capabilityIds'],
@@ -257,8 +273,10 @@ void main() {
       expect(features['publisherBackendFirebaseDeploy'], isTrue);
       expect(features['publisherBackendFirebaseHostCommand'], isTrue);
       expect(features['publisherBackendFirebaseHandoff'], isTrue);
+      expect(features['publisherBackendFirebaseAuthEmail'], isTrue);
       expect(features['publisherBackendFirebaseSmoke'], isTrue);
       expect(features['publisherBackendFirebaseWriteSmoke'], isTrue);
+      expect(features['publisherBackendFirebaseSmokeAuth'], isTrue);
       expect(features['publisherBackendFirebaseFirestoreDataExport'], isTrue);
       expect(features['publisherBackendFirebaseDestroyDataLossGuard'], isTrue);
     });
@@ -1487,11 +1505,18 @@ void main() {
             'publisherBackend',
             '--function-url',
             'https://custom-functions.example.com/publisherBackend',
+            '--auth-web-api-key',
+            'AIzaSyFakeFirebaseWebApiKey123456789',
           ]);
 
       expect(exitCode, 0);
       expect(stdoutBuffer.toString(), contains('Provider: firebase'));
       expect(stdoutBuffer.toString(), contains('projectId: coupon-prod'));
+      expect(stdoutBuffer.toString(), contains('authWebApiKey: <configured>'));
+      expect(
+        stdoutBuffer.toString(),
+        isNot(contains('AIzaSyFakeFirebaseWebApiKey123456789')),
+      );
       final state = await stateStore.readEnvironmentState(standaloneRoot);
       final environment = state!.cloudEnvironmentNamed('my-firebase-prod')!;
       expect(environment.provider, 'firebase');
@@ -1502,6 +1527,36 @@ void main() {
         environment.values['functionUrl'],
         'https://custom-functions.example.com/publisherBackend',
       );
+      expect(
+        environment.values['authWebApiKey'],
+        'AIzaSyFakeFirebaseWebApiKey123456789',
+      );
+
+      final useExitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: StringBuffer(),
+        stderrSink: StringBuffer(),
+        workingDirectory: standaloneRoot,
+      ).run(<String>['env', 'use', 'my-firebase-prod']);
+      expect(useExitCode, 0);
+      final statusBuffer = StringBuffer();
+      final statusExitCode = await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: statusBuffer,
+        stderrSink: StringBuffer(),
+        workingDirectory: standaloneRoot,
+      ).run(<String>['env', 'status', '--json']);
+      expect(statusExitCode, 0);
+      expect(
+        statusBuffer.toString(),
+        isNot(contains('AIzaSyFakeFirebaseWebApiKey123456789')),
+      );
+      final statusJson =
+          jsonDecode(statusBuffer.toString()) as Map<String, dynamic>;
+      final activeCloudEnvironment =
+          statusJson['activeCloudEnvironment'] as Map<String, dynamic>;
+      expect(activeCloudEnvironment['authWebApiKeyConfigured'], isTrue);
+      expect(activeCloudEnvironment['values']['authWebApiKey'], '<configured>');
     });
 
     test('publisher-backend firebase deploy prints text output', () async {
@@ -1583,6 +1638,10 @@ void main() {
         stderrSink: StringBuffer(),
         publisherBackendStarter: PublisherBackendStarter(
           healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          httpRequester: (method, uri, {headers, body}) async => http.Response(
+            jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+            401,
+          ),
         ),
         workingDirectory: standaloneRoot,
       );
@@ -2200,6 +2259,10 @@ void main() {
         stderrSink: StringBuffer(),
         publisherBackendStarter: PublisherBackendStarter(
           healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          httpRequester: (method, uri, {headers, body}) async => http.Response(
+            jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+            401,
+          ),
         ),
         workingDirectory: standaloneRoot,
       );
@@ -2221,7 +2284,10 @@ void main() {
       expect(stdoutBuffer.toString(), contains('GET /health: 200 OK'));
       expect(stdoutBuffer.toString(), contains('GET /home/bootstrap: 200 OK'));
       expect(stdoutBuffer.toString(), contains('GET /coupons/list: 200 OK'));
-      expect(stdoutBuffer.toString(), contains('GET /auth/session: 200 OK'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('GET /auth/session: 401 OK (auth_required)'),
+      );
     });
 
     test(
@@ -2260,6 +2326,12 @@ void main() {
             },
             firebaseAccessTokenProvider: () async => 'firebase-token',
             httpRequester: (method, uri, {headers, body}) async {
+              if (uri.path.endsWith('/auth/session')) {
+                return http.Response(
+                  jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+                  401,
+                );
+              }
               return http.Response(
                 _firestoreDocumentJson(<String, Object?>{
                   'status': 'redeemed',
@@ -2338,6 +2410,12 @@ void main() {
           },
           firebaseAccessTokenProvider: () async => 'firebase-token',
           httpRequester: (method, uri, {headers, body}) async {
+            if (uri.path.endsWith('/auth/session')) {
+              return http.Response(
+                jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+                401,
+              );
+            }
             return http.Response(
               _firestoreDocumentJson(<String, Object?>{
                 'status': 'redeemed',
@@ -2368,7 +2446,10 @@ void main() {
       expect(json['writeCouponId'], 'coupon-10');
       expect(json['writeUserId'], 'smoke-user');
       final routes = json['routes'] as List<Object?>;
-      final writeRoute = routes.last as Map<String, dynamic>;
+      final writeRoute = routes.cast<Map<String, dynamic>>().singleWhere(
+        (route) =>
+            route['method'] == 'POST' && route['path'] == '/coupon/redeem',
+      );
       expect(writeRoute['method'], 'POST');
       expect(writeRoute['path'], '/coupon/redeem');
       expect(writeRoute['responseStatus'], 'already_redeemed');
@@ -2378,6 +2459,236 @@ void main() {
         'miniPrograms/firebase_coupon/redemptions/smoke-user_coupon-10',
       );
     });
+
+    test('publisher-backend firebase smoke prints auth verification', () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await const PublisherBackendStarter().scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: standaloneRoot,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      var signedOut = false;
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+          postRequester: (uri, {headers, body}) async {
+            final path = uri.path;
+            if (path.endsWith('/auth/email/sign-up')) {
+              return http.Response(
+                jsonEncode(<String, Object?>{
+                  'errorCode': 'email_already_exists',
+                }),
+                409,
+              );
+            }
+            if (path.endsWith('/auth/email/sign-in')) {
+              return http.Response(
+                _authSmokeSessionJson(
+                  idToken: 'secret-id-token-1',
+                  refreshToken: 'secret-refresh-token-1',
+                ),
+                200,
+              );
+            }
+            if (path.endsWith('/auth/refresh')) {
+              return http.Response(
+                _authSmokeSessionJson(
+                  idToken: 'secret-id-token-2',
+                  refreshToken: 'secret-refresh-token-2',
+                ),
+                200,
+              );
+            }
+            if (path.endsWith('/auth/sign-out')) {
+              signedOut = true;
+              return http.Response(
+                jsonEncode(<String, Object?>{'status': 'signed_out'}),
+                200,
+              );
+            }
+            return http.Response('{}', 404);
+          },
+          httpRequester: (method, uri, {headers, body}) async {
+            if (!signedOut &&
+                headers?['authorization'] == 'Bearer secret-id-token-2') {
+              return http.Response(
+                jsonEncode(<String, Object?>{
+                  'authenticated': true,
+                  'user': <String, Object?>{
+                    'uid': 'firebase-user-1',
+                    'email': 'auth-smoke@example.com',
+                  },
+                }),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'errorCode': 'auth_session_revoked',
+              }),
+              401,
+            );
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final exitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'smoke',
+        '--env',
+        'my-firebase-prod',
+        '--include-auth',
+        '--auth-email',
+        'auth-smoke@example.com',
+        '--auth-password',
+        'secret-password',
+        '--auth-create-user',
+      ]);
+
+      final output = stdoutBuffer.toString();
+      expect(exitCode, 0);
+      expect(output, contains('Auth smoke: true'));
+      expect(output, contains('Auth email: auth-smoke@example.com'));
+      expect(output, contains('Auth create user: true'));
+      expect(
+        output,
+        contains('POST /auth/email/sign-up: 409 OK (email_already_exists)'),
+      );
+      expect(
+        output,
+        contains('POST /auth/email/sign-in: 200 OK (authenticated)'),
+      );
+      expect(output, contains('POST /auth/refresh: 200 OK (refreshed)'));
+      expect(output, contains('POST /auth/sign-out: 200 OK (signed_out)'));
+      expect(output, isNot(contains('secret-password')));
+      expect(output, isNot(contains('secret-id-token')));
+      expect(output, isNot(contains('secret-refresh-token')));
+    });
+
+    test(
+      'publisher-backend firebase smoke prints auth JSON redacted',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        var signedOut = false;
+        final stdoutBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          publisherBackendStarter: PublisherBackendStarter(
+            healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+            postRequester: (uri, {headers, body}) async {
+              if (uri.path.endsWith('/auth/email/sign-in')) {
+                return http.Response(
+                  _authSmokeSessionJson(
+                    idToken: 'json-id-token-1',
+                    refreshToken: 'json-refresh-token-1',
+                  ),
+                  200,
+                );
+              }
+              if (uri.path.endsWith('/auth/refresh')) {
+                return http.Response(
+                  _authSmokeSessionJson(
+                    idToken: 'json-id-token-2',
+                    refreshToken: 'json-refresh-token-2',
+                  ),
+                  200,
+                );
+              }
+              if (uri.path.endsWith('/auth/sign-out')) {
+                signedOut = true;
+                return http.Response(
+                  jsonEncode(<String, Object?>{'status': 'signed_out'}),
+                  200,
+                );
+              }
+              return http.Response('{}', 404);
+            },
+            httpRequester: (method, uri, {headers, body}) async {
+              if (!signedOut &&
+                  headers?['authorization'] == 'Bearer json-id-token-2') {
+                return http.Response(
+                  jsonEncode(<String, Object?>{
+                    'authenticated': true,
+                    'user': <String, Object?>{'uid': 'firebase-user-1'},
+                  }),
+                  200,
+                );
+              }
+              return http.Response(
+                jsonEncode(<String, Object?>{
+                  'errorCode': 'auth_session_revoked',
+                }),
+                401,
+              );
+            },
+          ),
+          workingDirectory: standaloneRoot,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'firebase',
+          'smoke',
+          '--env',
+          'my-firebase-prod',
+          '--include-auth',
+          '--auth-email',
+          'auth-smoke@example.com',
+          '--auth-password',
+          'json-secret-password',
+          '--json',
+        ]);
+
+        final output = stdoutBuffer.toString();
+        expect(exitCode, 0);
+        expect(output, isNot(contains('json-secret-password')));
+        expect(output, isNot(contains('json-id-token')));
+        expect(output, isNot(contains('json-refresh-token')));
+        final json = jsonDecode(output) as Map<String, dynamic>;
+        expect(json['includeAuth'], isTrue);
+        expect(json['authEmail'], 'auth-smoke@example.com');
+        final routes = (json['routes'] as List<Object?>)
+            .cast<Map<String, dynamic>>();
+        expect(
+          routes.map((route) => route['path']),
+          containsAll(<String>[
+            '/auth/email/sign-in',
+            '/auth/refresh',
+            '/auth/session',
+            '/auth/sign-out',
+          ]),
+        );
+      },
+    );
 
     test(
       'publisher-backend firebase smoke returns 1 when a route fails',
@@ -2403,11 +2714,16 @@ void main() {
           stderrSink: StringBuffer(),
           publisherBackendStarter: PublisherBackendStarter(
             healthGetter: (uri) async {
-              if (uri.path.endsWith('/auth/session')) {
+              if (uri.path.endsWith('/coupons/list')) {
                 return http.Response('nope', 500);
               }
               return http.Response('{"ok":true}', 200);
             },
+            httpRequester: (method, uri, {headers, body}) async =>
+                http.Response(
+                  jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+                  401,
+                ),
           ),
           workingDirectory: standaloneRoot,
         );
@@ -2424,7 +2740,7 @@ void main() {
         expect(stdoutBuffer.toString(), contains('Passed: false'));
         expect(
           stdoutBuffer.toString(),
-          contains('GET /auth/session: 500 FAIL'),
+          contains('GET /coupons/list: 500 FAIL'),
         );
       },
     );
@@ -2458,6 +2774,34 @@ void main() {
     );
 
     test(
+      'publisher-backend firebase smoke rejects auth options without auth smoke',
+      () async {
+        final stdoutBuffer = StringBuffer();
+        final stderrBuffer = StringBuffer();
+        final cli = MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: stderrBuffer,
+          workingDirectory: tempDir.path,
+        );
+
+        final exitCode = await cli.run(<String>[
+          'publisher-backend',
+          'firebase',
+          'smoke',
+          '--env',
+          'my-firebase-prod',
+          '--auth-email',
+          'auth-smoke@example.com',
+        ]);
+
+        expect(exitCode, 64);
+        expect(stderrBuffer.toString(), contains('require --include-auth'));
+        expect(stdoutBuffer.toString(), isEmpty);
+      },
+    );
+
+    test(
       'publisher-backend firebase smoke help includes write options',
       () async {
         final stdoutBuffer = StringBuffer();
@@ -2471,8 +2815,12 @@ void main() {
 
         expect(exitCode, 0);
         expect(stdoutBuffer.toString(), contains('--include-write'));
+        expect(stdoutBuffer.toString(), contains('--include-auth'));
         expect(stdoutBuffer.toString(), contains('--write-coupon-id'));
         expect(stdoutBuffer.toString(), contains('--write-user-id'));
+        expect(stdoutBuffer.toString(), contains('--auth-email'));
+        expect(stdoutBuffer.toString(), contains('--auth-password'));
+        expect(stdoutBuffer.toString(), contains('--auth-create-user'));
       },
     );
 
@@ -6867,6 +7215,22 @@ Map<String, Object?> _publisherBackendDynamoDbAttribute(Object? value) {
     };
   }
   return <String, Object?>{'S': value.toString()};
+}
+
+String _authSmokeSessionJson({
+  required String idToken,
+  required String refreshToken,
+}) {
+  return jsonEncode(<String, Object?>{
+    'authenticated': true,
+    'user': <String, Object?>{
+      'uid': 'firebase-user-1',
+      'email': 'auth-smoke@example.com',
+    },
+    'idToken': idToken,
+    'refreshToken': refreshToken,
+    'expiresIn': 3600,
+  });
 }
 
 const String _fakeStacCliSource = r'''

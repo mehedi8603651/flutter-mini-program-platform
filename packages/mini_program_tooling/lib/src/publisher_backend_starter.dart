@@ -44,8 +44,11 @@ const List<String> _publisherBackendAwsSmokeRoutePaths = <String>[
   '/coupons/list',
   '/auth/session',
 ];
-const List<String> _publisherBackendFirebaseSmokeRoutePaths =
-    _publisherBackendAwsSmokeRoutePaths;
+const List<String> _publisherBackendFirebaseSmokeRoutePaths = <String>[
+  '/health',
+  '/home/bootstrap',
+  '/coupons/list',
+];
 
 const Duration _awsDeployHealthWaitTimeout = Duration(seconds: 45);
 const Duration _awsDeployHealthAttemptTimeout = Duration(seconds: 5);
@@ -841,6 +844,10 @@ class PublisherBackendFirebaseSmokeRequest {
     this.includeWrite = false,
     this.writeCouponId = 'coupon-10',
     this.writeUserId = 'smoke-user',
+    this.includeAuth = false,
+    this.authEmail,
+    this.authPassword,
+    this.authCreateUser = false,
   });
 
   final String miniProgramRootPath;
@@ -848,6 +855,10 @@ class PublisherBackendFirebaseSmokeRequest {
   final bool includeWrite;
   final String writeCouponId;
   final String writeUserId;
+  final bool includeAuth;
+  final String? authEmail;
+  final String? authPassword;
+  final bool authCreateUser;
 }
 
 class PublisherBackendFirebaseSmokeRouteResult {
@@ -889,6 +900,9 @@ class PublisherBackendFirebaseSmokeResult {
     required this.includeWrite,
     required this.writeCouponId,
     required this.writeUserId,
+    required this.includeAuth,
+    required this.authCreateUser,
+    this.authEmail,
     this.error,
   });
 
@@ -903,6 +917,9 @@ class PublisherBackendFirebaseSmokeResult {
   final bool includeWrite;
   final String writeCouponId;
   final String writeUserId;
+  final bool includeAuth;
+  final bool authCreateUser;
+  final String? authEmail;
   final String? error;
 }
 
@@ -2235,6 +2252,9 @@ class PublisherBackendStarter {
         includeWrite: request.includeWrite,
         writeCouponId: request.writeCouponId,
         writeUserId: request.writeUserId,
+        includeAuth: request.includeAuth,
+        authCreateUser: request.authCreateUser,
+        authEmail: request.includeAuth ? request.authEmail : null,
         error:
             'Firebase Functions publisher backend was not found. Run '
             '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
@@ -2262,6 +2282,22 @@ class PublisherBackendStarter {
         ),
       );
     }
+    if (request.includeAuth) {
+      routes.addAll(
+        await _probeFirebaseSmokeAuthRoutes(
+          baseUri: baseUri,
+          email: request.authEmail?.trim() ?? '',
+          password: request.authPassword ?? '',
+          createUser: request.authCreateUser,
+        ),
+      );
+    } else {
+      routes.add(
+        await _probeFirebaseProtectedSessionGuard(
+          uri: _resolveBackendRoute(baseUri, '/auth/session'),
+        ),
+      );
+    }
     return PublisherBackendFirebaseSmokeResult(
       provider: request.environment.provider,
       environmentName: request.environment.name,
@@ -2274,6 +2310,9 @@ class PublisherBackendStarter {
       includeWrite: request.includeWrite,
       writeCouponId: request.writeCouponId,
       writeUserId: request.writeUserId,
+      includeAuth: request.includeAuth,
+      authCreateUser: request.authCreateUser,
+      authEmail: request.includeAuth ? request.authEmail : null,
     );
   }
 
@@ -3652,7 +3691,8 @@ class PublisherBackendStarter {
         final trimmed = line.trimLeft();
         if (trimmed.startsWith('FUNCTION_REGION=') ||
             trimmed.startsWith('PUBLISHER_BACKEND_REGION=') ||
-            trimmed.startsWith('MINI_PROGRAM_ID=')) {
+            trimmed.startsWith('MINI_PROGRAM_ID=') ||
+            trimmed.startsWith('FIREBASE_AUTH_WEB_API_KEY=')) {
           continue;
         }
         lines.add(line);
@@ -3663,6 +3703,9 @@ class PublisherBackendStarter {
     lines
       ..add('PUBLISHER_BACKEND_REGION=${settings.region}')
       ..add('MINI_PROGRAM_ID=${settings.miniProgramId}');
+    if (settings.authWebApiKey?.trim().isNotEmpty == true) {
+      lines.add('FIREBASE_AUTH_WEB_API_KEY=${settings.authWebApiKey!.trim()}');
+    }
     await file.writeAsString('${lines.join('\n')}\n');
   }
 
@@ -5335,6 +5378,314 @@ class PublisherBackendStarter {
   }
 
   Future<PublisherBackendFirebaseSmokeRouteResult>
+  _probeFirebaseProtectedSessionGuard({
+    required Uri uri,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    const path = '/auth/session';
+    try {
+      final response = await _httpRequester('GET', uri).timeout(timeout);
+      final body = _jsonObjectFromBody(response.body);
+      final errorCode = body['errorCode']?.toString();
+      final passed = response.statusCode == 401 && errorCode == 'auth_required';
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'GET',
+        path: path,
+        uri: uri,
+        passed: passed,
+        statusCode: response.statusCode,
+        responseStatus: errorCode,
+        error: passed
+            ? null
+            : 'Protected session route did not return auth_required.',
+      );
+    } on TimeoutException {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'GET',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'GET',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: '$error',
+      );
+    }
+  }
+
+  Future<List<PublisherBackendFirebaseSmokeRouteResult>>
+  _probeFirebaseSmokeAuthRoutes({
+    required Uri baseUri,
+    required String email,
+    required String password,
+    required bool createUser,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final routes = <PublisherBackendFirebaseSmokeRouteResult>[];
+    if (createUser) {
+      final signUp = await _probeFirebaseEmailAuthPost(
+        path: '/auth/email/sign-up',
+        uri: _resolveBackendRoute(baseUri, '/auth/email/sign-up'),
+        body: <String, String>{'email': email, 'password': password},
+        timeout: timeout,
+        acceptExistingEmail: true,
+      );
+      routes.add(signUp.route);
+      if (!routes.last.passed) {
+        return routes;
+      }
+    }
+
+    final signIn = await _probeFirebaseEmailAuthPost(
+      path: '/auth/email/sign-in',
+      uri: _resolveBackendRoute(baseUri, '/auth/email/sign-in'),
+      body: <String, String>{'email': email, 'password': password},
+      timeout: timeout,
+    );
+    routes.add(signIn.route);
+    if (!signIn.route.passed) {
+      return routes;
+    }
+    final idToken = signIn.idToken;
+    final refreshToken = signIn.refreshToken;
+    if (idToken == null || refreshToken == null) {
+      return routes;
+    }
+
+    final refresh = await _probeFirebaseEmailAuthPost(
+      path: '/auth/refresh',
+      uri: _resolveBackendRoute(baseUri, '/auth/refresh'),
+      body: <String, String>{'refreshToken': refreshToken},
+      timeout: timeout,
+      previousRefreshToken: refreshToken,
+    );
+    routes.add(refresh.route);
+    if (!refresh.route.passed) {
+      return routes;
+    }
+    final refreshedIdToken = refresh.idToken;
+    final refreshedRefreshToken = refresh.refreshToken;
+    if (refreshedIdToken == null || refreshedRefreshToken == null) {
+      return routes;
+    }
+
+    routes.add(
+      await _probeFirebaseAuthSessionRoute(
+        uri: _resolveBackendRoute(baseUri, '/auth/session'),
+        idToken: refreshedIdToken,
+        expectAuthenticated: true,
+        timeout: timeout,
+      ),
+    );
+    if (!routes.last.passed) {
+      return routes;
+    }
+
+    final signOut = await _probeFirebaseAuthSignOut(
+      uri: _resolveBackendRoute(baseUri, '/auth/sign-out'),
+      refreshToken: refreshedRefreshToken,
+      timeout: timeout,
+    );
+    routes.add(signOut);
+    if (!signOut.passed) {
+      return routes;
+    }
+
+    routes.add(
+      await _probeFirebaseAuthSessionRoute(
+        uri: _resolveBackendRoute(baseUri, '/auth/session'),
+        idToken: refreshedIdToken,
+        expectAuthenticated: false,
+        timeout: timeout,
+      ),
+    );
+    return routes;
+  }
+
+  Future<_FirebaseAuthSmokePostResult> _probeFirebaseEmailAuthPost({
+    required String path,
+    required Uri uri,
+    required Map<String, String> body,
+    required Duration timeout,
+    bool acceptExistingEmail = false,
+    String? previousRefreshToken,
+  }) async {
+    try {
+      final response = await _postRequester(
+        uri,
+        headers: const <String, String>{'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(timeout);
+      final decoded = _jsonObjectFromBody(response.body);
+      final errorCode = decoded['errorCode']?.toString();
+      final existingEmailAccepted =
+          acceptExistingEmail &&
+          response.statusCode == 409 &&
+          errorCode == 'email_already_exists';
+      final sessionValid = _firebaseAuthSessionLooksValid(decoded);
+      final rotated =
+          previousRefreshToken == null ||
+          decoded['refreshToken']?.toString() != previousRefreshToken;
+      final passed =
+          existingEmailAccepted ||
+          (response.statusCode >= 200 &&
+              response.statusCode < 300 &&
+              sessionValid &&
+              rotated);
+      final status = existingEmailAccepted
+          ? 'email_already_exists'
+          : sessionValid
+          ? previousRefreshToken == null
+                ? 'authenticated'
+                : 'refreshed'
+          : errorCode;
+      return _FirebaseAuthSmokePostResult(
+        route: PublisherBackendFirebaseSmokeRouteResult(
+          method: 'POST',
+          path: path,
+          uri: uri,
+          passed: passed,
+          statusCode: response.statusCode,
+          responseStatus: status,
+          error: passed
+              ? null
+              : previousRefreshToken != null && sessionValid && !rotated
+              ? 'Refresh route did not rotate the publisher refresh token.'
+              : 'Auth route did not return a valid SDK session.',
+        ),
+        idToken: decoded['idToken']?.toString(),
+        refreshToken: decoded['refreshToken']?.toString(),
+      );
+    } on TimeoutException {
+      return _FirebaseAuthSmokePostResult(
+        route: PublisherBackendFirebaseSmokeRouteResult(
+          method: 'POST',
+          path: path,
+          uri: uri,
+          passed: false,
+          error: 'Route check timed out.',
+        ),
+      );
+    } catch (error) {
+      return _FirebaseAuthSmokePostResult(
+        route: PublisherBackendFirebaseSmokeRouteResult(
+          method: 'POST',
+          path: path,
+          uri: uri,
+          passed: false,
+          error: '$error',
+        ),
+      );
+    }
+  }
+
+  Future<PublisherBackendFirebaseSmokeRouteResult>
+  _probeFirebaseAuthSessionRoute({
+    required Uri uri,
+    required String idToken,
+    required bool expectAuthenticated,
+    required Duration timeout,
+  }) async {
+    const path = '/auth/session';
+    try {
+      final response = await _httpRequester(
+        'GET',
+        uri,
+        headers: <String, String>{'authorization': 'Bearer $idToken'},
+      ).timeout(timeout);
+      final decoded = _jsonObjectFromBody(response.body);
+      final authenticated = decoded['authenticated'] == true;
+      final errorCode = decoded['errorCode']?.toString();
+      final passed = expectAuthenticated
+          ? response.statusCode == 200 && authenticated
+          : response.statusCode == 401 &&
+                (errorCode == 'auth_invalid_token' ||
+                    errorCode == 'auth_session_revoked' ||
+                    errorCode == 'auth_required');
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'GET',
+        path: path,
+        uri: uri,
+        passed: passed,
+        statusCode: response.statusCode,
+        responseStatus: authenticated ? 'authenticated' : errorCode,
+        error: passed
+            ? null
+            : expectAuthenticated
+            ? 'Protected session route did not accept the signed-in token.'
+            : 'Protected session route accepted a signed-out token.',
+      );
+    } on TimeoutException {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'GET',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'GET',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: '$error',
+      );
+    }
+  }
+
+  Future<PublisherBackendFirebaseSmokeRouteResult> _probeFirebaseAuthSignOut({
+    required Uri uri,
+    required String refreshToken,
+    required Duration timeout,
+  }) async {
+    const path = '/auth/sign-out';
+    try {
+      final response = await _postRequester(
+        uri,
+        headers: const <String, String>{'Content-Type': 'application/json'},
+        body: jsonEncode(<String, String>{'refreshToken': refreshToken}),
+      ).timeout(timeout);
+      final decoded = _jsonObjectFromBody(response.body);
+      final status = decoded['status']?.toString();
+      final passed =
+          response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          status == 'signed_out';
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: passed,
+        statusCode: response.statusCode,
+        responseStatus: status ?? decoded['errorCode']?.toString(),
+        error: passed ? null : 'Sign-out route did not revoke the session.',
+      );
+    } on TimeoutException {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: 'Route check timed out.',
+      );
+    } catch (error) {
+      return PublisherBackendFirebaseSmokeRouteResult(
+        method: 'POST',
+        path: path,
+        uri: uri,
+        passed: false,
+        error: '$error',
+      );
+    }
+  }
+
+  Future<PublisherBackendFirebaseSmokeRouteResult>
   _probeFirebaseSmokeWriteRoute({
     required _PublisherBackendFirebaseSettings settings,
     required Uri uri,
@@ -5472,6 +5823,42 @@ class PublisherBackendStarter {
       return null;
     }
     return null;
+  }
+
+  Map<String, Object?> _jsonObjectFromBody(String body) {
+    try {
+      final decoded = body.trim().isEmpty
+          ? <String, Object?>{}
+          : jsonDecode(body);
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+    } catch (_) {
+      return const <String, Object?>{};
+    }
+    return const <String, Object?>{};
+  }
+
+  bool _firebaseAuthSessionLooksValid(Map<String, Object?> body) {
+    final user = body['user'];
+    final idToken = body['idToken']?.toString().trim() ?? '';
+    final refreshToken = body['refreshToken']?.toString().trim() ?? '';
+    final expiresIn = body['expiresIn'];
+    final expiresAtUtc = body['expiresAtUtc']?.toString().trim() ?? '';
+    final expiresInSeconds = switch (expiresIn) {
+      int value => value,
+      String value => int.tryParse(value),
+      _ => null,
+    };
+    final expiryConfigured =
+        (expiresInSeconds != null && expiresInSeconds > 0) ||
+        expiresAtUtc.isNotEmpty;
+    return body['authenticated'] == true &&
+        user is Map &&
+        (user['uid']?.toString().trim().isNotEmpty ?? false) &&
+        idToken.isNotEmpty &&
+        refreshToken.isNotEmpty &&
+        expiryConfigured;
   }
 
   Uri _resolveBackendRoute(Uri baseUri, String path) {
@@ -5721,6 +6108,18 @@ class _FirebaseRedemptionVerification {
   final String? error;
 }
 
+class _FirebaseAuthSmokePostResult {
+  const _FirebaseAuthSmokePostResult({
+    required this.route,
+    this.idToken,
+    this.refreshToken,
+  });
+
+  final PublisherBackendFirebaseSmokeRouteResult route;
+  final String? idToken;
+  final String? refreshToken;
+}
+
 class _PublisherBackendAwsSeedData {
   const _PublisherBackendAwsSeedData({
     required this.home,
@@ -5899,6 +6298,7 @@ class _PublisherBackendFirebaseSettings {
     required this.region,
     required this.functionName,
     required this.functionUrl,
+    this.authWebApiKey,
   });
 
   final String environmentName;
@@ -5909,6 +6309,7 @@ class _PublisherBackendFirebaseSettings {
   final String region;
   final String functionName;
   final String functionUrl;
+  final String? authWebApiKey;
 
   String get healthUrl => _firebaseHealthUrlFromFunctionUrl(functionUrl);
 
@@ -5919,6 +6320,8 @@ class _PublisherBackendFirebaseSettings {
     'PublisherBackendProjectId': projectId,
     'PublisherBackendRegion': region,
     'PublisherBackendStorageMode': _publisherBackendStorageFirestore,
+    if (authWebApiKey?.trim().isNotEmpty == true)
+      'PublisherBackendFirebaseAuthEmail': 'configured',
   };
 
   static _PublisherBackendFirebaseSettings fromEnvironment({
@@ -5956,6 +6359,8 @@ class _PublisherBackendFirebaseSettings {
     final functionName = optionalValue('functionName', 'publisherBackend');
     final configuredFunctionUrl =
         environment.values['functionUrl']?.toString().trim() ?? '';
+    final authWebApiKey =
+        environment.values['authWebApiKey']?.toString().trim() ?? '';
     final functionUrl = configuredFunctionUrl.isEmpty
         ? _defaultFirebaseFunctionUrl(
             projectId: projectId,
@@ -5978,6 +6383,7 @@ class _PublisherBackendFirebaseSettings {
       region: region,
       functionName: functionName,
       functionUrl: functionUrl,
+      authWebApiKey: authWebApiKey.isEmpty ? null : authWebApiKey,
     );
   }
 }
@@ -6079,6 +6485,8 @@ Map<String, String> buildFirebaseFunctionsPublisherBackendFiles({
     p.join('functions', 'package.json'): _firebaseFunctionsPackageJson(appId),
     p.join('functions', 'index.js'): _firebaseFunctionsIndexSource(appId),
     p.join('functions', 'router.js'): _firebaseFunctionsRouterSource(),
+    p.join('functions', 'auth_service.js'):
+        _firebaseFunctionsAuthServiceSource(),
     p.join('functions', 'firestore_store.js'):
         _firebaseFunctionsFirestoreStoreSource(),
     p.join('functions', 'data', 'home_bootstrap.json'):
@@ -6193,7 +6601,11 @@ Generated routes:
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
-- `GET /auth/session`
+- `GET /auth/session` (requires `Authorization: Bearer <idToken>`)
+- `POST /auth/email/sign-up`
+- `POST /auth/email/sign-in`
+- `POST /auth/refresh`
+- `POST /auth/sign-out`
 - `POST /coupon/redeem`
 
 Firestore data model:
@@ -6201,6 +6613,7 @@ Firestore data model:
 - `miniPrograms/$appId/home/bootstrap`
 - `miniPrograms/$appId/sessions/demo`
 - `miniPrograms/$appId/coupons/<couponId>`
+- `miniPrograms/$appId/authSessions/<sessionId>`
 - `miniPrograms/$appId/redemptions/<safeUserId_safeCouponId>`
 
 Setup from the mini-program root:
@@ -6211,7 +6624,8 @@ miniprogram env init
 miniprogram env configure my-firebase-prod `
   --provider firebase `
   --project-id your-firebase-project-id `
-  --region us-central1
+  --region us-central1 `
+  --auth-web-api-key your-firebase-web-api-key
 
 miniprogram publisher-backend firebase deploy `
   --env my-firebase-prod
@@ -6224,12 +6638,20 @@ miniprogram publisher-backend firebase smoke `
 miniprogram publisher-backend firebase smoke `
   --env my-firebase-prod `
   --include-write
+miniprogram publisher-backend firebase smoke `
+  --env my-firebase-prod `
+  --include-auth `
+  --auth-email test@example.com `
+  --auth-password "replace-with-a-test-password" `
+  --auth-create-user
 ```
 
 `firebase seed` and `firebase data status` use your Firebase CLI login token, so
 run `firebase login` first or provide `FIREBASE_TOKEN` in CI.
 `firebase smoke --include-write` also uses that token to verify the written
 Firestore redemption document after `POST /coupon/redeem`.
+`firebase smoke --include-auth` calls the public auth endpoints and redacts
+passwords and auth tokens from CLI output.
 
 Local emulator:
 
@@ -6240,12 +6662,9 @@ npm run serve
 ```
 
 After deploy, connect host apps with the HTTPS function URL as
-`--backend-base-url`. The host app does not need Firebase SDKs unless the host
-itself chooses to use Firebase features such as Firebase Auth.
-
-Firebase Auth is intentionally not included in this scaffold. `/auth/session`
-returns publisher-owned session data from Firestore; a later auth bridge can
-verify Firebase ID tokens on the server.
+`--backend-base-url`. The host app does not need Firebase SDKs, Firebase
+project access, or the Firebase Web API key. Email/password auth is owned by
+this publisher backend and returns SDK-compatible sessions.
 ''';
 
 String _firebaseFunctionsIndexSource(String appId) =>
@@ -6253,6 +6672,7 @@ String _firebaseFunctionsIndexSource(String appId) =>
 import { onRequest } from 'firebase-functions/v2/https';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { createPublisherBackendHandler } from './router.js';
+import { createFirebasePublisherAuthService } from './auth_service.js';
 import { createFirestorePublisherBackendStore } from './firestore_store.js';
 
 if (getApps().length === 0) {
@@ -6261,7 +6681,11 @@ if (getApps().length === 0) {
 
 const appId = process.env.MINI_PROGRAM_ID || '$appId';
 const store = createFirestorePublisherBackendStore({ appId });
-const publisherBackendHandler = createPublisherBackendHandler({ store });
+const authService = createFirebasePublisherAuthService({ appId, store });
+const publisherBackendHandler = createPublisherBackendHandler({
+  store,
+  authService,
+});
 
 export const publisherBackend = onRequest(
   {
@@ -6277,11 +6701,16 @@ export const expectedRoutes = [
   'GET /home/bootstrap',
   'GET /coupons/list',
   'GET /auth/session',
+  'POST /auth/email/sign-up',
+  'POST /auth/email/sign-in',
+  'POST /auth/refresh',
+  'POST /auth/sign-out',
   'POST /coupon/redeem',
 ];
 
 export function createPublisherBackendHandler({
   store,
+  authService,
   clock = () => new Date(),
 } = {}) {
   if (!store) {
@@ -6320,13 +6749,45 @@ export function createPublisherBackendHandler({
         return writeJson(response, 200, await store.couponsList());
       }
       if (method === 'GET' && routePath === '/auth/session') {
-        const body = await store.authSession();
-        return body
-          ? writeJson(response, 200, body)
-          : writeJson(response, 404, {
-              errorCode: 'session_missing',
-              message: 'Session document was not found.',
-            });
+        const result = await requireAuthService(authService).currentSession({
+          authorizationHeader: headerValue(request, 'authorization'),
+        });
+        return writeJson(response, result.statusCode || 200, result.body || result);
+      }
+      if (method === 'POST' && routePath === '/auth/email/sign-up') {
+        const body = await readJsonBody(request);
+        const result = await requireAuthService(authService).signUpEmail({
+          email: stringValue(body?.email),
+          password: stringValue(body?.password),
+          requestedAtUtc: clock().toISOString(),
+        });
+        return writeJson(response, result.statusCode || 200, result.body || result);
+      }
+      if (method === 'POST' && routePath === '/auth/email/sign-in') {
+        const body = await readJsonBody(request);
+        const result = await requireAuthService(authService).signInEmail({
+          email: stringValue(body?.email),
+          password: stringValue(body?.password),
+          requestedAtUtc: clock().toISOString(),
+        });
+        return writeJson(response, result.statusCode || 200, result.body || result);
+      }
+      if (method === 'POST' && routePath === '/auth/refresh') {
+        const body = await readJsonBody(request);
+        const result = await requireAuthService(authService).refresh({
+          refreshToken: stringValue(body?.refreshToken),
+          requestedAtUtc: clock().toISOString(),
+        });
+        return writeJson(response, result.statusCode || 200, result.body || result);
+      }
+      if (method === 'POST' && routePath === '/auth/sign-out') {
+        const body = await readJsonBody(request);
+        const result = await requireAuthService(authService).signOut({
+          refreshToken: stringValue(body?.refreshToken),
+          authorizationHeader: headerValue(request, 'authorization'),
+          requestedAtUtc: clock().toISOString(),
+        });
+        return writeJson(response, result.statusCode || 200, result.body || result);
       }
       if (method === 'POST' && routePath === '/coupon/redeem') {
         const body = await readJsonBody(request);
@@ -6401,8 +6862,46 @@ function writeCorsHeaders(response) {
       'x-mini-program-sdk-version',
       'x-mini-program-platform',
       'x-mini-program-locale',
+      'authorization',
     ].join(', '),
   );
+}
+
+function requireAuthService(authService) {
+  if (!authService) {
+    return {
+      currentSession: async () => authNotConfigured(),
+      signUpEmail: async () => authNotConfigured(),
+      signInEmail: async () => authNotConfigured(),
+      refresh: async () => authNotConfigured(),
+      signOut: async () => authNotConfigured(),
+    };
+  }
+  return authService;
+}
+
+function authNotConfigured() {
+  return {
+    statusCode: 500,
+    body: {
+      errorCode: 'auth_not_configured',
+      message: 'Publisher auth service is not configured.',
+    },
+  };
+}
+
+function headerValue(request, name) {
+  const lowerName = String(name).toLowerCase();
+  const headers = request.headers || {};
+  for (const [key, value] of Object.entries(headers)) {
+    if (String(key).toLowerCase() === lowerName) {
+      return Array.isArray(value) ? String(value[0] || '') : String(value || '');
+    }
+  }
+  if (typeof request.get === 'function') {
+    return String(request.get(name) || '');
+  }
+  return '';
 }
 
 function writeJson(response, statusCode, body) {
@@ -6436,6 +6935,457 @@ function stringValue(value) {
 }
 ''';
 
+String _firebaseFunctionsAuthServiceSource() => r'''
+import { createHash, randomBytes } from 'node:crypto';
+import { getAuth } from 'firebase-admin/auth';
+
+export function createFirebasePublisherAuthService({
+  appId,
+  store,
+  auth = getAuth(),
+  apiKey = process.env.FIREBASE_AUTH_WEB_API_KEY,
+  fetchImpl = globalThis.fetch,
+  clock = () => new Date(),
+  refreshTokenTtlDays = Number(process.env.PUBLISHER_AUTH_REFRESH_TOKEN_TTL_DAYS || 30),
+} = {}) {
+  if (!appId) {
+    throw new Error('createFirebasePublisherAuthService requires appId.');
+  }
+  if (!store) {
+    throw new Error('createFirebasePublisherAuthService requires store.');
+  }
+
+  async function signUpEmail({ email, password }) {
+    const validation = validateEmailPassword(email, password);
+    if (validation) {
+      return validation;
+    }
+    if (!authConfigured(apiKey, fetchImpl)) {
+      return authNotConfigured();
+    }
+    try {
+      const userRecord = await auth.createUser({
+        email,
+        password,
+        emailVerified: false,
+        disabled: false,
+      });
+      return ok(
+        await createPublisherSession({
+          auth,
+          store,
+          appId,
+          apiKey,
+          fetchImpl,
+          clock,
+          refreshTokenTtlDays,
+          userRecord,
+        }),
+      );
+    } catch (error) {
+      return mapAdminAuthError(error, {
+        'auth/email-already-exists': {
+          statusCode: 409,
+          errorCode: 'email_already_exists',
+          message: 'A Firebase Auth user already exists for this email.',
+        },
+      });
+    }
+  }
+
+  async function signInEmail({ email, password }) {
+    const validation = validateEmailPassword(email, password);
+    if (validation) {
+      return validation;
+    }
+    if (!authConfigured(apiKey, fetchImpl)) {
+      return authNotConfigured();
+    }
+    const signIn = await callIdentityToolkit({
+      apiKey,
+      fetchImpl,
+      endpoint: 'accounts:signInWithPassword',
+      body: {
+        email,
+        password,
+        returnSecureToken: true,
+      },
+    });
+    if (!signIn.ok) {
+      return signIn.error;
+    }
+    const uid = String(signIn.body.localId || '').trim();
+    if (!uid) {
+      return failed(502, 'invalid_auth_response', 'Firebase Auth did not return a user id.');
+    }
+    try {
+      const userRecord = await auth.getUser(uid);
+      if (userRecord.disabled) {
+        return failed(403, 'user_disabled', 'Firebase Auth user is disabled.');
+      }
+      return ok(
+        await createPublisherSession({
+          auth,
+          store,
+          appId,
+          apiKey,
+          fetchImpl,
+          clock,
+          refreshTokenTtlDays,
+          userRecord,
+        }),
+      );
+    } catch (error) {
+      return mapAdminAuthError(error);
+    }
+  }
+
+  async function refresh({ refreshToken }) {
+    if (!refreshToken) {
+      return failed(400, 'missing_refresh_token', 'refreshToken is required.');
+    }
+    if (!authConfigured(apiKey, fetchImpl)) {
+      return authNotConfigured();
+    }
+    const session = await store.authSessionByRefreshTokenHash(hashToken(refreshToken));
+    const sessionCheck = await validateStoredSession({ session, store, clock });
+    if (sessionCheck) {
+      return sessionCheck;
+    }
+    try {
+      const userRecord = await auth.getUser(session.uid);
+      if (userRecord.disabled) {
+        return failed(403, 'user_disabled', 'Firebase Auth user is disabled.');
+      }
+      const nextRefreshToken = randomToken();
+      const now = clock();
+      await store.updateAuthSession({
+        sessionId: session.sessionId,
+        refreshTokenHash: hashToken(nextRefreshToken),
+        updatedAtUtc: now.toISOString(),
+        refreshExpiresAtUtc: refreshExpiry(clock, refreshTokenTtlDays).toISOString(),
+        email: userRecord.email || session.email || null,
+      });
+      return ok(
+        await createSessionResponse({
+          auth,
+          apiKey,
+          fetchImpl,
+          appId,
+          sessionId: session.sessionId,
+          userRecord,
+          refreshToken: nextRefreshToken,
+        }),
+      );
+    } catch (error) {
+      return mapAdminAuthError(error);
+    }
+  }
+
+  async function signOut({ refreshToken, authorizationHeader }) {
+    if (refreshToken) {
+      const session = await store.authSessionByRefreshTokenHash(hashToken(refreshToken));
+      if (session?.sessionId) {
+        await store.deleteAuthSession(session.sessionId);
+      }
+      return ok({ status: 'signed_out' });
+    }
+
+    const decoded = await verifyPublisherToken({ auth, appId, authorizationHeader });
+    if (decoded.ok && decoded.sessionId) {
+      await store.deleteAuthSession(decoded.sessionId);
+    }
+    return ok({ status: 'signed_out' });
+  }
+
+  async function currentSession({ authorizationHeader }) {
+    const decoded = await verifyPublisherToken({ auth, appId, authorizationHeader });
+    if (!decoded.ok) {
+      return decoded.error;
+    }
+    const session = await store.authSession(decoded.sessionId);
+    const sessionCheck = await validateStoredSession({ session, store, clock });
+    if (sessionCheck) {
+      return sessionCheck;
+    }
+    if (session.uid !== decoded.uid) {
+      return failed(401, 'auth_invalid_token', 'Auth token does not match the publisher session.');
+    }
+    try {
+      const userRecord = await auth.getUser(decoded.uid);
+      if (userRecord.disabled) {
+        return failed(403, 'user_disabled', 'Firebase Auth user is disabled.');
+      }
+      return ok({
+        authenticated: true,
+        user: userJson(userRecord),
+      });
+    } catch (error) {
+      return mapAdminAuthError(error);
+    }
+  }
+
+  return {
+    signUpEmail,
+    signInEmail,
+    refresh,
+    signOut,
+    currentSession,
+  };
+}
+
+async function createPublisherSession({
+  auth,
+  store,
+  appId,
+  apiKey,
+  fetchImpl,
+  clock,
+  refreshTokenTtlDays,
+  userRecord,
+}) {
+  const sessionId = randomToken();
+  const refreshToken = randomToken();
+  const now = clock();
+  const response = await createSessionResponse({
+    auth,
+    apiKey,
+    fetchImpl,
+    appId,
+    sessionId,
+    userRecord,
+    refreshToken,
+  });
+  await store.createAuthSession({
+    sessionId,
+    uid: userRecord.uid,
+    email: userRecord.email || null,
+    refreshTokenHash: hashToken(refreshToken),
+    createdAtUtc: now.toISOString(),
+    updatedAtUtc: now.toISOString(),
+    refreshExpiresAtUtc: refreshExpiry(clock, refreshTokenTtlDays).toISOString(),
+  });
+  return response;
+}
+
+async function createSessionResponse({
+  auth,
+  apiKey,
+  fetchImpl,
+  appId,
+  sessionId,
+  userRecord,
+  refreshToken,
+}) {
+  const customToken = await auth.createCustomToken(userRecord.uid, {
+    miniProgramId: appId,
+    miniProgramSessionId: sessionId,
+  });
+  const exchange = await callIdentityToolkit({
+    apiKey,
+    fetchImpl,
+    endpoint: 'accounts:signInWithCustomToken',
+    body: {
+      token: customToken,
+      returnSecureToken: true,
+    },
+  });
+  if (!exchange.ok) {
+    throw new Error(exchange.error.body.message || 'Firebase custom token exchange failed.');
+  }
+  const idToken = String(exchange.body.idToken || '').trim();
+  const expiresIn = Number(exchange.body.expiresIn || 3600);
+  if (!idToken) {
+    throw new Error('Firebase custom token exchange did not return an idToken.');
+  }
+  return {
+    authenticated: true,
+    user: userJson(userRecord),
+    idToken,
+    refreshToken,
+    expiresIn: Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600,
+  };
+}
+
+async function verifyPublisherToken({ auth, appId, authorizationHeader }) {
+  const idToken = bearerToken(authorizationHeader);
+  if (!idToken) {
+    return {
+      ok: false,
+      error: failed(401, 'auth_required', 'Authorization bearer token is required.'),
+    };
+  }
+  try {
+    const decoded = await auth.verifyIdToken(idToken, true);
+    if (decoded.miniProgramId !== appId) {
+      return {
+        ok: false,
+        error: failed(401, 'auth_invalid_token', 'Auth token belongs to a different mini-program.'),
+      };
+    }
+    const sessionId = String(decoded.miniProgramSessionId || '').trim();
+    if (!sessionId) {
+      return {
+        ok: false,
+        error: failed(401, 'auth_invalid_token', 'Auth token is missing publisher session claims.'),
+      };
+    }
+    return {
+      ok: true,
+      uid: decoded.uid,
+      sessionId,
+    };
+  } catch (_) {
+    return {
+      ok: false,
+      error: failed(401, 'auth_invalid_token', 'Auth token is invalid or expired.'),
+    };
+  }
+}
+
+async function validateStoredSession({ session, store, clock }) {
+  if (!session) {
+    return failed(401, 'auth_session_revoked', 'Publisher auth session was revoked.');
+  }
+  if (session.revokedAtUtc) {
+    return failed(401, 'auth_session_revoked', 'Publisher auth session was revoked.');
+  }
+  if (session.refreshExpiresAtUtc) {
+    const expiresAt = new Date(session.refreshExpiresAtUtc);
+    if (Number.isFinite(expiresAt.getTime()) && expiresAt <= clock()) {
+      await store.deleteAuthSession(session.sessionId);
+      return failed(401, 'auth_session_expired', 'Publisher auth session expired.');
+    }
+  }
+  return null;
+}
+
+async function callIdentityToolkit({ apiKey, fetchImpl, endpoint, body }) {
+  const response = await fetchImpl(
+    `https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  );
+  const decoded = await safeJson(response);
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: mapIdentityToolkitError(response.status, decoded),
+    };
+  }
+  return { ok: true, body: decoded };
+}
+
+async function safeJson(response) {
+  try {
+    return await response.json();
+  } catch (_) {
+    return {};
+  }
+}
+
+function validateEmailPassword(email, password) {
+  if (!email || !password) {
+    return failed(400, 'missing_email_password', 'Email and password are required.');
+  }
+  return null;
+}
+
+function authConfigured(apiKey, fetchImpl) {
+  return typeof fetchImpl === 'function' && String(apiKey || '').trim().length > 0;
+}
+
+function authNotConfigured() {
+  return failed(
+    500,
+    'auth_not_configured',
+    'FIREBASE_AUTH_WEB_API_KEY is required for publisher-owned email auth.',
+  );
+}
+
+function mapIdentityToolkitError(statusCode, decoded) {
+  const message = String(decoded?.error?.message || '').trim();
+  const normalized = message.split(' : ')[0];
+  if (normalized === 'EMAIL_EXISTS') {
+    return failed(409, 'email_already_exists', 'A Firebase Auth user already exists for this email.');
+  }
+  if (
+    normalized === 'EMAIL_NOT_FOUND' ||
+    normalized === 'INVALID_PASSWORD' ||
+    normalized === 'INVALID_LOGIN_CREDENTIALS'
+  ) {
+    return failed(401, 'invalid_credentials', 'Email or password is incorrect.');
+  }
+  if (normalized === 'USER_DISABLED') {
+    return failed(403, 'user_disabled', 'Firebase Auth user is disabled.');
+  }
+  return failed(statusCode || 502, 'firebase_auth_error', message || 'Firebase Auth request failed.');
+}
+
+function mapAdminAuthError(error, overrides = {}) {
+  const code = String(error?.code || '').trim();
+  if (overrides[code]) {
+    return failed(
+      overrides[code].statusCode,
+      overrides[code].errorCode,
+      overrides[code].message,
+    );
+  }
+  if (code === 'auth/user-not-found') {
+    return failed(401, 'auth_user_not_found', 'Firebase Auth user was not found.');
+  }
+  if (code === 'auth/invalid-password') {
+    return failed(400, 'invalid_password', 'Password does not satisfy Firebase Auth requirements.');
+  }
+  return failed(500, 'firebase_admin_auth_error', error instanceof Error ? error.message : String(error));
+}
+
+function ok(body) {
+  return { statusCode: 200, body };
+}
+
+function failed(statusCode, errorCode, message) {
+  return {
+    statusCode,
+    body: {
+      errorCode,
+      message,
+    },
+  };
+}
+
+function userJson(userRecord) {
+  return {
+    uid: userRecord.uid,
+    ...(userRecord.email ? { email: userRecord.email } : {}),
+  };
+}
+
+function randomToken() {
+  return randomBytes(32).toString('base64url');
+}
+
+function hashToken(token) {
+  return createHash('sha256').update(String(token), 'utf8').digest('hex');
+}
+
+function refreshExpiry(clock, refreshTokenTtlDays) {
+  const days = Number.isFinite(refreshTokenTtlDays) && refreshTokenTtlDays > 0
+    ? refreshTokenTtlDays
+    : 30;
+  return new Date(clock().getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function bearerToken(header) {
+  const value = String(header || '').trim();
+  const match = /^Bearer\s+(.+)$/i.exec(value);
+  return match ? match[1].trim() : '';
+}
+''';
+
 String _firebaseFunctionsFirestoreStoreSource() => r'''
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
@@ -6464,8 +7414,57 @@ export function createFirestorePublisherBackendStore({
       return { coupons };
     },
 
-    async authSession() {
-      return readDocument(appRef.collection('sessions').doc('demo'));
+    async createAuthSession(session) {
+      await appRef.collection('authSessions').doc(session.sessionId).set({
+        ...session,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return session;
+    },
+
+    async authSession(sessionId) {
+      const document = await readDocument(
+        appRef.collection('authSessions').doc(sessionId),
+      );
+      return document ? { sessionId, ...document } : null;
+    },
+
+    async authSessionByRefreshTokenHash(refreshTokenHash) {
+      const snapshot = await appRef
+        .collection('authSessions')
+        .where('refreshTokenHash', '==', refreshTokenHash)
+        .limit(1)
+        .get();
+      if (snapshot.empty) {
+        return null;
+      }
+      const document = snapshot.docs[0];
+      return { sessionId: document.id, ...document.data() };
+    },
+
+    async updateAuthSession({
+      sessionId,
+      refreshTokenHash,
+      updatedAtUtc,
+      refreshExpiresAtUtc,
+      email,
+    }) {
+      await appRef.collection('authSessions').doc(sessionId).set(
+        {
+          refreshTokenHash,
+          updatedAtUtc,
+          refreshExpiresAtUtc,
+          email: email || null,
+          revokedAtUtc: FieldValue.delete(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    },
+
+    async deleteAuthSession(sessionId) {
+      await appRef.collection('authSessions').doc(sessionId).delete();
     },
 
     async redeemCoupon({ couponId, userId, requestedAtUtc }) {

@@ -590,7 +590,8 @@ Current cloud support in this phase:
 
 - provider implementation shipped: `aws`
 - Firebase delivery support shipped: Functions + Firestore publisher backend,
-  handoff packages, and Firebase Hosting static delivery publish
+  publisher-owned email auth, handoff packages, and Firebase Hosting static
+  delivery publish
 - planned next providers: `gcp`
 - planned next providers: `custom-s3-compatible`
 
@@ -600,10 +601,11 @@ Hosting, and hands the host app a provider-neutral `.partner.json` package:
 
 ```powershell
 miniprogram publisher-backend scaffold --template firebase-functions --storage firestore
-miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id> --region us-central1
+miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id> --region us-central1 --auth-web-api-key <firebase-web-api-key>
 miniprogram publisher-backend firebase deploy --env my-firebase-prod
 miniprogram publisher-backend firebase seed --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write
+miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-auth --auth-email <test-email> --auth-password <test-password> --auth-create-user
 miniprogram publisher-backend firebase data export --env my-firebase-prod --include-redemptions
 miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
 miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery-url https://<project-id>.web.app/ --public --output <app>.partner.json
@@ -611,8 +613,10 @@ miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery
 
 The Flutter host app receives only the delivery URL and optional publisher
 backend URL through the `.partner.json` package. It does not need Firebase
-credentials or Firebase SDKs unless the host app itself chooses to use Firebase
-for unrelated host features.
+credentials, the Firebase Web API key, or Firebase SDKs unless the host app
+itself chooses to use Firebase for unrelated host features. Email/password auth
+is handled by the publisher backend and consumed by the SDK through bearer
+tokens.
 
 One cloud environment can serve many mini-programs. The recommended layout is
 one bucket per environment, for example one production bucket and one staging

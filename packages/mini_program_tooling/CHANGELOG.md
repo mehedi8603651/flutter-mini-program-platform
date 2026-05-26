@@ -1,4 +1,12 @@
 # Changelog
+## 0.3.43
+- add publisher-owned Firebase email/password auth routes to generated
+  Firebase Functions backends, matching the SDK auth session contract
+- add Firebase auth smoke verification for sign-up/sign-in, refresh, protected
+  session checks, and sign-out without printing raw auth tokens
+- support `--auth-web-api-key` on Firebase environments and write it to the
+  generated Functions `.env` during deploy while redacting it from CLI output
+
 ## 0.3.42
 - fix CLI-reported version metadata for the Firebase Hosting CORS release so
   `miniprogram capabilities --json` reports the published tooling version
