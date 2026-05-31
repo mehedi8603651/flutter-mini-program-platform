@@ -33,7 +33,7 @@ const List<String> _supportedPublishTargets = <String>[
   'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.3.43';
+const String _miniProgramToolingVersion = '0.3.44';
 
 const List<String> _capabilityIds = <String>[
   'publish.firebase_hosting',
@@ -54,6 +54,8 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.host_command',
   'publisher_backend.firebase.handoff',
   'publisher_backend.firebase.auth.email',
+  'publisher_backend.firebase.auth.status',
+  'publisher_backend.firebase.host.auth_diagnostics',
   'publisher_backend.firebase.smoke',
   'publisher_backend.firebase.smoke.write',
   'publisher_backend.firebase.smoke.auth',
@@ -3563,6 +3565,8 @@ class MiniprogramCli {
         return _runPublisherBackendFirebaseHostCommand(arguments.sublist(1));
       case 'handoff':
         return _runPublisherBackendFirebaseHandoff(arguments.sublist(1));
+      case 'auth':
+        return _runPublisherBackendFirebaseAuth(arguments.sublist(1));
       case 'smoke':
         return _runPublisherBackendFirebaseSmoke(arguments.sublist(1));
       case 'seed':
@@ -3781,6 +3785,11 @@ class MiniprogramCli {
             backendBaseUrl: backendBaseUrl,
             accessMode: accessMode,
           );
+    final hostAuthReadiness = hostProjectRootPath == null
+        ? null
+        : await _inspectHostAuthReadiness(
+            hostProjectRootPath: hostProjectRootPath,
+          );
     final result = _PublisherBackendFirebaseHostCommandResult(
       provider: outputs.provider,
       environmentName: outputs.environmentName,
@@ -3796,6 +3805,7 @@ class MiniprogramCli {
       hostEndpointCommandText: commandText,
       hostProjectRootPath: hostProjectRootPath,
       readiness: readiness,
+      hostAuthReadiness: hostAuthReadiness,
     );
     if (results.flag('json')) {
       _stdout.writeln(
@@ -3934,6 +3944,77 @@ class MiniprogramCli {
       _stdout.writeln(_formatPublisherBackendFirebaseHandoffResult(result));
     }
     return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseAuth(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_publisherBackendFirebaseAuthUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_publisherBackendFirebaseAuthUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'status':
+        return _runPublisherBackendFirebaseAuthStatus(arguments.sublist(1));
+      default:
+        _stderr.writeln(
+          'Unknown publisher-backend firebase auth command: ${arguments.first}',
+        );
+        _stderr.writeln(_publisherBackendFirebaseAuthUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runPublisherBackendFirebaseAuthStatus(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseCommandParser()
+      ..addOption(
+        'host-project-root',
+        help:
+            'Optional Flutter host app root to inspect for SDK auth controller setup.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase auth status [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final authStatus = await _publisherBackendStarter.firebaseAuthStatus(
+      PublisherBackendFirebaseAuthStatusRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    final hostProjectRootPath =
+        results.option('host-project-root')?.trim().isNotEmpty == true
+        ? p.normalize(p.absolute(results.option('host-project-root')!.trim()))
+        : null;
+    final hostAuthReadiness = hostProjectRootPath == null
+        ? null
+        : await _inspectHostAuthReadiness(
+            hostProjectRootPath: hostProjectRootPath,
+          );
+    final result = _PublisherBackendFirebaseAuthStatusCliResult(
+      authStatus: authStatus,
+      hostProjectRootPath: hostProjectRootPath,
+      hostAuthReadiness: hostAuthReadiness,
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseAuthStatusJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseAuthStatusResult(result));
+    }
+    return authStatus.ready && (hostAuthReadiness?.ready ?? true) ? 0 : 1;
   }
 
   Future<int> _runPublisherBackendFirebaseSmoke(List<String> arguments) async {
@@ -4983,7 +5064,7 @@ Commands:
   publisher-backend stop
   publisher-backend urls
   publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-  publisher-backend firebase deploy|status|outputs|host-command|handoff|smoke|seed|data|destroy --env <env-name>
+  publisher-backend firebase deploy|status|outputs|host-command|handoff|auth|smoke|seed|data|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -5021,6 +5102,7 @@ Commands:
   firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
   firebase host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   firebase handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
+  firebase auth status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
   firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--include-auth]
   firebase seed --env <env-name> [--mini-program-root <path>] [--json]
   firebase data status --env <env-name> [--mini-program-root <path>] [--json]
@@ -5056,13 +5138,21 @@ Commands:
   outputs --env <env-name> [--mini-program-root <path>] [--json]
   host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
-  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
+  auth status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
+  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--include-auth]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
   data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
   data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
   data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
   destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
+''';
+
+  String _publisherBackendFirebaseAuthUsage() => '''
+Usage: miniprogram publisher-backend firebase auth <command> [arguments]
+
+Commands:
+  status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
 ''';
 
   String _publisherBackendFirebaseDataUsage() => '''
@@ -5252,6 +5342,8 @@ Commands:
         'publisherBackendFirebaseHostCommand': true,
         'publisherBackendFirebaseHandoff': true,
         'publisherBackendFirebaseAuthEmail': true,
+        'publisherBackendFirebaseAuthStatus': true,
+        'publisherBackendFirebaseHostAuthDiagnostics': true,
         'publisherBackendFirebaseSmoke': true,
         'publisherBackendFirebaseWriteSmoke': true,
         'publisherBackendFirebaseSmokeAuth': true,
@@ -5270,7 +5362,7 @@ Commands:
         'publisher-backend firebase outputs',
         'publisher-backend firebase host-command',
         'publisher-backend firebase handoff',
-        'publisher-backend firebase auth email',
+        'publisher-backend firebase auth status',
         'publisher-backend firebase smoke',
         'publisher-backend firebase smoke --include-write',
         'publisher-backend firebase smoke --include-auth',
@@ -6869,6 +6961,63 @@ Commands:
     return lines.join('\n');
   }
 
+  String _formatPublisherBackendFirebaseAuthStatusResult(
+    _PublisherBackendFirebaseAuthStatusCliResult result,
+  ) {
+    final authStatus = result.authStatus;
+    final lines = <String>[
+      'Firebase publisher backend auth status.',
+      'Provider: ${authStatus.provider}',
+      'Environment: ${authStatus.environmentName}',
+      'Project: ${authStatus.projectId}',
+      'Region: ${authStatus.region}',
+      'Function: ${authStatus.functionName}',
+      'Mini-program ID: ${authStatus.miniProgramId}',
+      'Backend root: ${authStatus.backendRootPath}',
+      'Functions root: ${authStatus.functionsRootPath}',
+      'Auth Web API key configured: ${authStatus.authWebApiKeyConfigured}',
+      'Scaffold exists: ${authStatus.scaffoldExists}',
+      'Auth service file exists: ${authStatus.authServiceFileExists}',
+      'Router auth routes ready: ${authStatus.routerAuthRoutesReady}',
+      'Router allows Authorization header: ${authStatus.routerAllowsAuthorizationHeader}',
+      'Functions package has firebase-admin: ${authStatus.packageJsonHasFirebaseAdmin}',
+      'Functions package has firebase-functions: ${authStatus.packageJsonHasFirebaseFunctions}',
+      'Functions .env path: ${authStatus.envFilePath}',
+      'Functions .env auth key configured: ${authStatus.envAuthKeyConfigured}',
+      'Functions .env uses reserved auth key: ${authStatus.envUsesReservedAuthKey}',
+      'Deploy env ready: ${authStatus.deployEnvReady}',
+      'Ready: ${authStatus.ready}',
+    ];
+    final hostAuthReadiness = result.hostAuthReadiness;
+    if (result.hostProjectRootPath != null) {
+      lines.addAll(<String>[
+        'Host project root: ${result.hostProjectRootPath}',
+        'Host auth checked: true',
+        'Host auth controller ready: ${hostAuthReadiness?.ready ?? false}',
+        if (hostAuthReadiness?.runtimeSetupPath != null)
+          'Host runtime setup: ${hostAuthReadiness!.runtimeSetupPath}',
+      ]);
+    } else {
+      lines.add('Host auth checked: false');
+    }
+    if (authStatus.issues.isNotEmpty) {
+      lines
+        ..add('Issues:')
+        ..addAll(authStatus.issues.map((issue) => '- $issue'));
+    }
+    if (hostAuthReadiness != null && hostAuthReadiness.issues.isNotEmpty) {
+      lines
+        ..add('Host auth issues:')
+        ..addAll(hostAuthReadiness.issues.map((issue) => '- $issue'));
+    }
+    if (authStatus.warnings.isNotEmpty) {
+      lines
+        ..add('Warnings:')
+        ..addAll(authStatus.warnings.map((warning) => '- $warning'));
+    }
+    return lines.join('\n');
+  }
+
   String _formatPublisherBackendFirebaseHostCommandResult(
     _PublisherBackendFirebaseHostCommandResult result,
   ) {
@@ -6888,6 +7037,7 @@ Commands:
     ];
     if (result.hostProjectRootPath != null) {
       final readiness = result.readiness;
+      final hostAuthReadiness = result.hostAuthReadiness;
       lines.addAll(<String>[
         'Host project root: ${result.hostProjectRootPath}',
         'Host endpoint checked: true',
@@ -6900,14 +7050,24 @@ Commands:
           'Host endpoint backend base URL: ${readiness!.backendBaseUrl}',
         if (readiness?.accessMode != null)
           'Host endpoint access mode: ${readiness!.accessMode}',
+        'Host auth checked: true',
+        'Host auth controller ready: ${hostAuthReadiness?.ready ?? false}',
+        if (hostAuthReadiness?.runtimeSetupPath != null)
+          'Host runtime setup: ${hostAuthReadiness!.runtimeSetupPath}',
       ]);
       if (readiness != null && readiness.issues.isNotEmpty) {
         lines
           ..add('Host endpoint issues:')
           ..addAll(readiness.issues.map((issue) => '- $issue'));
       }
+      if (hostAuthReadiness != null && hostAuthReadiness.issues.isNotEmpty) {
+        lines
+          ..add('Host auth issues:')
+          ..addAll(hostAuthReadiness.issues.map((issue) => '- $issue'));
+      }
     } else {
       lines.add('Host endpoint checked: false');
+      lines.add('Host auth checked: false');
     }
     lines.addAll(<String>[
       '',
@@ -7478,6 +7638,55 @@ Commands:
     };
   }
 
+  Map<String, Object?> _publisherBackendFirebaseAuthStatusJson(
+    _PublisherBackendFirebaseAuthStatusCliResult result,
+  ) {
+    final authStatus = result.authStatus;
+    final hostAuthReadiness = result.hostAuthReadiness;
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase auth status',
+      'provider': authStatus.provider,
+      'environmentName': authStatus.environmentName,
+      'projectId': authStatus.projectId,
+      'region': authStatus.region,
+      'functionName': authStatus.functionName,
+      'miniProgramId': authStatus.miniProgramId,
+      'backendRootPath': authStatus.backendRootPath,
+      'functionsRootPath': authStatus.functionsRootPath,
+      'authWebApiKeyConfigured': authStatus.authWebApiKeyConfigured,
+      'scaffoldExists': authStatus.scaffoldExists,
+      'authServiceFileExists': authStatus.authServiceFileExists,
+      'routerFileExists': authStatus.routerFileExists,
+      'routerAuthRoutesReady': authStatus.routerAuthRoutesReady,
+      'routerAllowsAuthorizationHeader':
+          authStatus.routerAllowsAuthorizationHeader,
+      'packageJsonFileExists': authStatus.packageJsonFileExists,
+      'packageJsonHasFirebaseAdmin': authStatus.packageJsonHasFirebaseAdmin,
+      'packageJsonHasFirebaseFunctions':
+          authStatus.packageJsonHasFirebaseFunctions,
+      'envFilePath': authStatus.envFilePath,
+      'envFileExists': authStatus.envFileExists,
+      'envAuthKeyConfigured': authStatus.envAuthKeyConfigured,
+      'envUsesReservedAuthKey': authStatus.envUsesReservedAuthKey,
+      'deployEnvReady': authStatus.deployEnvReady,
+      'ready': authStatus.ready,
+      'issues': authStatus.issues,
+      'warnings': authStatus.warnings,
+      'hostAuthChecked': hostAuthReadiness != null,
+      'hostProjectRootPath': result.hostProjectRootPath,
+      'hostAuthControllerReady': hostAuthReadiness?.ready,
+      'hostRuntimeSetupPath': hostAuthReadiness?.runtimeSetupPath,
+      'hostAuthControllerConfigured':
+          hostAuthReadiness?.authControllerConfigured,
+      'hostSecureAuthControllerConfigured':
+          hostAuthReadiness?.secureAuthControllerConfigured,
+      'hostDisposeAuthControllerConfigured':
+          hostAuthReadiness?.disposeAuthControllerConfigured,
+      'hostAuthIssues': hostAuthReadiness?.issues ?? const <String>[],
+    };
+  }
+
   Map<String, Object?> _publisherBackendFirebaseHostCommandJson(
     _PublisherBackendFirebaseHostCommandResult result,
   ) {
@@ -7507,6 +7716,16 @@ Commands:
       'hostEndpointAccessMode': readiness?.accessMode,
       'hostEndpointBackendMode': readiness?.backendMode,
       'hostEndpointIssues': readiness?.issues ?? const <String>[],
+      'hostAuthChecked': result.hostAuthReadiness != null,
+      'hostAuthControllerReady': result.hostAuthReadiness?.ready,
+      'hostRuntimeSetupPath': result.hostAuthReadiness?.runtimeSetupPath,
+      'hostAuthControllerConfigured':
+          result.hostAuthReadiness?.authControllerConfigured,
+      'hostSecureAuthControllerConfigured':
+          result.hostAuthReadiness?.secureAuthControllerConfigured,
+      'hostDisposeAuthControllerConfigured':
+          result.hostAuthReadiness?.disposeAuthControllerConfigured,
+      'hostAuthIssues': result.hostAuthReadiness?.issues ?? const <String>[],
     };
   }
 
@@ -7738,6 +7957,65 @@ Commands:
       backendBaseUrl: endpointBackendBaseUrl,
       accessMode: endpointAccessMode,
       backendMode: endpointBackendMode,
+      issues: issues,
+    );
+  }
+
+  Future<_HostAuthReadiness> _inspectHostAuthReadiness({
+    required String hostProjectRootPath,
+  }) async {
+    final runtimeSetupPath = p.join(
+      hostProjectRootPath,
+      'lib',
+      'mini_program',
+      'mini_program_runtime_setup.dart',
+    );
+    final runtimeSetupFile = File(runtimeSetupPath);
+    if (!await runtimeSetupFile.exists()) {
+      return _HostAuthReadiness(
+        ready: false,
+        runtimeSetupPath: runtimeSetupPath,
+        authControllerConfigured: false,
+        secureAuthControllerConfigured: false,
+        disposeAuthControllerConfigured: false,
+        issues: const <String>[
+          'Host runtime setup was not found. Run `miniprogram embed init` in the Flutter host app first.',
+        ],
+      );
+    }
+
+    final source = await runtimeSetupFile.readAsString();
+    final authControllerConfigured =
+        source.contains('authController:') &&
+        source.contains('MiniProgramAuthController');
+    final secureAuthControllerConfigured = source.contains(
+      'MiniProgramAuthController.secure',
+    );
+    final disposeAuthControllerConfigured = source.contains(
+      'disposeAuthController: true',
+    );
+    final issues = <String>[];
+    if (!authControllerConfigured) {
+      issues.add(
+        'Host runtime setup does not configure MiniProgramAuthController. Re-run `miniprogram embed init --project-root $hostProjectRootPath --force` with tooling 0.3.44 or add `authController: MiniProgramAuthController.secure()` to buildMiniProgramConfig.',
+      );
+    } else if (!secureAuthControllerConfigured) {
+      issues.add(
+        'Host runtime setup has an auth controller but does not use MiniProgramAuthController.secure() for persisted email auth sessions.',
+      );
+    }
+    if (!disposeAuthControllerConfigured) {
+      issues.add(
+        'Host runtime setup should set `disposeAuthController: true` when it creates the auth controller.',
+      );
+    }
+
+    return _HostAuthReadiness(
+      ready: issues.isEmpty,
+      runtimeSetupPath: runtimeSetupPath,
+      authControllerConfigured: authControllerConfigured,
+      secureAuthControllerConfigured: secureAuthControllerConfigured,
+      disposeAuthControllerConfigured: disposeAuthControllerConfigured,
       issues: issues,
     );
   }
@@ -8149,6 +8427,7 @@ class _PublisherBackendFirebaseHostCommandResult {
     required this.hostEndpointCommandText,
     required this.hostProjectRootPath,
     required this.readiness,
+    required this.hostAuthReadiness,
   });
 
   final String provider;
@@ -8165,6 +8444,19 @@ class _PublisherBackendFirebaseHostCommandResult {
   final String hostEndpointCommandText;
   final String? hostProjectRootPath;
   final _HostEndpointReadiness? readiness;
+  final _HostAuthReadiness? hostAuthReadiness;
+}
+
+class _PublisherBackendFirebaseAuthStatusCliResult {
+  const _PublisherBackendFirebaseAuthStatusCliResult({
+    required this.authStatus,
+    required this.hostProjectRootPath,
+    required this.hostAuthReadiness,
+  });
+
+  final PublisherBackendFirebaseAuthStatusResult authStatus;
+  final String? hostProjectRootPath;
+  final _HostAuthReadiness? hostAuthReadiness;
 }
 
 class _PublisherBackendFirebaseHandoffResult {
@@ -8209,4 +8501,22 @@ class _HostEndpointReadiness {
   final String? backendBaseUrl;
   final String? accessMode;
   final String? backendMode;
+}
+
+class _HostAuthReadiness {
+  const _HostAuthReadiness({
+    required this.ready,
+    required this.runtimeSetupPath,
+    required this.authControllerConfigured,
+    required this.secureAuthControllerConfigured,
+    required this.disposeAuthControllerConfigured,
+    required this.issues,
+  });
+
+  final bool ready;
+  final String runtimeSetupPath;
+  final bool authControllerConfigured;
+  final bool secureAuthControllerConfigured;
+  final bool disposeAuthControllerConfigured;
+  final List<String> issues;
 }

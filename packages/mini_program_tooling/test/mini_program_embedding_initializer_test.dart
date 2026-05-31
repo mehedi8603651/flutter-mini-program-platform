@@ -278,6 +278,11 @@ void main() {
         runtimeSetup,
         contains('MiniProgramConfig buildMiniProgramConfig'),
       );
+      expect(
+        runtimeSetup,
+        contains('authController: MiniProgramAuthController.secure()'),
+      );
+      expect(runtimeSetup, contains('disposeAuthController: true'));
     });
 
     test(

@@ -593,6 +593,8 @@ MiniProgramConfig buildMiniProgramConfig({
             endpoints: endpoints,
             deliveryContext: deliveryContext,
           ),
+    authController: MiniProgramAuthController.secure(),
+    disposeAuthController: true,
     cacheBundle: MiniProgramCacheBundle.inMemory(),
   );
 }

@@ -818,6 +818,7 @@ miniprogram publisher-backend firebase outputs --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod
 miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write --write-coupon-id coupon-10 --write-user-id smoke-user
 miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-auth --auth-email test@example.com --auth-password "test-password" --auth-create-user
+miniprogram publisher-backend firebase auth status --env my-firebase-prod
 ```
 
 The deploy command runs `npm install` when `functions/node_modules` is missing,
@@ -873,6 +874,26 @@ email/password to verify sign-up/sign-in, refresh-token rotation, protected
 session access, and sign-out. Auth smoke redacts passwords, ID tokens, refresh
 tokens, and Authorization headers from text and JSON output.
 
+Use `firebase auth status` when auth UI or protected calls are not behaving as
+expected:
+
+```bash
+miniprogram publisher-backend firebase auth status \
+  --env my-firebase-prod \
+  --host-project-root ../host_app
+```
+
+The command is read-only. It verifies that the Firebase environment has an
+auth Web API key configured, the generated Functions scaffold contains the
+email auth service/routes, CORS allows the `Authorization` header, Functions
+dependencies include Firebase Admin, and the generated `.env` uses
+`PUBLISHER_AUTH_WEB_API_KEY` rather than the reserved Firebase prefix. When a
+host app root is provided, it also checks whether
+`lib/mini_program/mini_program_runtime_setup.dart` configures
+`MiniProgramAuthController.secure()` and `disposeAuthController: true`; this is
+required for SDK email/password login and cached sessions in imported
+mini-programs.
+
 After the mini-program delivery URL is public or otherwise reachable, generate
 the publisher-to-host handoff package:
 
@@ -911,7 +932,9 @@ miniprogram publisher-backend firebase host-command \
 The command is read-only. It prints the `miniprogram host endpoint add ...`
 command with `--backend-base-url <Firebase Functions URL>` and reports whether
 the host endpoint map already matches the app id, delivery URL, remote backend
-URL, and access mode.
+URL, and access mode. When `--host-project-root` is provided it also reports
+host auth controller readiness, so a host developer can see whether publisher
+email/password auth will render and cache sessions correctly.
 
 Firebase Admin SDK dependencies are generated only inside the publisher backend.
 The Flutter host app and `mini_program_sdk` do not need Firebase SDKs unless the
@@ -1353,7 +1376,8 @@ Generated host-app structure:
   `openAppMiniProgram(...)` and `AppMiniProgramLauncher`
 - `lib/mini_program/mini_program_runtime_setup.dart` resolves
   `MINI_PROGRAM_BACKEND_BASE_URL`, accepts optional
-  `Map<String, MiniProgramEndpoint>` endpoint routing, and builds
+  `Map<String, MiniProgramEndpoint>` endpoint routing, configures the SDK
+  auth controller for publisher-owned email/password login, and builds
   `MiniProgramConfig`
 - `lib/mini_program/app_host_bridge.dart` is where developers wire real
   analytics, optional native screens, and secure API behavior

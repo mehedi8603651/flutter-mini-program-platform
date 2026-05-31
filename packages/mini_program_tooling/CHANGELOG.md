@@ -1,4 +1,19 @@
 # Changelog
+## 0.3.44
+- add `publisher-backend firebase auth status` for read-only Firebase auth
+  readiness diagnostics, including env key configuration, generated auth
+  routes, CORS Authorization headers, Functions dependencies, and `.env`
+  deploy state without printing secrets
+- extend Firebase `host-command --host-project-root` diagnostics to report
+  whether the Flutter host runtime configures `MiniProgramAuthController`
+  for SDK email/password login and cached sessions
+- generate `MiniProgramAuthController.secure()` and
+  `disposeAuthController: true` in new host embedding runtime setup files so
+  Firebase auth mini-program UI works after endpoint import without manual host
+  code edits
+- expose Firebase auth status and host auth diagnostics in
+  `miniprogram capabilities`
+
 ## 0.3.43
 - add publisher-owned Firebase email/password auth routes to generated
   Firebase Functions backends, matching the SDK auth session contract

@@ -133,7 +133,7 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains(
-          'publisher-backend firebase deploy|status|outputs|host-command|handoff|smoke',
+          'publisher-backend firebase deploy|status|outputs|host-command|handoff|auth|smoke',
         ),
       );
     });
@@ -156,7 +156,7 @@ void main() {
         stdoutBuffer.toString(),
         contains('MiniProgram tooling capabilities.'),
       );
-      expect(stdoutBuffer.toString(), contains('Version: 0.3.43'));
+      expect(stdoutBuffer.toString(), contains('Version: 0.3.44'));
       expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
       expect(
         stdoutBuffer.toString(),
@@ -181,6 +181,14 @@ void main() {
       expect(
         stdoutBuffer.toString(),
         contains('publisher_backend.firebase.auth.email'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.auth.status'),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('publisher_backend.firebase.host.auth_diagnostics'),
       );
       expect(
         stdoutBuffer.toString(),
@@ -217,7 +225,7 @@ void main() {
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
       expect(json['schemaVersion'], 1);
       expect(json['command'], 'capabilities');
-      expect(json['toolingVersion'], '0.3.43');
+      expect(json['toolingVersion'], '0.3.44');
       expect(json['packageName'], 'mini_program_tooling');
       expect(json['capabilityIds'], contains('publish.firebase_hosting'));
       expect(
@@ -243,6 +251,14 @@ void main() {
       expect(
         json['capabilityIds'],
         contains('publisher_backend.firebase.auth.email'),
+      );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.auth.status'),
+      );
+      expect(
+        json['capabilityIds'],
+        contains('publisher_backend.firebase.host.auth_diagnostics'),
       );
       expect(
         json['capabilityIds'],
@@ -274,6 +290,8 @@ void main() {
       expect(features['publisherBackendFirebaseHostCommand'], isTrue);
       expect(features['publisherBackendFirebaseHandoff'], isTrue);
       expect(features['publisherBackendFirebaseAuthEmail'], isTrue);
+      expect(features['publisherBackendFirebaseAuthStatus'], isTrue);
+      expect(features['publisherBackendFirebaseHostAuthDiagnostics'], isTrue);
       expect(features['publisherBackendFirebaseSmoke'], isTrue);
       expect(features['publisherBackendFirebaseWriteSmoke'], isTrue);
       expect(features['publisherBackendFirebaseSmokeAuth'], isTrue);
@@ -2165,6 +2183,220 @@ void main() {
       },
     );
 
+    test(
+      'publisher-backend firebase host-command reports missing host auth controller',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await _writeEmbeddedHostFixture(hostRoot);
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final hostAddExitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: StringBuffer(),
+              stderrSink: StringBuffer(),
+              workingDirectory: hostRoot,
+            ).run(<String>[
+              'host',
+              'endpoint',
+              'add',
+              'firebase_coupon',
+              '--title',
+              'Firebase Coupon',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+              '--backend-base-url',
+              'https://asia-south1-coupon-prod.cloudfunctions.net/publisherBackend/',
+            ]);
+        expect(hostAddExitCode, 0);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'host-command',
+              '--env',
+              'my-firebase-prod',
+              '--api-base-url',
+              'https://cdn.example.com/public_mini_program/',
+              '--public',
+              '--host-project-root',
+              hostRoot,
+            ]);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), contains('Host endpoint ready: true'));
+        expect(
+          stdoutBuffer.toString(),
+          contains('Host auth controller ready: false'),
+        );
+        expect(
+          stdoutBuffer.toString(),
+          contains('Host runtime setup does not configure'),
+        );
+      },
+    );
+
+    test(
+      'publisher-backend firebase auth status reports ready setup',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await File(
+          p.join(
+            standaloneRoot,
+            'backend',
+            'firebase_functions',
+            'functions',
+            '.env',
+          ),
+        ).writeAsString('PUBLISHER_AUTH_WEB_API_KEY=fake-web-api-key\n');
+        await _writeEmbeddedHostFixture(hostRoot);
+        await File(
+          p.join(
+            hostRoot,
+            'lib',
+            'mini_program',
+            'mini_program_runtime_setup.dart',
+          ),
+        ).writeAsString('''
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+MiniProgramConfig buildMiniProgramConfig() {
+  return MiniProgramConfig(
+    sdkVersion: '1.0.0',
+    source: throw UnimplementedError(),
+    hostBridge: throw UnimplementedError(),
+    capabilityRegistry: throw UnimplementedError(),
+    authController: MiniProgramAuthController.secure(),
+    disposeAuthController: true,
+  );
+}
+''');
+        await _writeFirebaseEnvironmentState(
+          stateStore,
+          standaloneRoot,
+          authWebApiKey: 'fake-web-api-key',
+        );
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'auth',
+              'status',
+              '--env',
+              'my-firebase-prod',
+              '--host-project-root',
+              hostRoot,
+              '--json',
+            ]);
+
+        expect(exitCode, 0);
+        expect(stdoutBuffer.toString(), isNot(contains('fake-web-api-key')));
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(json['command'], 'publisher-backend firebase auth status');
+        expect(json['authWebApiKeyConfigured'], isTrue);
+        expect(json['scaffoldExists'], isTrue);
+        expect(json['authServiceFileExists'], isTrue);
+        expect(json['routerAuthRoutesReady'], isTrue);
+        expect(json['routerAllowsAuthorizationHeader'], isTrue);
+        expect(json['packageJsonHasFirebaseAdmin'], isTrue);
+        expect(json['envAuthKeyConfigured'], isTrue);
+        expect(json['envUsesReservedAuthKey'], isFalse);
+        expect(json['deployEnvReady'], isTrue);
+        expect(json['ready'], isTrue);
+        expect(json['issues'], isEmpty);
+        expect(json['hostAuthChecked'], isTrue);
+        expect(json['hostAuthControllerReady'], isTrue);
+        expect(json['hostSecureAuthControllerConfigured'], isTrue);
+        expect(json['hostDisposeAuthControllerConfigured'], isTrue);
+        expect(json['hostAuthIssues'], isEmpty);
+      },
+    );
+
+    test(
+      'publisher-backend firebase auth status reports missing env key',
+      () async {
+        final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+        await _writeMiniProgramFixture(
+          standaloneRoot,
+          miniProgramId: 'firebase_coupon',
+          version: '1.0.0',
+        );
+        await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: standaloneRoot,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+          ),
+        );
+        await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+        final stdoutBuffer = StringBuffer();
+
+        final exitCode =
+            await MiniprogramCli(
+              stateStore: stateStore,
+              stdoutSink: stdoutBuffer,
+              stderrSink: StringBuffer(),
+              workingDirectory: standaloneRoot,
+            ).run(<String>[
+              'publisher-backend',
+              'firebase',
+              'auth',
+              'status',
+              '--env',
+              'my-firebase-prod',
+              '--json',
+            ]);
+
+        expect(exitCode, 1);
+        final json =
+            jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+        expect(json['authWebApiKeyConfigured'], isFalse);
+        expect(json['ready'], isFalse);
+        expect(
+          (json['issues'] as List).join('\n'),
+          contains('missing --auth-web-api-key'),
+        );
+        expect(
+          (json['warnings'] as List).join('\n'),
+          contains('Functions .env was not found yet'),
+        );
+      },
+    );
+
     test('publisher-backend firebase host-command validates usage', () async {
       final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
       await _writeMiniProgramFixture(
@@ -3167,6 +3399,7 @@ void main() {
         contains('host-command --env <env-name>'),
       );
       expect(stdoutBuffer.toString(), contains('handoff --env <env-name>'));
+      expect(stdoutBuffer.toString(), contains('auth status --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('smoke --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('seed --env <env-name>'));
       expect(stdoutBuffer.toString(), contains('data status --env <env-name>'));
@@ -6845,6 +7078,7 @@ Future<void> _writeFirebaseEnvironmentState(
   LocalCliStateStore stateStore,
   String rootPath, {
   String environmentName = 'my-firebase-prod',
+  String? authWebApiKey,
 }) async {
   await stateStore.writeEnvironmentState(
     rootPath,
@@ -6860,6 +7094,7 @@ Future<void> _writeFirebaseEnvironmentState(
             'projectId': 'coupon-prod',
             'region': 'asia-south1',
             'functionName': 'publisherBackend',
+            if (authWebApiKey != null) 'authWebApiKey': authWebApiKey,
           },
           configuredAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),
           updatedAtUtc: DateTime.utc(2026, 5, 24).toIso8601String(),

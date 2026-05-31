@@ -845,6 +845,72 @@ class PublisherBackendFirebaseOutputsResult {
   final Map<String, String> outputs;
 }
 
+class PublisherBackendFirebaseAuthStatusRequest {
+  const PublisherBackendFirebaseAuthStatusRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseAuthStatusResult {
+  const PublisherBackendFirebaseAuthStatusResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.backendRootPath,
+    required this.functionsRootPath,
+    required this.authWebApiKeyConfigured,
+    required this.scaffoldExists,
+    required this.authServiceFileExists,
+    required this.routerFileExists,
+    required this.routerAuthRoutesReady,
+    required this.routerAllowsAuthorizationHeader,
+    required this.packageJsonFileExists,
+    required this.packageJsonHasFirebaseAdmin,
+    required this.packageJsonHasFirebaseFunctions,
+    required this.envFilePath,
+    required this.envFileExists,
+    required this.envAuthKeyConfigured,
+    required this.envUsesReservedAuthKey,
+    required this.ready,
+    required this.deployEnvReady,
+    required this.issues,
+    required this.warnings,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String backendRootPath;
+  final String functionsRootPath;
+  final bool authWebApiKeyConfigured;
+  final bool scaffoldExists;
+  final bool authServiceFileExists;
+  final bool routerFileExists;
+  final bool routerAuthRoutesReady;
+  final bool routerAllowsAuthorizationHeader;
+  final bool packageJsonFileExists;
+  final bool packageJsonHasFirebaseAdmin;
+  final bool packageJsonHasFirebaseFunctions;
+  final String envFilePath;
+  final bool envFileExists;
+  final bool envAuthKeyConfigured;
+  final bool envUsesReservedAuthKey;
+  final bool ready;
+  final bool deployEnvReady;
+  final List<String> issues;
+  final List<String> warnings;
+}
+
 class PublisherBackendFirebaseSmokeRequest {
   const PublisherBackendFirebaseSmokeRequest({
     required this.miniProgramRootPath,
@@ -2255,6 +2321,155 @@ class PublisherBackendStarter {
       region: settings.region,
       functionName: settings.functionName,
       outputs: settings.outputs,
+    );
+  }
+
+  Future<PublisherBackendFirebaseAuthStatusResult> firebaseAuthStatus(
+    PublisherBackendFirebaseAuthStatusRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final authServiceFile = File(
+      p.join(settings.functionsRootPath, 'auth_service.js'),
+    );
+    final routerFile = File(p.join(settings.functionsRootPath, 'router.js'));
+    final packageJsonFile = File(
+      p.join(settings.functionsRootPath, 'package.json'),
+    );
+    final envFile = File(p.join(settings.functionsRootPath, '.env'));
+
+    final scaffoldExists = await _firebaseBackendPathsExist(
+      settings.backendRootPath,
+    );
+    final authServiceFileExists = await authServiceFile.exists();
+    final routerFileExists = await routerFile.exists();
+    final packageJsonFileExists = await packageJsonFile.exists();
+    final envFileExists = await envFile.exists();
+    final routerSource = routerFileExists
+        ? await routerFile.readAsString()
+        : '';
+    final packageSource = packageJsonFileExists
+        ? await packageJsonFile.readAsString()
+        : '';
+    final envSource = envFileExists ? await envFile.readAsString() : '';
+
+    const authRouteSnippets = <String>[
+      'GET /auth/session',
+      'POST /auth/email/sign-up',
+      'POST /auth/email/sign-in',
+      'POST /auth/refresh',
+      'POST /auth/sign-out',
+    ];
+    final routerAuthRoutesReady = authRouteSnippets.every(
+      routerSource.contains,
+    );
+    final routerAllowsAuthorizationHeader = routerSource.toLowerCase().contains(
+      'authorization',
+    );
+    final packageJsonHasFirebaseAdmin = packageSource.contains(
+      '"firebase-admin"',
+    );
+    final packageJsonHasFirebaseFunctions = packageSource.contains(
+      '"firebase-functions"',
+    );
+    final envAuthKeyConfigured = envSource
+        .split('\n')
+        .map((line) => line.trim())
+        .any(
+          (line) =>
+              line.startsWith('PUBLISHER_AUTH_WEB_API_KEY=') &&
+              line.substring('PUBLISHER_AUTH_WEB_API_KEY='.length).isNotEmpty,
+        );
+    final envUsesReservedAuthKey = envSource
+        .split('\n')
+        .map((line) => line.trim())
+        .any((line) => line.startsWith('FIREBASE_AUTH_WEB_API_KEY='));
+
+    final issues = <String>[];
+    final warnings = <String>[];
+    if (settings.authWebApiKey?.trim().isNotEmpty != true) {
+      issues.add(
+        'Firebase environment is missing --auth-web-api-key. Re-run `miniprogram env configure ${settings.environmentName} --provider firebase ... --auth-web-api-key <firebase-web-api-key>`.',
+      );
+    }
+    if (!scaffoldExists) {
+      issues.add(
+        'Firebase Functions scaffold is missing. Run `miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
+      );
+    }
+    if (!authServiceFileExists) {
+      issues.add(
+        'Generated auth service is missing: ${authServiceFile.path}. Re-scaffold with current tooling or copy the 0.3.43+ Firebase auth files.',
+      );
+    }
+    if (!routerFileExists) {
+      issues.add('Generated router is missing: ${routerFile.path}.');
+    } else {
+      if (!routerAuthRoutesReady) {
+        issues.add(
+          'Generated router is missing one or more publisher auth routes.',
+        );
+      }
+      if (!routerAllowsAuthorizationHeader) {
+        issues.add('Generated router CORS headers do not allow Authorization.');
+      }
+    }
+    if (!packageJsonFileExists) {
+      issues.add('Functions package.json is missing: ${packageJsonFile.path}.');
+    } else {
+      if (!packageJsonHasFirebaseAdmin) {
+        issues.add('Functions package.json is missing firebase-admin.');
+      }
+      if (!packageJsonHasFirebaseFunctions) {
+        issues.add('Functions package.json is missing firebase-functions.');
+      }
+    }
+    if (!envFileExists) {
+      warnings.add(
+        'Functions .env was not found yet. `publisher-backend firebase deploy` writes PUBLISHER_AUTH_WEB_API_KEY before deployment.',
+      );
+    } else if (!envAuthKeyConfigured) {
+      warnings.add(
+        'Functions .env does not contain PUBLISHER_AUTH_WEB_API_KEY. Re-run `publisher-backend firebase deploy` after configuring --auth-web-api-key.',
+      );
+    }
+    if (envUsesReservedAuthKey) {
+      issues.add(
+        'Functions .env still contains reserved FIREBASE_AUTH_WEB_API_KEY. Remove it and use PUBLISHER_AUTH_WEB_API_KEY.',
+      );
+    }
+
+    return PublisherBackendFirebaseAuthStatusResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      backendRootPath: settings.backendRootPath,
+      functionsRootPath: settings.functionsRootPath,
+      authWebApiKeyConfigured:
+          settings.authWebApiKey?.trim().isNotEmpty == true,
+      scaffoldExists: scaffoldExists,
+      authServiceFileExists: authServiceFileExists,
+      routerFileExists: routerFileExists,
+      routerAuthRoutesReady: routerAuthRoutesReady,
+      routerAllowsAuthorizationHeader: routerAllowsAuthorizationHeader,
+      packageJsonFileExists: packageJsonFileExists,
+      packageJsonHasFirebaseAdmin: packageJsonHasFirebaseAdmin,
+      packageJsonHasFirebaseFunctions: packageJsonHasFirebaseFunctions,
+      envFilePath: envFile.path,
+      envFileExists: envFileExists,
+      envAuthKeyConfigured: envAuthKeyConfigured,
+      envUsesReservedAuthKey: envUsesReservedAuthKey,
+      ready: issues.isEmpty,
+      deployEnvReady:
+          envFileExists && envAuthKeyConfigured && !envUsesReservedAuthKey,
+      issues: issues,
+      warnings: warnings,
     );
   }
 
