@@ -1,4 +1,17 @@
 # Changelog
+## 0.3.45
+- add Firebase publisher backend access-key management:
+  `publisher-backend firebase access-key create|list|revoke|rotate`
+- store Firebase protected handoff keys in Firestore under each mini-program
+  using one-way hashes only; raw keys are shown only on create/rotate
+- update generated Firebase Functions backends to require
+  `x-mini-program-access-key` when active access keys exist while keeping
+  `/health` public
+- allow Firebase smoke checks to pass a protected backend access key without
+  printing it in text or JSON output
+- expose the Firebase access-key capability through
+  `miniprogram capabilities --json`
+
 ## 0.3.44
 - add `publisher-backend firebase auth status` for read-only Firebase auth
   readiness diagnostics, including env key configuration, generated auth

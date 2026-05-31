@@ -529,6 +529,89 @@ console.log(JSON.stringify({
       },
     );
 
+    test('generated Firebase router enforces configured access keys', () async {
+      final nodeVersion = await Process.run('node', <String>['--version']);
+      if (nodeVersion.exitCode != 0) {
+        markTestSkipped('Node.js is not available.');
+      }
+      final starter = const PublisherBackendStarter();
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+      final routerUri = Uri.file(
+        p.join(
+          miniProgramRoot.path,
+          'backend',
+          'firebase_functions',
+          'functions',
+          'router.js',
+        ),
+      ).toString();
+
+      final result = await _runNodeScript(tempDir, '''
+import { createHash } from 'node:crypto';
+import { createPublisherBackendHandler } from '$routerUri';
+
+const accessKey = 'mpk_live_partner_123456789012345';
+const accessKeyHash = createHash('sha256').update(accessKey, 'utf8').digest('hex');
+const handler = createPublisherBackendHandler({
+  clock: () => new Date('2026-06-01T00:00:00.000Z'),
+  store: {
+    activeAccessKeys: async () => [{
+      keyId: 'host-a',
+      keyHash: accessKeyHash,
+      active: true,
+      expiresAtUtc: '2026-06-02T00:00:00.000Z',
+    }],
+    homeBootstrap: async () => ({ title: 'Protected home' }),
+    couponsList: async () => ({ coupons: [] }),
+    redeemCoupon: async () => ({ statusCode: 200, body: { status: 'redeemed' } }),
+  },
+  authService: {
+    currentSession: async () => ({ statusCode: 401, body: { errorCode: 'auth_required' } }),
+  },
+});
+
+async function call(method, path, headers = {}) {
+  const response = {
+    statusCode: 200,
+    headers: {},
+    setHeader(name, value) { this.headers[name] = value; },
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; },
+    end(body) { this.body = body ? JSON.parse(body) : null; },
+  };
+  await handler({ method, path, headers }, response);
+  return { statusCode: response.statusCode, body: response.body };
+}
+
+const health = await call('GET', '/health');
+const missing = await call('GET', '/home/bootstrap');
+const invalid = await call('GET', '/home/bootstrap', { 'x-mini-program-access-key': 'mpk_live_wrong_123456789012345' });
+const valid = await call('GET', '/home/bootstrap', { 'x-mini-program-access-key': accessKey });
+const authGuard = await call('GET', '/auth/session', { 'x-mini-program-access-key': accessKey });
+
+console.log(JSON.stringify({ health, missing, invalid, valid, authGuard }));
+''');
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final decoded =
+          jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+      expect(decoded['health']['statusCode'], 200);
+      expect(decoded['missing']['statusCode'], 401);
+      expect(decoded['missing']['body']['errorCode'], 'access_key_required');
+      expect(decoded['invalid']['statusCode'], 403);
+      expect(decoded['invalid']['body']['errorCode'], 'access_key_invalid');
+      expect(decoded['valid']['statusCode'], 200);
+      expect(decoded['valid']['body']['title'], 'Protected home');
+      expect(decoded['authGuard']['statusCode'], 401);
+      expect(decoded['authGuard']['body']['errorCode'], 'auth_required');
+    });
+
     test(
       'generated Firebase auth service creates, refreshes, verifies, and signs out sessions',
       () async {

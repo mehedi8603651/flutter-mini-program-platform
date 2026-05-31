@@ -69,6 +69,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisherBackendFirebaseOutputs': true,
         'publisherBackendFirebaseHostCommand': true,
         'publisherBackendFirebaseHandoff': true,
+        'publisherBackendFirebaseAccessKeys': true,
         'publisherBackendFirebaseAuthEmail': true,
         'publisherBackendFirebaseAuthStatus': true,
         'publisherBackendFirebaseHostAuthDiagnostics': true,
@@ -90,6 +91,10 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisher-backend firebase outputs',
         'publisher-backend firebase host-command',
         'publisher-backend firebase handoff',
+        'publisher-backend firebase access-key create',
+        'publisher-backend firebase access-key list',
+        'publisher-backend firebase access-key revoke',
+        'publisher-backend firebase access-key rotate',
         'publisher-backend firebase auth status',
         'publisher-backend firebase smoke',
         'publisher-backend firebase smoke --include-write',
@@ -756,6 +761,97 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
     };
   }
 
+  Map<String, Object?> _publisherBackendFirebaseAccessKeyCreateJson(
+    PublisherBackendFirebaseAccessKeyCreateResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase access-key create',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'keyId': result.keyId,
+      'accessKey': result.accessKey,
+      'createdAtUtc': result.createdAtUtc,
+      'expiresAtUtc': result.expiresAtUtc,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseAccessKeyListJson(
+    PublisherBackendFirebaseAccessKeyListResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase access-key list',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'activeKeyCount': result.activeKeyCount,
+      'keyCount': result.keyCount,
+      'keys': result.keys
+          .map(
+            (key) => <String, Object?>{
+              'keyId': key.keyId,
+              'active': key.active,
+              'currentlyActive': key.currentlyActive,
+              'createdAtUtc': key.createdAtUtc,
+              'updatedAtUtc': key.updatedAtUtc,
+              'revokedAtUtc': key.revokedAtUtc,
+              'expiresAtUtc': key.expiresAtUtc,
+              'lastFour': key.lastFour,
+            },
+          )
+          .toList(),
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseAccessKeyRevokeJson(
+    PublisherBackendFirebaseAccessKeyRevokeResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase access-key revoke',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'keyId': result.keyId,
+      'revokedAtUtc': result.revokedAtUtc,
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseAccessKeyRotateJson(
+    PublisherBackendFirebaseAccessKeyRotateResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase access-key rotate',
+      'provider': result.provider,
+      'environmentName': result.environmentName,
+      'projectId': result.projectId,
+      'region': result.region,
+      'functionName': result.functionName,
+      'miniProgramId': result.miniProgramId,
+      'backendBaseUrl': result.backendBaseUrl,
+      'revokedKeyId': result.revokedKeyId,
+      'newKeyId': result.newKeyId,
+      'accessKey': result.accessKey,
+      'rotatedAtUtc': result.rotatedAtUtc,
+      'expiresAtUtc': result.expiresAtUtc,
+    };
+  }
+
   Map<String, Object?> _publisherBackendFirebaseSmokeJson(
     PublisherBackendFirebaseSmokeResult result,
   ) {
@@ -772,6 +868,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'writeCouponId': result.includeWrite ? result.writeCouponId : null,
       'writeUserId': result.includeWrite ? result.writeUserId : null,
       'includeAuth': result.includeAuth,
+      'accessKeyProvided': result.accessKeyProvided,
       'authEmail': result.includeAuth ? result.authEmail : null,
       'authCreateUser': result.includeAuth ? result.authCreateUser : null,
       'passed': result.passed,

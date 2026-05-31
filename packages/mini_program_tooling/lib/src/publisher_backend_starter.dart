@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
@@ -879,6 +881,235 @@ class PublisherBackendStarter {
     );
   }
 
+  Future<PublisherBackendFirebaseAccessKeyCreateResult> firebaseAccessKeyCreate(
+    PublisherBackendFirebaseAccessKeyCreateRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final keyId = _normalizeFirebaseAccessKeyId(request.keyId);
+    final expiresAtUtc = _normalizeFirebaseAccessKeyExpiry(
+      request.expiresAtUtc,
+    );
+    final existing = await _readFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: _firebaseAccessKeyDocumentPath(settings, keyId),
+    );
+    final existingActive = existing == null
+        ? false
+        : _firebaseAccessKeyEntryFromDocument(keyId, existing).currentlyActive;
+    if (existingActive) {
+      throw PublisherBackendException(
+        'Firebase publisher backend access key "$keyId" already exists for '
+        '${settings.miniProgramId}. Revoke or rotate it first.',
+      );
+    }
+
+    final accessKey = _normalizePublisherBackendAccessKey(
+      request.accessKey ?? _generatePublisherBackendAccessKey(),
+    );
+    final createdAtUtc = _clock().toUtc().toIso8601String();
+    await _writeFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: _firebaseAccessKeyDocumentPath(settings, keyId),
+      document: <String, Object?>{
+        'keyId': keyId,
+        'keyHash': _sha256Hex(accessKey),
+        'lastFour': _lastFour(accessKey),
+        'active': true,
+        'createdAtUtc': createdAtUtc,
+        'updatedAtUtc': createdAtUtc,
+        if (expiresAtUtc != null) 'expiresAtUtc': expiresAtUtc,
+      },
+    );
+    return PublisherBackendFirebaseAccessKeyCreateResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      backendBaseUrl: settings.functionUrl,
+      keyId: keyId,
+      accessKey: accessKey,
+      createdAtUtc: createdAtUtc,
+      expiresAtUtc: expiresAtUtc,
+    );
+  }
+
+  Future<PublisherBackendFirebaseAccessKeyListResult> firebaseAccessKeyList(
+    PublisherBackendFirebaseAccessKeyListRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final documents = await _listFirestoreCollectionDocuments(
+      projectId: settings.projectId,
+      collectionPath: 'miniPrograms/${settings.miniProgramId}/accessKeys',
+    );
+    final keys = documents.map((document) {
+      final keyId =
+          _firestoreDocumentIdFromName(document['name']?.toString()) ??
+          document['keyId']?.toString().trim() ??
+          'unknown';
+      return _firebaseAccessKeyEntryFromDocument(
+        keyId,
+        _fromFirestoreDocument(document),
+      );
+    }).toList()..sort((a, b) => a.keyId.compareTo(b.keyId));
+    return PublisherBackendFirebaseAccessKeyListResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      backendBaseUrl: settings.functionUrl,
+      keys: keys,
+    );
+  }
+
+  Future<PublisherBackendFirebaseAccessKeyRevokeResult> firebaseAccessKeyRevoke(
+    PublisherBackendFirebaseAccessKeyRevokeRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final keyId = _normalizeFirebaseAccessKeyId(request.keyId);
+    final documentPath = _firebaseAccessKeyDocumentPath(settings, keyId);
+    final existing = await _readFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: documentPath,
+    );
+    if (existing == null) {
+      throw PublisherBackendException(
+        'No Firebase publisher backend access key "$keyId" was found for '
+        '${settings.miniProgramId}.',
+      );
+    }
+    final revokedAtUtc = _clock().toUtc().toIso8601String();
+    await _writeFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: documentPath,
+      document: <String, Object?>{
+        ...existing,
+        'keyId': keyId,
+        'active': false,
+        'revokedAtUtc': revokedAtUtc,
+        'updatedAtUtc': revokedAtUtc,
+      },
+    );
+    return PublisherBackendFirebaseAccessKeyRevokeResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      backendBaseUrl: settings.functionUrl,
+      keyId: keyId,
+      revokedAtUtc: revokedAtUtc,
+    );
+  }
+
+  Future<PublisherBackendFirebaseAccessKeyRotateResult> firebaseAccessKeyRotate(
+    PublisherBackendFirebaseAccessKeyRotateRequest request,
+  ) async {
+    final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
+    final settings = _PublisherBackendFirebaseSettings.fromEnvironment(
+      environment: request.environment,
+      miniProgramRootPath: rootPath,
+    );
+    final oldKeyId = _normalizeFirebaseAccessKeyId(request.keyId);
+    final newKeyId = _normalizeFirebaseAccessKeyId(
+      request.newKeyId?.trim().isNotEmpty == true
+          ? request.newKeyId!.trim()
+          : request.keyId,
+    );
+    final expiresAtUtc = _normalizeFirebaseAccessKeyExpiry(
+      request.expiresAtUtc,
+    );
+    final oldDocumentPath = _firebaseAccessKeyDocumentPath(settings, oldKeyId);
+    final oldDocument = await _readFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: oldDocumentPath,
+    );
+    if (oldDocument == null) {
+      throw PublisherBackendException(
+        'No Firebase publisher backend access key "$oldKeyId" was found for '
+        '${settings.miniProgramId}.',
+      );
+    }
+    if (newKeyId != oldKeyId) {
+      final existingNewKey = await _readFirestoreDocument(
+        projectId: settings.projectId,
+        documentPath: _firebaseAccessKeyDocumentPath(settings, newKeyId),
+      );
+      if (existingNewKey != null &&
+          _firebaseAccessKeyEntryFromDocument(
+            newKeyId,
+            existingNewKey,
+          ).currentlyActive) {
+        throw PublisherBackendException(
+          'Firebase publisher backend access key "$newKeyId" already exists '
+          'for ${settings.miniProgramId}.',
+        );
+      }
+    }
+
+    final accessKey = _normalizePublisherBackendAccessKey(
+      request.accessKey ?? _generatePublisherBackendAccessKey(),
+    );
+    final rotatedAtUtc = _clock().toUtc().toIso8601String();
+    await _writeFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: oldDocumentPath,
+      document: <String, Object?>{
+        ...oldDocument,
+        'keyId': oldKeyId,
+        'active': false,
+        'revokedAtUtc': rotatedAtUtc,
+        'updatedAtUtc': rotatedAtUtc,
+      },
+    );
+    await _writeFirestoreDocument(
+      projectId: settings.projectId,
+      documentPath: _firebaseAccessKeyDocumentPath(settings, newKeyId),
+      document: <String, Object?>{
+        'keyId': newKeyId,
+        'keyHash': _sha256Hex(accessKey),
+        'lastFour': _lastFour(accessKey),
+        'active': true,
+        'createdAtUtc': newKeyId == oldKeyId
+            ? (oldDocument['createdAtUtc']?.toString() ?? rotatedAtUtc)
+            : rotatedAtUtc,
+        'updatedAtUtc': rotatedAtUtc,
+        'rotatedAtUtc': rotatedAtUtc,
+        if (expiresAtUtc != null) 'expiresAtUtc': expiresAtUtc,
+      },
+    );
+    return PublisherBackendFirebaseAccessKeyRotateResult(
+      provider: request.environment.provider,
+      environmentName: request.environment.name,
+      projectId: settings.projectId,
+      region: settings.region,
+      functionName: settings.functionName,
+      miniProgramId: settings.miniProgramId,
+      backendBaseUrl: settings.functionUrl,
+      revokedKeyId: oldKeyId,
+      newKeyId: newKeyId,
+      accessKey: accessKey,
+      rotatedAtUtc: rotatedAtUtc,
+      expiresAtUtc: expiresAtUtc,
+    );
+  }
+
   Future<PublisherBackendFirebaseSmokeResult> firebaseSmoke(
     PublisherBackendFirebaseSmokeRequest request,
   ) async {
@@ -903,6 +1134,7 @@ class PublisherBackendStarter {
         includeAuth: request.includeAuth,
         authCreateUser: request.authCreateUser,
         authEmail: request.includeAuth ? request.authEmail : null,
+        accessKeyProvided: request.accessKey?.trim().isNotEmpty == true,
         error:
             'Firebase Functions publisher backend was not found. Run '
             '`miniprogram publisher-backend scaffold --template firebase-functions --storage firestore` first.',
@@ -917,6 +1149,7 @@ class PublisherBackendStarter {
           method: 'GET',
           path: path,
           uri: _resolveBackendRoute(baseUri, path),
+          accessKey: request.accessKey,
         ),
       );
     }
@@ -927,6 +1160,7 @@ class PublisherBackendStarter {
           uri: _resolveBackendRoute(baseUri, '/coupon/redeem'),
           couponId: request.writeCouponId,
           userId: request.writeUserId,
+          accessKey: request.accessKey,
         ),
       );
     }
@@ -937,12 +1171,14 @@ class PublisherBackendStarter {
           email: request.authEmail?.trim() ?? '',
           password: request.authPassword ?? '',
           createUser: request.authCreateUser,
+          accessKey: request.accessKey,
         ),
       );
     } else {
       routes.add(
         await _probeFirebaseProtectedSessionGuard(
           uri: _resolveBackendRoute(baseUri, '/auth/session'),
+          accessKey: request.accessKey,
         ),
       );
     }
@@ -961,6 +1197,7 @@ class PublisherBackendStarter {
       includeAuth: request.includeAuth,
       authCreateUser: request.authCreateUser,
       authEmail: request.includeAuth ? request.authEmail : null,
+      accessKeyProvided: request.accessKey?.trim().isNotEmpty == true,
     );
   }
 

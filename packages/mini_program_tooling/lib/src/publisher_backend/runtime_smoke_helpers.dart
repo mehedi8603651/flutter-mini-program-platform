@@ -167,10 +167,17 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required String method,
     required String path,
     required Uri uri,
+    String? accessKey,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     try {
-      final response = await _healthGetter(uri).timeout(timeout);
+      final response = accessKey?.trim().isNotEmpty == true
+          ? await _httpRequester(
+              method,
+              uri,
+              headers: _firebaseSmokeHeaders(accessKey: accessKey),
+            ).timeout(timeout)
+          : await _healthGetter(uri).timeout(timeout);
       final passed = response.statusCode == 200;
       return PublisherBackendFirebaseSmokeRouteResult(
         method: method,
@@ -202,11 +209,16 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   Future<PublisherBackendFirebaseSmokeRouteResult>
   _probeFirebaseProtectedSessionGuard({
     required Uri uri,
+    String? accessKey,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     const path = '/auth/session';
     try {
-      final response = await _httpRequester('GET', uri).timeout(timeout);
+      final response = await _httpRequester(
+        'GET',
+        uri,
+        headers: _firebaseSmokeHeaders(accessKey: accessKey),
+      ).timeout(timeout);
       final body = _jsonObjectFromBody(response.body);
       final errorCode = body['errorCode']?.toString();
       final passed = response.statusCode == 401 && errorCode == 'auth_required';
@@ -246,6 +258,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required String email,
     required String password,
     required bool createUser,
+    String? accessKey,
     Duration timeout = const Duration(seconds: 8),
   }) async {
     final routes = <PublisherBackendFirebaseSmokeRouteResult>[];
@@ -255,6 +268,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
         uri: _resolveBackendRoute(baseUri, '/auth/email/sign-up'),
         body: <String, String>{'email': email, 'password': password},
         timeout: timeout,
+        accessKey: accessKey,
         acceptExistingEmail: true,
       );
       routes.add(signUp.route);
@@ -268,6 +282,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
       uri: _resolveBackendRoute(baseUri, '/auth/email/sign-in'),
       body: <String, String>{'email': email, 'password': password},
       timeout: timeout,
+      accessKey: accessKey,
     );
     routes.add(signIn.route);
     if (!signIn.route.passed) {
@@ -284,6 +299,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
       uri: _resolveBackendRoute(baseUri, '/auth/refresh'),
       body: <String, String>{'refreshToken': refreshToken},
       timeout: timeout,
+      accessKey: accessKey,
       previousRefreshToken: refreshToken,
     );
     routes.add(refresh.route);
@@ -302,6 +318,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
         idToken: refreshedIdToken,
         expectAuthenticated: true,
         timeout: timeout,
+        accessKey: accessKey,
       ),
     );
     if (!routes.last.passed) {
@@ -312,6 +329,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
       uri: _resolveBackendRoute(baseUri, '/auth/sign-out'),
       refreshToken: refreshedRefreshToken,
       timeout: timeout,
+      accessKey: accessKey,
     );
     routes.add(signOut);
     if (!signOut.passed) {
@@ -324,6 +342,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
         idToken: refreshedIdToken,
         expectAuthenticated: false,
         timeout: timeout,
+        accessKey: accessKey,
       ),
     );
     return routes;
@@ -334,13 +353,17 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required Uri uri,
     required Map<String, String> body,
     required Duration timeout,
+    String? accessKey,
     bool acceptExistingEmail = false,
     String? previousRefreshToken,
   }) async {
     try {
       final response = await _postRequester(
         uri,
-        headers: const <String, String>{'Content-Type': 'application/json'},
+        headers: _firebaseSmokeHeaders(
+          accessKey: accessKey,
+          contentTypeJson: true,
+        ),
         body: jsonEncode(body),
       ).timeout(timeout);
       final decoded = _jsonObjectFromBody(response.body);
@@ -412,13 +435,17 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required String idToken,
     required bool expectAuthenticated,
     required Duration timeout,
+    String? accessKey,
   }) async {
     const path = '/auth/session';
     try {
       final response = await _httpRequester(
         'GET',
         uri,
-        headers: <String, String>{'authorization': 'Bearer $idToken'},
+        headers: _firebaseSmokeHeaders(
+          accessKey: accessKey,
+          authorization: 'Bearer $idToken',
+        ),
       ).timeout(timeout);
       final decoded = _jsonObjectFromBody(response.body);
       final authenticated = decoded['authenticated'] == true;
@@ -465,12 +492,16 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required Uri uri,
     required String refreshToken,
     required Duration timeout,
+    String? accessKey,
   }) async {
     const path = '/auth/sign-out';
     try {
       final response = await _postRequester(
         uri,
-        headers: const <String, String>{'Content-Type': 'application/json'},
+        headers: _firebaseSmokeHeaders(
+          accessKey: accessKey,
+          contentTypeJson: true,
+        ),
         body: jsonEncode(<String, String>{'refreshToken': refreshToken}),
       ).timeout(timeout);
       final decoded = _jsonObjectFromBody(response.body);
@@ -513,6 +544,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required Uri uri,
     required String couponId,
     required String userId,
+    String? accessKey,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     const path = '/coupon/redeem';
@@ -524,7 +556,10 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     try {
       final response = await _postRequester(
         uri,
-        headers: const <String, String>{'Content-Type': 'application/json'},
+        headers: _firebaseSmokeHeaders(
+          accessKey: accessKey,
+          contentTypeJson: true,
+        ),
         body: jsonEncode(<String, String>{
           'couponId': couponId,
           'userId': userId,
@@ -646,6 +681,23 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
       return const <String, Object?>{};
     }
     return const <String, Object?>{};
+  }
+
+  Map<String, String> _firebaseSmokeHeaders({
+    String? accessKey,
+    String? authorization,
+    bool contentTypeJson = false,
+  }) {
+    final headers = <String, String>{
+      if (contentTypeJson) 'Content-Type': 'application/json',
+      if (authorization?.trim().isNotEmpty == true)
+        'authorization': authorization!.trim(),
+    };
+    final normalizedAccessKey = accessKey?.trim();
+    if (normalizedAccessKey != null && normalizedAccessKey.isNotEmpty) {
+      headers['x-mini-program-access-key'] = normalizedAccessKey;
+    }
+    return headers;
   }
 
   Future<_PublisherBackendHealth> _waitForHealthCheck(

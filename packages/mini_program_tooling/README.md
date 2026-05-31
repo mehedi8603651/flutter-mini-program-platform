@@ -95,7 +95,11 @@ miniprogram publisher-backend firebase status --env <env-name> [--mini-program-r
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase host-command --env <env-name> --api-base-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
 miniprogram publisher-backend firebase handoff --env <env-name> --delivery-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
-miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--write-coupon-id <id>] [--write-user-id <id>] [--include-auth] [--auth-email <email>] [--auth-password <password>] [--auth-create-user]
+miniprogram publisher-backend firebase access-key create --env <env-name> --key-id <id> [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
+miniprogram publisher-backend firebase access-key list --env <env-name> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase access-key revoke --env <env-name> --key-id <id> [--mini-program-root <path>] [--json]
+miniprogram publisher-backend firebase access-key rotate --env <env-name> --key-id <id> [--new-key-id <id>] [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
+miniprogram publisher-backend firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--write-coupon-id <id>] [--write-user-id <id>] [--include-auth] [--auth-email <email>] [--auth-password <password>] [--auth-create-user] [--access-key <key>]
 miniprogram publisher-backend firebase seed --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
@@ -908,6 +912,28 @@ miniprogram publisher-backend firebase handoff \
 Give the `.partner.json` file to the host app developer. They import it with
 `miniprogram host endpoint import`; they do not need Firebase CLI login,
 Firebase project access, Firebase SDKs, or publisher backend secrets.
+
+For a protected Firebase handoff, create a publisher backend access key first:
+
+```bash
+miniprogram publisher-backend firebase access-key create \
+  --env my-firebase-prod \
+  --key-id company-a
+
+miniprogram publisher-backend firebase handoff \
+  --env my-firebase-prod \
+  --delivery-url https://user.github.io/repo/public_mini_program/ \
+  --access-key <access-key-shown-once> \
+  --output firebase_coupon.company-a.partner.json
+```
+
+Access keys are stored in Firestore under the mini-program using one-way hashes.
+The raw key is shown only by `create` and `rotate`; `list`, diagnostics, smoke
+JSON, and handoff command output do not print it. Generated Firebase Functions
+backends keep `/health` public and require `x-mini-program-access-key` for
+publisher backend routes whenever active access keys exist for that
+mini-program. Revoke or rotate keys without changing Firebase project access for
+the host team.
 
 For local full-stack testing, generate the exact host endpoint command:
 

@@ -904,6 +904,199 @@ class PublisherBackendFirebaseAuthStatusResult {
   final List<String> warnings;
 }
 
+class PublisherBackendFirebaseAccessKeyCreateRequest {
+  const PublisherBackendFirebaseAccessKeyCreateRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    required this.keyId,
+    this.accessKey,
+    this.expiresAtUtc,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String keyId;
+  final String? accessKey;
+  final String? expiresAtUtc;
+}
+
+class PublisherBackendFirebaseAccessKeyListRequest {
+  const PublisherBackendFirebaseAccessKeyListRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+}
+
+class PublisherBackendFirebaseAccessKeyRevokeRequest {
+  const PublisherBackendFirebaseAccessKeyRevokeRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    required this.keyId,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String keyId;
+}
+
+class PublisherBackendFirebaseAccessKeyRotateRequest {
+  const PublisherBackendFirebaseAccessKeyRotateRequest({
+    required this.miniProgramRootPath,
+    required this.environment,
+    required this.keyId,
+    this.newKeyId,
+    this.accessKey,
+    this.expiresAtUtc,
+  });
+
+  final String miniProgramRootPath;
+  final CloudEnvironmentConfiguration environment;
+  final String keyId;
+  final String? newKeyId;
+  final String? accessKey;
+  final String? expiresAtUtc;
+}
+
+class PublisherBackendFirebaseAccessKeyEntry {
+  const PublisherBackendFirebaseAccessKeyEntry({
+    required this.keyId,
+    required this.active,
+    required this.createdAtUtc,
+    required this.updatedAtUtc,
+    this.revokedAtUtc,
+    this.expiresAtUtc,
+    this.lastFour,
+  });
+
+  final String keyId;
+  final bool active;
+  final String createdAtUtc;
+  final String updatedAtUtc;
+  final String? revokedAtUtc;
+  final String? expiresAtUtc;
+  final String? lastFour;
+
+  bool get currentlyActive {
+    if (!active || revokedAtUtc != null) {
+      return false;
+    }
+    final expiresAt = expiresAtUtc == null
+        ? null
+        : DateTime.tryParse(expiresAtUtc!);
+    return expiresAt == null || expiresAt.isAfter(DateTime.now().toUtc());
+  }
+}
+
+class PublisherBackendFirebaseAccessKeyCreateResult {
+  const PublisherBackendFirebaseAccessKeyCreateResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.backendBaseUrl,
+    required this.keyId,
+    required this.accessKey,
+    required this.createdAtUtc,
+    this.expiresAtUtc,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String backendBaseUrl;
+  final String keyId;
+  final String accessKey;
+  final String createdAtUtc;
+  final String? expiresAtUtc;
+}
+
+class PublisherBackendFirebaseAccessKeyListResult {
+  const PublisherBackendFirebaseAccessKeyListResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.backendBaseUrl,
+    required this.keys,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String backendBaseUrl;
+  final List<PublisherBackendFirebaseAccessKeyEntry> keys;
+
+  int get keyCount => keys.length;
+  int get activeKeyCount => keys.where((key) => key.currentlyActive).length;
+}
+
+class PublisherBackendFirebaseAccessKeyRevokeResult {
+  const PublisherBackendFirebaseAccessKeyRevokeResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.backendBaseUrl,
+    required this.keyId,
+    required this.revokedAtUtc,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String backendBaseUrl;
+  final String keyId;
+  final String revokedAtUtc;
+}
+
+class PublisherBackendFirebaseAccessKeyRotateResult {
+  const PublisherBackendFirebaseAccessKeyRotateResult({
+    required this.provider,
+    required this.environmentName,
+    required this.projectId,
+    required this.region,
+    required this.functionName,
+    required this.miniProgramId,
+    required this.backendBaseUrl,
+    required this.revokedKeyId,
+    required this.newKeyId,
+    required this.accessKey,
+    required this.rotatedAtUtc,
+    this.expiresAtUtc,
+  });
+
+  final String provider;
+  final String environmentName;
+  final String projectId;
+  final String region;
+  final String functionName;
+  final String miniProgramId;
+  final String backendBaseUrl;
+  final String revokedKeyId;
+  final String newKeyId;
+  final String accessKey;
+  final String rotatedAtUtc;
+  final String? expiresAtUtc;
+}
+
 class PublisherBackendFirebaseSmokeRequest {
   const PublisherBackendFirebaseSmokeRequest({
     required this.miniProgramRootPath,
@@ -915,6 +1108,7 @@ class PublisherBackendFirebaseSmokeRequest {
     this.authEmail,
     this.authPassword,
     this.authCreateUser = false,
+    this.accessKey,
   });
 
   final String miniProgramRootPath;
@@ -926,6 +1120,7 @@ class PublisherBackendFirebaseSmokeRequest {
   final String? authEmail;
   final String? authPassword;
   final bool authCreateUser;
+  final String? accessKey;
 }
 
 class PublisherBackendFirebaseSmokeRouteResult {
@@ -970,6 +1165,7 @@ class PublisherBackendFirebaseSmokeResult {
     required this.includeAuth,
     required this.authCreateUser,
     this.authEmail,
+    this.accessKeyProvided = false,
     this.error,
   });
 
@@ -987,6 +1183,7 @@ class PublisherBackendFirebaseSmokeResult {
   final bool includeAuth;
   final bool authCreateUser;
   final String? authEmail;
+  final bool accessKeyProvided;
   final String? error;
 }
 

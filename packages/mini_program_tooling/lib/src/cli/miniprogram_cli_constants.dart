@@ -7,7 +7,7 @@ const List<String> _supportedPublishTargets = <String>[
   'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.3.44';
+const String _miniProgramToolingVersion = '0.3.45';
 
 const List<String> _capabilityIds = <String>[
   'publish.firebase_hosting',
@@ -27,6 +27,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.outputs',
   'publisher_backend.firebase.host_command',
   'publisher_backend.firebase.handoff',
+  'publisher_backend.firebase.access_keys',
   'publisher_backend.firebase.auth.email',
   'publisher_backend.firebase.auth.status',
   'publisher_backend.firebase.host.auth_diagnostics',

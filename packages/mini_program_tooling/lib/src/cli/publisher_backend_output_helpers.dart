@@ -854,6 +854,96 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
     ].join('\n');
   }
 
+  String _formatPublisherBackendFirebaseAccessKeyCreateResult(
+    PublisherBackendFirebaseAccessKeyCreateResult result,
+  ) {
+    return <String>[
+      'Created Firebase publisher backend access key.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Key ID: ${result.keyId}',
+      'Access key (shown once): ${result.accessKey}',
+      'Created at UTC: ${result.createdAtUtc}',
+      if (result.expiresAtUtc != null) 'Expires at UTC: ${result.expiresAtUtc}',
+      '',
+      'Protected handoff command:',
+      'miniprogram publisher-backend firebase handoff --env ${result.environmentName} --delivery-url <delivery-url> --access-key ${result.accessKey}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseAccessKeyListResult(
+    PublisherBackendFirebaseAccessKeyListResult result,
+  ) {
+    final lines = <String>[
+      'Firebase publisher backend access keys.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Active keys: ${result.activeKeyCount}',
+      'Total keys: ${result.keyCount}',
+    ];
+    if (result.keys.isNotEmpty) {
+      lines.add('');
+      for (final key in result.keys) {
+        final state = key.currentlyActive ? 'active' : 'inactive';
+        lines.add(
+          '- ${key.keyId}: $state'
+          '${key.lastFour == null ? '' : ' (last4 ${key.lastFour})'}'
+          '${key.expiresAtUtc == null ? '' : ' expires ${key.expiresAtUtc}'}',
+        );
+      }
+    }
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseAccessKeyRevokeResult(
+    PublisherBackendFirebaseAccessKeyRevokeResult result,
+  ) {
+    return <String>[
+      'Revoked Firebase publisher backend access key.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Key ID: ${result.keyId}',
+      'Revoked at UTC: ${result.revokedAtUtc}',
+    ].join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseAccessKeyRotateResult(
+    PublisherBackendFirebaseAccessKeyRotateResult result,
+  ) {
+    return <String>[
+      'Rotated Firebase publisher backend access key.',
+      'Provider: ${result.provider}',
+      'Environment: ${result.environmentName}',
+      'Project: ${result.projectId}',
+      'Region: ${result.region}',
+      'Function: ${result.functionName}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Publisher backend base URL: ${result.backendBaseUrl}',
+      'Revoked key ID: ${result.revokedKeyId}',
+      'New key ID: ${result.newKeyId}',
+      'Access key (shown once): ${result.accessKey}',
+      'Rotated at UTC: ${result.rotatedAtUtc}',
+      if (result.expiresAtUtc != null) 'Expires at UTC: ${result.expiresAtUtc}',
+      '',
+      'Update protected handoff packages with the new access key.',
+    ].join('\n');
+  }
+
   String _formatPublisherBackendFirebaseSmokeResult(
     PublisherBackendFirebaseSmokeResult result,
   ) {
@@ -869,6 +959,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       if (result.includeWrite) 'Write coupon ID: ${result.writeCouponId}',
       if (result.includeWrite) 'Write user ID: ${result.writeUserId}',
       'Auth smoke: ${result.includeAuth}',
+      'Access key provided: ${result.accessKeyProvided}',
       if (result.includeAuth && result.authEmail != null)
         'Auth email: ${result.authEmail}',
       if (result.includeAuth) 'Auth create user: ${result.authCreateUser}',

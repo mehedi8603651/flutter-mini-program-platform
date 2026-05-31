@@ -562,6 +562,217 @@ void _registerPublisherBackendFirebaseTests() {
   });
 
   test(
+    'publisher-backend firebase access-key create/list redacts hashes',
+    () async {
+      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      await _writeMiniProgramFixture(
+        standaloneRoot,
+        miniProgramId: 'firebase_coupon',
+        version: '1.0.0',
+      );
+      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      final writes = <String, Object?>{};
+      final stdoutBuffer = StringBuffer();
+      final accessKey = 'mpk_live_partner_123456789012345';
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        publisherBackendStarter: PublisherBackendStarter(
+          firebaseAccessTokenProvider: () async => 'firebase-token',
+          clock: () => DateTime.utc(2026, 6),
+          httpRequester: (method, uri, {headers, body}) async {
+            expect(headers?['authorization'], 'Bearer firebase-token');
+            if (method == 'GET' && uri.path.endsWith('/accessKeys/host-a')) {
+              return http.Response('{}', 404);
+            }
+            if (method == 'PATCH' && uri.path.endsWith('/accessKeys/host-a')) {
+              writes[uri.path] = body;
+              return http.Response('{}', 200);
+            }
+            if (method == 'GET' && uri.path.endsWith('/accessKeys')) {
+              return http.Response(
+                _firestoreDocumentsJsonFrom(
+                  'firebase_coupon',
+                  'accessKeys',
+                  <String, Map<String, Object?>>{
+                    'host-a': <String, Object?>{
+                      'keyId': 'host-a',
+                      'keyHash': 'hash-that-must-not-appear-in-list-output',
+                      'lastFour': '2345',
+                      'active': true,
+                      'createdAtUtc': '2026-06-01T00:00:00.000Z',
+                      'updatedAtUtc': '2026-06-01T00:00:00.000Z',
+                    },
+                  },
+                ),
+                200,
+              );
+            }
+            fail('Unexpected Firebase HTTP request: $method $uri');
+          },
+        ),
+        workingDirectory: standaloneRoot,
+      );
+
+      final createExitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'access-key',
+        'create',
+        '--env',
+        'my-firebase-prod',
+        '--key-id',
+        'host-a',
+        '--key',
+        accessKey,
+        '--json',
+      ]);
+
+      expect(createExitCode, 0);
+      final createJson =
+          jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(
+        createJson['command'],
+        'publisher-backend firebase access-key create',
+      );
+      expect(createJson['accessKey'], accessKey);
+      expect(createJson['keyId'], 'host-a');
+      expect(stdoutBuffer.toString(), isNot(contains('hash-that')));
+      expect(writes, isNotEmpty);
+      final writeBody = writes.values.single.toString();
+      expect(writeBody, contains('keyHash'));
+      expect(writeBody, contains('lastFour'));
+      expect(writeBody, isNot(contains(accessKey)));
+
+      stdoutBuffer.clear();
+      final listExitCode = await cli.run(<String>[
+        'publisher-backend',
+        'firebase',
+        'access-key',
+        'list',
+        '--env',
+        'my-firebase-prod',
+        '--json',
+      ]);
+
+      expect(listExitCode, 0);
+      expect(stdoutBuffer.toString(), isNot(contains(accessKey)));
+      expect(
+        stdoutBuffer.toString(),
+        isNot(contains('hash-that-must-not-appear-in-list-output')),
+      );
+      final listJson =
+          jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(listJson['activeKeyCount'], 1);
+      expect(listJson['keys'], hasLength(1));
+      expect((listJson['keys'] as List).single['lastFour'], '2345');
+    },
+  );
+
+  test('publisher-backend firebase access-key revoke and rotate', () async {
+    final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+    await _writeMiniProgramFixture(
+      standaloneRoot,
+      miniProgramId: 'firebase_coupon',
+      version: '1.0.0',
+    );
+    await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+    final patchedPaths = <String>[];
+    final stdoutBuffer = StringBuffer();
+    final cli = MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      publisherBackendStarter: PublisherBackendStarter(
+        firebaseAccessTokenProvider: () async => 'firebase-token',
+        clock: () => DateTime.utc(2026, 6, 1, 1),
+        httpRequester: (method, uri, {headers, body}) async {
+          if (method == 'GET' && uri.path.endsWith('/accessKeys/host-a')) {
+            return http.Response(
+              _firestoreDocumentJson(<String, Object?>{
+                'keyId': 'host-a',
+                'keyHash': 'old-hash',
+                'lastFour': '0000',
+                'active': true,
+                'createdAtUtc': '2026-06-01T00:00:00.000Z',
+                'updatedAtUtc': '2026-06-01T00:00:00.000Z',
+              }),
+              200,
+            );
+          }
+          if (method == 'GET' && uri.path.endsWith('/accessKeys/host-b')) {
+            return http.Response('{}', 404);
+          }
+          if (method == 'PATCH' && uri.path.contains('/accessKeys/')) {
+            patchedPaths.add(uri.path);
+            return http.Response('{}', 200);
+          }
+          fail('Unexpected Firebase HTTP request: $method $uri');
+        },
+      ),
+      workingDirectory: standaloneRoot,
+    );
+
+    final revokeExitCode = await cli.run(<String>[
+      'publisher-backend',
+      'firebase',
+      'access-key',
+      'revoke',
+      '--env',
+      'my-firebase-prod',
+      '--key-id',
+      'host-a',
+      '--json',
+    ]);
+
+    expect(revokeExitCode, 0);
+    final revokeJson =
+        jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(
+      revokeJson['command'],
+      'publisher-backend firebase access-key revoke',
+    );
+    expect(revokeJson['keyId'], 'host-a');
+
+    stdoutBuffer.clear();
+    final rotateExitCode = await cli.run(<String>[
+      'publisher-backend',
+      'firebase',
+      'access-key',
+      'rotate',
+      '--env',
+      'my-firebase-prod',
+      '--key-id',
+      'host-a',
+      '--new-key-id',
+      'host-b',
+      '--key',
+      'mpk_live_replacement_123456789012',
+      '--json',
+    ]);
+
+    expect(rotateExitCode, 0);
+    final rotateJson =
+        jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(
+      rotateJson['command'],
+      'publisher-backend firebase access-key rotate',
+    );
+    expect(rotateJson['revokedKeyId'], 'host-a');
+    expect(rotateJson['newKeyId'], 'host-b');
+    expect(rotateJson['accessKey'], 'mpk_live_replacement_123456789012');
+    expect(
+      patchedPaths.where((path) => path.endsWith('/accessKeys/host-a')),
+      isNotEmpty,
+    );
+    expect(
+      patchedPaths.where((path) => path.endsWith('/accessKeys/host-b')),
+      isNotEmpty,
+    );
+  });
+
+  test(
     'publisher-backend firebase host-command JSON reports host ready',
     () async {
       final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
@@ -1518,6 +1729,71 @@ void _registerPublisherBackendFirebaseTests() {
     },
   );
 
+  test('publisher-backend firebase smoke sends access key header', () async {
+    final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+    await _writeMiniProgramFixture(
+      standaloneRoot,
+      miniProgramId: 'firebase_coupon',
+      version: '1.0.0',
+    );
+    await const PublisherBackendStarter().scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: standaloneRoot,
+        template: 'firebase-functions',
+        storageMode: 'firestore',
+      ),
+    );
+    await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+    final seenHeaders = <Map<String, String>?>[];
+    final stdoutBuffer = StringBuffer();
+    final cli = MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      publisherBackendStarter: PublisherBackendStarter(
+        healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        httpRequester: (method, uri, {headers, body}) async {
+          seenHeaders.add(headers);
+          if (uri.path.endsWith('/auth/session')) {
+            return http.Response(
+              jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+              401,
+            );
+          }
+          return http.Response('{"ok":true}', 200);
+        },
+      ),
+      workingDirectory: standaloneRoot,
+    );
+
+    final exitCode = await cli.run(<String>[
+      'publisher-backend',
+      'firebase',
+      'smoke',
+      '--env',
+      'my-firebase-prod',
+      '--access-key',
+      'mpk_live_partner_123456789012345',
+      '--json',
+    ]);
+
+    expect(exitCode, 0);
+    expect(
+      stdoutBuffer.toString(),
+      isNot(contains('mpk_live_partner_123456789012345')),
+    );
+    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(json['accessKeyProvided'], isTrue);
+    expect(
+      seenHeaders.where(
+        (headers) =>
+            headers?['x-mini-program-access-key'] ==
+            'mpk_live_partner_123456789012345',
+      ),
+      hasLength(4),
+    );
+  });
+
   test(
     'publisher-backend firebase smoke help includes write options',
     () async {
@@ -1538,6 +1814,7 @@ void _registerPublisherBackendFirebaseTests() {
       expect(stdoutBuffer.toString(), contains('--auth-email'));
       expect(stdoutBuffer.toString(), contains('--auth-password'));
       expect(stdoutBuffer.toString(), contains('--auth-create-user'));
+      expect(stdoutBuffer.toString(), contains('--access-key'));
     },
   );
 

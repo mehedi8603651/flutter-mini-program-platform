@@ -22,6 +22,8 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
         return _runPublisherBackendFirebaseHostCommand(arguments.sublist(1));
       case 'handoff':
         return _runPublisherBackendFirebaseHandoff(arguments.sublist(1));
+      case 'access-key':
+        return _runPublisherBackendFirebaseAccessKey(arguments.sublist(1));
       case 'auth':
         return _runPublisherBackendFirebaseAuth(arguments.sublist(1));
       case 'smoke':
@@ -425,6 +427,218 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
     }
   }
 
+  Future<int> _runPublisherBackendFirebaseAccessKey(
+    List<String> arguments,
+  ) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_publisherBackendFirebaseAccessKeyUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_publisherBackendFirebaseAccessKeyUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'create':
+        return _runPublisherBackendFirebaseAccessKeyCreate(
+          arguments.sublist(1),
+        );
+      case 'list':
+        return _runPublisherBackendFirebaseAccessKeyList(arguments.sublist(1));
+      case 'revoke':
+        return _runPublisherBackendFirebaseAccessKeyRevoke(
+          arguments.sublist(1),
+        );
+      case 'rotate':
+        return _runPublisherBackendFirebaseAccessKeyRotate(
+          arguments.sublist(1),
+        );
+      default:
+        _stderr.writeln(
+          'Unknown publisher-backend firebase access-key command: ${arguments.first}',
+        );
+        _stderr.writeln(_publisherBackendFirebaseAccessKeyUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runPublisherBackendFirebaseAccessKeyCreate(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseAccessKeyParser()
+      ..addOption('key-id', help: 'Stable partner/host key id.')
+      ..addOption(
+        'expires-at-utc',
+        help: 'Optional ISO-8601 expiry timestamp for the key.',
+      )
+      ..addOption(
+        'key',
+        hide: true,
+        help: 'Optional explicit access key value. Intended for tests/CI.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase access-key create --key-id <id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final keyId = results.option('key-id')?.trim() ?? '';
+    if (keyId.isEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase access-key create requires --key-id <id>.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseAccessKeyCreate(
+      PublisherBackendFirebaseAccessKeyCreateRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        keyId: keyId,
+        accessKey: results.option('key'),
+        expiresAtUtc: results.option('expires-at-utc'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseAccessKeyCreateJson(result)),
+      );
+    } else {
+      _stdout.writeln(
+        _formatPublisherBackendFirebaseAccessKeyCreateResult(result),
+      );
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseAccessKeyList(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseAccessKeyParser()
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase access-key list [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseAccessKeyList(
+      PublisherBackendFirebaseAccessKeyListRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseAccessKeyListJson(result)),
+      );
+    } else {
+      _stdout.writeln(
+        _formatPublisherBackendFirebaseAccessKeyListResult(result),
+      );
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseAccessKeyRevoke(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseAccessKeyParser()
+      ..addOption('key-id', help: 'Access key id to revoke.')
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase access-key revoke --key-id <id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final keyId = results.option('key-id')?.trim() ?? '';
+    if (keyId.isEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase access-key revoke requires --key-id <id>.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseAccessKeyRevoke(
+      PublisherBackendFirebaseAccessKeyRevokeRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        keyId: keyId,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseAccessKeyRevokeJson(result)),
+      );
+    } else {
+      _stdout.writeln(
+        _formatPublisherBackendFirebaseAccessKeyRevokeResult(result),
+      );
+    }
+    return 0;
+  }
+
+  Future<int> _runPublisherBackendFirebaseAccessKeyRotate(
+    List<String> arguments,
+  ) async {
+    final parser = _publisherBackendFirebaseAccessKeyParser()
+      ..addOption('key-id', help: 'Access key id to rotate.')
+      ..addOption('new-key-id', help: 'Optional id for the replacement key.')
+      ..addOption(
+        'expires-at-utc',
+        help: 'Optional ISO-8601 expiry timestamp for the replacement key.',
+      )
+      ..addOption(
+        'key',
+        hide: true,
+        help: 'Optional explicit access key value. Intended for tests/CI.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase access-key rotate --key-id <id> [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    final keyId = results.option('key-id')?.trim() ?? '';
+    if (keyId.isEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase access-key rotate requires --key-id <id>.',
+      );
+    }
+    final resolved = await _resolvePublisherBackendFirebaseInputs(results);
+    final result = await _publisherBackendStarter.firebaseAccessKeyRotate(
+      PublisherBackendFirebaseAccessKeyRotateRequest(
+        miniProgramRootPath: resolved.miniProgramRootPath,
+        environment: resolved.environment,
+        keyId: keyId,
+        newKeyId: results.option('new-key-id'),
+        accessKey: results.option('key'),
+        expiresAtUtc: results.option('expires-at-utc'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseAccessKeyRotateJson(result)),
+      );
+    } else {
+      _stdout.writeln(
+        _formatPublisherBackendFirebaseAccessKeyRotateResult(result),
+      );
+    }
+    return 0;
+  }
+
   Future<int> _runPublisherBackendFirebaseAuthStatus(
     List<String> arguments,
   ) async {
@@ -501,6 +715,10 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
       )
       ..addOption('auth-email', help: 'Email used with --include-auth.')
       ..addOption('auth-password', help: 'Password used with --include-auth.')
+      ..addOption(
+        'access-key',
+        help: 'MiniProgram access key for protected Firebase backends.',
+      )
       ..addFlag(
         'auth-create-user',
         negatable: false,
@@ -548,6 +766,7 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
       _stderr.writeln('--auth-email and --auth-password are required.');
       return 64;
     }
+    final accessKey = results.option('access-key')?.trim();
     final resolved = await _resolvePublisherBackendFirebaseInputs(results);
     final result = await _publisherBackendStarter.firebaseSmoke(
       PublisherBackendFirebaseSmokeRequest(
@@ -560,6 +779,7 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
         authEmail: includeAuth ? authEmail : null,
         authPassword: includeAuth ? authPassword : null,
         authCreateUser: results.flag('auth-create-user'),
+        accessKey: accessKey == null || accessKey.isEmpty ? null : accessKey,
       ),
     );
     if (results.flag('json')) {
@@ -846,6 +1066,9 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
       'mini-program-root',
       help: 'Exact mini-program root. Defaults to the current directory.',
     );
+
+  ArgParser _publisherBackendFirebaseAccessKeyParser() =>
+      _publisherBackendFirebaseCommandParser();
 
   Future<_PublisherBackendFirebaseInputs>
   _resolvePublisherBackendFirebaseInputs(ArgResults results) async {

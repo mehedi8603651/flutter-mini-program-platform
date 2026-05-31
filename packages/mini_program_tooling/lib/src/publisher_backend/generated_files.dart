@@ -277,6 +277,8 @@ export const publisherBackend = onRequest(
 ''';
 
 String _firebaseFunctionsRouterSource() => r'''
+import { createHash } from 'node:crypto';
+
 export const expectedRoutes = [
   'GET /health',
   'GET /home/bootstrap',
@@ -317,6 +319,20 @@ export function createPublisherBackendHandler({
           generatedAtUtc: clock().toISOString(),
         });
       }
+
+      const accessGuard = await verifyMiniProgramAccessKey({
+        store,
+        request,
+        clock,
+      });
+      if (accessGuard) {
+        return writeJson(
+          response,
+          accessGuard.statusCode,
+          accessGuard.body,
+        );
+      }
+
       if (method === 'GET' && routePath === '/home/bootstrap') {
         const body = await store.homeBootstrap();
         return body
@@ -483,6 +499,61 @@ function headerValue(request, name) {
     return String(request.get(name) || '');
   }
   return '';
+}
+
+async function verifyMiniProgramAccessKey({ store, request, clock }) {
+  if (typeof store.activeAccessKeys !== 'function') {
+    return null;
+  }
+  const keys = await store.activeAccessKeys();
+  const configuredKeys = Array.isArray(keys)
+    ? keys.filter((key) => key && key.active !== false && !key.revokedAtUtc)
+    : [];
+  if (configuredKeys.length === 0) {
+    return null;
+  }
+  const accessKey = headerValue(request, 'x-mini-program-access-key').trim();
+  if (!accessKey) {
+    return accessKeyFailed(
+      401,
+      'access_key_required',
+      'MiniProgram access key is required for this publisher backend.',
+    );
+  }
+  const accessKeyHash = createHash('sha256')
+    .update(accessKey, 'utf8')
+    .digest('hex');
+  const now = clock();
+  const matched = configuredKeys.some((key) => {
+    if (String(key.keyHash || key.sha256 || '').trim() !== accessKeyHash) {
+      return false;
+    }
+    if (key.expiresAtUtc) {
+      const expiresAt = new Date(key.expiresAtUtc);
+      if (Number.isFinite(expiresAt.getTime()) && expiresAt <= now) {
+        return false;
+      }
+    }
+    return true;
+  });
+  if (!matched) {
+    return accessKeyFailed(
+      403,
+      'access_key_invalid',
+      'MiniProgram access key is not authorized for this publisher backend.',
+    );
+  }
+  return null;
+}
+
+function accessKeyFailed(statusCode, errorCode, message) {
+  return {
+    statusCode,
+    body: {
+      errorCode,
+      message,
+    },
+  };
 }
 
 function writeJson(response, statusCode, body) {
@@ -1046,6 +1117,17 @@ export function createFirestorePublisherBackendStore({
 
     async deleteAuthSession(sessionId) {
       await appRef.collection('authSessions').doc(sessionId).delete();
+    },
+
+    async activeAccessKeys() {
+      const snapshot = await appRef
+        .collection('accessKeys')
+        .where('active', '==', true)
+        .get();
+      return snapshot.docs.map((document) => ({
+        keyId: document.id,
+        ...document.data(),
+      }));
     },
 
     async redeemCoupon({ couponId, userId, requestedAtUtc }) {

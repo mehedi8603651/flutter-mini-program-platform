@@ -871,4 +871,90 @@ extension _PublisherBackendStarterFirebaseHelpers on PublisherBackendStarter {
         refreshToken.isNotEmpty &&
         expiryConfigured;
   }
+
+  PublisherBackendFirebaseAccessKeyEntry _firebaseAccessKeyEntryFromDocument(
+    String keyId,
+    Map<String, Object?> document,
+  ) {
+    return PublisherBackendFirebaseAccessKeyEntry(
+      keyId: document['keyId']?.toString().trim().isNotEmpty == true
+          ? document['keyId']!.toString().trim()
+          : keyId,
+      active: document['active'] != false,
+      createdAtUtc: document['createdAtUtc']?.toString() ?? '',
+      updatedAtUtc: document['updatedAtUtc']?.toString() ?? '',
+      revokedAtUtc: _nonEmptyString(document['revokedAtUtc']),
+      expiresAtUtc: _nonEmptyString(document['expiresAtUtc']),
+      lastFour: _nonEmptyString(document['lastFour']),
+    );
+  }
+
+  String _firebaseAccessKeyDocumentPath(
+    _PublisherBackendFirebaseSettings settings,
+    String keyId,
+  ) => 'miniPrograms/${settings.miniProgramId}/accessKeys/$keyId';
+
+  String _normalizeFirebaseAccessKeyId(String rawKeyId) {
+    final keyId = rawKeyId.trim();
+    if (keyId.isEmpty) {
+      throw const PublisherBackendException(
+        'Firebase access-key commands require --key-id <id>.',
+      );
+    }
+    if (keyId.length > 96 || !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(keyId)) {
+      throw const PublisherBackendException(
+        'Firebase access key ids may only contain letters, numbers, dot, '
+        'underscore, and dash, and must be 96 characters or fewer.',
+      );
+    }
+    return keyId;
+  }
+
+  String _normalizePublisherBackendAccessKey(String rawAccessKey) {
+    final accessKey = rawAccessKey.trim();
+    if (accessKey.length < 24 || accessKey.length > 128) {
+      throw const PublisherBackendException(
+        'MiniProgram access keys must be between 24 and 128 characters.',
+      );
+    }
+    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(accessKey)) {
+      throw const PublisherBackendException(
+        'MiniProgram access keys may only contain letters, numbers, dot, '
+        'underscore, and dash.',
+      );
+    }
+    return accessKey;
+  }
+
+  String? _normalizeFirebaseAccessKeyExpiry(String? rawExpiresAtUtc) {
+    final value = rawExpiresAtUtc?.trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      throw PublisherBackendException(
+        'Firebase access key --expires-at-utc must be an ISO-8601 date/time: '
+        '$rawExpiresAtUtc',
+      );
+    }
+    return parsed.toUtc().toIso8601String();
+  }
+
+  String _generatePublisherBackendAccessKey() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(24, (_) => random.nextInt(256));
+    return 'mpk_live_${base64Url.encode(bytes).replaceAll('=', '')}';
+  }
+
+  String _sha256Hex(String value) =>
+      sha256.convert(utf8.encode(value)).toString();
+
+  String _lastFour(String value) =>
+      value.length <= 4 ? value : value.substring(value.length - 4);
+
+  String? _nonEmptyString(Object? value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
 }
