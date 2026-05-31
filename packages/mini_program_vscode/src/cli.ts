@@ -310,6 +310,12 @@ export interface PublisherBackendFirebaseHandoffArgsOptions
   readonly json?: boolean;
 }
 
+export interface PublisherBackendFirebaseAuthStatusArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly hostProjectRoot?: string;
+  readonly json?: boolean;
+}
+
 export interface PublisherBackendFirebaseSmokeArgsOptions
   extends PublisherBackendFirebaseBaseArgsOptions {
   readonly json?: boolean;
@@ -998,6 +1004,19 @@ export function buildPublisherBackendFirebaseHandoffArgs(
   }
   if (options.outputPath?.trim()) {
     args.push('--output', options.outputPath.trim());
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseAuthStatusArgs(
+  options: PublisherBackendFirebaseAuthStatusArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'auth', 'status'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  if (options.hostProjectRoot?.trim()) {
+    args.push('--host-project-root', options.hostProjectRoot.trim());
   }
   return withPublisherBackendFirebaseOptions(args, options);
 }

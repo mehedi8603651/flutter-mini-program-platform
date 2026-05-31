@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.34
+
+- Add `MiniProgram: Firebase Publisher Auth Status`, backed by
+  `mini_program_tooling` 0.3.44.
+- Show Firebase auth backend readiness and host SDK auth controller readiness
+  in the sidebar.
+- Extend Firebase host endpoint diagnostics with host auth controller rows so
+  publishers can see whether imported mini-program login UI will work.
+- Gate Firebase auth diagnostics on the CLI capability map.
+
 ## 0.1.33
 
 - Require `mini_program_tooling` 0.3.42 for Firebase Hosting publish so newly

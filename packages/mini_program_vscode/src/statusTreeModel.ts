@@ -34,18 +34,58 @@ export interface FirebaseHostEndpointStatus {
   readonly hostingManifestUrl?: string;
   readonly hostingCorsAllowOrigin?: string;
   readonly hostingDeliveryIssue?: string;
+  readonly hostAuthControllerReady?: boolean;
+  readonly hostRuntimeSetupPath?: string;
+  readonly hostAuthControllerConfigured?: boolean;
+  readonly hostSecureAuthControllerConfigured?: boolean;
+  readonly hostDisposeAuthControllerConfigured?: boolean;
+  readonly hostAuthIssues?: readonly string[];
+}
+
+export interface FirebaseAuthStatus {
+  readonly ready?: boolean;
+  readonly deployEnvReady?: boolean;
+  readonly environmentName?: string;
+  readonly projectId?: string;
+  readonly region?: string;
+  readonly functionName?: string;
+  readonly miniProgramId?: string;
+  readonly authWebApiKeyConfigured?: boolean;
+  readonly scaffoldExists?: boolean;
+  readonly authServiceFileExists?: boolean;
+  readonly routerAuthRoutesReady?: boolean;
+  readonly routerAllowsAuthorizationHeader?: boolean;
+  readonly packageJsonHasFirebaseAdmin?: boolean;
+  readonly envAuthKeyConfigured?: boolean;
+  readonly envUsesReservedAuthKey?: boolean;
+  readonly envFilePath?: string;
+  readonly hostAuthChecked?: boolean;
+  readonly hostProjectRootPath?: string;
+  readonly hostAuthControllerReady?: boolean;
+  readonly hostRuntimeSetupPath?: string;
+  readonly hostAuthControllerConfigured?: boolean;
+  readonly hostSecureAuthControllerConfigured?: boolean;
+  readonly hostDisposeAuthControllerConfigured?: boolean;
+  readonly issues?: readonly string[];
+  readonly warnings?: readonly string[];
+  readonly hostAuthIssues?: readonly string[];
 }
 
 export function buildStatusTreeSections(
   report: WorkflowStatusReport | undefined,
   options: {
     readonly firebaseHostEndpoint?: FirebaseHostEndpointStatus;
+    readonly firebaseAuthStatus?: FirebaseAuthStatus;
   } = {},
 ): StatusTreeSection[] {
   const firebaseHostEndpoint = options.firebaseHostEndpoint;
+  const firebaseAuthStatus = options.firebaseAuthStatus;
   if (!report) {
-    if (firebaseHostEndpoint) {
-      return [firebaseHostEndpointSection(firebaseHostEndpoint)];
+    if (firebaseHostEndpoint || firebaseAuthStatus) {
+      return compactSections([
+        firebaseHostEndpoint ? firebaseHostEndpointSection(firebaseHostEndpoint) : undefined,
+        firebaseAuthStatus ? firebaseAuthStatusSection(firebaseAuthStatus) : undefined,
+      ]);
     }
     return [
       {
@@ -238,6 +278,9 @@ export function buildStatusTreeSections(
   if (firebaseHostEndpoint) {
     sections.push(firebaseHostEndpointSection(firebaseHostEndpoint));
   }
+  if (firebaseAuthStatus) {
+    sections.push(firebaseAuthStatusSection(firebaseAuthStatus));
+  }
 
   sections.push({
     label: 'Next actions',
@@ -305,9 +348,56 @@ function firebaseHostEndpointSection(
       row('Hosting manifest URL', status.hostingManifestUrl ?? ''),
       row('CORS allow origin', status.hostingCorsAllowOrigin ?? ''),
       row('Hosting issue', status.hostingDeliveryIssue ?? ''),
+      row('Host auth ready', optionalYesNo(status.hostAuthControllerReady)),
+      row('Host runtime setup', status.hostRuntimeSetupPath ?? ''),
+      row('Host auth configured', optionalYesNo(status.hostAuthControllerConfigured)),
+      row('Host secure auth store', optionalYesNo(status.hostSecureAuthControllerConfigured)),
+      row('Host disposes auth', optionalYesNo(status.hostDisposeAuthControllerConfigured)),
+      row('Host auth issues', (status.hostAuthIssues ?? []).join('; ')),
       row('Issues', (status.hostEndpointIssues ?? []).join('; ')),
     ]),
   };
+}
+
+function firebaseAuthStatusSection(status: FirebaseAuthStatus): StatusTreeSection {
+  return {
+    label: 'Firebase auth',
+    icon: status.ready === false || status.hostAuthControllerReady === false ? 'warning' : 'shield',
+    rows: compactRows([
+      row('Ready', optionalYesNo(status.ready)),
+      row('Deploy env ready', optionalYesNo(status.deployEnvReady)),
+      row('Environment', status.environmentName ?? ''),
+      row('Project', status.projectId ?? ''),
+      row('Region', status.region ?? ''),
+      row('Function', status.functionName ?? ''),
+      row('Mini-program ID', status.miniProgramId ?? ''),
+      row('Auth Web API key', optionalYesNo(status.authWebApiKeyConfigured)),
+      row('Scaffold', optionalYesNo(status.scaffoldExists)),
+      row('Auth service file', optionalYesNo(status.authServiceFileExists)),
+      row('Auth routes', optionalYesNo(status.routerAuthRoutesReady)),
+      row('Authorization CORS', optionalYesNo(status.routerAllowsAuthorizationHeader)),
+      row('Firebase Admin dependency', optionalYesNo(status.packageJsonHasFirebaseAdmin)),
+      row('Functions .env auth key', optionalYesNo(status.envAuthKeyConfigured)),
+      row('Reserved .env key present', optionalYesNo(status.envUsesReservedAuthKey)),
+      row('Functions .env', status.envFilePath ?? ''),
+      row('Host auth checked', optionalYesNo(status.hostAuthChecked)),
+      row('Host app', status.hostProjectRootPath ?? ''),
+      row('Host auth ready', optionalYesNo(status.hostAuthControllerReady)),
+      row('Host runtime setup', status.hostRuntimeSetupPath ?? ''),
+      row('Host auth configured', optionalYesNo(status.hostAuthControllerConfigured)),
+      row('Host secure auth store', optionalYesNo(status.hostSecureAuthControllerConfigured)),
+      row('Host disposes auth', optionalYesNo(status.hostDisposeAuthControllerConfigured)),
+      row('Issues', (status.issues ?? []).join('; ')),
+      row('Warnings', (status.warnings ?? []).join('; ')),
+      row('Host auth issues', (status.hostAuthIssues ?? []).join('; ')),
+    ]),
+  };
+}
+
+function compactSections(
+  sections: readonly (StatusTreeSection | undefined)[],
+): StatusTreeSection[] {
+  return sections.filter((section): section is StatusTreeSection => Boolean(section));
 }
 
 function iconForSeverity(severity: string): string {

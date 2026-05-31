@@ -163,6 +163,12 @@ test('renders Firebase host endpoint readiness diagnostics', () => {
         hostingManifestUrl:
           'https://coupon-demo.web.app/manifests/coupon_demo/latest.json',
         hostingDeliveryIssue: 'Missing Access-Control-Allow-Origin header.',
+        hostAuthControllerReady: false,
+        hostRuntimeSetupPath: 'D:/host/lib/mini_program/mini_program_runtime_setup.dart',
+        hostAuthControllerConfigured: false,
+        hostSecureAuthControllerConfigured: false,
+        hostDisposeAuthControllerConfigured: false,
+        hostAuthIssues: ['Host runtime setup does not configure MiniProgramAuthController.'],
       },
     }),
   );
@@ -176,7 +182,73 @@ test('renders Firebase host endpoint readiness diagnostics', () => {
   assert.match(text, /Hosting manifest: yes/);
   assert.match(text, /Hosting CORS: no/);
   assert.match(text, /Missing Access-Control-Allow-Origin header/);
+  assert.match(text, /Host auth ready: no/);
+  assert.match(text, /Host auth configured: no/);
+  assert.match(text, /Host auth issues: Host runtime setup does not configure MiniProgramAuthController/);
   assert.match(text, /Issues: Delivery URL differs/);
+});
+
+test('renders Firebase auth status diagnostics', () => {
+  const report: WorkflowStatusReport = {
+    schemaVersion: 1,
+    command: 'workflow status',
+    workspace: { type: 'mini_program', path: 'D:/coupon' },
+    ready: true,
+    severity: 'ok',
+    miniProgram: {
+      detected: true,
+      appId: 'coupon_demo',
+      version: '1.0.0',
+      build: { exists: true, screenCount: 1 },
+      validation: { status: 'ok' },
+      partnerPackages: [],
+      backendUsage: { usesPublisherBackend: true },
+      publisherBackendStarter: { detected: true, template: 'firebase-functions' },
+    },
+    environment: { configured: true, provider: 'firebase' },
+    backend: { configured: false },
+    remote: { checked: false },
+    nextActions: [],
+  };
+
+  const text = flattenStatusSections(
+    buildStatusTreeSections(report, {
+      firebaseAuthStatus: {
+        ready: true,
+        deployEnvReady: true,
+        environmentName: 'my-firebase-prod',
+        projectId: 'miniprogram-backend-test',
+        region: 'us-central1',
+        functionName: 'publisherBackend',
+        miniProgramId: 'coupon_demo',
+        authWebApiKeyConfigured: true,
+        scaffoldExists: true,
+        authServiceFileExists: true,
+        routerAuthRoutesReady: true,
+        routerAllowsAuthorizationHeader: true,
+        packageJsonHasFirebaseAdmin: true,
+        envAuthKeyConfigured: true,
+        envUsesReservedAuthKey: false,
+        envFilePath: 'D:/coupon/backend/firebase_functions/functions/.env',
+        hostAuthChecked: true,
+        hostProjectRootPath: 'D:/host',
+        hostAuthControllerReady: true,
+        hostRuntimeSetupPath: 'D:/host/lib/mini_program/mini_program_runtime_setup.dart',
+        hostAuthControllerConfigured: true,
+        hostSecureAuthControllerConfigured: true,
+        hostDisposeAuthControllerConfigured: true,
+      },
+    }),
+  );
+
+  assert.match(text, /Firebase auth/);
+  assert.match(text, /Ready: yes/);
+  assert.match(text, /Deploy env ready: yes/);
+  assert.match(text, /Auth Web API key: yes/);
+  assert.match(text, /Auth routes: yes/);
+  assert.match(text, /Authorization CORS: yes/);
+  assert.match(text, /Host auth ready: yes/);
+  assert.match(text, /Host secure auth store: yes/);
 });
 
 test('does not render raw access-key secrets', () => {

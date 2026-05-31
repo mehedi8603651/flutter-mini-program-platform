@@ -49,6 +49,7 @@ import {
   buildPublisherBackendFirebaseDataImportArgs,
   buildPublisherBackendFirebaseDataRedemptionsArgs,
   buildPublisherBackendFirebaseDataStatusArgs,
+  buildPublisherBackendFirebaseAuthStatusArgs,
   buildPublisherBackendFirebaseDeployArgs,
   buildPublisherBackendFirebaseDestroyArgs,
   buildPublisherBackendFirebaseHandoffArgs,
@@ -95,7 +96,7 @@ import {
   upsertRegistryEntry,
 } from './hostIntegration';
 import { MiniProgramStatusTreeProvider } from './statusTree';
-import { FirebaseHostEndpointStatus } from './statusTreeModel';
+import { FirebaseAuthStatus, FirebaseHostEndpointStatus } from './statusTreeModel';
 import { parseWorkflowStatusJson } from './workflowStatus';
 
 const outputChannelName = 'MiniProgram';
@@ -302,6 +303,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHandoff', () =>
       publisherBackendFirebaseHandoff(output, () => refreshStatus(false)),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAuthStatus', () =>
+      publisherBackendFirebaseAuthStatus(output, statusProvider),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmoke', () =>
       publisherBackendFirebaseSmoke(output),
@@ -2178,10 +2182,19 @@ async function publisherBackendFirebaseHostCommand(
   output.appendLine(
     `Host endpoint ready: ${hostCommandResult.hostEndpointReady === true ? 'yes' : 'no'}`,
   );
+  if (typeof hostCommandResult.hostAuthControllerReady === 'boolean') {
+    output.appendLine(
+      `Host auth controller ready: ${hostCommandResult.hostAuthControllerReady === true ? 'yes' : 'no'}`,
+    );
+  }
   appendFirebaseHostingDeliveryDiagnostics(output, hostEndpointStatus);
   const issues = stringArrayValue(hostCommandResult.hostEndpointIssues);
   if (issues.length > 0) {
     output.appendLine(`Host endpoint issues: ${issues.join('; ')}`);
+  }
+  const authIssues = stringArrayValue(hostCommandResult.hostAuthIssues);
+  if (authIssues.length > 0) {
+    output.appendLine(`Host auth issues: ${authIssues.join('; ')}`);
   }
 
   const action = await vscode.window.showQuickPick(
@@ -2359,6 +2372,94 @@ async function publisherBackendFirebaseHandoff(
   );
   await refreshStatus();
   vscode.window.showInformationMessage('Firebase host handoff package created.');
+}
+
+async function publisherBackendFirebaseAuthStatus(
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseAuthStatusCli044(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const hostMode = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Check backend and host auth',
+        description: 'Inspect a Flutter host app for SDK auth controller setup.',
+        value: 'host' as const,
+      },
+      {
+        label: 'Check backend only',
+        description: 'Validate Firebase auth backend readiness only.',
+        value: 'backend' as const,
+      },
+    ],
+    {
+      title: 'Firebase auth status',
+      ignoreFocusOut: true,
+    },
+  );
+  if (!hostMode) {
+    return;
+  }
+  const hostProjectRoot =
+    hostMode.value === 'host'
+      ? await chooseHostProjectRootForFirebase()
+      : undefined;
+  if (hostMode.value === 'host' && !hostProjectRoot) {
+    return;
+  }
+  const args = buildPublisherBackendFirebaseAuthStatusArgs({
+    envName,
+    miniProgramRoot: workspacePath,
+    hostProjectRoot,
+    json: true,
+  });
+  const result = await runCliCapture(
+    'Publisher Backend Firebase Auth Status',
+    args,
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+  if (!result) {
+    return;
+  }
+  const decoded = parseJsonObject(result.stdout);
+  const status = firebaseAuthStatusFromCli(decoded);
+  statusProvider.setFirebaseAuthStatus(status);
+  output.appendLine('');
+  output.appendLine(`Firebase auth ready: ${status.ready === true ? 'yes' : 'no'}`);
+  output.appendLine(`Deploy env ready: ${status.deployEnvReady === true ? 'yes' : 'no'}`);
+  if (status.hostAuthChecked) {
+    output.appendLine(
+      `Host auth controller ready: ${status.hostAuthControllerReady === true ? 'yes' : 'no'}`,
+    );
+  }
+  if ((status.issues ?? []).length > 0) {
+    output.appendLine(`Firebase auth issues: ${(status.issues ?? []).join('; ')}`);
+  }
+  if ((status.hostAuthIssues ?? []).length > 0) {
+    output.appendLine(`Host auth issues: ${(status.hostAuthIssues ?? []).join('; ')}`);
+  }
+  if ((status.warnings ?? []).length > 0) {
+    output.appendLine(`Firebase auth warnings: ${(status.warnings ?? []).join('; ')}`);
+  }
+  if (status.ready === true && (!status.hostAuthChecked || status.hostAuthControllerReady !== false)) {
+    vscode.window.showInformationMessage('Firebase auth status is ready.');
+  } else {
+    vscode.window.showWarningMessage(
+      'Firebase auth status found issues. Check the MiniProgram sidebar.',
+    );
+  }
 }
 
 async function publisherBackendFirebaseSmoke(
@@ -4287,9 +4388,18 @@ async function runFirebaseHostCommandJson(
     output.appendLine(
       `Host endpoint ready: ${decoded.hostEndpointReady === true ? 'yes' : 'no'}`,
     );
+    if (typeof decoded.hostAuthControllerReady === 'boolean') {
+      output.appendLine(
+        `Host auth controller ready: ${decoded.hostAuthControllerReady === true ? 'yes' : 'no'}`,
+      );
+    }
     const issues = stringArrayValue(decoded.hostEndpointIssues);
     if (issues.length > 0) {
       output.appendLine(`Host endpoint issues: ${issues.join('; ')}`);
+    }
+    const authIssues = stringArrayValue(decoded.hostAuthIssues);
+    if (authIssues.length > 0) {
+      output.appendLine(`Host auth issues: ${authIssues.join('; ')}`);
     }
     return decoded;
   } catch (error) {
@@ -4316,6 +4426,45 @@ function firebaseHostEndpointStatusFromHostCommand(
     accessMode: stringValue(decoded.accessMode),
     hostEndpointBackendMode: stringValue(decoded.hostEndpointBackendMode),
     hostEndpointIssues: stringArrayValue(decoded.hostEndpointIssues),
+    hostAuthControllerReady: booleanValue(decoded.hostAuthControllerReady),
+    hostRuntimeSetupPath: stringValue(decoded.hostRuntimeSetupPath),
+    hostAuthControllerConfigured: booleanValue(decoded.hostAuthControllerConfigured),
+    hostSecureAuthControllerConfigured: booleanValue(decoded.hostSecureAuthControllerConfigured),
+    hostDisposeAuthControllerConfigured: booleanValue(decoded.hostDisposeAuthControllerConfigured),
+    hostAuthIssues: stringArrayValue(decoded.hostAuthIssues),
+  };
+}
+
+function firebaseAuthStatusFromCli(
+  decoded: Record<string, unknown>,
+): FirebaseAuthStatus {
+  return {
+    ready: booleanValue(decoded.ready),
+    deployEnvReady: booleanValue(decoded.deployEnvReady),
+    environmentName: stringValue(decoded.environmentName),
+    projectId: stringValue(decoded.projectId),
+    region: stringValue(decoded.region),
+    functionName: stringValue(decoded.functionName),
+    miniProgramId: stringValue(decoded.miniProgramId),
+    authWebApiKeyConfigured: booleanValue(decoded.authWebApiKeyConfigured),
+    scaffoldExists: booleanValue(decoded.scaffoldExists),
+    authServiceFileExists: booleanValue(decoded.authServiceFileExists),
+    routerAuthRoutesReady: booleanValue(decoded.routerAuthRoutesReady),
+    routerAllowsAuthorizationHeader: booleanValue(decoded.routerAllowsAuthorizationHeader),
+    packageJsonHasFirebaseAdmin: booleanValue(decoded.packageJsonHasFirebaseAdmin),
+    envAuthKeyConfigured: booleanValue(decoded.envAuthKeyConfigured),
+    envUsesReservedAuthKey: booleanValue(decoded.envUsesReservedAuthKey),
+    envFilePath: stringValue(decoded.envFilePath),
+    hostAuthChecked: booleanValue(decoded.hostAuthChecked),
+    hostProjectRootPath: stringValue(decoded.hostProjectRootPath),
+    hostAuthControllerReady: booleanValue(decoded.hostAuthControllerReady),
+    hostRuntimeSetupPath: stringValue(decoded.hostRuntimeSetupPath),
+    hostAuthControllerConfigured: booleanValue(decoded.hostAuthControllerConfigured),
+    hostSecureAuthControllerConfigured: booleanValue(decoded.hostSecureAuthControllerConfigured),
+    hostDisposeAuthControllerConfigured: booleanValue(decoded.hostDisposeAuthControllerConfigured),
+    issues: stringArrayValue(decoded.issues),
+    warnings: stringArrayValue(decoded.warnings),
+    hostAuthIssues: stringArrayValue(decoded.hostAuthIssues),
   };
 }
 
@@ -4931,6 +5080,8 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
   readonly supportsFirebaseHandoff?: boolean;
+  readonly supportsFirebaseAuthStatus?: boolean;
+  readonly supportsFirebaseHostAuthDiagnostics?: boolean;
   readonly supportsFirebaseWriteSmoke?: boolean;
   readonly supportsFirebaseFirestoreData?: boolean;
   readonly supportsFirebaseDataManagement?: boolean;
@@ -4985,6 +5136,8 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsFirebaseOperations ||
         capability.supportsFirebaseHostCommand ||
         capability.supportsFirebaseHandoff ||
+        capability.supportsFirebaseAuthStatus ||
+        capability.supportsFirebaseHostAuthDiagnostics ||
         capability.supportsFirebaseWriteSmoke ||
         capability.supportsFirebaseFirestoreData ||
         capability.supportsFirebaseDataManagement
@@ -5110,6 +5263,12 @@ function capabilityFromCliCapabilitiesJson(
   const supportsFirebaseHandoff =
     hasFeature('publisherBackendFirebaseHandoff') ||
     hasCapability('publisher_backend.firebase.handoff');
+  const supportsFirebaseAuthStatus =
+    hasFeature('publisherBackendFirebaseAuthStatus') ||
+    hasCapability('publisher_backend.firebase.auth.status');
+  const supportsFirebaseHostAuthDiagnostics =
+    hasFeature('publisherBackendFirebaseHostAuthDiagnostics') ||
+    hasCapability('publisher_backend.firebase.host.auth_diagnostics');
   const supportsFirebaseFirestoreData =
     (hasFeature('publisherBackendFirebaseFirestoreSeed') &&
       hasFeature('publisherBackendFirebaseFirestoreDataStatus')) ||
@@ -5146,6 +5305,12 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseHandoff
       ? undefined
       : 'Configured CLI capabilities do not include Firebase handoff.',
+    supportsFirebaseAuthStatus
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase auth status.',
+    supportsFirebaseHostAuthDiagnostics
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase host auth diagnostics.',
     supportsFirebaseWriteSmoke
       ? undefined
       : 'Configured CLI capabilities do not include Firebase write smoke.',
@@ -5165,6 +5330,8 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseOperations,
     supportsFirebaseHostCommand,
     supportsFirebaseHandoff,
+    supportsFirebaseAuthStatus,
+    supportsFirebaseHostAuthDiagnostics,
     supportsFirebaseWriteSmoke,
     supportsFirebaseFirestoreData,
     supportsFirebaseDataManagement,
@@ -5381,6 +5548,32 @@ async function ensurePublisherBackendFirebaseHandoffCli039(
   return false;
 }
 
+async function ensurePublisherBackendFirebaseAuthStatusCli044(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseAuthStatus
+  ) {
+    return true;
+  }
+  const message =
+    'MiniProgram CLI 0.3.44 or newer is required for Firebase auth status diagnostics. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.44`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
 async function ensureFirebaseHostingPublishCli042(
   workspacePath: string,
   output: vscode.OutputChannel,
@@ -5480,6 +5673,10 @@ function parseJsonObject(rawOutput: string): Record<string, unknown> {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function booleanValue(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 function recordValue(value: unknown): Record<string, unknown> | undefined {
