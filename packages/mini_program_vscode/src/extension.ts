@@ -50,6 +50,10 @@ import {
   buildPublisherBackendFirebaseDataRedemptionsArgs,
   buildPublisherBackendFirebaseDataStatusArgs,
   buildPublisherBackendFirebaseAuthStatusArgs,
+  buildPublisherBackendFirebaseAccessKeyCreateArgs,
+  buildPublisherBackendFirebaseAccessKeyListArgs,
+  buildPublisherBackendFirebaseAccessKeyRevokeArgs,
+  buildPublisherBackendFirebaseAccessKeyRotateArgs,
   buildPublisherBackendFirebaseDeployArgs,
   buildPublisherBackendFirebaseDestroyArgs,
   buildPublisherBackendFirebaseHandoffArgs,
@@ -96,7 +100,11 @@ import {
   upsertRegistryEntry,
 } from './hostIntegration';
 import { MiniProgramStatusTreeProvider } from './statusTree';
-import { FirebaseAuthStatus, FirebaseHostEndpointStatus } from './statusTreeModel';
+import {
+  FirebaseAccessKeyStatus,
+  FirebaseAuthStatus,
+  FirebaseHostEndpointStatus,
+} from './statusTreeModel';
 import { parseWorkflowStatusJson } from './workflowStatus';
 
 const outputChannelName = 'MiniProgram';
@@ -302,7 +310,19 @@ export function activate(context: vscode.ExtensionContext): void {
       publisherBackendFirebaseHostCommand(output, statusProvider),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHandoff', () =>
-      publisherBackendFirebaseHandoff(output, () => refreshStatus(false)),
+      publisherBackendFirebaseHandoff(output, () => refreshStatus(false), {}, statusProvider),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyCreate', () =>
+      publisherBackendFirebaseAccessKeyCreate(output, statusProvider),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyList', () =>
+      publisherBackendFirebaseAccessKeyList(output, statusProvider),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyRevoke', () =>
+      publisherBackendFirebaseAccessKeyRevoke(output, statusProvider),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyRotate', () =>
+      publisherBackendFirebaseAccessKeyRotate(output, statusProvider),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAuthStatus', () =>
       publisherBackendFirebaseAuthStatus(output, statusProvider),
@@ -2125,18 +2145,15 @@ async function publisherBackendFirebaseHostCommand(
   }
   let accessKey: string | undefined;
   if (accessMode === 'protected') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'MiniProgram access key for protected delivery',
-      password: true,
-      placeHolder: 'mpk_live_...',
-      ignoreFocusOut: true,
-      validateInput: (input) =>
-        input.trim() ? undefined : 'Access key is required.',
-    });
-    if (!value) {
+    accessKey = await resolveFirebaseProtectedAccessKey(
+      workspacePath,
+      envName,
+      output,
+      statusProvider,
+    );
+    if (!accessKey) {
       return;
     }
-    accessKey = value.trim();
   }
 
   const hostCommandArgs = buildPublisherBackendFirebaseHostCommandArgs({
@@ -2272,6 +2289,7 @@ async function publisherBackendFirebaseHandoff(
     readonly deliveryUrl?: string;
     readonly public?: boolean;
   } = {},
+  statusProvider?: MiniProgramStatusTreeProvider,
 ): Promise<void> {
   const workspacePath = await requireMiniProgramRoot();
   if (!workspacePath) {
@@ -2313,18 +2331,15 @@ async function publisherBackendFirebaseHandoff(
   }
   let accessKey: string | undefined;
   if (accessMode === 'protected') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'MiniProgram access key for protected delivery',
-      password: true,
-      placeHolder: 'mpk_live_...',
-      ignoreFocusOut: true,
-      validateInput: (input) =>
-        input.trim() ? undefined : 'Access key is required.',
-    });
-    if (!value) {
+    accessKey = await resolveFirebaseProtectedAccessKey(
+      workspacePath,
+      envName,
+      output,
+      statusProvider,
+    );
+    if (!accessKey) {
       return;
     }
-    accessKey = value.trim();
   }
   const outputPath = await chooseFirebaseHandoffOutputPath(
     workspacePath,
@@ -2372,6 +2387,346 @@ async function publisherBackendFirebaseHandoff(
   );
   await refreshStatus();
   vscode.window.showInformationMessage('Firebase host handoff package created.');
+}
+
+async function publisherBackendFirebaseAccessKeyCreate(
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseAccessKeysCli045(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const keyId = await promptKeyId('Firebase access key id', 'host-a');
+  if (!keyId) {
+    return;
+  }
+  const expiresAtUtc = await promptOptionalFirebaseAccessKeyExpiry();
+  if (expiresAtUtc === undefined) {
+    return;
+  }
+  const decoded = await createFirebaseAccessKey(
+    workspacePath,
+    envName,
+    keyId,
+    expiresAtUtc,
+    output,
+  );
+  if (!decoded) {
+    return;
+  }
+  const accessKey = stringValue(decoded.accessKey);
+  if (accessKey) {
+    await vscode.env.clipboard.writeText(accessKey);
+  }
+  await refreshFirebaseAccessKeyStatus(workspacePath, envName, output, statusProvider);
+  vscode.window.showInformationMessage(
+    accessKey
+      ? 'Firebase access key created and copied to clipboard. Store it now; it cannot be listed again.'
+      : 'Firebase access key created.',
+  );
+}
+
+async function publisherBackendFirebaseAccessKeyList(
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseAccessKeysCli045(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  await refreshFirebaseAccessKeyStatus(workspacePath, envName, output, statusProvider, {
+    showSuccessNotification: true,
+  });
+}
+
+async function publisherBackendFirebaseAccessKeyRevoke(
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseAccessKeysCli045(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const keyId = await promptKeyId('Firebase access key id to revoke', 'host-a');
+  if (!keyId) {
+    return;
+  }
+  const confirmed = await vscode.window.showWarningMessage(
+    `Revoke Firebase access key "${keyId}"? Protected host packages using this key will stop reaching protected publisher backend routes.`,
+    { modal: true },
+    'Revoke',
+  );
+  if (confirmed !== 'Revoke') {
+    return;
+  }
+  const result = await runCliCapture(
+    'Publisher Backend Firebase Access Key Revoke',
+    buildPublisherBackendFirebaseAccessKeyRevokeArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      keyId,
+      json: true,
+    }),
+    workspacePath,
+    output,
+  );
+  if (!result) {
+    return;
+  }
+  await refreshFirebaseAccessKeyStatus(workspacePath, envName, output, statusProvider);
+  vscode.window.showInformationMessage('Firebase access key revoked.');
+}
+
+async function publisherBackendFirebaseAccessKeyRotate(
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseAccessKeysCli045(workspacePath, output))) {
+    return;
+  }
+  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  if (!envName) {
+    return;
+  }
+  const keyId = await promptKeyId('Firebase access key id to rotate', 'host-a');
+  if (!keyId) {
+    return;
+  }
+  const newKeyId = await vscode.window.showInputBox({
+    prompt: 'Optional replacement Firebase access key id',
+    placeHolder: `${keyId}-next`,
+    ignoreFocusOut: true,
+  });
+  if (newKeyId === undefined) {
+    return;
+  }
+  const expiresAtUtc = await promptOptionalFirebaseAccessKeyExpiry();
+  if (expiresAtUtc === undefined) {
+    return;
+  }
+  const confirmed = await vscode.window.showWarningMessage(
+    `Rotate Firebase access key "${keyId}"? The old key will be revoked and a new key will be shown once.`,
+    { modal: true },
+    'Rotate',
+  );
+  if (confirmed !== 'Rotate') {
+    return;
+  }
+  const result = await runCliCapture(
+    'Publisher Backend Firebase Access Key Rotate',
+    buildPublisherBackendFirebaseAccessKeyRotateArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      keyId,
+      newKeyId: newKeyId.trim() || undefined,
+      expiresAtUtc,
+      json: true,
+    }),
+    workspacePath,
+    output,
+  );
+  if (!result) {
+    return;
+  }
+  const decoded = parseJsonObject(result.stdout);
+  const accessKey = stringValue(decoded.accessKey);
+  if (accessKey) {
+    await vscode.env.clipboard.writeText(accessKey);
+  }
+  await refreshFirebaseAccessKeyStatus(workspacePath, envName, output, statusProvider);
+  vscode.window.showInformationMessage(
+    accessKey
+      ? 'Firebase access key rotated and copied to clipboard. Store it now; it cannot be listed again.'
+      : 'Firebase access key rotated.',
+  );
+}
+
+async function resolveFirebaseProtectedAccessKey(
+  workspacePath: string,
+  envName: string,
+  output: vscode.OutputChannel,
+  statusProvider?: MiniProgramStatusTreeProvider,
+): Promise<string | undefined> {
+  if (!(await ensurePublisherBackendFirebaseAccessKeysCli045(workspacePath, output))) {
+    return undefined;
+  }
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Create new Firebase access key',
+        description: 'Recommended for a new host/partner handoff',
+        value: 'create' as const,
+      },
+      {
+        label: 'Paste existing Firebase access key',
+        description: 'Use a key created earlier for this mini-program',
+        value: 'paste' as const,
+      },
+    ],
+    { title: 'Protected Firebase handoff access key', ignoreFocusOut: true },
+  );
+  if (!choice) {
+    return undefined;
+  }
+  if (choice.value === 'paste') {
+    const value = await vscode.window.showInputBox({
+      prompt: 'Firebase MiniProgram access key for protected handoff',
+      password: true,
+      placeHolder: 'mpk_live_...',
+      ignoreFocusOut: true,
+      validateInput: (input) =>
+        input.trim() ? undefined : 'Access key is required.',
+    });
+    return value?.trim() || undefined;
+  }
+  const keyId = await promptKeyId('Firebase access key id for this host/partner', 'host-a');
+  if (!keyId) {
+    return undefined;
+  }
+  const expiresAtUtc = await promptOptionalFirebaseAccessKeyExpiry();
+  if (expiresAtUtc === undefined) {
+    return undefined;
+  }
+  const decoded = await createFirebaseAccessKey(
+    workspacePath,
+    envName,
+    keyId,
+    expiresAtUtc,
+    output,
+  );
+  if (!decoded) {
+    return undefined;
+  }
+  const accessKey = stringValue(decoded.accessKey);
+  if (!accessKey) {
+    vscode.window.showErrorMessage(
+      'Firebase access key was created, but the CLI did not return the one-time key.',
+    );
+    return undefined;
+  }
+  await vscode.env.clipboard.writeText(accessKey);
+  if (statusProvider) {
+    await refreshFirebaseAccessKeyStatus(workspacePath, envName, output, statusProvider);
+  }
+  vscode.window.showInformationMessage(
+    'Firebase access key created and copied to clipboard. It will also be embedded in the protected handoff package.',
+  );
+  return accessKey;
+}
+
+async function createFirebaseAccessKey(
+  workspacePath: string,
+  envName: string,
+  keyId: string,
+  expiresAtUtc: string | undefined,
+  output: vscode.OutputChannel,
+): Promise<Record<string, unknown> | undefined> {
+  const result = await runCliCapture(
+    'Publisher Backend Firebase Access Key Create',
+    buildPublisherBackendFirebaseAccessKeyCreateArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      keyId,
+      expiresAtUtc,
+      json: true,
+    }),
+    workspacePath,
+    output,
+  );
+  return result ? parseJsonObject(result.stdout) : undefined;
+}
+
+async function refreshFirebaseAccessKeyStatus(
+  workspacePath: string,
+  envName: string,
+  output: vscode.OutputChannel,
+  statusProvider: MiniProgramStatusTreeProvider,
+  options: { readonly showSuccessNotification?: boolean } = {},
+): Promise<void> {
+  const result = await runCliCapture(
+    'Publisher Backend Firebase Access Key List',
+    buildPublisherBackendFirebaseAccessKeyListArgs({
+      envName,
+      miniProgramRoot: workspacePath,
+      json: true,
+    }),
+    workspacePath,
+    output,
+    { allowNonZeroExit: true },
+  );
+  if (!result) {
+    return;
+  }
+  const decoded = parseJsonObject(result.stdout);
+  statusProvider.setFirebaseAccessKeyStatus(firebaseAccessKeyStatusFromCli(decoded));
+  if (options.showSuccessNotification) {
+    vscode.window.showInformationMessage('Firebase access keys refreshed.');
+  }
+}
+
+function firebaseAccessKeyStatusFromCli(
+  decoded: Record<string, unknown>,
+): FirebaseAccessKeyStatus {
+  const keyEntries = Array.isArray(decoded.keys) ? decoded.keys : [];
+  const activeKeyIds: string[] = [];
+  const inactiveKeyIds: string[] = [];
+  for (const entry of keyEntries) {
+    const key = recordValue(entry);
+    if (!key) {
+      continue;
+    }
+    const keyId = stringValue(key.keyId);
+    if (!keyId) {
+      continue;
+    }
+    const currentlyActive =
+      typeof key.currentlyActive === 'boolean'
+        ? key.currentlyActive
+        : key.active === true;
+    if (currentlyActive) {
+      activeKeyIds.push(keyId);
+    } else {
+      inactiveKeyIds.push(keyId);
+    }
+  }
+  return {
+    environmentName: stringValue(decoded.environmentName),
+    projectId: stringValue(decoded.projectId),
+    region: stringValue(decoded.region),
+    functionName: stringValue(decoded.functionName),
+    miniProgramId: stringValue(decoded.miniProgramId),
+    backendBaseUrl: stringValue(decoded.backendBaseUrl),
+    activeKeyCount: numberValue(decoded.activeKeyCount),
+    keyCount: numberValue(decoded.keyCount),
+    activeKeyIds,
+    inactiveKeyIds,
+  };
 }
 
 async function publisherBackendFirebaseAuthStatus(
@@ -2476,11 +2831,16 @@ async function publisherBackendFirebaseSmoke(
   if (!envName) {
     return;
   }
+  const accessKey = await promptOptionalFirebaseSmokeAccessKey();
+  if (accessKey === undefined) {
+    return;
+  }
   await runCliCommand(
     'Publisher Backend Firebase Smoke',
     buildPublisherBackendFirebaseSmokeArgs({
       envName,
       miniProgramRoot: workspacePath,
+      accessKey,
     }),
     workspacePath,
     output,
@@ -2499,6 +2859,10 @@ async function publisherBackendFirebaseSmokeWrite(
   }
   const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
   if (!envName) {
+    return;
+  }
+  const accessKey = await promptOptionalFirebaseSmokeAccessKey();
+  if (accessKey === undefined) {
     return;
   }
   const couponId = await vscode.window.showInputBox({
@@ -2535,6 +2899,7 @@ async function publisherBackendFirebaseSmokeWrite(
       includeWrite: true,
       writeCouponId: couponId.trim(),
       writeUserId: userId.trim(),
+      accessKey,
     }),
     workspacePath,
     output,
@@ -4720,6 +5085,52 @@ async function promptKeyId(
   return keyId?.trim() || undefined;
 }
 
+async function promptOptionalFirebaseAccessKeyExpiry(): Promise<string | undefined> {
+  const value = await vscode.window.showInputBox({
+    prompt: 'Optional Firebase access key expiry UTC',
+    placeHolder: '2026-12-31T23:59:59Z (leave blank for no expiry)',
+    ignoreFocusOut: true,
+    validateInput: validateOptionalIsoDateTime,
+  });
+  if (value === undefined) {
+    return undefined;
+  }
+  return value.trim();
+}
+
+async function promptOptionalFirebaseSmokeAccessKey(): Promise<string | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Run without access key',
+        description: 'Use for public Firebase publisher backends',
+        value: 'none' as const,
+      },
+      {
+        label: 'Enter Firebase access key',
+        description: 'Use for protected Firebase publisher backends',
+        value: 'protected' as const,
+      },
+    ],
+    { title: 'Firebase smoke access key', ignoreFocusOut: true },
+  );
+  if (!choice) {
+    return undefined;
+  }
+  if (choice.value === 'none') {
+    return '';
+  }
+  const value = await vscode.window.showInputBox({
+    prompt: 'Firebase MiniProgram access key for protected smoke',
+    password: true,
+    placeHolder: 'mpk_live_...',
+    ignoreFocusOut: true,
+    validateInput: (input) =>
+      input.trim() ? undefined : 'Access key is required.',
+  });
+  return value?.trim() || undefined;
+}
+
 async function promptHostEndpointInputs(): Promise<
   | {
       readonly appId: string;
@@ -5080,6 +5491,7 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
   readonly supportsFirebaseHandoff?: boolean;
+  readonly supportsFirebaseAccessKeys?: boolean;
   readonly supportsFirebaseAuthStatus?: boolean;
   readonly supportsFirebaseHostAuthDiagnostics?: boolean;
   readonly supportsFirebaseWriteSmoke?: boolean;
@@ -5136,6 +5548,7 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsFirebaseOperations ||
         capability.supportsFirebaseHostCommand ||
         capability.supportsFirebaseHandoff ||
+        capability.supportsFirebaseAccessKeys ||
         capability.supportsFirebaseAuthStatus ||
         capability.supportsFirebaseHostAuthDiagnostics ||
         capability.supportsFirebaseWriteSmoke ||
@@ -5263,6 +5676,9 @@ function capabilityFromCliCapabilitiesJson(
   const supportsFirebaseHandoff =
     hasFeature('publisherBackendFirebaseHandoff') ||
     hasCapability('publisher_backend.firebase.handoff');
+  const supportsFirebaseAccessKeys =
+    hasFeature('publisherBackendFirebaseAccessKeys') ||
+    hasCapability('publisher_backend.firebase.access_keys');
   const supportsFirebaseAuthStatus =
     hasFeature('publisherBackendFirebaseAuthStatus') ||
     hasCapability('publisher_backend.firebase.auth.status');
@@ -5305,6 +5721,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseHandoff
       ? undefined
       : 'Configured CLI capabilities do not include Firebase handoff.',
+    supportsFirebaseAccessKeys
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase access-key management.',
     supportsFirebaseAuthStatus
       ? undefined
       : 'Configured CLI capabilities do not include Firebase auth status.',
@@ -5330,6 +5749,7 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseOperations,
     supportsFirebaseHostCommand,
     supportsFirebaseHandoff,
+    supportsFirebaseAccessKeys,
     supportsFirebaseAuthStatus,
     supportsFirebaseHostAuthDiagnostics,
     supportsFirebaseWriteSmoke,
@@ -5548,6 +5968,39 @@ async function ensurePublisherBackendFirebaseHandoffCli039(
   return false;
 }
 
+async function ensurePublisherBackendFirebaseAccessKeysCli045(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseOperations &&
+    capability.supportsFirebaseAccessKeys &&
+    toolingVersionAtLeast(capability.toolingVersion, '0.3.45')
+  ) {
+    return true;
+  }
+  const versionDetail = capability.toolingVersion
+    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
+    : '';
+  const message =
+    'MiniProgram CLI 0.3.45 or newer is required for Firebase protected handoff access keys. ' +
+    'Run `dart pub global activate mini_program_tooling 0.3.45`.';
+  output.appendLine(message);
+  if (versionDetail) {
+    output.appendLine(versionDetail.trim());
+  }
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
 async function ensurePublisherBackendFirebaseAuthStatusCli044(
   workspacePath: string,
   output: vscode.OutputChannel,
@@ -5677,6 +6130,10 @@ function stringValue(value: unknown): string | undefined {
 
 function booleanValue(value: unknown): boolean | undefined {
   return typeof value === 'boolean' ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function recordValue(value: unknown): Record<string, unknown> | undefined {
@@ -6342,8 +6799,19 @@ function validateRedemptionLimit(value: string): string | undefined {
     : 'Limit must be between 1 and 500.';
 }
 
+function validateOptionalIsoDateTime(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed)
+    ? undefined
+    : 'Use an ISO-8601 date/time, for example 2026-12-31T23:59:59Z.';
+}
+
 function extractAccessKey(output: string): string | undefined {
-  return /Access key:\s*(mpk_live_[A-Za-z0-9._-]+)/.exec(output)?.[1];
+  return /Access key(?: \(shown once\))?:\s*([A-Za-z0-9._-]{24,128})/.exec(output)?.[1];
 }
 
 function validatePartnerPackageJson(decoded: unknown): string[] {

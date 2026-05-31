@@ -49,6 +49,10 @@ import {
   buildPublisherBackendFirebaseDataRedemptionsArgs,
   buildPublisherBackendFirebaseDataStatusArgs,
   buildPublisherBackendFirebaseAuthStatusArgs,
+  buildPublisherBackendFirebaseAccessKeyCreateArgs,
+  buildPublisherBackendFirebaseAccessKeyListArgs,
+  buildPublisherBackendFirebaseAccessKeyRevokeArgs,
+  buildPublisherBackendFirebaseAccessKeyRotateArgs,
   buildPublisherBackendFirebaseDeployArgs,
   buildPublisherBackendFirebaseDestroyArgs,
   buildPublisherBackendFirebaseHandoffArgs,
@@ -1095,14 +1099,103 @@ test('builds backend command arguments', () => {
     ],
   );
   assert.deepEqual(
-    buildPublisherBackendFirebaseSmokeArgs({
+    buildPublisherBackendFirebaseAccessKeyCreateArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      keyId: ' host-a ',
+      expiresAtUtc: ' 2026-12-31T23:59:59Z ',
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'access-key',
+      'create',
+      '--key-id',
+      'host-a',
+      '--expires-at-utc',
+      '2026-12-31T23:59:59Z',
+      '--json',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseAccessKeyListArgs({
       envName: 'my-firebase-prod',
       miniProgramRoot: 'D:/work/coupon_demo',
     }),
     [
       'publisher-backend',
       'firebase',
+      'access-key',
+      'list',
+      '--json',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseAccessKeyRevokeArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      keyId: 'host-a',
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'access-key',
+      'revoke',
+      '--key-id',
+      'host-a',
+      '--json',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseAccessKeyRotateArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      keyId: 'host-a',
+      newKeyId: ' host-a-next ',
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'access-key',
+      'rotate',
+      '--key-id',
+      'host-a',
+      '--new-key-id',
+      'host-a-next',
+      '--json',
+      '--env',
+      'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseSmokeArgs({
+      envName: 'my-firebase-prod',
+      miniProgramRoot: 'D:/work/coupon_demo',
+      accessKey: ' mpk_live_secret ',
+    }),
+    [
+      'publisher-backend',
+      'firebase',
       'smoke',
+      '--access-key',
+      'mpk_live_secret',
       '--env',
       'my-firebase-prod',
       '--mini-program-root',

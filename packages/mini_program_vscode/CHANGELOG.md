@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.35
+
+- Add Firebase publisher access-key commands backed by `mini_program_tooling`
+  0.3.45: create, list, revoke, and rotate.
+- Upgrade `MiniProgram: Create Firebase Host Handoff Package` protected mode so
+  publishers can create a new Firebase access key during handoff instead of
+  manually switching to the terminal.
+- Copy one-time Firebase access keys to the clipboard after create/rotate and
+  keep command-line output redacted.
+- Show Firebase access-key counts and key IDs in the sidebar without exposing
+  raw keys or hashes.
+- Let Firebase smoke commands include an optional access key for protected
+  publisher backends.
+
 ## 0.1.34
 
 - Add `MiniProgram: Firebase Publisher Auth Status`, backed by

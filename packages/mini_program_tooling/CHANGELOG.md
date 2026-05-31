@@ -1,4 +1,10 @@
 # Changelog
+## 0.3.46
+- fix protected host endpoint generation so `--access-key` plus
+  `--backend-base-url` writes
+  `MiniProgramBackendEndpoint(sendAccessKeyToBackend: true)`, allowing
+  publisher backend calls to send `x-mini-program-access-key`
+
 ## 0.3.45
 - add Firebase publisher backend access-key management:
   `publisher-backend firebase access-key create|list|revoke|rotate`

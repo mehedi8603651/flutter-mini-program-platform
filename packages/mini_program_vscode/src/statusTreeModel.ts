@@ -71,20 +71,36 @@ export interface FirebaseAuthStatus {
   readonly hostAuthIssues?: readonly string[];
 }
 
+export interface FirebaseAccessKeyStatus {
+  readonly environmentName?: string;
+  readonly projectId?: string;
+  readonly region?: string;
+  readonly functionName?: string;
+  readonly miniProgramId?: string;
+  readonly backendBaseUrl?: string;
+  readonly activeKeyCount?: number;
+  readonly keyCount?: number;
+  readonly activeKeyIds?: readonly string[];
+  readonly inactiveKeyIds?: readonly string[];
+}
+
 export function buildStatusTreeSections(
   report: WorkflowStatusReport | undefined,
   options: {
     readonly firebaseHostEndpoint?: FirebaseHostEndpointStatus;
     readonly firebaseAuthStatus?: FirebaseAuthStatus;
+    readonly firebaseAccessKeys?: FirebaseAccessKeyStatus;
   } = {},
 ): StatusTreeSection[] {
   const firebaseHostEndpoint = options.firebaseHostEndpoint;
   const firebaseAuthStatus = options.firebaseAuthStatus;
+  const firebaseAccessKeys = options.firebaseAccessKeys;
   if (!report) {
-    if (firebaseHostEndpoint || firebaseAuthStatus) {
+    if (firebaseHostEndpoint || firebaseAuthStatus || firebaseAccessKeys) {
       return compactSections([
         firebaseHostEndpoint ? firebaseHostEndpointSection(firebaseHostEndpoint) : undefined,
         firebaseAuthStatus ? firebaseAuthStatusSection(firebaseAuthStatus) : undefined,
+        firebaseAccessKeys ? firebaseAccessKeySection(firebaseAccessKeys) : undefined,
       ]);
     }
     return [
@@ -281,6 +297,9 @@ export function buildStatusTreeSections(
   if (firebaseAuthStatus) {
     sections.push(firebaseAuthStatusSection(firebaseAuthStatus));
   }
+  if (firebaseAccessKeys) {
+    sections.push(firebaseAccessKeySection(firebaseAccessKeys));
+  }
 
   sections.push({
     label: 'Next actions',
@@ -390,6 +409,29 @@ function firebaseAuthStatusSection(status: FirebaseAuthStatus): StatusTreeSectio
       row('Issues', (status.issues ?? []).join('; ')),
       row('Warnings', (status.warnings ?? []).join('; ')),
       row('Host auth issues', (status.hostAuthIssues ?? []).join('; ')),
+    ]),
+  };
+}
+
+function firebaseAccessKeySection(
+  status: FirebaseAccessKeyStatus,
+): StatusTreeSection {
+  const activeKeyIds = (status.activeKeyIds ?? []).join(', ');
+  const inactiveKeyIds = (status.inactiveKeyIds ?? []).join(', ');
+  return {
+    label: 'Firebase access keys',
+    icon: (status.activeKeyCount ?? 0) > 0 ? 'key' : 'info',
+    rows: compactRows([
+      row('Environment', status.environmentName ?? ''),
+      row('Project', status.projectId ?? ''),
+      row('Region', status.region ?? ''),
+      row('Function', status.functionName ?? ''),
+      row('Mini-program ID', status.miniProgramId ?? ''),
+      row('Backend URL', status.backendBaseUrl ?? ''),
+      row('Active keys', optionalNumber(status.activeKeyCount)),
+      row('Total keys', optionalNumber(status.keyCount)),
+      row('Active key IDs', activeKeyIds),
+      row('Inactive key IDs', inactiveKeyIds),
     ]),
   };
 }

@@ -8,19 +8,19 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.44 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.45 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
 Functions/Firestore publisher backend workflows, Firebase Firestore production
 data management, Firebase write smoke, Firebase host integration, Firebase
-host handoff packages, Firebase Hosting publish with browser CORS headers, and
-Firebase auth readiness diagnostics through
+host handoff packages, Firebase protected handoff access keys, Firebase Hosting
+publish with browser CORS headers, and Firebase auth readiness diagnostics through
 `miniprogram capabilities --json`.
 
-Use `mini_program_tooling` 0.3.44 or newer when testing real Firebase auth
-workflows so the extension can report backend auth route readiness and optional
-host SDK auth-controller readiness.
+Use `mini_program_tooling` 0.3.45 or newer when testing real Firebase auth and
+protected handoff workflows so the extension can report backend auth readiness,
+host SDK auth-controller readiness, and Firebase publisher access-key status.
 
 Install or upgrade the CLI first:
 
@@ -48,7 +48,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.34.vsix
+code --install-extension mini-program-tools-0.1.35.vsix
 ```
 
 ## Features
@@ -103,6 +103,10 @@ code --install-extension mini-program-tools-0.1.34.vsix
   - `MiniProgram: Publisher Backend Firebase Outputs`
   - `MiniProgram: Wire Firebase Publisher Backend Into Host App`
   - `MiniProgram: Create Firebase Host Handoff Package`
+  - `MiniProgram: Create Firebase Publisher Access Key`
+  - `MiniProgram: List Firebase Publisher Access Keys`
+  - `MiniProgram: Revoke Firebase Publisher Access Key`
+  - `MiniProgram: Rotate Firebase Publisher Access Key`
   - `MiniProgram: Smoke Test Firebase Publisher Backend`
   - `MiniProgram: Smoke Test Firebase Publisher Backend With Write`
   - `MiniProgram: Seed Firebase Publisher Firestore`
@@ -151,6 +155,14 @@ and deploy/dry-run mode. After publish it shows the Hosting delivery URL and can
 start `MiniProgram: Create Firebase Host Handoff Package` with that URL. The
 0.3.42 tooling requirement matters because generated Firebase Hosting configs
 include CORS headers required by browser-based host apps.
+
+For protected Firebase publisher backends, use
+`MiniProgram: Create Firebase Host Handoff Package` and choose **Protected
+endpoint**. The extension can create a new Firebase publisher access key through
+tooling 0.3.45, copy the one-time key to the clipboard, embed it into the
+`.partner.json` handoff package, and show active/revoked key counts in the
+sidebar. Host developers still import only the provider-neutral handoff package;
+they do not need Firebase login or project access.
 
 `MiniProgram: Embed Init` can also generate a public first-run demo endpoint.
 Choose **Add public demo endpoint** when prompted to create:
@@ -272,14 +284,14 @@ For DynamoDB scaffolds, use:
   The guarded mode relies on the CLI data-loss check and blocks when DynamoDB
   records exist. The explicit data-loss mode requires typing `delete data`.
 
-If the configured CLI is older than `mini_program_tooling` 0.3.44, the extension
+If the configured CLI is older than `mini_program_tooling` 0.3.45, the extension
 warns before running newer publisher backend actions or when quiet capability
-detection is unavailable. Version 0.1.34 calls `miniprogram capabilities --json`
+detection is unavailable. Version 0.1.35 calls `miniprogram capabilities --json`
 once per workspace and only falls back to older AWS `--help` probes for older
 CLI installs. Upgrade with:
 
 ```bash
-dart pub global activate mini_program_tooling 0.3.44
+dart pub global activate mini_program_tooling 0.3.45
 ```
 
 `MiniProgram: Copy AWS Backend Host Command` reads the deployed
@@ -327,6 +339,10 @@ After deploy, use:
   provider-neutral `.partner.json` package from the Firebase environment and a
   delivery URL. The host developer imports that package and does not need
   Firebase login or project access.
+- `MiniProgram: Create/List/Revoke/Rotate Firebase Publisher Access Key` to
+  manage protected Firebase handoff keys in Firestore. Raw keys are shown only
+  after create/rotate and copied to the clipboard; list/sidebar views show only
+  counts and key IDs.
 - `MiniProgram: Firebase Publisher Auth Status` to check publisher-owned email
   auth readiness. It reports whether the Firebase auth Web API key, generated
   auth routes, CORS `Authorization` header, Functions `.env`, Firebase Admin
@@ -342,8 +358,8 @@ newer. Firebase Firestore export/import/redemptions and guarded destroy require
 0.3.34 or newer. Firebase write smoke requires 0.3.35 or newer. Firebase host
 integration requires 0.3.38 or newer. Firebase handoff packages require 0.3.39
 or newer. Firebase Hosting publish requires 0.3.42 or newer for browser CORS
-headers. Firebase auth status diagnostics require 0.3.44 or newer. The
-extension uses
+headers. Firebase auth status diagnostics require 0.3.44 or newer. Firebase
+protected handoff access-key management requires 0.3.45 or newer. The extension uses
 `miniprogram capabilities --json` once per workspace to detect support and warns
 with an upgrade command if the configured CLI is too old.
 
@@ -368,7 +384,9 @@ For Firebase publisher backends, run
 `MiniProgram: Create Firebase Host Handoff Package` instead of manually entering
 the backend URL. It reads the Firebase Functions output from the selected env,
 adds the publisher backend URL to the package, and keeps Firebase credentials
-with the publisher.
+with the publisher. In protected mode, choose **Create new Firebase access key**
+to create a one-time key and embed it in the handoff package, or choose
+**Paste existing Firebase access key** when rotating or reusing a partner key.
 
 `MiniProgram: Add Host Endpoint` also supports both modes. Use protected mode
 for AWS/GCP/backend delivery that requires a MiniProgram access key. Use

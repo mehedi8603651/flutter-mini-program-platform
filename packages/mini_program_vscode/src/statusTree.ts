@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import {
+  FirebaseAccessKeyStatus,
   FirebaseAuthStatus,
   FirebaseHostEndpointStatus,
   StatusTreeSection,
@@ -32,6 +33,7 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
   private report: WorkflowStatusReport | undefined;
   private firebaseHostEndpoint: FirebaseHostEndpointStatus | undefined;
   private firebaseAuthStatus: FirebaseAuthStatus | undefined;
+  private firebaseAccessKeys: FirebaseAccessKeyStatus | undefined;
 
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
@@ -41,6 +43,7 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
     this.sections = buildStatusTreeSections(report, {
       firebaseHostEndpoint: this.firebaseHostEndpoint,
       firebaseAuthStatus: this.firebaseAuthStatus,
+      firebaseAccessKeys: this.firebaseAccessKeys,
     });
     this.changeEmitter.fire(undefined);
   }
@@ -51,6 +54,7 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
     this.sections = buildStatusTreeSections(this.report, {
       firebaseHostEndpoint: this.firebaseHostEndpoint,
       firebaseAuthStatus: this.firebaseAuthStatus,
+      firebaseAccessKeys: this.firebaseAccessKeys,
     });
     this.changeEmitter.fire(undefined);
   }
@@ -61,6 +65,18 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
     this.sections = buildStatusTreeSections(this.report, {
       firebaseHostEndpoint: this.firebaseHostEndpoint,
       firebaseAuthStatus: this.firebaseAuthStatus,
+      firebaseAccessKeys: this.firebaseAccessKeys,
+    });
+    this.changeEmitter.fire(undefined);
+  }
+
+  setFirebaseAccessKeyStatus(status: FirebaseAccessKeyStatus): void {
+    this.errorMessage = undefined;
+    this.firebaseAccessKeys = status;
+    this.sections = buildStatusTreeSections(this.report, {
+      firebaseHostEndpoint: this.firebaseHostEndpoint,
+      firebaseAuthStatus: this.firebaseAuthStatus,
+      firebaseAccessKeys: this.firebaseAccessKeys,
     });
     this.changeEmitter.fire(undefined);
   }

@@ -322,6 +322,7 @@ export interface PublisherBackendFirebaseSmokeArgsOptions
   readonly includeWrite?: boolean;
   readonly writeCouponId?: string;
   readonly writeUserId?: string;
+  readonly accessKey?: string;
 }
 
 export interface PublisherBackendFirebaseSeedArgsOptions
@@ -361,6 +362,32 @@ export interface PublisherBackendFirebaseDestroyArgsOptions
   extends PublisherBackendFirebaseBaseArgsOptions {
   readonly yes?: boolean;
   readonly confirmDataLoss?: boolean;
+}
+
+export interface PublisherBackendFirebaseAccessKeyCreateArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly keyId: string;
+  readonly expiresAtUtc?: string;
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseAccessKeyListArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseAccessKeyRevokeArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly keyId: string;
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseAccessKeyRotateArgsOptions
+  extends PublisherBackendFirebaseBaseArgsOptions {
+  readonly keyId: string;
+  readonly newKeyId?: string;
+  readonly expiresAtUtc?: string;
+  readonly json?: boolean;
 }
 
 export interface AccessKeyCreateArgsOptions {
@@ -1037,6 +1064,9 @@ export function buildPublisherBackendFirebaseSmokeArgs(
       args.push('--write-user-id', options.writeUserId.trim());
     }
   }
+  if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
   return withPublisherBackendFirebaseOptions(args, options);
 }
 
@@ -1121,6 +1151,76 @@ export function buildPublisherBackendFirebaseDestroyArgs(
   }
   if (options.confirmDataLoss) {
     args.push('--confirm-data-loss');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseAccessKeyCreateArgs(
+  options: PublisherBackendFirebaseAccessKeyCreateArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'firebase',
+    'access-key',
+    'create',
+    '--key-id',
+    options.keyId.trim(),
+  ];
+  if (options.expiresAtUtc?.trim()) {
+    args.push('--expires-at-utc', options.expiresAtUtc.trim());
+  }
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseAccessKeyListArgs(
+  options: PublisherBackendFirebaseAccessKeyListArgsOptions,
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'access-key', 'list'];
+  if (options.json ?? true) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseAccessKeyRevokeArgs(
+  options: PublisherBackendFirebaseAccessKeyRevokeArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'firebase',
+    'access-key',
+    'revoke',
+    '--key-id',
+    options.keyId.trim(),
+  ];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseAccessKeyRotateArgs(
+  options: PublisherBackendFirebaseAccessKeyRotateArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'firebase',
+    'access-key',
+    'rotate',
+    '--key-id',
+    options.keyId.trim(),
+  ];
+  if (options.newKeyId?.trim()) {
+    args.push('--new-key-id', options.newKeyId.trim());
+  }
+  if (options.expiresAtUtc?.trim()) {
+    args.push('--expires-at-utc', options.expiresAtUtc.trim());
+  }
+  if (options.json ?? false) {
+    args.push('--json');
   }
   return withPublisherBackendFirebaseOptions(args, options);
 }

@@ -477,6 +477,7 @@ class MiniProgramHostController {
             ..writeln(
               '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
             )
+            ..writeln('        sendAccessKeyToBackend: true,')
             ..writeln('      ),');
         }
         buffer.writeln('    ),');

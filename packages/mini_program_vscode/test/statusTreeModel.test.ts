@@ -298,3 +298,52 @@ test('does not render raw access-key secrets', () => {
   assert.doesNotMatch(text, /sha256_should_not_render/);
   assert.match(text, /Active access keys: 1/);
 });
+
+test('renders Firebase access-key status without secrets', () => {
+  const report: WorkflowStatusReport = {
+    schemaVersion: 1,
+    command: 'workflow status',
+    workspace: { type: 'mini_program', path: 'D:/coupon' },
+    ready: true,
+    severity: 'ok',
+    miniProgram: {
+      detected: true,
+      appId: 'coupon_demo',
+      version: '1.0.0',
+      build: { exists: true, screenCount: 1 },
+      validation: { status: 'ok' },
+      partnerPackages: [],
+    },
+    environment: { configured: true, provider: 'firebase' },
+    backend: { configured: false },
+    remote: { checked: false },
+    nextActions: [],
+  };
+
+  const text = flattenStatusSections(
+    buildStatusTreeSections(report, {
+      firebaseAccessKeys: {
+        environmentName: 'my-firebase-prod',
+        projectId: 'miniprogram-backend-test',
+        region: 'us-central1',
+        functionName: 'publisherBackend',
+        miniProgramId: 'coupon_demo',
+        backendBaseUrl: 'https://firebase.example.com/publisherBackend/',
+        activeKeyCount: 1,
+        keyCount: 2,
+        activeKeyIds: ['host-a'],
+        inactiveKeyIds: ['old-host'],
+      },
+    }),
+  );
+
+  assert.match(text, /Firebase access keys/);
+  assert.match(text, /Environment: my-firebase-prod/);
+  assert.match(text, /Mini-program ID: coupon_demo/);
+  assert.match(text, /Active keys: 1/);
+  assert.match(text, /Total keys: 2/);
+  assert.match(text, /Active key IDs: host-a/);
+  assert.match(text, /Inactive key IDs: old-host/);
+  assert.doesNotMatch(text, /mpk_live_/);
+  assert.doesNotMatch(text, /sha256/);
+});
