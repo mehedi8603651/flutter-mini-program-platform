@@ -5,6 +5,7 @@ repository: https://github.com/mehedi8603651/flutter-mini-program-platform
 
 false_secrets:
   - /lib/src/publisher_backend_starter.dart
+  - /lib/src/publisher_backend/models.dart
 
 executables:
   miniprogram: miniprogram
