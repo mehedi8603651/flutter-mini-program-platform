@@ -53,7 +53,7 @@ Already shipped:
 - AWS API Gateway + Lambda cloud backend deployment
 - Firebase Functions + Firestore publisher backend scaffold, deploy, smoke,
   seed/data status, export/import/redemptions, guarded destroy, handoff
-  packages, and host wiring
+  packages, paged backend list routes, and host wiring
 - Firebase Hosting static delivery publish for Firebase-owned public
   mini-program artifacts
 - host-app cloud binding and `host run`
@@ -355,7 +355,8 @@ Publisher workspace:
    backend/firebase_functions/functions/data/session.json
    ```
 
-   Use `miniProgramBackendBuilder(...)` for publisher backend reads and
+   Use `miniProgramBackendBuilder(...)` for single publisher backend reads,
+   `miniProgramPagedBackendBuilder(...)` for large lists with Load more, and
    `miniProgramAuthBuilder(...)` with `miniProgramAuth` actions for email
    sign-in/sign-up/sign-out UI. Do not edit `stac/.build` directly.
 

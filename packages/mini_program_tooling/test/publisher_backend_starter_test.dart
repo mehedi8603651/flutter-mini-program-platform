@@ -313,6 +313,8 @@ void main() {
         expect(authService, contains('miniProgramSessionId'));
         expect(authService, contains('hashToken'));
         expect(router, contains('access-control-allow-origin'));
+        expect(router, contains('GET /coupons/page'));
+        expect(router, contains("routePath === '/coupons/page'"));
         expect(router, contains('POST /auth/email/sign-up'));
         expect(router, contains('authorization'));
         expect(
@@ -393,9 +395,12 @@ void main() {
 
       expect(helper, contains('miniProgramShowEmailAuthAction'));
       expect(helper, contains('miniProgramAuthBuilder'));
+      expect(helper, contains('miniProgramPagedBackendBuilder'));
+      expect(helper, contains('miniProgramLoadMore'));
       expect(screen, contains('miniProgramAuthBuilder'));
       expect(screen, contains("endpoint: 'auth/session'"));
-      expect(screen, contains("endpoint: 'coupons/list'"));
+      expect(screen, contains("endpoint: 'coupons/page'"));
+      expect(screen, contains('Load more coupons'));
       expect(homeData['heroImageUrl'], contains('picsum.photos'));
 
       final second = await starter.firebaseStarterUi(
@@ -586,6 +591,7 @@ async function call(method, path, body, headers = {}) {
 const health = await call('GET', '/health');
 const home = await call('GET', '/home/bootstrap');
 const couponsList = await call('GET', '/coupons/list');
+const couponsPage = await call('GET', '/coupons/page?limit=1');
 const missingSession = await call('GET', '/auth/session');
 const session = await call('GET', '/auth/session', null, { authorization: 'Bearer valid-token' });
 const signUp = await call('POST', '/auth/email/sign-up', { email: 'user@example.com', password: 'secret123' });
@@ -601,6 +607,7 @@ console.log(JSON.stringify({
   health,
   home,
   couponsList,
+  couponsPage,
   missingSession,
   session,
   signUp,
@@ -620,6 +627,8 @@ console.log(JSON.stringify({
         expect(decoded['health']['statusCode'], 200);
         expect(decoded['home']['body']['title'], 'Firebase home');
         expect(decoded['couponsList']['body']['coupons'], hasLength(1));
+        expect(decoded['couponsPage']['body']['items'], hasLength(1));
+        expect(decoded['couponsPage']['body']['hasMore'], isFalse);
         expect(decoded['missingSession']['statusCode'], 401);
         expect(decoded['session']['body']['authenticated'], isTrue);
         expect(decoded['signUp']['body']['refreshToken'], isNotEmpty);
@@ -927,14 +936,16 @@ console.log(JSON.stringify({
         final result = await _runNodeScript(tempDir, '''
 import { handler } from '$handlerUri';
 
-const event = (method, path, body) => ({
+const event = (method, path, body, queryStringParameters = undefined) => ({
   rawPath: `/prod\${path}`,
   requestContext: { stage: 'prod', http: { method } },
+  queryStringParameters,
   body: body == null ? undefined : JSON.stringify(body),
 });
 
 const home = await handler(event('GET', '/home/bootstrap'));
 const coupons = await handler(event('GET', '/coupons/list'));
+const couponPage = await handler(event('GET', '/coupons/page', null, { limit: '1' }));
 const session = await handler(event('GET', '/auth/session'));
 const redeemed = await handler(event('POST', '/coupon/redeem', { couponId: 'coupon-10' }));
 console.log(JSON.stringify({
@@ -942,6 +953,8 @@ console.log(JSON.stringify({
   homeTitle: JSON.parse(home.body).title,
   couponsStatus: coupons.statusCode,
   couponCount: JSON.parse(coupons.body).coupons.length,
+  couponPageStatus: couponPage.statusCode,
+  couponPage: JSON.parse(couponPage.body),
   sessionStatus: session.statusCode,
   redeemStatus: redeemed.statusCode,
   redeemBody: JSON.parse(redeemed.body),
@@ -954,6 +967,10 @@ console.log(JSON.stringify({
         expect(decoded['homeStatus'], 200);
         expect(decoded['homeTitle'], contains('Coupon App'));
         expect(decoded['couponCount'], 2);
+        expect(decoded['couponPageStatus'], 200);
+        expect(decoded['couponPage']['items'], hasLength(1));
+        expect(decoded['couponPage']['hasMore'], isTrue);
+        expect(decoded['couponPage']['nextCursor'], 'coupon-10');
         expect(decoded['sessionStatus'], 200);
         expect(decoded['redeemStatus'], 200);
         expect(decoded['redeemBody']['status'], 'redeemed');
@@ -990,23 +1007,31 @@ import { handler, setPublisherBackendStoreForTesting } from '$handlerUri';
 
 setPublisherBackendStoreForTesting({
   homeBootstrap: async () => ({ title: 'Dynamo home' }),
-  couponsList: async () => ({ coupons: [{ id: 'coupon-10', title: 'Ten' }] }),
+  couponsList: async () => ({
+    coupons: [
+      { id: 'coupon-10', title: 'Ten' },
+      { id: 'coupon-20', title: 'Twenty' },
+    ],
+  }),
   authSession: async () => ({ authenticated: true }),
   redeemCoupon: async (body) => body?.couponId
     ? { statusCode: 200, body: { status: 'redeemed', couponId: body.couponId } }
     : { statusCode: 400, body: { errorCode: 'missing_coupon_id' } },
 });
 
-const event = (method, path, body) => ({
+const event = (method, path, body, queryStringParameters = undefined) => ({
   rawPath: `/prod\${path}`,
   requestContext: { stage: 'prod', http: { method } },
+  queryStringParameters,
   body: body == null ? undefined : JSON.stringify(body),
 });
 const home = await handler(event('GET', '/home/bootstrap'));
+const page = await handler(event('GET', '/coupons/page', null, { limit: '1', cursor: 'coupon-10' }));
 const redeemed = await handler(event('POST', '/coupon/redeem', { couponId: 'coupon-10' }));
 const missing = await handler(event('POST', '/coupon/redeem', {}));
 console.log(JSON.stringify({
   home: JSON.parse(home.body),
+  page: JSON.parse(page.body),
   redeemedStatus: redeemed.statusCode,
   redeemed: JSON.parse(redeemed.body),
   missingStatus: missing.statusCode,
@@ -1017,6 +1042,9 @@ console.log(JSON.stringify({
         final decoded =
             jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
         expect(decoded['home']['title'], 'Dynamo home');
+        expect(decoded['page']['items'], hasLength(1));
+        expect(decoded['page']['items'][0]['id'], 'coupon-20');
+        expect(decoded['page']['hasMore'], isFalse);
         expect(decoded['redeemedStatus'], 200);
         expect(decoded['redeemed']['couponId'], 'coupon-10');
         expect(decoded['missingStatus'], 400);
@@ -3246,6 +3274,15 @@ console.log(JSON.stringify({
       );
       expect(coupons.statusCode, 200);
       expect(coupons.body, contains('imageUrl'));
+      final couponPage = await http.get(
+        Uri.parse('http://127.0.0.1:$runningPort/coupons/page?limit=1'),
+      );
+      expect(couponPage.statusCode, 200);
+      final couponPageJson =
+          jsonDecode(couponPage.body) as Map<String, dynamic>;
+      expect(couponPageJson['items'], hasLength(1));
+      expect(couponPageJson['hasMore'], isTrue);
+      expect(couponPageJson['nextCursor'], 'coupon-10');
       final options = await http.Request(
         'OPTIONS',
         Uri.parse('http://127.0.0.1:$runningPort/coupons/list'),

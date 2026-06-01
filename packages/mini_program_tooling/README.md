@@ -656,6 +656,7 @@ The mock backend serves:
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
+- `GET /coupons/page?limit=20&cursor=<couponId>`
 - `GET /auth/session`
 - `POST /coupon/redeem`
 - `OPTIONS *` for browser CORS
@@ -727,6 +728,7 @@ and a least-scope DynamoDB policy for the generated function.
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
+- `GET /coupons/page?limit=20&cursor=<couponId>`
 - `GET /auth/session`
 - `POST /coupon/redeem`
 
@@ -822,6 +824,7 @@ the same public publisher backend routes as the mock and AWS starters:
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
+- `GET /coupons/page?limit=20&cursor=<couponId>`
 - `GET /auth/session` (protected with `Authorization: Bearer <idToken>`)
 - `POST /auth/email/sign-up`
 - `POST /auth/email/sign-in`
@@ -841,7 +844,10 @@ For the generated Firebase starter, edit source files in two places:
 
 - UI and bindings live in `stac/screens/<appId>_home.dart` and other
   `stac/screens/*.dart` files. Use `miniProgramBackendBuilder(...)` for
-  `home/bootstrap`, `coupons/list`, and other publisher backend reads. Use
+  `home/bootstrap` and other single-response reads. Use
+  `miniProgramPagedBackendBuilder(...)` plus `miniProgramLoadMore(...)` for
+  large lists through `coupons/page`, which returns
+  `{ "items": [], "nextCursor": null, "hasMore": false }`. Use
   `miniProgramAuthBuilder(...)` plus `miniProgramAuth` actions for
   publisher-owned email/password sign-in, sign-up, refresh, and sign-out.
 - Seed data lives in

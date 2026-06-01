@@ -24,7 +24,7 @@ test('package manifest exposes cloud publisher backend commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.1.38');
+  assert.equal(manifest.version, '0.1.39');
   for (const commandId of [
     'miniProgramTools.publisherBackendAwsOutputs',
     'miniProgramTools.publisherBackendAwsSmoke',

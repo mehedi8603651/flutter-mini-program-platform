@@ -1,4 +1,13 @@
 # Changelog
+## 0.3.49
+- generate provider-neutral paged coupon routes for Firebase Functions,
+  AWS Lambda, and the local mock publisher backend at `GET /coupons/page`
+- update Firebase production starter UI generation to demonstrate
+  `miniProgramPagedBackendBuilder` and `miniProgramLoadMore`
+- expose Firebase/AWS paged-route capabilities through
+  `miniprogram capabilities --json`
+- document the generated paged-list contract for large backend datasets
+
 ## 0.3.48
 - add Firebase production starter UI generation with
   `publisher-backend firebase starter-ui`

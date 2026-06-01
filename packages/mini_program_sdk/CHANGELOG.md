@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.7
+
+- add `miniProgramPagedBackendBuilder` for lazy publisher backend lists that
+  render item templates and keep loaded pages in SDK state
+- add `miniProgramLoadMore` so mini-program UI can append the next backend page
+  by request id
+- expose paged backend bindings such as `items`, `itemCount`, `pageCount`,
+  `hasMore`, `nextCursor`, and `loadingMore` without changing existing
+  `miniProgramBackendBuilder` behavior
+
 ## 0.3.6
 
 - add publisher-owned email/password auth runtime APIs with per-mini-program

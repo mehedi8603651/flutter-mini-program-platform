@@ -50,6 +50,11 @@ test('renders mini-program and host status rows', () => {
       publisherBackendStarter: {
         detected: true,
         template: 'aws-lambda',
+        expectedRoutes: [
+          'GET /health',
+          'GET /coupons/list',
+          'GET /coupons/page',
+        ],
         aws: {
           detected: true,
           environmentName: 'my-aws-prod',
@@ -98,6 +103,8 @@ test('renders mini-program and host status rows', () => {
   const text = flattenStatusSections(buildStatusTreeSections(report));
   assert.match(text, /Host app/);
   assert.match(text, /Backend usage: query\/state/);
+  assert.match(text, /Publisher routes: GET \/health, GET \/coupons\/list, GET \/coupons\/page/);
+  assert.match(text, /Paged route: yes/);
   assert.match(text, /AWS env: my-aws-prod/);
   assert.match(text, /AWS stack: publisher-stack/);
   assert.match(text, /AWS region: ap-south-1/);

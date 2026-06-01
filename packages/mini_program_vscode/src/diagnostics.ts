@@ -57,11 +57,13 @@ export interface BuildDiagnosticsOptions {
     readonly checked: boolean;
     readonly supportsFirebaseHostingPublish?: boolean;
     readonly supportsWriteSmoke: boolean;
+    readonly supportsAwsPagedRoutes?: boolean;
     readonly supportsDataManagement?: boolean;
     readonly supportsFirebaseOperations?: boolean;
     readonly supportsFirebaseHostCommand?: boolean;
     readonly supportsFirebaseHandoff?: boolean;
     readonly supportsFirebaseStarterUi?: boolean;
+    readonly supportsFirebasePagedRoutes?: boolean;
     readonly supportsFirebaseAuthStatus?: boolean;
     readonly supportsFirebaseHostAuthDiagnostics?: boolean;
     readonly supportsFirebaseWriteSmoke?: boolean;
@@ -827,10 +829,12 @@ function buildCliCapabilityCheck(capability: {
   readonly supportsWriteSmoke: boolean;
   readonly supportsFirebaseHostingPublish?: boolean;
   readonly supportsDataManagement?: boolean;
+  readonly supportsAwsPagedRoutes?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
   readonly supportsFirebaseHandoff?: boolean;
   readonly supportsFirebaseStarterUi?: boolean;
+  readonly supportsFirebasePagedRoutes?: boolean;
   readonly supportsFirebaseAuthStatus?: boolean;
   readonly supportsFirebaseHostAuthDiagnostics?: boolean;
   readonly supportsFirebaseWriteSmoke?: boolean;
@@ -841,6 +845,7 @@ function buildCliCapabilityCheck(capability: {
   readonly detail?: string;
 }): DiagnosticCheck {
   const supportsDataManagement = capability.supportsDataManagement ?? false;
+  const supportsAwsPagedRoutes = capability.supportsAwsPagedRoutes ?? false;
   const supportsFirebaseHostingPublish =
     capability.supportsFirebaseHostingPublish ?? false;
   const supportsFirebaseHostingCors =
@@ -851,6 +856,7 @@ function buildCliCapabilityCheck(capability: {
   const supportsFirebaseHostCommand = capability.supportsFirebaseHostCommand ?? false;
   const supportsFirebaseHandoff = capability.supportsFirebaseHandoff ?? false;
   const supportsFirebaseStarterUi = capability.supportsFirebaseStarterUi ?? false;
+  const supportsFirebasePagedRoutes = capability.supportsFirebasePagedRoutes ?? false;
   const supportsFirebaseAuthStatus =
     capability.supportsFirebaseAuthStatus ?? false;
   const supportsFirebaseHostAuthDiagnostics =
@@ -863,10 +869,12 @@ function buildCliCapabilityCheck(capability: {
   const supportsExpectedCli =
     capability.supportsWriteSmoke &&
     supportsDataManagement &&
+    supportsAwsPagedRoutes &&
     supportsFirebaseOperations &&
     supportsFirebaseHostCommand &&
     supportsFirebaseHandoff &&
     supportsFirebaseStarterUi &&
+    supportsFirebasePagedRoutes &&
     supportsFirebaseAuthStatus &&
     supportsFirebaseHostAuthDiagnostics &&
     supportsFirebaseWriteSmoke &&
@@ -882,13 +890,15 @@ function buildCliCapabilityCheck(capability: {
     'CLI publisher backend commands',
     supportsExpectedCli ? 'ok' : 'warning',
     supportsExpectedCli
-      ? `Configured CLI supports AWS DynamoDB, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery.${versionSuffix}`
+      ? `Configured CLI supports AWS DynamoDB, AWS/Firebase paged routes, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery.${versionSuffix}`
       : capability.supportsWriteSmoke &&
           supportsDataManagement &&
+          supportsAwsPagedRoutes &&
           supportsFirebaseOperations &&
           supportsFirebaseHostCommand &&
           supportsFirebaseHandoff &&
           supportsFirebaseStarterUi &&
+          supportsFirebasePagedRoutes &&
           supportsFirebaseAuthStatus &&
           supportsFirebaseHostAuthDiagnostics &&
           supportsFirebaseWriteSmoke &&
@@ -898,11 +908,11 @@ function buildCliCapabilityCheck(capability: {
         ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
         : supportsFirebaseHostingPublish && !supportsFirebaseHostingCors
           ? 'Configured CLI supports Firebase Hosting publish but lacks the 0.3.42 CORS/version metadata fix.'
-        : 'Configured CLI is missing mini_program_tooling 0.3.48 Firebase starter UI support.',
+        : 'Configured CLI is missing mini_program_tooling 0.3.49 paged backend starter support.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Run `dart pub global activate mini_program_tooling 0.3.48` or update miniProgram.cliPath.',
+      : 'Run `dart pub global activate mini_program_tooling 0.3.49` or update miniProgram.cliPath.',
   );
 }
 

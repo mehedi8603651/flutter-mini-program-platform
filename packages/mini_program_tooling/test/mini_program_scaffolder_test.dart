@@ -226,10 +226,22 @@ void main() {
         );
         expect(helperSource, contains('StacWidget miniProgramBackendBuilder('));
         expect(helperSource, contains("'type': 'miniProgramBackendBuilder'"));
+        expect(
+          helperSource,
+          contains('StacWidget miniProgramPagedBackendBuilder('),
+        );
+        expect(
+          helperSource,
+          contains("'type': 'miniProgramPagedBackendBuilder'"),
+        );
+        expect(helperSource, contains('StacAction miniProgramLoadMore('));
+        expect(helperSource, contains("'actionType': 'miniProgramLoadMore'"));
         expect(helperSource, contains('itemTemplate.toJson()'));
         expect(helperSource, contains("'cacheTtlSeconds'"));
         expect(readmeSource, contains('## Publisher backend helpers'));
         expect(readmeSource, contains('miniProgramBackendBuilder('));
+        expect(readmeSource, contains('miniProgramPagedBackendBuilder('));
+        expect(readmeSource, contains('GET /coupons/page'));
         expect(
           readmeSource,
           contains('{{backend.coupon_center-home.data.title}}'),
@@ -430,7 +442,9 @@ void main() {
 
       expect(screenSource, contains('miniProgramBackendBuilder('));
       expect(screenSource, contains("endpoint: 'home/bootstrap'"));
-      expect(screenSource, contains("itemsPath: 'data.coupons'"));
+      expect(screenSource, contains('miniProgramPagedBackendBuilder('));
+      expect(screenSource, contains("endpoint: 'coupons/page'"));
+      expect(screenSource, contains('miniProgramLoadMore('));
       expect(screenSource, contains('{{item.imageUrl}}'));
       expect(screenSource, contains('miniProgramBackendQueryAction('));
       expect(readmeSource, contains('backend/mock/'));

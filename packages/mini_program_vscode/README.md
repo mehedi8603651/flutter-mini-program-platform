@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.48 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.49 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
@@ -16,16 +16,18 @@ Functions/Firestore publisher backend workflows, Firebase Firestore production
 data management, Firebase write smoke, Firebase host integration, Firebase
 host handoff packages, Firebase protected handoff access keys, Firebase Hosting
 publish with browser CORS headers, Firebase auth readiness diagnostics, and
-Firebase production starter UI generation through `miniprogram capabilities --json`.
+Firebase production starter UI generation with paged backend routes through
+`miniprogram capabilities --json`.
 
-Use `mini_program_tooling` 0.3.47 or newer when testing real Firebase auth and
+Use `mini_program_tooling` 0.3.49 or newer when testing real Firebase auth and
 protected handoff workflows so the extension can report backend auth readiness,
 host SDK auth-controller readiness, Firebase publisher access-key status, and
 generate protected host endpoints that forward access keys to publisher backend
 routes. Tooling 0.3.47 also makes Firebase smoke tests more tolerant of
 transient VPN/TLS connection drops and generates `mini_program_sdk: ^0.3.6` for
-new host apps. Tooling 0.3.48 adds Firebase starter UI generation for auth,
-Firestore data, remote images, and protected-session checks.
+new host apps. Tooling 0.3.49 adds Firebase and AWS paged backend routes for
+large coupon/data lists, with starter UI examples that use
+`miniProgramPagedBackendBuilder` and `miniProgramLoadMore`.
 
 Install or upgrade the CLI first:
 
@@ -58,7 +60,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.38.vsix
+code --install-extension mini-program-tools-0.1.39.vsix
 ```
 
 ## Features
@@ -190,7 +192,8 @@ Publisher workspace:
    MiniProgram`. Choose **Normal mini-program**.
 2. Run `MiniProgram: Setup Publisher Backend` and choose **Firebase Functions +
    Firestore**. When prompted, choose **Add Firebase starter UI** to generate
-   the matching frontend auth/data/image starter and backend seed JSON.
+   the matching frontend auth/data/image starter, paged coupon list, and
+   backend seed JSON.
 3. Run `MiniProgram: Configure Firebase Environment`. Enter the Firebase
    project id, region, function name, and Firebase Web API key when
    email/password auth should be enabled.

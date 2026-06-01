@@ -45,9 +45,9 @@ code --install-extension MiniProgramTools.mini-program-tools
 
 Recommended minimum versions:
 
-- `mini_program_tooling` 0.3.48 or newer
+- `mini_program_tooling` 0.3.49 or newer
 - `mini_program_vscode` 0.1.38 or newer
-- `mini_program_sdk` 0.3.6 or newer in host apps
+- `mini_program_sdk` 0.3.7 or newer in host apps
 
 Check the CLI:
 
@@ -56,6 +56,8 @@ miniprogram capabilities --json
 ```
 
 Confirm it reports `publisher_backend.firebase.starter_ui`.
+For paged backend starter routes, also confirm it reports
+`publisher_backend.firebase.paged_routes`.
 
 ## Firebase Console Setup
 
@@ -187,6 +189,8 @@ backend/firebase_functions/functions/data/session.json
 Use the generated starter as the production-shaped example:
 
 - `miniProgramBackendBuilder(...)` loads publisher backend data.
+- `miniProgramPagedBackendBuilder(...)` loads large backend lists from
+  `coupons/page` and uses `miniProgramLoadMore(...)` for manual paging.
 - `miniProgramAuthBuilder(...)` renders signed-out, signed-in, loading, and
   error states.
 - `miniProgramAuth` actions open the SDK email/password sheet, restore cached
@@ -565,4 +569,3 @@ data boundary is the Firebase Functions publisher backend, enforced by
 MiniProgram access keys and user auth. For production, set Firebase budget
 alerts and consider custom rate limiting or Firebase/App Check style hardening
 for high-risk public endpoints.
-

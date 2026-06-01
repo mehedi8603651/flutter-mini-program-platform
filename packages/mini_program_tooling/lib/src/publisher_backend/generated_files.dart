@@ -182,6 +182,7 @@ Generated routes:
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
+- `GET /coupons/page?limit=20&cursor=<couponId>`
 - `GET /auth/session` (requires `Authorization: Bearer <idToken>`)
 - `POST /auth/email/sign-up`
 - `POST /auth/email/sign-in`
@@ -283,6 +284,7 @@ export const expectedRoutes = [
   'GET /health',
   'GET /home/bootstrap',
   'GET /coupons/list',
+  'GET /coupons/page',
   'GET /auth/session',
   'POST /auth/email/sign-up',
   'POST /auth/email/sign-in',
@@ -344,6 +346,14 @@ export function createPublisherBackendHandler({
       }
       if (method === 'GET' && routePath === '/coupons/list') {
         return writeJson(response, 200, await store.couponsList());
+      }
+      if (method === 'GET' && routePath === '/coupons/page') {
+        const options = pagingOptions(request);
+        if (typeof store.couponsPage === 'function') {
+          return writeJson(response, 200, await store.couponsPage(options));
+        }
+        const body = await store.couponsList();
+        return writeJson(response, 200, pageItems(body?.coupons, options));
       }
       if (method === 'GET' && routePath === '/auth/session') {
         const result = await requireAuthService(authService).currentSession({
@@ -584,6 +594,64 @@ function stringValue(value) {
     return '';
   }
   return String(value).trim();
+}
+
+function pagingOptions(request) {
+  return {
+    limit: boundedLimit(queryValue(request, 'limit'), 20, 100),
+    cursor: queryValue(request, 'cursor'),
+  };
+}
+
+function pageItems(items, { limit, cursor }) {
+  const source = Array.isArray(items) ? items : [];
+  const startIndex = cursor ? cursorStartIndex(source, cursor) : 0;
+  const page = source.slice(startIndex, startIndex + limit);
+  const nextIndex = startIndex + page.length;
+  const hasMore = nextIndex < source.length;
+  return {
+    items: page,
+    nextCursor: hasMore ? cursorFor(page[page.length - 1], nextIndex) : null,
+    hasMore,
+  };
+}
+
+function queryValue(request, name) {
+  if (request.query && request.query[name] !== undefined) {
+    const value = request.query[name];
+    return Array.isArray(value) ? String(value[0] || '') : String(value || '');
+  }
+  const rawUrl = request.originalUrl || request.url || request.path || '';
+  try {
+    const parsed = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+      ? new URL(rawUrl)
+      : new URL(rawUrl, 'http://localhost');
+    return parsed.searchParams.get(name) || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function boundedLimit(value, defaultLimit, maxLimit) {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return defaultLimit;
+  }
+  return Math.min(parsed, maxLimit);
+}
+
+function cursorStartIndex(items, cursor) {
+  const index = items.findIndex((item) => String(item?.id || '') === cursor);
+  if (index >= 0) {
+    return index + 1;
+  }
+  const numeric = Number.parseInt(cursor, 10);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+}
+
+function cursorFor(item, fallbackIndex) {
+  const id = item?.id == null ? '' : String(item.id);
+  return id || String(fallbackIndex);
 }
 ''';
 
@@ -1039,7 +1107,7 @@ function bearerToken(header) {
 ''';
 
 String _firebaseFunctionsFirestoreStoreSource() => r'''
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
 
 export function createFirestorePublisherBackendStore({
   appId,
@@ -1064,6 +1132,29 @@ export function createFirestorePublisherBackendStore({
         }))
         .sort(compareCoupons);
       return { coupons };
+    },
+
+    async couponsPage({ limit = 20, cursor = '' } = {}) {
+      const pageLimit = boundedLimit(limit, 20, 100);
+      let query = appRef
+        .collection('coupons')
+        .orderBy(FieldPath.documentId());
+      if (cursor) {
+        query = query.startAfter(String(cursor));
+      }
+      const snapshot = await query.limit(pageLimit + 1).get();
+      const documents = snapshot.docs;
+      const pageDocuments = documents.slice(0, pageLimit);
+      const items = pageDocuments.map((document) => ({
+        id: document.id,
+        ...document.data(),
+      }));
+      const hasMore = documents.length > pageLimit;
+      return {
+        items,
+        nextCursor: hasMore && items.length > 0 ? items[items.length - 1].id : null,
+        hasMore,
+      };
     },
 
     async createAuthSession(session) {
@@ -1205,6 +1296,14 @@ function compareCoupons(left, right) {
   return String(left.title || left.id).localeCompare(String(right.title || right.id));
 }
 
+function boundedLimit(value, defaultLimit, maxLimit) {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return defaultLimit;
+  }
+  return Math.min(parsed, maxLimit);
+}
+
 function safeDocumentId(value) {
   return String(value || 'unknown')
     .trim()
@@ -1246,6 +1345,7 @@ Routes:
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
+- `GET /coupons/page?limit=20&cursor=<couponId>`
 - `GET /auth/session`
 - `POST /coupon/redeem`
 
@@ -1306,6 +1406,10 @@ Future<void> _handleRequest(HttpRequest request, Directory dataRoot) async {
     await _writeDataFile(request.response, dataRoot, 'coupons_list.json');
     return;
   }
+  if (request.method == 'GET' && path == '/coupons/page') {
+    await _writePagedCoupons(request.response, dataRoot, request.uri);
+    return;
+  }
   if (request.method == 'GET' && path == '/auth/session') {
     await _writeDataFile(request.response, dataRoot, 'session.json');
     return;
@@ -1345,6 +1449,72 @@ Future<void> _writeDataFile(
   response.headers.contentType = ContentType.json;
   await response.addStream(file.openRead());
   await response.close();
+}
+
+Future<void> _writePagedCoupons(
+  HttpResponse response,
+  Directory dataRoot,
+  Uri uri,
+) async {
+  final file = File('${dataRoot.path}${Platform.pathSeparator}coupons_list.json');
+  if (!await file.exists()) {
+    response.statusCode = HttpStatus.notFound;
+    await _writeJson(response, <String, Object?>{
+      'errorCode': 'mock_data_missing',
+      'message': 'Mock data file was not found: coupons_list.json',
+    });
+    return;
+  }
+  final decoded = jsonDecode(await file.readAsString());
+  final coupons = decoded is Map && decoded['coupons'] is List
+      ? List<Object?>.from(decoded['coupons'] as List)
+      : <Object?>[];
+  await _writeJson(response, _pageItems(coupons, uri));
+}
+
+Map<String, Object?> _pageItems(List<Object?> items, Uri uri) {
+  final limit = _boundedLimit(uri.queryParameters['limit'], 20, 100);
+  final cursor = uri.queryParameters['cursor']?.trim() ?? '';
+  final startIndex = cursor.isEmpty ? 0 : _cursorStartIndex(items, cursor);
+  final page = items.skip(startIndex).take(limit).toList();
+  final nextIndex = startIndex + page.length;
+  final hasMore = nextIndex < items.length;
+  return <String, Object?>{
+    'items': page,
+    'nextCursor': hasMore && page.isNotEmpty
+        ? _cursorFor(page.last, nextIndex)
+        : null,
+    'hasMore': hasMore,
+  };
+}
+
+int _boundedLimit(String? value, int defaultLimit, int maxLimit) {
+  final parsed = int.tryParse(value ?? '');
+  if (parsed == null || parsed < 1) {
+    return defaultLimit;
+  }
+  return parsed > maxLimit ? maxLimit : parsed;
+}
+
+int _cursorStartIndex(List<Object?> items, String cursor) {
+  final index = items.indexWhere((item) {
+    return item is Map && item['id']?.toString() == cursor;
+  });
+  if (index >= 0) {
+    return index + 1;
+  }
+  final numeric = int.tryParse(cursor);
+  return numeric != null && numeric > 0 ? numeric : 0;
+}
+
+String _cursorFor(Object? item, int fallbackIndex) {
+  if (item is Map) {
+    final id = item['id']?.toString() ?? '';
+    if (id.isNotEmpty) {
+      return id;
+    }
+  }
+  return fallbackIndex.toString();
 }
 
 Future<void> _writeJson(HttpResponse response, Object? body) async {
@@ -1548,6 +1718,7 @@ Routes:
 - `GET /health`
 - `GET /home/bootstrap`
 - `GET /coupons/list`
+- `GET /coupons/page?limit=20&cursor=<couponId>`
 - `GET /auth/session`
 - `POST /coupon/redeem`
 - `OPTIONS *`
@@ -1655,6 +1826,15 @@ export async function handler(event) {
     return jsonFromStore(await store.couponsList(), 'coupons/list');
   }
 
+  if (method === 'GET' && path === '/coupons/page') {
+    const options = pagingOptions(event);
+    if (typeof store.couponsPage === 'function') {
+      return json(200, await store.couponsPage(options));
+    }
+    const body = await store.couponsList();
+    return json(200, pageItems(body?.coupons, options));
+  }
+
   if (method === 'GET' && path === '/auth/session') {
     return jsonFromStore(await store.authSession(), 'auth/session');
   }
@@ -1695,6 +1875,57 @@ function jsonFromStore(body, label) {
   return json(200, body);
 }
 
+function pagingOptions(event) {
+  return {
+    limit: boundedLimit(queryValue(event, 'limit'), 20, 100),
+    cursor: queryValue(event, 'cursor'),
+  };
+}
+
+function pageItems(items, { limit, cursor }) {
+  const source = Array.isArray(items) ? items : [];
+  const startIndex = cursor ? cursorStartIndex(source, cursor) : 0;
+  const page = source.slice(startIndex, startIndex + limit);
+  const nextIndex = startIndex + page.length;
+  const hasMore = nextIndex < source.length;
+  return {
+    items: page,
+    nextCursor: hasMore ? cursorFor(page[page.length - 1], nextIndex) : null,
+    hasMore,
+  };
+}
+
+function queryValue(event, name) {
+  const parameters = event.queryStringParameters || {};
+  if (parameters[name] !== undefined && parameters[name] !== null) {
+    return String(parameters[name]);
+  }
+  const rawQuery = event.rawQueryString || '';
+  return new URLSearchParams(rawQuery).get(name) || '';
+}
+
+function boundedLimit(value, defaultLimit, maxLimit) {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return defaultLimit;
+  }
+  return Math.min(parsed, maxLimit);
+}
+
+function cursorStartIndex(items, cursor) {
+  const index = items.findIndex((item) => String(item?.id || '') === cursor);
+  if (index >= 0) {
+    return index + 1;
+  }
+  const numeric = Number.parseInt(cursor, 10);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+}
+
+function cursorFor(item, fallbackIndex) {
+  const id = item?.id == null ? '' : String(item.id);
+  return id || String(fallbackIndex);
+}
+
 class BundledJsonStore {
   constructor(root) {
     this.root = root;
@@ -1706,6 +1937,11 @@ class BundledJsonStore {
 
   couponsList() {
     return this.dataFile('coupons_list.json');
+  }
+
+  async couponsPage(options) {
+    const body = await this.couponsList();
+    return pageItems(body?.coupons, options);
   }
 
   authSession() {
@@ -1798,6 +2034,39 @@ class DynamoDbStore {
       .map((item) => item.payload)
       .filter((item) => item != null);
     return { coupons };
+  }
+
+  async couponsPage({ limit = 20, cursor = '' } = {}) {
+    const pageLimit = boundedLimit(limit, 20, 100);
+    const response = await this.docClient.send(
+      new this.QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'pk = :pk AND begins_with(sk, :prefix)',
+        ExpressionAttributeValues: {
+          ':pk': this.appPk,
+          ':prefix': 'COUPON#',
+        },
+        ConsistentRead: true,
+        Limit: pageLimit + 1,
+        ExclusiveStartKey: cursor
+          ? {
+              pk: this.appPk,
+              sk: `COUPON#${cursor}`,
+            }
+          : undefined,
+      }),
+    );
+    const records = response.Items ?? [];
+    const pageRecords = records.slice(0, pageLimit);
+    const items = pageRecords
+      .map((item) => item.payload)
+      .filter((item) => item != null);
+    const hasMore = records.length > pageLimit || response.LastEvaluatedKey != null;
+    return {
+      items,
+      nextCursor: hasMore && items.length > 0 ? cursorFor(items[items.length - 1], pageRecords.length) : null,
+      hasMore,
+    };
   }
 
   authSession() {

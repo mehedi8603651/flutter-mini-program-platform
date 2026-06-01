@@ -1481,7 +1481,7 @@ async function publisherBackendSetup(
     withStarterUi = starterUi;
     if (
       withStarterUi &&
-      !(await ensurePublisherBackendFirebaseStarterUiCli048(workspacePath, output))
+      !(await ensurePublisherBackendFirebaseStarterUiCli049(workspacePath, output))
     ) {
       return;
     }
@@ -1520,7 +1520,7 @@ async function publisherBackendFirebaseStarterUi(
   if (!workspacePath) {
     return;
   }
-  if (!(await ensurePublisherBackendFirebaseStarterUiCli048(workspacePath, output))) {
+  if (!(await ensurePublisherBackendFirebaseStarterUiCli049(workspacePath, output))) {
     return;
   }
   const mode = await chooseFirebaseStarterUiMode();
@@ -5554,12 +5554,14 @@ interface PublisherBackendAwsCliCapability {
   readonly checked: boolean;
   readonly supportsFirebaseHostingPublish?: boolean;
   readonly supportsWriteSmoke: boolean;
+  readonly supportsAwsPagedRoutes?: boolean;
   readonly supportsDataManagement: boolean;
   readonly supportsFirebaseScaffold?: boolean;
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
   readonly supportsFirebaseHandoff?: boolean;
   readonly supportsFirebaseStarterUi?: boolean;
+  readonly supportsFirebasePagedRoutes?: boolean;
   readonly supportsFirebaseAccessKeys?: boolean;
   readonly supportsFirebaseAuthStatus?: boolean;
   readonly supportsFirebaseHostAuthDiagnostics?: boolean;
@@ -5613,11 +5615,13 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
       if (
         capability.supportsFirebaseHostingPublish ||
         capability.supportsWriteSmoke ||
+        capability.supportsAwsPagedRoutes ||
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
         capability.supportsFirebaseHostCommand ||
         capability.supportsFirebaseHandoff ||
         capability.supportsFirebaseStarterUi ||
+        capability.supportsFirebasePagedRoutes ||
         capability.supportsFirebaseAccessKeys ||
         capability.supportsFirebaseAuthStatus ||
         capability.supportsFirebaseHostAuthDiagnostics ||
@@ -5713,6 +5717,9 @@ function capabilityFromCliCapabilitiesJson(
   const supportsWriteSmoke =
     hasFeature('publisherBackendAwsWriteSmoke') ||
     hasCapability('publisher_backend.aws.smoke.write');
+  const supportsAwsPagedRoutes =
+    hasFeature('publisherBackendAwsPagedRoutes') ||
+    hasCapability('publisher_backend.aws.paged_routes');
   const supportsDataManagement =
     (hasFeature('publisherBackendAwsDynamoDbDataExport') &&
       hasFeature('publisherBackendAwsDynamoDbDataImport') &&
@@ -5749,6 +5756,9 @@ function capabilityFromCliCapabilitiesJson(
   const supportsFirebaseStarterUi =
     hasFeature('publisherBackendFirebaseStarterUi') ||
     hasCapability('publisher_backend.firebase.starter_ui');
+  const supportsFirebasePagedRoutes =
+    hasFeature('publisherBackendFirebasePagedRoutes') ||
+    hasCapability('publisher_backend.firebase.paged_routes');
   const supportsFirebaseAccessKeys =
     hasFeature('publisherBackendFirebaseAccessKeys') ||
     hasCapability('publisher_backend.firebase.access_keys');
@@ -5782,6 +5792,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsDataManagement
       ? undefined
       : 'Configured CLI capabilities do not include AWS DynamoDB export/import/redemptions and guarded destroy.',
+    supportsAwsPagedRoutes
+      ? undefined
+      : 'Configured CLI capabilities do not include AWS paged backend routes.',
     supportsFirebaseScaffold
       ? undefined
       : 'Configured CLI capabilities do not include Firebase Functions scaffold.',
@@ -5797,6 +5810,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseStarterUi
       ? undefined
       : 'Configured CLI capabilities do not include Firebase starter UI.',
+    supportsFirebasePagedRoutes
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase paged backend routes.',
     supportsFirebaseAccessKeys
       ? undefined
       : 'Configured CLI capabilities do not include Firebase access-key management.',
@@ -5820,12 +5836,14 @@ function capabilityFromCliCapabilitiesJson(
     checked: true,
     supportsFirebaseHostingPublish,
     supportsWriteSmoke,
+    supportsAwsPagedRoutes,
     supportsDataManagement,
     supportsFirebaseScaffold,
     supportsFirebaseOperations,
     supportsFirebaseHostCommand,
     supportsFirebaseHandoff,
     supportsFirebaseStarterUi,
+    supportsFirebasePagedRoutes,
     supportsFirebaseAccessKeys,
     supportsFirebaseAuthStatus,
     supportsFirebaseHostAuthDiagnostics,
@@ -6045,7 +6063,7 @@ async function ensurePublisherBackendFirebaseHandoffCli039(
   return false;
 }
 
-async function ensurePublisherBackendFirebaseStarterUiCli048(
+async function ensurePublisherBackendFirebaseStarterUiCli049(
   workspacePath: string,
   output: vscode.OutputChannel,
 ): Promise<boolean> {
@@ -6057,7 +6075,8 @@ async function ensurePublisherBackendFirebaseStarterUiCli048(
   if (
     capability.supportsFirebaseScaffold &&
     capability.supportsFirebaseStarterUi &&
-    toolingVersionAtLeast(capability.toolingVersion, '0.3.48')
+    capability.supportsFirebasePagedRoutes &&
+    toolingVersionAtLeast(capability.toolingVersion, '0.3.49')
   ) {
     return true;
   }
@@ -6065,8 +6084,8 @@ async function ensurePublisherBackendFirebaseStarterUiCli048(
     ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
     : '';
   const message =
-    'MiniProgram CLI 0.3.48 or newer is required for Firebase starter UI generation. ' +
-    `${versionDetail}Run \`dart pub global activate mini_program_tooling 0.3.48\`.`;
+    'MiniProgram CLI 0.3.49 or newer is required for Firebase paged starter UI generation. ' +
+    `${versionDetail}Run \`dart pub global activate mini_program_tooling 0.3.49\`.`;
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -6596,7 +6615,7 @@ async function chooseFirebaseStarterUiForScaffold(): Promise<boolean | undefined
     [
       {
         label: 'Add Firebase starter UI',
-        description: 'Generate auth, Firestore data, image, and protected-session starter UI',
+        description: 'Generate auth, paged Firestore data, image, and protected-session starter UI',
         withStarterUi: true,
       },
       {

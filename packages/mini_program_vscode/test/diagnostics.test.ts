@@ -443,8 +443,8 @@ test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /CLI publisher backend commands/);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.3.48/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.48/);
+    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.3.49/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.49/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -465,8 +465,8 @@ test('diagnostics warn when CLI lacks AWS data management support', async () => 
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.3.48/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.48/);
+    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.3.49/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.49/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -481,11 +481,13 @@ test('diagnostics warn when CLI lacks Firebase write smoke support', async () =>
       cliCapabilities: {
         checked: true,
         supportsWriteSmoke: true,
+        supportsAwsPagedRoutes: true,
         supportsDataManagement: true,
         supportsFirebaseOperations: true,
         supportsFirebaseHostCommand: true,
         supportsFirebaseHandoff: true,
         supportsFirebaseStarterUi: true,
+        supportsFirebasePagedRoutes: true,
         supportsFirebaseAuthStatus: true,
         supportsFirebaseHostAuthDiagnostics: true,
         supportsFirebaseHostingPublish: true,
@@ -499,9 +501,9 @@ test('diagnostics warn when CLI lacks Firebase write smoke support', async () =>
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.3.48/);
+    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.3.49/);
     assert.match(text, /Firebase write smoke/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.48/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.49/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -516,11 +518,13 @@ test('diagnostics warn when CLI lacks quiet capability discovery', async () => {
       cliCapabilities: {
         checked: true,
         supportsWriteSmoke: true,
+        supportsAwsPagedRoutes: true,
         supportsDataManagement: true,
         supportsFirebaseOperations: true,
         supportsFirebaseHostCommand: true,
         supportsFirebaseHandoff: true,
         supportsFirebaseStarterUi: true,
+        supportsFirebasePagedRoutes: true,
         supportsFirebaseAuthStatus: true,
         supportsFirebaseHostAuthDiagnostics: true,
         supportsFirebaseHostingPublish: true,
@@ -534,7 +538,7 @@ test('diagnostics warn when CLI lacks quiet capability discovery', async () => {
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /lacks 0.3.29 quiet capability discovery/);
-    assert.match(text, /dart pub global activate mini_program_tooling 0.3.48/);
+    assert.match(text, /dart pub global activate mini_program_tooling 0.3.49/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -549,11 +553,13 @@ test('diagnostics accept CLI with AWS data management support', async () => {
       cliCapabilities: {
         checked: true,
         supportsWriteSmoke: true,
+        supportsAwsPagedRoutes: true,
         supportsDataManagement: true,
         supportsFirebaseOperations: true,
         supportsFirebaseHostCommand: true,
         supportsFirebaseHandoff: true,
         supportsFirebaseStarterUi: true,
+        supportsFirebasePagedRoutes: true,
         supportsFirebaseAuthStatus: true,
         supportsFirebaseHostAuthDiagnostics: true,
         supportsFirebaseHostingPublish: true,
@@ -561,17 +567,17 @@ test('diagnostics accept CLI with AWS data management support', async () => {
         supportsFirebaseFirestoreData: true,
         supportsFirebaseDataManagement: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.3.48',
+        toolingVersion: '0.3.49',
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(
       text,
-      /Configured CLI supports AWS DynamoDB, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery/,
+      /Configured CLI supports AWS DynamoDB, AWS\/Firebase paged routes, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery/,
     );
-    assert.match(text, /Version: 0.3.48/);
-    assert.doesNotMatch(text, /mini_program_tooling 0.3.48/);
+    assert.match(text, /Version: 0.3.49/);
+    assert.doesNotMatch(text, /mini_program_tooling 0.3.49/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

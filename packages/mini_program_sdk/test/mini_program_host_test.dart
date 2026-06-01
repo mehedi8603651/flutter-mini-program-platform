@@ -529,6 +529,76 @@ void main() {
       expect(find.text('Coupon c2: Free delivery'), findsOneWidget);
     });
 
+    testWidgets('paged backend builder loads more and appends items', (
+      tester,
+    ) async {
+      var count = 0;
+      final connector = _FakeBackendConnector(
+        responder: (request) async {
+          count++;
+          if (count == 1) {
+            return MiniProgramBackendResult.success(
+              requestId: request.requestId,
+              endpoint: request.endpoint,
+              method: request.method,
+              data: const <String, dynamic>{
+                'items': [
+                  <String, dynamic>{'id': 'c1', 'title': '10% OFF'},
+                ],
+                'nextCursor': 'c1',
+                'hasMore': true,
+              },
+            );
+          }
+          return MiniProgramBackendResult.success(
+            requestId: request.requestId,
+            endpoint: request.endpoint,
+            method: request.method,
+            data: const <String, dynamic>{
+              'items': [
+                <String, dynamic>{'id': 'c2', 'title': 'Free delivery'},
+              ],
+              'hasMore': false,
+            },
+          );
+        },
+      );
+      final source = _FakeMiniProgramSource(
+        manifest: _buildManifest(),
+        screenJson: _pagedBackendListBuilderScreenJson,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'profile_center',
+            sdkVersion: '1.1.0',
+            source: source,
+            hostBridge: _FakeHostBridge(),
+            backendConnector: connector,
+            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            manifestCache: InMemoryManifestCache(),
+            screenCache: InMemoryScreenCache(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coupon c1: 10% OFF'), findsOneWidget);
+      expect(find.text('Load more'), findsOneWidget);
+      expect(connector.calls.single.endpoint, 'coupons/list?limit=1');
+
+      await tester.tap(find.text('Load more'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coupon c1: 10% OFF'), findsOneWidget);
+      expect(find.text('Coupon c2: Free delivery'), findsOneWidget);
+      expect(find.text('No more coupons'), findsOneWidget);
+      expect(find.text('Load more'), findsNothing);
+      expect(connector.calls[1].endpoint, 'coupons/list?limit=1&cursor=c1');
+    });
+
     testWidgets('backend query action refreshes a bound builder', (
       tester,
     ) async {
@@ -1239,6 +1309,40 @@ const Map<String, dynamic> _backendListBuilderScreenJson = <String, dynamic>{
     },
   },
 };
+
+const Map<String, dynamic> _pagedBackendListBuilderScreenJson =
+    <String, dynamic>{
+      'type': 'scaffold',
+      'body': <String, dynamic>{
+        'type': 'miniProgramPagedBackendBuilder',
+        'requestId': 'coupons',
+        'endpoint': 'coupons/list',
+        'limit': 1,
+        'loading': <String, dynamic>{'type': 'text', 'data': 'Loading coupons'},
+        'empty': <String, dynamic>{'type': 'text', 'data': 'No coupons yet'},
+        'loadingMore': <String, dynamic>{
+          'type': 'text',
+          'data': 'Loading more',
+        },
+        'end': <String, dynamic>{'type': 'text', 'data': 'No more coupons'},
+        'error': <String, dynamic>{
+          'type': 'text',
+          'data': 'Error: {{backend.coupons.message}}',
+        },
+        'itemTemplate': <String, dynamic>{
+          'type': 'text',
+          'data': 'Coupon {{item.id}}: {{item.title}}',
+        },
+        'loadMore': <String, dynamic>{
+          'type': 'elevatedButton',
+          'onPressed': <String, dynamic>{
+            'actionType': 'miniProgramLoadMore',
+            'requestId': 'coupons',
+          },
+          'child': <String, dynamic>{'type': 'text', 'data': 'Load more'},
+        },
+      },
+    };
 
 const Map<String, dynamic> _backendBuilderRefreshScreenJson = <String, dynamic>{
   'type': 'scaffold',

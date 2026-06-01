@@ -6,9 +6,11 @@ import '../actions/sdk_mini_program_auth_parser.dart';
 import '../actions/sdk_host_action_parser.dart';
 import '../actions/sdk_mini_program_backend_parser.dart';
 import '../actions/sdk_mini_program_backend_query_parser.dart';
+import '../actions/sdk_mini_program_load_more_parser.dart';
 import '../observability/sdk_logger.dart';
 import 'sdk_mini_program_auth_builder_parser.dart';
 import 'sdk_mini_program_backend_builder_parser.dart';
+import 'sdk_mini_program_paged_backend_builder_parser.dart';
 
 /// Ensures the SDK's Stac extensions are registered exactly once per isolate.
 abstract final class StacInitializer {
@@ -29,12 +31,14 @@ abstract final class StacInitializer {
         parsers: const [
           SdkMiniProgramAuthBuilderParser(),
           SdkMiniProgramBackendBuilderParser(),
+          SdkMiniProgramPagedBackendBuilderParser(),
         ],
         actionParsers: const [
           SdkHostActionParser(),
           SdkMiniProgramAuthParser(),
           SdkMiniProgramBackendParser(),
           SdkMiniProgramBackendQueryParser(),
+          SdkMiniProgramLoadMoreParser(),
           SdkMiniProgramNavigationParser(),
         ],
         showErrorWidgets: false,

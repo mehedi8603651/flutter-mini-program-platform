@@ -7,7 +7,7 @@ const List<String> _supportedPublishTargets = <String>[
   'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.3.48';
+const String _miniProgramToolingVersion = '0.3.49';
 
 const List<String> _capabilityIds = <String>[
   'publish.firebase_hosting',
@@ -15,6 +15,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.outputs',
   'publisher_backend.aws.smoke',
   'publisher_backend.aws.smoke.write',
+  'publisher_backend.aws.paged_routes',
   'publisher_backend.aws.dynamodb.seed',
   'publisher_backend.aws.dynamodb.data.status',
   'publisher_backend.aws.dynamodb.data.export',
@@ -28,6 +29,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.firebase.host_command',
   'publisher_backend.firebase.handoff',
   'publisher_backend.firebase.starter_ui',
+  'publisher_backend.firebase.paged_routes',
   'publisher_backend.firebase.access_keys',
   'publisher_backend.firebase.auth.email',
   'publisher_backend.firebase.auth.status',

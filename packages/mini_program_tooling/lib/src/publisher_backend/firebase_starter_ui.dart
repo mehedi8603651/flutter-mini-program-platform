@@ -221,6 +221,12 @@ Future<void> _writeFirebaseStarterHelperFile(
   if (!contents.contains('miniProgramBackendBuilder(')) {
     additions.add(_firebaseStarterBackendBuilderSource());
   }
+  if (!contents.contains('miniProgramPagedBackendBuilder(')) {
+    additions.add(_firebaseStarterPagedBackendBuilderSource());
+  }
+  if (!contents.contains('miniProgramLoadMore(')) {
+    additions.add(_firebaseStarterLoadMoreActionSource());
+  }
   if (!contents.contains('miniProgramAuthBuilder(')) {
     additions.add(_firebaseStarterAuthBuilderSource());
   }
@@ -525,14 +531,20 @@ StacWidget $screenFunctionName() {
             ),
           ),
           StacSizedBox(height: 16),
-          miniProgramBackendBuilder(
+          miniProgramPagedBackendBuilder(
             requestId: 'coupons',
-            endpoint: 'coupons/list',
-            itemsPath: 'data.coupons',
+            endpoint: 'coupons/page',
+            limit: 2,
             cacheTtl: const Duration(seconds: 60),
             loading: StacText(data: 'Loading Firebase coupons...'),
+            loadingMore: StacText(data: 'Loading more coupons...'),
             error: StacText(data: '{{backend.coupons.message}}'),
             empty: StacText(data: 'No Firebase coupons yet'),
+            end: StacText(data: 'All Firebase coupons loaded'),
+            loadMore: StacOutlinedButton(
+              onPressed: miniProgramLoadMore(requestId: 'coupons'),
+              child: StacText(data: 'Load more coupons'),
+            ),
             itemTemplate: StacContainer(
               margin: StacEdgeInsets.only(bottom: 10),
               padding: StacEdgeInsets.all(12),
@@ -589,6 +601,8 @@ ${_firebaseStarterBackendQueryActionSource()}
 ${_firebaseStarterEmailAuthActionSource()}
 ${_firebaseStarterAuthActionSource()}
 ${_firebaseStarterBackendBuilderSource()}
+${_firebaseStarterPagedBackendBuilderSource()}
+${_firebaseStarterLoadMoreActionSource()}
 ${_firebaseStarterAuthBuilderSource()}
 ''';
 
@@ -669,6 +683,63 @@ StacWidget miniProgramBackendBuilder({
     if (itemsPath != null && itemsPath.trim().isNotEmpty)
       'itemsPath': itemsPath.trim(),
   });
+}
+''';
+
+String _firebaseStarterPagedBackendBuilderSource() => '''
+StacWidget miniProgramPagedBackendBuilder({
+  required String requestId,
+  required String endpoint,
+  required StacWidget itemTemplate,
+  int limit = 20,
+  String? initialCursor,
+  String cursorParam = 'cursor',
+  String limitParam = 'limit',
+  String itemsPath = 'items',
+  String nextCursorPath = 'nextCursor',
+  String hasMorePath = 'hasMore',
+  Duration? cacheTtl,
+  bool forceRefresh = false,
+  StacWidget? loading,
+  StacWidget? loadingMore,
+  StacWidget? error,
+  StacWidget? empty,
+  StacWidget? end,
+  StacWidget? loadMore,
+}) {
+  return StacWidget.fromJson(<String, dynamic>{
+    'type': 'miniProgramPagedBackendBuilder',
+    'requestId': requestId,
+    'endpoint': endpoint,
+    'itemTemplate': itemTemplate.toJson(),
+    'limit': limit,
+    if (initialCursor != null && initialCursor.trim().isNotEmpty)
+      'initialCursor': initialCursor.trim(),
+    'cursorParam': cursorParam,
+    'limitParam': limitParam,
+    'itemsPath': itemsPath,
+    'nextCursorPath': nextCursorPath,
+    'hasMorePath': hasMorePath,
+    if (cacheTtl != null) 'cacheTtlSeconds': cacheTtl.inSeconds,
+    if (forceRefresh) 'forceRefresh': true,
+    if (loading != null) 'loading': loading.toJson(),
+    if (loadingMore != null) 'loadingMore': loadingMore.toJson(),
+    if (error != null) 'error': error.toJson(),
+    if (empty != null) 'empty': empty.toJson(),
+    if (end != null) 'end': end.toJson(),
+    if (loadMore != null) 'loadMore': loadMore.toJson(),
+  });
+}
+''';
+
+String _firebaseStarterLoadMoreActionSource() => '''
+StacAction miniProgramLoadMore({required String requestId}) {
+  return StacAction(
+    jsonData: <String, dynamic>{
+      'actionType': 'miniProgramLoadMore',
+      'requestId': requestId,
+    },
+  );
 }
 ''';
 

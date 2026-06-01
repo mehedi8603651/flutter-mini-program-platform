@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.39
+
+- Align Firebase starter UI diagnostics with `mini_program_tooling` 0.3.49 and
+  the SDK paged backend list support.
+- Detect AWS and Firebase paged backend route capabilities from
+  `miniprogram capabilities --json`.
+- Show generated publisher backend routes in the sidebar when workflow status
+  reports them, including `GET /coupons/page`.
+- Update docs and package metadata for the paged backend starter workflow.
+
 ## 0.1.38
 
 - Add `MiniProgram: Add Firebase Starter UI`, backed by `mini_program_tooling`

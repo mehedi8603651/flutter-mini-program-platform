@@ -18,12 +18,13 @@ shared platform contracts.
 - in-memory cache helpers for manifests, screens, and assets
 - publisher-owned email/password auth runtime with per-mini-program cached
   sessions
+- paged publisher backend list rendering with manual Load more support
 
 ## Install
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.6
+  mini_program_sdk: ^0.3.7
   mini_program_contracts: ^0.1.1
 ```
 
@@ -179,7 +180,7 @@ class NoopHostBridge implements HostBridge {
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
 mini-program delivery backends and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
-the package can be `0.3.6` while the runtime compatibility version remains
+the package can be `0.3.7` while the runtime compatibility version remains
 `1.0.0`.
 
 ## Multi-publisher endpoints
@@ -343,6 +344,60 @@ miniProgramBackendBuilder(
   itemTemplate: StacText(data: '{{item.title}}'),
 )
 ```
+
+For larger lists, use `miniProgramPagedBackendBuilder` and a manual Load more
+action:
+
+```dart
+miniProgramPagedBackendBuilder(
+  requestId: 'coupons',
+  endpoint: 'coupons/list',
+  limit: 20,
+  cacheTtl: const Duration(seconds: 60),
+  loading: StacText(data: 'Loading coupons...'),
+  loadingMore: StacText(data: 'Loading more...'),
+  empty: StacText(data: 'No coupons yet'),
+  end: StacText(data: 'No more coupons'),
+  error: StacText(data: '{{backend.coupons.message}}'),
+  itemTemplate: StacText(data: '{{item.title}}'),
+  loadMore: StacElevatedButton(
+    onPressed: miniProgramLoadMore(requestId: 'coupons'),
+    child: StacText(data: 'Load more'),
+  ),
+)
+```
+
+The default provider-neutral response shape is:
+
+```json
+{
+  "items": [],
+  "nextCursor": null,
+  "hasMore": false
+}
+```
+
+The SDK requests:
+
+```text
+GET coupons/list?limit=20
+GET coupons/list?limit=20&cursor=<nextCursor>
+```
+
+Loaded pages are appended in SDK state. Useful paged bindings include:
+
+```text
+{{backend.coupons.items}}
+{{backend.coupons.itemCount}}
+{{backend.coupons.pageCount}}
+{{backend.coupons.hasMore}}
+{{backend.coupons.nextCursor}}
+{{backend.coupons.loadingMore}}
+```
+
+`miniProgramPagedBackendBuilder` is SDK-only. Firebase, AWS, or custom
+publisher backends should expose matching paged routes such as
+`GET /coupons/list?limit=20&cursor=...`.
 
 Supported bindings include:
 

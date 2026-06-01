@@ -139,6 +139,7 @@ export function buildStatusTreeSections(
     const publisherBackendStarter = asRecord(miniProgram.publisherBackendStarter);
     const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
     const firebasePublisherBackend = asRecord(publisherBackendStarter.firebase);
+    const expectedPublisherRoutes = asStringList(publisherBackendStarter.expectedRoutes);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
       ? miniProgram.partnerPackages.length
       : 0;
@@ -169,6 +170,13 @@ export function buildStatusTreeSections(
           asBoolean(publisherBackendStarter.detected)
             ? asString(publisherBackendStarter.template, 'mock')
             : 'none',
+        ),
+        row('Publisher routes', expectedPublisherRoutes.join(', ')),
+        row(
+          'Paged route',
+          expectedPublisherRoutes.some((route) => route.includes('/coupons/page'))
+            ? 'yes'
+            : '',
         ),
         row(
           'AWS backend',

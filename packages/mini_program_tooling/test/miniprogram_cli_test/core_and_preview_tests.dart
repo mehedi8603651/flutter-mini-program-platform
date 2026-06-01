@@ -100,11 +100,15 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.3.48'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.3.49'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(
       stdoutBuffer.toString(),
       contains('publisher_backend.aws.dynamodb.data.export'),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      contains('publisher_backend.aws.paged_routes'),
     );
     expect(
       stdoutBuffer.toString(),
@@ -125,6 +129,10 @@ void _registerCoreAndPreviewTests() {
     expect(
       stdoutBuffer.toString(),
       contains('publisher_backend.firebase.starter_ui'),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      contains('publisher_backend.firebase.paged_routes'),
     );
     expect(
       stdoutBuffer.toString(),
@@ -177,12 +185,16 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.3.48');
+    expect(json['toolingVersion'], '0.3.49');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
     expect(
       json['capabilityIds'],
       contains('publisher_backend.aws.dynamodb.data.redemptions'),
+    );
+    expect(
+      json['capabilityIds'],
+      contains('publisher_backend.aws.paged_routes'),
     );
     expect(
       json['capabilityIds'],
@@ -203,6 +215,10 @@ void _registerCoreAndPreviewTests() {
     expect(
       json['capabilityIds'],
       contains('publisher_backend.firebase.starter_ui'),
+    );
+    expect(
+      json['capabilityIds'],
+      contains('publisher_backend.firebase.paged_routes'),
     );
     expect(
       json['capabilityIds'],
@@ -240,6 +256,7 @@ void _registerCoreAndPreviewTests() {
     final features = json['features'] as Map<String, dynamic>;
     expect(features['firebaseHostingPublish'], isTrue);
     expect(features['publisherBackendAwsWriteSmoke'], isTrue);
+    expect(features['publisherBackendAwsPagedRoutes'], isTrue);
     expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
     expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
     expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
@@ -247,6 +264,7 @@ void _registerCoreAndPreviewTests() {
     expect(features['publisherBackendFirebaseHostCommand'], isTrue);
     expect(features['publisherBackendFirebaseHandoff'], isTrue);
     expect(features['publisherBackendFirebaseStarterUi'], isTrue);
+    expect(features['publisherBackendFirebasePagedRoutes'], isTrue);
     expect(features['publisherBackendFirebaseAccessKeys'], isTrue);
     expect(features['publisherBackendFirebaseAuthEmail'], isTrue);
     expect(features['publisherBackendFirebaseAuthStatus'], isTrue);
@@ -431,6 +449,8 @@ void _registerCoreAndPreviewTests() {
       ),
     ).readAsString();
     expect(screenSource, contains('miniProgramBackendBuilder('));
+    expect(screenSource, contains('miniProgramPagedBackendBuilder('));
+    expect(screenSource, contains("endpoint: 'coupons/page'"));
   });
 
   test('doctor dispatches to the diagnostics helper', () async {
