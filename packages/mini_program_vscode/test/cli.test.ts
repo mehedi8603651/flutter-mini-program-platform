@@ -60,6 +60,7 @@ import {
   buildPublisherBackendFirebaseOutputsArgs,
   buildPublisherBackendFirebaseSeedArgs,
   buildPublisherBackendFirebaseSmokeArgs,
+  buildPublisherBackendFirebaseStarterUiArgs,
   buildPublisherBackendFirebaseStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
@@ -693,6 +694,7 @@ test('builds backend command arguments', () => {
       miniProgramRoot: 'D:/work/coupon_demo',
       template: 'firebase-functions',
       storageMode: 'firestore',
+      withStarterUi: true,
     }),
     [
       'publisher-backend',
@@ -703,6 +705,7 @@ test('builds backend command arguments', () => {
       'firestore',
       '--mini-program-root',
       'D:/work/coupon_demo',
+      '--with-starter-ui',
     ],
   );
   assert.deepEqual(
@@ -1097,6 +1100,22 @@ test('builds backend command arguments', () => {
       'D:/host_app',
       '--env',
       'my-firebase-prod',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendFirebaseStarterUiArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      force: true,
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'firebase',
+      'starter-ui',
+      '--json',
+      '--force',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],

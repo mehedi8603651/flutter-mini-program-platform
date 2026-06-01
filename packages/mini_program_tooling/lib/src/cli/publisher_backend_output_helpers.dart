@@ -13,6 +13,20 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       'Created files: ${result.createdPaths.length}',
     ];
     lines.addAll(result.createdPaths.map((filePath) => '- $filePath'));
+    if (result.starterUi != null) {
+      final starterUi = result.starterUi!;
+      lines.addAll(<String>[
+        '',
+        'Firebase starter UI:',
+        'Entry screen: ${starterUi.entryScreen}',
+        'Starter files written: ${starterUi.writtenPaths.length}',
+      ]);
+      lines.addAll(starterUi.writtenPaths.map((filePath) => '- $filePath'));
+      if (starterUi.skippedPaths.isNotEmpty) {
+        lines.add('Starter files skipped: ${starterUi.skippedPaths.length}');
+        lines.addAll(starterUi.skippedPaths.map((filePath) => '- $filePath'));
+      }
+    }
     if (result.template == 'mock') {
       lines.addAll(<String>[
         '',
@@ -34,6 +48,41 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
         'npm run serve',
       ]);
     }
+    return lines.join('\n');
+  }
+
+  String _formatPublisherBackendFirebaseStarterUiResult(
+    PublisherBackendFirebaseStarterUiResult result,
+  ) {
+    final lines = <String>[
+      'Firebase publisher backend starter UI updated.',
+      'Mini-program root: ${result.miniProgramRootPath}',
+      'Backend root: ${result.backendRootPath}',
+      'Mini-program ID: ${result.miniProgramId}',
+      'Title: ${result.title}',
+      'Entry screen: ${result.entryScreen}',
+      'Force: ${result.force}',
+      'Written files: ${result.writtenPaths.length}',
+    ];
+    lines.addAll(result.writtenPaths.map((filePath) => '- $filePath'));
+    if (result.unchangedPaths.isNotEmpty) {
+      lines
+        ..add('Unchanged files: ${result.unchangedPaths.length}')
+        ..addAll(result.unchangedPaths.map((filePath) => '- $filePath'));
+    }
+    if (result.skippedPaths.isNotEmpty) {
+      lines
+        ..add('Skipped files: ${result.skippedPaths.length}')
+        ..addAll(result.skippedPaths.map((filePath) => '- $filePath'))
+        ..add('')
+        ..add('Run again with --force to replace skipped starter files.');
+    }
+    lines.addAll(<String>[
+      '',
+      'Next Firebase steps:',
+      'miniprogram publisher-backend firebase seed --env <env-name> --mini-program-root "${result.miniProgramRootPath}"',
+      'miniprogram publish --target firebase-hosting --env <env-name> --mini-program-root "${result.miniProgramRootPath}" --clean',
+    ]);
     return lines.join('\n');
   }
 

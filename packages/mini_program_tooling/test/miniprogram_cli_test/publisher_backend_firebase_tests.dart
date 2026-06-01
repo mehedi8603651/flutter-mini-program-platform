@@ -91,6 +91,100 @@ void _registerPublisherBackendFirebaseTests() {
     expect(activeCloudEnvironment['values']['authWebApiKey'], '<configured>');
   });
 
+  test('publisher-backend firebase starter-ui writes text output', () async {
+    final standaloneRoot = p.join(tempDir.path, 'firebase_starter_ui');
+    await _writeMiniProgramFixture(
+      standaloneRoot,
+      miniProgramId: 'firebase_starter_ui',
+      version: '1.0.0',
+    );
+    await const PublisherBackendStarter().scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: standaloneRoot,
+        template: 'firebase-functions',
+        storageMode: 'firestore',
+      ),
+    );
+    final stdoutBuffer = StringBuffer();
+
+    final exitCode =
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        ).run(<String>[
+          'publisher-backend',
+          'firebase',
+          'starter-ui',
+          '--mini-program-root',
+          standaloneRoot,
+        ]);
+
+    expect(exitCode, 0);
+    expect(
+      stdoutBuffer.toString(),
+      contains('Firebase publisher backend starter UI updated.'),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      contains('Entry screen: firebase_starter_ui_home'),
+    );
+    expect(
+      await File(
+        p.join(
+          standaloneRoot,
+          'stac',
+          'screens',
+          'firebase_starter_ui_home.dart',
+        ),
+      ).exists(),
+      isTrue,
+    );
+  });
+
+  test('publisher-backend firebase starter-ui prints JSON output', () async {
+    final standaloneRoot = p.join(tempDir.path, 'firebase_starter_ui_json');
+    await _writeMiniProgramFixture(
+      standaloneRoot,
+      miniProgramId: 'firebase_starter_ui_json',
+      version: '1.0.0',
+    );
+    await const PublisherBackendStarter().scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: standaloneRoot,
+        template: 'firebase-functions',
+        storageMode: 'firestore',
+      ),
+    );
+    final stdoutBuffer = StringBuffer();
+
+    final exitCode =
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        ).run(<String>[
+          'publisher-backend',
+          'firebase',
+          'starter-ui',
+          '--json',
+          '--force',
+        ]);
+
+    expect(exitCode, 0);
+    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(json['command'], 'publisher-backend firebase starter-ui');
+    expect(json['provider'], 'firebase');
+    expect(json['miniProgramId'], 'firebase_starter_ui_json');
+    expect(json['writtenFileCount'], 5);
+    expect(
+      json['writtenPaths'].toString(),
+      contains('firebase_starter_ui_json_home.dart'),
+    );
+  });
+
   test('publisher-backend firebase deploy prints text output', () async {
     final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
     await _writeMiniProgramFixture(

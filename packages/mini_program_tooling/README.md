@@ -74,7 +74,7 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-miniprogram publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force]
+miniprogram publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force] [--with-starter-ui]
 miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
 miniprogram publisher-backend status [--mini-program-root <path>] [--json]
 miniprogram publisher-backend stop [--mini-program-root <path>]
@@ -95,6 +95,7 @@ miniprogram publisher-backend firebase status --env <env-name> [--mini-program-r
 miniprogram publisher-backend firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase host-command --env <env-name> --api-base-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
 miniprogram publisher-backend firebase handoff --env <env-name> --delivery-url <delivery-url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
+miniprogram publisher-backend firebase starter-ui [--mini-program-root <path>] [--force] [--json]
 miniprogram publisher-backend firebase access-key create --env <env-name> --key-id <id> [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
 miniprogram publisher-backend firebase access-key list --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend firebase access-key revoke --env <env-name> --key-id <id> [--mini-program-root <path>] [--json]
@@ -786,6 +787,27 @@ starter:
 ```bash
 miniprogram publisher-backend scaffold --template firebase-functions --storage firestore
 ```
+
+For a new production-shaped Firebase mini-program, generate the backend starter
+and the matching frontend starter together:
+
+```bash
+miniprogram publisher-backend scaffold --template firebase-functions --storage firestore --with-starter-ui
+```
+
+For an existing Firebase scaffold, add or refresh only the starter UI and seed
+data:
+
+```bash
+miniprogram publisher-backend firebase starter-ui
+miniprogram publisher-backend firebase starter-ui --force
+```
+
+Without `--force`, existing screen and seed-data files are skipped so custom
+work is not overwritten. The command appends missing helper wrappers to
+`lib/host_action_helpers.dart` and reports written, unchanged, and skipped
+files. Use `--force` only when you want the generated starter screen and seed
+JSON to replace local versions.
 
 This creates `backend/firebase_functions/` with Firebase Cloud Functions v2,
 Firestore store wiring, sample data, publisher-owned email auth routes, and

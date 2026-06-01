@@ -22,6 +22,8 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
         return _runPublisherBackendFirebaseHostCommand(arguments.sublist(1));
       case 'handoff':
         return _runPublisherBackendFirebaseHandoff(arguments.sublist(1));
+      case 'starter-ui':
+        return _runPublisherBackendFirebaseStarterUi(arguments.sublist(1));
       case 'access-key':
         return _runPublisherBackendFirebaseAccessKey(arguments.sublist(1));
       case 'auth':
@@ -41,6 +43,58 @@ extension _MiniprogramCliPublisherBackendFirebaseCommands on MiniprogramCli {
         _stderr.writeln(_publisherBackendFirebaseUsage());
         return 64;
     }
+  }
+
+  Future<int> _runPublisherBackendFirebaseStarterUi(
+    List<String> arguments,
+  ) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'mini-program-root',
+        help: 'Exact mini-program root. Defaults to the current directory.',
+      )
+      ..addFlag(
+        'force',
+        negatable: false,
+        help: 'Overwrite starter-managed UI and backend seed data files.',
+      )
+      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram publisher-backend firebase starter-ui [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.isNotEmpty) {
+      throw const FormatException(
+        'publisher-backend firebase starter-ui does not accept positional arguments.',
+      );
+    }
+    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    );
+    final result = await _publisherBackendStarter.firebaseStarterUi(
+      PublisherBackendFirebaseStarterUiRequest(
+        miniProgramRootPath: miniProgramRootPath,
+        force: results.flag('force'),
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(
+        _prettyJson(_publisherBackendFirebaseStarterUiJson(result)),
+      );
+    } else {
+      _stdout.writeln(_formatPublisherBackendFirebaseStarterUiResult(result));
+    }
+    return 0;
   }
 
   Future<int> _runPublisherBackendFirebaseDeploy(List<String> arguments) async {

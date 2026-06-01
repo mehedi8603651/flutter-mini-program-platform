@@ -351,6 +351,7 @@ void _registerPublisherBackendAwsSmokeTests() {
     expect(stdoutBuffer.toString(), contains('dynamodb'));
     expect(stdoutBuffer.toString(), contains('firebase-functions'));
     expect(stdoutBuffer.toString(), contains('firestore'));
+    expect(stdoutBuffer.toString(), contains('--with-starter-ui'));
   });
 
   test(
@@ -399,4 +400,44 @@ void _registerPublisherBackendAwsSmokeTests() {
       );
     },
   );
+
+  test('publisher-backend scaffold can include Firebase starter UI', () async {
+    final standaloneRoot = p.join(tempDir.path, 'firebase_starter_scaffold');
+    await _writeMiniProgramFixture(
+      standaloneRoot,
+      miniProgramId: 'firebase_starter_scaffold',
+      version: '1.0.0',
+    );
+    final stdoutBuffer = StringBuffer();
+
+    final exitCode =
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: standaloneRoot,
+        ).run(<String>[
+          'publisher-backend',
+          'scaffold',
+          '--template',
+          'firebase-functions',
+          '--storage',
+          'firestore',
+          '--with-starter-ui',
+        ]);
+
+    expect(exitCode, 0);
+    expect(stdoutBuffer.toString(), contains('Firebase starter UI:'));
+    expect(
+      await File(
+        p.join(
+          standaloneRoot,
+          'stac',
+          'screens',
+          'firebase_starter_scaffold_home.dart',
+        ),
+      ).exists(),
+      isTrue,
+    );
+  });
 }

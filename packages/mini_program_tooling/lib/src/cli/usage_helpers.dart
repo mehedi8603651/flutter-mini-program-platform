@@ -31,13 +31,13 @@ Commands:
   backend stop
   backend status [--json]
   backend reset-local --yes
-  publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore]
+  publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore] [--with-starter-ui]
   publisher-backend run --port 9090
   publisher-backend status [--json]
   publisher-backend stop
   publisher-backend urls
   publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-  publisher-backend firebase deploy|status|outputs|host-command|handoff|access-key|auth|smoke|seed|data|destroy --env <env-name>
+  publisher-backend firebase deploy|status|outputs|host-command|handoff|starter-ui|access-key|auth|smoke|seed|data|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -54,7 +54,7 @@ Commands:
 Usage: miniprogram publisher-backend <command> [arguments]
 
 Commands:
-  scaffold [--template mock|aws-lambda|firebase-functions] [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force]
+  scaffold [--template mock|aws-lambda|firebase-functions] [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force] [--with-starter-ui]
   run [--mini-program-root <path>] [--port 9090]
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
@@ -75,6 +75,7 @@ Commands:
   firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
   firebase host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   firebase handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
+  firebase starter-ui [--mini-program-root <path>] [--force] [--json]
   firebase access-key create --env <env-name> --key-id <id> [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
   firebase access-key list --env <env-name> [--mini-program-root <path>] [--json]
   firebase access-key revoke --env <env-name> --key-id <id> [--mini-program-root <path>] [--json]
@@ -115,6 +116,7 @@ Commands:
   outputs --env <env-name> [--mini-program-root <path>] [--json]
   host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
   handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
+  starter-ui [--mini-program-root <path>] [--force] [--json]
   access-key create|list|revoke|rotate --env <env-name> [--mini-program-root <path>]
   auth status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
   smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--include-auth] [--access-key <key>]

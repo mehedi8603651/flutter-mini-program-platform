@@ -64,6 +64,12 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         'force',
         negatable: false,
         help: 'Overwrite scaffold-managed publisher backend files.',
+      )
+      ..addFlag(
+        'with-starter-ui',
+        negatable: false,
+        help:
+            'For Firebase Functions + Firestore, also generate the matching auth/data starter UI and seed data.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -87,6 +93,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         template: results.option('template')!,
         storageMode: results.option('storage')!,
         force: results.flag('force'),
+        withStarterUi: results.flag('with-starter-ui'),
       ),
     );
     _stdout.writeln(_formatPublisherBackendScaffoldResult(result));

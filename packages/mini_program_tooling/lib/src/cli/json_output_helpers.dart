@@ -69,6 +69,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisherBackendFirebaseOutputs': true,
         'publisherBackendFirebaseHostCommand': true,
         'publisherBackendFirebaseHandoff': true,
+        'publisherBackendFirebaseStarterUi': true,
         'publisherBackendFirebaseAccessKeys': true,
         'publisherBackendFirebaseAuthEmail': true,
         'publisherBackendFirebaseAuthStatus': true,
@@ -91,6 +92,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisher-backend firebase outputs',
         'publisher-backend firebase host-command',
         'publisher-backend firebase handoff',
+        'publisher-backend firebase starter-ui',
         'publisher-backend firebase access-key create',
         'publisher-backend firebase access-key list',
         'publisher-backend firebase access-key revoke',
@@ -204,6 +206,28 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
           ).androidUsbBaseUrl,
         },
       },
+    };
+  }
+
+  Map<String, Object?> _publisherBackendFirebaseStarterUiJson(
+    PublisherBackendFirebaseStarterUiResult result,
+  ) {
+    return <String, Object?>{
+      'schemaVersion': 1,
+      'command': 'publisher-backend firebase starter-ui',
+      'provider': 'firebase',
+      'miniProgramRootPath': result.miniProgramRootPath,
+      'backendRootPath': result.backendRootPath,
+      'miniProgramId': result.miniProgramId,
+      'title': result.title,
+      'entryScreen': result.entryScreen,
+      'force': result.force,
+      'writtenFileCount': result.writtenPaths.length,
+      'skippedFileCount': result.skippedPaths.length,
+      'unchangedFileCount': result.unchangedPaths.length,
+      'writtenPaths': result.writtenPaths,
+      'skippedPaths': result.skippedPaths,
+      'unchangedPaths': result.unchangedPaths,
     };
   }
 

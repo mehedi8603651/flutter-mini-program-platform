@@ -13,6 +13,7 @@ part 'publisher_backend/models.dart';
 part 'publisher_backend/internal_models.dart';
 part 'publisher_backend/generated_files.dart';
 part 'publisher_backend/starter_helpers.dart';
+part 'publisher_backend/firebase_starter_ui.dart';
 part 'publisher_backend/firebase_helpers.dart';
 part 'publisher_backend/aws_helpers.dart';
 part 'publisher_backend/runtime_smoke_helpers.dart';
@@ -92,6 +93,14 @@ class PublisherBackendStarter {
         '--storage firestore.',
       );
     }
+    if (request.withStarterUi &&
+        (request.template != 'firebase-functions' ||
+            request.storageMode != _publisherBackendStorageFirestore)) {
+      throw const PublisherBackendException(
+        'publisher-backend scaffold --with-starter-ui is only supported with '
+        '--template firebase-functions --storage firestore.',
+      );
+    }
     final miniProgramRootPath = await _requireMiniProgramRoot(
       request.miniProgramRootPath,
     );
@@ -129,6 +138,14 @@ class PublisherBackendStarter {
         createdPaths: createdPaths,
       );
     }
+    final starterUi = request.withStarterUi
+        ? await _writeFirebaseStarterUi(
+            PublisherBackendFirebaseStarterUiRequest(
+              miniProgramRootPath: miniProgramRootPath,
+              force: true,
+            ),
+          )
+        : null;
     createdPaths.sort();
     return PublisherBackendScaffoldResult(
       miniProgramRootPath: miniProgramRootPath,
@@ -140,8 +157,13 @@ class PublisherBackendStarter {
               request.template == 'firebase-functions'
           ? request.storageMode
           : null,
+      starterUi: starterUi,
     );
   }
+
+  Future<PublisherBackendFirebaseStarterUiResult> firebaseStarterUi(
+    PublisherBackendFirebaseStarterUiRequest request,
+  ) => _writeFirebaseStarterUi(request);
 
   Future<PublisherBackendRunResult> run({
     required String miniProgramRootPath,

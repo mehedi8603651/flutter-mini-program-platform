@@ -61,6 +61,7 @@ import {
   buildPublisherBackendFirebaseOutputsArgs,
   buildPublisherBackendFirebaseSeedArgs,
   buildPublisherBackendFirebaseSmokeArgs,
+  buildPublisherBackendFirebaseStarterUiArgs,
   buildPublisherBackendFirebaseStatusArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
@@ -311,6 +312,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHandoff', () =>
       publisherBackendFirebaseHandoff(output, () => refreshStatus(false), {}, statusProvider),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseStarterUi', () =>
+      publisherBackendFirebaseStarterUi(output, refreshStatus),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyCreate', () =>
       publisherBackendFirebaseAccessKeyCreate(output, statusProvider),
@@ -1468,6 +1472,20 @@ async function publisherBackendSetup(
   if (!templateChoice) {
     return;
   }
+  let withStarterUi = false;
+  if (templateChoice.value === 'firebase-functions') {
+    const starterUi = await chooseFirebaseStarterUiForScaffold();
+    if (starterUi === undefined) {
+      return;
+    }
+    withStarterUi = starterUi;
+    if (
+      withStarterUi &&
+      !(await ensurePublisherBackendFirebaseStarterUiCli048(workspacePath, output))
+    ) {
+      return;
+    }
+  }
   const force = await chooseForce(
     'Overwrite scaffold-managed publisher backend files?',
   );
@@ -1484,6 +1502,7 @@ async function publisherBackendSetup(
         ? templateChoice.storageMode
         : undefined,
       force,
+      withStarterUi,
     }),
     workspacePath,
     output,
@@ -1491,6 +1510,32 @@ async function publisherBackendSetup(
   if (ok) {
     await refreshStatus(false);
   }
+}
+
+async function publisherBackendFirebaseStarterUi(
+  output: vscode.OutputChannel,
+  refreshStatus: (remote: boolean) => Promise<void>,
+): Promise<void> {
+  const workspacePath = await requireMiniProgramRoot();
+  if (!workspacePath) {
+    return;
+  }
+  if (!(await ensurePublisherBackendFirebaseStarterUiCli048(workspacePath, output))) {
+    return;
+  }
+  const mode = await chooseFirebaseStarterUiMode();
+  if (!mode) {
+    return;
+  }
+  await runWorkspaceCliCommand(
+    'Publisher Backend Firebase Starter UI',
+    buildPublisherBackendFirebaseStarterUiArgs({
+      miniProgramRoot: workspacePath,
+      force: mode.force,
+    }),
+    output,
+    refreshStatus,
+  );
 }
 
 async function publisherBackendRun(
@@ -5514,6 +5559,7 @@ interface PublisherBackendAwsCliCapability {
   readonly supportsFirebaseOperations?: boolean;
   readonly supportsFirebaseHostCommand?: boolean;
   readonly supportsFirebaseHandoff?: boolean;
+  readonly supportsFirebaseStarterUi?: boolean;
   readonly supportsFirebaseAccessKeys?: boolean;
   readonly supportsFirebaseAuthStatus?: boolean;
   readonly supportsFirebaseHostAuthDiagnostics?: boolean;
@@ -5571,6 +5617,7 @@ async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsFirebaseOperations ||
         capability.supportsFirebaseHostCommand ||
         capability.supportsFirebaseHandoff ||
+        capability.supportsFirebaseStarterUi ||
         capability.supportsFirebaseAccessKeys ||
         capability.supportsFirebaseAuthStatus ||
         capability.supportsFirebaseHostAuthDiagnostics ||
@@ -5699,6 +5746,9 @@ function capabilityFromCliCapabilitiesJson(
   const supportsFirebaseHandoff =
     hasFeature('publisherBackendFirebaseHandoff') ||
     hasCapability('publisher_backend.firebase.handoff');
+  const supportsFirebaseStarterUi =
+    hasFeature('publisherBackendFirebaseStarterUi') ||
+    hasCapability('publisher_backend.firebase.starter_ui');
   const supportsFirebaseAccessKeys =
     hasFeature('publisherBackendFirebaseAccessKeys') ||
     hasCapability('publisher_backend.firebase.access_keys');
@@ -5744,6 +5794,9 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseHandoff
       ? undefined
       : 'Configured CLI capabilities do not include Firebase handoff.',
+    supportsFirebaseStarterUi
+      ? undefined
+      : 'Configured CLI capabilities do not include Firebase starter UI.',
     supportsFirebaseAccessKeys
       ? undefined
       : 'Configured CLI capabilities do not include Firebase access-key management.',
@@ -5772,6 +5825,7 @@ function capabilityFromCliCapabilitiesJson(
     supportsFirebaseOperations,
     supportsFirebaseHostCommand,
     supportsFirebaseHandoff,
+    supportsFirebaseStarterUi,
     supportsFirebaseAccessKeys,
     supportsFirebaseAuthStatus,
     supportsFirebaseHostAuthDiagnostics,
@@ -5983,6 +6037,36 @@ async function ensurePublisherBackendFirebaseHandoffCli039(
   const message =
     'MiniProgram CLI 0.3.39 or newer is required for Firebase host handoff packages. ' +
     'Run `dart pub global activate mini_program_tooling 0.3.39`.';
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+async function ensurePublisherBackendFirebaseStarterUiCli048(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsFirebaseScaffold &&
+    capability.supportsFirebaseStarterUi &&
+    toolingVersionAtLeast(capability.toolingVersion, '0.3.48')
+  ) {
+    return true;
+  }
+  const versionDetail = capability.toolingVersion
+    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
+    : '';
+  const message =
+    'MiniProgram CLI 0.3.48 or newer is required for Firebase starter UI generation. ' +
+    `${versionDetail}Run \`dart pub global activate mini_program_tooling 0.3.48\`.`;
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);
@@ -6505,6 +6589,46 @@ async function chooseForce(prompt: string): Promise<boolean | undefined> {
     { title: 'MiniProgram command mode', ignoreFocusOut: true },
   );
   return choice?.force;
+}
+
+async function chooseFirebaseStarterUiForScaffold(): Promise<boolean | undefined> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Add Firebase starter UI',
+        description: 'Generate auth, Firestore data, image, and protected-session starter UI',
+        withStarterUi: true,
+      },
+      {
+        label: 'Backend only',
+        description: 'Generate Firebase Functions + Firestore backend files only',
+        withStarterUi: false,
+      },
+    ],
+    { title: 'Firebase starter UI', ignoreFocusOut: true },
+  );
+  return choice?.withStarterUi;
+}
+
+async function chooseFirebaseStarterUiMode(): Promise<
+  { readonly force: boolean } | undefined
+> {
+  const choice = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Add safely',
+        description: 'Append missing helpers and skip existing screen/seed files',
+        force: false,
+      },
+      {
+        label: 'Replace starter files',
+        description: 'Pass --force and overwrite generated starter screen/seed files',
+        force: true,
+      },
+    ],
+    { title: 'Firebase starter UI mode', ignoreFocusOut: true },
+  );
+  return choice ? { force: choice.force } : undefined;
 }
 
 async function chooseWithDemo(): Promise<boolean | undefined> {

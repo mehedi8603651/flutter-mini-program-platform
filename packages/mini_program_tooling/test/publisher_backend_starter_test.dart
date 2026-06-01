@@ -346,6 +346,110 @@ void main() {
       },
     );
 
+    test('generates Firebase production starter UI and seed data', () async {
+      final starter = const PublisherBackendStarter();
+      await File(
+        p.join(miniProgramRoot.path, 'pubspec.yaml'),
+      ).writeAsString('name: coupon_app_mini_program\n');
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseStarterUi(
+        PublisherBackendFirebaseStarterUiRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          force: true,
+        ),
+      );
+
+      expect(result.miniProgramId, 'coupon_app');
+      expect(result.entryScreen, 'coupon_app_home');
+      expect(result.writtenPaths, hasLength(5));
+      expect(result.skippedPaths, isEmpty);
+      final helper = await File(
+        p.join(miniProgramRoot.path, 'lib', 'host_action_helpers.dart'),
+      ).readAsString();
+      final screen = await File(
+        p.join(miniProgramRoot.path, 'stac', 'screens', 'coupon_app_home.dart'),
+      ).readAsString();
+      final homeData =
+          jsonDecode(
+                await File(
+                  p.join(
+                    miniProgramRoot.path,
+                    'backend',
+                    'firebase_functions',
+                    'functions',
+                    'data',
+                    'home_bootstrap.json',
+                  ),
+                ).readAsString(),
+              )
+              as Map<String, dynamic>;
+
+      expect(helper, contains('miniProgramShowEmailAuthAction'));
+      expect(helper, contains('miniProgramAuthBuilder'));
+      expect(screen, contains('miniProgramAuthBuilder'));
+      expect(screen, contains("endpoint: 'auth/session'"));
+      expect(screen, contains("endpoint: 'coupons/list'"));
+      expect(homeData['heroImageUrl'], contains('picsum.photos'));
+
+      final second = await starter.firebaseStarterUi(
+        PublisherBackendFirebaseStarterUiRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+        ),
+      );
+      expect(second.writtenPaths, isEmpty);
+      expect(second.unchangedPaths, hasLength(5));
+      expect(second.skippedPaths, isEmpty);
+    });
+
+    test(
+      'scaffold can generate Firebase starter UI with backend files',
+      () async {
+        await File(
+          p.join(miniProgramRoot.path, 'pubspec.yaml'),
+        ).writeAsString('name: coupon_app_mini_program\n');
+        final result = await const PublisherBackendStarter().scaffold(
+          PublisherBackendScaffoldRequest(
+            miniProgramRootPath: miniProgramRoot.path,
+            template: 'firebase-functions',
+            storageMode: 'firestore',
+            withStarterUi: true,
+          ),
+        );
+
+        expect(result.starterUi, isNotNull);
+        expect(result.starterUi!.writtenPaths, isNotEmpty);
+        expect(
+          await File(
+            p.join(
+              miniProgramRoot.path,
+              'stac',
+              'screens',
+              'coupon_app_home.dart',
+            ),
+          ).exists(),
+          isTrue,
+        );
+        final coupons = await File(
+          p.join(
+            miniProgramRoot.path,
+            'backend',
+            'firebase_functions',
+            'functions',
+            'data',
+            'coupons_list.json',
+          ),
+        ).readAsString();
+        expect(coupons, contains('image-backed flash deal'));
+      },
+    );
+
     test('rejects invalid publisher backend storage combinations', () {
       final starter = const PublisherBackendStarter();
       expect(

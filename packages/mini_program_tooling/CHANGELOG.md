@@ -1,4 +1,15 @@
 # Changelog
+## 0.3.48
+- add Firebase production starter UI generation with
+  `publisher-backend firebase starter-ui`
+- add `publisher-backend scaffold --with-starter-ui` for new Firebase
+  Functions + Firestore mini-programs so backend seed data and frontend auth,
+  Firestore, image, and protected-session UI are generated together
+- keep standalone starter UI generation safe by skipping existing screen/seed
+  files unless `--force` is passed while appending missing helper wrappers
+- expose the Firebase starter UI capability through
+  `miniprogram capabilities --json`
+
 ## 0.3.47
 - add retry handling to Firebase publisher backend smoke GET checks so
   transient TLS/connection drops do not fail otherwise healthy Firebase

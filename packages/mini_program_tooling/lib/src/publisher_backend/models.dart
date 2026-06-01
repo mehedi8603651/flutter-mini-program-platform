@@ -86,12 +86,14 @@ class PublisherBackendScaffoldRequest {
     this.template = 'mock',
     this.storageMode = 'bundled',
     this.force = false,
+    this.withStarterUi = false,
   });
 
   final String miniProgramRootPath;
   final String template;
   final String storageMode;
   final bool force;
+  final bool withStarterUi;
 }
 
 class PublisherBackendScaffoldResult {
@@ -101,6 +103,7 @@ class PublisherBackendScaffoldResult {
     required this.template,
     required this.createdPaths,
     this.storageMode,
+    this.starterUi,
   });
 
   final String miniProgramRootPath;
@@ -108,6 +111,41 @@ class PublisherBackendScaffoldResult {
   final String template;
   final List<String> createdPaths;
   final String? storageMode;
+  final PublisherBackendFirebaseStarterUiResult? starterUi;
+}
+
+class PublisherBackendFirebaseStarterUiRequest {
+  const PublisherBackendFirebaseStarterUiRequest({
+    required this.miniProgramRootPath,
+    this.force = false,
+  });
+
+  final String miniProgramRootPath;
+  final bool force;
+}
+
+class PublisherBackendFirebaseStarterUiResult {
+  const PublisherBackendFirebaseStarterUiResult({
+    required this.miniProgramRootPath,
+    required this.backendRootPath,
+    required this.miniProgramId,
+    required this.title,
+    required this.entryScreen,
+    required this.writtenPaths,
+    required this.skippedPaths,
+    required this.unchangedPaths,
+    required this.force,
+  });
+
+  final String miniProgramRootPath;
+  final String backendRootPath;
+  final String miniProgramId;
+  final String title;
+  final String entryScreen;
+  final List<String> writtenPaths;
+  final List<String> skippedPaths;
+  final List<String> unchangedPaths;
+  final bool force;
 }
 
 class PublisherBackendAwsDeployRequest {

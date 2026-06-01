@@ -77,7 +77,7 @@ void _registerCoreAndPreviewTests() {
     expect(
       stdoutBuffer.toString(),
       contains(
-        'publisher-backend firebase deploy|status|outputs|host-command|handoff|access-key|auth|smoke',
+        'publisher-backend firebase deploy|status|outputs|host-command|handoff|starter-ui|access-key|auth|smoke',
       ),
     );
   });
@@ -100,7 +100,7 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.3.47'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.3.48'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(
       stdoutBuffer.toString(),
@@ -121,6 +121,10 @@ void _registerCoreAndPreviewTests() {
     expect(
       stdoutBuffer.toString(),
       contains('publisher_backend.firebase.handoff'),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      contains('publisher_backend.firebase.starter_ui'),
     );
     expect(
       stdoutBuffer.toString(),
@@ -173,7 +177,7 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.3.47');
+    expect(json['toolingVersion'], '0.3.48');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
     expect(
@@ -195,6 +199,10 @@ void _registerCoreAndPreviewTests() {
     expect(
       json['capabilityIds'],
       contains('publisher_backend.firebase.handoff'),
+    );
+    expect(
+      json['capabilityIds'],
+      contains('publisher_backend.firebase.starter_ui'),
     );
     expect(
       json['capabilityIds'],
@@ -238,6 +246,7 @@ void _registerCoreAndPreviewTests() {
     expect(features['publisherBackendFirebaseDeploy'], isTrue);
     expect(features['publisherBackendFirebaseHostCommand'], isTrue);
     expect(features['publisherBackendFirebaseHandoff'], isTrue);
+    expect(features['publisherBackendFirebaseStarterUi'], isTrue);
     expect(features['publisherBackendFirebaseAccessKeys'], isTrue);
     expect(features['publisherBackendFirebaseAuthEmail'], isTrue);
     expect(features['publisherBackendFirebaseAuthStatus'], isTrue);

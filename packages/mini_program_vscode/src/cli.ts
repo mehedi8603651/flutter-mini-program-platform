@@ -181,6 +181,7 @@ export interface PublisherBackendScaffoldArgsOptions {
   readonly template?: 'mock' | 'aws-lambda' | 'firebase-functions';
   readonly storageMode?: 'bundled' | 'dynamodb' | 'firestore';
   readonly force?: boolean;
+  readonly withStarterUi?: boolean;
 }
 
 export interface PublisherBackendRunArgsOptions {
@@ -308,6 +309,12 @@ export interface PublisherBackendFirebaseHandoffArgsOptions
   readonly accessKey?: string;
   readonly public?: boolean;
   readonly outputPath?: string;
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendFirebaseStarterUiArgsOptions {
+  readonly miniProgramRoot?: string;
+  readonly force?: boolean;
   readonly json?: boolean;
 }
 
@@ -769,6 +776,9 @@ export function buildPublisherBackendScaffoldArgs(
   if (options.force) {
     args.push('--force');
   }
+  if (options.withStarterUi) {
+    args.push('--with-starter-ui');
+  }
   return args;
 }
 
@@ -1037,6 +1047,19 @@ export function buildPublisherBackendFirebaseHandoffArgs(
     args.push('--output', options.outputPath.trim());
   }
   return withPublisherBackendFirebaseOptions(args, options);
+}
+
+export function buildPublisherBackendFirebaseStarterUiArgs(
+  options: PublisherBackendFirebaseStarterUiArgsOptions = {},
+): string[] {
+  const args = ['publisher-backend', 'firebase', 'starter-ui'];
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  if (options.force) {
+    args.push('--force');
+  }
+  return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
 export function buildPublisherBackendFirebaseAuthStatusArgs(

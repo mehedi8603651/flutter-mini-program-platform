@@ -278,9 +278,9 @@ miniprogram publisher-backend run --port 9090
 miniprogram publisher-backend status
 miniprogram publisher-backend stop
 miniprogram publisher-backend urls
-miniprogram publisher-backend scaffold --template aws-lambda|firebase-functions [--storage dynamodb|firestore]
+miniprogram publisher-backend scaffold --template aws-lambda|firebase-functions [--storage dynamodb|firestore] [--with-starter-ui]
 miniprogram publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-miniprogram publisher-backend firebase deploy|status|outputs|host-command|handoff|access-key|auth|smoke|seed|data|destroy --env <env-name>
+miniprogram publisher-backend firebase deploy|status|outputs|host-command|handoff|starter-ui|access-key|auth|smoke|seed|data|destroy --env <env-name>
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
@@ -310,11 +310,21 @@ Publisher workspace:
    miniprogram create firebase_full_demo --output-root D:\firebase_full_demo --title "Firebase Full Demo"
    ```
 
-2. Scaffold Firebase Functions + Firestore:
+2. Scaffold Firebase Functions + Firestore. For a new production-shaped demo,
+   generate the backend and matching starter UI together:
 
    ```powershell
-   miniprogram publisher-backend scaffold --template firebase-functions --storage firestore --mini-program-root D:\firebase_full_demo
+   miniprogram publisher-backend scaffold `
+     --template firebase-functions `
+     --storage firestore `
+     --with-starter-ui `
+     --mini-program-root D:\firebase_full_demo
    ```
+
+   For an existing Firebase scaffold, use
+   `miniprogram publisher-backend firebase starter-ui --mini-program-root D:\firebase_full_demo`.
+   Add `--force` only when you want generated starter screen and seed JSON files
+   to replace local versions.
 
 3. Configure Firebase. Include the Firebase Web API key when publisher-owned
    email/password auth is needed:

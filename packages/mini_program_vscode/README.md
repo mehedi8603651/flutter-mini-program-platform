@@ -8,15 +8,15 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.47 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.48 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
 Functions/Firestore publisher backend workflows, Firebase Firestore production
 data management, Firebase write smoke, Firebase host integration, Firebase
 host handoff packages, Firebase protected handoff access keys, Firebase Hosting
-publish with browser CORS headers, and Firebase auth readiness diagnostics through
-`miniprogram capabilities --json`.
+publish with browser CORS headers, Firebase auth readiness diagnostics, and
+Firebase production starter UI generation through `miniprogram capabilities --json`.
 
 Use `mini_program_tooling` 0.3.47 or newer when testing real Firebase auth and
 protected handoff workflows so the extension can report backend auth readiness,
@@ -24,7 +24,8 @@ host SDK auth-controller readiness, Firebase publisher access-key status, and
 generate protected host endpoints that forward access keys to publisher backend
 routes. Tooling 0.3.47 also makes Firebase smoke tests more tolerant of
 transient VPN/TLS connection drops and generates `mini_program_sdk: ^0.3.6` for
-new host apps.
+new host apps. Tooling 0.3.48 adds Firebase starter UI generation for auth,
+Firestore data, remote images, and protected-session checks.
 
 Install or upgrade the CLI first:
 
@@ -52,7 +53,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.37.vsix
+code --install-extension mini-program-tools-0.1.38.vsix
 ```
 
 ## Features
@@ -107,6 +108,7 @@ code --install-extension mini-program-tools-0.1.37.vsix
   - `MiniProgram: Publisher Backend Firebase Outputs`
   - `MiniProgram: Wire Firebase Publisher Backend Into Host App`
   - `MiniProgram: Create Firebase Host Handoff Package`
+  - `MiniProgram: Add Firebase Starter UI`
   - `MiniProgram: Create Firebase Publisher Access Key`
   - `MiniProgram: List Firebase Publisher Access Keys`
   - `MiniProgram: Revoke Firebase Publisher Access Key`
@@ -178,11 +180,16 @@ Publisher workspace:
 1. Open or create the mini-program folder with `MiniProgram: Create
    MiniProgram`. Choose **Normal mini-program**.
 2. Run `MiniProgram: Setup Publisher Backend` and choose **Firebase Functions +
-   Firestore**.
+   Firestore**. When prompted, choose **Add Firebase starter UI** to generate
+   the matching frontend auth/data/image starter and backend seed JSON.
 3. Run `MiniProgram: Configure Firebase Environment`. Enter the Firebase
    project id, region, function name, and Firebase Web API key when
    email/password auth should be enabled.
-4. Edit UI in `stac/screens/<appId>_home.dart`. Edit Firestore seed data in
+4. Edit UI in `stac/screens/<appId>_home.dart`. For an existing Firebase
+   scaffold that does not have the generated UI, run
+   `MiniProgram: Add Firebase Starter UI`; choose **Add safely** to skip
+   existing screen/seed files or **Replace starter files** to pass `--force`.
+   Edit Firestore seed data in
    `backend/firebase_functions/functions/data/home_bootstrap.json`,
    `coupons_list.json`, and `session.json`.
 5. Run `MiniProgram: Deploy Publisher Backend to Firebase`.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.38
+
+- Add `MiniProgram: Add Firebase Starter UI`, backed by `mini_program_tooling`
+  0.3.48.
+- Let `MiniProgram: Setup Publisher Backend` ask whether to generate the
+  Firebase production starter UI when **Firebase Functions + Firestore** is
+  selected.
+- Guide existing Firebase workspaces through safe starter UI generation or
+  `--force` replacement for generated starter screen and seed JSON files.
+- Gate the workflow on the Firebase starter UI capability and update package
+  metadata/docs.
+
 ## 0.1.37
 
 - Default protected Firebase handoff package filenames include the new
