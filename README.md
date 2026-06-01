@@ -265,7 +265,7 @@ miniprogram create <mini-program-id> [--with-backend mock]
 miniprogram doctor
 miniprogram env init
 miniprogram env configure <env-name> --provider aws --bucket <bucket> --region <region> [--aws-profile <profile>] [--require-access-keys]
-miniprogram env configure <env-name> --provider firebase --project-id <project-id> [--region us-central1] [--function-name publisherBackend]
+miniprogram env configure <env-name> --provider firebase --project-id <project-id> [--region us-central1] [--function-name publisherBackend] [--auth-web-api-key <firebase-web-api-key>]
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status
@@ -280,7 +280,7 @@ miniprogram publisher-backend stop
 miniprogram publisher-backend urls
 miniprogram publisher-backend scaffold --template aws-lambda|firebase-functions [--storage dynamodb|firestore]
 miniprogram publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-miniprogram publisher-backend firebase deploy|status|outputs|host-command|handoff|smoke|seed|data|destroy --env <env-name>
+miniprogram publisher-backend firebase deploy|status|outputs|host-command|handoff|access-key|auth|smoke|seed|data|destroy --env <env-name>
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
@@ -296,6 +296,130 @@ miniprogram backend reset-local --yes
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+
+## Firebase Full System Quickstart
+
+This is the current end-to-end Firebase path for separate mini-program
+publisher and host-app developer teams.
+
+Publisher workspace:
+
+1. Create a normal mini-program:
+
+   ```powershell
+   miniprogram create firebase_full_demo --output-root D:\firebase_full_demo --title "Firebase Full Demo"
+   ```
+
+2. Scaffold Firebase Functions + Firestore:
+
+   ```powershell
+   miniprogram publisher-backend scaffold --template firebase-functions --storage firestore --mini-program-root D:\firebase_full_demo
+   ```
+
+3. Configure Firebase. Include the Firebase Web API key when publisher-owned
+   email/password auth is needed:
+
+   ```powershell
+   miniprogram env configure my-firebase-prod `
+     --provider firebase `
+     --project-id miniprogram-backend-test `
+     --region us-central1 `
+     --function-name publisherBackend `
+     --auth-web-api-key "<firebase-web-api-key>"
+   ```
+
+4. Edit portable UI in `stac/screens/<appId>_home.dart`. Edit Firestore seed
+   source data in:
+
+   ```text
+   backend/firebase_functions/functions/data/home_bootstrap.json
+   backend/firebase_functions/functions/data/coupons_list.json
+   backend/firebase_functions/functions/data/session.json
+   ```
+
+   Use `miniProgramBackendBuilder(...)` for publisher backend reads and
+   `miniProgramAuthBuilder(...)` with `miniProgramAuth` actions for email
+   sign-in/sign-up/sign-out UI. Do not edit `stac/.build` directly.
+
+5. Deploy backend, seed Firestore, and verify:
+
+   ```powershell
+   miniprogram publisher-backend firebase deploy --env my-firebase-prod --mini-program-root D:\firebase_full_demo
+   miniprogram publisher-backend firebase seed --env my-firebase-prod --mini-program-root D:\firebase_full_demo
+   miniprogram publisher-backend firebase smoke --env my-firebase-prod --mini-program-root D:\firebase_full_demo
+   miniprogram publisher-backend firebase auth status --env my-firebase-prod --mini-program-root D:\firebase_full_demo
+   ```
+
+6. Publish static delivery to Firebase Hosting:
+
+   ```powershell
+   miniprogram publish --target firebase-hosting --env my-firebase-prod --mini-program-root D:\firebase_full_demo --clean
+   ```
+
+7. Create a protected publisher access key per host company, then create the
+   provider-neutral handoff package:
+
+   ```powershell
+   miniprogram publisher-backend firebase access-key create --env my-firebase-prod --mini-program-root D:\firebase_full_demo --key-id company-a
+
+   miniprogram publisher-backend firebase handoff `
+     --env my-firebase-prod `
+     --mini-program-root D:\firebase_full_demo `
+     --delivery-url https://miniprogram-backend-test.web.app/ `
+     --access-key "<access-key-shown-once>" `
+     --output D:\firebase_full_demo\firebase_full_demo-my-firebase-prod-company-a.partner.json
+   ```
+
+Give only the `.partner.json` file to the host app developer. It contains the
+delivery URL, backend URL, access mode, and MiniProgram access key. It does not
+contain Firebase credentials, Firebase Web API keys, service accounts, or
+publisher backend secrets.
+
+Host workspace:
+
+1. Create a Flutter host app and initialize the MiniProgram adapter:
+
+   ```powershell
+   flutter create D:\firebase_full_host
+   cd D:\firebase_full_host
+   miniprogram embed init
+   flutter pub get
+   ```
+
+2. Import the handoff package:
+
+   ```powershell
+   miniprogram host endpoint import D:\firebase_full_demo\firebase_full_demo-my-firebase-prod-company-a.partner.json --project-root D:\firebase_full_host
+   ```
+
+3. Wrap the app in `MiniProgramScope` and open by app id:
+
+   ```dart
+   MiniProgramScope(
+     config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+     child: const MyApp(),
+   )
+   ```
+
+   ```dart
+   openAppMiniProgram(
+     context,
+     appId: 'firebase_full_demo',
+     title: 'Firebase Full Demo',
+   );
+   ```
+
+4. Run and test:
+
+   ```powershell
+   flutter run -d chrome
+   ```
+
+The host app does not need Firebase login, Firebase project access, Firebase
+SDK configuration, or publisher backend secrets. New host apps generated by
+tooling use `mini_program_sdk: ^0.3.6`, which includes SDK email/password auth
+UI, secure cached login on Android/iOS, and lower-security web persistence for
+local/web testing.
 
 ## Local Developer Workflow
 

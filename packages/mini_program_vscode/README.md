@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.46 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.47 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
@@ -18,11 +18,13 @@ host handoff packages, Firebase protected handoff access keys, Firebase Hosting
 publish with browser CORS headers, and Firebase auth readiness diagnostics through
 `miniprogram capabilities --json`.
 
-Use `mini_program_tooling` 0.3.46 or newer when testing real Firebase auth and
+Use `mini_program_tooling` 0.3.47 or newer when testing real Firebase auth and
 protected handoff workflows so the extension can report backend auth readiness,
 host SDK auth-controller readiness, Firebase publisher access-key status, and
 generate protected host endpoints that forward access keys to publisher backend
-routes.
+routes. Tooling 0.3.47 also makes Firebase smoke tests more tolerant of
+transient VPN/TLS connection drops and generates `mini_program_sdk: ^0.3.6` for
+new host apps.
 
 Install or upgrade the CLI first:
 
@@ -165,6 +167,73 @@ tooling 0.3.45, copy the one-time key to the clipboard, embed it into the
 `.partner.json` handoff package, and show active/revoked key counts in the
 sidebar. Host developers still import only the provider-neutral handoff package;
 they do not need Firebase login or project access.
+
+## Firebase full system walkthrough
+
+Use this flow when the mini-program publisher and Flutter host developer are
+different teams.
+
+Publisher workspace:
+
+1. Open or create the mini-program folder with `MiniProgram: Create
+   MiniProgram`. Choose **Normal mini-program**.
+2. Run `MiniProgram: Setup Publisher Backend` and choose **Firebase Functions +
+   Firestore**.
+3. Run `MiniProgram: Configure Firebase Environment`. Enter the Firebase
+   project id, region, function name, and Firebase Web API key when
+   email/password auth should be enabled.
+4. Edit UI in `stac/screens/<appId>_home.dart`. Edit Firestore seed data in
+   `backend/firebase_functions/functions/data/home_bootstrap.json`,
+   `coupons_list.json`, and `session.json`.
+5. Run `MiniProgram: Deploy Publisher Backend to Firebase`.
+6. Run `MiniProgram: Seed Firebase Publisher Firestore`.
+7. Run `MiniProgram: Smoke Test Firebase Publisher Backend`. Before creating
+   access keys, choose **Run without access key**. After protected keys exist,
+   choose **Enter Firebase access key**.
+8. Run `MiniProgram: Firebase Publisher Auth Status` to confirm the auth key,
+   generated routes, CORS, Firebase Admin dependency, and host auth readiness.
+9. Run `MiniProgram: Publish MiniProgram to Firebase Hosting`. Use
+   `backend/firebase_hosting/public` as the output folder and choose deploy.
+10. Run `MiniProgram: Create Firebase Host Handoff Package`. For a real host
+    partner choose protected mode and **Create new Firebase access key**. Use a
+    key id like `company-a`; the default package filename becomes
+    `<app>-<env>-company-a.partner.json`.
+
+Send the generated `.partner.json` file to the host developer. It is the
+contract between teams. It includes the delivery URL, publisher backend URL,
+access mode, and MiniProgram access key, but it does not include Firebase
+credentials, Firebase Web API keys, service accounts, or publisher secrets.
+
+Host workspace:
+
+1. Create/open a Flutter app.
+2. Run `MiniProgram: Embed Init` and choose **Clean adapter only** for a real
+   handoff.
+3. Run `MiniProgram: Import Host Endpoint` and select the `.partner.json` file
+   from the publisher.
+4. Wrap the host app with:
+
+   ```dart
+   MiniProgramScope(
+     config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+     child: const MyApp(),
+   )
+   ```
+
+5. Open the mini-program by app id:
+
+   ```dart
+   openAppMiniProgram(
+     context,
+     appId: 'firebase_full_demo',
+     title: 'Firebase Full Demo',
+   );
+   ```
+
+6. Run `MiniProgram: Diagnose Host App`, then `MiniProgram: Run Host App`.
+
+The host developer does not need Firebase CLI login, Firebase console access,
+Firebase SDK configuration, or publisher backend secrets.
 
 `MiniProgram: Embed Init` can also generate a public first-run demo endpoint.
 Choose **Add public demo endpoint** when prompted to create:
