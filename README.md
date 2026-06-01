@@ -78,6 +78,10 @@ Future-only roadmap is tracked in:
 
 - [nextWorkAgents.md](D:/flutter-mini-program-platform/nextWorkAgents.md)
 
+New Firebase developers should start with:
+
+- [Firebase end-to-end guide](docs/firebase_end_to_end_guide.md)
+
 ## What This Platform Is Good For
 
 This platform is a good fit for:
@@ -301,6 +305,10 @@ Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 
 This is the current end-to-end Firebase path for separate mini-program
 publisher and host-app developer teams.
+
+For the full new-developer walkthrough, including Firebase Console setup, VS
+Code commands, protected handoff, host import, and troubleshooting, see
+[Firebase end-to-end guide](docs/firebase_end_to_end_guide.md).
 
 Publisher workspace:
 

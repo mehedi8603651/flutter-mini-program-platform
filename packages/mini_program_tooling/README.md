@@ -41,6 +41,12 @@ The extension is a thin UI over this same `miniprogram` CLI. Keep
 `mini_program_tooling` installed globally because the extension calls the CLI as
 the source of truth.
 
+For a complete first-time Firebase workflow with Firebase Console setup, VS
+Code commands, protected handoff, host import, and troubleshooting, see the
+repo guide:
+
+- [Firebase end-to-end guide](../../docs/firebase_end_to_end_guide.md)
+
 ## CLI surface
 
 ```text

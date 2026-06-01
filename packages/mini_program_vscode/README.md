@@ -44,6 +44,11 @@ code --install-extension MiniProgramTools.mini-program-tools
 You can also install it from the VS Code Extensions view by searching for
 `MiniProgram Tools`.
 
+For a complete first-time Firebase workflow with Firebase Console setup,
+publisher steps, protected handoff, host import, and troubleshooting, see:
+
+- [Firebase end-to-end guide](../../docs/firebase_end_to_end_guide.md)
+
 ## Local VSIX install
 
 Use this only when testing an unreleased extension build locally.
@@ -174,6 +179,10 @@ they do not need Firebase login or project access.
 
 Use this flow when the mini-program publisher and Flutter host developer are
 different teams.
+
+This section is the short VS Code checklist. For the full new-developer guide,
+including Firebase Console setup and common failures, see
+[Firebase end-to-end guide](../../docs/firebase_end_to_end_guide.md).
 
 Publisher workspace:
 
