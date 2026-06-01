@@ -8,7 +8,7 @@ package, host endpoint, or backend logic.
 
 ## Marketplace install
 
-Requires `mini_program_tooling` 0.3.45 or newer for endpoint/registry sync,
+Requires `mini_program_tooling` 0.3.46 or newer for endpoint/registry sync,
 public demo generation, public/static endpoint support, publisher backend
 endpoint metadata, backend query/state diagnostics, mock publisher backend
 starter commands, AWS Lambda/DynamoDB publisher backend workflows, Firebase
@@ -18,9 +18,11 @@ host handoff packages, Firebase protected handoff access keys, Firebase Hosting
 publish with browser CORS headers, and Firebase auth readiness diagnostics through
 `miniprogram capabilities --json`.
 
-Use `mini_program_tooling` 0.3.45 or newer when testing real Firebase auth and
+Use `mini_program_tooling` 0.3.46 or newer when testing real Firebase auth and
 protected handoff workflows so the extension can report backend auth readiness,
-host SDK auth-controller readiness, and Firebase publisher access-key status.
+host SDK auth-controller readiness, Firebase publisher access-key status, and
+generate protected host endpoints that forward access keys to publisher backend
+routes.
 
 Install or upgrade the CLI first:
 
@@ -48,7 +50,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.1.35.vsix
+code --install-extension mini-program-tools-0.1.37.vsix
 ```
 
 ## Features

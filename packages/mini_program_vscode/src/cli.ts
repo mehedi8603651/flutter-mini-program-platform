@@ -121,6 +121,7 @@ export interface EnvConfigureFirebaseArgsOptions {
   readonly region?: string;
   readonly functionName?: string;
   readonly functionUrl?: string;
+  readonly authWebApiKey?: string;
 }
 
 export interface EnvUseArgsOptions {
@@ -673,6 +674,9 @@ export function buildEnvConfigureFirebaseArgs(
   }
   if (options.functionUrl?.trim()) {
     args.push('--function-url', options.functionUrl.trim());
+  }
+  if (options.authWebApiKey?.trim()) {
+    args.push('--auth-web-api-key', options.authWebApiKey.trim());
   }
   return args;
 }

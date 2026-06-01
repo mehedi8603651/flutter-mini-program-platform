@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.37
+
+- Default protected Firebase handoff package filenames include the new
+  access-key id, for example
+  `<app>-<env>-company-a.partner.json`, so publishers can keep separate
+  packages for separate host companies.
+
+## 0.1.36
+
+- Add an optional Firebase Web API key prompt to `MiniProgram: Configure Firebase Environment`.
+- Pass `--auth-web-api-key` to `miniprogram env configure` so publisher-owned
+  email/password auth can be configured from VS Code without dropping to the terminal.
+
 ## 0.1.35
 
 - Add Firebase publisher access-key commands backed by `mini_program_tooling`

@@ -496,6 +496,7 @@ test('builds environment and cloud command arguments', () => {
       region: 'us-central1',
       functionName: 'publisherBackend',
       functionUrl: 'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/',
+      authWebApiKey: 'AIza-test-web-api-key',
     }),
     [
       'env',
@@ -513,6 +514,8 @@ test('builds environment and cloud command arguments', () => {
       'publisherBackend',
       '--function-url',
       'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/',
+      '--auth-web-api-key',
+      'AIza-test-web-api-key',
     ],
   );
   assert.deepEqual(

@@ -1131,6 +1131,22 @@ async function configureFirebaseEnvironment(
   if (functionUrl === undefined) {
     return;
   }
+  const authWebApiKey = await vscode.window.showInputBox({
+    prompt: 'Optional Firebase Web API key for publisher-owned email auth',
+    placeHolder: 'Paste apiKey from Firebase web app config, or leave blank to skip email auth',
+    ignoreFocusOut: true,
+    password: true,
+    validateInput: (value) => {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return undefined;
+      }
+      return trimmed.length >= 10 ? undefined : 'Firebase Web API key looks too short.';
+    },
+  });
+  if (authWebApiKey === undefined) {
+    return;
+  }
 
   const ok = await runCliCommand(
     'Configure Firebase Environment',
@@ -1141,6 +1157,7 @@ async function configureFirebaseEnvironment(
       region: region.trim(),
       functionName: functionName.trim(),
       functionUrl: functionUrl.trim() || undefined,
+      authWebApiKey: authWebApiKey.trim() || undefined,
     }),
     workspacePath,
     output,
@@ -2145,15 +2162,16 @@ async function publisherBackendFirebaseHostCommand(
   }
   let accessKey: string | undefined;
   if (accessMode === 'protected') {
-    accessKey = await resolveFirebaseProtectedAccessKey(
+    const resolvedAccessKey = await resolveFirebaseProtectedAccessKey(
       workspacePath,
       envName,
       output,
       statusProvider,
     );
-    if (!accessKey) {
+    if (!resolvedAccessKey) {
       return;
     }
+    accessKey = resolvedAccessKey.accessKey;
   }
 
   const hostCommandArgs = buildPublisherBackendFirebaseHostCommandArgs({
@@ -2330,21 +2348,25 @@ async function publisherBackendFirebaseHandoff(
     return;
   }
   let accessKey: string | undefined;
+  let accessKeyId: string | undefined;
   if (accessMode === 'protected') {
-    accessKey = await resolveFirebaseProtectedAccessKey(
+    const resolvedAccessKey = await resolveFirebaseProtectedAccessKey(
       workspacePath,
       envName,
       output,
       statusProvider,
     );
-    if (!accessKey) {
+    if (!resolvedAccessKey) {
       return;
     }
+    accessKey = resolvedAccessKey.accessKey;
+    accessKeyId = resolvedAccessKey.keyId;
   }
   const outputPath = await chooseFirebaseHandoffOutputPath(
     workspacePath,
     appId,
     envName,
+    accessKeyId,
   );
   if (!outputPath) {
     return;
@@ -2572,7 +2594,7 @@ async function resolveFirebaseProtectedAccessKey(
   envName: string,
   output: vscode.OutputChannel,
   statusProvider?: MiniProgramStatusTreeProvider,
-): Promise<string | undefined> {
+): Promise<{ readonly accessKey: string; readonly keyId?: string } | undefined> {
   if (!(await ensurePublisherBackendFirebaseAccessKeysCli045(workspacePath, output))) {
     return undefined;
   }
@@ -2603,7 +2625,8 @@ async function resolveFirebaseProtectedAccessKey(
       validateInput: (input) =>
         input.trim() ? undefined : 'Access key is required.',
     });
-    return value?.trim() || undefined;
+    const accessKey = value?.trim();
+    return accessKey ? { accessKey } : undefined;
   }
   const keyId = await promptKeyId('Firebase access key id for this host/partner', 'host-a');
   if (!keyId) {
@@ -2637,7 +2660,7 @@ async function resolveFirebaseProtectedAccessKey(
   vscode.window.showInformationMessage(
     'Firebase access key created and copied to clipboard. It will also be embedded in the protected handoff package.',
   );
-  return accessKey;
+  return { accessKey, keyId };
 }
 
 async function createFirebaseAccessKey(
@@ -6361,13 +6384,18 @@ async function chooseFirebaseHandoffOutputPath(
   workspacePath: string,
   appId: string,
   envName: string,
+  accessKeyId?: string,
 ): Promise<string | undefined> {
+  const fileNameParts = [
+    safeFileSegment(appId),
+    safeFileSegment(envName),
+  ];
+  if (accessKeyId?.trim()) {
+    fileNameParts.push(safeFileSegment(accessKeyId.trim()));
+  }
   const uri = await vscode.window.showSaveDialog({
     defaultUri: vscode.Uri.file(
-      path.join(
-        workspacePath,
-        `${safeFileSegment(appId)}-${safeFileSegment(envName)}.partner.json`,
-      ),
+      path.join(workspacePath, `${fileNameParts.join('-')}.partner.json`),
     ),
     filters: {
       'Partner package JSON': ['json'],

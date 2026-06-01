@@ -1067,7 +1067,7 @@ void _registerWorkflowValidationEmbedBackendTests() {
     );
     expect(
       await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-      contains('mini_program_sdk: ^0.3.5'),
+      contains('mini_program_sdk: ^0.3.6'),
     );
   });
 

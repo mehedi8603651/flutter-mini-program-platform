@@ -1669,6 +1669,49 @@ console.log(JSON.stringify({
       expect(requestedHttpUris.single.path, '/publisherBackend/auth/session');
     });
 
+    test('Firebase smoke retries transient read route failures', () async {
+      var healthAttempts = 0;
+      final starter = PublisherBackendStarter(
+        healthGetter: (uri) async {
+          healthAttempts += 1;
+          if (uri.path.endsWith('/health') && healthAttempts == 1) {
+            throw http.ClientException(
+              'Connection terminated during handshake',
+              uri,
+            );
+          }
+          return http.Response('{"ok":true}', 200);
+        },
+        httpRequester: (method, uri, {headers, body}) async => http.Response(
+          jsonEncode(<String, Object?>{'errorCode': 'auth_required'}),
+          401,
+        ),
+        delay: (duration) async {},
+      );
+      await starter.scaffold(
+        PublisherBackendScaffoldRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          template: 'firebase-functions',
+          storageMode: 'firestore',
+        ),
+      );
+
+      final result = await starter.firebaseSmoke(
+        PublisherBackendFirebaseSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _firebaseEnvironment(),
+        ),
+      );
+
+      expect(result.passed, isTrue);
+      final health = result.routes.singleWhere(
+        (route) => route.path == '/health',
+      );
+      expect(health.statusCode, 200);
+      expect(health.error, isNull);
+      expect(healthAttempts, 4);
+    });
+
     test(
       'Firebase write smoke verifies Firestore redemption document',
       () async {

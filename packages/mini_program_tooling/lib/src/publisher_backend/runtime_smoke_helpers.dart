@@ -172,12 +172,18 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   }) async {
     try {
       final response = accessKey?.trim().isNotEmpty == true
-          ? await _httpRequester(
-              method,
-              uri,
-              headers: _firebaseSmokeHeaders(accessKey: accessKey),
-            ).timeout(timeout)
-          : await _healthGetter(uri).timeout(timeout);
+          ? await _firebaseSmokeHttpWithRetry(
+              timeout: timeout,
+              request: () => _httpRequester(
+                method,
+                uri,
+                headers: _firebaseSmokeHeaders(accessKey: accessKey),
+              ),
+            )
+          : await _firebaseSmokeHttpWithRetry(
+              timeout: timeout,
+              request: () => _healthGetter(uri),
+            );
       final passed = response.statusCode == 200;
       return PublisherBackendFirebaseSmokeRouteResult(
         method: method,
@@ -214,11 +220,14 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   }) async {
     const path = '/auth/session';
     try {
-      final response = await _httpRequester(
-        'GET',
-        uri,
-        headers: _firebaseSmokeHeaders(accessKey: accessKey),
-      ).timeout(timeout);
+      final response = await _firebaseSmokeHttpWithRetry(
+        timeout: timeout,
+        request: () => _httpRequester(
+          'GET',
+          uri,
+          headers: _firebaseSmokeHeaders(accessKey: accessKey),
+        ),
+      );
       final body = _jsonObjectFromBody(response.body);
       final errorCode = body['errorCode']?.toString();
       final passed = response.statusCode == 401 && errorCode == 'auth_required';
@@ -439,14 +448,17 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   }) async {
     const path = '/auth/session';
     try {
-      final response = await _httpRequester(
-        'GET',
-        uri,
-        headers: _firebaseSmokeHeaders(
-          accessKey: accessKey,
-          authorization: 'Bearer $idToken',
+      final response = await _firebaseSmokeHttpWithRetry(
+        timeout: timeout,
+        request: () => _httpRequester(
+          'GET',
+          uri,
+          headers: _firebaseSmokeHeaders(
+            accessKey: accessKey,
+            authorization: 'Bearer $idToken',
+          ),
         ),
-      ).timeout(timeout);
+      );
       final decoded = _jsonObjectFromBody(response.body);
       final authenticated = decoded['authenticated'] == true;
       final errorCode = decoded['errorCode']?.toString();
@@ -698,6 +710,51 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
       headers['x-mini-program-access-key'] = normalizedAccessKey;
     }
     return headers;
+  }
+
+  Future<http.Response> _firebaseSmokeHttpWithRetry({
+    required Future<http.Response> Function() request,
+    required Duration timeout,
+    int attempts = 3,
+  }) async {
+    Object? lastError;
+    StackTrace? lastStackTrace;
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      try {
+        return await request().timeout(timeout);
+      } on TimeoutException catch (error, stackTrace) {
+        lastError = error;
+        lastStackTrace = stackTrace;
+      } catch (error, stackTrace) {
+        lastError = error;
+        lastStackTrace = stackTrace;
+        if (!_isTransientFirebaseSmokeError(error)) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+      }
+      if (attempt < attempts - 1) {
+        await _delay(Duration(milliseconds: 250 * (1 << attempt)));
+      }
+    }
+
+    Error.throwWithStackTrace(lastError!, lastStackTrace!);
+  }
+
+  bool _isTransientFirebaseSmokeError(Object error) {
+    if (error is TimeoutException ||
+        error is SocketException ||
+        error is HandshakeException ||
+        error is HttpException ||
+        error is http.ClientException) {
+      return true;
+    }
+    final message = error.toString().toLowerCase();
+    return message.contains('connection terminated') ||
+        message.contains('connection reset') ||
+        message.contains('connection closed') ||
+        message.contains('handshake') ||
+        message.contains('tls') ||
+        message.contains('socket');
   }
 
   Future<_PublisherBackendHealth> _waitForHealthCheck(

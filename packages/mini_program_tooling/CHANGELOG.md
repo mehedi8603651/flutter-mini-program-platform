@@ -1,4 +1,11 @@
 # Changelog
+## 0.3.47
+- add retry handling to Firebase publisher backend smoke GET checks so
+  transient TLS/connection drops do not fail otherwise healthy Firebase
+  Functions routes on unstable VPN/network paths
+- update host `embed init` to generate `mini_program_sdk: ^0.3.6` so new host
+  apps include publisher-owned email auth and cached login support by default
+
 ## 0.3.46
 - fix protected host endpoint generation so `--access-key` plus
   `--backend-base-url` writes
