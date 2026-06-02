@@ -5,6 +5,39 @@ This document is the handoff for the **next** implementation wave.
 The local Flutter CLI foundation is already shipped. The next work must build
 on that baseline instead of redesigning it again.
 
+## Active Architecture Wave: Mp JSON Engine
+
+The next major architecture wave is the platform-owned Mp JSON engine:
+
+```text
+Mini-program Dart source using Mp.*
+  -> mini_program_tooling build
+  -> versioned Mp JSON
+  -> mini_program_sdk parser + validator
+  -> SDK-owned Mp renderer and design system
+  -> Flutter core widgets
+```
+
+Implementation is intentionally incremental. Keep the shipped Stac platform
+stable while work proceeds on `feature/mp-json-engine`.
+
+Decision-complete roadmap:
+
+- [docs/mp_json_engine_roadmap.md](docs/mp_json_engine_roadmap.md)
+
+Milestone order:
+
+1. roadmap, isolated worktree, and release-size baseline
+2. contract metadata, extensible capabilities, and `mini_program_ui`
+3. strict Mp parser, validator, renderer, core nodes, and theme tokens
+4. navigation, backend, auth, paging, and asset parity
+5. optional `mini_program_legacy_stac` extraction and base SDK cleanup
+6. tooling build, scaffold, preview, validate, and publish migration
+7. Firebase, AWS, static hosting, handoff, and VS Code parity
+8. fixture migration, documentation, release-size comparison, and stable merge
+
+Do not publish local development packages before all release gates pass.
+
 ## Current Shipped Baseline
 
 These are already done and should be treated as stable unless a bug forces a

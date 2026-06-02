@@ -76,7 +76,8 @@ and **portable Flutter-hosted mini-programs**.
 
 Future-only roadmap is tracked in:
 
-- [nextWorkAgents.md](D:/flutter-mini-program-platform/nextWorkAgents.md)
+- [nextWorkAgents.md](nextWorkAgents.md)
+- [Mp JSON engine roadmap](docs/mp_json_engine_roadmap.md)
 
 New Firebase developers should start with:
 
@@ -1370,8 +1371,8 @@ miniprogram doctor
 
 ## Additional Docs
 
-- [mini_program_authoring.md](D:/flutter-mini-program-platform/docs/mini_program_authoring.md)
-- [embed_existing_flutter_app.md](D:/flutter-mini-program-platform/docs/embed_existing_flutter_app.md)
-- [packages/mini_program_tooling/README.md](D:/flutter-mini-program-platform/packages/mini_program_tooling/README.md)
-- [packages/mini_program_sdk/README.md](D:/flutter-mini-program-platform/packages/mini_program_sdk/README.md)
-- [nextWorkAgents.md](D:/flutter-mini-program-platform/nextWorkAgents.md)
+- [mini_program_authoring.md](docs/mini_program_authoring.md)
+- [embed_existing_flutter_app.md](docs/embed_existing_flutter_app.md)
+- [packages/mini_program_tooling/README.md](packages/mini_program_tooling/README.md)
+- [packages/mini_program_sdk/README.md](packages/mini_program_sdk/README.md)
+- [nextWorkAgents.md](nextWorkAgents.md)
