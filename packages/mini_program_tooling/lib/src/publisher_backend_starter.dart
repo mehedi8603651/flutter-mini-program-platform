@@ -10,6 +10,9 @@ import 'package:path/path.dart' as p;
 import 'local_cli_state.dart';
 
 part 'publisher_backend/models.dart';
+part 'publisher_backend/models/aws_models.dart';
+part 'publisher_backend/models/firebase_models.dart';
+part 'publisher_backend/models/local_models.dart';
 part 'publisher_backend/internal_models.dart';
 part 'publisher_backend/generated_files.dart';
 part 'publisher_backend/generated_files/aws_lambda_templates.dart';
