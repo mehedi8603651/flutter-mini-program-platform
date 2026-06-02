@@ -153,6 +153,7 @@ void _registerWorkflowValidationEmbedBackendTests() {
     expect(starter['template'], 'firebase-functions');
     expect(starter['storageMode'], 'firestore');
     expect(starter['backendRootPath'], contains('firebase_functions'));
+    expect(starter['expectedRoutes'], contains('GET /coupons/page'));
     final firebase = starter['firebase'] as Map<String, dynamic>;
     expect(firebase['detected'], isTrue);
     expect(firebase['storageMode'], 'firestore');

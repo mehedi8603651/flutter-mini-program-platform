@@ -1063,6 +1063,7 @@ class MiniProgramWorkflowStatusController {
         'GET /health',
         'GET /home/bootstrap',
         'GET /coupons/list',
+        'GET /coupons/page',
         'GET /auth/session',
         'POST /coupon/redeem',
       ],

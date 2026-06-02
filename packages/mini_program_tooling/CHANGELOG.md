@@ -1,4 +1,8 @@
 # Changelog
+## 0.3.50
+- report `GET /coupons/page` in `workflow status` publisher backend route
+  metadata so VS Code and other CLI consumers can show paged-route readiness
+
 ## 0.3.49
 - generate provider-neutral paged coupon routes for Firebase Functions,
   AWS Lambda, and the local mock publisher backend at `GET /coupons/page`
