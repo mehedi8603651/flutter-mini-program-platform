@@ -56,6 +56,6 @@ MiniProgramManifest _buildManifest({
     entry: 'profile/home',
     contractVersion: '1.0.0',
     sdkVersionRange: sdkVersionRange,
-    requiredCapabilities: const [Capability.auth],
+    requiredCapabilities: const [CapabilityIds.auth],
   );
 }

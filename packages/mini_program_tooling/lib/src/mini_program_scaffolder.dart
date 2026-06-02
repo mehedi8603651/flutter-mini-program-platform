@@ -72,12 +72,19 @@ class MiniProgramScaffolder {
 
   static final RegExp _miniProgramIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
 
-  static final Map<String, Capability> _knownCapabilities =
-      Map<String, Capability>.fromEntries(
-        Capability.values.map(
-          (capability) => MapEntry(capability.wireValue, capability),
-        ),
-      );
+  static const List<CapabilityId> _scaffoldCapabilityOrder = <CapabilityId>[
+    CapabilityIds.auth,
+    CapabilityIds.analytics,
+    CapabilityIds.secureApi,
+    CapabilityIds.nativeNavigation,
+  ];
+
+  static const Set<CapabilityId> _knownCapabilities = <CapabilityId>{
+    CapabilityIds.auth,
+    CapabilityIds.analytics,
+    CapabilityIds.secureApi,
+    CapabilityIds.nativeNavigation,
+  };
 
   Future<MiniProgramScaffoldResult> scaffold(
     MiniProgramScaffoldRequest request,
@@ -255,7 +262,7 @@ class MiniProgramScaffolder {
 
     final unknownCapabilities =
         normalized
-            .where((capability) => !_knownCapabilities.containsKey(capability))
+            .where((capability) => !_knownCapabilities.contains(capability))
             .toList()
           ..sort();
 
@@ -265,8 +272,7 @@ class MiniProgramScaffolder {
       );
     }
 
-    final ordered = Capability.values
-        .map((capability) => capability.wireValue)
+    final ordered = _scaffoldCapabilityOrder
         .where(normalized.contains)
         .toList();
 
@@ -323,7 +329,7 @@ class MiniProgramScaffolder {
     required List<String> capabilities,
     required String entryScreenId,
   }) {
-    final usesSecureApi = capabilities.contains(Capability.secureApi.wireValue);
+    final usesSecureApi = capabilities.contains(CapabilityIds.secureApi);
     final manifest = <String, dynamic>{
       'id': miniProgramId,
       'version': '1.0.0',
@@ -423,7 +429,7 @@ StacOptions get defaultStacOptions => const StacOptions(
       );
     }
 
-    if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
+    if (capabilities.contains(CapabilityIds.nativeNavigation)) {
       notes.add(
         '- `native_navigation` is enabled, but the scaffold does not call any '
         'host-owned route by default; add `hostOpenNativeScreenAction(...)` '
@@ -431,7 +437,7 @@ StacOptions get defaultStacOptions => const StacOptions(
       );
     }
 
-    if (capabilities.contains(Capability.secureApi.wireValue)) {
+    if (capabilities.contains(CapabilityIds.secureApi)) {
       notes.add(
         '- `secure_api` is enabled, but the scaffold does not call a backend '
         'endpoint by default; add `hostCallSecureApiAction(...)` only after '
@@ -703,7 +709,7 @@ ${_buildHomeRouteExamplesComment(miniProgramId: miniProgramId, detailsScreenId: 
 ''',
     ];
 
-    if (capabilities.contains(Capability.analytics.wireValue)) {
+    if (capabilities.contains(CapabilityIds.analytics)) {
       widgets.add(_buildTrackEventButton(miniProgramId));
     }
 
@@ -903,11 +909,11 @@ ${_buildDetailsRouteExamplesComment(miniProgramId: miniProgramId, detailsScreenI
 ''',
     ];
 
-    if (capabilities.contains(Capability.nativeNavigation.wireValue)) {
+    if (capabilities.contains(CapabilityIds.nativeNavigation)) {
       widgets.add(_buildNativeNavigationCapabilityNote());
     }
 
-    if (capabilities.contains(Capability.secureApi.wireValue)) {
+    if (capabilities.contains(CapabilityIds.secureApi)) {
       widgets.add(_buildSecureApiCapabilityNote());
     }
 

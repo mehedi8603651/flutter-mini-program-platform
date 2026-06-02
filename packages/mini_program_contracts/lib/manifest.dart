@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'capability.dart';
 import 'feature_flags.dart';
 import 'sdk_version.dart';
+import 'screen_format.dart';
 
 part 'manifest.freezed.dart';
 part 'manifest.g.dart';
@@ -139,13 +140,26 @@ abstract class MiniProgramFallback with _$MiniProgramFallback {
 @freezed
 abstract class MiniProgramManifest with _$MiniProgramManifest {
   @JsonSerializable(checked: true, explicitToJson: true)
+  @Assert(
+    "screenFormat != 'mp' || screenSchemaVersion != null",
+    'screenSchemaVersion is required when screenFormat is "mp".',
+  )
+  @Assert(
+    'screenSchemaVersion == null || screenSchemaVersion > 0',
+    'screenSchemaVersion must be greater than zero when provided.',
+  )
   const factory MiniProgramManifest({
     required String id,
     required String version,
     required String entry,
     required String contractVersion,
     @SdkVersionRangeConverter() required SdkVersionRange sdkVersionRange,
-    required List<Capability> requiredCapabilities,
+    @CapabilityIdListConverter()
+    required List<CapabilityId> requiredCapabilities,
+    @MiniProgramScreenFormatConverter()
+    @Default(MiniProgramScreenFormats.stac)
+    MiniProgramScreenFormat screenFormat,
+    @JsonKey(includeIfNull: false) int? screenSchemaVersion,
     @Default(<FeatureFlagKey>[]) List<FeatureFlagKey> featureFlags,
     @Default(MiniProgramCachePolicy()) MiniProgramCachePolicy cachePolicy,
     MiniProgramFallback? fallback,
@@ -160,8 +174,15 @@ extension MiniProgramManifestX on MiniProgramManifest {
   bool hasFeatureFlag(FeatureFlagKey key) => featureFlags.contains(key);
 
   /// Whether the manifest requires a given host capability.
-  bool requiresCapability(Capability capability) =>
-      requiredCapabilities.contains(capability);
+  bool requiresCapability(Object? capability) =>
+      requiredCapabilities.contains(CapabilityIds.normalizeObject(capability));
+
+  /// Whether this manifest points at an Mp JSON screen document.
+  bool get usesMpScreenFormat => screenFormat == MiniProgramScreenFormats.mp;
+
+  /// Whether this manifest points at a legacy Stac screen document.
+  bool get usesLegacyStacScreenFormat =>
+      screenFormat == MiniProgramScreenFormats.stac;
 
   /// Whether the manifest itself may be reused from stale cache on backend
   /// errors.

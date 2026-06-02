@@ -1,13 +1,31 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('wire values', () {
     test('capability values stay stable', () {
+      expect(CapabilityIds.auth, 'auth');
+      expect(CapabilityIds.analytics, 'analytics');
+      expect(CapabilityIds.secureApi, 'secure_api');
+      expect(CapabilityIds.nativeNavigation, 'native_navigation');
+      expect(CapabilityIds.mediaVideo, 'media.video');
+      expect(CapabilityIds.documentPdf, 'document.pdf');
+      expect(CapabilityIds.browserWebview, 'browser.webview');
       expect(Capability.auth.wireValue, 'auth');
       expect(Capability.analytics.wireValue, 'analytics');
       expect(Capability.secureApi.wireValue, 'secure_api');
       expect(Capability.nativeNavigation.wireValue, 'native_navigation');
+      expect(CapabilityIds.isValid('media.video'), isTrue);
+      expect(CapabilityIds.isValid('secure_api'), isTrue);
+      expect(CapabilityIds.isValid(''), isFalse);
+      expect(CapabilityIds.isValid('Media.Video'), isFalse);
+    });
+
+    test('screen format values stay stable', () {
+      expect(MiniProgramScreenFormats.stac, 'stac');
+      expect(MiniProgramScreenFormats.mp, 'mp');
     });
 
     test('action names stay stable', () {

@@ -34,7 +34,7 @@ void main() {
           source: source,
           manifestCache: manifestCache,
           screenCache: screenCache,
-          capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
           logger: const DebugPrintSdkLogger(),
         );
@@ -65,7 +65,7 @@ void main() {
           source: source,
           manifestCache: manifestCache,
           screenCache: screenCache,
-          capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
           logger: const DebugPrintSdkLogger(),
         );
@@ -102,7 +102,7 @@ void main() {
           source: source,
           manifestCache: manifestCache,
           screenCache: screenCache,
-          capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
           logger: const DebugPrintSdkLogger(),
         );
@@ -129,7 +129,7 @@ void main() {
             source: source,
             manifestCache: manifestCache,
             screenCache: screenCache,
-            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
             featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
             logger: const DebugPrintSdkLogger(),
           ),
@@ -171,7 +171,7 @@ void main() {
           source: source,
           manifestCache: manifestCache,
           screenCache: screenCache,
-          capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
           logger: const DebugPrintSdkLogger(),
         );
@@ -202,7 +202,7 @@ void main() {
             source: source,
             manifestCache: manifestCache,
             screenCache: screenCache,
-            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
             featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
             logger: const DebugPrintSdkLogger(),
           ),
@@ -268,7 +268,7 @@ void main() {
             source: source,
             manifestCache: manifestCache,
             screenCache: screenCache,
-            capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+            capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
             featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
             logger: const DebugPrintSdkLogger(),
           ),
@@ -323,7 +323,7 @@ void main() {
           source: initialSource,
           manifestCache: initialCacheBundle.manifestCache,
           screenCache: initialCacheBundle.screenCache,
-          capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
           logger: const DebugPrintSdkLogger(),
         );
@@ -351,7 +351,7 @@ void main() {
           source: offlineSource,
           manifestCache: coldStartCacheBundle.manifestCache,
           screenCache: coldStartCacheBundle.screenCache,
-          capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+          capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
           featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
           logger: const DebugPrintSdkLogger(),
         );
@@ -394,7 +394,7 @@ void main() {
         source: source,
         manifestCache: cacheBundle.manifestCache,
         screenCache: cacheBundle.screenCache,
-        capabilityRegistry: CapabilityRegistry(const [Capability.auth]),
+        capabilityRegistry: CapabilityRegistry(const [CapabilityIds.auth]),
         featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
         logger: const DebugPrintSdkLogger(),
       );
@@ -448,7 +448,7 @@ MiniProgramManifest _buildManifest({
     entry: 'profile/home',
     contractVersion: '1.0.0',
     sdkVersionRange: const SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-    requiredCapabilities: const [Capability.auth],
+    requiredCapabilities: const [CapabilityIds.auth],
     cachePolicy: cachePolicy,
   );
 }

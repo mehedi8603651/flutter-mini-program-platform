@@ -30,10 +30,10 @@ void main() {
               hostApp: 'embedded_app',
               sdkVersion: '1.0.0',
               hostVersion: '2.4.0',
-              capabilities: <Capability>{
-                Capability.secureApi,
-                Capability.analytics,
-                Capability.nativeNavigation,
+              capabilities: <CapabilityId>{
+                CapabilityIds.secureApi,
+                CapabilityIds.analytics,
+                CapabilityIds.nativeNavigation,
               },
               platform: 'android',
               locale: 'en-US',
@@ -110,10 +110,10 @@ void main() {
     expect(catalog.traceId, 'trace_catalog_001');
     expect(catalog.entries, hasLength(2));
     expect(catalog.entries.first.id, 'feedback_form');
-    expect(catalog.entries.first.requiredCapabilities, <Capability>[
-      Capability.analytics,
-      Capability.secureApi,
-      Capability.nativeNavigation,
+    expect(catalog.entries.first.requiredCapabilities, <CapabilityId>[
+      CapabilityIds.analytics,
+      CapabilityIds.secureApi,
+      CapabilityIds.nativeNavigation,
     ]);
   });
 

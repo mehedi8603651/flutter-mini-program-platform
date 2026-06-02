@@ -93,9 +93,7 @@ class ManifestLoader {
       manifest.requiredCapabilities,
     );
     if (missingCapabilities.isNotEmpty) {
-      final missingWireValues =
-          missingCapabilities.map((capability) => capability.wireValue).toList()
-            ..sort();
+      final missingWireValues = missingCapabilities.toList()..sort();
 
       logger.warn(
         'Manifest rejected because required capabilities are missing.',

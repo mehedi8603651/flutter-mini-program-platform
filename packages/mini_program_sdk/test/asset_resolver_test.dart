@@ -143,7 +143,7 @@ MiniProgramManifest _cacheableManifest() {
     entry: 'profile_center_home',
     contractVersion: '1.0.0',
     sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-    requiredCapabilities: <Capability>[Capability.analytics],
+    requiredCapabilities: <CapabilityId>[CapabilityIds.analytics],
     cachePolicy: MiniProgramCachePolicy(
       manifest: MiniProgramCacheRule(
         mode: MiniProgramCacheMode.staleWhileError,
@@ -164,7 +164,7 @@ MiniProgramManifest _noCacheManifest() {
     entry: 'feedback_form_home',
     contractVersion: '1.0.0',
     sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-    requiredCapabilities: <Capability>[Capability.secureApi],
+    requiredCapabilities: <CapabilityId>[CapabilityIds.secureApi],
     cachePolicy: MiniProgramCachePolicy(
       manifest: MiniProgramCacheRule(mode: MiniProgramCacheMode.noCache),
       entryScreen: MiniProgramCacheRule(mode: MiniProgramCacheMode.noCache),

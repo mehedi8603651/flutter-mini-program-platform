@@ -105,9 +105,17 @@ _MiniProgramManifest _$MiniProgramManifestFromJson(Map<String, dynamic> json) =>
         ),
         requiredCapabilities: $checkedConvert(
           'requiredCapabilities',
-          (v) => (v as List<dynamic>)
-              .map((e) => $enumDecode(_$CapabilityEnumMap, e))
-              .toList(),
+          (v) => const CapabilityIdListConverter().fromJson(v),
+        ),
+        screenFormat: $checkedConvert(
+          'screenFormat',
+          (v) => v == null
+              ? MiniProgramScreenFormats.stac
+              : const MiniProgramScreenFormatConverter().fromJson(v),
+        ),
+        screenSchemaVersion: $checkedConvert(
+          'screenSchemaVersion',
+          (v) => (v as num?)?.toInt(),
         ),
         featureFlags: $checkedConvert(
           'featureFlags',
@@ -141,17 +149,14 @@ Map<String, dynamic> _$MiniProgramManifestToJson(
   'sdkVersionRange': const SdkVersionRangeConverter().toJson(
     instance.sdkVersionRange,
   ),
-  'requiredCapabilities': instance.requiredCapabilities
-      .map((e) => _$CapabilityEnumMap[e]!)
-      .toList(),
+  'requiredCapabilities': const CapabilityIdListConverter().toJson(
+    instance.requiredCapabilities,
+  ),
+  'screenFormat': const MiniProgramScreenFormatConverter().toJson(
+    instance.screenFormat,
+  ),
+  'screenSchemaVersion': ?instance.screenSchemaVersion,
   'featureFlags': instance.featureFlags,
   'cachePolicy': instance.cachePolicy.toJson(),
   'fallback': instance.fallback?.toJson(),
-};
-
-const _$CapabilityEnumMap = {
-  Capability.auth: 'auth',
-  Capability.analytics: 'analytics',
-  Capability.secureApi: 'secure_api',
-  Capability.nativeNavigation: 'native_navigation',
 };

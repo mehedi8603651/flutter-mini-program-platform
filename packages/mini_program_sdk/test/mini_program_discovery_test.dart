@@ -138,9 +138,9 @@ const MiniProgramManifest _profileCenterManifest = MiniProgramManifest(
   entry: 'profile_center_home',
   contractVersion: '1.0.0',
   sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-  requiredCapabilities: <Capability>[
-    Capability.analytics,
-    Capability.nativeNavigation,
+  requiredCapabilities: <CapabilityId>[
+    CapabilityIds.analytics,
+    CapabilityIds.nativeNavigation,
   ],
   cachePolicy: MiniProgramCachePolicy(
     manifest: MiniProgramCacheRule(

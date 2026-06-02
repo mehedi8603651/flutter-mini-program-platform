@@ -40,7 +40,7 @@ class PublishedMiniProgramSummary {
       entry: json['entry'] as String,
       resolvedVersion: json['resolvedVersion'] as String,
       requiredCapabilities: rawRequiredCapabilities
-          .map((value) => _parseCapability(value.toString()))
+          .map((value) => CapabilityIds.normalizeObject(value))
           .toList(growable: false),
       selectionMode: json['selectionMode']?.toString(),
       decisionReason: json['decisionReason']?.toString(),
@@ -53,7 +53,7 @@ class PublishedMiniProgramSummary {
   final String description;
   final String entry;
   final String resolvedVersion;
-  final List<Capability> requiredCapabilities;
+  final List<CapabilityId> requiredCapabilities;
   final String? selectionMode;
   final String? decisionReason;
   final String? matchedRuleId;
@@ -257,14 +257,4 @@ class PublishedMiniProgramCatalogClient {
 
     return null;
   }
-}
-
-Capability _parseCapability(String wireValue) {
-  for (final capability in Capability.values) {
-    if (capability.wireValue == wireValue) {
-      return capability;
-    }
-  }
-
-  throw FormatException('Unsupported capability "$wireValue".');
 }

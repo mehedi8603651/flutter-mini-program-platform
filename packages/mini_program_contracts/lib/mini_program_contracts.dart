@@ -22,5 +22,8 @@ export 'mini_program_navigation_actions.dart';
 // Manifest contract models for portable mini-program delivery.
 export 'manifest.dart';
 
+// Screen document format contract values.
+export 'screen_format.dart';
+
 // SDK semver compatibility helpers.
 export 'sdk_version.dart';

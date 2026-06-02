@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:test/test.dart';
@@ -12,10 +14,12 @@ void main() {
         contractVersion: '1.0.0',
         sdkVersionRange: const SdkVersionRange(value: '>=1.0.0 <2.0.0'),
         requiredCapabilities: const [
-          Capability.auth,
-          Capability.secureApi,
-          Capability.nativeNavigation,
+          CapabilityIds.auth,
+          CapabilityIds.secureApi,
+          CapabilityIds.nativeNavigation,
         ],
+        screenFormat: MiniProgramScreenFormats.mp,
+        screenSchemaVersion: 1,
         featureFlags: const ['profile_center_v2'],
         cachePolicy: const MiniProgramCachePolicy(
           manifest: MiniProgramCacheRule(
@@ -39,6 +43,8 @@ void main() {
         'secure_api',
         'native_navigation',
       ]);
+      expect(json['screenFormat'], 'mp');
+      expect(json['screenSchemaVersion'], 1);
       expect(json['featureFlags'], ['profile_center_v2']);
       expect(json['cachePolicy'], {
         'manifest': {'mode': 'staleWhileError', 'maxStaleSeconds': 86400},
@@ -54,28 +60,111 @@ void main() {
 
       expect(decoded, manifest);
       expect(decoded.hasFeatureFlag('profile_center_v2'), isTrue);
+      expect(decoded.requiresCapability(CapabilityIds.auth), isTrue);
       expect(decoded.requiresCapability(Capability.auth), isTrue);
-      expect(decoded.requiresCapability(Capability.analytics), isFalse);
+      expect(decoded.requiresCapability(CapabilityIds.analytics), isFalse);
+      expect(decoded.usesMpScreenFormat, isTrue);
+      expect(decoded.usesLegacyStacScreenFormat, isFalse);
       expect(decoded.allowsManifestStaleCache, isTrue);
       expect(decoded.allowsEntryScreenStaleCache, isFalse);
       expect(decoded.manifestMaxStaleAge, const Duration(days: 1));
       expect(decoded.entryScreenMaxStaleAge, const Duration(hours: 1));
     });
 
-    test('rejects unknown capability values during decode', () {
+    test('decodes old manifests without screenFormat as legacy Stac', () {
+      final manifest = MiniProgramManifest.fromJson({
+        'id': 'profile_center',
+        'version': '1.2.3',
+        'entry': 'screens/profile_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': ['auth'],
+      });
+
+      expect(manifest.screenFormat, MiniProgramScreenFormats.stac);
+      expect(manifest.screenSchemaVersion, isNull);
+      expect(manifest.usesLegacyStacScreenFormat, isTrue);
+    });
+
+    test('round-trips unknown but valid capability IDs', () {
+      final manifest = MiniProgramManifest.fromJson({
+        'id': 'profile_center',
+        'version': '1.2.3',
+        'entry': 'screens/profile_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': ['auth', 'media.video'],
+      });
+
+      expect(manifest.requiredCapabilities, [
+        CapabilityIds.auth,
+        CapabilityIds.mediaVideo,
+      ]);
+      expect(manifest.toJson()['requiredCapabilities'], [
+        'auth',
+        'media.video',
+      ]);
+    });
+
+    test('rejects malformed capability values during decode', () {
       final json = {
         'id': 'profile_center',
         'version': '1.2.3',
         'entry': 'screens/profile_home',
         'contractVersion': '1.0.0',
         'sdkVersionRange': '>=1.0.0 <2.0.0',
-        'requiredCapabilities': ['auth', 'camera'],
+        'requiredCapabilities': ['auth', 'Camera'],
       };
 
       expect(
         () => MiniProgramManifest.fromJson(json),
         throwsA(isA<CheckedFromJsonException>()),
       );
+    });
+
+    test('rejects Mp manifests without a screen schema version', () {
+      final json = {
+        'id': 'profile_center',
+        'version': '1.2.3',
+        'entry': 'screens/profile_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': ['auth'],
+        'screenFormat': 'mp',
+      };
+
+      expect(() => MiniProgramManifest.fromJson(json), throwsA(anything));
+    });
+
+    test('rejects non-positive screen schema versions', () {
+      final json = {
+        'id': 'profile_center',
+        'version': '1.2.3',
+        'entry': 'screens/profile_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': ['auth'],
+        'screenFormat': 'mp',
+        'screenSchemaVersion': 0,
+      };
+
+      expect(() => MiniProgramManifest.fromJson(json), throwsA(anything));
+    });
+
+    test('preserves unknown screen format strings', () {
+      final manifest = MiniProgramManifest.fromJson({
+        'id': 'profile_center',
+        'version': '1.2.3',
+        'entry': 'screens/profile_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=1.0.0 <2.0.0',
+        'requiredCapabilities': ['auth'],
+        'screenFormat': 'future',
+      });
+
+      expect(manifest.screenFormat, 'future');
+      expect(manifest.usesMpScreenFormat, isFalse);
+      expect(manifest.usesLegacyStacScreenFormat, isFalse);
     });
 
     test('rejects malformed manifest payloads', () {
@@ -161,16 +250,16 @@ void main() {
           endpoint: 'feedback/submit',
           body: const {'source': 'feedback_form'},
         );
-        const openMiniProgramScreenPayload =
-            OpenMiniProgramScreenActionPayload(screenId: 'recharge_plan');
-        const resetMiniProgramStackPayload =
-            ResetMiniProgramStackActionPayload(screenId: 'recharge_summary');
+        const openMiniProgramScreenPayload = OpenMiniProgramScreenActionPayload(
+          screenId: 'recharge_plan',
+        );
+        const resetMiniProgramStackPayload = ResetMiniProgramStackActionPayload(
+          screenId: 'recharge_summary',
+        );
         const replaceMiniProgramScreenPayload =
             ReplaceMiniProgramScreenActionPayload(screenId: 'recharge_confirm');
-        const popMiniProgramScreenPayload =
-            PopMiniProgramScreenActionPayload();
-        const popToMiniProgramRootPayload =
-            PopToMiniProgramRootActionPayload();
+        const popMiniProgramScreenPayload = PopMiniProgramScreenActionPayload();
+        const popToMiniProgramRootPayload = PopToMiniProgramRootActionPayload();
         const popToMiniProgramScreenPayload =
             PopToMiniProgramScreenActionPayload(screenId: 'recharge_plan');
         final openNativeScreenRequest = HostActionRequest.openNativeScreen(
@@ -254,10 +343,7 @@ void main() {
         );
         expect(callSecureApiRequest.actionName, ActionNames.callSecureApi);
         expect(trackEventRequest.actionName, ActionNames.trackEvent);
-        expect(
-          ActionNames.openMiniProgramScreen,
-          'openMiniProgramScreen',
-        );
+        expect(ActionNames.openMiniProgramScreen, 'openMiniProgramScreen');
         expect(
           ActionNames.replaceMiniProgramScreen,
           'replaceMiniProgramScreen',
@@ -265,10 +351,7 @@ void main() {
         expect(ActionNames.popMiniProgramScreen, 'popMiniProgramScreen');
         expect(ActionNames.resetMiniProgramStack, 'resetMiniProgramStack');
         expect(ActionNames.popToMiniProgramRoot, 'popToMiniProgramRoot');
-        expect(
-          ActionNames.popToMiniProgramScreen,
-          'popToMiniProgramScreen',
-        );
+        expect(ActionNames.popToMiniProgramScreen, 'popToMiniProgramScreen');
       },
     );
 

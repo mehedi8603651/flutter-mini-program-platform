@@ -185,7 +185,7 @@ const MiniProgramDeliveryContext _deliveryContext = MiniProgramDeliveryContext(
   hostApp: 'host_app',
   sdkVersion: '1.0.0',
   hostVersion: '1.0.0',
-  capabilities: <Capability>{Capability.analytics},
+  capabilities: <CapabilityId>{CapabilityIds.analytics},
   platform: 'android',
   locale: 'en-US',
 );
@@ -208,7 +208,7 @@ class _RecordingSource implements DisposableMiniProgramSource {
       entry: 'home',
       contractVersion: '1.0.0',
       sdkVersionRange: const SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-      requiredCapabilities: const <Capability>[Capability.analytics],
+      requiredCapabilities: const <CapabilityId>[CapabilityIds.analytics],
     );
   }
 

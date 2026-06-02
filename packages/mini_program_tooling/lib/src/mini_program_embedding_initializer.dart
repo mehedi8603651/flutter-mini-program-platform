@@ -566,9 +566,9 @@ MiniProgramConfig buildMiniProgramConfig({
   final locale = WidgetsFlutterBinding.ensureInitialized()
       .platformDispatcher
       .locale;
-  final supportedCapabilities = <Capability>{
-    Capability.analytics,
-    if (openNativeRoute != null) Capability.nativeNavigation,
+  final supportedCapabilities = <CapabilityId>{
+    CapabilityIds.analytics,
+    if (openNativeRoute != null) CapabilityIds.nativeNavigation,
   };
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,

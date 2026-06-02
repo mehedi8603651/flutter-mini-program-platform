@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-dev.1
+
+- add `screenFormat` and `screenSchemaVersion` manifest metadata for the Mp JSON engine
+- default missing `screenFormat` to legacy `stac`
+- switch manifest required capabilities to value-based capability IDs
+- add dotted capability IDs for future optional media/document/browser features
+- keep the old `Capability` enum as deprecated compatibility API
+
 ## 0.1.1
 
 - add `endpoint_not_configured` for host runtime endpoint routing failures

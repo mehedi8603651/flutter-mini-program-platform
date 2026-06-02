@@ -485,7 +485,7 @@ const MiniProgramDeliveryContext _deliveryContext = MiniProgramDeliveryContext(
   hostApp: 'host_app',
   sdkVersion: '1.0.0',
   hostVersion: '2.0.0',
-  capabilities: <Capability>{Capability.analytics},
+  capabilities: <CapabilityId>{CapabilityIds.analytics},
   platform: 'android',
   locale: 'en-US',
 );

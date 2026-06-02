@@ -8,7 +8,8 @@ backend delivery, host apps, and runtime/tooling packages.
 ## What it exports
 
 - manifest models and cache policy types
-- capability enums
+- value-based capability IDs
+- screen format metadata for legacy Stac and Mp JSON screens
 - stable action names
 - typed action payload models
 - host action request/result envelopes
@@ -26,3 +27,25 @@ backend delivery, host apps, and runtime/tooling packages.
 Most application code should depend on a higher-level package such as the SDK
 or tooling package. Depend on `mini_program_contracts` directly when you need
 the shared wire-level types and constants.
+
+## Screen formats
+
+Older manifests do not need a `screenFormat`; missing values decode as
+`stac`. New Mp JSON manifests should declare:
+
+```json
+{
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1
+}
+```
+
+Unknown non-empty screen format strings are preserved so SDKs can show a
+controlled unsupported-format error.
+
+## Capability IDs
+
+New code should use `CapabilityId` strings and the constants in
+`CapabilityIds`, for example `CapabilityIds.auth` or
+`CapabilityIds.mediaVideo`. The old `Capability` enum remains available as a
+deprecated compatibility API while the Mp engine branch migrates callers.

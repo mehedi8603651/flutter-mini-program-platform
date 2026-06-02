@@ -463,8 +463,8 @@ MiniProgramConfig _buildConfig({
           screenJson: const <String, dynamic>{'type': 'text', 'data': 'Loaded'},
         ),
     hostBridge: _FakeHostBridge(),
-    capabilityRegistry: CapabilityRegistry(const <Capability>[
-      Capability.analytics,
+    capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+      CapabilityIds.analytics,
     ]),
     backendConnector: backendConnector,
   );
@@ -477,7 +477,7 @@ MiniProgramManifest _buildManifest() {
     entry: 'profile_center_home',
     contractVersion: '1.0.0',
     sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-    requiredCapabilities: <Capability>[Capability.analytics],
+    requiredCapabilities: <CapabilityId>[CapabilityIds.analytics],
   );
 }
 
@@ -494,8 +494,8 @@ class _CountingConfig extends MiniProgramConfig {
               },
             ),
         hostBridge: _FakeHostBridge(),
-        capabilityRegistry: CapabilityRegistry(const <Capability>[
-          Capability.analytics,
+        capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+          CapabilityIds.analytics,
         ]),
       );
 

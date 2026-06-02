@@ -336,10 +336,10 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
     );
     _hostBridge = PreviewHostBridge(navigatorKey: _navigatorKey);
     _capabilityRegistry = CapabilityRegistry(
-      const <Capability>[
-        Capability.analytics,
-        Capability.nativeNavigation,
-        Capability.secureApi,
+      const <CapabilityId>[
+        CapabilityIds.analytics,
+        CapabilityIds.nativeNavigation,
+        CapabilityIds.secureApi,
       ],
     );
     _cacheBundle = MiniProgramCacheBundle.inMemory();

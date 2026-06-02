@@ -30,8 +30,8 @@ void main() {
           },
         ),
         hostBridge: _FakeHostBridge(),
-        capabilityRegistry: CapabilityRegistry(const <Capability>[
-          Capability.analytics,
+        capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+          CapabilityIds.analytics,
         ]),
         cacheBundle: MiniProgramCacheBundle.inMemory(),
       );
@@ -78,8 +78,8 @@ void main() {
         },
       ),
       hostBridge: _FakeHostBridge(),
-      capabilityRegistry: CapabilityRegistry(const <Capability>[
-        Capability.analytics,
+      capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+        CapabilityIds.analytics,
       ]),
       cacheBundle: MiniProgramCacheBundle.inMemory(),
     );
@@ -114,8 +114,8 @@ void main() {
         },
       ),
       hostBridge: _FakeHostBridge(),
-      capabilityRegistry: CapabilityRegistry(const <Capability>[
-        Capability.analytics,
+      capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+        CapabilityIds.analytics,
       ]),
       cacheBundle: MiniProgramCacheBundle.inMemory(),
     );
@@ -135,8 +135,8 @@ void main() {
         },
       ),
       hostBridge: _FakeHostBridge(),
-      capabilityRegistry: CapabilityRegistry(const <Capability>[
-        Capability.analytics,
+      capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+        CapabilityIds.analytics,
       ]),
       cacheBundle: MiniProgramCacheBundle.inMemory(),
     );
@@ -165,8 +165,8 @@ void main() {
       sdkVersion: '1.0.0',
       source: const _FailingManifestSource(),
       hostBridge: _FakeHostBridge(),
-      capabilityRegistry: CapabilityRegistry(const <Capability>[
-        Capability.analytics,
+      capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+        CapabilityIds.analytics,
       ]),
       cacheBundle: MiniProgramCacheBundle.inMemory(),
     );
@@ -207,8 +207,8 @@ void main() {
           },
         ),
         hostBridge: _FakeHostBridge(),
-        capabilityRegistry: CapabilityRegistry(const <Capability>[
-          Capability.analytics,
+        capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+          CapabilityIds.analytics,
         ]),
         cacheBundle: MiniProgramCacheBundle.inMemory(),
       );
@@ -265,8 +265,8 @@ void main() {
         },
       ),
       hostBridge: _FakeHostBridge(),
-      capabilityRegistry: CapabilityRegistry(const <Capability>[
-        Capability.analytics,
+      capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+        CapabilityIds.analytics,
       ]),
       cacheBundle: MiniProgramCacheBundle.inMemory(),
     );
@@ -400,6 +400,6 @@ MiniProgramManifest _buildManifest() {
     entry: 'profile_center_home',
     contractVersion: '1.0.0',
     sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-    requiredCapabilities: <Capability>[Capability.analytics],
+    requiredCapabilities: <CapabilityId>[CapabilityIds.analytics],
   );
 }

@@ -31,9 +31,9 @@ void main() {
             hostApp: 'embedded_app',
             sdkVersion: '1.0.0',
             hostVersion: '2.4.0',
-            capabilities: <Capability>{
-              Capability.nativeNavigation,
-              Capability.analytics,
+            capabilities: <CapabilityId>{
+              CapabilityIds.nativeNavigation,
+              CapabilityIds.analytics,
             },
             platform: 'android',
             locale: 'en-US',

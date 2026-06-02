@@ -1,0 +1,3 @@
+dependency_overrides:
+  mini_program_contracts:
+    path: ../mini_program_contracts

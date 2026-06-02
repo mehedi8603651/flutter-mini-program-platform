@@ -1161,7 +1161,7 @@ class DeliveryRepositoryValidator {
       );
     }
 
-    if (manifest.requiresCapability(Capability.secureApi) &&
+    if (manifest.requiresCapability(CapabilityIds.secureApi) &&
         manifest.cachePolicy.entryScreen.mode != MiniProgramCacheMode.noCache) {
       messages.add(
         DeliveryValidationMessage(

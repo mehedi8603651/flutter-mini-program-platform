@@ -18,7 +18,7 @@ class MiniProgramDeliveryContext {
   final String hostApp;
   final String sdkVersion;
   final String hostVersion;
-  final Set<Capability> capabilities;
+  final Set<CapabilityId> capabilities;
   final String? platform;
   final String? locale;
   final String? tenantId;
@@ -55,9 +55,9 @@ class MiniProgramDeliveryContext {
     return queryParameters;
   }
 
-  static String _serializeCapabilities(Set<Capability> capabilities) {
-    final wireValues =
-        capabilities.map((capability) => capability.wireValue).toList()..sort();
+  static String _serializeCapabilities(Set<CapabilityId> capabilities) {
+    final wireValues = CapabilityIds.normalizeAll(capabilities).toList()
+      ..sort();
     return wireValues.join(',');
   }
 
