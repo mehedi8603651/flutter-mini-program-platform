@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
-import 'package:stac/stac.dart';
 
 import 'cache/asset_cache.dart';
 import 'cache/manifest_cache.dart';
@@ -17,7 +17,7 @@ import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
 import 'network/mini_program_source_exception.dart';
 import 'observability/sdk_logger.dart';
-import 'rendering/stac_initializer.dart';
+import 'rendering/mini_program_screen_renderer.dart';
 import 'sdk_context.dart';
 import 'widgets/sdk_error_view.dart';
 import 'widgets/sdk_loading_view.dart';
@@ -42,6 +42,7 @@ class MiniProgramHost extends StatefulWidget {
     this.screenCache,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
+    this.renderers = const <MiniProgramScreenRenderer>[],
     this.loadingBuilder,
     this.errorBuilder,
   });
@@ -58,6 +59,7 @@ class MiniProgramHost extends StatefulWidget {
   final ScreenCache? screenCache;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
+  final List<MiniProgramScreenRenderer> renderers;
   final WidgetBuilder? loadingBuilder;
   final MiniProgramErrorBuilder? errorBuilder;
 
@@ -70,6 +72,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   final AssetResolver _assetResolver = AssetResolver();
   final MiniProgramBackendStore _backendStore = MiniProgramBackendStore();
 
+  late MiniProgramScreenRendererRegistry _rendererRegistry;
   late Future<void> _loadFuture;
   int _loadGeneration = 0;
   MiniProgramManifest? _manifest;
@@ -80,6 +83,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   @override
   void initState() {
     super.initState();
+    _rebuildRendererRegistry();
     _restartLoad();
   }
 
@@ -98,9 +102,17 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.manifestCache != oldWidget.manifestCache ||
         widget.screenCache != oldWidget.screenCache ||
         widget.featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
-        widget.logger != oldWidget.logger) {
+        widget.logger != oldWidget.logger ||
+        !listEquals(widget.renderers, oldWidget.renderers)) {
+      _rebuildRendererRegistry();
       _restartLoad();
     }
+  }
+
+  void _rebuildRendererRegistry() {
+    _rendererRegistry = MiniProgramScreenRendererRegistry.withDefaults(
+      widget.renderers,
+    );
   }
 
   void _restartLoad() {
@@ -119,8 +131,6 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   }
 
   Future<void> _loadMiniProgram(int generation) async {
-    await StacInitializer.ensureInitialized(logger: widget.logger);
-
     final loadedMiniProgram = await _manifestLoader.load(
       miniProgramId: widget.miniProgramId,
       sdkVersion: widget.sdkVersion,
@@ -131,6 +141,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       featureFlagEvaluator: widget.featureFlagEvaluator,
       logger: widget.logger,
     );
+    final renderer = _rendererRegistry.resolve(loadedMiniProgram.manifest);
+    await renderer.ensureInitialized(logger: widget.logger);
 
     final initialScreen = _RenderedMiniProgramScreen.content(
       screenId: loadedMiniProgram.manifest.entry,
@@ -511,30 +523,29 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
                   return _buildError(context, currentScreen.failure!);
                 }
 
-                final rendered = Stac.fromJson(
-                  currentScreen.screenJson!,
-                  context,
-                );
-                if (rendered == null) {
-                  final failure = MiniProgramFailure(
-                    errorCode: MiniProgramErrorCodes.manifestParseFailure,
-                    message:
-                        'Failed to render screen "${currentScreen.screenId}" for mini-program "${manifest.id}".',
-                    fallback: manifest.fallback,
-                    details: <String, dynamic>{
-                      'miniProgramId': manifest.id,
-                      'screenId': currentScreen.screenId,
-                    },
+                late final Widget rendered;
+                try {
+                  rendered = _rendererRegistry
+                      .resolve(manifest)
+                      .render(
+                        MiniProgramRenderRequest(
+                          context: context,
+                          manifest: manifest,
+                          screenId: currentScreen.screenId,
+                          screenJson: currentScreen.screenJson!,
+                          logger: widget.logger,
+                        ),
+                      );
+                } catch (error, stackTrace) {
+                  return _buildError(
+                    context,
+                    _toFailure(
+                      error,
+                      stackTrace,
+                      manifest: manifest,
+                      screenId: currentScreen.screenId,
+                    ),
                   );
-
-                  widget.logger.warn(
-                    'Stac returned null while rendering a mini-program screen.',
-                    context: <String, Object?>{
-                      'miniProgramId': manifest.id,
-                      'screenId': currentScreen.screenId,
-                    },
-                  );
-                  return _buildError(context, failure);
                 }
 
                 if (!_usedStaleManifestCache && !currentScreen.usedStaleCache) {
@@ -581,6 +592,24 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           if (screenId != null) 'screenId': screenId,
           ...error.details,
         },
+      );
+    }
+
+    if (error is MiniProgramRenderException) {
+      final resolvedManifest =
+          manifest ??
+          MiniProgramManifest(
+            id: widget.miniProgramId,
+            version: 'unknown',
+            entry: screenId ?? 'unknown',
+            contractVersion: 'unknown',
+            sdkVersionRange: const SdkVersionRange(value: '>=0.0.0'),
+            requiredCapabilities: const <CapabilityId>[],
+          );
+      return error.toFailure(
+        manifest: resolvedManifest,
+        screenId: screenId ?? resolvedManifest.entry,
+        stackTrace: stackTrace,
       );
     }
 

@@ -9,6 +9,7 @@ import 'mini_program_runtime.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
+import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
 class MiniProgramConfig {
@@ -24,6 +25,7 @@ class MiniProgramConfig {
     this.cacheBundle,
     this.logger = const DebugPrintSdkLogger(),
     this.disposeSource = true,
+    this.renderers = const <MiniProgramScreenRenderer>[],
   });
 
   /// Runtime compatibility version sent to mini-program delivery backends.
@@ -42,6 +44,7 @@ class MiniProgramConfig {
   final MiniProgramCacheBundle? cacheBundle;
   final SdkLogger logger;
   final bool disposeSource;
+  final List<MiniProgramScreenRenderer> renderers;
 
   MiniProgramRuntime createRuntime() {
     return MiniProgramRuntime(
@@ -56,6 +59,7 @@ class MiniProgramConfig {
       cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
       logger: logger,
       disposeSource: disposeSource,
+      renderers: renderers,
     );
   }
 

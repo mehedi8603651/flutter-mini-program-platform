@@ -19,4 +19,15 @@ void main() {
       expect(pubspec, isNot(contains('\n  $packageName:')));
     }
   });
+
+  test('SDK runtime does not depend on mini_program_ui', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final dependenciesBlock = pubspec
+        .split('\ndev_dependencies:')
+        .first
+        .split('\ndependencies:')
+        .last;
+
+    expect(dependenciesBlock, isNot(contains('\n  mini_program_ui:')));
+  });
 }

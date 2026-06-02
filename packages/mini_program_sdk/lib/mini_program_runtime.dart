@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'cache/mini_program_cache_bundle.dart';
@@ -8,6 +9,7 @@ import 'host_bridge.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
+import 'rendering/mini_program_screen_renderer.dart';
 
 /// Shared embedded runtime that existing apps configure once, then reuse to
 /// open many mini-programs by ID.
@@ -25,6 +27,7 @@ class MiniProgramRuntime {
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
     this.disposeSource = false,
+    this.renderers = const <MiniProgramScreenRenderer>[],
   });
 
   final String sdkVersion;
@@ -38,6 +41,7 @@ class MiniProgramRuntime {
   final MiniProgramCacheBundle cacheBundle;
   final SdkLogger logger;
   final bool disposeSource;
+  final List<MiniProgramScreenRenderer> renderers;
 
   MiniProgramRuntime copyWith({
     String? sdkVersion,
@@ -51,6 +55,7 @@ class MiniProgramRuntime {
     MiniProgramCacheBundle? cacheBundle,
     SdkLogger? logger,
     bool? disposeSource,
+    List<MiniProgramScreenRenderer>? renderers,
   }) {
     return MiniProgramRuntime(
       sdkVersion: sdkVersion ?? this.sdkVersion,
@@ -65,6 +70,7 @@ class MiniProgramRuntime {
       cacheBundle: cacheBundle ?? this.cacheBundle,
       logger: logger ?? this.logger,
       disposeSource: disposeSource ?? this.disposeSource,
+      renderers: renderers ?? this.renderers,
     );
   }
 
@@ -127,6 +133,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
             oldWidget.runtime.featureFlagEvaluator ||
         runtime.cacheBundle != oldWidget.runtime.cacheBundle ||
         runtime.logger != oldWidget.runtime.logger ||
-        runtime.disposeSource != oldWidget.runtime.disposeSource;
+        runtime.disposeSource != oldWidget.runtime.disposeSource ||
+        !listEquals(runtime.renderers, oldWidget.runtime.renderers);
   }
 }

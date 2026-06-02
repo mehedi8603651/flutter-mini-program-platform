@@ -35,6 +35,7 @@ class MiniProgramPage extends StatelessWidget {
       manifestCache: resolvedRuntime.cacheBundle.manifestCache,
       screenCache: resolvedRuntime.cacheBundle.screenCache,
       logger: resolvedRuntime.logger,
+      renderers: resolvedRuntime.renderers,
       loadingBuilder: (context) {
         final resolvedTitle = title ?? _defaultTitle(miniProgramId);
         return Scaffold(

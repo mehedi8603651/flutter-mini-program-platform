@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0-dev.1
+
+- add the SDK Mp screen renderer seam and default renderer registry
+- add strict Mp JSON validation and basic Flutter-core node rendering
+- keep legacy Stac screen rendering as the default for older manifests
+
 ## 0.3.7
 
 - add `miniProgramPagedBackendBuilder` for lazy publisher backend lists that
