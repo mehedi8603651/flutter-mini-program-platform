@@ -318,6 +318,9 @@ void _registerScaffoldTests() {
 
     expect(result.miniProgramId, 'coupon_app');
     expect(result.entryScreen, 'coupon_app_home');
+    expect(result.screenFormat, 'stac');
+    expect(result.screenSchemaVersion, isNull);
+    expect(result.sourceRootPath, p.join(miniProgramRoot.path, 'stac'));
     expect(result.writtenPaths, hasLength(5));
     expect(result.skippedPaths, isEmpty);
     final helper = await File(
@@ -361,6 +364,75 @@ void _registerScaffoldTests() {
     expect(second.skippedPaths, isEmpty);
   });
 
+  test('generates Mp Firebase starter UI for Mp manifests', () async {
+    await miniProgramRoot.delete(recursive: true);
+    final scaffold = await const MiniProgramScaffolder().scaffold(
+      MiniProgramScaffoldRequest(
+        outputRootPath: miniProgramRoot.path,
+        miniProgramId: 'coupon_app',
+      ),
+    );
+    expect(scaffold.screenFormat, 'mp');
+    final starter = const PublisherBackendStarter();
+    await starter.scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: miniProgramRoot.path,
+        template: 'firebase-functions',
+        storageMode: 'firestore',
+      ),
+    );
+
+    final result = await starter.firebaseStarterUi(
+      PublisherBackendFirebaseStarterUiRequest(
+        miniProgramRootPath: miniProgramRoot.path,
+        force: true,
+      ),
+    );
+
+    expect(result.screenFormat, 'mp');
+    expect(result.screenSchemaVersion, 1);
+    expect(result.sourceRootPath, p.join(miniProgramRoot.path, 'mp'));
+    expect(result.skippedPaths, isEmpty);
+    final screen = await File(
+      p.join(miniProgramRoot.path, 'mp', 'screens', 'coupon_app_home.dart'),
+    ).readAsString();
+    final program = await File(
+      p.join(miniProgramRoot.path, 'mp', 'program.dart'),
+    ).readAsString();
+    final buildScript = await File(
+      p.join(miniProgramRoot.path, 'tool', 'build_mp.dart'),
+    ).readAsString();
+
+    expect(screen, contains('Mp.authBuilder('));
+    expect(screen, contains("endpoint: 'auth/session'"));
+    expect(screen, contains("endpoint: 'coupons/page'"));
+    expect(screen, contains("action: Mp.backend.loadMore(requestId: 'coupons')"));
+    expect(program, contains("'coupon_app_home':"));
+    expect(buildScript, contains('writeMpBuildOutput(miniProgram'));
+    expect(
+      await File(
+        p.join(miniProgramRoot.path, 'lib', 'host_action_helpers.dart'),
+      ).exists(),
+      isFalse,
+    );
+    expect(
+      await File(
+        p.join(miniProgramRoot.path, 'stac', 'screens', 'coupon_app_home.dart'),
+      ).exists(),
+      isFalse,
+    );
+
+    final second = await starter.firebaseStarterUi(
+      PublisherBackendFirebaseStarterUiRequest(
+        miniProgramRootPath: miniProgramRoot.path,
+      ),
+    );
+    expect(second.screenFormat, 'mp');
+    expect(second.writtenPaths, isEmpty);
+    expect(second.skippedPaths, isEmpty);
+    expect(second.unchangedPaths, containsAll(result.writtenPaths));
+  });
+
   test(
     'scaffold can generate Firebase starter UI with backend files',
     () async {
@@ -377,6 +449,7 @@ void _registerScaffoldTests() {
       );
 
       expect(result.starterUi, isNotNull);
+      expect(result.starterUi!.screenFormat, 'stac');
       expect(result.starterUi!.writtenPaths, isNotEmpty);
       expect(
         await File(

@@ -140,6 +140,7 @@ export function buildStatusTreeSections(
     const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
     const firebasePublisherBackend = asRecord(publisherBackendStarter.firebase);
     const expectedPublisherRoutes = asStringList(publisherBackendStarter.expectedRoutes);
+    const screenSchemaVersion = asNumber(miniProgram.screenSchemaVersion);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
       ? miniProgram.partnerPackages.length
       : 0;
@@ -149,12 +150,21 @@ export function buildStatusTreeSections(
       rows: compactRows([
         row('App ID', asString(miniProgram.appId, 'unknown')),
         row('Version', asString(miniProgram.version, 'unknown')),
+        row('Screen format', asString(miniProgram.screenFormat, 'stac')),
+        row(
+          'Schema version',
+          screenSchemaVersion > 0 ? String(screenSchemaVersion) : '',
+        ),
+        row('Source root', asString(miniProgram.sourceRootPath)),
+        row('Output root', asString(miniProgram.outputRootPath)),
         row(
           'Build',
           asBoolean(build.exists)
             ? `${asNumber(build.screenCount)} screen JSON file(s)`
             : 'missing',
         ),
+        row('Entry screen', asString(build.entryScreenPath)),
+        row('Entry ready', optionalYesNo(build.entryScreenExists)),
         row('Validation', asString(validation.status, 'not_run')),
         row('Partner packages', String(partnerPackages)),
         row(

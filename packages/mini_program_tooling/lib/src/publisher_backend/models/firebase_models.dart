@@ -14,20 +14,26 @@ class PublisherBackendFirebaseStarterUiResult {
   const PublisherBackendFirebaseStarterUiResult({
     required this.miniProgramRootPath,
     required this.backendRootPath,
+    required this.sourceRootPath,
     required this.miniProgramId,
     required this.title,
     required this.entryScreen,
+    required this.screenFormat,
     required this.writtenPaths,
     required this.skippedPaths,
     required this.unchangedPaths,
     required this.force,
+    this.screenSchemaVersion,
   });
 
   final String miniProgramRootPath;
   final String backendRootPath;
+  final String sourceRootPath;
   final String miniProgramId;
   final String title;
   final String entryScreen;
+  final String screenFormat;
+  final int? screenSchemaVersion;
   final List<String> writtenPaths;
   final List<String> skippedPaths;
   final List<String> unchangedPaths;

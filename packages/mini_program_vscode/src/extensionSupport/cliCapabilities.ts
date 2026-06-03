@@ -543,7 +543,7 @@ export async function ensurePublisherBackendFirebaseStarterUiCli049(
     capability.supportsFirebaseScaffold &&
     capability.supportsFirebaseStarterUi &&
     capability.supportsFirebasePagedRoutes &&
-    toolingVersionAtLeast(capability.toolingVersion, '0.3.49')
+    toolingVersionAtLeast(capability.toolingVersion, '0.4.0')
   ) {
     return true;
   }
@@ -551,8 +551,8 @@ export async function ensurePublisherBackendFirebaseStarterUiCli049(
     ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
     : '';
   const message =
-    'MiniProgram CLI 0.3.49 or newer is required for Firebase paged starter UI generation. ' +
-    `${versionDetail}Run \`dart pub global activate mini_program_tooling 0.3.49\`.`;
+    'MiniProgram CLI 0.4.0-dev.3 or newer is required for Mp-aware Firebase starter UI generation. ' +
+    `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {
     output.appendLine(capability.detail);

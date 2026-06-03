@@ -40,7 +40,16 @@ test('renders mini-program and host status rows', () => {
       detected: true,
       appId: 'coupon_demo',
       version: '1.0.0',
-      build: { exists: true, screenCount: 1 },
+      screenFormat: 'mp',
+      screenSchemaVersion: 1,
+      sourceRootPath: 'D:/coupon/mp',
+      outputRootPath: 'D:/coupon/mp/.build',
+      build: {
+        exists: true,
+        screenCount: 1,
+        entryScreenPath: 'D:/coupon/mp/.build/screens/coupon_demo_home.json',
+        entryScreenExists: true,
+      },
       validation: { status: 'ok' },
       partnerPackages: [],
       backendUsage: {
@@ -102,6 +111,11 @@ test('renders mini-program and host status rows', () => {
 
   const text = flattenStatusSections(buildStatusTreeSections(report));
   assert.match(text, /Host app/);
+  assert.match(text, /Screen format: mp/);
+  assert.match(text, /Schema version: 1/);
+  assert.match(text, /Source root: D:\/coupon\/mp/);
+  assert.match(text, /Output root: D:\/coupon\/mp\/\.build/);
+  assert.match(text, /Entry ready: yes/);
   assert.match(text, /Backend usage: query\/state/);
   assert.match(text, /Publisher routes: GET \/health, GET \/coupons\/list, GET \/coupons\/page/);
   assert.match(text, /Paged route: yes/);

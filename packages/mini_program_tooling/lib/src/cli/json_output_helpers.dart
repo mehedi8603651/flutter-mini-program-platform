@@ -220,9 +220,13 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'provider': 'firebase',
       'miniProgramRootPath': result.miniProgramRootPath,
       'backendRootPath': result.backendRootPath,
+      'sourceRootPath': result.sourceRootPath,
       'miniProgramId': result.miniProgramId,
       'title': result.title,
       'entryScreen': result.entryScreen,
+      'screenFormat': result.screenFormat,
+      if (result.screenSchemaVersion != null)
+        'screenSchemaVersion': result.screenSchemaVersion,
       'force': result.force,
       'writtenFileCount': result.writtenPaths.length,
       'skippedFileCount': result.skippedPaths.length,

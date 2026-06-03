@@ -19,6 +19,10 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
         '',
         'Firebase starter UI:',
         'Entry screen: ${starterUi.entryScreen}',
+        'Screen format: ${starterUi.screenFormat}',
+        if (starterUi.screenSchemaVersion != null)
+          'Screen schema version: ${starterUi.screenSchemaVersion}',
+        'Source root: ${starterUi.sourceRootPath}',
         'Starter files written: ${starterUi.writtenPaths.length}',
       ]);
       lines.addAll(starterUi.writtenPaths.map((filePath) => '- $filePath'));
@@ -61,6 +65,10 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       'Mini-program ID: ${result.miniProgramId}',
       'Title: ${result.title}',
       'Entry screen: ${result.entryScreen}',
+      'Screen format: ${result.screenFormat}',
+      if (result.screenSchemaVersion != null)
+        'Screen schema version: ${result.screenSchemaVersion}',
+      'Source root: ${result.sourceRootPath}',
       'Force: ${result.force}',
       'Written files: ${result.writtenPaths.length}',
     ];

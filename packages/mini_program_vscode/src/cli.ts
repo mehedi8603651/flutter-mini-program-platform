@@ -39,6 +39,7 @@ export interface CreateArgsOptions {
   readonly title?: string;
   readonly outputRoot: string;
   readonly backendTemplate?: 'mock';
+  readonly screenFormat?: 'mp' | 'stac';
 }
 
 export interface PublishArgsOptions {
@@ -50,15 +51,21 @@ export interface PublishArgsOptions {
   readonly clean?: boolean;
   readonly dryRun?: boolean;
   readonly json?: boolean;
+  readonly mpBuildScript?: string;
 }
 
 export interface PreviewArgsOptions {
   readonly deviceId: string;
   readonly miniProgramRoot?: string;
+  readonly mpBuildScript?: string;
 }
 
 export interface WorkspaceMiniProgramArgsOptions {
   readonly miniProgramRoot?: string;
+}
+
+export interface BuildArgsOptions extends WorkspaceMiniProgramArgsOptions {
+  readonly mpBuildScript?: string;
 }
 
 export interface EmbedInitArgsOptions {
@@ -479,6 +486,9 @@ export function buildCapabilitiesArgs(
 
 export function buildCreateArgs(options: CreateArgsOptions): string[] {
   const args = ['create', '--output-root', options.outputRoot];
+  if (options.screenFormat?.trim()) {
+    args.push('--screen-format', options.screenFormat.trim());
+  }
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
   }
@@ -490,9 +500,13 @@ export function buildCreateArgs(options: CreateArgsOptions): string[] {
 }
 
 export function buildBuildArgs(
-  options: WorkspaceMiniProgramArgsOptions = {},
+  options: BuildArgsOptions = {},
 ): string[] {
-  return withMiniProgramRoot(['build'], options.miniProgramRoot);
+  const args = ['build'];
+  if (options.mpBuildScript?.trim()) {
+    args.push('--mp-build-script', options.mpBuildScript.trim());
+  }
+  return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
 export function buildValidateArgs(
@@ -502,10 +516,11 @@ export function buildValidateArgs(
 }
 
 export function buildPreviewArgs(options: PreviewArgsOptions): string[] {
-  return withMiniProgramRoot(
-    ['preview', '-d', options.deviceId],
-    options.miniProgramRoot,
-  );
+  const args = ['preview', '-d', options.deviceId];
+  if (options.mpBuildScript?.trim()) {
+    args.push('--mp-build-script', options.mpBuildScript.trim());
+  }
+  return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
 export function buildPublishArgs(options: PublishArgsOptions): string[] {
@@ -527,6 +542,9 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
   }
   if (options.json) {
     args.push('--json');
+  }
+  if (options.mpBuildScript?.trim()) {
+    args.push('--mp-build-script', options.mpBuildScript.trim());
   }
   return withMiniProgramRoot(args, options.miniProgramRoot);
 }

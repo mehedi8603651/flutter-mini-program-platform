@@ -174,11 +174,14 @@ test('builds core workflow command arguments', () => {
       appId: 'coupon_demo',
       title: 'Coupon Demo',
       outputRoot: 'D:/work/coupon_demo',
+      screenFormat: 'mp',
     }),
     [
       'create',
       '--output-root',
       'D:/work/coupon_demo',
+      '--screen-format',
+      'mp',
       '--title',
       'Coupon Demo',
       'coupon_demo',
@@ -190,11 +193,14 @@ test('builds core workflow command arguments', () => {
       title: 'Coupon Demo',
       outputRoot: 'D:/work/coupon_demo',
       backendTemplate: 'mock',
+      screenFormat: 'stac',
     }),
     [
       'create',
       '--output-root',
       'D:/work/coupon_demo',
+      '--screen-format',
+      'stac',
       '--title',
       'Coupon Demo',
       '--with-backend',
@@ -208,6 +214,19 @@ test('builds core workflow command arguments', () => {
     'D:/work/coupon_demo',
   ]);
   assert.deepEqual(
+    buildBuildArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      mpBuildScript: 'D:/work/coupon_demo/tool/custom_build.dart',
+    }),
+    [
+      'build',
+      '--mp-build-script',
+      'D:/work/coupon_demo/tool/custom_build.dart',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
     buildValidateArgs({ miniProgramRoot: 'D:/work/coupon_demo' }),
     ['validate', '--mini-program-root', 'D:/work/coupon_demo'],
   );
@@ -215,11 +234,14 @@ test('builds core workflow command arguments', () => {
     buildPreviewArgs({
       deviceId: 'emulator-5554',
       miniProgramRoot: 'D:/work/coupon_demo',
+      mpBuildScript: 'D:/work/coupon_demo/tool/custom_build.dart',
     }),
     [
       'preview',
       '-d',
       'emulator-5554',
+      '--mp-build-script',
+      'D:/work/coupon_demo/tool/custom_build.dart',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],
@@ -229,6 +251,7 @@ test('builds core workflow command arguments', () => {
       target: 'cloud',
       envName: 'my-aws-prod',
       miniProgramRoot: 'D:/work/coupon_demo',
+      mpBuildScript: 'D:/work/coupon_demo/tool/custom_build.dart',
     }),
     [
       'publish',
@@ -236,6 +259,8 @@ test('builds core workflow command arguments', () => {
       'cloud',
       '--env',
       'my-aws-prod',
+      '--mp-build-script',
+      'D:/work/coupon_demo/tool/custom_build.dart',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],
