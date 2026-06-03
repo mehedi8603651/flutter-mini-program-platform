@@ -88,6 +88,9 @@ class MiniProgramFirebaseHostingPublishResult {
     'siteId': siteId,
     'miniProgramId': staticResult.miniProgramId,
     'version': staticResult.version,
+    'screenFormat': staticResult.buildResult.screenFormat,
+    if (staticResult.buildResult.screenSchemaVersion != null)
+      'screenSchemaVersion': staticResult.buildResult.screenSchemaVersion,
     'hostingRootPath': hostingRootPath,
     'publicDirectoryName': publicDirectoryName,
     'outputPath': outputPath,

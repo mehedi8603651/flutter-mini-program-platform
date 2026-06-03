@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:mini_program_tooling/mini_program_tooling.dart';
@@ -229,6 +230,126 @@ void main() {
             contains('does not have versioning enabled'),
           ),
         ),
+      );
+    });
+
+    test('uploads Mp screens and metadata through aws cli', () async {
+      final mpScreensDirectoryPath = p.join(
+        miniProgramRoot.path,
+        'mp',
+        '.build',
+        'screens',
+      );
+      await Directory(mpScreensDirectoryPath).create(recursive: true);
+      await File(manifestPath).writeAsString('''
+{
+  "id": "coupon_center",
+  "version": "1.2.3",
+  "entry": "coupon_center_home",
+  "contractVersion": "1.0.0",
+  "sdkVersionRange": ">=0.4.0-dev.2 <0.5.0",
+  "requiredCapabilities": ["analytics"],
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1
+}
+''');
+      await File(
+        p.join(mpScreensDirectoryPath, 'coupon_center_home.json'),
+      ).writeAsString(
+        '{"schemaVersion":1,"screenId":"coupon_center_home","root":{"type":"text","props":{"text":"Coupon Center"}}}',
+      );
+      final uploadedBodies = <String, Map<String, dynamic>>{};
+      final publisher = AwsCloudPublisher(
+        builder: _FakeMiniProgramBuilder(
+          MiniProgramBuildResult(
+            repoRootPath: tempDir.path,
+            miniProgramId: 'coupon_center',
+            miniProgramRootPath: miniProgramRoot.path,
+            cliSource: 'mp_build_script',
+            invocation: const <String>['dart', 'tool/build_mp.dart'],
+            outputDirectoryPath: p.join(miniProgramRoot.path, 'mp', '.build'),
+            screensDirectoryPath: mpScreensDirectoryPath,
+            entryScreenJsonPath: p.join(
+              mpScreensDirectoryPath,
+              'coupon_center_home.json',
+            ),
+            pubGetRan: true,
+            screenFormat: 'mp',
+            screenSchemaVersion: 1,
+          ),
+        ),
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              if (arguments.contains('get-bucket-versioning')) {
+                return ProcessResult(1, 0, '{"Status":"Enabled"}', '');
+              }
+              if (arguments.contains('put-object')) {
+                final key = arguments[arguments.indexOf('--key') + 1];
+                final body = arguments[arguments.indexOf('--body') + 1];
+                if (key.startsWith('metadata/')) {
+                  uploadedBodies[key] =
+                      jsonDecode(await File(body).readAsString())
+                          as Map<String, dynamic>;
+                }
+                return ProcessResult(1, 0, '{"VersionId":"v1"}', '');
+              }
+              return ProcessResult(1, 1, '', 'unexpected command');
+            },
+      );
+
+      final result = await publisher.publish(
+        MiniProgramCloudPublishRequest(
+          repoRootPath: tempDir.path,
+          environment: CloudEnvironmentConfiguration(
+            name: 'my-aws-prod',
+            provider: 'aws',
+            values: <String, dynamic>{
+              'bucket': 'mini-program-prod',
+              'region': 'us-east-1',
+              'artifactsPrefix': 'artifacts',
+              'metadataPrefix': 'metadata',
+            },
+            configuredAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+            updatedAtUtc: DateTime.utc(2026, 4, 18).toIso8601String(),
+          ),
+          miniProgramId: 'coupon_center',
+          miniProgramRootPath: miniProgramRoot.path,
+        ),
+      );
+
+      expect(result.buildResult.screenFormat, 'mp');
+      expect(result.buildResult.screenSchemaVersion, 1);
+      expect(result.buildResult.screensDirectoryPath, contains('mp\\.build'));
+      expect(result.screensPrefixKey, 'artifacts/coupon_center/1.2.3/screens');
+      expect(
+        result.uploadedObjects.any(
+          (object) =>
+              object.key ==
+                  'artifacts/coupon_center/1.2.3/screens/coupon_center_home.json' &&
+              object.localSourcePath.contains('mp\\.build'),
+        ),
+        isTrue,
+      );
+      expect(
+        uploadedBodies['metadata/releases/coupon_center/1.2.3.json']?['screenFormat'],
+        'mp',
+      );
+      expect(
+        uploadedBodies['metadata/releases/coupon_center/1.2.3.json']?['screenSchemaVersion'],
+        1,
+      );
+      expect(
+        uploadedBodies['metadata/catalog/coupon_center.json']?['screenFormat'],
+        'mp',
+      );
+      expect(
+        uploadedBodies['metadata/catalog/coupon_center.json']?['screenSchemaVersion'],
+        1,
       );
     });
   });

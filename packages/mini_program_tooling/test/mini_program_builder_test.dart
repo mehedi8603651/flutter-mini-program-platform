@@ -337,7 +337,7 @@ Future<void> _writeMpMiniProgramFixture(
   "version": "1.0.0",
   "entry": "${miniProgramId}_home",
   "contractVersion": "1.0.0",
-  "sdkVersionRange": ">=0.4.0-dev.1 <0.5.0",
+  "sdkVersionRange": ">=0.4.0-dev.2 <0.5.0",
   "requiredCapabilities": ["analytics"],
   "screenFormat": "mp"${includeSchemaVersion ? ',\n  "screenSchemaVersion": 1' : ''}
 }
@@ -372,7 +372,7 @@ Future<void> _writeUnsupportedFormatMiniProgramFixture(
   "version": "1.0.0",
   "entry": "future_screen_home",
   "contractVersion": "1.0.0",
-  "sdkVersionRange": ">=0.4.0-dev.1 <0.5.0",
+  "sdkVersionRange": ">=0.4.0-dev.2 <0.5.0",
   "requiredCapabilities": ["analytics"],
   "screenFormat": "future",
   "screenSchemaVersion": 1

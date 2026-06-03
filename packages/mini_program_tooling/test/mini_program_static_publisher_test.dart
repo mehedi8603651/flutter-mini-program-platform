@@ -15,6 +15,9 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp(
         'mini_program_tooling_static_publish_',
       );
+      await Directory(
+        p.join(tempDir.path, 'mini_programs'),
+      ).create(recursive: true);
       miniProgramRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await Directory(
         p.join(miniProgramRoot.path, 'assets'),
@@ -146,6 +149,58 @@ void main() {
         contains('MiniProgramEndpoint.public'),
       );
       expect(await File(p.join(outputPath, '.nojekyll')).exists(), isTrue);
+    });
+
+    test('publishes Mp build output with engine-neutral layout', () async {
+      final scaffold = await const MiniProgramScaffolder().scaffold(
+        MiniProgramScaffoldRequest(
+          repoRootPath: tempDir.path,
+          miniProgramId: 'mp_coupon_center',
+        ),
+      );
+      final outputPath = p.join(tempDir.path, 'mp_public_mini_program');
+
+      final result = await const MiniProgramStaticPublisher().publish(
+        MiniProgramStaticPublishRequest(
+          repoRootPath: tempDir.path,
+          miniProgramRootPath: scaffold.miniProgramRootPath,
+          miniProgramId: 'mp_coupon_center',
+          outputPath: outputPath,
+          clean: true,
+        ),
+      );
+
+      expect(result.buildResult.screenFormat, 'mp');
+      expect(result.buildResult.screenSchemaVersion, 1);
+      expect(result.buildResult.screensDirectoryPath, contains('mp\\.build'));
+      expect(result.screensDirectoryPath, isNot(contains('mp\\.build')));
+      expect(
+        File(
+          p.join(
+            outputPath,
+            'screens',
+            'mp_coupon_center',
+            '1.0.0',
+            'mp_coupon_center_home.json',
+          ),
+        ).existsSync(),
+        isTrue,
+      );
+
+      final release =
+          jsonDecode(await File(result.metadataReleasePath).readAsString())
+              as Map<String, dynamic>;
+      final catalog =
+          jsonDecode(await File(result.metadataCatalogPath).readAsString())
+              as Map<String, dynamic>;
+      expect(release['screenFormat'], 'mp');
+      expect(release['screenSchemaVersion'], 1);
+      expect(catalog['screenFormat'], 'mp');
+      expect(catalog['screenSchemaVersion'], 1);
+      expect(
+        release['artifacts'],
+        containsPair('screensBasePath', 'screens/mp_coupon_center/1.0.0/'),
+      );
     });
 
     test('clean removes only generated static output before writing', () async {

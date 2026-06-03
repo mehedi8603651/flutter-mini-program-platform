@@ -216,6 +216,9 @@ class MiniProgramStaticPublisher {
         'provider': 'static',
         'miniProgramId': buildResult.miniProgramId,
         'version': version,
+        'screenFormat': buildResult.screenFormat,
+        if (buildResult.screenSchemaVersion != null)
+          'screenSchemaVersion': buildResult.screenSchemaVersion,
         'publishedAtUtc': publishedAtUtc,
         'artifacts': <String, Object?>{
           'manifestPath':
@@ -237,6 +240,9 @@ class MiniProgramStaticPublisher {
         'provider': 'static',
         'miniProgramId': buildResult.miniProgramId,
         'latestVersion': version,
+        'screenFormat': buildResult.screenFormat,
+        if (buildResult.screenSchemaVersion != null)
+          'screenSchemaVersion': buildResult.screenSchemaVersion,
         'updatedAtUtc': publishedAtUtc,
         'releasePath':
             'metadata/releases/${buildResult.miniProgramId}/$version.json',

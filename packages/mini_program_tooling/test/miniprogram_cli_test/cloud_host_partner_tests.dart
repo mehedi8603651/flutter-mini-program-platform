@@ -55,6 +55,8 @@ void _registerCloudHostPartnerTests() {
       expect(decoded['projectId'], 'coupon-prod');
       expect(decoded['siteId'], 'coupon-prod');
       expect(decoded['deliveryApiBaseUrl'], 'https://coupon-prod.web.app/');
+      expect(decoded['screenFormat'], 'mp');
+      expect(decoded['screenSchemaVersion'], 1);
       expect(decoded['dryRun'], isTrue);
       expect(decoded['deployed'], isFalse);
       final firebaseJson =

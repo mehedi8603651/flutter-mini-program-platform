@@ -465,7 +465,7 @@ class MiniProgramScaffolder {
       'version': '1.0.0',
       'entry': entryScreenId,
       'contractVersion': '1.0.0',
-      'sdkVersionRange': isMp ? '>=0.4.0-dev.1 <0.5.0' : '>=1.0.0 <2.0.0',
+      'sdkVersionRange': isMp ? '>=0.4.0-dev.2 <0.5.0' : '>=1.0.0 <2.0.0',
       'requiredCapabilities': capabilities,
       if (isMp) ...<String, dynamic>{
         'screenFormat': MiniProgramScreenFormats.mp,

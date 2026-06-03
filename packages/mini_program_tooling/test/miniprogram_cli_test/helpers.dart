@@ -226,21 +226,23 @@ class _FakeMiniProgramStaticPublisher extends MiniProgramStaticPublisher {
       miniProgramRootPath: miniProgramRootPath,
       cliSource: 'fake',
       invocation: const <String>['dart', 'fake'],
-      outputDirectoryPath: p.join(miniProgramRootPath, 'stac', '.build'),
+      outputDirectoryPath: p.join(miniProgramRootPath, 'mp', '.build'),
       screensDirectoryPath: p.join(
         miniProgramRootPath,
-        'stac',
+        'mp',
         '.build',
         'screens',
       ),
       entryScreenJsonPath: p.join(
         miniProgramRootPath,
-        'stac',
+        'mp',
         '.build',
         'screens',
         'coupon_center_home.json',
       ),
       pubGetRan: false,
+      screenFormat: 'mp',
+      screenSchemaVersion: 1,
     );
     return MiniProgramStaticPublishResult(
       outputPath: request.outputPath,

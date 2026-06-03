@@ -135,6 +135,9 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Published mini-program: ${result.miniProgramId}',
       'Version: ${result.version}',
       'Backend root: ${result.backendRootPath}',
+      'Screen format: ${result.buildResult.screenFormat}',
+      if (result.buildResult.screenSchemaVersion != null)
+        'Screen schema version: ${result.buildResult.screenSchemaVersion}',
       'Build CLI source: ${result.buildResult.cliSource}',
       'Built entry screen: ${result.buildResult.entryScreenJsonPath}',
       'Pre-publish validation: ${result.prePublishValidation.errorCount} error(s), ${result.prePublishValidation.warningCount} warning(s)',
@@ -155,6 +158,9 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Version: ${result.version}',
+      'Screen format: ${result.buildResult.screenFormat}',
+      if (result.buildResult.screenSchemaVersion != null)
+        'Screen schema version: ${result.buildResult.screenSchemaVersion}',
       'Bucket: ${result.bucketName}',
       'Region: ${result.region}',
       'Build CLI source: ${result.buildResult.cliSource}',
@@ -181,6 +187,9 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Published mini-program to static folder: ${result.miniProgramId}',
       'Version: ${result.version}',
       'Output folder: ${result.outputPath}',
+      'Screen format: ${result.buildResult.screenFormat}',
+      if (result.buildResult.screenSchemaVersion != null)
+        'Screen schema version: ${result.buildResult.screenSchemaVersion}',
       'Build CLI source: ${result.buildResult.cliSource}',
       'Built entry screen: ${result.buildResult.entryScreenJsonPath}',
       'Latest manifest: ${result.manifestLatestPath}',
@@ -214,6 +223,9 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Site: ${result.siteId}',
       'Mini-program ID: ${result.staticResult.miniProgramId}',
       'Version: ${result.staticResult.version}',
+      'Screen format: ${result.staticResult.buildResult.screenFormat}',
+      if (result.staticResult.buildResult.screenSchemaVersion != null)
+        'Screen schema version: ${result.staticResult.buildResult.screenSchemaVersion}',
       'Hosting root: ${result.hostingRootPath}',
       'Public folder: ${result.outputPath}',
       'Firebase config: ${result.firebaseJsonPath}',

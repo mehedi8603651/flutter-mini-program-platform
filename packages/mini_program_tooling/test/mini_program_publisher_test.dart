@@ -68,6 +68,40 @@ void main() {
       expect(latestManifest['version'], '1.2.0');
     });
 
+    test('publishes Mp screens from mp build output', () async {
+      final scaffold = await const MiniProgramScaffolder().scaffold(
+        MiniProgramScaffoldRequest(
+          repoRootPath: tempDir.path,
+          miniProgramId: 'mp_coupon_center',
+        ),
+      );
+
+      final result = await const MiniProgramPublisher().publish(
+        MiniProgramPublishRequest(
+          repoRootPath: tempDir.path,
+          miniProgramRootPath: scaffold.miniProgramRootPath,
+        ),
+      );
+
+      expect(result.version, '1.0.0');
+      expect(result.buildResult.screenFormat, 'mp');
+      expect(result.buildResult.screenSchemaVersion, 1);
+      expect(result.buildResult.screensDirectoryPath, contains('mp\\.build'));
+      expect(result.screensDirectoryPath, isNot(contains('mp\\.build')));
+      expect(result.copiedScreenCount, 2);
+      expect(
+        await File(
+          p.join(result.screensDirectoryPath, 'mp_coupon_center_home.json'),
+        ).exists(),
+        isTrue,
+      );
+      final latestManifest =
+          jsonDecode(await File(result.latestManifestPath).readAsString())
+              as Map<String, dynamic>;
+      expect(latestManifest['screenFormat'], 'mp');
+      expect(latestManifest['screenSchemaVersion'], 1);
+    });
+
     test('publishes to a standalone backend workspace when provided', () async {
       final miniProgramId = 'coupon_center';
       final repoRoot = p.join(tempDir.path, 'repo_root');

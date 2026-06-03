@@ -142,7 +142,7 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.4.0-dev.1'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.4.0-dev.2'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(
       stdoutBuffer.toString(),
@@ -227,7 +227,7 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.4.0-dev.1');
+    expect(json['toolingVersion'], '0.4.0-dev.2');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
     expect(

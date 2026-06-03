@@ -236,6 +236,8 @@ class AwsCloudPublisher {
             manifestKey: manifestKey,
             screensPrefixKey: screensPrefixKey,
             assetsPrefixKey: assetsPrefixKey,
+            screenFormat: buildResult.screenFormat,
+            screenSchemaVersion: buildResult.screenSchemaVersion,
           ),
         ),
       );
@@ -248,6 +250,8 @@ class AwsCloudPublisher {
             publishedAtUtc: publishedAtUtc,
             provider: request.environment.provider,
             metadataReleaseKey: metadataReleaseKey,
+            screenFormat: buildResult.screenFormat,
+            screenSchemaVersion: buildResult.screenSchemaVersion,
           ),
         ),
       );
@@ -493,6 +497,8 @@ class AwsCloudPublisher {
     required String manifestKey,
     required String screensPrefixKey,
     required String? assetsPrefixKey,
+    required String screenFormat,
+    required int? screenSchemaVersion,
   }) {
     return <String, dynamic>{
       'schemaVersion': 1,
@@ -500,6 +506,9 @@ class AwsCloudPublisher {
       'environment': environmentName,
       'miniProgramId': miniProgramId,
       'version': version,
+      'screenFormat': screenFormat,
+      if (screenSchemaVersion != null)
+        'screenSchemaVersion': screenSchemaVersion,
       'publishedAtUtc': publishedAtUtc,
       'artifacts': <String, dynamic>{
         'bucket': settings.bucketName,
@@ -535,6 +544,8 @@ class AwsCloudPublisher {
     required String publishedAtUtc,
     required String provider,
     required String metadataReleaseKey,
+    required String screenFormat,
+    required int? screenSchemaVersion,
   }) {
     return <String, dynamic>{
       'schemaVersion': 1,
@@ -542,6 +553,9 @@ class AwsCloudPublisher {
       'environment': environmentName,
       'miniProgramId': miniProgramId,
       'latestVersion': version,
+      'screenFormat': screenFormat,
+      if (screenSchemaVersion != null)
+        'screenSchemaVersion': screenSchemaVersion,
       'updatedAtUtc': publishedAtUtc,
       'releaseKey': metadataReleaseKey,
     };

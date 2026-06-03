@@ -126,7 +126,7 @@ void _registerWorkflowValidationEmbedBackendTests() {
         'version': '1.0.0',
         'entry': 'mp_coupon_center_home',
         'contractVersion': '1.0.0',
-        'sdkVersionRange': '>=0.4.0-dev.1 <0.5.0',
+        'sdkVersionRange': '>=0.4.0-dev.2 <0.5.0',
         'requiredCapabilities': <String>['analytics'],
         'screenFormat': 'mp',
         'screenSchemaVersion': 1,
