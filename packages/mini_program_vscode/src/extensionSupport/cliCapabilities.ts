@@ -561,6 +561,32 @@ export async function ensurePublisherBackendFirebaseStarterUiCli049(
   return false;
 }
 
+export async function ensureMpCreateCli040(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (toolingVersionAtLeast(capability.toolingVersion, '0.4.0')) {
+    return true;
+  }
+  const versionDetail = capability.toolingVersion
+    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
+    : '';
+  const message =
+    'MiniProgram CLI 0.4.0-dev.3 or newer is required for Mp JSON mini-program creation. ' +
+    `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
 export async function ensurePublisherBackendFirebaseAccessKeysCli045(
   workspacePath: string,
   output: vscode.OutputChannel,

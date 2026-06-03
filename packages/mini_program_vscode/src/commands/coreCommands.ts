@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import {
@@ -17,6 +18,7 @@ import {
   configuredCliPath,
   configuredDefaultPreviewDevice,
   ensureFirebaseHostingPublishCli042,
+  ensureMpCreateCli040,
   getWorkspacePath,
   parseJsonObject,
   promptPublisherBackendFirebaseEnvName,
@@ -44,6 +46,9 @@ export async function createMiniProgram(output: vscode.OutputChannel): Promise<v
   });
   const parentFolder = folders?.[0]?.fsPath;
   if (!parentFolder) {
+    return;
+  }
+  if (!(await ensureMpCreateCli040(parentFolder, output))) {
     return;
   }
 
@@ -99,12 +104,38 @@ export async function createMiniProgram(output: vscode.OutputChannel): Promise<v
     return;
   }
   const outputRoot = resolveCreateOutputRoot(parentFolder, appId);
+  let force = false;
+  if (directoryHasEntries(outputRoot)) {
+    const overwriteChoice = await vscode.window.showQuickPick(
+      [
+        {
+          label: 'Cancel',
+          description: 'Choose a different appId or empty folder',
+          force: false,
+        },
+        {
+          label: 'Overwrite scaffold-managed files',
+          description: 'Pass --force; unrelated files are left in place',
+          force: true,
+        },
+      ],
+      {
+        title: 'Mini-program target folder already exists',
+        ignoreFocusOut: true,
+      },
+    );
+    if (!overwriteChoice?.force) {
+      return;
+    }
+    force = true;
+  }
   const args = buildCreateArgs({
     appId,
     title,
     outputRoot,
     backendTemplate: backendChoice.backendTemplate,
     screenFormat: screenFormatChoice.screenFormat,
+    force,
   });
   const ok = await runCliCommand('Create MiniProgram', args, parentFolder, output);
   if (!ok) {
@@ -121,6 +152,14 @@ export async function createMiniProgram(output: vscode.OutputChannel): Promise<v
       vscode.Uri.file(outputRoot),
       false,
     );
+  }
+}
+
+function directoryHasEntries(directoryPath: string): boolean {
+  try {
+    return fs.existsSync(directoryPath) && fs.readdirSync(directoryPath).length > 0;
+  } catch {
+    return false;
   }
 }
 

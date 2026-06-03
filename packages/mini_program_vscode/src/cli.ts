@@ -40,6 +40,7 @@ export interface CreateArgsOptions {
   readonly outputRoot: string;
   readonly backendTemplate?: 'mock';
   readonly screenFormat?: 'mp' | 'stac';
+  readonly force?: boolean;
 }
 
 export interface PublishArgsOptions {
@@ -494,6 +495,9 @@ export function buildCreateArgs(options: CreateArgsOptions): string[] {
   }
   if (options.backendTemplate?.trim()) {
     args.push('--with-backend', options.backendTemplate.trim());
+  }
+  if (options.force) {
+    args.push('--force');
   }
   args.push(options.appId);
   return args;

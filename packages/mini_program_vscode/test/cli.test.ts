@@ -194,6 +194,7 @@ test('builds core workflow command arguments', () => {
       outputRoot: 'D:/work/coupon_demo',
       backendTemplate: 'mock',
       screenFormat: 'stac',
+      force: true,
     }),
     [
       'create',
@@ -205,6 +206,7 @@ test('builds core workflow command arguments', () => {
       'Coupon Demo',
       '--with-backend',
       'mock',
+      '--force',
       'coupon_demo',
     ],
   );
