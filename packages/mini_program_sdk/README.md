@@ -14,7 +14,8 @@ shared platform contracts.
 - manifest loading and version validation
 - capability registry and feature-flag evaluation
 - host bridge dispatch for native actions
-- Stac-based rendering setup
+- Mp JSON parsing, validation, and SDK-owned rendering
+- legacy Stac rendering compatibility during the migration branch
 - in-memory cache helpers for manifests, screens, and assets
 - publisher-owned email/password auth runtime with per-mini-program cached
   sessions
@@ -24,12 +25,44 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.7
-  mini_program_contracts: ^0.1.1
+  mini_program_sdk: ^0.4.0-dev.2
+  mini_program_contracts: ^0.2.0-dev.1
 ```
 
 For monorepo contributor work, keep `pubspec_overrides.yaml` so the package
 uses the local `mini_program_contracts` checkout.
+
+These dev versions are local to the Mp engine branch. Do not publish them until
+the migration release gates pass.
+
+## Mp Renderer And Legacy Stac
+
+`MiniProgramHost` chooses a renderer from manifest metadata:
+
+```json
+{
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1
+}
+```
+
+Missing `screenFormat` means legacy `stac`. Unsupported formats render a
+controlled SDK error instead of executing unknown content.
+
+Mp screens support:
+
+- basic layout, text, image, card, and button nodes
+- internal mini-program navigation
+- publisher-owned email auth builders and actions
+- publisher backend builders
+- paged backend builders with manual Load more
+- safe bindings such as `{{auth.user.email}}`, `{{backend.home.data.title}}`,
+  and `{{item.title}}`
+
+The base SDK still carries Stac compatibility in this branch. The later
+`mini_program_legacy_stac` extraction milestone will move Stac into an
+optional adapter package after Mp fixtures, cloud publish, and host flows are
+fully proven.
 
 ## VS Code extension
 

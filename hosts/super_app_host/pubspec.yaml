@@ -27,3 +27,8 @@ flutter:
     - assets/mini_programs/profile_center/screens/profile_center_home.json
     - assets/mini_programs/feedback_form/manifest.json
     - assets/mini_programs/feedback_form/screens/feedback_form_home.json
+    - assets/mini_programs/mp_profile_center/manifest.json
+    - assets/mini_programs/mp_profile_center/screens/mp_profile_center_home.json
+    - assets/mini_programs/mp_profile_center/screens/mp_profile_center_details.json
+    - assets/mini_programs/mp_rewards_center/manifest.json
+    - assets/mini_programs/mp_rewards_center/screens/mp_rewards_center_home.json

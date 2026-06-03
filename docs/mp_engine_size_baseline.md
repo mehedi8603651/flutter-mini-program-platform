@@ -48,3 +48,45 @@ Flutter also warned that expected Material and Cupertino icon fonts were not
 fully present in the font tree-shaking input. This does not block the baseline;
 record any release-size improvement from the future Mp JSON engine against this
 measured APK.
+
+## Milestone 8 Interim Mp Branch Size
+
+Date: 2026-06-04
+
+- Worktree: `D:\flutter-mini-program-platform-mp-engine`
+- Branch: `feature/mp-json-engine`
+- Commit before Milestone 8 working-tree edits:
+  `95d2cb2c3dcc00242c664341e485a2debdb35056`
+- Host app: `hosts/super_app_host`
+- Flutter: `3.38.9`
+- Dart: `3.10.8`
+- Scope: Mp fixtures are bundled and rendered by the base SDK, while legacy Stac
+  support is still present in the base SDK.
+
+Command:
+
+```powershell
+cd D:\flutter-mini-program-platform-mp-engine\hosts\super_app_host
+flutter build apk --release --analyze-size --target-platform android-arm64
+```
+
+Result:
+
+- Build result: PASS
+- APK: `hosts\super_app_host\build\app\outputs\flutter-apk\app-release.apk`
+- APK size: `22,462,797` bytes (`21.4MB` reported by Flutter)
+- Size analysis file:
+  `C:\Users\mehed\.flutter-devtools\apk-code-size-analysis_02.json`
+- Size analysis JSON size: `10,372,568` bytes
+
+Selected AOT symbol groups from this interim branch:
+
+- `package:stac`: `994 KB`
+- `package:stac_core`: `440 KB`
+- `package:mini_program_sdk`: `206 KB`
+- `package:dio`: `58 KB`
+
+This is not the final reduction measurement. The base SDK still includes Stac
+for legacy compatibility, so the expected size reduction is blocked until the
+later `mini_program_legacy_stac` adapter extraction and base SDK dependency
+cleanup milestone.

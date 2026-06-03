@@ -1,0 +1,15 @@
+name: mp_profile_center
+description: Mp JSON migration fixture for bundled profile center coverage.
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  mini_program_ui:
+    path: ../../packages/mini_program_ui
+
+dependency_overrides:
+  mini_program_contracts:
+    path: ../../packages/mini_program_contracts

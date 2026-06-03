@@ -1,195 +1,253 @@
 # Mini-Program Authoring
 
-This repo currently supports **developer-authored** and **partner-authored**
-mini-programs. Authors create a repo-backed package under `mini_programs/`,
-write portable UI in Stac DSL, validate it, then publish the generated JSON
-into the local backend sample.
+New mini-programs should use the platform-owned Mp JSON engine. Authors write
+pure Dart with `Mp.*` helpers, build deterministic JSON, validate it, then
+preview or publish through the same provider-neutral delivery layout used by
+legacy Stac mini-programs.
 
-## Quick start
+Legacy Stac projects remain supported during the migration. Use
+`--screen-format stac` only when you intentionally need the old Stac path.
 
-Generate a new scaffold anywhere:
+## Quick Start
+
+Create a new Mp mini-program:
 
 ```powershell
 cd D:\
 miniprogram create first_miniprogram
-```
-
-By default, the scaffold declares only `analytics`. This keeps the generated
-mini-program compatible with the minimal generated host app. Add
-`native_navigation` only when the host app has a real native route callback.
-
-Optional scaffold inputs:
-
-```powershell
-miniprogram create claim_center `
-  --title "Claim Center" `
-  --description "Portable claim intake starter flow." `
-  --capabilities analytics,secure_api `
-  --force
-```
-
-The scaffold creates:
-
-- `mini_programs/<id>/manifest.json`
-- `mini_programs/<id>/README.md`
-- `mini_programs/<id>/pubspec.yaml`
-- `mini_programs/<id>/lib/default_stac_options.dart`
-- `mini_programs/<id>/lib/host_action_helpers.dart`
-- `mini_programs/<id>/stac/screens/<id>_home.dart`
-- `mini_programs/<id>/stac/screens/<id>_details.dart`
-- `mini_programs/<id>/stac/components/`
-- `mini_programs/<id>/stac/theme/`
-- `mini_programs/<id>/assets/`
-
-## Authoring rules
-
-- Write portable UI in `stac/screens/` and `stac/components/`.
-- Do not author normal host Flutter pages for mini-program UI.
-- Use the generated `lib/host_action_helpers.dart` wrappers instead of hand-writing raw `StacAction(jsonData: ...)` maps when possible.
-- Keep native work behind approved `hostAction` payloads.
-- Only use declared manifest capabilities.
-- Replace starter demo route aliases and secure endpoints before shipping.
-- Prefer internal mini-program routing by `screenId` for portable page-to-page flows.
-
-Current scaffold behavior:
-
-- `Continue to second screen` uses internal mini-program routing through `openMiniProgramScreenAction(...)`
-- `Track starter event (logs only)` writes to the host analytics log only
-- `Back to first screen` uses internal mini-program routing through `popMiniProgramScreenAction(...)`
-- `native_navigation` is no longer part of the default scaffold; add it only
-  when the host app has a real native route callback
-- when `native_navigation` is requested, the generated helper file includes
-  `hostOpenNativeScreenAction(...)`, but generated screens leave host route
-  calls out by default
-- the generated helper wrappers still serialize the same JSON shape for backend delivery; authors just no longer need to hand-write it
-
-## Current supported capability values
-
-- `auth`
-- `analytics`
-- `secure_api`
-- `native_navigation`
-
-The scaffold only accepts these current contract wire values.
-
-## Starter action helper style
-
-The scaffolded screen now uses helper functions instead of raw action maps:
-
-```dart
-StacFilledButton(
-  onPressed: openMiniProgramScreenAction(
-    requestId: 'coupon_center-open-details',
-    screenId: 'coupon_center_details',
-  ),
-  child: StacText(data: 'Continue to second screen'),
-)
-```
-
-The second generated screen includes:
-
-- `popMiniProgramScreenAction(...)` for portable back navigation
-- `hostOpenNativeScreenAction(...)` only when the scaffold requested `native_navigation`
-- `hostCallSecureApiAction(...)` only when the scaffold requested `secure_api`
-
-Current internal routing helper set:
-
-- `openMiniProgramScreenAction(...)`
-- `replaceMiniProgramScreenAction(...)`
-- `popMiniProgramScreenAction(...)`
-- `resetMiniProgramStackAction(...)`
-- `popToMiniProgramRootAction(...)`
-- `popToMiniProgramScreenAction(...)`
-
-Those helpers still compile down to serializable JSON actions when you run the
-Stac build step.
-
-## Build
-
-Preferred standalone local flow:
-
-```powershell
-cd <id>
-miniprogram doctor
-miniprogram backend init
-miniprogram env init
+cd first_miniprogram
 miniprogram build
+miniprogram validate
+miniprogram preview -d chrome
 ```
 
-On Windows, `miniprogram backend init` defaults to
-`%LOCALAPPDATA%\mini_program\backend\`. Use `--root` only when you intentionally
-want a custom backend workspace path.
+The default scaffold writes:
 
-Expected screen output:
+- `manifest.json`
+- `mp/program.dart`
+- `mp/screens/<id>_home.dart`
+- `tool/build_mp.dart`
+- `pubspec.yaml`
+- `assets/`
+
+The manifest includes:
+
+```json
+{
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1
+}
+```
+
+Build output is generated under:
 
 ```text
-stac/.build/screens/<id>_home.json
+mp/.build/screens/<screenId>.json
 ```
 
-Build resolution order:
+Do not edit `mp/.build` directly. Edit `mp/program.dart` and
+`mp/screens/*.dart`, then run `miniprogram build`.
 
-1. explicit `-StacCliScript`
-2. managed pinned Stac builder bundled inside `mini_program_tooling`
-3. vendored `stac-dev/packages/stac_cli/bin/stac_cli.dart`
-4. global `stac` command
+## Legacy Stac
 
-Standalone external-developer flow should normally rely on the managed pinned
-Stac builder. If you need to point at a specific CLI script:
+Create a legacy Stac mini-program only when you are testing compatibility or
+migrating an existing package:
 
 ```powershell
-miniprogram build <id> --stac-cli-script D:\path\to\bin\stac_cli.dart
+miniprogram create old_profile_flow --screen-format stac
 ```
 
-## Validate
+Missing `screenFormat` is treated as legacy `stac` by contracts, tooling, and
+the SDK.
 
-Run validation before publish:
+## Mp Source Pattern
+
+Register screens explicitly:
+
+```dart
+import 'package:mini_program_ui/mini_program_ui.dart';
+
+import 'screens/coupon_details.dart';
+import 'screens/coupon_home.dart';
+
+final miniProgram = MpProgram(
+  screens: <String, MpScreenBuilder>{
+    'coupon_home': buildCouponHome,
+    'coupon_details': buildCouponDetails,
+  },
+);
+```
+
+Author UI with platform components:
+
+```dart
+MpNode buildCouponHome() {
+  return Mp.column(
+    children: <MpNode>[
+      Mp.heading('Coupon Center'),
+      Mp.text('Portable rewards for every host app.'),
+      Mp.card(
+        child: Mp.text('Rendered by the SDK Mp renderer.'),
+      ),
+      Mp.primaryButton(
+        label: 'Open details',
+        action: Mp.navigation.openScreen('coupon_details'),
+      ),
+    ],
+  );
+}
+```
+
+The SDK owns the visual system. Authors should not write Material, Cupertino,
+or host app widgets inside mini-program source.
+
+## Auth
+
+Use publisher-owned email auth through the SDK auth controller:
+
+```dart
+Mp.authBuilder(
+  loading: Mp.text('Checking session...'),
+  signedOut: Mp.card(
+    child: Mp.column(
+      children: <MpNode>[
+        Mp.text('Sign in to continue.'),
+        Mp.primaryButton(
+          label: 'Sign in with email',
+          action: Mp.auth.showEmailAuth(),
+        ),
+      ],
+    ),
+  ),
+  signedIn: Mp.card(
+    child: Mp.column(
+      children: <MpNode>[
+        Mp.text('Signed in as {{auth.user.email}}'),
+        Mp.secondaryButton(label: 'Sign out', action: Mp.auth.signOut()),
+      ],
+    ),
+  ),
+  error: Mp.text('{{auth.message}}'),
+);
+```
+
+Tokens are never available through bindings. Use safe bindings such as
+`{{auth.authenticated}}`, `{{auth.user.uid}}`, and `{{auth.user.email}}`.
+
+## Backend Data
+
+Use `Mp.backendBuilder` for one backend response:
+
+```dart
+Mp.backendBuilder(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+  loading: Mp.text('Loading...'),
+  error: Mp.text('{{backend.home.message}}'),
+  child: Mp.card(
+    child: Mp.column(
+      children: <MpNode>[
+        Mp.heading('{{backend.home.data.title}}'),
+        Mp.text('{{backend.home.data.message}}'),
+      ],
+    ),
+  ),
+);
+```
+
+Use `Mp.pagedBackendBuilder` for large lists with manual Load more:
+
+```dart
+Mp.pagedBackendBuilder(
+  requestId: 'rewards',
+  endpoint: 'coupons/page',
+  limit: 20,
+  loading: Mp.text('Loading rewards...'),
+  loadingMore: Mp.text('Loading more...'),
+  empty: Mp.text('No rewards yet.'),
+  end: Mp.text('No more rewards.'),
+  error: Mp.text('{{backend.rewards.message}}'),
+  itemTemplate: Mp.card(
+    child: Mp.column(
+      children: <MpNode>[
+        Mp.heading('{{item.title}}'),
+        Mp.text('{{item.description}}'),
+      ],
+    ),
+  ),
+  loadMore: Mp.secondaryButton(
+    label: 'Load more',
+    action: Mp.backend.loadMore(requestId: 'rewards'),
+  ),
+);
+```
+
+Provider backends should return:
+
+```json
+{
+  "items": [],
+  "nextCursor": null,
+  "hasMore": false
+}
+```
+
+## Navigation
+
+Prefer internal mini-program navigation for portable page-to-page flows:
+
+```dart
+Mp.primaryButton(
+  label: 'Details',
+  action: Mp.navigation.openScreen('coupon_details'),
+);
+
+Mp.secondaryButton(
+  label: 'Back',
+  action: Mp.navigation.popScreen(),
+);
+```
+
+Native host screens should remain behind approved host bridge contracts. Do not
+download Dart, JavaScript, or arbitrary expressions.
+
+## Build, Validate, Publish
+
+Normal flow:
 
 ```powershell
+miniprogram build
 miniprogram validate
+miniprogram publish --target static --output public_mini_program --clean
 ```
 
-## Publish the local backend sample
-
-Preferred command:
+Firebase static delivery:
 
 ```powershell
-miniprogram publish
+miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
 ```
 
-If you are outside the mini-program folder, the explicit form still works:
+AWS/S3 delivery:
 
 ```powershell
-miniprogram build <id>
-miniprogram validate <id>
-miniprogram publish <id>
+miniprogram publish --target cloud --env my-aws-prod
 ```
 
-This command:
+All publish targets copy the same engine-neutral layout:
 
-1. builds the mini-program
-2. runs pre-publish validation
-3. copies manifest and screens into the initialized local backend workspace
-4. runs post-publish validation
+```text
+manifests/<appId>/manifest.json
+screens/<appId>/<version>/<screenId>.json
+assets/<appId>/<version>/
+metadata/
+```
 
-## Test in a host
+## Practical Guidance
 
-For a local proof:
-
-1. Publish the new mini-program into the initialized local backend workspace.
-2. Run `miniprogram backend start --port 8080`.
-3. Run a Flutter host app.
-3. Open the generated entry screen and verify:
-   - first screen -> second screen internal routing
-   - back to first screen internal routing
-   - any declared host capability path such as analytics or native navigation
-
-## Practical guidance
-
-- Use the default `analytics` capability for the lowest-friction starter flow.
-- Add `native_navigation` only when the host app has a real route callback.
-- Use `secure_api` only when the flow truly needs a host-owned secure endpoint.
-- If the mini-program depends on `secure_api`, keep caching conservative.
-- Prefer page-to-page portable routing first, and only leave the mini-program
-  through `openNativeScreen` when the flow genuinely needs a host-owned page.
-- Add reusable components after the entry screen, second screen, and backend
-  publish path are working.
+- Keep the default `analytics` capability until the flow needs more.
+- Add `auth` only when using `Mp.authBuilder` or auth actions.
+- Use publisher backend routes for business data, not static screen JSON.
+- Use paged backend lists for large collections.
+- Keep images on HTTPS URLs or bundled assets.
+- Use `workflow status --json` to confirm `screenFormat: mp`,
+  `screenSchemaVersion: 1`, entry readiness, and backend/auth/paged usage.

@@ -12,6 +12,9 @@ class MiniProgramEntryPage extends StatelessWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     required this.featureFlagEvaluator,
+    this.backendConnector,
+    this.authController,
+    this.disposeAuthController = false,
     this.cacheBundle,
   });
 
@@ -21,6 +24,9 @@ class MiniProgramEntryPage extends StatelessWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final FeatureFlagEvaluator featureFlagEvaluator;
+  final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramAuthController? authController;
+  final bool disposeAuthController;
   final MiniProgramCacheBundle? cacheBundle;
 
   @override
@@ -33,6 +39,9 @@ class MiniProgramEntryPage extends StatelessWidget {
         source: source,
         hostBridge: hostBridge,
         capabilityRegistry: capabilityRegistry,
+        backendConnector: backendConnector,
+        authController: authController,
+        disposeAuthController: disposeAuthController,
         featureFlagEvaluator: featureFlagEvaluator,
         cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
       ),

@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 1,
+  "screenId": "mp_rewards_center_home",
+  "root": {
+    "type": "column",
+    "props": {},
+    "children": [
+      {
+        "type": "heading",
+        "props": {
+          "data": "Mp Rewards Center"
+        },
+        "children": []
+      },
+      {
+        "type": "text",
+        "props": {
+          "data": "Auth, backend, and paged list coverage from Mp JSON."
+        },
+        "children": []
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "authBuilder",
+        "props": {
+          "error": {
+            "type": "text",
+            "props": {
+              "data": "{{auth.message}}"
+            },
+            "children": []
+          },
+          "loading": {
+            "type": "text",
+            "props": {
+              "data": "Checking reward session..."
+            },
+            "children": []
+          },
+          "signedIn": {
+            "type": "card",
+            "props": {},
+            "children": [
+              {
+                "type": "column",
+                "props": {},
+                "children": [
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "Signed in as {{auth.user.email}}"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "secondaryButton",
+                    "props": {
+                      "action": {
+                        "type": "auth.signOut",
+                        "props": {}
+                      },
+                      "label": "Sign out"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          "signedOut": {
+            "type": "card",
+            "props": {},
+            "children": [
+              {
+                "type": "column",
+                "props": {},
+                "children": [
+                  {
+                    "type": "heading",
+                    "props": {
+                      "data": "Publisher account"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "Sign in to unlock Mp rewards."
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "primaryButton",
+                    "props": {
+                      "action": {
+                        "type": "auth.showEmailAuth",
+                        "props": {}
+                      },
+                      "label": "Sign in with email"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "children": []
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "backendBuilder",
+        "props": {
+          "cacheTtlSeconds": 30,
+          "child": {
+            "type": "card",
+            "props": {},
+            "children": [
+              {
+                "type": "column",
+                "props": {},
+                "children": [
+                  {
+                    "type": "heading",
+                    "props": {
+                      "data": "{{backend.home.data.title}}"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "{{backend.home.data.message}}"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "Member: {{backend.home.data.user.name}}"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          "empty": {
+            "type": "text",
+            "props": {
+              "data": "No reward summary is available."
+            },
+            "children": []
+          },
+          "endpoint": "home/bootstrap",
+          "error": {
+            "type": "text",
+            "props": {
+              "data": "{{backend.home.message}}"
+            },
+            "children": []
+          },
+          "loading": {
+            "type": "text",
+            "props": {
+              "data": "Loading reward summary..."
+            },
+            "children": []
+          },
+          "method": "GET",
+          "requestId": "home"
+        },
+        "children": []
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "pagedBackendBuilder",
+        "props": {
+          "cacheTtlSeconds": 30,
+          "cursorParam": "cursor",
+          "empty": {
+            "type": "text",
+            "props": {
+              "data": "No Mp rewards yet."
+            },
+            "children": []
+          },
+          "end": {
+            "type": "text",
+            "props": {
+              "data": "No more Mp rewards."
+            },
+            "children": []
+          },
+          "endpoint": "coupons/page",
+          "error": {
+            "type": "text",
+            "props": {
+              "data": "{{backend.rewards.message}}"
+            },
+            "children": []
+          },
+          "hasMorePath": "hasMore",
+          "itemTemplate": {
+            "type": "card",
+            "props": {},
+            "children": [
+              {
+                "type": "column",
+                "props": {},
+                "children": [
+                  {
+                    "type": "heading",
+                    "props": {
+                      "data": "{{item.title}}"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "{{item.description}}"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "Sort index: {{item.sortIndex}}"
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          "itemsPath": "items",
+          "limit": 1,
+          "limitParam": "limit",
+          "loadMore": {
+            "type": "secondaryButton",
+            "props": {
+              "action": {
+                "type": "backend.loadMore",
+                "props": {
+                  "cursorParam": "cursor",
+                  "hasMorePath": "hasMore",
+                  "itemsPath": "items",
+                  "limit": 20,
+                  "limitParam": "limit",
+                  "nextCursorPath": "nextCursor",
+                  "requestId": "rewards"
+                }
+              },
+              "label": "Load more rewards"
+            },
+            "children": []
+          },
+          "loading": {
+            "type": "text",
+            "props": {
+              "data": "Loading rewards..."
+            },
+            "children": []
+          },
+          "loadingMore": {
+            "type": "text",
+            "props": {
+              "data": "Loading more rewards..."
+            },
+            "children": []
+          },
+          "nextCursorPath": "nextCursor",
+          "requestId": "rewards"
+        },
+        "children": []
+      }
+    ]
+  }
+}

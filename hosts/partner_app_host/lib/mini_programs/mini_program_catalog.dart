@@ -27,7 +27,7 @@ class PartnerMiniProgramDefinition {
   final String id;
   final String title;
   final String description;
-  final List<Capability> requiredCapabilities;
+  final List<CapabilityId> requiredCapabilities;
   final String expectedLaneVersion;
   final bool isBackendDiscovered;
 }
@@ -40,9 +40,9 @@ abstract final class PartnerMiniProgramCatalog {
         description:
             'The same portable Stac mini-program delivered into a smaller '
             'partner host lane through backend selection.',
-        requiredCapabilities: <Capability>[
-          Capability.analytics,
-          Capability.nativeNavigation,
+        requiredCapabilities: <CapabilityId>[
+          CapabilityIds.analytics,
+          CapabilityIds.nativeNavigation,
         ],
         expectedLaneVersion: '1.0.0',
       );
@@ -55,10 +55,10 @@ abstract final class PartnerMiniProgramCatalog {
             'A second portable Stac mini-program delivered through the same '
             'SDK and backend path, with partner-owned secure API handling and '
             'native follow-up.',
-        requiredCapabilities: <Capability>[
-          Capability.analytics,
-          Capability.secureApi,
-          Capability.nativeNavigation,
+        requiredCapabilities: <CapabilityId>[
+          CapabilityIds.analytics,
+          CapabilityIds.secureApi,
+          CapabilityIds.nativeNavigation,
         ],
         expectedLaneVersion: '1.1.0',
       );

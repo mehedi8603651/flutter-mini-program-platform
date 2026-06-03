@@ -107,27 +107,31 @@ void main() {
     expect(find.text('Open mini-program'), findsWidgets);
   });
 
-  testWidgets('opens a mini-program from the host list through MiniProgramPage', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      PartnerAppHostApp(
-        source: const _PartnerLaneMiniProgramSource(),
-        sourceDescription: 'Injected source',
-        cacheBundle: MiniProgramCacheBundle.inMemory(),
-      ),
-    );
-    await tester.pump();
-    await _pumpUntilFound(tester, find.text('Open mini-program'));
-    await tester.scrollUntilVisible(find.text('Open mini-program').first, 300);
-    await tester.pumpAndSettle();
+  testWidgets(
+    'opens a mini-program from the host list through MiniProgramPage',
+    (tester) async {
+      await tester.pumpWidget(
+        PartnerAppHostApp(
+          source: const _PartnerLaneMiniProgramSource(),
+          sourceDescription: 'Injected source',
+          cacheBundle: MiniProgramCacheBundle.inMemory(),
+        ),
+      );
+      await tester.pump();
+      await _pumpUntilFound(tester, find.text('Open mini-program'));
+      await tester.scrollUntilVisible(
+        find.text('Open mini-program').first,
+        300,
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Open mini-program').first);
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Open mini-program').first);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Portable account module'), findsOneWidget);
-    expect(find.text('Open Native Edit Screen'), findsOneWidget);
-  });
+      expect(find.text('Portable account module'), findsOneWidget);
+      expect(find.text('Open Native Edit Screen'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'shows offline and unavailable discovery states before opening mini-programs',
@@ -143,9 +147,9 @@ void main() {
             entry: 'profile_center_home',
             contractVersion: '1.0.0',
             sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-            requiredCapabilities: <Capability>[
-              Capability.analytics,
-              Capability.nativeNavigation,
+            requiredCapabilities: <CapabilityId>[
+              CapabilityIds.analytics,
+              CapabilityIds.nativeNavigation,
             ],
           ),
           cachedAt: now,
@@ -633,9 +637,9 @@ class _PartnerLaneMiniProgramSource implements MiniProgramSource {
           entry: 'profile_center_home',
           contractVersion: '1.0.0',
           sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-          requiredCapabilities: <Capability>[
-            Capability.analytics,
-            Capability.nativeNavigation,
+          requiredCapabilities: <CapabilityId>[
+            CapabilityIds.analytics,
+            CapabilityIds.nativeNavigation,
           ],
           fallback: MiniProgramFallback(
             strategy: MiniProgramFallbackStrategy.errorView,
@@ -650,10 +654,10 @@ class _PartnerLaneMiniProgramSource implements MiniProgramSource {
           entry: 'feedback_form_home',
           contractVersion: '1.0.0',
           sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-          requiredCapabilities: <Capability>[
-            Capability.analytics,
-            Capability.secureApi,
-            Capability.nativeNavigation,
+          requiredCapabilities: <CapabilityId>[
+            CapabilityIds.analytics,
+            CapabilityIds.secureApi,
+            CapabilityIds.nativeNavigation,
           ],
           fallback: MiniProgramFallback(
             strategy: MiniProgramFallbackStrategy.errorView,
@@ -819,7 +823,7 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
       entry: 'profile_center_home',
       contractVersion: '1.0.0',
       sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-      requiredCapabilities: <Capability>[Capability.nativeNavigation],
+      requiredCapabilities: <CapabilityId>[CapabilityIds.nativeNavigation],
       fallback: MiniProgramFallback(
         strategy: MiniProgramFallbackStrategy.errorView,
         message: 'Profile Center is temporarily unavailable in this host app.',
@@ -883,9 +887,9 @@ class _CatalogDiscoveryMiniProgramSource implements MiniProgramSource {
       entry: '${miniProgramId}_home',
       contractVersion: '1.0.0',
       sdkVersionRange: const SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-      requiredCapabilities: const <Capability>[
-        Capability.analytics,
-        Capability.nativeNavigation,
+      requiredCapabilities: const <CapabilityId>[
+        CapabilityIds.analytics,
+        CapabilityIds.nativeNavigation,
       ],
       fallback: MiniProgramFallback(
         strategy: MiniProgramFallbackStrategy.errorView,

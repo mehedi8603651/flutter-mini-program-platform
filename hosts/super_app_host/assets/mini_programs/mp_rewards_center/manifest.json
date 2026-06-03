@@ -1,0 +1,25 @@
+{
+  "id": "mp_rewards_center",
+  "version": "1.0.0",
+  "entry": "mp_rewards_center_home",
+  "contractVersion": "1.0.0",
+  "sdkVersionRange": ">=1.0.0 <2.0.0",
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1,
+  "requiredCapabilities": [
+    "auth",
+    "analytics"
+  ],
+  "cachePolicy": {
+    "manifest": {
+      "mode": "noCache"
+    },
+    "entryScreen": {
+      "mode": "noCache"
+    }
+  },
+  "fallback": {
+    "strategy": "errorView",
+    "message": "Mp Rewards Center is temporarily unavailable in this host app."
+  }
+}

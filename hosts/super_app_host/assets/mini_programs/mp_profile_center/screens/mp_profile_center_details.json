@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "screenId": "mp_profile_center_details",
+  "root": {
+    "type": "column",
+    "props": {},
+    "children": [
+      {
+        "type": "heading",
+        "props": {
+          "data": "Mp profile details"
+        },
+        "children": []
+      },
+      {
+        "type": "card",
+        "props": {},
+        "children": [
+          {
+            "type": "column",
+            "props": {},
+            "children": [
+              {
+                "type": "text",
+                "props": {
+                  "data": "Internal Mp navigation kept this flow inside the mini-program stack."
+                },
+                "children": []
+              },
+              {
+                "type": "text",
+                "props": {
+                  "data": "This fixture verifies that Mp screens can navigate without Stac."
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "secondaryButton",
+        "props": {
+          "action": {
+            "type": "navigation.popScreen",
+            "props": {}
+          },
+          "label": "Back to Mp profile home"
+        },
+        "children": []
+      }
+    ]
+  }
+}

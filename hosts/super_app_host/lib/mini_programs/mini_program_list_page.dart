@@ -434,12 +434,12 @@ class _MiniProgramCard extends StatelessWidget {
 class _CapabilityChip extends StatelessWidget {
   const _CapabilityChip(this.capability);
 
-  final Capability capability;
+  final CapabilityId capability;
 
   @override
   Widget build(BuildContext context) {
     return Chip(
-      label: Text(capability.name),
+      label: Text(capability),
       avatar: const Icon(Icons.verified_outlined, size: 18),
     );
   }

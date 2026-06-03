@@ -31,12 +31,35 @@ Milestone order:
 2. contract metadata, extensible capabilities, and `mini_program_ui`
 3. strict Mp parser, validator, renderer, core nodes, and theme tokens
 4. navigation, backend, auth, paging, and asset parity
-5. optional `mini_program_legacy_stac` extraction and base SDK cleanup
-6. tooling build, scaffold, preview, validate, and publish migration
-7. Firebase, AWS, static hosting, handoff, and VS Code parity
-8. fixture migration, documentation, release-size comparison, and stable merge
+5. tooling build, scaffold, preview, validate, and publish migration
+6. Mp publish and host E2E parity
+7. Mp starter UI and VS Code workflow parity
+8. fixture migration, documentation, and interim release-size comparison
+9. optional `mini_program_legacy_stac` extraction and base SDK cleanup
+10. final release-size comparison and stable merge
+
+Milestone 8 adds tracked Mp fixtures:
+
+- `mini_programs/mp_profile_center`
+- `mini_programs/mp_rewards_center`
+
+The super host bundles both fixtures alongside the legacy Stac fixtures. Use
+`tools/verify_mp_engine_release.ps1` before starting adapter extraction.
 
 Do not publish local development packages before all release gates pass.
+
+## Current Mp Engine Branch State
+
+The branch is Mp-first for new scaffolds and still legacy-compatible for Stac.
+The next major implementation step should be `mini_program_legacy_stac`
+extraction. Do not remove Stac from the base SDK until:
+
+- Mp fixtures build, publish, and render in the super host
+- protected Firebase host flow still passes in Chrome and Android
+- AWS host flow still passes in Chrome and Android
+- Windows desktop host verification passes
+- release-size analysis shows the base SDK without Stac transitives is not
+  larger than the recorded baseline
 
 ## Current Shipped Baseline
 

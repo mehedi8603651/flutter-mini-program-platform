@@ -50,7 +50,7 @@ repo guide:
 ## CLI surface
 
 ```text
-miniprogram create <mini-program-id> [--with-backend mock]
+miniprogram create <mini-program-id> [--screen-format mp|stac] [--with-backend mock]
 miniprogram capabilities [--json]
 miniprogram doctor [--json]
 miniprogram backend init
@@ -60,10 +60,10 @@ miniprogram env configure <env-name> --provider firebase --project-id <firebase-
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status [--json]
-miniprogram build [mini-program-id]
-miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
+miniprogram build [mini-program-id] [--mp-build-script <path>]
+miniprogram preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id] [--mp-build-script <path>]
 miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean] [--site <firebase-hosting-site>] [--dry-run] [--json]
+miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean] [--site <firebase-hosting-site>] [--mp-build-script <path>] [--dry-run] [--json]
 miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
 miniprogram access-key list <mini-program-id> [--env <env-name>] [--json]
 miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
@@ -172,6 +172,16 @@ Create a standalone mini-program in the current directory:
 miniprogram create coupon_center
 ```
 
+New scaffolds default to Mp JSON. The generated project contains
+`mp/program.dart`, `mp/screens/*.dart`, `tool/build_mp.dart`, and
+`manifest.json` with `screenFormat: "mp"` and `screenSchemaVersion: 1`.
+
+Use legacy Stac only when migrating or testing an old mini-program:
+
+```bash
+miniprogram create legacy_coupon_center --screen-format stac
+```
+
 Create a mini-program with a local mock publisher backend and backend-driven
 starter UI:
 
@@ -213,8 +223,9 @@ During preview, the CLI:
 
 - builds the mini-program before launch
 - starts a tiny session-scoped localhost preview server when needed
-- watches `manifest.json`, `stac/**`, `assets/**`, and
-  `lib/default_stac_options.dart`
+- watches `manifest.json`, `mp/**`, `tool/build_mp.dart`, `assets/**`, and
+  legacy `stac/**`
+- ignores generated `mp/.build` and `stac/.build` output
 - rebuilds on save and triggers a full preview refresh
 - prefers `adb reverse tcp:<port> tcp:<port>` for Android emulator preview and
   uses `http://127.0.0.1:<port>/preview/` when reverse is available
@@ -268,6 +279,16 @@ miniprogram publish
 If a standalone backend workspace was initialized earlier with
 `miniprogram backend init`, `publish` writes manifests and screens into that
 workspace instead of the platform repo backend.
+
+For Mp projects, `build` writes:
+
+```text
+mp/.build/screens/<screenId>.json
+```
+
+Every publish target consumes the build result's screen directory, so local,
+static, Firebase Hosting, and AWS cloud delivery keep the same engine-neutral
+layout. Legacy Stac projects still build from `stac/.build`.
 
 From outside the mini-program folder, the explicit form still works:
 
@@ -842,14 +863,15 @@ The generated Firestore model is:
 
 For the generated Firebase starter, edit source files in two places:
 
-- UI and bindings live in `stac/screens/<appId>_home.dart` and other
-  `stac/screens/*.dart` files. Use `miniProgramBackendBuilder(...)` for
-  `home/bootstrap` and other single-response reads. Use
-  `miniProgramPagedBackendBuilder(...)` plus `miniProgramLoadMore(...)` for
-  large lists through `coupons/page`, which returns
-  `{ "items": [], "nextCursor": null, "hasMore": false }`. Use
-  `miniProgramAuthBuilder(...)` plus `miniProgramAuth` actions for
-  publisher-owned email/password sign-in, sign-up, refresh, and sign-out.
+- New Mp UI and bindings live in `mp/screens/<appId>_home.dart` and
+  `mp/program.dart`. Use `Mp.backendBuilder(...)` for `home/bootstrap` and
+  other single-response reads. Use `Mp.pagedBackendBuilder(...)` plus
+  `Mp.backend.loadMore(...)` for large lists through `coupons/page`, which
+  returns `{ "items": [], "nextCursor": null, "hasMore": false }`. Use
+  `Mp.authBuilder(...)` plus `Mp.auth.*` actions for publisher-owned
+  email/password sign-in, sign-up, refresh, and sign-out.
+- Legacy Stac workspaces keep the old `stac/screens/*.dart` helper output when
+  the manifest is missing `screenFormat` or declares `screenFormat: "stac"`.
 - Seed data lives in
   `backend/firebase_functions/functions/data/home_bootstrap.json`,
   `backend/firebase_functions/functions/data/coupons_list.json`, and
@@ -857,12 +879,12 @@ For the generated Firebase starter, edit source files in two places:
   are local source data for Firestore. Edit them to add starter records,
   image URLs, coupon text, or demo profile values, then run Firebase seed.
 
-Do not edit `stac/.build` directly; it is generated by build/publish. After UI
-edits, run `miniprogram build` or publish again. After seed JSON edits, run
-`miniprogram publisher-backend firebase seed --env <env>`. In VS Code, the
-same flow is `MiniProgram: Build`, `MiniProgram: Seed Firebase Publisher
-Firestore`, and then `MiniProgram: Publish MiniProgram to Firebase Hosting`
-when the static delivery should be updated.
+Do not edit `mp/.build` or `stac/.build` directly; they are generated by
+build/publish. After UI edits, run `miniprogram build` or publish again. After
+seed JSON edits, run `miniprogram publisher-backend firebase seed --env <env>`.
+In VS Code, the same flow is `MiniProgram: Build`, `MiniProgram: Seed Firebase
+Publisher Firestore`, and then `MiniProgram: Publish MiniProgram to Firebase
+Hosting` when the static delivery should be updated.
 
 Configure a Firebase environment, deploy the function, and smoke-test the
 publisher routes:

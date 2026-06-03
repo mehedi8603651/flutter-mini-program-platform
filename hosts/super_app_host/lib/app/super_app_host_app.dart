@@ -24,6 +24,9 @@ class SuperAppHostApp extends StatefulWidget {
     this.sourceConfiguration,
     this.authSessionService,
     this.capabilityRegistry,
+    this.backendConnector,
+    this.authController,
+    this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.cacheBundle,
     this.discoverySourceKind,
@@ -35,6 +38,9 @@ class SuperAppHostApp extends StatefulWidget {
   final SuperAppHostSourceConfiguration? sourceConfiguration;
   final AuthSessionService? authSessionService;
   final CapabilityRegistry? capabilityRegistry;
+  final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramAuthController? authController;
+  final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final MiniProgramCacheBundle? cacheBundle;
   final MiniProgramDiscoverySourceKind? discoverySourceKind;
@@ -108,6 +114,9 @@ class _SuperAppHostAppState extends State<SuperAppHostApp> {
       source: _source,
       hostBridge: _hostBridge,
       capabilityRegistry: _capabilityRegistry,
+      backendConnector: widget.backendConnector,
+      authController: widget.authController,
+      disposeAuthController: widget.disposeAuthController,
       featureFlagEvaluator: widget.featureFlagEvaluator,
       cacheBundle: _cacheBundle,
     );

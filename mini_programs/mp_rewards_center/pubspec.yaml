@@ -1,0 +1,15 @@
+name: mp_rewards_center
+description: Mp JSON migration fixture for auth, backend, and paged list coverage.
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.10.8
+
+dependencies:
+  mini_program_ui:
+    path: ../../packages/mini_program_ui
+
+dependency_overrides:
+  mini_program_contracts:
+    path: ../../packages/mini_program_contracts
