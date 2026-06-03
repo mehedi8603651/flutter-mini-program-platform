@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-dev.2
+
+- add Mp runtime parity support for auth, backend data, paged backend data,
+  bindings, and mini-program navigation
+- add Mp-native runtime widgets and actions while keeping legacy Stac rendering
+  unchanged
+
 ## 0.4.0-dev.1
 
 - add the SDK Mp screen renderer seam and default renderer registry

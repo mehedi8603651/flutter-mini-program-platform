@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev.2
+
+- add Mp authoring helpers for auth, backend, paged backend, and navigation
+  runtime parity nodes and actions
+
 ## 0.1.0-dev.1
 
 - add the pure-Dart Mp JSON authoring foundation

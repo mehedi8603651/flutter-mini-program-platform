@@ -35,5 +35,23 @@ void main() {
     test('requires sizedBox to define at least one dimension', () {
       expect(() => Mp.sizedBox(), throwsArgumentError);
     });
+
+    test('runtime parity helpers reject invalid required fields', () {
+      expect(
+        () => Mp.backendBuilder(requestId: '', endpoint: 'home/bootstrap'),
+        throwsArgumentError,
+      );
+      expect(() => Mp.backend.call(endpoint: ''), throwsArgumentError);
+      expect(
+        () => Mp.pagedBackendBuilder(
+          requestId: 'coupons',
+          endpoint: 'coupons/page',
+          itemTemplate: Mp.text('{{item.title}}'),
+          limit: 0,
+        ),
+        throwsArgumentError,
+      );
+      expect(() => Mp.navigation.openScreen(''), throwsArgumentError);
+    });
   });
 }
