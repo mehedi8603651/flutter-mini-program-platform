@@ -10,6 +10,7 @@ class MiniProgramCloudPublishRequest {
     this.miniProgramId,
     this.miniProgramRootPath,
     this.stacCliScriptPath,
+    this.mpBuildScriptPath,
     this.skipBuildPubGet = false,
   });
 
@@ -18,6 +19,7 @@ class MiniProgramCloudPublishRequest {
   final String? miniProgramId;
   final String? miniProgramRootPath;
   final String? stacCliScriptPath;
+  final String? mpBuildScriptPath;
   final bool skipBuildPubGet;
 }
 

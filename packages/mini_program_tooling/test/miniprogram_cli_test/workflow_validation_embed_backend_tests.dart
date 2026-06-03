@@ -115,6 +115,91 @@ void _registerWorkflowValidationEmbedBackendTests() {
     expect(cloudController.lastAccessKeyListRequest, isNull);
   });
 
+  test('workflow status reports Mp build metadata and backend usage', () async {
+    final miniProgramRoot = p.join(tempDir.path, 'mp_coupon_center');
+    await Directory(
+      p.join(miniProgramRoot, 'mp', '.build', 'screens'),
+    ).create(recursive: true);
+    await File(p.join(miniProgramRoot, 'manifest.json')).writeAsString(
+      jsonEncode(<String, Object?>{
+        'id': 'mp_coupon_center',
+        'version': '1.0.0',
+        'entry': 'mp_coupon_center_home',
+        'contractVersion': '1.0.0',
+        'sdkVersionRange': '>=0.4.0-dev.1 <0.5.0',
+        'requiredCapabilities': <String>['analytics'],
+        'screenFormat': 'mp',
+        'screenSchemaVersion': 1,
+      }),
+    );
+    await File(
+      p.join(
+        miniProgramRoot,
+        'mp',
+        '.build',
+        'screens',
+        'mp_coupon_center_home.json',
+      ),
+    ).writeAsString(
+      jsonEncode(<String, Object?>{
+        'schemaVersion': 1,
+        'screenId': 'mp_coupon_center_home',
+        'root': <String, Object?>{
+          'type': 'pagedBackendBuilder',
+          'props': <String, Object?>{
+            'requestId': 'coupons',
+            'endpoint': 'coupons/page',
+          },
+          'children': <Object?>[],
+        },
+      }),
+    );
+    await Directory(
+      p.join(miniProgramRoot, 'mp', 'screens'),
+    ).create(recursive: true);
+    await File(
+      p.join(miniProgramRoot, 'mp', 'screens', 'mp_coupon_center_home.dart'),
+    ).writeAsString('''
+Mp.authBuilder();
+Mp.pagedBackendBuilder(
+  requestId: 'coupons',
+  endpoint: 'coupons/page',
+  itemTemplate: Mp.text('{{item.title}}'),
+  loadMore: Mp.secondaryButton(
+    label: 'Load more',
+    action: Mp.backend.loadMore(requestId: 'coupons'),
+  ),
+);
+''');
+    final stdoutBuffer = StringBuffer();
+
+    final exitCode = await MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      workingDirectory: miniProgramRoot,
+    ).run(<String>['workflow', 'status', '--json']);
+
+    expect(exitCode, 0);
+    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    final miniProgram = json['miniProgram'] as Map<String, dynamic>;
+    final build = miniProgram['build'] as Map<String, dynamic>;
+    final backendUsage = miniProgram['backendUsage'] as Map<String, dynamic>;
+    expect(miniProgram['screenFormat'], 'mp');
+    expect(miniProgram['screenSchemaVersion'], 1);
+    expect(miniProgram['sourceRootPath'], p.join(miniProgramRoot, 'mp'));
+    expect(
+      miniProgram['outputRootPath'],
+      p.join(miniProgramRoot, 'mp', '.build'),
+    );
+    expect(build['screenCount'], 1);
+    expect(build['entryScreenExists'], isTrue);
+    expect(backendUsage['usesAuthBuilder'], isTrue);
+    expect(backendUsage['usesPagedBackendBuilder'], isTrue);
+    expect(backendUsage['usesLoadMore'], isTrue);
+    expect(backendUsage['requestIds'], contains('coupons'));
+  });
+
   test('workflow status reports Firebase publisher backend scaffold', () async {
     final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
     await _writeMiniProgramFixture(

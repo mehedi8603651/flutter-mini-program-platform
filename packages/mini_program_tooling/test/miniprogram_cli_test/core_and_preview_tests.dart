@@ -17,6 +17,10 @@ void _registerCoreAndPreviewTests() {
     expect(stderrBuffer.toString(), isEmpty);
     expect(
       stdoutBuffer.toString(),
+      contains('create <mini-program-id> [--screen-format mp|stac]'),
+    );
+    expect(
+      stdoutBuffer.toString(),
       contains(
         'publish [mini-program-id] [--target local|cloud|static|firebase-hosting]',
       ),
@@ -82,6 +86,44 @@ void _registerCoreAndPreviewTests() {
     );
   });
 
+  test('create help exposes screen format selection', () async {
+    final stdoutBuffer = StringBuffer();
+    final exitCode = await MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      workingDirectory: tempDir.path,
+    ).run(<String>['create', '--help']);
+
+    expect(exitCode, 0);
+    expect(stdoutBuffer.toString(), contains('--screen-format'));
+    expect(stdoutBuffer.toString(), contains('mp'));
+    expect(stdoutBuffer.toString(), contains('stac'));
+  });
+
+  test('build and preview help expose Mp build script override', () async {
+    final buildStdout = StringBuffer();
+    final previewStdout = StringBuffer();
+    final cli = MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: buildStdout,
+      stderrSink: StringBuffer(),
+      workingDirectory: tempDir.path,
+    );
+
+    expect(await cli.run(<String>['build', '--help']), 0);
+    expect(buildStdout.toString(), contains('--mp-build-script'));
+
+    final previewExitCode = await MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: previewStdout,
+      stderrSink: StringBuffer(),
+      workingDirectory: tempDir.path,
+    ).run(<String>['preview', '--help']);
+    expect(previewExitCode, 0);
+    expect(previewStdout.toString(), contains('--mp-build-script'));
+  });
+
   test('capabilities prints text output', () async {
     final stdoutBuffer = StringBuffer();
     final stderrBuffer = StringBuffer();
@@ -100,7 +142,7 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.3.50'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.4.0-dev.1'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(
       stdoutBuffer.toString(),
@@ -185,7 +227,7 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.3.50');
+    expect(json['toolingVersion'], '0.4.0-dev.1');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
     expect(
@@ -443,13 +485,13 @@ void _registerCoreAndPreviewTests() {
       p.join(
         tempDir.path,
         'coupon_backend',
-        'stac',
+        'mp',
         'screens',
         'coupon_backend_home.dart',
       ),
     ).readAsString();
-    expect(screenSource, contains('miniProgramBackendBuilder('));
-    expect(screenSource, contains('miniProgramPagedBackendBuilder('));
+    expect(screenSource, contains('Mp.backendBuilder('));
+    expect(screenSource, contains('Mp.pagedBackendBuilder('));
     expect(screenSource, contains("endpoint: 'coupons/page'"));
   });
 
@@ -804,7 +846,7 @@ void _registerCoreAndPreviewTests() {
   });
 
   test(
-    'preview forwards repo-root and stac-cli-script without requiring backend state',
+    'preview forwards repo-root and build script overrides without requiring backend state',
     () async {
       final standaloneRoot = p.join(tempDir.path, 'coupon_center');
       await _writeMiniProgramFixture(
@@ -813,7 +855,9 @@ void _registerCoreAndPreviewTests() {
         version: '1.0.0',
       );
       final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
+      final fakeMpBuildScriptPath = p.join(repoRoot.path, 'fake_build_mp.dart');
       await File(fakeCliPath).writeAsString(_fakeStacCliSource);
+      await File(fakeMpBuildScriptPath).writeAsString('// mp');
       final previewController = _FakeMiniProgramPreviewController();
 
       final exitCode =
@@ -831,12 +875,18 @@ void _registerCoreAndPreviewTests() {
             repoRoot.path,
             '--stac-cli-script',
             fakeCliPath,
+            '--mp-build-script',
+            fakeMpBuildScriptPath,
           ]);
 
       expect(exitCode, 0);
       expect(previewController.lastRequest, isNotNull);
       expect(previewController.lastRequest!.repoRootPath, repoRoot.path);
       expect(previewController.lastRequest!.stacCliScriptPath, fakeCliPath);
+      expect(
+        previewController.lastRequest!.mpBuildScriptPath,
+        fakeMpBuildScriptPath,
+      );
     },
   );
 

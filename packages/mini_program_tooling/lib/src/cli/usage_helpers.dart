@@ -5,7 +5,7 @@ extension _MiniprogramCliUsageHelpers on MiniprogramCli {
 Usage: miniprogram <command> [arguments]
 
 Commands:
-  create <mini-program-id> [--with-backend mock]
+  create <mini-program-id> [--screen-format mp|stac] [--with-backend mock]
   capabilities [--json]
   doctor [--json]
   env init|list|status

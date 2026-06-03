@@ -119,6 +119,7 @@ class AwsCloudPublisher {
         miniProgramId: request.miniProgramId,
         miniProgramRootPath: request.miniProgramRootPath,
         stacCliScriptPath: request.stacCliScriptPath,
+        mpBuildScriptPath: request.mpBuildScriptPath,
         skipPubGet: request.skipBuildPubGet,
       ),
     );

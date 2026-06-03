@@ -159,9 +159,19 @@ class MiniProgramWorkflowStatusController {
     final appId = manifest?['id']?.toString();
     final entry = manifest?['entry']?.toString();
     final version = manifest?['version']?.toString();
-    final screensDirectory = Directory(
-      p.join(workspacePath, 'stac', '.build', 'screens'),
+    final screenFormat = _resolveMiniProgramScreenFormat(manifest);
+    final screenSchemaVersion = _resolveMiniProgramScreenSchemaVersion(
+      manifest,
     );
+    final sourceRootPath = p.join(
+      workspacePath,
+      screenFormat == 'mp' ? 'mp' : 'stac',
+    );
+    final outputRootPath = _resolveMiniProgramBuildOutputPath(
+      workspacePath: workspacePath,
+      screenFormat: screenFormat,
+    );
+    final screensDirectory = Directory(p.join(outputRootPath, 'screens'));
     final buildScreens = await screensDirectory.exists()
         ? await screensDirectory
               .list()
@@ -190,6 +200,11 @@ class MiniProgramWorkflowStatusController {
       'appId': appId,
       'version': version,
       'entry': entry,
+      'screenFormat': screenFormat,
+      'screenSchemaVersion': screenSchemaVersion,
+      'sourceRootPath': sourceRootPath,
+      'sourceRootExists': await Directory(sourceRootPath).exists(),
+      'outputRootPath': outputRootPath,
       'build': <String, Object?>{
         'screensDirectory': screensDirectory.path,
         'exists': buildScreens > 0,
@@ -205,6 +220,64 @@ class MiniProgramWorkflowStatusController {
       'backendUsage': backendUsage,
       'publisherBackendStarter': publisherBackendStarter,
     };
+  }
+
+  String _resolveMiniProgramScreenFormat(Map<String, dynamic>? manifest) {
+    final rawScreenFormat = manifest?['screenFormat'];
+    if (rawScreenFormat == null) {
+      return 'stac';
+    }
+    final screenFormat = rawScreenFormat.toString().trim();
+    return screenFormat.isEmpty ? 'stac' : screenFormat;
+  }
+
+  int? _resolveMiniProgramScreenSchemaVersion(Map<String, dynamic>? manifest) {
+    final rawVersion = manifest?['screenSchemaVersion'];
+    if (rawVersion is int) {
+      return rawVersion;
+    }
+    if (rawVersion is num) {
+      return rawVersion.toInt();
+    }
+    if (rawVersion is String) {
+      return int.tryParse(rawVersion.trim());
+    }
+    return null;
+  }
+
+  String _resolveMiniProgramBuildOutputPath({
+    required String workspacePath,
+    required String screenFormat,
+  }) {
+    if (screenFormat == 'mp') {
+      return p.join(workspacePath, 'mp', '.build');
+    }
+    if (screenFormat != 'stac') {
+      return p.join(workspacePath, screenFormat, '.build');
+    }
+
+    final defaultOptionsPath = p.join(
+      workspacePath,
+      'lib',
+      'default_stac_options.dart',
+    );
+    try {
+      final source = File(defaultOptionsPath).readAsStringSync();
+      final match = RegExp(
+        r'''outputDir\s*:\s*(['"])(.*?)\1''',
+      ).firstMatch(source);
+      final outputDir = match?.group(2)?.trim();
+      if (outputDir != null && outputDir.isNotEmpty) {
+        return p.normalize(
+          p.isAbsolute(outputDir)
+              ? outputDir
+              : p.join(workspacePath, outputDir),
+        );
+      }
+    } catch (_) {
+      // Keep workflow status best-effort.
+    }
+    return p.join(workspacePath, 'stac', '.build');
   }
 
   Future<Map<String, Object?>> _inspectHostApp(
@@ -873,6 +946,7 @@ class MiniProgramWorkflowStatusController {
     final roots = <Directory>[
       Directory(p.join(workspacePath, 'lib')),
       Directory(p.join(workspacePath, 'stac')),
+      Directory(p.join(workspacePath, 'mp')),
     ];
     final sources = <String>[];
     for (final root in roots) {
@@ -909,22 +983,58 @@ class MiniProgramWorkflowStatusController {
     }
     final usesAction =
         joined.contains('miniProgramBackendAction(') ||
+        joined.contains('Mp.backend.call(') ||
         joined.contains('"actionType":"miniProgramBackend"') ||
-        joined.contains('"actionType": "miniProgramBackend"');
+        joined.contains('"actionType": "miniProgramBackend"') ||
+        joined.contains('"type":"backend.call"') ||
+        joined.contains('"type": "backend.call"');
     final usesQueryAction =
         joined.contains('miniProgramBackendQueryAction(') ||
+        joined.contains('Mp.backend.query(') ||
         joined.contains('"actionType":"miniProgramBackendQuery"') ||
-        joined.contains('"actionType": "miniProgramBackendQuery"');
+        joined.contains('"actionType": "miniProgramBackendQuery"') ||
+        joined.contains('"type":"backend.query"') ||
+        joined.contains('"type": "backend.query"');
     final usesBuilder =
         joined.contains('miniProgramBackendBuilder(') ||
+        joined.contains('Mp.backendBuilder(') ||
         joined.contains('"type":"miniProgramBackendBuilder"') ||
-        joined.contains('"type": "miniProgramBackendBuilder"');
+        joined.contains('"type": "miniProgramBackendBuilder"') ||
+        joined.contains('"type":"backendBuilder"') ||
+        joined.contains('"type": "backendBuilder"');
+    final usesPagedBuilder =
+        joined.contains('miniProgramPagedBackendBuilder(') ||
+        joined.contains('Mp.pagedBackendBuilder(') ||
+        joined.contains('"type":"miniProgramPagedBackendBuilder"') ||
+        joined.contains('"type": "miniProgramPagedBackendBuilder"') ||
+        joined.contains('"type":"pagedBackendBuilder"') ||
+        joined.contains('"type": "pagedBackendBuilder"');
+    final usesLoadMore =
+        joined.contains('miniProgramLoadMore(') ||
+        joined.contains('Mp.backend.loadMore(') ||
+        joined.contains('"actionType":"miniProgramLoadMore"') ||
+        joined.contains('"actionType": "miniProgramLoadMore"') ||
+        joined.contains('"type":"backend.loadMore"') ||
+        joined.contains('"type": "backend.loadMore"');
+    final usesAuthBuilder =
+        joined.contains('Mp.authBuilder(') ||
+        joined.contains('"type":"authBuilder"') ||
+        joined.contains('"type": "authBuilder"');
     return <String, Object?>{
       'usesBackendAction': usesAction,
       'usesBackendQueryAction': usesQueryAction,
       'usesBackendBuilder': usesBuilder,
-      'usesBackendState': usesQueryAction || usesBuilder,
-      'usesPublisherBackend': usesAction || usesQueryAction || usesBuilder,
+      'usesPagedBackendBuilder': usesPagedBuilder,
+      'usesLoadMore': usesLoadMore,
+      'usesAuthBuilder': usesAuthBuilder,
+      'usesBackendState':
+          usesQueryAction || usesBuilder || usesPagedBuilder || usesLoadMore,
+      'usesPublisherBackend':
+          usesAction ||
+          usesQueryAction ||
+          usesBuilder ||
+          usesPagedBuilder ||
+          usesLoadMore,
       'requestIds': requestIds.toList()..sort(),
     };
   }

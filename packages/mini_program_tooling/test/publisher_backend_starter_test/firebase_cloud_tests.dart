@@ -11,6 +11,23 @@ void _registerFirebaseCloudTests() {
         return ProcessResult(0, 0, '', '');
       },
       healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+      firebaseAccessTokenProvider: () async => 'firebase-token',
+      httpRequester: (method, uri, {headers, body}) async {
+        if (uri.host == 'run.googleapis.com') {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'bindings': <Object?>[
+                <String, Object?>{
+                  'role': 'roles/run.invoker',
+                  'members': <String>['allUsers'],
+                },
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      },
       clock: () => DateTime.utc(2026, 5, 24, 12),
     );
     await starter.scaffold(
@@ -89,6 +106,43 @@ void _registerFirebaseCloudTests() {
         return ProcessResult(0, 0, '', '');
       },
       healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+      firebaseAccessTokenProvider: () async => 'firebase-token',
+      httpRequester: (method, uri, {headers, body}) async {
+        if (uri.host == 'run.googleapis.com') {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'bindings': <Object?>[
+                <String, Object?>{
+                  'role': 'roles/run.invoker',
+                  'members': <String>['allUsers'],
+                },
+              ],
+            }),
+            200,
+          );
+        }
+        if (uri.host == 'cloudfunctions.googleapis.com') {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'serviceConfig': <String, Object?>{
+                'serviceAccountEmail':
+                    'publisher-backend@coupon-prod.iam.gserviceaccount.com',
+              },
+            }),
+            200,
+          );
+        }
+        if (uri.host == 'cloudresourcemanager.googleapis.com') {
+          if (method == 'GET') {
+            return http.Response(
+              jsonEncode(<String, Object?>{'projectNumber': '123456789'}),
+              200,
+            );
+          }
+          return http.Response('{"bindings":[]}', 200);
+        }
+        return http.Response('{}', 200);
+      },
     );
     await starter.scaffold(
       PublisherBackendScaffoldRequest(

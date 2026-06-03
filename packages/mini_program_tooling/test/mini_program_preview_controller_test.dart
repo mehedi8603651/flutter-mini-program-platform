@@ -45,6 +45,10 @@ void main() {
                 'type': 'column',
                 'children': <Object?>[
                   <String, dynamic>{'type': 'image', 'src': 'assets/hero.png'},
+                  <String, dynamic>{
+                    'type': 'image',
+                    'props': <String, dynamic>{'src': 'assets/hero.png'},
+                  },
                 ],
               },
             },
@@ -75,9 +79,15 @@ void main() {
         final screenJson =
             jsonDecode(screenResponse.body) as Map<String, dynamic>;
         final children = screenJson['children'] as List<dynamic>;
-        final imageJson = children.single as Map<String, dynamic>;
+        final imageJson = children.first as Map<String, dynamic>;
         expect(
           imageJson['src'],
+          server.baseUri.resolve('assets/hero.png').toString(),
+        );
+        final mpImageJson = children[1] as Map<String, dynamic>;
+        final mpImageProps = mpImageJson['props'] as Map<String, dynamic>;
+        expect(
+          mpImageProps['src'],
           server.baseUri.resolve('assets/hero.png').toString(),
         );
 
@@ -243,6 +253,30 @@ void main() {
         MiniProgramPreviewWatcher.isRelevantPath(
           rootPath: projectRoot,
           path: ignoredPath,
+        ),
+        isFalse,
+      );
+    });
+
+    test('watches Mp sources and ignores mp/.build output', () {
+      expect(
+        MiniProgramPreviewWatcher.isRelevantPath(
+          rootPath: projectRoot,
+          path: p.join(projectRoot, 'tool', 'build_mp.dart'),
+        ),
+        isTrue,
+      );
+      expect(
+        MiniProgramPreviewWatcher.isRelevantPath(
+          rootPath: projectRoot,
+          path: p.join(projectRoot, 'mp', 'screens', 'home.dart'),
+        ),
+        isTrue,
+      );
+      expect(
+        MiniProgramPreviewWatcher.isRelevantPath(
+          rootPath: projectRoot,
+          path: p.join(projectRoot, 'mp', '.build', 'screens', 'home.json'),
         ),
         isFalse,
       );

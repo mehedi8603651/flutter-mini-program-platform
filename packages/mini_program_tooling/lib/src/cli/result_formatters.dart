@@ -23,6 +23,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       lines.addAll(<String>[
         'Mini-program: ${miniProgram['appId'] ?? 'unknown'}',
         'Version: ${miniProgram['version'] ?? 'unknown'}',
+        'Screen format: ${miniProgram['screenFormat'] ?? 'stac'}',
         'Build: ${build['exists'] == true ? 'found' : 'missing'} (${build['screenCount']} screen JSON file(s))',
         'Validation: ${validation['status']}',
         'Partner packages: ${(miniProgram['partnerPackages'] as List).length}',
@@ -63,6 +64,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Created mini-program scaffold: ${result.miniProgramId}',
       'Root: ${result.miniProgramRootPath}',
       if (result.repoRootPath != null) 'Repo root: ${result.repoRootPath}',
+      'Screen format: ${result.screenFormat}',
       'Capabilities: ${result.capabilities.join(', ')}',
       'Files:',
       ...result.createdPaths.map((path) => '- $path'),

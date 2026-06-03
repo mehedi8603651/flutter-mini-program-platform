@@ -83,6 +83,7 @@ class MiniProgramPreviewRequest {
     required this.deviceId,
     this.repoRootPath,
     this.stacCliScriptPath,
+    this.mpBuildScriptPath,
   });
 
   final String miniProgramId;
@@ -90,6 +91,7 @@ class MiniProgramPreviewRequest {
   final String deviceId;
   final String? repoRootPath;
   final String? stacCliScriptPath;
+  final String? mpBuildScriptPath;
 }
 
 class StartedPreviewProcess {
@@ -162,9 +164,15 @@ class MiniProgramPreviewWatcher {
       'lib',
       'default_stac_options.dart',
     );
+    final mpBuildScriptPath = p.join(
+      normalizedRootPath,
+      'tool',
+      'build_mp.dart',
+    );
 
     if (p.equals(normalizedPath, manifestPath) ||
-        p.equals(normalizedPath, defaultOptionsPath)) {
+        p.equals(normalizedPath, defaultOptionsPath) ||
+        p.equals(normalizedPath, mpBuildScriptPath)) {
       return true;
     }
 
@@ -177,6 +185,7 @@ class MiniProgramPreviewWatcher {
     }
 
     return p.isWithin(p.join(normalizedRootPath, 'stac'), normalizedPath) ||
+        p.isWithin(p.join(normalizedRootPath, 'mp'), normalizedPath) ||
         p.isWithin(p.join(normalizedRootPath, 'assets'), normalizedPath);
   }
 
@@ -184,7 +193,8 @@ class MiniProgramPreviewWatcher {
     return _pathEqualsOrIsWithin(p.join(rootPath, '.mini_program'), path) ||
         _pathEqualsOrIsWithin(p.join(rootPath, '.dart_tool'), path) ||
         _pathEqualsOrIsWithin(p.join(rootPath, 'build'), path) ||
-        _pathEqualsOrIsWithin(p.join(rootPath, 'stac', '.build'), path);
+        _pathEqualsOrIsWithin(p.join(rootPath, 'stac', '.build'), path) ||
+        _pathEqualsOrIsWithin(p.join(rootPath, 'mp', '.build'), path);
   }
 
   static bool _pathEqualsOrIsWithin(String rootPath, String path) {
@@ -423,6 +433,7 @@ class MiniProgramPreviewController {
         miniProgramId: request.miniProgramId,
         miniProgramRootPath: request.miniProgramRootPath,
         stacCliScriptPath: request.stacCliScriptPath,
+        mpBuildScriptPath: request.mpBuildScriptPath,
         skipPubGet: skipPubGet,
       ),
     );

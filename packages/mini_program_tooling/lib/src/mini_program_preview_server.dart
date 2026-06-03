@@ -453,15 +453,9 @@ class MiniProgramPreviewServer {
     }
 
     final json = value.map((key, entry) => MapEntry(key.toString(), entry));
-    if (_isLocalAssetImage(json, bundle: bundle)) {
-      final rawSource = '${json['src']}'.trim();
-      return <String, dynamic>{
-        ...json,
-        'imageType': 'network',
-        'src': baseUri
-            .resolve('assets/${_normalizePreviewAssetPath(rawSource)}')
-            .toString(),
-      };
+    final rewrittenImage = _rewriteLocalAssetImage(json, bundle: bundle);
+    if (rewrittenImage != null) {
+      return rewrittenImage;
     }
 
     return json.map(
@@ -469,16 +463,54 @@ class MiniProgramPreviewServer {
     );
   }
 
-  bool _isLocalAssetImage(
+  Map<String, dynamic>? _rewriteLocalAssetImage(
     Map<String, dynamic> json, {
     required MiniProgramPreviewBundle bundle,
   }) {
     if (bundle.assetRootPath == null || json['type'] != 'image') {
-      return false;
+      return null;
     }
 
-    final rawSource = json['src'];
-    if (rawSource is! String || rawSource.trim().isEmpty) {
+    final rawTopLevelSource = json['src'];
+    if (rawTopLevelSource is String &&
+        _isLocalAssetSource(rawTopLevelSource, bundle: bundle)) {
+      return <String, dynamic>{
+        ...json,
+        'imageType': 'network',
+        'src': baseUri
+            .resolve('assets/${_normalizePreviewAssetPath(rawTopLevelSource)}')
+            .toString(),
+      };
+    }
+
+    final props = json['props'];
+    if (props is Map) {
+      final normalizedProps = props.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+      final rawPropsSource = normalizedProps['src'];
+      if (rawPropsSource is String &&
+          _isLocalAssetSource(rawPropsSource, bundle: bundle)) {
+        return <String, dynamic>{
+          ...json,
+          'props': <String, dynamic>{
+            ...normalizedProps,
+            'src': baseUri
+                .resolve('assets/${_normalizePreviewAssetPath(rawPropsSource)}')
+                .toString(),
+          },
+        };
+      }
+    }
+
+    return null;
+  }
+
+  bool _isLocalAssetSource(
+    String rawSource, {
+    required MiniProgramPreviewBundle bundle,
+  }) {
+    if (rawSource.trim().isEmpty || bundle.assetRootPath == null) {
       return false;
     }
 

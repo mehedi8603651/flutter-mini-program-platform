@@ -210,6 +210,17 @@ void _registerPublisherBackendFirebaseSetupDeployTests() {
           return ProcessResult(0, 0, '', '');
         },
         healthGetter: (uri) async => http.Response('{"ok":true}', 200),
+        httpRequester: (method, uri, {headers, body}) async => http.Response(
+          jsonEncode(<String, Object?>{
+            'bindings': <Object?>[
+              <String, Object?>{
+                'role': 'roles/run.invoker',
+                'members': <String>['allUsers'],
+              },
+            ],
+          }),
+          200,
+        ),
         clock: () => DateTime.utc(2026, 5, 24, 12),
       ),
       workingDirectory: standaloneRoot,

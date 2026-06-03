@@ -19,6 +19,7 @@ class MiniProgramBuildRequest {
     this.miniProgramId,
     this.miniProgramRootPath,
     this.stacCliScriptPath,
+    this.mpBuildScriptPath,
     this.skipPubGet = false,
   });
 
@@ -26,6 +27,7 @@ class MiniProgramBuildRequest {
   final String? miniProgramId;
   final String? miniProgramRootPath;
   final String? stacCliScriptPath;
+  final String? mpBuildScriptPath;
   final bool skipPubGet;
 }
 
@@ -37,6 +39,8 @@ class MiniProgramBuildResult {
     required this.outputDirectoryPath,
     required this.screensDirectoryPath,
     required this.entryScreenJsonPath,
+    this.screenFormat = 'stac',
+    this.screenSchemaVersion,
     required this.cliSource,
     required this.invocation,
     required this.pubGetRan,
@@ -48,6 +52,8 @@ class MiniProgramBuildResult {
   final String outputDirectoryPath;
   final String screensDirectoryPath;
   final String entryScreenJsonPath;
+  final String screenFormat;
+  final int? screenSchemaVersion;
   final String cliSource;
   final List<String> invocation;
   final bool pubGetRan;
@@ -59,6 +65,8 @@ class MiniProgramBuildResult {
     'outputDirectoryPath': outputDirectoryPath,
     'screensDirectoryPath': screensDirectoryPath,
     'entryScreenJsonPath': entryScreenJsonPath,
+    'screenFormat': screenFormat,
+    if (screenSchemaVersion != null) 'screenSchemaVersion': screenSchemaVersion,
     'cliSource': cliSource,
     'invocation': invocation,
     'pubGetRan': pubGetRan,
@@ -103,12 +111,6 @@ class MiniProgramBuilder {
 
     final manifestPath = p.join(miniProgramRootPath, 'manifest.json');
     final pubspecPath = p.join(miniProgramRootPath, 'pubspec.yaml');
-    final defaultOptionsPath = p.join(
-      miniProgramRootPath,
-      'lib',
-      'default_stac_options.dart',
-    );
-
     for (final path in <String>[manifestPath, pubspecPath]) {
       if (!await File(path).exists()) {
         throw MiniProgramBuildException('Required file is missing: $path');
@@ -139,10 +141,16 @@ class MiniProgramBuilder {
         'Manifest is missing a usable entry screen: $manifestPath',
       );
     }
+    final screenFormat = _resolveScreenFormat(manifest, manifestPath);
+    final screenSchemaVersion = _resolveScreenSchemaVersion(
+      manifest,
+      manifestPath,
+      screenFormat: screenFormat,
+    );
 
     final outputDirectoryPath = await _resolveOutputDirectory(
       miniProgramRootPath: miniProgramRootPath,
-      defaultOptionsPath: defaultOptionsPath,
+      screenFormat: screenFormat,
     );
     final screensDirectoryPath = p.join(outputDirectoryPath, 'screens');
     final entryScreenJsonPath = p.join(
@@ -153,7 +161,10 @@ class MiniProgramBuilder {
     final command = await _resolveBuildCommand(
       repoRootPath: repoRootPath,
       miniProgramRootPath: miniProgramRootPath,
+      outputDirectoryPath: outputDirectoryPath,
+      screenFormat: screenFormat,
       stacCliScriptPath: request.stacCliScriptPath,
+      mpBuildScriptPath: request.mpBuildScriptPath,
     );
 
     if (!request.skipPubGet) {
@@ -171,13 +182,21 @@ class MiniProgramBuilder {
       arguments: command.arguments,
       workingDirectory: command.workingDirectory,
       environment: command.environment,
-      failureLabel: 'Stac build failed for $resolvedMiniProgramId',
+      failureLabel:
+          '${screenFormat == 'mp' ? 'Mp' : 'Stac'} build failed for $resolvedMiniProgramId',
     );
 
     if (!await File(entryScreenJsonPath).exists()) {
       throw MiniProgramBuildException(
         'Build completed but entry screen JSON was not found: '
         '$entryScreenJsonPath',
+      );
+    }
+    if (screenFormat == 'mp') {
+      await _validateMpEntryScreen(
+        entryScreenJsonPath: entryScreenJsonPath,
+        entryScreenId: entryScreenId,
+        screenSchemaVersion: screenSchemaVersion,
       );
     }
 
@@ -188,6 +207,8 @@ class MiniProgramBuilder {
       outputDirectoryPath: outputDirectoryPath,
       screensDirectoryPath: screensDirectoryPath,
       entryScreenJsonPath: entryScreenJsonPath,
+      screenFormat: screenFormat,
+      screenSchemaVersion: screenSchemaVersion,
       cliSource: command.source,
       invocation: <String>[command.executable, ...command.arguments],
       pubGetRan: !request.skipPubGet,
@@ -196,8 +217,17 @@ class MiniProgramBuilder {
 
   Future<String> _resolveOutputDirectory({
     required String miniProgramRootPath,
-    required String defaultOptionsPath,
+    required String screenFormat,
   }) async {
+    if (screenFormat == 'mp') {
+      return p.normalize(p.join(miniProgramRootPath, 'mp', '.build'));
+    }
+
+    final defaultOptionsPath = p.join(
+      miniProgramRootPath,
+      'lib',
+      'default_stac_options.dart',
+    );
     var outputDir = 'stac/.build';
 
     final defaultOptionsFile = File(defaultOptionsPath);
@@ -220,8 +250,19 @@ class MiniProgramBuilder {
   Future<_BuildCommand> _resolveBuildCommand({
     required String? repoRootPath,
     required String miniProgramRootPath,
+    required String outputDirectoryPath,
+    required String screenFormat,
     required String? stacCliScriptPath,
+    required String? mpBuildScriptPath,
   }) async {
+    if (screenFormat == 'mp') {
+      return _resolveMpBuildCommand(
+        miniProgramRootPath: miniProgramRootPath,
+        outputDirectoryPath: outputDirectoryPath,
+        mpBuildScriptPath: mpBuildScriptPath,
+      );
+    }
+
     if (stacCliScriptPath != null && stacCliScriptPath.trim().isNotEmpty) {
       final explicitPath = p.normalize(p.absolute(stacCliScriptPath.trim()));
       if (!await File(explicitPath).exists()) {
@@ -321,6 +362,133 @@ class MiniProgramBuilder {
       'missing, and no explicit script, vendored stac-dev CLI, or global '
       '`stac` command was available.',
     );
+  }
+
+  Future<_BuildCommand> _resolveMpBuildCommand({
+    required String miniProgramRootPath,
+    required String outputDirectoryPath,
+    required String? mpBuildScriptPath,
+  }) async {
+    final scriptPath =
+        mpBuildScriptPath != null && mpBuildScriptPath.trim().isNotEmpty
+        ? p.normalize(p.absolute(mpBuildScriptPath.trim()))
+        : p.join(miniProgramRootPath, 'tool', 'build_mp.dart');
+
+    if (!await File(scriptPath).exists()) {
+      throw MiniProgramBuildException(
+        'Mp build script was not found: $scriptPath\n'
+        'Create tool/build_mp.dart or pass --mp-build-script <path>.',
+      );
+    }
+
+    return _BuildCommand(
+      source: mpBuildScriptPath != null && mpBuildScriptPath.trim().isNotEmpty
+          ? 'explicit_mp_build_script'
+          : 'mp_build_script',
+      executable: 'dart',
+      arguments: <String>['run', scriptPath, '--output', outputDirectoryPath],
+      workingDirectory: miniProgramRootPath,
+      environment: const <String, String>{},
+    );
+  }
+
+  String _resolveScreenFormat(
+    Map<String, dynamic> manifest,
+    String manifestPath,
+  ) {
+    final rawValue = manifest['screenFormat'];
+    final screenFormat = rawValue == null ? 'stac' : '$rawValue'.trim();
+    if (screenFormat.isEmpty) {
+      throw MiniProgramBuildException(
+        'Manifest screenFormat must not be empty: $manifestPath',
+      );
+    }
+    if (screenFormat == 'stac' || screenFormat == 'mp') {
+      return screenFormat;
+    }
+    throw MiniProgramBuildException(
+      'Unsupported manifest screenFormat "$screenFormat": $manifestPath',
+    );
+  }
+
+  int? _resolveScreenSchemaVersion(
+    Map<String, dynamic> manifest,
+    String manifestPath, {
+    required String screenFormat,
+  }) {
+    final rawValue = manifest['screenSchemaVersion'];
+    if (screenFormat == 'stac') {
+      if (rawValue == null) {
+        return null;
+      }
+      if (rawValue is int && rawValue > 0) {
+        return rawValue;
+      }
+      throw MiniProgramBuildException(
+        'Manifest screenSchemaVersion must be a positive integer when provided: '
+        '$manifestPath',
+      );
+    }
+
+    if (rawValue == null) {
+      throw MiniProgramBuildException(
+        'Manifest screenSchemaVersion is required when screenFormat is "mp": '
+        '$manifestPath',
+      );
+    }
+    if (rawValue is! int || rawValue <= 0) {
+      throw MiniProgramBuildException(
+        'Manifest screenSchemaVersion must be a positive integer: '
+        '$manifestPath',
+      );
+    }
+    if (rawValue != 1) {
+      throw MiniProgramBuildException(
+        'Unsupported Mp screenSchemaVersion "$rawValue": $manifestPath',
+      );
+    }
+    return rawValue;
+  }
+
+  Future<void> _validateMpEntryScreen({
+    required String entryScreenJsonPath,
+    required String entryScreenId,
+    required int? screenSchemaVersion,
+  }) async {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(await File(entryScreenJsonPath).readAsString());
+    } on FormatException catch (error) {
+      throw MiniProgramBuildException(
+        'Mp entry screen JSON could not be parsed: $entryScreenJsonPath\n'
+        '${error.message}',
+      );
+    }
+
+    if (decoded is! Map) {
+      throw MiniProgramBuildException(
+        'Mp entry screen JSON must be an object: $entryScreenJsonPath',
+      );
+    }
+    final json = decoded.map((key, value) => MapEntry(key.toString(), value));
+    if (json['schemaVersion'] != screenSchemaVersion) {
+      throw MiniProgramBuildException(
+        'Mp entry screen schemaVersion "${json['schemaVersion']}" does not '
+        'match manifest screenSchemaVersion "$screenSchemaVersion": '
+        '$entryScreenJsonPath',
+      );
+    }
+    if (json['screenId'] != entryScreenId) {
+      throw MiniProgramBuildException(
+        'Mp entry screenId "${json['screenId']}" does not match manifest entry '
+        '"$entryScreenId": $entryScreenJsonPath',
+      );
+    }
+    if (json['root'] is! Map) {
+      throw MiniProgramBuildException(
+        'Mp entry screen root must be an object: $entryScreenJsonPath',
+      );
+    }
   }
 
   Future<void> _runOrThrow({

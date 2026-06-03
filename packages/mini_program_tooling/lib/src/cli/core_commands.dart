@@ -34,6 +34,12 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         help:
             'Scaffold an opt-in publisher-owned backend starter. Currently supports: mock.',
       )
+      ..addOption(
+        'screen-format',
+        allowed: const <String>['mp', 'stac'],
+        defaultsTo: 'mp',
+        help: 'Screen authoring format for the scaffold.',
+      )
       ..addFlag(
         'force',
         negatable: false,
@@ -69,6 +75,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         description: results.option('description'),
         capabilities: _parseCapabilities(results.option('capabilities')!),
         backendTemplate: results.option('with-backend'),
+        screenFormat: results.option('screen-format') ?? 'mp',
         force: results.flag('force'),
       ),
     );
@@ -165,6 +172,10 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         'stac-cli-script',
         help: 'Optional explicit path to bin/stac_cli.dart.',
       )
+      ..addOption(
+        'mp-build-script',
+        help: 'Optional explicit path to tool/build_mp.dart for Mp projects.',
+      )
       ..addFlag(
         'skip-pub-get',
         negatable: false,
@@ -204,6 +215,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         miniProgramId: miniProgramId,
         miniProgramRootPath: resolved.miniProgramRootPath,
         stacCliScriptPath: results.option('stac-cli-script'),
+        mpBuildScriptPath: results.option('mp-build-script'),
         skipPubGet: results.flag('skip-pub-get'),
       ),
     );
@@ -237,6 +249,10 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ..addOption(
         'stac-cli-script',
         help: 'Optional explicit path to bin/stac_cli.dart.',
+      )
+      ..addOption(
+        'mp-build-script',
+        help: 'Optional explicit path to tool/build_mp.dart for Mp projects.',
       );
 
     final results = parser.parse(arguments);
@@ -284,6 +300,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         repoRootPath: resolved.repoRootPath,
         deviceId: deviceId,
         stacCliScriptPath: results.option('stac-cli-script'),
+        mpBuildScriptPath: results.option('mp-build-script'),
       ),
       stdoutSink: _stdout,
       stderrSink: _stderr,
@@ -386,6 +403,10 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         'stac-cli-script',
         help: 'Optional explicit path to bin/stac_cli.dart.',
       )
+      ..addOption(
+        'mp-build-script',
+        help: 'Optional explicit path to tool/build_mp.dart for Mp projects.',
+      )
       ..addFlag(
         'skip-build-pub-get',
         negatable: false,
@@ -483,6 +504,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
               ? null
               : resolved.miniProgramRootPath,
           stacCliScriptPath: results.option('stac-cli-script'),
+          mpBuildScriptPath: results.option('mp-build-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
         ),
       );
@@ -506,6 +528,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
               ? null
               : resolved.miniProgramRootPath,
           stacCliScriptPath: results.option('stac-cli-script'),
+          mpBuildScriptPath: results.option('mp-build-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
           clean: results.flag('clean'),
         ),
@@ -528,6 +551,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
           outputPath: results.option('output'),
           siteId: results.option('site'),
           stacCliScriptPath: results.option('stac-cli-script'),
+          mpBuildScriptPath: results.option('mp-build-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
           clean: results.flag('clean'),
           dryRun: results.flag('dry-run'),
@@ -557,6 +581,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
             ? null
             : resolved.miniProgramRootPath,
         stacCliScriptPath: results.option('stac-cli-script'),
+        mpBuildScriptPath: results.option('mp-build-script'),
         skipBuildPubGet: results.flag('skip-build-pub-get'),
       ),
     );

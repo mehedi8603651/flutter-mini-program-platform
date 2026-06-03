@@ -24,6 +24,66 @@ void main() {
       }
     });
 
+    test('creates an Mp scaffold by default', () async {
+      final result = await const MiniProgramScaffolder().scaffold(
+        MiniProgramScaffoldRequest(
+          repoRootPath: tempDir.path,
+          miniProgramId: 'mp_coupon_center',
+          backendTemplate: 'mock',
+        ),
+      );
+
+      final root = result.miniProgramRootPath;
+      final manifest =
+          jsonDecode(await File(p.join(root, 'manifest.json')).readAsString())
+              as Map<String, dynamic>;
+      final pubspec = await File(p.join(root, 'pubspec.yaml')).readAsString();
+      final program = await File(
+        p.join(root, 'mp', 'program.dart'),
+      ).readAsString();
+      final home = await File(
+        p.join(root, 'mp', 'screens', 'mp_coupon_center_home.dart'),
+      ).readAsString();
+      final buildScript = await File(
+        p.join(root, 'tool', 'build_mp.dart'),
+      ).readAsString();
+      final gitignore = await File(p.join(root, '.gitignore')).readAsString();
+
+      expect(result.screenFormat, 'mp');
+      expect(manifest['screenFormat'], 'mp');
+      expect(manifest['screenSchemaVersion'], 1);
+      expect(manifest['entry'], 'mp_coupon_center_home');
+      expect(pubspec, contains('mini_program_ui:'));
+      expect(pubspec, contains('dependency_overrides:'));
+      expect(pubspec, contains('mini_program_contracts:'));
+      expect(program, contains("'mp_coupon_center_home':"));
+      expect(program, contains("'mp_coupon_center_details':"));
+      expect(buildScript, contains('writeMpBuildOutput(miniProgram'));
+      expect(home, contains('Mp.backendBuilder('));
+      expect(home, contains("endpoint: 'home/bootstrap'"));
+      expect(home, contains('Mp.pagedBackendBuilder('));
+      expect(home, contains("endpoint: 'coupons/page'"));
+      expect(home, contains('Mp.backend.loadMore('));
+      expect(home, contains('Mp.authBuilder('));
+      expect(
+        home,
+        contains("Mp.navigation.openScreen('mp_coupon_center_details')"),
+      );
+      expect(gitignore, contains('mp/.build/'));
+      expect(
+        await File(
+          p.join(root, 'backend', 'mock', 'data', 'coupons_list.json'),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          p.join(root, 'stac', 'screens', 'mp_coupon_center_home.dart'),
+        ).exists(),
+        isFalse,
+      );
+    });
+
     test(
       'creates a buildable starter scaffold with default capabilities',
       () async {
@@ -31,6 +91,7 @@ void main() {
           MiniProgramScaffoldRequest(
             repoRootPath: tempDir.path,
             miniProgramId: 'coupon_center',
+            screenFormat: 'stac',
           ),
         );
 
@@ -284,6 +345,7 @@ void main() {
         MiniProgramScaffoldRequest(
           repoRootPath: tempDir.path,
           miniProgramId: 'native_flow',
+          screenFormat: 'stac',
           capabilities: const <String>{'analytics', 'native_navigation'},
         ),
       );
@@ -328,6 +390,7 @@ void main() {
           MiniProgramScaffoldRequest(
             repoRootPath: tempDir.path,
             miniProgramId: 'claim_center',
+            screenFormat: 'stac',
             capabilities: const <String>{'analytics', 'secure_api'},
           ),
         );
@@ -407,6 +470,7 @@ void main() {
           MiniProgramScaffoldRequest(
             miniProgramId: 'coupon_center',
             outputRootPath: standaloneRoot,
+            screenFormat: 'stac',
           ),
         );
 
@@ -430,6 +494,7 @@ void main() {
         MiniProgramScaffoldRequest(
           repoRootPath: tempDir.path,
           miniProgramId: 'coupon_backend',
+          screenFormat: 'stac',
           backendTemplate: 'mock',
         ),
       );
@@ -468,6 +533,7 @@ void main() {
           MiniProgramScaffoldRequest(
             repoRootPath: tempDir.path,
             miniProgramId: 'broken_program',
+            screenFormat: 'stac',
             capabilities: <String>{'analytics', 'camera'},
           ),
         ),
@@ -487,6 +553,7 @@ void main() {
           MiniProgramScaffoldRequest(
             repoRootPath: tempDir.path,
             miniProgramId: 'coupon_center',
+            screenFormat: 'stac',
           ),
         ),
         throwsA(isA<MiniProgramScaffoldException>()),
@@ -504,6 +571,7 @@ void main() {
         MiniProgramScaffoldRequest(
           repoRootPath: tempDir.path,
           miniProgramId: 'coupon_center',
+          screenFormat: 'stac',
           force: true,
         ),
       );

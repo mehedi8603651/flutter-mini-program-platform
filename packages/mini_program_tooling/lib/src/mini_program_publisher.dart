@@ -14,6 +14,7 @@ class MiniProgramPublishRequest {
     this.miniProgramId,
     this.miniProgramRootPath,
     this.stacCliScriptPath,
+    this.mpBuildScriptPath,
     this.skipBuildPubGet = false,
   });
 
@@ -22,6 +23,7 @@ class MiniProgramPublishRequest {
   final String? miniProgramId;
   final String? miniProgramRootPath;
   final String? stacCliScriptPath;
+  final String? mpBuildScriptPath;
   final bool skipBuildPubGet;
 }
 
@@ -99,6 +101,7 @@ class MiniProgramPublisher {
         miniProgramId: request.miniProgramId,
         miniProgramRootPath: request.miniProgramRootPath,
         stacCliScriptPath: request.stacCliScriptPath,
+        mpBuildScriptPath: request.mpBuildScriptPath,
         skipPubGet: request.skipBuildPubGet,
       ),
     );

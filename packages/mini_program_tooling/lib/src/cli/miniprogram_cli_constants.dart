@@ -7,7 +7,7 @@ const List<String> _supportedPublishTargets = <String>[
   'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.3.50';
+const String _miniProgramToolingVersion = '0.4.0-dev.1';
 
 const List<String> _capabilityIds = <String>[
   'publish.firebase_hosting',
