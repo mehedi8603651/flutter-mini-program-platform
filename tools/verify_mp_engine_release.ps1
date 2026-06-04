@@ -178,3 +178,5 @@ Write-Host "- Firebase publish: miniprogram publish --target firebase-hosting --
 Write-Host "- AWS publish: miniprogram publish --target cloud --env my-aws-prod --mini-program-root <fixture>"
 Write-Host "- Host import: create a protected handoff package, import it into a disposable host, and run flutter run -d chrome."
 Write-Host "- Do not run destroy, delete, Firestore delete, DynamoDB delete, or cleanup commands from this script."
+Write-Host "- Full commands: docs/mp_engine_cloud_e2e_guide.md"
+Write-Host "- Release gates: docs/mp_engine_release_checklist.md"

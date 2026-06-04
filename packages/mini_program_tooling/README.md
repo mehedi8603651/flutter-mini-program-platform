@@ -47,6 +47,11 @@ repo guide:
 
 - [Firebase end-to-end guide](../../docs/firebase_end_to_end_guide.md)
 
+For Mp JSON protected Firebase/AWS verification and release gates, see:
+
+- [Mp engine cloud end-to-end guide](../../docs/mp_engine_cloud_e2e_guide.md)
+- [Mp engine release checklist](../../docs/mp_engine_release_checklist.md)
+
 ## CLI surface
 
 ```text

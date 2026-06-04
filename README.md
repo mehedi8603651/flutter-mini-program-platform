@@ -87,6 +87,8 @@ Mp engine migration developers should also read:
 
 - [Mini-program authoring guide](docs/mini_program_authoring.md)
 - [Mp JSON engine roadmap](docs/mp_json_engine_roadmap.md)
+- [Mp engine cloud end-to-end guide](docs/mp_engine_cloud_e2e_guide.md)
+- [Mp engine release checklist](docs/mp_engine_release_checklist.md)
 
 ## What This Platform Is Good For
 

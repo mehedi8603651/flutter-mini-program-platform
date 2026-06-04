@@ -76,11 +76,25 @@ Milestone 9 is complete:
   - generated remote host endpoints now use explicit 20-second delivery and
     30-second publisher-backend timeouts
 
-The next major step is Milestone 10 AWS verification: run the protected AWS Mp
-host flow in Chrome and Windows, then repeat Android verification on a network
-route or physical device that can reach the live HTTPS endpoints. After those
-gates pass, finalize migration docs and prepare the stable merge. Do not publish
-the dev packages before all release gates pass.
+Milestone 10 cloud verification now includes:
+
+- protected AWS delivery and publisher backend access-key enforcement
+- AWS security matrix: public health `200`, missing key `401`, invalid key
+  `403`, valid key `200`
+- protected AWS Mp-only host flow with all paged Load more results in Chrome
+  and Windows
+- protected AWS Mp-only host flow confirmed by the user on physical Android
+- protected Firebase Mp-only host flow in Chrome and Windows
+
+The focused workflows and gates are documented in:
+
+- [docs/mp_engine_cloud_e2e_guide.md](docs/mp_engine_cloud_e2e_guide.md)
+- [docs/mp_engine_release_checklist.md](docs/mp_engine_release_checklist.md)
+
+The next release step is to record the exact protected Firebase physical
+Android run, execute the release verification script from a clean checkout,
+map local dev versions to reviewed stable versions, and prepare the stable
+merge. Do not publish the dev packages before all required release gates pass.
 
 ## Current Shipped Baseline
 

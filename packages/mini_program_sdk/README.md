@@ -99,6 +99,10 @@ The extension does not replace the SDK or CLI. It calls the installed
 `miniprogram` CLI and helps developers wire `MiniProgramScope`, endpoints,
 partner packages, public static delivery, and cloud delivery from VS Code.
 
+For protected Mp JSON Firebase/AWS handoff and cross-platform host verification,
+see the repo's
+[Mp engine cloud end-to-end guide](../../docs/mp_engine_cloud_e2e_guide.md).
+
 ## Minimal usage
 
 For most host apps, prefer generating the adapter with

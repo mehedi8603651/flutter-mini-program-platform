@@ -265,8 +265,11 @@ Update tooling incrementally:
 
 Commit each milestone separately.
 
-Milestone 9 completed the optional Stac adapter extraction. Milestone 10 owns
-the final release-size comparison, live provider/host gates, and stable merge.
+Milestone 9 completed the optional Stac adapter extraction. Milestone 10 has
+passed the Mp-only size gate and protected Firebase/AWS Chrome and Windows
+flows. The protected AWS physical Android flow is user-verified. Use the
+[Mp engine release checklist](mp_engine_release_checklist.md) to record the
+remaining provider/platform evidence and prepare the stable merge.
 
 ## Test Plan
 

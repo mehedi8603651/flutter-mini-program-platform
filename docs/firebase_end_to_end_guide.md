@@ -11,6 +11,10 @@ This guide is for a new mini-program publisher who wants to use Firebase for:
 It also shows what the host app developer receives and how they connect the
 mini-program without Firebase project access.
 
+New Mp JSON projects should also use the
+[Mp engine cloud end-to-end guide](mp_engine_cloud_e2e_guide.md). The commands
+remain provider-neutral, but Mp source lives under `mp/` instead of `stac/`.
+
 ## Team Split
 
 The mini-program publisher owns:
@@ -103,7 +107,7 @@ If you do not have one yet, run:
 MiniProgram: Create MiniProgram
 ```
 
-Choose **Normal mini-program**.
+Choose **Mp JSON** for a new mini-program.
 
 ### 1. Generate Firebase Backend And Starter UI
 
@@ -128,8 +132,9 @@ backend/firebase_functions/
 backend/firebase_functions/functions/data/home_bootstrap.json
 backend/firebase_functions/functions/data/coupons_list.json
 backend/firebase_functions/functions/data/session.json
-stac/screens/<appId>_home.dart
-lib/host_action_helpers.dart
+mp/program.dart
+mp/screens/<appId>_home.dart
+tool/build_mp.dart
 ```
 
 For an existing Firebase backend, run:
@@ -175,7 +180,7 @@ miniprogram env configure my-firebase-prod `
 Edit portable UI:
 
 ```text
-stac/screens/<appId>_home.dart
+mp/screens/<appId>_home.dart
 ```
 
 Edit Firestore seed source data:
@@ -188,15 +193,15 @@ backend/firebase_functions/functions/data/session.json
 
 Use the generated starter as the production-shaped example:
 
-- `miniProgramBackendBuilder(...)` loads publisher backend data.
-- `miniProgramPagedBackendBuilder(...)` loads large backend lists from
-  `coupons/page` and uses `miniProgramLoadMore(...)` for manual paging.
-- `miniProgramAuthBuilder(...)` renders signed-out, signed-in, loading, and
-  error states.
-- `miniProgramAuth` actions open the SDK email/password sheet, restore cached
-  login, refresh sessions, and sign out.
+- `Mp.backendBuilder(...)` loads publisher backend data.
+- `Mp.pagedBackendBuilder(...)` loads large backend lists from `coupons/page`
+  and uses `Mp.backend.loadMore(...)` for manual paging.
+- `Mp.authBuilder(...)` renders signed-out, signed-in, loading, and error
+  states.
+- `Mp.auth.*` actions open the SDK email/password sheet, restore cached login,
+  refresh sessions, and sign out.
 
-Do not edit `stac/.build`; it is generated.
+Do not edit `mp/.build`; it is generated.
 
 ### 4. Deploy Backend
 
@@ -389,7 +394,7 @@ MiniProgram: Import Host Endpoint
 
 Select the `.partner.json` file from the publisher.
 
-For a new host app, tooling should generate `mini_program_sdk: ^0.3.6` and the
+For a new host app, tooling adds the configured SDK/contracts versions and the
 runtime setup files. If needed, run:
 
 ```powershell
