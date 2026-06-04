@@ -96,6 +96,220 @@ Android run, execute the release verification script from a clean checkout,
 map local dev versions to reviewed stable versions, and prepare the stable
 merge. Do not publish the dev packages before all required release gates pass.
 
+## Next Architecture Wave: Provider-Neutral Publisher Backend
+
+After the Mp engine release gates pass, the next major implementation wave is a
+provider-neutral publisher backend foundation. It should let mini-program
+developers build full web-style server systems without adding Firebase, AWS, or
+other provider SDKs to the Flutter host app.
+
+Target architecture:
+
+```text
+Mp mini-program frontend
+  -> mini_program_sdk provider-neutral HTTPS client
+  -> publisher-owned standalone HTTPS server
+  -> Firebase / AWS / Cloud Run / Docker / custom provider services
+```
+
+The host app remains lightweight. It knows only:
+
+```text
+appId
+delivery API base URL
+publisher backend base URL
+MiniProgram access key
+publisher auth session token when signed in
+declared host capabilities
+```
+
+The host must not install publisher-specific Firebase, AWS, database, payment,
+email, AI, or storage SDKs. A host can connect hundreds of mini-programs backed
+by different providers without meaningful binary-size growth because every
+publisher backend uses the same HTTPS boundary.
+
+### Locked Backend Direction
+
+- Business logic and provider credentials stay on the publisher server.
+- Mini-program JSON must never directly call Firestore, DynamoDB, Firebase
+  Admin, AWS SDKs, databases, or arbitrary provider APIs.
+- Do not use hidden/custom Chromium as the mini-program backend runtime.
+- Do not create an unrestricted generic proxy such as
+  `POST /call-any-provider`.
+- Publisher servers expose business-specific routes such as `/products`,
+  `/orders`, `/profile`, `/support/tickets`, and `/files/upload-url`.
+- Delivery, publisher backend, access-key policy, auth, and handoff formats
+  remain provider-neutral.
+- Firebase and AWS become deployment/runtime adapters around the same backend
+  contract, not separate mini-program architectures.
+- Native-sensitive features such as payments, camera, contacts, and push
+  notifications still require explicit host capability and bridge contracts.
+
+### Proposed Package Boundaries
+
+Start with local-only development packages:
+
+```text
+mini_program_backend_contracts
+mini_program_backend_dart
+mini_program_backend_node
+mini_program_backend_firebase
+mini_program_backend_aws
+```
+
+Responsibilities:
+
+- `mini_program_backend_contracts`
+  - versioned request/response/error envelopes
+  - access-key and authenticated-session context
+  - cursor pagination
+  - upload-intent and background-job contracts
+  - request IDs, API versions, and capability metadata
+- `mini_program_backend_dart`
+  - standalone Dart server runtime
+  - route registration and typed handlers
+  - access-key/auth middleware
+  - validation, CORS, safe logs, errors, and pagination helpers
+- `mini_program_backend_node`
+  - equivalent TypeScript/Node runtime and middleware
+  - no provider-specific dependency in the core runtime
+- `mini_program_backend_firebase`
+  - Firebase Functions, Firestore, Firebase Auth, Storage, and task adapters
+- `mini_program_backend_aws`
+  - Lambda/API Gateway, DynamoDB, S3, SQS/EventBridge, and job adapters
+
+Cloud Run, Docker, VPS, Kubernetes, Azure, Supabase, or another custom server
+should work through the standalone Dart/Node runtime without needing a new
+mini-program SDK architecture.
+
+### Backend Contract V1
+
+Standardize shared behavior before adding more generated routes:
+
+```text
+GET  /health
+POST /auth/...
+GET  /auth/session
+GET  /<resource>?limit=<limit>&cursor=<cursor>
+POST /files/upload-url
+POST /jobs
+GET  /jobs/<jobId>
+```
+
+Publishers can add custom routes:
+
+```text
+GET  /products
+POST /orders
+GET  /orders/<orderId>
+POST /cart/items
+POST /support/tickets
+```
+
+The contract must define:
+
+- API and schema versioning
+- consistent JSON success/error envelopes
+- stable error codes and safe client messages
+- request IDs and trace propagation
+- access-key verification and partner isolation
+- publisher-owned user auth and authorization
+- cursor pagination
+- idempotency keys for writes
+- CORS and allowed headers
+- payload, timeout, and rate-limit behavior
+- signed upload URL flow for large files
+- job IDs and polling for long-running work
+- redaction rules for credentials, access keys, auth tokens, and provider
+  errors
+
+Realtime WebSocket or Server-Sent Events support is later work. Do not block
+the initial custom-route release on realtime.
+
+### Developer Experience Target
+
+Dart example:
+
+```dart
+final app = MiniProgramBackend(appId: 'rewards');
+
+app.get('/products', requireAccessKey: true, handler: listProducts);
+app.post('/orders', requireAuth: true, handler: createOrder);
+app.post('/payments/webhook', handler: paymentWebhook);
+
+await app.serve();
+```
+
+Node/TypeScript example:
+
+```typescript
+const app = createMiniProgramBackend({ appId: "rewards" });
+
+app.get("/products", requireAccessKey(), listProducts);
+app.post("/orders", requireAuth(), createOrder);
+app.post("/payments/webhook", verifyWebhook(), paymentWebhook);
+```
+
+Tooling should eventually expose:
+
+```text
+miniprogram publisher-backend create --runtime dart|node
+miniprogram publisher-backend start
+miniprogram publisher-backend validate
+miniprogram publisher-backend smoke
+miniprogram publisher-backend package --target docker|firebase|aws
+miniprogram publisher-backend handoff
+```
+
+The CLI remains the source of truth. VS Code only wraps these commands.
+
+### Implementation Milestones
+
+1. Write a decision-complete backend contract and threat model.
+2. Add `mini_program_backend_contracts` with deterministic JSON fixtures and
+   compatibility tests.
+3. Add a standalone Dart runtime with custom routes, access-key/auth
+   middleware, pagination, errors, CORS, safe logs, and Docker support.
+4. Add an equivalent Node/TypeScript runtime using the same fixtures.
+5. Update tooling to scaffold, run, validate, smoke-test, package, and create
+   partner handoffs for standalone backends.
+6. Refactor generated Firebase and AWS publisher backends to implement the
+   shared contract through provider adapters without changing existing client
+   behavior.
+7. Add signed upload URL and background-job contracts.
+8. Add VS Code guided workflows and diagnostics.
+9. Verify one custom multi-provider backend, for example:
+
+   ```text
+   Cloud Run standalone server
+     -> Firebase Auth
+     -> PostgreSQL business data
+     -> AWS S3 files
+     -> external email/payment/AI APIs
+   ```
+
+10. Run protected host E2E in Chrome, Windows, and physical Android before
+    stable release.
+
+### Security And Release Gates
+
+- No provider credential or database secret enters mini-program JSON, host
+  source, APK, IPA, web JavaScript, partner handoff, logs, or diagnostics.
+- Access keys remain partner revocation/identification tools, not permanent
+  mobile secrets.
+- Add short-lived signed host tokens, request signing, app/device attestation,
+  quotas, rate limits, key expiry, and audit events as later hardening layers.
+- Custom routes must use allowlisted HTTP methods, paths, payload limits, and
+  response limits.
+- Uploads use signed provider URLs; large files do not pass through the SDK as
+  JSON.
+- Long-running work returns a job ID; requests must not wait indefinitely.
+- Provider adapters pass the same shared contract fixtures and smoke suite.
+- A host with many providers must show no meaningful binary-size increase
+  compared with the same host using one provider.
+- Do not publish backend framework packages until Dart, Node, Firebase, AWS,
+  Docker/custom-server, Chrome, Windows, and physical Android gates pass.
+
 ## Current Shipped Baseline
 
 These are already done and should be treated as stable unless a bug forces a
