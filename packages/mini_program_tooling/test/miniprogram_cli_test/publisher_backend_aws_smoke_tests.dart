@@ -133,6 +133,7 @@ void _registerPublisherBackendAwsSmokeTests() {
     expect(json['passed'], isTrue);
     expect(json['backendBaseUrl'], contains('/prod/'));
     expect(json['includeWrite'], isFalse);
+    expect(json['accessKeyProvided'], isFalse);
     final routes = json['routes'] as List<Object?>;
     expect(routes, hasLength(4));
     expect(routes.first, containsPair('path', '/health'));
@@ -184,6 +185,54 @@ void _registerPublisherBackendAwsSmokeTests() {
     expect(writeRoute['method'], 'POST');
     expect(writeRoute['path'], '/coupon/redeem');
     expect(writeRoute['responseStatus'], 'already_redeemed');
+  });
+
+  test('publisher-backend aws smoke forwards and redacts access key', () async {
+    const accessKey = 'mpk_live_partner_123456789012345';
+    final standaloneRoot = p.join(tempDir.path, 'coupon_center');
+    await _writeMiniProgramFixture(
+      standaloneRoot,
+      miniProgramId: 'coupon_center',
+      version: '1.2.3',
+    );
+    await _writeAwsEnvironmentState(stateStore, standaloneRoot);
+    final stdoutBuffer = StringBuffer();
+    final requestedHeaders = <Map<String, String>?>[];
+    final cli = MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      publisherBackendStarter: PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _publisherBackendStackJson(), '');
+        },
+        httpRequester: (method, uri, {headers, body}) async {
+          requestedHeaders.add(headers);
+          return http.Response('{"ok":true}', 200);
+        },
+      ),
+      workingDirectory: standaloneRoot,
+    );
+
+    final exitCode = await cli.run(<String>[
+      'publisher-backend',
+      'aws',
+      'smoke',
+      '--env',
+      'my-aws-prod',
+      '--access-key',
+      accessKey,
+      '--json',
+    ]);
+
+    expect(exitCode, 0);
+    expect(stdoutBuffer.toString(), isNot(contains(accessKey)));
+    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(json['accessKeyProvided'], isTrue);
+    expect(
+      requestedHeaders,
+      everyElement(containsPair('x-mini-program-access-key', accessKey)),
+    );
   });
 
   test('publisher-backend aws smoke returns 1 when a route fails', () async {
@@ -266,6 +315,7 @@ void _registerPublisherBackendAwsSmokeTests() {
 
     expect(exitCode, 0);
     expect(stdoutBuffer.toString(), contains('--include-write'));
+    expect(stdoutBuffer.toString(), contains('--access-key'));
     expect(stdoutBuffer.toString(), contains('--write-coupon-id'));
     expect(stdoutBuffer.toString(), contains('--write-user-id'));
   });
@@ -328,6 +378,14 @@ void _registerPublisherBackendAwsSmokeTests() {
     expect(
       stdoutBuffer.toString(),
       contains('publisher-backend aws smoke --env my-aws-prod'),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      contains('For protected backend smoke, append --access-key <key>.'),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      contains('(--access-key <key>|--public)'),
     );
     expect(
       stdoutBuffer.toString(),

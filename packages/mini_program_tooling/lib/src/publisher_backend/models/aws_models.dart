@@ -146,6 +146,7 @@ class PublisherBackendAwsSmokeRequest {
     this.includeWrite = false,
     this.writeCouponId = 'coupon-10',
     this.writeUserId = 'smoke-user',
+    this.accessKey,
   });
 
   final String miniProgramRootPath;
@@ -156,6 +157,7 @@ class PublisherBackendAwsSmokeRequest {
   final bool includeWrite;
   final String writeCouponId;
   final String writeUserId;
+  final String? accessKey;
 }
 
 class PublisherBackendAwsSmokeRouteResult {
@@ -189,6 +191,7 @@ class PublisherBackendAwsSmokeResult {
     required this.passed,
     required this.routes,
     required this.includeWrite,
+    this.accessKeyProvided = false,
     this.backendBaseUrl,
     this.stackStatus,
     this.error,
@@ -203,6 +206,7 @@ class PublisherBackendAwsSmokeResult {
   final bool passed;
   final List<PublisherBackendAwsSmokeRouteResult> routes;
   final bool includeWrite;
+  final bool accessKeyProvided;
   final String? backendBaseUrl;
   final String? stackStatus;
   final String? error;

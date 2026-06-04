@@ -146,6 +146,10 @@ extension _MiniprogramCliPublisherBackendAwsCommands on MiniprogramCli {
         help: 'Also verify POST /coupon/redeem. This mutates backend data.',
       )
       ..addOption(
+        'access-key',
+        help: 'MiniProgram access key for protected AWS publisher backends.',
+      )
+      ..addOption(
         'write-coupon-id',
         defaultsTo: 'coupon-10',
         help: 'Coupon ID used with --include-write.',
@@ -197,6 +201,7 @@ extension _MiniprogramCliPublisherBackendAwsCommands on MiniprogramCli {
         includeWrite: includeWrite,
         writeCouponId: writeCouponId,
         writeUserId: writeUserId,
+        accessKey: results.option('access-key'),
       ),
     );
     if (results.flag('json')) {

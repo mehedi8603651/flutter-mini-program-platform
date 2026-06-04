@@ -58,6 +58,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisherBackendAwsOutputs': true,
         'publisherBackendAwsSmoke': true,
         'publisherBackendAwsWriteSmoke': true,
+        'publisherBackendAwsAccessKeyEnforcement': true,
         'publisherBackendAwsPagedRoutes': true,
         'publisherBackendAwsDynamoDbSeed': true,
         'publisherBackendAwsDynamoDbDataStatus': true,
@@ -115,6 +116,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisher-backend aws outputs',
         'publisher-backend aws smoke',
         'publisher-backend aws smoke --include-write',
+        'publisher-backend aws smoke --access-key',
         'publisher-backend aws seed',
         'publisher-backend aws data status',
         'publisher-backend aws data export',
@@ -302,6 +304,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'stackStatus': result.stackStatus,
       'backendBaseUrl': result.backendBaseUrl,
       'includeWrite': result.includeWrite,
+      'accessKeyProvided': result.accessKeyProvided,
       'passed': result.passed,
       'error': result.error,
       'routes': result.routes

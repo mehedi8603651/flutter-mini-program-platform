@@ -32,6 +32,9 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
       settings.samS3Bucket,
       '--parameter-overrides',
       'StageName=${settings.stageName}',
+      'AccessPolicyBucketName=${settings.accessPolicyBucketName}',
+      'AccessPolicyObjectKey=${settings.accessPolicyObjectKey}',
+      'RequireAccessKeys=${settings.requireAccessKeys}',
       '--no-confirm-changeset',
       '--no-fail-on-empty-changeset',
     ], workingDirectory: settings.backendRootPath);
@@ -164,6 +167,8 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
   Future<PublisherBackendAwsSmokeResult> _awsSmokeImpl(
     PublisherBackendAwsSmokeRequest request,
   ) async {
+    final accessKey = request.accessKey?.trim();
+    final accessKeyProvided = accessKey?.isNotEmpty == true;
     final rootPath = await _requireMiniProgramRoot(request.miniProgramRootPath);
     final settings = _PublisherBackendAwsSettings.fromEnvironment(
       environment: request.environment,
@@ -184,6 +189,7 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
         passed: false,
         routes: const <PublisherBackendAwsSmokeRouteResult>[],
         includeWrite: request.includeWrite,
+        accessKeyProvided: accessKeyProvided,
         error:
             'AWS publisher backend stack "${settings.stackName}" was not found.',
       );
@@ -204,6 +210,7 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
         passed: false,
         routes: const <PublisherBackendAwsSmokeRouteResult>[],
         includeWrite: request.includeWrite,
+        accessKeyProvided: accessKeyProvided,
         error: 'PublisherBackendBaseUrl output is missing.',
       );
     }
@@ -216,6 +223,7 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
           method: 'GET',
           path: path,
           uri: _resolveBackendRoute(baseUri, path),
+          accessKey: accessKey,
         ),
       );
     }
@@ -225,6 +233,7 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
           uri: _resolveBackendRoute(baseUri, '/coupon/redeem'),
           couponId: request.writeCouponId,
           userId: request.writeUserId,
+          accessKey: accessKey,
         ),
       );
     }
@@ -241,6 +250,7 @@ extension _PublisherBackendStarterAwsOperations on PublisherBackendStarter {
       passed: passed,
       routes: routes,
       includeWrite: request.includeWrite,
+      accessKeyProvided: accessKeyProvided,
     );
   }
 

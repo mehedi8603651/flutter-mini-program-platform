@@ -16,6 +16,7 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.outputs',
   'publisher_backend.aws.smoke',
   'publisher_backend.aws.smoke.write',
+  'publisher_backend.aws.access_key_enforcement',
   'publisher_backend.aws.paged_routes',
   'publisher_backend.aws.dynamodb.seed',
   'publisher_backend.aws.dynamodb.data.status',

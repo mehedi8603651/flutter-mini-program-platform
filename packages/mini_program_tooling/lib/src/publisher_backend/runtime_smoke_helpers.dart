@@ -78,12 +78,19 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required String method,
     required String path,
     required Uri uri,
+    String? accessKey,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     try {
       final response = await _smokeHttpWithRetry(
         timeout: timeout,
-        request: () => _healthGetter(uri),
+        request: () => accessKey?.trim().isNotEmpty == true
+            ? _httpRequester(
+                method,
+                uri,
+                headers: _smokeHeaders(accessKey: accessKey),
+              )
+            : _healthGetter(uri),
       );
       final passed = response.statusCode == 200;
       return PublisherBackendAwsSmokeRouteResult(
@@ -117,13 +124,14 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     required Uri uri,
     required String couponId,
     required String userId,
+    String? accessKey,
     Duration timeout = const Duration(seconds: 5),
   }) async {
     const path = '/coupon/redeem';
     try {
       final response = await _postRequester(
         uri,
-        headers: const <String, String>{'Content-Type': 'application/json'},
+        headers: _smokeHeaders(accessKey: accessKey, contentTypeJson: true),
         body: jsonEncode(<String, String>{
           'couponId': couponId,
           'userId': userId,
@@ -180,7 +188,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
               request: () => _httpRequester(
                 method,
                 uri,
-                headers: _firebaseSmokeHeaders(accessKey: accessKey),
+                headers: _smokeHeaders(accessKey: accessKey),
               ),
             )
           : await _smokeHttpWithRetry(
@@ -228,7 +236,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
         request: () => _httpRequester(
           'GET',
           uri,
-          headers: _firebaseSmokeHeaders(accessKey: accessKey),
+          headers: _smokeHeaders(accessKey: accessKey),
         ),
       );
       final body = _jsonObjectFromBody(response.body);
@@ -372,10 +380,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     try {
       final response = await _postRequester(
         uri,
-        headers: _firebaseSmokeHeaders(
-          accessKey: accessKey,
-          contentTypeJson: true,
-        ),
+        headers: _smokeHeaders(accessKey: accessKey, contentTypeJson: true),
         body: jsonEncode(body),
       ).timeout(timeout);
       final decoded = _jsonObjectFromBody(response.body);
@@ -456,7 +461,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
         request: () => _httpRequester(
           'GET',
           uri,
-          headers: _firebaseSmokeHeaders(
+          headers: _smokeHeaders(
             accessKey: accessKey,
             authorization: 'Bearer $idToken',
           ),
@@ -513,10 +518,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     try {
       final response = await _postRequester(
         uri,
-        headers: _firebaseSmokeHeaders(
-          accessKey: accessKey,
-          contentTypeJson: true,
-        ),
+        headers: _smokeHeaders(accessKey: accessKey, contentTypeJson: true),
         body: jsonEncode(<String, String>{'refreshToken': refreshToken}),
       ).timeout(timeout);
       final decoded = _jsonObjectFromBody(response.body);
@@ -571,10 +573,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     try {
       final response = await _postRequester(
         uri,
-        headers: _firebaseSmokeHeaders(
-          accessKey: accessKey,
-          contentTypeJson: true,
-        ),
+        headers: _smokeHeaders(accessKey: accessKey, contentTypeJson: true),
         body: jsonEncode(<String, String>{
           'couponId': couponId,
           'userId': userId,
@@ -698,7 +697,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     return const <String, Object?>{};
   }
 
-  Map<String, String> _firebaseSmokeHeaders({
+  Map<String, String> _smokeHeaders({
     String? accessKey,
     String? authorization,
     bool contentTypeJson = false,

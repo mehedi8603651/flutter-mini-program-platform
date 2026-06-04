@@ -105,7 +105,11 @@ void _registerScaffoldTests() {
     ).readAsString();
     expect(template, contains('PublisherBackendStorageMode'));
     expect(template, contains('Value: bundled'));
+    expect(template, contains('AccessPolicyBucketName'));
+    expect(template, contains('PUBLISHER_BACKEND_ACCESS_POLICY_BUCKET'));
+    expect(template, contains('s3:GetObject'));
     expect(template, isNot(contains('AWS::DynamoDB::Table')));
+    expect(packageJson, contains('@aws-sdk/client-s3'));
     expect(packageJson, isNot(contains('@aws-sdk/client-dynamodb')));
 
     final readme = File(
@@ -178,6 +182,7 @@ void _registerScaffoldTests() {
     expect(template, contains('PublisherBackendDataTableName'));
     expect(packageJson, contains('@aws-sdk/client-dynamodb'));
     expect(packageJson, contains('@aws-sdk/lib-dynamodb'));
+    expect(packageJson, contains('@aws-sdk/client-s3'));
     expect(readme, contains('Storage mode: DynamoDB'));
     expect(handler, contains('ConsistentRead: true'));
     expect(handler, contains('LastEvaluatedKey'));
@@ -406,7 +411,10 @@ void _registerScaffoldTests() {
     expect(screen, contains('Mp.authBuilder('));
     expect(screen, contains("endpoint: 'auth/session'"));
     expect(screen, contains("endpoint: 'coupons/page'"));
-    expect(screen, contains("action: Mp.backend.loadMore(requestId: 'coupons')"));
+    expect(
+      screen,
+      contains("action: Mp.backend.loadMore(requestId: 'coupons')"),
+    );
     expect(program, contains("'coupon_app_home':"));
     expect(buildScript, contains('writeMpBuildOutput(miniProgram'));
     expect(

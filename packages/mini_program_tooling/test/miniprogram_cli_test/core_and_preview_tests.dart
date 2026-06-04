@@ -243,6 +243,10 @@ void _registerCoreAndPreviewTests() {
     );
     expect(
       json['capabilityIds'],
+      contains('publisher_backend.aws.access_key_enforcement'),
+    );
+    expect(
+      json['capabilityIds'],
       contains('publisher_backend.firebase_functions.scaffold'),
     );
     expect(
@@ -302,6 +306,7 @@ void _registerCoreAndPreviewTests() {
     expect(features['hostLegacyStacAdapter'], isTrue);
     expect(features['firebaseHostingPublish'], isTrue);
     expect(features['publisherBackendAwsWriteSmoke'], isTrue);
+    expect(features['publisherBackendAwsAccessKeyEnforcement'], isTrue);
     expect(features['publisherBackendAwsPagedRoutes'], isTrue);
     expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
     expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);

@@ -191,7 +191,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       lines.addAll(<String>[
         '',
         'Host endpoint command:',
-        'miniprogram host endpoint add <appId> --api-base-url <delivery-url> --public --backend-base-url ${result.backendBaseUrl}',
+        'miniprogram host endpoint add <appId> --api-base-url <delivery-url> (--access-key <key>|--public) --backend-base-url ${result.backendBaseUrl}',
         '',
         'Next commands:',
         if (result.outputs['PublisherBackendStorageMode'] == 'dynamodb')
@@ -199,6 +199,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
         if (result.outputs['PublisherBackendStorageMode'] == 'dynamodb')
           'miniprogram publisher-backend aws data status --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
         'miniprogram publisher-backend aws smoke --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)}',
+        'For protected backend smoke, append --access-key <key>.',
         'miniprogram publisher-backend aws logs --env ${result.environmentName}${_publisherBackendRootOption(result.miniProgramRootPath)} --since 1h',
       ]);
     }
@@ -278,6 +279,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       if (result.backendBaseUrl != null)
         'Publisher backend base URL: ${result.backendBaseUrl}',
       'Write smoke: ${result.includeWrite}',
+      'Access key provided: ${result.accessKeyProvided}',
       'Passed: ${result.passed}',
       if (result.error != null) 'Detail: ${result.error}',
     ];

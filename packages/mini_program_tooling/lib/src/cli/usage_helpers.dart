@@ -97,7 +97,7 @@ Commands:
   deploy --env <env-name> [--mini-program-root <path>] [--stack-name <name>] [--stage-name <stage>] [--sam-s3-bucket <bucket>]
   status --env <env-name> [--mini-program-root <path>] [--json]
   outputs --env <env-name> [--mini-program-root <path>] [--json]
-  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
+  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--access-key <key>]
   seed --env <env-name> [--mini-program-root <path>] [--json]
   data status --env <env-name> [--mini-program-root <path>] [--json]
   data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]

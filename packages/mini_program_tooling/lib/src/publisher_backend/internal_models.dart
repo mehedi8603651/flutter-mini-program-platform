@@ -134,6 +134,9 @@ class _PublisherBackendAwsSettings {
     required this.stageName,
     required this.region,
     required this.samS3Bucket,
+    required this.accessPolicyBucketName,
+    required this.accessPolicyObjectKey,
+    required this.requireAccessKeys,
     this.awsProfile,
   });
 
@@ -144,6 +147,9 @@ class _PublisherBackendAwsSettings {
   final String stageName;
   final String region;
   final String samS3Bucket;
+  final String accessPolicyBucketName;
+  final String accessPolicyObjectKey;
+  final bool requireAccessKeys;
   final String? awsProfile;
 
   static _PublisherBackendAwsSettings fromEnvironment({
@@ -181,9 +187,44 @@ class _PublisherBackendAwsSettings {
       return value.isEmpty ? fallback : value;
     }
 
+    bool optionalBool(String key, bool fallback) {
+      final rawValue = environment.values[key];
+      if (rawValue == null) {
+        return fallback;
+      }
+      final normalized = rawValue.toString().trim().toLowerCase();
+      if (const <String>['true', '1', 'yes', 'y', 'on'].contains(normalized)) {
+        return true;
+      }
+      if (const <String>['false', '0', 'no', 'n', 'off'].contains(normalized)) {
+        return false;
+      }
+      throw PublisherBackendException(
+        'Cloud environment "${environment.name}" has a non-boolean aws '
+        'setting "$key".',
+      );
+    }
+
     final appId = _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
     final region = requiredValue('region');
     final bucket = requiredValue('bucket');
+    final metadataPrefix = optionalValue(
+      null,
+      'metadataPrefix',
+      'metadata',
+    ).replaceAll(RegExp(r'^/+|/+$'), '');
+    if (metadataPrefix.isEmpty) {
+      throw PublisherBackendException(
+        'Cloud environment "${environment.name}" has an empty aws setting '
+        '"metadataPrefix".',
+      );
+    }
+    if (metadataPrefix.contains('*') || metadataPrefix.contains('?')) {
+      throw PublisherBackendException(
+        'Cloud environment "${environment.name}" has unsafe wildcard '
+        'characters in aws setting "metadataPrefix".',
+      );
+    }
     final stageName = optionalValue(stageNameOverride, 'stageName', 'prod');
     final samS3Bucket = optionalValue(
       samS3BucketOverride,
@@ -206,6 +247,9 @@ class _PublisherBackendAwsSettings {
       stageName: stageName,
       region: region,
       samS3Bucket: samS3Bucket,
+      accessPolicyBucketName: bucket,
+      accessPolicyObjectKey: '$metadataPrefix/access_keys/$appId.json',
+      requireAccessKeys: optionalBool('requireAccessKeys', false),
       awsProfile: awsProfile,
     );
   }

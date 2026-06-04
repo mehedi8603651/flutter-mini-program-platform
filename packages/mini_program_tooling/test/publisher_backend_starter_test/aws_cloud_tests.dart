@@ -46,6 +46,11 @@ void _registerAwsCloudTests() {
             '--stack-name mini-program-publisher-backend-coupon-app-my-aws-prod',
           ),
           contains('--s3-bucket sam-artifacts'),
+          contains('AccessPolicyBucketName=delivery-bucket'),
+          contains(
+            'AccessPolicyObjectKey=metadata/access_keys/coupon_app.json',
+          ),
+          contains('RequireAccessKeys=false'),
           contains('--profile my-aws'),
         ),
       ),
@@ -136,6 +141,36 @@ void _registerAwsCloudTests() {
     expect(result.healthy, isFalse);
     expect(result.healthStatusCode, 503);
     expect(result.healthError, contains('503'));
+  });
+
+  test('deploy rejects wildcard access-policy metadata prefixes', () async {
+    final environment = CloudEnvironmentConfiguration(
+      name: 'my-aws-prod',
+      provider: 'aws',
+      values: <String, dynamic>{
+        'bucket': 'delivery-bucket',
+        'region': 'ap-south-1',
+        'metadataPrefix': 'metadata/*',
+      },
+      configuredAtUtc: DateTime.utc(2026).toIso8601String(),
+      updatedAtUtc: DateTime.utc(2026).toIso8601String(),
+    );
+
+    expect(
+      () => const PublisherBackendStarter().awsDeploy(
+        PublisherBackendAwsDeployRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: environment,
+        ),
+      ),
+      throwsA(
+        isA<PublisherBackendException>().having(
+          (error) => error.message,
+          'message',
+          contains('unsafe wildcard'),
+        ),
+      ),
+    );
   });
 
   test('AWS status reports missing stack without failing', () async {
@@ -230,6 +265,49 @@ void _registerAwsCloudTests() {
     expect(result.passed, isTrue);
     expect(attempts, 5);
   });
+
+  test(
+    'AWS smoke sends access key to protected read and write routes',
+    () async {
+      const accessKey = 'mpk_live_partner_123456789012345';
+      final readHeaders = <Map<String, String>?>[];
+      Map<String, String>? writeHeaders;
+      final starter = PublisherBackendStarter(
+        shellRunner: (executable, arguments, {workingDirectory}) async {
+          return ProcessResult(0, 0, _stackDescribeJson(), '');
+        },
+        httpRequester: (method, uri, {headers, body}) async {
+          readHeaders.add(headers);
+          return http.Response('{"ok":true}', 200);
+        },
+        postRequester: (uri, {headers, body}) async {
+          writeHeaders = headers;
+          return http.Response('{"status":"redeemed"}', 200);
+        },
+      );
+
+      final result = await starter.awsSmoke(
+        PublisherBackendAwsSmokeRequest(
+          miniProgramRootPath: miniProgramRoot.path,
+          environment: _awsEnvironment(),
+          accessKey: accessKey,
+          includeWrite: true,
+        ),
+      );
+
+      expect(result.passed, isTrue);
+      expect(result.accessKeyProvided, isTrue);
+      expect(readHeaders, hasLength(4));
+      expect(
+        readHeaders,
+        everyElement(containsPair('x-mini-program-access-key', accessKey)),
+      );
+      expect(
+        writeHeaders,
+        containsPair('x-mini-program-access-key', accessKey),
+      );
+    },
+  );
 
   test('AWS smoke optionally verifies coupon redeem writes', () async {
     for (final responseStatus in <String>['redeemed', 'already_redeemed']) {

@@ -489,6 +489,150 @@ console.log(JSON.stringify({
     },
   );
 
+  test('generated Lambda handler enforces shared AWS access policy', () async {
+    final nodeVersion = await Process.run('node', <String>['--version']);
+    if (nodeVersion.exitCode != 0) {
+      markTestSkipped('Node.js is not available.');
+    }
+    final starter = const PublisherBackendStarter();
+    await starter.scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: miniProgramRoot.path,
+        template: 'aws-lambda',
+      ),
+    );
+    final handlerUri = Uri.file(
+      p.join(
+        miniProgramRoot.path,
+        'backend',
+        'aws_lambda',
+        'src',
+        'handler.mjs',
+      ),
+    ).toString();
+
+    final result = await _runNodeScript(tempDir, '''
+import { createHash } from 'node:crypto';
+import {
+  handler,
+  setPublisherBackendAccessPolicyLoaderForTesting,
+} from '$handlerUri';
+
+const accessKey = 'mpk_live_partner_123456789012345';
+const sha256 = createHash('sha256').update(accessKey, 'utf8').digest('hex');
+setPublisherBackendAccessPolicyLoaderForTesting(async () => ({
+  schemaVersion: 1,
+  miniProgramId: 'mini_program',
+  keys: [
+    { id: 'active', sha256, enabled: true },
+    { id: 'revoked', sha256: '0'.repeat(64), enabled: false },
+  ],
+}));
+
+const event = (method, path, headers = {}) => ({
+  rawPath: `/prod\${path}`,
+  requestContext: { stage: 'prod', http: { method } },
+  headers,
+});
+
+const health = await handler(event('GET', '/health'));
+const missing = await handler(event('GET', '/home/bootstrap'));
+const invalid = await handler(event('GET', '/home/bootstrap', {
+  'x-mini-program-access-key': 'mpk_live_wrong_123456789012345',
+}));
+const valid = await handler(event('GET', '/home/bootstrap', {
+  'X-Mini-Program-Access-Key': accessKey,
+}));
+
+console.log(JSON.stringify({
+  healthStatus: health.statusCode,
+  missingStatus: missing.statusCode,
+  missingCode: JSON.parse(missing.body).errorCode,
+  invalidStatus: invalid.statusCode,
+  invalidCode: JSON.parse(invalid.body).errorCode,
+  validStatus: valid.statusCode,
+  validTitle: JSON.parse(valid.body).title,
+}));
+''');
+
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    final decoded =
+        jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+    expect(decoded['healthStatus'], 200);
+    expect(decoded['missingStatus'], 401);
+    expect(decoded['missingCode'], 'access_key_required');
+    expect(decoded['invalidStatus'], 403);
+    expect(decoded['invalidCode'], 'access_key_invalid');
+    expect(decoded['validStatus'], 200);
+    expect(decoded['validTitle'], contains('Coupon App'));
+  });
+
+  test('generated Lambda handler can fail closed without a policy', () async {
+    final nodeVersion = await Process.run('node', <String>['--version']);
+    if (nodeVersion.exitCode != 0) {
+      markTestSkipped('Node.js is not available.');
+    }
+    final starter = const PublisherBackendStarter();
+    await starter.scaffold(
+      PublisherBackendScaffoldRequest(
+        miniProgramRootPath: miniProgramRoot.path,
+        template: 'aws-lambda',
+      ),
+    );
+    final handlerUri = Uri.file(
+      p.join(
+        miniProgramRoot.path,
+        'backend',
+        'aws_lambda',
+        'src',
+        'handler.mjs',
+      ),
+    ).toString();
+
+    final result = await _runNodeScript(tempDir, '''
+process.env.PUBLISHER_BACKEND_REQUIRE_ACCESS_KEYS = 'true';
+const {
+  handler,
+  setPublisherBackendAccessPolicyLoaderForTesting,
+} = await import('$handlerUri?require-access-keys=true');
+setPublisherBackendAccessPolicyLoaderForTesting(async () => null);
+
+const event = (path) => ({
+  rawPath: `/prod\${path}`,
+  requestContext: { stage: 'prod', http: { method: 'GET' } },
+});
+const health = await handler(event('/health'));
+const home = await handler(event('/home/bootstrap'));
+setPublisherBackendAccessPolicyLoaderForTesting(async () => {
+  throw new Error('internal-s3-detail');
+});
+const unavailable = await handler(event('/home/bootstrap'));
+console.log(JSON.stringify({
+  healthStatus: health.statusCode,
+  homeStatus: home.statusCode,
+  homeCode: JSON.parse(home.body).errorCode,
+  unavailableStatus: unavailable.statusCode,
+  unavailableBody: JSON.parse(unavailable.body),
+}));
+''');
+
+    expect(result.exitCode, 0, reason: result.stderr.toString());
+    final decoded =
+        jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+    expect(decoded['healthStatus'], 200);
+    expect(decoded['homeStatus'], 403);
+    expect(decoded['homeCode'], 'access_key_not_configured');
+    expect(decoded['unavailableStatus'], 500);
+    expect(
+      decoded['unavailableBody']['errorCode'],
+      'access_policy_unavailable',
+    );
+    expect(
+      decoded['unavailableBody']['message'],
+      isNot(contains('internal-s3-detail')),
+    );
+  });
+
   test(
     'generated Lambda handler supports an injected DynamoDB store',
     () async {

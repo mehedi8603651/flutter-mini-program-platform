@@ -12,6 +12,10 @@
   timeouts for imported remote host endpoints
 - retry transient AWS publisher-backend read smoke failures, matching the
   existing Firebase smoke behavior
+- protect generated AWS publisher-backend routes with the same hashed S3
+  access-key policy used by AWS delivery, while keeping health checks public
+- add `publisher-backend aws smoke --access-key` and AWS publisher-backend
+  access-key enforcement capability metadata
 
 ## 0.3.50
 - report `GET /coupons/page` in `workflow status` publisher backend route

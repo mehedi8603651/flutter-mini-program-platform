@@ -31,14 +31,21 @@ String _awsLambdaTemplateYaml(
         Variables:
           PUBLISHER_BACKEND_STORAGE: $storageMode
           MINI_PROGRAM_ID: $appId
+          PUBLISHER_BACKEND_ACCESS_POLICY_BUCKET: !Ref AccessPolicyBucketName
+          PUBLISHER_BACKEND_ACCESS_POLICY_KEY: !Ref AccessPolicyObjectKey
+          PUBLISHER_BACKEND_REQUIRE_ACCESS_KEYS: !Ref RequireAccessKeys
 ${usesDynamoDb ? '          PUBLISHER_BACKEND_TABLE_NAME: !Ref PublisherBackendDataTable\n' : ''}''';
-  final functionPolicies = usesDynamoDb
-      ? '''
+  final functionPolicies =
+      '''
       Policies:
-        - DynamoDBCrudPolicy:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub 'arn:\${AWS::Partition}:s3:::\${AccessPolicyBucketName}/\${AccessPolicyObjectKey}'
+${usesDynamoDb ? '''        - DynamoDBCrudPolicy:
             TableName: !Ref PublisherBackendDataTable
-'''
-      : '';
+''' : ''}''';
   final dataTableOutput = usesDynamoDb
       ? '''
   PublisherBackendDataTableName:
@@ -56,6 +63,20 @@ Parameters:
     Type: String
     Default: prod
     Description: API Gateway stage name.
+  AccessPolicyBucketName:
+    Type: String
+    Description: S3 bucket containing the shared MiniProgram delivery access-key policy.
+  AccessPolicyObjectKey:
+    Type: String
+    Default: metadata/access_keys/$appId.json
+    Description: S3 object key containing hashed MiniProgram access keys.
+  RequireAccessKeys:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Fail closed when the access-key policy object is missing.
 
 Globals:
   Function:
@@ -118,6 +139,15 @@ Outputs:
   PublisherBackendStorageMode:
     Description: Publisher backend storage mode.
     Value: $storageMode
+  PublisherBackendAccessPolicyBucketName:
+    Description: S3 bucket containing the shared delivery/backend access-key policy.
+    Value: !Ref AccessPolicyBucketName
+  PublisherBackendAccessPolicyObjectKey:
+    Description: S3 object key containing hashed access keys for this mini-program.
+    Value: !Ref AccessPolicyObjectKey
+  PublisherBackendRequireAccessKeys:
+    Description: Whether missing access-key policy objects fail closed.
+    Value: !Ref RequireAccessKeys
 $dataTableOutput''';
 }
 
@@ -183,12 +213,19 @@ Deploy waits for the health endpoint with cold-start-aware retries. The default
 smoke command is read-only; add `--include-write` only when you want to verify
 `POST /coupon/redeem`.
 
+The CLI deploy connects this Lambda to the same hashed S3 access-key policy used
+by AWS mini-program delivery. When `miniprogram access-key create $appId ...`
+has created a policy, every route except `GET /health` and `OPTIONS` requires
+the matching `x-mini-program-access-key` header. Run protected smoke checks
+with `--access-key <key>`. Set the AWS environment's `requireAccessKeys` value
+to true when missing policy objects must fail closed.
+
 After deploy, connect a host endpoint with:
 
 ```powershell
 miniprogram host endpoint add $appId `
   --api-base-url <delivery-url> `
-  --public `
+  (--access-key <key> | --public) `
   --backend-base-url <PublisherBackendBaseUrl>
 ```
 
@@ -198,13 +235,16 @@ IPA, or web JavaScript.
 }
 
 String _awsLambdaPackageJson(String appId, String storageMode) {
-  final dependencies = storageMode == _publisherBackendStorageDynamoDb
+  final dynamoDbDependencies = storageMode == _publisherBackendStorageDynamoDb
       ? ''',
-  "dependencies": {
     "@aws-sdk/client-dynamodb": "$_awsSdkJavaScriptV3Version",
-    "@aws-sdk/lib-dynamodb": "$_awsSdkJavaScriptV3Version"
-  }'''
+    "@aws-sdk/lib-dynamodb": "$_awsSdkJavaScriptV3Version"'''
       : '';
+  final dependencies =
+      ''',
+  "dependencies": {
+    "@aws-sdk/client-s3": "$_awsSdkJavaScriptV3Version"$dynamoDbDependencies
+  }''';
   return '''
 {
   "name": "${appId}_aws_publisher_backend",
@@ -217,6 +257,7 @@ String _awsLambdaPackageJson(String appId, String storageMode) {
 }
 
 String _awsLambdaHandlerSource() => r'''
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -225,6 +266,11 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const dataRoot = join(currentDir, 'data');
 const storageMode = process.env.PUBLISHER_BACKEND_STORAGE ?? 'bundled';
 const miniProgramId = process.env.MINI_PROGRAM_ID ?? 'mini_program';
+const accessPolicyBucket = process.env.PUBLISHER_BACKEND_ACCESS_POLICY_BUCKET ?? '';
+const accessPolicyKey = process.env.PUBLISHER_BACKEND_ACCESS_POLICY_KEY ?? '';
+const requireAccessKeys =
+  String(process.env.PUBLISHER_BACKEND_REQUIRE_ACCESS_KEYS ?? 'false').toLowerCase() ===
+  'true';
 
 const corsHeaders = {
   'access-control-allow-origin': '*',
@@ -235,11 +281,16 @@ const corsHeaders = {
 };
 
 let testStore = null;
+let testAccessPolicyLoader = null;
 let cachedStore = null;
 
 export function setPublisherBackendStoreForTesting(store) {
   testStore = store;
   cachedStore = null;
+}
+
+export function setPublisherBackendAccessPolicyLoaderForTesting(loader) {
+  testAccessPolicyLoader = loader;
 }
 
 export async function handler(event) {
@@ -257,8 +308,6 @@ export async function handler(event) {
     };
   }
 
-  const store = await resolveStore();
-
   if (method === 'GET' && path === '/health') {
     return json(200, {
       status: 'ok',
@@ -267,6 +316,21 @@ export async function handler(event) {
       generatedAtUtc: new Date().toISOString(),
     });
   }
+
+  try {
+    const accessGuard = await verifyMiniProgramAccessKey(event);
+    if (accessGuard) {
+      return accessGuard;
+    }
+  } catch (error) {
+    console.error('MiniProgram access-key policy verification failed.', error);
+    return json(500, {
+      errorCode: 'access_policy_unavailable',
+      message: 'MiniProgram access-key policy could not be verified.',
+    });
+  }
+
+  const store = await resolveStore();
 
   if (method === 'GET' && path === '/home/bootstrap') {
     return jsonFromStore(await store.homeBootstrap(), 'home/bootstrap');
@@ -299,6 +363,137 @@ export async function handler(event) {
     errorCode: 'not_found',
     message: `No publisher backend route matches ${path}.`,
   });
+}
+
+async function verifyMiniProgramAccessKey(event) {
+  const policy = await readMiniProgramAccessPolicy();
+  if (policy == null) {
+    return requireAccessKeys
+      ? json(403, {
+          errorCode: 'access_key_not_configured',
+          message:
+            'MiniProgram access keys are required, but no access-key policy exists for this publisher backend.',
+        })
+      : null;
+  }
+  if (
+    policy.miniProgramId != null &&
+    String(policy.miniProgramId).trim() !== miniProgramId
+  ) {
+    throw new Error('MiniProgram access-key policy does not match this publisher backend.');
+  }
+
+  const accessKey = headerValue(event, 'x-mini-program-access-key').trim();
+  if (!accessKey) {
+    return json(401, {
+      errorCode: 'access_key_required',
+      message: 'MiniProgram access key is required for this publisher backend.',
+    });
+  }
+  if (!accessPolicyAllowsKey(policy, accessKey)) {
+    return json(403, {
+      errorCode: 'access_key_invalid',
+      message: 'MiniProgram access key is not authorized for this publisher backend.',
+    });
+  }
+  return null;
+}
+
+async function readMiniProgramAccessPolicy() {
+  if (testAccessPolicyLoader) {
+    return testAccessPolicyLoader();
+  }
+  if (!accessPolicyBucket || !accessPolicyKey) {
+    return null;
+  }
+  const { GetObjectCommand, S3Client } = await import('@aws-sdk/client-s3');
+  try {
+    const response = await new S3Client({}).send(
+      new GetObjectCommand({
+        Bucket: accessPolicyBucket,
+        Key: accessPolicyKey,
+      }),
+    );
+    const raw = await bodyText(response.Body);
+    const policy = JSON.parse(raw);
+    if (!policy || typeof policy !== 'object' || Array.isArray(policy)) {
+      throw new Error('MiniProgram access-key policy must be a JSON object.');
+    }
+    return policy;
+  } catch (error) {
+    if (
+      error?.name === 'NoSuchKey' ||
+      error?.name === 'NotFound' ||
+      error?.$metadata?.httpStatusCode === 404
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function bodyText(body) {
+  if (!body) {
+    return '';
+  }
+  if (typeof body.transformToString === 'function') {
+    return body.transformToString('utf-8');
+  }
+  const chunks = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function accessPolicyAllowsKey(policy, accessKey) {
+  const candidates = [
+    ...(Array.isArray(policy.keys) ? policy.keys : []),
+    ...(Array.isArray(policy.accessKeys) ? policy.accessKeys : []),
+  ];
+  const accessKeyHash = createHash('sha256').update(accessKey, 'utf8').digest('hex');
+  const now = new Date();
+  return candidates.some((candidate) => {
+    if (!candidate || typeof candidate !== 'object') {
+      return false;
+    }
+    if (
+      candidate.enabled === false ||
+      candidate.active === false ||
+      candidate.revoked === true ||
+      candidate.revokedAtUtc
+    ) {
+      return false;
+    }
+    if (candidate.expiresAtUtc) {
+      const expiresAt = new Date(candidate.expiresAtUtc);
+      if (Number.isFinite(expiresAt.getTime()) && expiresAt <= now) {
+        return false;
+      }
+    }
+    const candidateHash = String(
+      candidate.sha256 ?? candidate.sha256Hash ?? candidate.hash ?? '',
+    )
+      .trim()
+      .toLowerCase();
+    return candidateHash && safeStringEquals(candidateHash, accessKeyHash);
+  });
+}
+
+function headerValue(event, name) {
+  const expected = String(name).toLowerCase();
+  for (const [key, value] of Object.entries(event.headers || {})) {
+    if (String(key).toLowerCase() === expected) {
+      return Array.isArray(value) ? String(value[0] || '') : String(value || '');
+    }
+  }
+  return '';
+}
+
+function safeStringEquals(left, right) {
+  const leftBytes = Buffer.from(String(left), 'utf8');
+  const rightBytes = Buffer.from(String(right), 'utf8');
+  return leftBytes.length === rightBytes.length && timingSafeEqual(leftBytes, rightBytes);
 }
 
 async function resolveStore() {
