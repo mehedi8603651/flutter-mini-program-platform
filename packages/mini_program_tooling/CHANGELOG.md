@@ -10,6 +10,8 @@
   range instead of using the `mini_program_sdk` package version
 - generate explicit 20-second delivery and 30-second publisher-backend
   timeouts for imported remote host endpoints
+- retry transient AWS publisher-backend read smoke failures, matching the
+  existing Firebase smoke behavior
 
 ## 0.3.50
 - report `GET /coupons/page` in `workflow status` publisher backend route

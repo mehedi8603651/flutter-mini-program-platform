@@ -204,6 +204,33 @@ void _registerAwsCloudTests() {
     ]);
   });
 
+  test('AWS smoke retries transient read route failures', () async {
+    var attempts = 0;
+    final starter = PublisherBackendStarter(
+      shellRunner: (executable, arguments, {workingDirectory}) async {
+        return ProcessResult(0, 0, _stackDescribeJson(), '');
+      },
+      healthGetter: (uri) async {
+        attempts++;
+        if (attempts == 1) {
+          throw TimeoutException('transient route timeout');
+        }
+        return http.Response('{"ok":true}', 200);
+      },
+      delay: (_) async {},
+    );
+
+    final result = await starter.awsSmoke(
+      PublisherBackendAwsSmokeRequest(
+        miniProgramRootPath: miniProgramRoot.path,
+        environment: _awsEnvironment(),
+      ),
+    );
+
+    expect(result.passed, isTrue);
+    expect(attempts, 5);
+  });
+
   test('AWS smoke optionally verifies coupon redeem writes', () async {
     for (final responseStatus in <String>['redeemed', 'already_redeemed']) {
       final requestedPosts = <Uri>[];

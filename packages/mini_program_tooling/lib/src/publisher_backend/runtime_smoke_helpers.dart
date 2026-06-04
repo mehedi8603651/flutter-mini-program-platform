@@ -81,7 +81,10 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     Duration timeout = const Duration(seconds: 5),
   }) async {
     try {
-      final response = await _healthGetter(uri).timeout(timeout);
+      final response = await _smokeHttpWithRetry(
+        timeout: timeout,
+        request: () => _healthGetter(uri),
+      );
       final passed = response.statusCode == 200;
       return PublisherBackendAwsSmokeRouteResult(
         method: method,
@@ -172,7 +175,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   }) async {
     try {
       final response = accessKey?.trim().isNotEmpty == true
-          ? await _firebaseSmokeHttpWithRetry(
+          ? await _smokeHttpWithRetry(
               timeout: timeout,
               request: () => _httpRequester(
                 method,
@@ -180,7 +183,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
                 headers: _firebaseSmokeHeaders(accessKey: accessKey),
               ),
             )
-          : await _firebaseSmokeHttpWithRetry(
+          : await _smokeHttpWithRetry(
               timeout: timeout,
               request: () => _healthGetter(uri),
             );
@@ -220,7 +223,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   }) async {
     const path = '/auth/session';
     try {
-      final response = await _firebaseSmokeHttpWithRetry(
+      final response = await _smokeHttpWithRetry(
         timeout: timeout,
         request: () => _httpRequester(
           'GET',
@@ -448,7 +451,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
   }) async {
     const path = '/auth/session';
     try {
-      final response = await _firebaseSmokeHttpWithRetry(
+      final response = await _smokeHttpWithRetry(
         timeout: timeout,
         request: () => _httpRequester(
           'GET',
@@ -712,7 +715,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     return headers;
   }
 
-  Future<http.Response> _firebaseSmokeHttpWithRetry({
+  Future<http.Response> _smokeHttpWithRetry({
     required Future<http.Response> Function() request,
     required Duration timeout,
     int attempts = 3,
@@ -728,7 +731,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
       } catch (error, stackTrace) {
         lastError = error;
         lastStackTrace = stackTrace;
-        if (!_isTransientFirebaseSmokeError(error)) {
+        if (!_isTransientSmokeError(error)) {
           Error.throwWithStackTrace(error, stackTrace);
         }
       }
@@ -740,7 +743,7 @@ extension _PublisherBackendStarterRuntimeSmokeHelpers
     Error.throwWithStackTrace(lastError!, lastStackTrace!);
   }
 
-  bool _isTransientFirebaseSmokeError(Object error) {
+  bool _isTransientSmokeError(Object error) {
     if (error is TimeoutException ||
         error is SocketException ||
         error is HandshakeException ||
