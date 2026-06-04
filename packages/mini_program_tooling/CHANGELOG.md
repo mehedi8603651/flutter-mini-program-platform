@@ -6,6 +6,10 @@
 - report legacy Stac adapter dependency, renderer registration, and readiness
   through workflow status
 - expose the `host.legacy_stac_adapter` CLI capability
+- fix new Mp scaffolds to declare the established `1.x` runtime compatibility
+  range instead of using the `mini_program_sdk` package version
+- generate explicit 20-second delivery and 30-second publisher-backend
+  timeouts for imported remote host endpoints
 
 ## 0.3.50
 - report `GET /coupons/page` in `workflow status` publisher backend route

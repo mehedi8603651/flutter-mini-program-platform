@@ -53,6 +53,7 @@ void main() {
       expect(manifest['screenFormat'], 'mp');
       expect(manifest['screenSchemaVersion'], 1);
       expect(manifest['entry'], 'mp_coupon_center_home');
+      expect(manifest['sdkVersionRange'], '>=1.0.0 <2.0.0');
       expect(pubspec, contains('mini_program_ui:'));
       expect(pubspec, contains('dependency_overrides:'));
       expect(pubspec, contains('mini_program_contracts:'));

@@ -447,6 +447,14 @@ void _registerCloudHostPartnerTests() {
     expect(endpointSource, contains('"backendMode":"remote"'));
     expect(endpointSource, contains('MiniProgramBackendEndpoint('));
     expect(endpointSource, contains('https://publisher.example.com/api'));
+    expect(
+      endpointSource,
+      contains('requestTimeout: const Duration(seconds: 20)'),
+    );
+    expect(
+      endpointSource,
+      contains('requestTimeout: const Duration(seconds: 30)'),
+    );
     expect(endpointSource, contains('sendAccessKeyToBackend: true'));
     final registryFile = File(
       p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
@@ -785,6 +793,14 @@ void _registerCloudHostPartnerTests() {
     expect(endpointSource, contains('https://gcp.example.com/api'));
     expect(endpointSource, contains('https://publisher.example.com/api'));
     expect(endpointSource, contains('MiniProgramBackendEndpoint('));
+    expect(
+      endpointSource,
+      contains('requestTimeout: const Duration(seconds: 20)'),
+    );
+    expect(
+      endpointSource,
+      contains('requestTimeout: const Duration(seconds: 30)'),
+    );
     expect(endpointSource, contains('sendAccessKeyToBackend: true'));
     expect(endpointSource, contains('mpk_live_company_b_12345678901234567890'));
     expect(stdoutBuffer.toString(), contains('Imported MiniProgram'));

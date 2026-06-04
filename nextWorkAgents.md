@@ -62,11 +62,25 @@ Milestone 9 is complete:
   stable Stac baseline
 - the base SDK dependency graph is free of Stac and its targeted transitive
   dependencies
+- protected Firebase Mp-only E2E is complete against
+  `miniprogram-backend-test`:
+  - Firebase Functions deploy, Firestore seed, Firebase Hosting publish,
+    protected access key, partner handoff, and host import passed
+  - the live protected Mp screen and all paged `Load more` results passed in
+    Chrome and Windows
+  - the Android x64 debug APK built and installed; the emulator could not
+    complete Firebase HTTPS requests through the current China/VPN route
+- live verification fixed two tooling issues:
+  - new Mp scaffolds now use the established `>=1.0.0 <2.0.0` runtime
+    compatibility range
+  - generated remote host endpoints now use explicit 20-second delivery and
+    30-second publisher-backend timeouts
 
-The next major step is Milestone 10: run protected Firebase/AWS host flows,
-complete interactive Chrome/Windows/Android gates, finalize migration docs, and
-prepare the stable merge. Do not publish the dev packages before those gates
-pass.
+The next major step is Milestone 10 AWS verification: run the protected AWS Mp
+host flow in Chrome and Windows, then repeat Android verification on a network
+route or physical device that can reach the live HTTPS endpoints. After those
+gates pass, finalize migration docs and prepare the stable merge. Do not publish
+the dev packages before all release gates pass.
 
 ## Current Shipped Baseline
 

@@ -454,13 +454,15 @@ class MiniProgramHostController {
           ..writeln('    $mapKey: MiniProgramEndpoint.public(')
           ..writeln(
             '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
-          );
+          )
+          ..writeln('      requestTimeout: const Duration(seconds: 20),');
         if (entry.value.backendBaseUri != null) {
           buffer
             ..writeln('      backend: MiniProgramBackendEndpoint(')
             ..writeln(
               '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
             )
+            ..writeln('        requestTimeout: const Duration(seconds: 30),')
             ..writeln('      ),');
         }
         buffer.writeln('    ),');
@@ -470,13 +472,15 @@ class MiniProgramHostController {
           ..writeln(
             '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
           )
-          ..writeln('      accessKey: ${_dartString(entry.value.accessKey!)},');
+          ..writeln('      accessKey: ${_dartString(entry.value.accessKey!)},')
+          ..writeln('      requestTimeout: const Duration(seconds: 20),');
         if (entry.value.backendBaseUri != null) {
           buffer
             ..writeln('      backend: MiniProgramBackendEndpoint(')
             ..writeln(
               '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
             )
+            ..writeln('        requestTimeout: const Duration(seconds: 30),')
             ..writeln('        sendAccessKeyToBackend: true,')
             ..writeln('      ),');
         }
