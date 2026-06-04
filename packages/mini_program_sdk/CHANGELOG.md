@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-dev.3
+
+- make Mp JSON the only built-in screen renderer
+- move legacy Stac compatibility to the optional `mini_program_legacy_stac`
+  package
+- remove Stac and its transitive runtime dependencies from the base SDK
+
 ## 0.4.0-dev.2
 
 - add Mp runtime parity support for auth, backend data, paged backend data,

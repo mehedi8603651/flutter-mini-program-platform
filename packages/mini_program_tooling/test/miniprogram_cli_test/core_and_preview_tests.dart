@@ -60,7 +60,9 @@ void _registerCoreAndPreviewTests() {
     );
     expect(
       stdoutBuffer.toString(),
-      contains('embed init [--project-root <path>] [--with-demo]'),
+      contains(
+        'embed init [--project-root <path>] [--with-legacy-stac] [--with-demo]',
+      ),
     );
     expect(
       stdoutBuffer.toString(),
@@ -142,7 +144,7 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.4.0-dev.3'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.4.0-dev.4'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(
       stdoutBuffer.toString(),
@@ -227,9 +229,10 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.4.0-dev.3');
+    expect(json['toolingVersion'], '0.4.0-dev.4');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
+    expect(json['capabilityIds'], contains('host.legacy_stac_adapter'));
     expect(
       json['capabilityIds'],
       contains('publisher_backend.aws.dynamodb.data.redemptions'),
@@ -296,6 +299,7 @@ void _registerCoreAndPreviewTests() {
       contains('publisher_backend.firebase.destroy.data_loss_guard'),
     );
     final features = json['features'] as Map<String, dynamic>;
+    expect(features['hostLegacyStacAdapter'], isTrue);
     expect(features['firebaseHostingPublish'], isTrue);
     expect(features['publisherBackendAwsWriteSmoke'], isTrue);
     expect(features['publisherBackendAwsPagedRoutes'], isTrue);

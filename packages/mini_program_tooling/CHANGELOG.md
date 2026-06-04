@@ -1,4 +1,12 @@
 # Changelog
+## 0.4.0-dev.4
+- make generated and managed-preview hosts Mp-only by default
+- add `embed init --with-legacy-stac` and automatically enable the optional
+  adapter for the public legacy Stac demo
+- report legacy Stac adapter dependency, renderer registration, and readiness
+  through workflow status
+- expose the `host.legacy_stac_adapter` CLI capability
+
 ## 0.3.50
 - report `GET /coupons/page` in `workflow status` publisher backend route
   metadata so VS Code and other CLI consumers can show paged-route readiness

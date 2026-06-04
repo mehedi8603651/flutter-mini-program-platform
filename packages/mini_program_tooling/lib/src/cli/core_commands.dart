@@ -774,7 +774,13 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         'with-demo',
         negatable: false,
         help:
-            'Add a public GitHub/jsDelivr demo endpoint, registry entry, and README button snippet.',
+            'Add the public legacy Stac GitHub/jsDelivr demo endpoint and enable its adapter.',
+      )
+      ..addFlag(
+        'with-legacy-stac',
+        negatable: false,
+        help:
+            'Add and register the optional legacy Stac renderer adapter.',
       );
 
     final results = parser.parse(arguments);
@@ -798,6 +804,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         nativeRoutePath: results.option('native-route-path')!,
         force: results.flag('force'),
         withDemo: results.flag('with-demo'),
+        withLegacyStac: results.flag('with-legacy-stac'),
       ),
     );
 

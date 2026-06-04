@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-dev.2
+
+- Make Mp-only host setup the recommended default.
+- Add explicit Mp plus legacy Stac and public legacy Stac demo host choices.
+- Show optional legacy Stac adapter dependency, renderer registration, and
+  readiness from workflow status.
+
 ## 0.1.39
 
 - Align Firebase starter UI diagnostics with `mini_program_tooling` 0.3.49 and

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "screenId": "mp_profile_center_home",
+  "root": {
+    "type": "column",
+    "props": {},
+    "children": [
+      {
+        "type": "heading",
+        "props": {
+          "data": "Mp Profile Center"
+        },
+        "children": []
+      },
+      {
+        "type": "text",
+        "props": {
+          "data": "A lightweight Mp JSON fixture rendered by mini_program_sdk."
+        },
+        "children": []
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "image",
+        "props": {
+          "alt": "Profile workspace image",
+          "src": "https://picsum.photos/seed/mp_profile_center/640/320"
+        },
+        "children": []
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "card",
+        "props": {},
+        "children": [
+          {
+            "type": "column",
+            "props": {},
+            "children": [
+              {
+                "type": "heading",
+                "props": {
+                  "data": "Portable Mp profile"
+                },
+                "children": []
+              },
+              {
+                "type": "text",
+                "props": {
+                  "data": "This screen is authored with Mp.* and bundled as versioned Mp JSON."
+                },
+                "children": []
+              },
+              {
+                "type": "text",
+                "props": {
+                  "data": "Fixture id: mp_profile_center"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "sizedBox",
+        "props": {
+          "height": 16
+        },
+        "children": []
+      },
+      {
+        "type": "primaryButton",
+        "props": {
+          "action": {
+            "type": "navigation.openScreen",
+            "props": {
+              "screenId": "mp_profile_center_details"
+            }
+          },
+          "label": "Open Mp profile details"
+        },
+        "children": []
+      }
+    ]
+  }
+}

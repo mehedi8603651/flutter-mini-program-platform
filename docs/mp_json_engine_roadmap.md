@@ -31,10 +31,11 @@ gates:
 
 ```text
 mini_program_contracts 0.2.0-dev.1
-mini_program_ui 0.1.0-dev.1
-mini_program_sdk 0.4.0-dev.1
+mini_program_ui 0.1.0-dev.3
+mini_program_sdk 0.4.0-dev.3
 mini_program_legacy_stac 0.1.0-dev.1
-mini_program_tooling 0.4.0-dev.1
+mini_program_tooling 0.4.0-dev.4
+mini_program_vscode 0.2.0-dev.2
 ```
 
 Do not publish these development packages. Use path overrides in local host
@@ -220,7 +221,7 @@ lazy network fetching, not runtime Dart code downloads.
 
 ## Legacy Stac Adapter
 
-Add `mini_program_legacy_stac` as an optional host dependency:
+`mini_program_legacy_stac` is now an optional host dependency:
 
 ```text
 mini_program_legacy_stac
@@ -228,10 +229,10 @@ mini_program_legacy_stac
   -> registers StacScreenRenderer
 ```
 
-The final base `mini_program_sdk` must not depend on Stac, Dio, cached network
+The base `mini_program_sdk` no longer depends on Stac, Dio, cached network
 image, SVG, shared preferences, or SQLite through Stac. Hosts that only consume
 Mp screens install the lightweight base SDK. Hosts that still consume legacy
-screens explicitly add the Stac adapter.
+screens explicitly add and register the Stac adapter.
 
 ## Tooling Migration
 
@@ -251,19 +252,21 @@ Update tooling incrementally:
 
 ## Milestones
 
-1. Add this roadmap, create the worktree, and record the current release-size
-   baseline.
+1. Add this roadmap, create the worktree, and record the release-size baseline.
 2. Add contract metadata, extensible capabilities, and `mini_program_ui`.
-3. Add strict Mp validation, renderer registration, core nodes, and theme
-   tokens.
+3. Add strict Mp validation, renderer registration, and core nodes.
 4. Reach navigation, backend, auth, paging, and asset parity.
-5. Extract optional Stac compatibility and remove Stac from the base SDK.
-6. Migrate build, scaffold, preview, validate, and publish tooling.
-7. Verify Firebase, AWS, static hosting, handoff, and VS Code parity.
-8. Migrate fixtures, complete documentation, compare release sizes, and merge
-   the feature branch.
+5. Add Mp tooling build and preview support.
+6. Prove Mp publish and host E2E parity.
+7. Add Mp starter UI and VS Code workflow parity.
+8. Add migration fixtures, documentation, and interim size comparison.
+9. Extract optional Stac compatibility and remove Stac from the base SDK.
+10. Complete final size/live release gates and merge the feature branch.
 
 Commit each milestone separately.
+
+Milestone 9 completed the optional Stac adapter extraction. Milestone 10 owns
+the final release-size comparison, live provider/host gates, and stable merge.
 
 ## Test Plan
 

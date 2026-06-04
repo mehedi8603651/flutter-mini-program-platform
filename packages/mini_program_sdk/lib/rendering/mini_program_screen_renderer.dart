@@ -4,7 +4,6 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import '../mini_program_failure.dart';
 import '../observability/sdk_logger.dart';
 import 'mp_screen_renderer.dart';
-import 'stac_screen_renderer.dart';
 
 /// Input passed to a screen renderer for one loaded mini-program screen.
 @immutable
@@ -120,7 +119,7 @@ class MiniProgramScreenRendererRegistry {
 
   /// Built-in screen renderers.
   static const List<MiniProgramScreenRenderer> defaultRenderers =
-      <MiniProgramScreenRenderer>[StacScreenRenderer(), MpScreenRenderer()];
+      <MiniProgramScreenRenderer>[MpScreenRenderer()];
 
   final Map<String, MiniProgramScreenRenderer> _renderers;
 

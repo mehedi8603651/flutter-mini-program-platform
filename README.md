@@ -4,7 +4,7 @@ Portable mini-program platform built around:
 
 - shared contracts
 - a shared Flutter runtime SDK
-- Mp JSON-authored portable UI with legacy Stac compatibility
+- Mp JSON-authored portable UI with optional legacy Stac compatibility
 - local and AWS cloud delivery
 - Firebase Functions publisher backend support
 - controlled host-native bridges
@@ -156,7 +156,7 @@ It is responsible for:
 - validating SDK compatibility
 - enforcing declared capabilities
 - rendering Mp JSON safely
-- keeping legacy Stac JSON compatible during migration
+- registering optional renderers such as `mini_program_legacy_stac`
 - dispatching approved actions through the host bridge
 
 ### Tooling CLI
@@ -179,8 +179,8 @@ This package exposes the global `miniprogram` command used for:
 
 ### Mini-Program Authoring
 New mini-programs are authored with `Mp.*` helpers and built into versioned Mp
-JSON. Legacy Stac mini-programs still work through the Stac renderer path while
-the migration branch hardens the new engine.
+JSON. The base SDK is Mp-only. Legacy Stac mini-programs remain supported when
+a host explicitly installs and registers `mini_program_legacy_stac`.
 
 Safe assumption:
 

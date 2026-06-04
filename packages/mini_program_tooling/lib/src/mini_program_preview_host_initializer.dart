@@ -14,11 +14,13 @@ class MiniProgramPreviewHostInitRequest {
   const MiniProgramPreviewHostInitRequest({
     required this.hostRootPath,
     this.repoRootPath,
+    this.screenFormat = 'mp',
     this.requiredPlatforms = const <String>{'web', 'windows'},
   });
 
   final String hostRootPath;
   final String? repoRootPath;
+  final String screenFormat;
   final Set<String> requiredPlatforms;
 }
 
@@ -27,11 +29,15 @@ class MiniProgramPreviewHostInitResult {
     required this.hostRootPath,
     required this.managedPaths,
     required this.usedPathDependencies,
+    this.screenFormat = 'mp',
+    this.legacyStacEnabled = false,
   });
 
   final String hostRootPath;
   final List<String> managedPaths;
   final bool usedPathDependencies;
+  final String screenFormat;
+  final bool legacyStacEnabled;
 }
 
 class MiniProgramPreviewHostInitException implements Exception {
@@ -56,8 +62,9 @@ class MiniProgramPreviewHostInitializer {
     'web',
     'windows',
   };
-  static const String _sdkConstraint = '^0.3.5';
-  static const String _contractsConstraint = '^0.1.1';
+  static const String _sdkConstraint = '^0.4.0-dev.3';
+  static const String _contractsConstraint = '^0.2.0-dev.1';
+  static const String _legacyStacConstraint = '^0.1.0-dev.1';
   static const String _httpConstraint = '^1.5.0';
   static const String _projectName = 'mini_program_preview_host';
 
@@ -70,6 +77,8 @@ class MiniProgramPreviewHostInitializer {
     final repoRootPath = request.repoRootPath == null
         ? null
         : p.normalize(p.absolute(request.repoRootPath!));
+    final screenFormat = _normalizeScreenFormat(request.screenFormat);
+    final legacyStacEnabled = screenFormat == 'stac';
     final requiredPlatforms = _normalizePlatforms(request.requiredPlatforms);
 
     await Directory(p.dirname(hostRootPath)).create(recursive: true);
@@ -83,12 +92,18 @@ class MiniProgramPreviewHostInitializer {
     final mainPath = p.join(hostRootPath, 'lib', 'main.dart');
 
     await File(pubspecPath).writeAsString(
-      _buildPubspec(hostRootPath: hostRootPath, repoRootPath: repoRootPath),
+      _buildPubspec(
+        hostRootPath: hostRootPath,
+        repoRootPath: repoRootPath,
+        legacyStacEnabled: legacyStacEnabled,
+      ),
     );
     managedPaths.add(pubspecPath);
 
     await File(mainPath).create(recursive: true);
-    await File(mainPath).writeAsString(_buildMainDart());
+    await File(
+      mainPath,
+    ).writeAsString(_buildMainDart(legacyStacEnabled: legacyStacEnabled));
     managedPaths.add(mainPath);
 
     final platformFiles = _buildPlatformIntegrationFiles(hostRootPath);
@@ -103,6 +118,18 @@ class MiniProgramPreviewHostInitializer {
       hostRootPath: hostRootPath,
       managedPaths: managedPaths,
       usedPathDependencies: repoRootPath != null,
+      screenFormat: screenFormat,
+      legacyStacEnabled: legacyStacEnabled,
+    );
+  }
+
+  String _normalizeScreenFormat(String rawScreenFormat) {
+    final screenFormat = rawScreenFormat.trim().toLowerCase();
+    if (screenFormat == 'mp' || screenFormat == 'stac') {
+      return screenFormat;
+    }
+    throw MiniProgramPreviewHostInitException(
+      'Unsupported preview screen format "$rawScreenFormat".',
     );
   }
 
@@ -217,6 +244,7 @@ class MiniProgramPreviewHostInitializer {
   String _buildPubspec({
     required String hostRootPath,
     required String? repoRootPath,
+    required bool legacyStacEnabled,
   }) {
     final dependencies = <String>[
       'dependencies:',
@@ -225,10 +253,13 @@ class MiniProgramPreviewHostInitializer {
       '  http: $_httpConstraint',
       '  mini_program_sdk: $_sdkConstraint',
       '  mini_program_contracts: $_contractsConstraint',
+      if (legacyStacEnabled)
+        '  mini_program_legacy_stac: $_legacyStacConstraint',
     ];
     final dependencyOverrides = _miniProgramDependencyOverrideLines(
       hostRootPath: hostRootPath,
       repoRootPath: repoRootPath,
+      legacyStacEnabled: legacyStacEnabled,
     );
 
     return [
@@ -255,6 +286,7 @@ class MiniProgramPreviewHostInitializer {
   List<String> _miniProgramDependencyOverrideLines({
     required String hostRootPath,
     required String? repoRootPath,
+    required bool legacyStacEnabled,
   }) {
     if (repoRootPath == null) {
       return const <String>[];
@@ -268,12 +300,20 @@ class MiniProgramPreviewHostInitializer {
       p.join(repoRootPath, 'packages', 'mini_program_contracts'),
       from: hostRootPath,
     );
+    final legacyStacPath = _yamlRelativePath(
+      p.join(repoRootPath, 'packages', 'mini_program_legacy_stac'),
+      from: hostRootPath,
+    );
     return <String>[
       'dependency_overrides:',
       '  mini_program_sdk:',
       '    path: $sdkPath',
       '  mini_program_contracts:',
       '    path: $contractsPath',
+      if (legacyStacEnabled) ...<String>[
+        '  mini_program_legacy_stac:',
+        '    path: $legacyStacPath',
+      ],
     ];
   }
 
@@ -282,14 +322,15 @@ class MiniProgramPreviewHostInitializer {
     return relativePath.replaceAll('\\', '/');
   }
 
-  String _buildMainDart() => r'''
+  String _buildMainDart({required bool legacyStacEnabled}) {
+    final source = r'''
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
+__LEGACY_STAC_IMPORT__import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 const String _configuredPreviewBaseUrl = String.fromEnvironment(
   'MINI_PROGRAM_PREVIEW_BASE_URL',
@@ -369,7 +410,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       hostBridge: _hostBridge,
       capabilityRegistry: _capabilityRegistry,
       cacheBundle: _cacheBundle,
-    );
+__LEGACY_STAC_RENDERERS__    );
 
     return MaterialApp(
       title: title,
@@ -892,6 +933,18 @@ class _PreviewStatusBanner extends StatelessWidget {
   }
 }
 ''';
+    return source
+        .replaceFirst(
+          '__LEGACY_STAC_IMPORT__',
+          legacyStacEnabled
+              ? "import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';\n"
+              : '',
+        )
+        .replaceFirst(
+          '__LEGACY_STAC_RENDERERS__',
+          legacyStacEnabled ? '      renderers: legacyStacRenderers,\n' : '',
+        );
+  }
 
   String _buildAndroidDebugManifest() {
     return '''

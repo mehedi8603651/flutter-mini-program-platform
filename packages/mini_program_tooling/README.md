@@ -117,7 +117,7 @@ miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--a
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
 miniprogram host endpoint import <partner-package.json>
-miniprogram embed init [--project-root <path>] [--force] [--with-demo]
+miniprogram embed init [--project-root <path>] [--force] [--with-legacy-stac] [--with-demo]
 miniprogram embed cloud configure [--env <env-name>]
 miniprogram backend start --port 8080
 miniprogram backend stop
@@ -157,6 +157,10 @@ miniprogram workflow status --remote --json
 JSON output is intended for a future VS Code Activity Bar/sidebar extension.
 It is redacted: endpoint and partner package access-key values are never
 printed, only key IDs, counts, app IDs, URLs, and `hasAccessKey` flags.
+
+For host workspaces, workflow status also reports optional legacy Stac adapter
+dependency, renderer registration, and readiness. Partial configuration is a
+warning with a repair command.
 
 ## Examples
 
@@ -1301,6 +1305,15 @@ miniprogram embed init --with-demo
 flutter pub get
 ```
 
+The public demo is legacy Stac, so `--with-demo` automatically installs and
+registers `mini_program_legacy_stac`. New Mp-only hosts should use plain
+`miniprogram embed init`. Hosts that need their own legacy Stac mini-programs
+use:
+
+```powershell
+miniprogram embed init --with-legacy-stac
+```
+
 That also creates:
 
 - `lib/mini_program/mini_program_endpoints.dart`
@@ -1647,7 +1660,10 @@ miniprogram embed init
 ```
 
 `embed init` updates the host app `pubspec.yaml` to use the published
-`mini_program_sdk` and `mini_program_contracts` packages.
+`mini_program_sdk` and `mini_program_contracts` packages. It creates an Mp-only
+host by default. Pass `--with-legacy-stac` only when the host must render older
+Stac manifests; the generated runtime then installs the optional adapter and
+registers `legacyStacRenderers`.
 
 When the local backend is already running on port `8080`, the generated
 runtime setup uses target-aware defaults:
@@ -1770,7 +1786,8 @@ policy files that were not created by the CLI publish flow.
 - Standalone build/publish/validate no longer require a platform repo root.
 - `preview` is the fastest local authoring loop; `publish` plus
   `backend start` remains the real local delivery simulation.
-- Normal builds use the managed pinned Stac builder bundled inside
+- Mp builds use the generated `tool/build_mp.dart` script.
+- Legacy Stac builds use the managed pinned Stac builder bundled inside
   `mini_program_tooling`.
 - `--stac-cli-script` remains the escape hatch when you intentionally need to
   override that managed builder.

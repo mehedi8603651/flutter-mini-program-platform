@@ -23,9 +23,10 @@ import {
   chooseForce,
   chooseHostMiniProgramEntry,
   choosePublisherBackendMode,
-  chooseWithDemo,
+  chooseHostRendererChoice,
   configuredCliPath,
   configuredDefaultPreviewDevice,
+  ensureLegacyStacAdapterCli040,
   hostRegistryPath,
   readHostEndpointAppIds,
   readOptionalText,
@@ -48,14 +49,20 @@ export async function embedInit(
   if (force === undefined) {
     return;
   }
-  const withDemo = await chooseWithDemo();
-  if (withDemo === undefined) {
+  const rendererChoice = await chooseHostRendererChoice();
+  if (!rendererChoice) {
+    return;
+  }
+  if (
+    (rendererChoice.withLegacyStac || rendererChoice.withDemo) &&
+    !(await ensureLegacyStacAdapterCli040(projectRoot, output))
+  ) {
     return;
   }
 
   await runWorkspaceCliCommand(
     'Embed Init',
-    buildEmbedInitArgs({ projectRoot, force, withDemo }),
+    buildEmbedInitArgs({ projectRoot, force, ...rendererChoice }),
     output,
     refreshStatus,
   );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../capabilities/supported_capabilities.dart';
@@ -269,6 +270,7 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
       cacheBundle: widget.cacheBundle,
       logger: widget.config.logger,
       disposeSource: false,
+      renderers: legacyStacRenderers,
     );
   }
 }

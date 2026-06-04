@@ -30,4 +30,26 @@ void main() {
 
     expect(dependenciesBlock, isNot(contains('\n  mini_program_ui:')));
   });
+
+  test('SDK runtime does not carry legacy Stac dependencies', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final dependenciesBlock = pubspec
+        .split('\ndev_dependencies:')
+        .first
+        .split('\ndependencies:')
+        .last;
+
+    for (final packageName in <String>[
+      'stac',
+      'stac_core',
+      'dio',
+      'cached_network_image',
+      'flutter_svg',
+      'shared_preferences',
+      'sqflite',
+      'mini_program_legacy_stac',
+    ]) {
+      expect(dependenciesBlock, isNot(contains('\n  $packageName:')));
+    }
+  });
 }

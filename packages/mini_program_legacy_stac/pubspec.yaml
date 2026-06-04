@@ -1,0 +1,20 @@
+name: mini_program_legacy_stac
+description: Optional legacy Stac renderer adapter for mini_program_sdk.
+version: 0.1.0-dev.1
+repository: https://github.com/mehedi8603651/flutter-mini-program-platform
+
+environment:
+  sdk: ^3.10.0
+  flutter: '>=3.35.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  mini_program_contracts: ^0.2.0-dev.1
+  mini_program_sdk: ^0.4.0-dev.3
+  stac: ^1.4.0
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter

@@ -365,6 +365,47 @@ Mp.pagedBackendBuilder(
     expect(couponEndpoint['backendMode'], 'remote');
     expect(rewardsEndpoint['accessMode'], 'public');
     expect(rewardsEndpoint['backendMode'], 'none');
+    expect(json['hostApp']['legacyStac']['status'], 'disabled');
+    expect(json['hostApp']['legacyStac']['ready'], isFalse);
+  });
+
+  test('workflow status warns about partial legacy Stac setup', () async {
+    final hostRoot = p.join(tempDir.path, 'host_app');
+    await _writeEmbeddedHostFixture(hostRoot);
+    await File(p.join(hostRoot, 'pubspec.yaml')).writeAsString('''
+name: host_app
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  mini_program_legacy_stac: ^0.1.0-dev.1
+''');
+    final stdoutBuffer = StringBuffer();
+
+    final exitCode = await MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      workingDirectory: hostRoot,
+    ).run(<String>['workflow', 'status', '--json']);
+
+    expect(exitCode, 0);
+    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(json['severity'], 'warning');
+    expect(json['ready'], isFalse);
+    expect(json['hostApp']['legacyStac']['status'], 'misconfigured');
+    expect(json['hostApp']['legacyStac']['dependencyConfigured'], isTrue);
+    expect(json['hostApp']['legacyStac']['rendererConfigured'], isFalse);
+    expect(
+      (json['nextActions'] as List).cast<String>(),
+      contains(
+        'Run `miniprogram embed init --with-legacy-stac --force` '
+        'or remove the partial legacy adapter configuration.',
+      ),
+    );
   });
 
   test(
@@ -1153,7 +1194,7 @@ Mp.pagedBackendBuilder(
     );
     expect(
       await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-      contains('mini_program_sdk: ^0.3.6'),
+      contains('mini_program_sdk: ^0.4.0-dev.3'),
     );
   });
 
@@ -1187,6 +1228,20 @@ Mp.pagedBackendBuilder(
 
     expect(exitCode, 0);
     expect(stdoutBuffer.toString(), contains('Public demo: profile via'));
+    expect(stdoutBuffer.toString(), contains('Legacy Stac adapter: enabled'));
+    final pubspecSource = await File(
+      p.join(projectRoot, 'pubspec.yaml'),
+    ).readAsString();
+    final runtimeSource = await File(
+      p.join(
+        projectRoot,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    ).readAsString();
+    expect(pubspecSource, contains('mini_program_legacy_stac: ^0.1.0-dev.1'));
+    expect(runtimeSource, contains('legacyStacRenderers'));
     final endpointSource = await File(
       p.join(projectRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
     ).readAsString();

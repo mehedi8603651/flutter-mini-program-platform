@@ -339,8 +339,25 @@ test('builds host app command arguments', () => {
     ['embed', 'init', '--project-root', 'D:/host', '--with-demo'],
   );
   assert.deepEqual(
-    buildEmbedInitArgs({ projectRoot: 'D:/host', withDemo: true, force: true }),
-    ['embed', 'init', '--project-root', 'D:/host', '--with-demo', '--force'],
+    buildEmbedInitArgs({ projectRoot: 'D:/host', withLegacyStac: true }),
+    ['embed', 'init', '--project-root', 'D:/host', '--with-legacy-stac'],
+  );
+  assert.deepEqual(
+    buildEmbedInitArgs({
+      projectRoot: 'D:/host',
+      withLegacyStac: true,
+      withDemo: true,
+      force: true,
+    }),
+    [
+      'embed',
+      'init',
+      '--project-root',
+      'D:/host',
+      '--with-legacy-stac',
+      '--with-demo',
+      '--force',
+    ],
   );
   assert.deepEqual(
     buildEmbedCloudConfigureArgs({

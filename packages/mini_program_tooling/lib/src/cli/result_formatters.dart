@@ -620,6 +620,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       if (result.repoRootPath != null) 'Repo root: ${result.repoRootPath}',
       'Host app id: ${result.hostAppId}',
       'Host version: ${result.hostVersion}',
+      'Legacy Stac adapter: ${result.legacyStacEnabled ? 'enabled' : 'disabled'}',
       if (result.withDemo)
         'Public demo: profile via https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/',
       'Files:',

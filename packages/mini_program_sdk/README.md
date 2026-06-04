@@ -15,7 +15,7 @@ shared platform contracts.
 - capability registry and feature-flag evaluation
 - host bridge dispatch for native actions
 - Mp JSON parsing, validation, and SDK-owned rendering
-- legacy Stac rendering compatibility during the migration branch
+- renderer registration for optional compatibility or feature adapters
 - in-memory cache helpers for manifests, screens, and assets
 - publisher-owned email/password auth runtime with per-mini-program cached
   sessions
@@ -25,7 +25,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.4.0-dev.2
+  mini_program_sdk: ^0.4.0-dev.3
   mini_program_contracts: ^0.2.0-dev.1
 ```
 
@@ -46,8 +46,10 @@ the migration release gates pass.
 }
 ```
 
-Missing `screenFormat` means legacy `stac`. Unsupported formats render a
-controlled SDK error instead of executing unknown content.
+Missing `screenFormat` means legacy `stac`. The Mp-only base SDK renders a
+controlled unsupported-format error until the optional legacy adapter is
+registered. Unknown formats also fail safely instead of executing unknown
+content.
 
 Mp screens support:
 
@@ -59,10 +61,26 @@ Mp screens support:
 - safe bindings such as `{{auth.user.email}}`, `{{backend.home.data.title}}`,
   and `{{item.title}}`
 
-The base SDK still carries Stac compatibility in this branch. The later
-`mini_program_legacy_stac` extraction milestone will move Stac into an
-optional adapter package after Mp fixtures, cloud publish, and host flows are
-fully proven.
+The base SDK contains only the Mp renderer. Hosts that still consume legacy
+Stac screens add and register the optional adapter:
+
+```yaml
+dependencies:
+  mini_program_legacy_stac: ^0.1.0-dev.1
+```
+
+```dart
+import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';
+
+final config = MiniProgramConfig(
+  // Existing runtime configuration...
+  renderers: legacyStacRenderers,
+);
+```
+
+Use `miniprogram embed init --with-legacy-stac` to generate that setup. The
+public demo is currently Stac, so `miniprogram embed init --with-demo` enables
+the adapter automatically.
 
 ## VS Code extension
 
@@ -124,9 +142,9 @@ void main() {
         hostApp: 'sample_host',
         sdkVersion: '1.0.0',
         hostVersion: '1.0.0',
-        capabilities: <Capability>{
-          Capability.analytics,
-          Capability.nativeNavigation,
+        capabilities: <CapabilityId>{
+          CapabilityIds.analytics,
+          CapabilityIds.nativeNavigation,
         },
         platform: 'android',
         locale: 'en-US',
@@ -134,9 +152,9 @@ void main() {
     ),
     hostBridge: const NoopHostBridge(),
     capabilityRegistry: CapabilityRegistry(
-      const <Capability>[
-        Capability.analytics,
-        Capability.nativeNavigation,
+      const <CapabilityId>[
+        CapabilityIds.analytics,
+        CapabilityIds.nativeNavigation,
       ],
     ),
     cacheBundle: MiniProgramCacheBundle.inMemory(),
@@ -230,7 +248,7 @@ final config = MiniProgramConfig(
       hostApp: 'sample_host',
       sdkVersion: '1.0.0',
       hostVersion: '1.0.0',
-      capabilities: <Capability>{Capability.analytics},
+      capabilities: <CapabilityId>{CapabilityIds.analytics},
       platform: 'android',
       locale: 'en-US',
     ),
@@ -248,7 +266,7 @@ final config = MiniProgramConfig(
   ),
   hostBridge: const NoopHostBridge(),
   capabilityRegistry: CapabilityRegistry(
-    const <Capability>[Capability.analytics],
+    const <CapabilityId>[CapabilityIds.analytics],
   ),
 );
 ```
@@ -286,7 +304,7 @@ final deliveryContext = MiniProgramDeliveryContext(
   hostApp: 'sample_host',
   sdkVersion: '1.0.0',
   hostVersion: '1.0.0',
-  capabilities: <Capability>{Capability.analytics},
+  capabilities: <CapabilityId>{CapabilityIds.analytics},
 );
 
 final endpoints = <String, MiniProgramEndpoint>{
@@ -312,7 +330,7 @@ final config = MiniProgramConfig(
   ),
   hostBridge: const NoopHostBridge(),
   capabilityRegistry: CapabilityRegistry(
-    const <Capability>[Capability.analytics],
+    const <CapabilityId>[CapabilityIds.analytics],
   ),
 );
 ```
@@ -322,8 +340,8 @@ you. Backend calls are lazy: no HTTP client or request is created until a
 mini-program action calls the publisher backend.
 
 Mini-programs can also load backend JSON into local mini-program state and bind
-simple UI text to that state. Generated mini-program scaffolds include helper
-functions for this:
+simple UI text to that state. New scaffolds generate Mp authoring helpers for
+this:
 
 ```bash
 miniprogram create coupon_app --title "Coupon App" --with-backend mock
@@ -332,73 +350,13 @@ miniprogram publisher-backend run --port 9090
 ```
 
 The mock publisher backend is a local HTTP JSON server for development. It is
-not a production backend and it does not add Firebase, AWS, or other backend SDK
-dependencies to this Flutter SDK.
+not a production backend and it does not add Firebase, AWS, or other backend
+SDK dependencies to this Flutter SDK.
 
-```dart
-miniProgramBackendBuilder(
-  requestId: 'home',
-  endpoint: 'home/bootstrap',
-  cacheTtl: const Duration(seconds: 60),
-  loading: StacText(data: 'Loading...'),
-  error: StacText(data: '{{backend.home.message}}'),
-  child: StacColumn(
-    children: [
-      StacText(data: '{{backend.home.data.title}}'),
-      StacText(data: '{{backend.home.data.user.name}}'),
-    ],
-  ),
-)
-```
-
-The builder starts the query only when it renders, stores the result under the
-`requestId`, and does not refetch on normal rebuilds. A button or refresh action
-can update the same state:
-
-```dart
-StacFilledButton(
-  onPressed: miniProgramBackendQueryAction(
-    requestId: 'home',
-    endpoint: 'home/bootstrap',
-    forceRefresh: true,
-  ),
-  child: StacText(data: 'Refresh'),
-)
-```
-
-For simple lists, provide `itemsPath` and an `itemTemplate`:
-
-```dart
-miniProgramBackendBuilder(
-  requestId: 'coupons',
-  endpoint: 'coupons/list',
-  itemsPath: 'data.coupons',
-  empty: StacText(data: 'No coupons yet'),
-  itemTemplate: StacText(data: '{{item.title}}'),
-)
-```
-
-For larger lists, use `miniProgramPagedBackendBuilder` and a manual Load more
-action:
-
-```dart
-miniProgramPagedBackendBuilder(
-  requestId: 'coupons',
-  endpoint: 'coupons/list',
-  limit: 20,
-  cacheTtl: const Duration(seconds: 60),
-  loading: StacText(data: 'Loading coupons...'),
-  loadingMore: StacText(data: 'Loading more...'),
-  empty: StacText(data: 'No coupons yet'),
-  end: StacText(data: 'No more coupons'),
-  error: StacText(data: '{{backend.coupons.message}}'),
-  itemTemplate: StacText(data: '{{item.title}}'),
-  loadMore: StacElevatedButton(
-    onPressed: miniProgramLoadMore(requestId: 'coupons'),
-    child: StacText(data: 'Load more'),
-  ),
-)
-```
+Mp screens use `Mp.backendBuilder(...)`, `Mp.pagedBackendBuilder(...)`, and
+`Mp.backend.loadMore(...)` from `mini_program_ui`. The SDK executes those
+provider-neutral JSON nodes through `MiniProgramBackendStore`; requests remain
+lazy until the corresponding runtime node or action is used.
 
 The default provider-neutral response shape is:
 
@@ -428,8 +386,8 @@ Loaded pages are appended in SDK state. Useful paged bindings include:
 {{backend.coupons.loadingMore}}
 ```
 
-`miniProgramPagedBackendBuilder` is SDK-only. Firebase, AWS, or custom
-publisher backends should expose matching paged routes such as
+`pagedBackendBuilder` is provider-neutral. Firebase, AWS, or custom publisher
+backends should expose matching paged routes such as
 `GET /coupons/list?limit=20&cursor=...`.
 
 Supported bindings include:
@@ -467,16 +425,16 @@ final config = MiniProgramConfig(
   disposeAuthController: true,
   hostBridge: const NoopHostBridge(),
   capabilityRegistry: CapabilityRegistry(
-    const <Capability>[Capability.analytics],
+    const <CapabilityId>[CapabilityIds.analytics],
   ),
 );
 ```
 
-Mini-program JSON can use `miniProgramAuth` actions and
-`miniProgramAuthBuilder` widgets. The SDK shows the native email/password auth
-sheet for `showEmailAuth`, caches only backend-issued tokens, restores cached
-sessions on the next launch, and sends `Authorization: Bearer <idToken>` on
-publisher backend calls when the mini-program is signed in.
+Mp JSON can use `auth.*` actions and the `authBuilder` node. The SDK shows the
+native email/password auth sheet for `auth.showEmailAuth`, caches only
+backend-issued tokens, restores cached sessions on the next launch, and sends
+`Authorization: Bearer <idToken>` on publisher backend calls when the
+mini-program is signed in.
 
 ```text
 {{auth.authenticated}}
@@ -625,5 +583,5 @@ typedef MiniProgramRouteBuilder<T> = Route<T> Function(
 
 - This package is the runtime only. Authoring and local backend workflows live
   in `mini_program_tooling`.
-- No manifest loading, network request, Stac initialization, mini-program route,
-  or overlay work starts until a mini-program is opened.
+- No manifest loading, network request, optional adapter initialization,
+  mini-program route, or overlay work starts until a mini-program is opened.

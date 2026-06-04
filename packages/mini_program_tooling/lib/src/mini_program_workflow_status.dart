@@ -312,6 +312,25 @@ class MiniProgramWorkflowStatusController {
       'mini_program',
       'mini_program_registry.dart',
     );
+    final pubspecPath = p.join(workspacePath, 'pubspec.yaml');
+    final pubspecSource = await _readTextBestEffort(File(pubspecPath));
+    final runtimeSetupSource = await _readTextBestEffort(
+      File(runtimeSetupPath),
+    );
+    final legacyStacDependencyConfigured =
+        pubspecSource?.contains('mini_program_legacy_stac:') ?? false;
+    final legacyStacRendererConfigured =
+        runtimeSetupSource?.contains('legacyStacRenderers') ?? false;
+    final legacyStacReady =
+        legacyStacDependencyConfigured && legacyStacRendererConfigured;
+    final legacyStacIssues = <String>[
+      if (legacyStacDependencyConfigured && !legacyStacRendererConfigured)
+        'The legacy Stac adapter dependency is present but '
+            'legacyStacRenderers is not registered.',
+      if (!legacyStacDependencyConfigured && legacyStacRendererConfigured)
+        'legacyStacRenderers is registered but the '
+            'mini_program_legacy_stac dependency is missing.',
+    ];
     final endpoints = await _readEndpointMetadata(File(endpointPath));
     final registryEntries = await _readRegistryMetadata(File(registryPath));
     final hostCloud = await _stateStore.readHostCloudConfiguration(
@@ -319,7 +338,7 @@ class MiniProgramWorkflowStatusController {
     );
     return <String, Object?>{
       'detected': true,
-      'pubspecPath': p.join(workspacePath, 'pubspec.yaml'),
+      'pubspecPath': pubspecPath,
       'runtimeSetupExists': await File(runtimeSetupPath).exists(),
       'runtimeSetupPath': runtimeSetupPath,
       'launcherExists': await File(launcherPath).exists(),
@@ -340,6 +359,19 @@ class MiniProgramWorkflowStatusController {
             },
           )
           .toList(),
+      'legacyStac': <String, Object?>{
+        'dependencyConfigured': legacyStacDependencyConfigured,
+        'rendererConfigured': legacyStacRendererConfigured,
+        'enabled':
+            legacyStacDependencyConfigured || legacyStacRendererConfigured,
+        'ready': legacyStacReady,
+        'status': legacyStacIssues.isNotEmpty
+            ? 'misconfigured'
+            : legacyStacReady
+            ? 'ready'
+            : 'disabled',
+        'issues': legacyStacIssues,
+      },
       'endpoints': endpoints.entries
           .map(
             (entry) => <String, Object?>{
@@ -769,6 +801,12 @@ class MiniProgramWorkflowStatusController {
         if (hostApp['runtimeSetupExists'] != true) {
           actions.add('Run `miniprogram embed init`.');
         }
+        if (((hostApp['legacyStac'] as Map?)?['status']) == 'misconfigured') {
+          actions.add(
+            'Run `miniprogram embed init --with-legacy-stac --force` '
+            'or remove the partial legacy adapter configuration.',
+          );
+        }
         if ((hostApp['endpointCount'] as int? ?? 0) == 0) {
           actions.add('Run `miniprogram host endpoint import <partner.json>`.');
         }
@@ -806,6 +844,9 @@ class MiniProgramWorkflowStatusController {
             (hostApp['endpointCount'] as int? ?? 0) == 0) {
           return 'warning';
         }
+        if (((hostApp['legacyStac'] as Map?)?['status']) == 'misconfigured') {
+          return 'warning';
+        }
         return 'ok';
       default:
         return 'warning';
@@ -824,6 +865,14 @@ class MiniProgramWorkflowStatusController {
       return decoded.cast<String, dynamic>();
     }
     return null;
+  }
+
+  Future<String?> _readTextBestEffort(File file) async {
+    try {
+      return await file.exists() ? await file.readAsString() : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<Map<String, Object?>>> _findPartnerPackages(

@@ -62,6 +62,43 @@ function Assert-JsonValue {
   }
 }
 
+function Assert-BaseSdkDependencyClean {
+  $sdkRoot = Join-Path $RepoRoot 'packages\mini_program_sdk'
+  Write-Host ""
+  Write-Host "==> base SDK dependency boundary"
+  Push-Location $sdkRoot
+  try {
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+      $ErrorActionPreference = 'Continue'
+      $dependencyOutput = (& flutter pub deps --style=list 2>&1 | Out-String)
+      $dependencyExitCode = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($dependencyExitCode -ne 0) {
+      throw "Base SDK dependency inspection failed with exit code $dependencyExitCode."
+    }
+    $forbiddenPackages = @(
+      'stac',
+      'stac_core',
+      'dio',
+      'cached_network_image',
+      'flutter_svg',
+      'shared_preferences',
+      'sqflite',
+      'mini_program_legacy_stac'
+    )
+    foreach ($packageName in $forbiddenPackages) {
+      if ($dependencyOutput -match "(?m)^\s*(?:-\s*)?$([regex]::Escape($packageName))\s") {
+        throw "Base SDK dependency graph unexpectedly contains '$packageName'."
+      }
+    }
+  } finally {
+    Pop-Location
+  }
+}
+
 if (-not $SkipPackageTests) {
   Invoke-Step 'contracts tests' (Join-Path $RepoRoot 'packages\mini_program_contracts') 'dart' @('test')
   Invoke-Step 'contracts analyze' (Join-Path $RepoRoot 'packages\mini_program_contracts') 'dart' @('analyze')
@@ -69,7 +106,14 @@ if (-not $SkipPackageTests) {
   Invoke-Step 'ui analyze' (Join-Path $RepoRoot 'packages\mini_program_ui') 'dart' @('analyze')
   Invoke-Step 'sdk tests' (Join-Path $RepoRoot 'packages\mini_program_sdk') 'flutter' @('test')
   Invoke-Step 'sdk analyze' (Join-Path $RepoRoot 'packages\mini_program_sdk') 'flutter' @('analyze')
-  Invoke-Step 'tooling tests' (Join-Path $RepoRoot 'packages\mini_program_tooling') 'dart' @('test')
+  Assert-BaseSdkDependencyClean
+  Invoke-Step 'legacy Stac adapter tests' (Join-Path $RepoRoot 'packages\mini_program_legacy_stac') 'flutter' @('test')
+  Invoke-Step 'legacy Stac adapter analyze' (Join-Path $RepoRoot 'packages\mini_program_legacy_stac') 'flutter' @('analyze')
+  Invoke-Step 'tooling tests' (Join-Path $RepoRoot 'packages\mini_program_tooling') 'dart' @(
+    'test',
+    '--concurrency=1',
+    '--timeout=2m'
+  )
   Invoke-Step 'tooling analyze' (Join-Path $RepoRoot 'packages\mini_program_tooling') 'dart' @('analyze')
 }
 
@@ -78,7 +122,9 @@ if (-not $SkipVsCodeTests) {
 }
 
 if (-not $SkipHostTests) {
+  Invoke-Step 'Mp-only host widget tests' (Join-Path $RepoRoot 'hosts\mp_only_host') 'flutter' @('test')
   Invoke-Step 'super host widget tests' (Join-Path $RepoRoot 'hosts\super_app_host') 'flutter' @('test')
+  Invoke-Step 'partner host widget tests' (Join-Path $RepoRoot 'hosts\partner_app_host') 'flutter' @('test')
 }
 
 if (Test-Path -LiteralPath $StaticOutputRoot) {

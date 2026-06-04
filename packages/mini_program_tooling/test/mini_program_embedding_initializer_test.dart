@@ -60,6 +60,7 @@ void main() {
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
       expect(result.withDemo, isFalse);
+      expect(result.legacyStacEnabled, isFalse);
       expect(result.createdPaths, hasLength(6));
       expect(
         runtimeSetup,
@@ -112,6 +113,8 @@ void main() {
       expect(launcher, contains('MiniProgramScope.of(context)'));
       expect(launcher, isNot(contains('MiniProgramLauncherButton')));
       expect(runtimeSetup, isNot(contains('MaterialApp(')));
+      expect(runtimeSetup, isNot(contains('legacyStacRenderers')));
+      expect(runtimeSetup, isNot(contains('mini_program_legacy_stac')));
       expect(barrel, isNot(contains("export 'mini_program_app_shell.dart';")));
       expect(
         barrel,
@@ -120,10 +123,12 @@ void main() {
       expect(barrel, contains("export 'app_host_bridge.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.3.6'));
-      expect(updatedPubspec, contains('mini_program_contracts: ^0.1.1'));
-      expect(readme, contains('mini_program_sdk: ^0.3.6'));
-      expect(readme, contains('mini_program_contracts: ^0.1.1'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.4.0-dev.3'));
+      expect(updatedPubspec, contains('mini_program_contracts: ^0.2.0-dev.1'));
+      expect(updatedPubspec, isNot(contains('mini_program_legacy_stac:')));
+      expect(readme, contains('mini_program_sdk: ^0.4.0-dev.3'));
+      expect(readme, contains('mini_program_contracts: ^0.2.0-dev.1'));
+      expect(readme, contains('Mp-only runtime'));
       expect(readme, contains('MiniProgramScope('));
       expect(
         readme,
@@ -195,8 +200,15 @@ void main() {
       final readme = await File(
         p.join(integrationRootPath, 'README.md'),
       ).readAsString();
+      final runtimeSetup = await File(
+        p.join(integrationRootPath, 'mini_program_runtime_setup.dart'),
+      ).readAsString();
+      final pubspec = await File(
+        p.join(tempDir.path, 'pubspec.yaml'),
+      ).readAsString();
 
       expect(result.withDemo, isTrue);
+      expect(result.legacyStacEnabled, isTrue);
       expect(
         result.createdPaths,
         contains(p.join(integrationRootPath, 'mini_program_endpoints.dart')),
@@ -223,6 +235,10 @@ void main() {
       expect(barrel, contains("export 'mini_program_endpoints.dart';"));
       expect(barrel, contains("export 'mini_program_registry.dart';"));
       expect(readme, contains('Public demo endpoint'));
+      expect(readme, contains('Legacy Stac compatibility'));
+      expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0-dev.1'));
+      expect(runtimeSetup, contains('legacyStacRenderers'));
+      expect(runtimeSetup, contains('mini_program_legacy_stac'));
       expect(readme, contains('MiniPrograms.publicDemo.appId'));
       expect(readme, contains('Open Public Demo'));
       expect(
@@ -230,6 +246,37 @@ void main() {
         contains('https://cdn.jsdelivr.net/gh/mehedi8603651/<repo>@main/'),
       );
     });
+
+    test(
+      'withLegacyStac enables the optional adapter without demo files',
+      () async {
+        final result = await const MiniProgramEmbeddingInitializer().initialize(
+          MiniProgramEmbeddingInitRequest(
+            projectRootPath: tempDir.path,
+            withLegacyStac: true,
+          ),
+        );
+
+        final integrationRootPath = p.join(tempDir.path, 'lib', 'mini_program');
+        final runtimeSetup = await File(
+          p.join(integrationRootPath, 'mini_program_runtime_setup.dart'),
+        ).readAsString();
+        final pubspec = await File(
+          p.join(tempDir.path, 'pubspec.yaml'),
+        ).readAsString();
+
+        expect(result.withDemo, isFalse);
+        expect(result.legacyStacEnabled, isTrue);
+        expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0-dev.1'));
+        expect(runtimeSetup, contains('renderers: legacyStacRenderers'));
+        expect(
+          await File(
+            p.join(integrationRootPath, 'mini_program_endpoints.dart'),
+          ).exists(),
+          isFalse,
+        );
+      },
+    );
 
     test('supports custom host metadata and route path', () async {
       final result = await const MiniProgramEmbeddingInitializer().initialize(

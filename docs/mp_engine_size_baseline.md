@@ -90,3 +90,74 @@ This is not the final reduction measurement. The base SDK still includes Stac
 for legacy compatibility, so the expected size reduction is blocked until the
 later `mini_program_legacy_stac` adapter extraction and base SDK dependency
 cleanup milestone.
+
+## Milestone 9 Optional Adapter Extraction
+
+Date: 2026-06-04
+
+- Worktree: `D:\flutter-mini-program-platform-mp-engine`
+- Branch: `feature/mp-json-engine`
+- Commit before Milestone 9 working-tree edits:
+  `6f87ca50b2b8caafa7b34aa348377c2b2f386548`
+- Flutter: `3.38.9`
+- Dart: `3.10.8`
+- Base SDK dependency check: PASS
+- Mp-only web release build: PASS
+- Mp-only Windows release build: PASS
+
+The base `mini_program_sdk` dependency graph contains none of:
+
+- `stac`
+- `stac_core`
+- `dio`
+- `cached_network_image`
+- `flutter_svg`
+- `shared_preferences`
+- `sqflite`
+- `mini_program_legacy_stac`
+
+### Mp-Only Host
+
+```powershell
+cd D:\flutter-mini-program-platform-mp-engine\hosts\mp_only_host
+flutter build apk --release --analyze-size --target-platform android-arm64
+```
+
+- Build result: PASS
+- APK: `hosts\mp_only_host\build\app\outputs\flutter-apk\app-release.apk`
+- APK size: `16,503,270` bytes (`15.7MB` reported by Flutter)
+- Size analysis file:
+  `C:\Users\mehed\.flutter-devtools\apk-code-size-analysis_03.json`
+- Size analysis JSON size: `5,441,466` bytes
+- `package:mini_program_sdk`: `133 KB`
+- Stac, Stac core, and Dio groups: absent
+
+### Mixed Legacy-Compatible Host
+
+```powershell
+cd D:\flutter-mini-program-platform-mp-engine\hosts\super_app_host
+flutter build apk --release --analyze-size --target-platform android-arm64
+```
+
+- Build result: PASS
+- APK: `hosts\super_app_host\build\app\outputs\flutter-apk\app-release.apk`
+- APK size: `22,462,797` bytes (`21.4MB` reported by Flutter)
+- Size analysis file:
+  `C:\Users\mehed\.flutter-devtools\apk-code-size-analysis_04.json`
+- Size analysis JSON size: `10,372,656` bytes
+- `package:stac`: `994 KB`
+- `package:stac_core`: `441 KB`
+- `package:mini_program_sdk`: `168 KB`
+- `package:dio`: `58 KB`
+
+### Comparison
+
+- Mp-only host versus stable Stac baseline: `5,890,290` bytes smaller (`26.3%`)
+- Mp-only host versus mixed host: `5,959,527` bytes smaller (`26.53%`)
+- Mixed host size is unchanged from the Milestone 8 measurement, confirming
+  that legacy compatibility cost is paid only by hosts that install the
+  optional adapter.
+
+The dependency-cleanliness and release-size gates pass. Protected Firebase and
+AWS host flows plus interactive Chrome, Android, and Windows runtime checks
+remain Milestone 10 release gates.

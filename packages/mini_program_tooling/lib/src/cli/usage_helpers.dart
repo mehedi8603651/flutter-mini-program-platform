@@ -24,7 +24,7 @@ Commands:
   host run -d <device> [--env <env-name>]
   host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
   host endpoint import <partner-package.json>
-  embed init [--project-root <path>] [--with-demo]
+  embed init [--project-root <path>] [--with-legacy-stac] [--with-demo]
   embed cloud configure [--env <env-name>]
   backend init [--root <path>]
   backend start --port 8080

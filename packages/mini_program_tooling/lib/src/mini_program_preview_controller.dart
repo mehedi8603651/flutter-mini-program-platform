@@ -293,6 +293,7 @@ class MiniProgramPreviewController {
       MiniProgramPreviewHostInitRequest(
         hostRootPath: previewHostRootPath,
         repoRootPath: request.repoRootPath,
+        screenFormat: initialBuildResult.screenFormat,
         requiredPlatforms: launchTarget.flutterPlatforms,
       ),
     );

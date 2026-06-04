@@ -70,6 +70,8 @@ void main() {
         );
 
         expect(result.usedPathDependencies, isTrue);
+        expect(result.screenFormat, 'mp');
+        expect(result.legacyStacEnabled, isFalse);
         expect(invocations, hasLength(1));
 
         final pubspec = await File(
@@ -89,14 +91,16 @@ void main() {
             .replaceAll('\\', '/');
         expect(pubspec, contains('path: $expectedSdkPath'));
         expect(pubspec, contains('path: $expectedContractsPath'));
-        expect(pubspec, contains('mini_program_sdk: ^0.3.5'));
-        expect(pubspec, contains('mini_program_contracts: ^0.1.1'));
+        expect(pubspec, contains('mini_program_sdk: ^0.4.0-dev.3'));
+        expect(pubspec, contains('mini_program_contracts: ^0.2.0-dev.1'));
+        expect(pubspec, isNot(contains('mini_program_legacy_stac')));
         expect(pubspec, contains('dependency_overrides:'));
 
         final mainDart = await File(
           p.join(hostRootPath, 'lib', 'main.dart'),
         ).readAsString();
         expect(mainDart, contains('PreviewMiniProgramSource'));
+        expect(mainDart, isNot(contains('legacyStacRenderers')));
         expect(mainDart, contains('PreviewHostBridge'));
         expect(mainDart, contains("status.json"));
         expect(
@@ -381,9 +385,74 @@ void main() {
       final pubspec = await File(
         p.join(hostRootPath, 'pubspec.yaml'),
       ).readAsString();
-      expect(pubspec, contains('mini_program_sdk: ^0.3.5'));
-      expect(pubspec, contains('mini_program_contracts: ^0.1.1'));
+      expect(pubspec, contains('mini_program_sdk: ^0.4.0-dev.3'));
+      expect(pubspec, contains('mini_program_contracts: ^0.2.0-dev.1'));
       expect(pubspec, contains('http: ^1.5.0'));
+    });
+
+    test('Stac preview enables and registers the optional adapter', () async {
+      final hostRootPath = p.join(
+        tempDir.path,
+        'legacy_profile',
+        '.mini_program',
+        'preview_host',
+      );
+      final repoRootPath = p.join(tempDir.path, 'repo');
+      for (final packageName in <String>[
+        'mini_program_sdk',
+        'mini_program_contracts',
+        'mini_program_legacy_stac',
+      ]) {
+        await Directory(
+          p.join(repoRootPath, 'packages', packageName),
+        ).create(recursive: true);
+      }
+
+      final initializer = MiniProgramPreviewHostInitializer(
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              final resolvedHostRoot = p.join(
+                workingDirectory!,
+                arguments.last,
+              );
+              await Directory(
+                p.join(resolvedHostRoot, 'web'),
+              ).create(recursive: true);
+              await Directory(
+                p.join(resolvedHostRoot, 'windows'),
+              ).create(recursive: true);
+              await Directory(
+                p.join(resolvedHostRoot, 'lib'),
+              ).create(recursive: true);
+              return ProcessResult(0, 0, '', '');
+            },
+      );
+
+      final result = await initializer.initialize(
+        MiniProgramPreviewHostInitRequest(
+          hostRootPath: hostRootPath,
+          repoRootPath: repoRootPath,
+          screenFormat: 'stac',
+        ),
+      );
+      final pubspec = await File(
+        p.join(hostRootPath, 'pubspec.yaml'),
+      ).readAsString();
+      final mainDart = await File(
+        p.join(hostRootPath, 'lib', 'main.dart'),
+      ).readAsString();
+
+      expect(result.screenFormat, 'stac');
+      expect(result.legacyStacEnabled, isTrue);
+      expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0-dev.1'));
+      expect(pubspec, contains('packages/mini_program_legacy_stac'));
+      expect(mainDart, contains('mini_program_legacy_stac'));
+      expect(mainDart, contains('renderers: legacyStacRenderers'));
     });
   });
 }

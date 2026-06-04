@@ -11,6 +11,7 @@ class MiniProgramEmbeddingInitRequest {
     this.nativeRoutePath = '/native/profile-editor',
     this.force = false,
     this.withDemo = false,
+    this.withLegacyStac = false,
   });
 
   final String projectRootPath;
@@ -20,6 +21,7 @@ class MiniProgramEmbeddingInitRequest {
   final String nativeRoutePath;
   final bool force;
   final bool withDemo;
+  final bool withLegacyStac;
 }
 
 class MiniProgramEmbeddingInitResult {
@@ -31,6 +33,7 @@ class MiniProgramEmbeddingInitResult {
     required this.hostVersion,
     required this.nativeRoutePath,
     required this.withDemo,
+    required this.legacyStacEnabled,
     required this.createdPaths,
   });
 
@@ -41,6 +44,7 @@ class MiniProgramEmbeddingInitResult {
   final String hostVersion;
   final String nativeRoutePath;
   final bool withDemo;
+  final bool legacyStacEnabled;
   final List<String> createdPaths;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -51,6 +55,7 @@ class MiniProgramEmbeddingInitResult {
     'hostVersion': hostVersion,
     'nativeRoutePath': nativeRoutePath,
     'withDemo': withDemo,
+    'legacyStacEnabled': legacyStacEnabled,
     'createdPaths': createdPaths,
   };
 }
@@ -67,8 +72,9 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.3.6';
-  static const String _miniProgramContractsConstraint = '^0.1.1';
+  static const String _miniProgramSdkConstraint = '^0.4.0-dev.3';
+  static const String _miniProgramContractsConstraint = '^0.2.0-dev.1';
+  static const String _miniProgramLegacyStacConstraint = '^0.1.0-dev.1';
   static const String _publicDemoAppId = 'profile';
   static const String _publicDemoTitle = 'Public Demo';
   static const String _publicDemoApiBaseUri =
@@ -116,7 +122,13 @@ class MiniProgramEmbeddingInitializer {
         ? request.hostVersion!.trim()
         : _extractVersion(pubspecSource);
     final normalizedRoutePath = _normalizeRoutePath(request.nativeRoutePath);
-    final updatedPubspecSource = _ensureHostedDependencies(pubspecSource);
+    final legacyStacEnabled = request.withDemo || request.withLegacyStac;
+    final updatedPubspecSource = _ensureDependencies(
+      pubspecSource,
+      projectRootPath: projectRootPath,
+      repoRootPath: repoRootPath,
+      legacyStacEnabled: legacyStacEnabled,
+    );
 
     final integrationRootPath = p.join(projectRootPath, 'lib', 'mini_program');
     final integrationRootDir = Directory(integrationRootPath);
@@ -131,6 +143,7 @@ class MiniProgramEmbeddingInitializer {
       ): _buildRuntimeSetup(
         hostAppId: resolvedHostAppId,
         hostVersion: resolvedHostVersion,
+        legacyStacEnabled: legacyStacEnabled,
       ),
       p.join(integrationRootPath, 'mini_program_launcher.dart'):
           _buildLauncher(),
@@ -143,6 +156,7 @@ class MiniProgramEmbeddingInitializer {
         hostAppId: resolvedHostAppId,
         hostVersion: resolvedHostVersion,
         withDemo: request.withDemo,
+        legacyStacEnabled: legacyStacEnabled,
       ),
     };
     if (request.withDemo) {
@@ -186,6 +200,7 @@ class MiniProgramEmbeddingInitializer {
       hostVersion: resolvedHostVersion,
       nativeRoutePath: normalizedRoutePath,
       withDemo: request.withDemo,
+      legacyStacEnabled: legacyStacEnabled,
       createdPaths: createdPaths,
     );
   }
@@ -234,20 +249,91 @@ class MiniProgramEmbeddingInitializer {
     return trimmed.startsWith('/') ? trimmed : '/$trimmed';
   }
 
-  String _ensureHostedDependencies(String source) {
+  String _ensureDependencies(
+    String source, {
+    required String projectRootPath,
+    required String? repoRootPath,
+    required bool legacyStacEnabled,
+  }) {
+    final managedDependencies = <String, List<String>>{
+      'mini_program_sdk': <String>[
+        '  mini_program_sdk: $_miniProgramSdkConstraint',
+      ],
+      'mini_program_contracts': <String>[
+        '  mini_program_contracts: $_miniProgramContractsConstraint',
+      ],
+      if (legacyStacEnabled)
+        'mini_program_legacy_stac': <String>[
+          '  mini_program_legacy_stac: $_miniProgramLegacyStacConstraint',
+        ],
+    };
+    var updated = _upsertPackageSection(
+      source,
+      sectionName: 'dependencies',
+      managedPackages: managedDependencies,
+      removePackages: legacyStacEnabled
+          ? const <String>{}
+          : const <String>{'mini_program_legacy_stac'},
+    );
+    if (repoRootPath == null) {
+      return updated;
+    }
+
+    String relativePackagePath(String packageName) {
+      return p
+          .relative(
+            p.join(repoRootPath, 'packages', packageName),
+            from: projectRootPath,
+          )
+          .replaceAll('\\', '/');
+    }
+
+    updated = _upsertPackageSection(
+      updated,
+      sectionName: 'dependency_overrides',
+      managedPackages: <String, List<String>>{
+        'mini_program_sdk': <String>[
+          '  mini_program_sdk:',
+          '    path: ${relativePackagePath('mini_program_sdk')}',
+        ],
+        'mini_program_contracts': <String>[
+          '  mini_program_contracts:',
+          '    path: ${relativePackagePath('mini_program_contracts')}',
+        ],
+        if (legacyStacEnabled)
+          'mini_program_legacy_stac': <String>[
+            '  mini_program_legacy_stac:',
+            '    path: ${relativePackagePath('mini_program_legacy_stac')}',
+          ],
+      },
+      removePackages: legacyStacEnabled
+          ? const <String>{}
+          : const <String>{'mini_program_legacy_stac'},
+    );
+    return updated;
+  }
+
+  String _upsertPackageSection(
+    String source, {
+    required String sectionName,
+    required Map<String, List<String>> managedPackages,
+    Set<String> removePackages = const <String>{},
+  }) {
     final normalizedSource = source.replaceAll('\r\n', '\n');
     final lines = normalizedSource.split('\n');
     final dependenciesHeaderIndex = lines.indexWhere(
-      (line) => line.trim() == 'dependencies:',
+      (line) => line.trim() == '$sectionName:',
     );
 
     if (dependenciesHeaderIndex == -1) {
       final suffix = normalizedSource.endsWith('\n') || normalizedSource.isEmpty
           ? ''
           : '\n';
-      return '$normalizedSource${suffix}dependencies:\n'
-          '  mini_program_sdk: $_miniProgramSdkConstraint\n'
-          '  mini_program_contracts: $_miniProgramContractsConstraint\n';
+      return <String>[
+        '$normalizedSource$suffix$sectionName:',
+        ...managedPackages.values.expand((lines) => lines),
+        '',
+      ].join('\n');
     }
 
     var dependenciesEndIndex = dependenciesHeaderIndex + 1;
@@ -264,7 +350,7 @@ class MiniProgramEmbeddingInitializer {
       dependenciesEndIndex,
     );
     final rebuiltSectionLines = <String>[];
-    final preservedPackages = <String>{};
+    final writtenPackages = <String>{};
 
     for (var index = 0; index < sectionLines.length; index++) {
       final line = sectionLines[index];
@@ -275,10 +361,6 @@ class MiniProgramEmbeddingInitializer {
       }
 
       final packageName = packageMatch.group(1)!;
-      final shouldReplace =
-          packageName == 'mini_program_sdk' ||
-          packageName == 'mini_program_contracts';
-
       final blockLines = <String>[line];
       while (index + 1 < sectionLines.length &&
           !RegExp(r'^  [A-Za-z0-9_]+:').hasMatch(sectionLines[index + 1])) {
@@ -286,26 +368,22 @@ class MiniProgramEmbeddingInitializer {
         blockLines.add(sectionLines[index]);
       }
 
-      if (!shouldReplace) {
+      if (!managedPackages.containsKey(packageName) &&
+          !removePackages.contains(packageName)) {
         rebuiltSectionLines.addAll(blockLines);
         continue;
       }
-
-      preservedPackages.add(packageName);
-      rebuiltSectionLines.add(
-        packageName == 'mini_program_sdk'
-            ? '  mini_program_sdk: $_miniProgramSdkConstraint'
-            : '  mini_program_contracts: $_miniProgramContractsConstraint',
-      );
+      final replacement = managedPackages[packageName];
+      if (replacement != null) {
+        writtenPackages.add(packageName);
+        rebuiltSectionLines.addAll(replacement);
+      }
     }
 
-    if (!preservedPackages.contains('mini_program_sdk')) {
-      rebuiltSectionLines.add('  mini_program_sdk: $_miniProgramSdkConstraint');
-    }
-    if (!preservedPackages.contains('mini_program_contracts')) {
-      rebuiltSectionLines.add(
-        '  mini_program_contracts: $_miniProgramContractsConstraint',
-      );
+    for (final entry in managedPackages.entries) {
+      if (writtenPackages.add(entry.key)) {
+        rebuiltSectionLines.addAll(entry.value);
+      }
     }
 
     final rebuiltLines = <String>[
@@ -533,12 +611,19 @@ class MiniPrograms {
   String _buildRuntimeSetup({
     required String hostAppId,
     required String hostVersion,
+    required bool legacyStacEnabled,
   }) {
+    final legacyStacImport = legacyStacEnabled
+        ? "import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';\n"
+        : '';
+    final legacyStacConfig = legacyStacEnabled
+        ? '    renderers: legacyStacRenderers,\n'
+        : '';
     return '''
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
+${legacyStacImport}import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import 'app_host_bridge.dart';
 
@@ -596,7 +681,7 @@ MiniProgramConfig buildMiniProgramConfig({
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,
     cacheBundle: MiniProgramCacheBundle.inMemory(),
-  );
+$legacyStacConfig  );
 }
 
 MiniProgramSource _buildDefaultHttpSource(
@@ -691,7 +776,39 @@ String _platformName() {
     required String hostAppId,
     required String hostVersion,
     required bool withDemo,
+    required bool legacyStacEnabled,
   }) {
+    final legacyStacDependency = legacyStacEnabled
+        ? '\n  mini_program_legacy_stac: $_miniProgramLegacyStacConstraint'
+        : '';
+    final legacyStacSection = legacyStacEnabled
+        ? '''
+## Legacy Stac compatibility
+
+This host explicitly enables the optional legacy Stac renderer:
+
+```dart
+MiniProgramConfig(
+  renderers: legacyStacRenderers,
+  // ...
+)
+```
+
+Remove the `mini_program_legacy_stac` dependency, import, and renderer
+registration when this host no longer opens legacy Stac mini-programs.
+
+'''
+        : '''
+## Mp-only runtime
+
+This host uses the Mp renderer included in `mini_program_sdk` and does not
+install the optional legacy Stac adapter. Add it later with:
+
+```bash
+miniprogram embed init --with-legacy-stac --force
+```
+
+''';
     final demoSection = withDemo
         ? '''
 ## Public demo endpoint
@@ -788,13 +905,14 @@ Generated files:
 ```yaml
 dependencies:
   mini_program_sdk: $_miniProgramSdkConstraint
-  mini_program_contracts: $_miniProgramContractsConstraint
+  mini_program_contracts: $_miniProgramContractsConstraint$legacyStacDependency
 ```
 
 `embed init` updates `pubspec.yaml` to add these hosted packages if they are
 missing or still using local `path:` entries. Run `flutter pub get` after the
 scaffold is generated.
 
+$legacyStacSection
 ## 2. Keep main.dart small
 
 ```dart

@@ -43,23 +43,30 @@ Milestone 8 adds tracked Mp fixtures:
 - `mini_programs/mp_profile_center`
 - `mini_programs/mp_rewards_center`
 
-The super host bundles both fixtures alongside the legacy Stac fixtures. Use
-`tools/verify_mp_engine_release.ps1` before starting adapter extraction.
+The super host bundles both fixtures alongside the legacy Stac fixtures. The
+Mp-only reference host is `hosts/mp_only_host`.
 
 Do not publish local development packages before all release gates pass.
 
 ## Current Mp Engine Branch State
 
-The branch is Mp-first for new scaffolds and still legacy-compatible for Stac.
-The next major implementation step should be `mini_program_legacy_stac`
-extraction. Do not remove Stac from the base SDK until:
+Milestone 9 is complete:
 
-- Mp fixtures build, publish, and render in the super host
-- protected Firebase host flow still passes in Chrome and Android
-- AWS host flow still passes in Chrome and Android
-- Windows desktop host verification passes
-- release-size analysis shows the base SDK without Stac transitives is not
-  larger than the recorded baseline
+- `mini_program_sdk` is Mp-only by default
+- `mini_program_legacy_stac` owns legacy Stac rendering and parser behavior
+- generated and managed-preview Mp hosts do not install the adapter
+- mixed hosts register `legacyStacRenderers` explicitly
+- workflow status and VS Code report adapter readiness
+- `hosts/mp_only_host` is the dependency and size reference
+- the Mp-only arm64 APK is `16,503,270` bytes, a `26.3%` reduction from the
+  stable Stac baseline
+- the base SDK dependency graph is free of Stac and its targeted transitive
+  dependencies
+
+The next major step is Milestone 10: run protected Firebase/AWS host flows,
+complete interactive Chrome/Windows/Android gates, finalize migration docs, and
+prepare the stable merge. Do not publish the dev packages before those gates
+pass.
 
 ## Current Shipped Baseline
 

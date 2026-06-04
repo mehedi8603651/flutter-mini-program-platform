@@ -5,14 +5,14 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
   group('MiniProgramScreenRendererRegistry', () {
-    test('selects Stac for legacy manifests and Mp for Mp manifests', () {
+    test('selects Mp by default and rejects legacy Stac without adapter', () {
       final registry = MiniProgramScreenRendererRegistry.withDefaults();
 
       expect(
-        registry.resolve(
+        () => registry.resolve(
           _manifest(screenFormat: MiniProgramScreenFormats.stac),
         ),
-        isA<StacScreenRenderer>(),
+        throwsA(isA<MiniProgramRenderException>()),
       );
       expect(
         registry.resolve(
@@ -46,9 +46,22 @@ void main() {
     test('rejects duplicate renderer registrations', () {
       expect(
         () => MiniProgramScreenRendererRegistry.withDefaults(
-          const <MiniProgramScreenRenderer>[_DuplicateStacRenderer()],
+          const <MiniProgramScreenRenderer>[_DuplicateMpRenderer()],
         ),
         throwsArgumentError,
+      );
+    });
+
+    test('accepts an explicit legacy-format renderer', () {
+      final registry = MiniProgramScreenRendererRegistry.withDefaults(
+        const <MiniProgramScreenRenderer>[_TestStacRenderer()],
+      );
+
+      expect(
+        registry.resolve(
+          _manifest(screenFormat: MiniProgramScreenFormats.stac),
+        ),
+        isA<_TestStacRenderer>(),
       );
     });
   });
@@ -70,8 +83,21 @@ MiniProgramManifest _manifest({
   );
 }
 
-class _DuplicateStacRenderer extends MiniProgramScreenRenderer {
-  const _DuplicateStacRenderer();
+class _DuplicateMpRenderer extends MiniProgramScreenRenderer {
+  const _DuplicateMpRenderer();
+
+  @override
+  String get screenFormat => MiniProgramScreenFormats.mp;
+
+  @override
+  Set<int> get supportedSchemaVersions => const <int>{1};
+
+  @override
+  Widget render(MiniProgramRenderRequest request) => const SizedBox.shrink();
+}
+
+class _TestStacRenderer extends MiniProgramScreenRenderer {
+  const _TestStacRenderer();
 
   @override
   String get screenFormat => MiniProgramScreenFormats.stac;
