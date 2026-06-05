@@ -25,15 +25,14 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.4.0-dev.3
-  mini_program_contracts: ^0.2.0-dev.1
+  mini_program_sdk: ^0.4.0
+  mini_program_contracts: ^0.2.0
 ```
 
 For monorepo contributor work, keep `pubspec_overrides.yaml` so the package
 uses the local `mini_program_contracts` checkout.
 
-These dev versions are local to the Mp engine branch. Do not publish them until
-the migration release gates pass.
+Publish these versions only after the Mp engine release gates pass.
 
 ## Mp Renderer And Legacy Stac
 
@@ -66,7 +65,7 @@ Stac screens add and register the optional adapter:
 
 ```yaml
 dependencies:
-  mini_program_legacy_stac: ^0.1.0-dev.1
+  mini_program_legacy_stac: ^0.1.0
 ```
 
 ```dart

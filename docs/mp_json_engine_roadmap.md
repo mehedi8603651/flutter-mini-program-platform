@@ -34,19 +34,19 @@ helpers, not requirements of the Mp runtime.
 Develop this engine on the isolated `feature/mp-json-engine` worktree. Keep the
 current published Stac platform available for production fixes.
 
-Use local-only prerelease versions until the migration passes all release
+Use these reviewed release versions after the migration passes all release
 gates:
 
 ```text
-mini_program_contracts 0.2.0-dev.1
-mini_program_ui 0.1.0-dev.3
-mini_program_sdk 0.4.0-dev.3
-mini_program_legacy_stac 0.1.0-dev.1
-mini_program_tooling 0.4.0-dev.4
-mini_program_vscode 0.2.0-dev.2
+mini_program_contracts 0.2.0
+mini_program_ui 0.1.0
+mini_program_sdk 0.4.0
+mini_program_legacy_stac 0.1.0
+mini_program_tooling 0.4.0
+mini_program_vscode 0.2.0
 ```
 
-Do not publish these development packages. Use path overrides in local host
+Before publishing, verify the release gates with path overrides in local host
 apps and test workspaces.
 
 ## Contracts

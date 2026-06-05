@@ -46,7 +46,7 @@ Milestone 8 adds tracked Mp fixtures:
 The super host bundles both fixtures alongside the legacy Stac fixtures. The
 Mp-only reference host is `hosts/mp_only_host`.
 
-Do not publish local development packages before all release gates pass.
+Do not publish the release packages before all release gates pass.
 
 ## Current Mp Engine Branch State
 
@@ -93,8 +93,8 @@ The focused workflows and gates are documented in:
 
 The next release step is to record the exact protected Firebase physical
 Android run, execute the release verification script from a clean checkout,
-map local dev versions to reviewed stable versions, and prepare the stable
-merge. Do not publish the dev packages before all required release gates pass.
+confirm the reviewed stable versions, and prepare the stable release. Do not
+publish packages before all required release gates pass.
 
 Provider-neutral standalone API support is available through the contract
 commands:

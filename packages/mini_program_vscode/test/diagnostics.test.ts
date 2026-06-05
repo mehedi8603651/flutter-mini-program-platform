@@ -443,7 +443,7 @@ test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /CLI publisher backend commands/);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0-dev.3/);
+    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0/);
     assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
@@ -465,7 +465,7 @@ test('diagnostics warn when CLI lacks AWS data management support', async () => 
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0-dev.3/);
+    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0/);
     assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
@@ -501,7 +501,7 @@ test('diagnostics warn when CLI lacks Firebase write smoke support', async () =>
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0-dev.3/);
+    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0/);
     assert.match(text, /Firebase write smoke/);
     assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
   } finally {
@@ -567,7 +567,7 @@ test('diagnostics accept CLI with AWS data management support', async () => {
         supportsFirebaseFirestoreData: true,
         supportsFirebaseDataManagement: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.4.0-dev.3',
+        toolingVersion: '0.4.0',
       },
     });
 
@@ -576,8 +576,8 @@ test('diagnostics accept CLI with AWS data management support', async () => {
       text,
       /Configured CLI supports AWS DynamoDB, AWS\/Firebase paged routes, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery/,
     );
-    assert.match(text, /Version: 0.4.0-dev.3/);
-    assert.doesNotMatch(text, /mini_program_tooling 0.4.0-dev.3/);
+    assert.match(text, /Version: 0.4.0/);
+    assert.doesNotMatch(text, /mini_program_tooling 0.4.0/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

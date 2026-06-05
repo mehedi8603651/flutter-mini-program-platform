@@ -133,7 +133,7 @@ Record results in [Mp engine size baseline](mp_engine_size_baseline.md).
 - [ ] Firebase/AWS protected handoff docs match current CLI help.
 - [ ] Release checklist evidence is current.
 - [ ] Changelogs describe public behavior.
-- [ ] Local dev versions are mapped to reviewed stable release versions.
+- [ ] Package versions match the reviewed stable release versions.
 - [ ] Pub package dry-runs pass before publishing.
 - [ ] VS Code VSIX builds and installs locally.
 
@@ -159,4 +159,3 @@ mini_program_legacy_stac
 mini_program_tooling
 mini_program_vscode
 ```
-

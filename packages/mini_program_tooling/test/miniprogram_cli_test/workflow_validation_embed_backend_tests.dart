@@ -126,7 +126,7 @@ void _registerWorkflowValidationEmbedBackendTests() {
         'version': '1.0.0',
         'entry': 'mp_coupon_center_home',
         'contractVersion': '1.0.0',
-        'sdkVersionRange': '>=0.4.0-dev.2 <0.5.0',
+        'sdkVersionRange': '>=0.4.0 <0.5.0',
         'requiredCapabilities': <String>['analytics'],
         'screenFormat': 'mp',
         'screenSchemaVersion': 1,
@@ -381,7 +381,7 @@ environment:
   sdk: ^3.10.0
 
 dependencies:
-  mini_program_legacy_stac: ^0.1.0-dev.1
+  mini_program_legacy_stac: ^0.1.0
 ''');
     final stdoutBuffer = StringBuffer();
 
@@ -1194,7 +1194,7 @@ dependencies:
     );
     expect(
       await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-      contains('mini_program_sdk: ^0.4.0-dev.3'),
+      contains('mini_program_sdk: ^0.4.0'),
     );
   });
 
@@ -1240,7 +1240,7 @@ dependencies:
         'mini_program_runtime_setup.dart',
       ),
     ).readAsString();
-    expect(pubspecSource, contains('mini_program_legacy_stac: ^0.1.0-dev.1'));
+    expect(pubspecSource, contains('mini_program_legacy_stac: ^0.1.0'));
     expect(runtimeSource, contains('legacyStacRenderers'));
     final endpointSource = await File(
       p.join(projectRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),

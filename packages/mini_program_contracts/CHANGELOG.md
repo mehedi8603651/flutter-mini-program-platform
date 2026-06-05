@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0-dev.1
+## 0.2.0
 
 - add `screenFormat` and `screenSchemaVersion` manifest metadata for the Mp JSON engine
 - default missing `screenFormat` to legacy `stac`

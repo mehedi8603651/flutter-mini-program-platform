@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0-dev.2
+## 0.2.0
 
 - Make Mp-only host setup the recommended default.
 - Add explicit Mp plus legacy Stac and public legacy Stac demo host choices.

@@ -3,8 +3,7 @@
 This guide verifies an Mp JSON mini-program through protected Firebase and AWS
 delivery, publisher backends, partner handoff, and a real Flutter host.
 
-Use it from the `feature/mp-json-engine` worktree while the Mp packages remain
-local-only development versions.
+Use it from the release branch before publishing the Mp packages.
 
 ## Architecture
 
@@ -32,7 +31,7 @@ miniprogram capabilities --json
 Confirm the CLI reports:
 
 ```text
-mini_program_tooling 0.4.0-dev.4
+mini_program_tooling 0.4.0
 host.legacy_stac_adapter
 publisher_backend.aws.access_key_enforcement
 ```

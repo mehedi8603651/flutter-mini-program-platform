@@ -908,7 +908,7 @@ function buildCliCapabilityCheck(capability: {
         ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
         : supportsFirebaseHostingPublish && !supportsFirebaseHostingCors
           ? 'Configured CLI supports Firebase Hosting publish but lacks the 0.3.42 CORS/version metadata fix.'
-        : 'Configured CLI is missing mini_program_tooling 0.4.0-dev.3 Mp-aware Firebase starter support.',
+        : 'Configured CLI is missing mini_program_tooling 0.4.0 Mp-aware Firebase starter support.',
     capability.detail,
     supportsExpectedCli
       ? undefined

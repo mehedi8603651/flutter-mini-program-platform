@@ -27,7 +27,7 @@ void _registerPublisherBackendContractTests() {
 
         expect(capabilitiesExitCode, 0);
         final json = jsonDecode(capabilitiesOut.toString()) as Map;
-        expect(json['toolingVersion'], '0.4.0-dev.5');
+        expect(json['toolingVersion'], '0.4.0');
         expect(
           json['capabilityIds'],
           contains('publisher_backend.contract.smoke'),

@@ -575,7 +575,7 @@ export async function ensurePublisherBackendFirebaseStarterUiCli049(
     ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
     : '';
   const message =
-    'MiniProgram CLI 0.4.0-dev.3 or newer is required for Mp-aware Firebase starter UI generation. ' +
+    'MiniProgram CLI 0.4.0 or newer is required for Mp-aware Firebase starter UI generation. ' +
     `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {
@@ -604,7 +604,7 @@ export async function ensurePublisherBackendContractCli0405(
     ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
     : '';
   const message =
-    'MiniProgram CLI 0.4.0-dev.5 or newer is required for provider-neutral publisher backend API contracts. ' +
+    'MiniProgram CLI 0.4.0 or newer is required for provider-neutral publisher backend API contracts. ' +
     `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {
@@ -633,7 +633,7 @@ export async function ensureLegacyStacAdapterCli040(
     ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
     : '';
   const message =
-    'MiniProgram CLI 0.4.0-dev.4 or newer is required for optional legacy Stac host setup. ' +
+    'MiniProgram CLI 0.4.0 or newer is required for optional legacy Stac host setup. ' +
     `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {
@@ -659,7 +659,7 @@ export async function ensureMpCreateCli040(
     ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
     : '';
   const message =
-    'MiniProgram CLI 0.4.0-dev.3 or newer is required for Mp JSON mini-program creation. ' +
+    'MiniProgram CLI 0.4.0 or newer is required for Mp JSON mini-program creation. ' +
     `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {

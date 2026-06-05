@@ -247,7 +247,7 @@ void main() {
   "version": "1.2.3",
   "entry": "coupon_center_home",
   "contractVersion": "1.0.0",
-  "sdkVersionRange": ">=0.4.0-dev.2 <0.5.0",
+  "sdkVersionRange": ">=0.4.0 <0.5.0",
   "requiredCapabilities": ["analytics"],
   "screenFormat": "mp",
   "screenSchemaVersion": 1

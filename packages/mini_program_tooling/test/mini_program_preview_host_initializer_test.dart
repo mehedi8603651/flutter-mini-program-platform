@@ -91,8 +91,8 @@ void main() {
             .replaceAll('\\', '/');
         expect(pubspec, contains('path: $expectedSdkPath'));
         expect(pubspec, contains('path: $expectedContractsPath'));
-        expect(pubspec, contains('mini_program_sdk: ^0.4.0-dev.3'));
-        expect(pubspec, contains('mini_program_contracts: ^0.2.0-dev.1'));
+        expect(pubspec, contains('mini_program_sdk: ^0.4.0'));
+        expect(pubspec, contains('mini_program_contracts: ^0.2.0'));
         expect(pubspec, isNot(contains('mini_program_legacy_stac')));
         expect(pubspec, contains('dependency_overrides:'));
 
@@ -385,8 +385,8 @@ void main() {
       final pubspec = await File(
         p.join(hostRootPath, 'pubspec.yaml'),
       ).readAsString();
-      expect(pubspec, contains('mini_program_sdk: ^0.4.0-dev.3'));
-      expect(pubspec, contains('mini_program_contracts: ^0.2.0-dev.1'));
+      expect(pubspec, contains('mini_program_sdk: ^0.4.0'));
+      expect(pubspec, contains('mini_program_contracts: ^0.2.0'));
       expect(pubspec, contains('http: ^1.5.0'));
     });
 
@@ -449,7 +449,7 @@ void main() {
 
       expect(result.screenFormat, 'stac');
       expect(result.legacyStacEnabled, isTrue);
-      expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0-dev.1'));
+      expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0'));
       expect(pubspec, contains('packages/mini_program_legacy_stac'));
       expect(mainDart, contains('mini_program_legacy_stac'));
       expect(mainDart, contains('renderers: legacyStacRenderers'));

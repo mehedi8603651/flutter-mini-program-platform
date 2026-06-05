@@ -1,5 +1,5 @@
 # Changelog
-## 0.4.0-dev.4
+## 0.4.0
 - make generated and managed-preview hosts Mp-only by default
 - add `embed init --with-legacy-stac` and automatically enable the optional
   adapter for the public legacy Stac demo
