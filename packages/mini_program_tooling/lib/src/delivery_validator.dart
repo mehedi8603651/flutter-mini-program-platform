@@ -135,6 +135,7 @@ class DeliveryRepositoryValidator {
       repoRootPath: normalizedRepoRoot,
       backendApiRootPath: backendApiRoot.path,
       authoredManifests: authoredManifests,
+      publishedVersionsByMiniProgram: publishedVersionsByMiniProgram,
       miniProgramId: miniProgramId,
       messages: messages,
     );
@@ -943,6 +944,7 @@ class DeliveryRepositoryValidator {
     required String repoRootPath,
     required String backendApiRootPath,
     required Map<String, MiniProgramManifest> authoredManifests,
+    required Map<String, Set<String>> publishedVersionsByMiniProgram,
     required String? miniProgramId,
     required List<DeliveryValidationMessage> messages,
   }) async {
@@ -961,7 +963,10 @@ class DeliveryRepositoryValidator {
         .toList();
     files.sort((a, b) => a.path.compareTo(b.path));
 
-    final knownMiniProgramIds = authoredManifests.keys.toSet();
+    final knownMiniProgramIds = <String>{
+      ...authoredManifests.keys,
+      ...publishedVersionsByMiniProgram.keys,
+    };
 
     for (final file in files) {
       final filePolicyId = path.basenameWithoutExtension(file.path);
@@ -1071,7 +1076,7 @@ class DeliveryRepositoryValidator {
               code: 'secure_api_policy_unknown_source',
               path: _relative(repoRootPath, file.path),
               message:
-                  'allowedSources contains "$source", but no authored mini-program manifest was found for it.',
+                  'allowedSources contains "$source", but no authored manifest or published backend artifacts were found for it.',
             ),
           );
         }

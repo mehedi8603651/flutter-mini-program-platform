@@ -32,6 +32,35 @@ void main() {
     });
 
     test(
+      'accepts secure API sources backed only by published artifacts',
+      () async {
+        await _writeValidFixture(tempDir.path, miniProgramId: 'feedback_form');
+        await Directory(
+          path.join(tempDir.path, 'mini_programs', 'feedback_form'),
+        ).delete(recursive: true);
+
+        final report = await const DeliveryRepositoryValidator().validate(
+          repoRootPath: tempDir.path,
+        );
+
+        expect(report.hasErrors, isFalse);
+        expect(
+          report.messages.any(
+            (message) => message.code == 'secure_api_policy_unknown_source',
+          ),
+          isFalse,
+        );
+        expect(
+          report.messages.any(
+            (message) =>
+                message.code == 'capability_policy_missing_authored_manifest',
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
       'fails when secure_api manifest allows entry-screen caching',
       () async {
         await _writeValidFixture(
