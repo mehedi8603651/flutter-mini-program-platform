@@ -32,6 +32,7 @@ Commands:
   backend status [--json]
   backend reset-local --yes
   publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore] [--with-starter-ui]
+  publisher-backend contract init|validate|smoke|handoff [options]
   publisher-backend run --port 9090
   publisher-backend status [--json]
   publisher-backend stop
@@ -59,6 +60,10 @@ Commands:
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
   urls [--port 9090]
+  contract init --backend-base-url <url> [--mini-program-root <path>] [--public]
+  contract validate [--mini-program-root <path>] [--contract <file>] [--json]
+  contract smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--json]
+  contract handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
   aws deploy --env <env-name> [--mini-program-root <path>]
   aws status --env <env-name> [--mini-program-root <path>] [--json]
   aws outputs --env <env-name> [--mini-program-root <path>] [--json]
@@ -88,6 +93,16 @@ Commands:
   firebase data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
   firebase data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
   firebase destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
+''';
+
+  String _publisherBackendContractUsage() => '''
+Usage: miniprogram publisher-backend contract <command> [arguments]
+
+Commands:
+  init --backend-base-url <url> [--mini-program-root <path>] [--public]
+  validate [--mini-program-root <path>] [--contract <file>] [--json]
+  smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--json]
+  handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
 ''';
 
   String _publisherBackendAwsUsage() => '''

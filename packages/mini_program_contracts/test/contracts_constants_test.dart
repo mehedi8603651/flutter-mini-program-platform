@@ -82,6 +82,43 @@ void main() {
       );
     });
 
+    test('publisher backend header and error values stay stable', () {
+      expect(
+        MiniProgramPublisherBackendHeaders.accessKey,
+        'x-mini-program-access-key',
+      );
+      expect(MiniProgramPublisherBackendHeaders.appId, 'x-mini-program-app-id');
+      expect(
+        MiniProgramPublisherBackendHeaders.hostApp,
+        'x-mini-program-host-app',
+      );
+      expect(
+        MiniProgramPublisherBackendHeaders.hostVersion,
+        'x-mini-program-host-version',
+      );
+      expect(
+        MiniProgramPublisherBackendHeaders.sdkVersion,
+        'x-mini-program-sdk-version',
+      );
+      expect(MiniProgramPublisherBackendHeaders.authorization, 'authorization');
+      expect(
+        MiniProgramPublisherBackendHeaders.requestId,
+        'x-mini-program-request-id',
+      );
+      expect(
+        MiniProgramPublisherBackendHeaders.contractVersion,
+        'x-mini-program-backend-contract-version',
+      );
+      expect(
+        MiniProgramPublisherBackendErrorCodes.unreachable,
+        'publisher_backend_unreachable',
+      );
+      expect(
+        MiniProgramPublisherBackendErrorCodes.unexpectedStatus,
+        'publisher_backend_unexpected_status',
+      );
+    });
+
     test('cache policy values stay stable', () {
       expect(MiniProgramCacheMode.staleWhileError.name, 'staleWhileError');
       expect(MiniProgramCacheMode.noCache.name, 'noCache');

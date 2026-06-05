@@ -22,6 +22,8 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         return _runPublisherBackendStop(arguments.sublist(1));
       case 'urls':
         return _runPublisherBackendUrls(arguments.sublist(1));
+      case 'contract':
+        return _runPublisherBackendContract(arguments.sublist(1));
       case 'aws':
         return _runPublisherBackendAws(arguments.sublist(1));
       case 'firebase':

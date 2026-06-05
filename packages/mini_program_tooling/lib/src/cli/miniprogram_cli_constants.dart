@@ -7,7 +7,7 @@ const List<String> _supportedPublishTargets = <String>[
   'firebase-hosting',
 ];
 
-const String _miniProgramToolingVersion = '0.4.0-dev.4';
+const String _miniProgramToolingVersion = '0.4.0-dev.5';
 
 const List<String> _capabilityIds = <String>[
   'host.legacy_stac_adapter',
@@ -24,6 +24,10 @@ const List<String> _capabilityIds = <String>[
   'publisher_backend.aws.dynamodb.data.import',
   'publisher_backend.aws.dynamodb.data.redemptions',
   'publisher_backend.aws.destroy.data_loss_guard',
+  'publisher_backend.contract.init',
+  'publisher_backend.contract.validate',
+  'publisher_backend.contract.smoke',
+  'publisher_backend.contract.handoff',
   'publisher_backend.firebase_functions.scaffold',
   'publisher_backend.firebase.deploy',
   'publisher_backend.firebase.status',

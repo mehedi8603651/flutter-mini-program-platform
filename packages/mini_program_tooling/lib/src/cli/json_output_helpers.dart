@@ -66,6 +66,10 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisherBackendAwsDynamoDbDataImport': true,
         'publisherBackendAwsDynamoDbDataRedemptions': true,
         'publisherBackendAwsDestroyDataLossGuard': true,
+        'publisherBackendContractInit': true,
+        'publisherBackendContractValidate': true,
+        'publisherBackendContractSmoke': true,
+        'publisherBackendContractHandoff': true,
         'publisherBackendFirebaseFunctionsScaffold': true,
         'publisherBackendFirebaseDeploy': true,
         'publisherBackendFirebaseStatus': true,
@@ -123,6 +127,10 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisher-backend aws data import',
         'publisher-backend aws data redemptions',
         'publisher-backend aws destroy --confirm-data-loss',
+        'publisher-backend contract init',
+        'publisher-backend contract validate',
+        'publisher-backend contract smoke',
+        'publisher-backend contract handoff',
       ],
     };
   }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:path/path.dart' as p;
 
 import 'mini_program_cloud_publisher.dart';
@@ -24,6 +25,7 @@ import 'mini_program_publisher.dart';
 import 'mini_program_scaffolder.dart';
 import 'mini_program_static_publisher.dart';
 import 'mini_program_workflow_status.dart';
+import 'publisher_backend_contract_controller.dart';
 import 'publisher_backend_starter.dart';
 
 part 'cli/miniprogram_cli_constants.dart';
@@ -34,6 +36,7 @@ part 'cli/host_partner_commands.dart';
 part 'cli/env_commands.dart';
 part 'cli/backend_commands.dart';
 part 'cli/publisher_backend_commands.dart';
+part 'cli/publisher_backend_contract_commands.dart';
 part 'cli/publisher_backend_aws_commands.dart';
 part 'cli/publisher_backend_firebase_commands.dart';
 part 'cli/firebase_host_diagnostics.dart';
@@ -70,6 +73,8 @@ class MiniprogramCli {
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     MiniProgramPathResolver pathResolver = const MiniProgramPathResolver(),
+    PublisherBackendContractController publisherBackendContractController =
+        const PublisherBackendContractController(),
     PublisherBackendStarter publisherBackendStarter =
         const PublisherBackendStarter(),
     StringSink? stdoutSink,
@@ -92,6 +97,7 @@ class MiniprogramCli {
        _doctor = doctor,
        _stateStore = stateStore,
        _pathResolver = pathResolver,
+       _publisherBackendContractController = publisherBackendContractController,
        _publisherBackendStarter = publisherBackendStarter,
        _stdout = stdoutSink ?? stdout,
        _stderr = stderrSink ?? stderr,
@@ -114,6 +120,7 @@ class MiniprogramCli {
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
   final MiniProgramPathResolver _pathResolver;
+  final PublisherBackendContractController _publisherBackendContractController;
   final PublisherBackendStarter _publisherBackendStarter;
   final StringSink _stdout;
   final StringSink _stderr;
