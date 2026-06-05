@@ -1,6 +1,9 @@
 import 'mp_action.dart';
 import 'mp_json.dart';
 import 'mp_node.dart';
+import 'widgets/display_widgets.dart';
+import 'widgets/layout_widgets.dart';
+import 'widgets/list_widgets.dart';
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
@@ -51,6 +54,101 @@ abstract final class Mp {
       },
     );
   }
+
+  /// Creates padding around [child].
+  static MpNode padding({
+    required MpNode child,
+    num? all,
+    num? horizontal,
+    num? vertical,
+    num? left,
+    num? top,
+    num? right,
+    num? bottom,
+  }) => buildPaddingNode(
+    child: child,
+    all: all,
+    horizontal: horizontal,
+    vertical: vertical,
+    left: left,
+    top: top,
+    right: right,
+    bottom: bottom,
+  );
+
+  /// Creates a styled container around [child].
+  static MpNode container({
+    required MpNode child,
+    num? width,
+    num? height,
+    num? paddingAll,
+    num? paddingHorizontal,
+    num? paddingVertical,
+    num? paddingLeft,
+    num? paddingTop,
+    num? paddingRight,
+    num? paddingBottom,
+    String? backgroundColor,
+    String? borderColor,
+    num? borderWidth,
+    num? borderRadius,
+  }) => buildContainerNode(
+    child: child,
+    width: width,
+    height: height,
+    paddingAll: paddingAll,
+    paddingHorizontal: paddingHorizontal,
+    paddingVertical: paddingVertical,
+    paddingLeft: paddingLeft,
+    paddingTop: paddingTop,
+    paddingRight: paddingRight,
+    paddingBottom: paddingBottom,
+    backgroundColor: backgroundColor,
+    borderColor: borderColor,
+    borderWidth: borderWidth,
+    borderRadius: borderRadius,
+  );
+
+  /// Creates a nested or section-level scroll view.
+  static MpNode scrollView({
+    required MpNode child,
+    num? paddingAll,
+    num? paddingHorizontal,
+    num? paddingVertical,
+    num? paddingLeft,
+    num? paddingTop,
+    num? paddingRight,
+    num? paddingBottom,
+  }) => buildScrollViewNode(
+    child: child,
+    paddingAll: paddingAll,
+    paddingHorizontal: paddingHorizontal,
+    paddingVertical: paddingVertical,
+    paddingLeft: paddingLeft,
+    paddingTop: paddingTop,
+    paddingRight: paddingRight,
+    paddingBottom: paddingBottom,
+  );
+
+  /// Creates a horizontal divider.
+  static MpNode divider({
+    num thickness = 1,
+    num spacing = 12,
+    String color = '#E5E7EB',
+  }) => buildDividerNode(thickness: thickness, spacing: spacing, color: color);
+
+  /// Creates an icon from the Mp icon allowlist.
+  static MpNode icon(
+    String name, {
+    num size = 20,
+    String? color,
+    String? semanticLabel,
+  }) => buildIconNode(
+    name,
+    size: size,
+    color: color,
+    semanticLabel: semanticLabel,
+  );
 
   /// Creates an image node.
   static MpNode image({required String src, String? alt}) => MpNode(
@@ -254,6 +352,40 @@ abstract final class Mp {
     'secondaryButton',
     props: <String, Object?>{'label': label, 'action': action},
   );
+
+  /// Creates a compact list row.
+  static MpNode listTile({
+    required String title,
+    String? subtitle,
+    String? leadingIcon,
+    String? trailingIcon,
+    String? badge,
+    MpAction? action,
+  }) => buildListTileNode(
+    title: title,
+    subtitle: subtitle,
+    leadingIcon: leadingIcon,
+    trailingIcon: trailingIcon,
+    badge: badge,
+    action: action,
+  );
+
+  /// Creates a small status or filter chip.
+  static MpNode chip({
+    required String label,
+    String tone = 'neutral',
+    String? leadingIcon,
+    MpAction? action,
+  }) => buildChipNode(
+    label: label,
+    tone: tone,
+    leadingIcon: leadingIcon,
+    action: action,
+  );
+
+  /// Creates a small status badge.
+  static MpNode badge({required String label, String tone = 'info'}) =>
+      buildBadgeNode(label: label, tone: tone);
 
   /// Creates an auth state builder.
   static MpNode authBuilder({

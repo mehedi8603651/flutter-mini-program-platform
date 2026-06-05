@@ -36,6 +36,34 @@ void main() {
       expect(() => Mp.sizedBox(), throwsArgumentError);
     });
 
+    test('core design widget helpers reject invalid configuration', () {
+      expect(
+        () => Mp.padding(all: -1, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.container(width: -1, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.container(backgroundColor: 'red', child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(() => Mp.divider(thickness: -1), throwsArgumentError);
+      expect(() => Mp.divider(color: '#FFF'), throwsArgumentError);
+      expect(() => Mp.icon(''), throwsArgumentError);
+      expect(() => Mp.icon('video'), throwsArgumentError);
+      expect(() => Mp.listTile(title: ''), throwsArgumentError);
+      expect(
+        () => Mp.listTile(title: 'Profile', leadingIcon: 'video'),
+        throwsArgumentError,
+      );
+      expect(() => Mp.chip(label: ''), throwsArgumentError);
+      expect(() => Mp.chip(label: 'New', tone: 'brand'), throwsArgumentError);
+      expect(() => Mp.badge(label: ''), throwsArgumentError);
+      expect(() => Mp.badge(label: 'New', tone: 'brand'), throwsArgumentError);
+    });
+
     test('runtime parity helpers reject invalid required fields', () {
       expect(
         () => Mp.backendBuilder(requestId: '', endpoint: 'home/bootstrap'),

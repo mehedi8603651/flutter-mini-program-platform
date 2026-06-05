@@ -48,6 +48,30 @@ class MpScreenValidator {
 
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
+  static final RegExp _hexColorPattern = RegExp(
+    r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$',
+  );
+  static const Set<String> _toneNames = <String>{
+    'neutral',
+    'info',
+    'success',
+    'warning',
+    'danger',
+  };
+  static const Set<String> _iconNames = <String>{
+    'person',
+    'settings',
+    'chevronRight',
+    'star',
+    'gift',
+    'check',
+    'warning',
+    'info',
+    'lock',
+    'mail',
+    'home',
+    'search',
+  };
 
   /// Validates an Mp screen document without rendering it.
   void validate(Map<String, dynamic> json, {required String expectedScreenId}) {
@@ -195,6 +219,46 @@ class MpScreenValidator {
         path: path,
       ),
       'card' => _parseCardNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'padding' => _parsePaddingNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'container' => _parseContainerNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'scrollView' => _parseScrollViewNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'divider' => _parseDividerNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'icon' => _parseIconNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'listTile' => _parseListTileNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'chip' => _parseChipNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'badge' => _parseBadgeNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -351,6 +415,256 @@ class MpScreenValidator {
       type: 'card',
       props: const <String, dynamic>{},
       children: children,
+    );
+  }
+
+  _MpNode _parsePaddingNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{'padding'}, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'padding', path: path);
+    return _MpNode(
+      type: 'padding',
+      props: <String, dynamic>{
+        'padding': _parseSpacing(props['padding'], path: '$path.props.padding'),
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseContainerNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'width',
+      'height',
+      'padding',
+      'backgroundColor',
+      'borderColor',
+      'borderWidth',
+      'borderRadius',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'container', path: path);
+    final parsedProps = <String, dynamic>{
+      if (props.containsKey('backgroundColor'))
+        'backgroundColor': _requiredHexColor(
+          props,
+          'backgroundColor',
+          path: '$path.props',
+        ),
+      if (props.containsKey('borderColor'))
+        'borderColor': _requiredHexColor(
+          props,
+          'borderColor',
+          path: '$path.props',
+        ),
+      if (props.containsKey('borderRadius'))
+        'borderRadius': _optionalNonNegativeNumberValue(
+          props['borderRadius'],
+          path: '$path.props.borderRadius',
+        ),
+      if (props.containsKey('borderWidth'))
+        'borderWidth': _optionalNonNegativeNumberValue(
+          props['borderWidth'],
+          path: '$path.props.borderWidth',
+        ),
+      if (props.containsKey('height'))
+        'height': _optionalNonNegativeNumberValue(
+          props['height'],
+          path: '$path.props.height',
+        ),
+      if (props.containsKey('padding'))
+        'padding': _parseSpacing(props['padding'], path: '$path.props.padding'),
+      if (props.containsKey('width'))
+        'width': _optionalNonNegativeNumberValue(
+          props['width'],
+          path: '$path.props.width',
+        ),
+    };
+    return _MpNode(type: 'container', props: parsedProps, children: children);
+  }
+
+  _MpNode _parseScrollViewNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{'padding'}, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'scrollView', path: path);
+    return _MpNode(
+      type: 'scrollView',
+      props: <String, dynamic>{
+        if (props.containsKey('padding'))
+          'padding': _parseSpacing(
+            props['padding'],
+            path: '$path.props.padding',
+          ),
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseDividerNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'thickness',
+      'spacing',
+      'color',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'divider',
+      props: <String, dynamic>{
+        'color': props.containsKey('color')
+            ? _requiredHexColor(props, 'color', path: '$path.props')
+            : '#E5E7EB',
+        'spacing':
+            _optionalNonNegativeNumberValue(
+              props['spacing'],
+              path: '$path.props.spacing',
+            ) ??
+            12,
+        'thickness':
+            _optionalNonNegativeNumberValue(
+              props['thickness'],
+              path: '$path.props.thickness',
+            ) ??
+            1,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseIconNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'name',
+      'size',
+      'color',
+      'semanticLabel',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'icon',
+      props: <String, dynamic>{
+        if (props.containsKey('color'))
+          'color': _requiredHexColor(props, 'color', path: '$path.props'),
+        'name': _requiredIconName(props, 'name', path: '$path.props'),
+        if (props.containsKey('semanticLabel'))
+          'semanticLabel': _requiredString(
+            props,
+            'semanticLabel',
+            path: '$path.props',
+          ),
+        'size':
+            _optionalNonNegativeNumberValue(
+              props['size'],
+              path: '$path.props.size',
+            ) ??
+            20,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseListTileNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'title',
+      'subtitle',
+      'leadingIcon',
+      'trailingIcon',
+      'badge',
+      'action',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'listTile',
+      props: <String, dynamic>{
+        if (props.containsKey('action'))
+          'action': _parseAction(props['action'], path: '$path.props.action'),
+        if (props.containsKey('badge'))
+          'badge': _requiredString(props, 'badge', path: '$path.props'),
+        if (props.containsKey('leadingIcon'))
+          'leadingIcon': _requiredIconName(
+            props,
+            'leadingIcon',
+            path: '$path.props',
+          ),
+        if (props.containsKey('subtitle'))
+          'subtitle': _requiredString(props, 'subtitle', path: '$path.props'),
+        'title': _requiredString(props, 'title', path: '$path.props'),
+        if (props.containsKey('trailingIcon'))
+          'trailingIcon': _requiredIconName(
+            props,
+            'trailingIcon',
+            path: '$path.props',
+          ),
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseChipNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'label',
+      'tone',
+      'leadingIcon',
+      'action',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'chip',
+      props: <String, dynamic>{
+        if (props.containsKey('action'))
+          'action': _parseAction(props['action'], path: '$path.props.action'),
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        if (props.containsKey('leadingIcon'))
+          'leadingIcon': _requiredIconName(
+            props,
+            'leadingIcon',
+            path: '$path.props',
+          ),
+        'tone': _optionalTone(props, 'tone', path: '$path.props') ?? 'neutral',
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseBadgeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'label',
+      'tone',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'badge',
+      props: <String, dynamic>{
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        'tone': _optionalTone(props, 'tone', path: '$path.props') ?? 'info',
+      },
+      children: const <_MpNode>[],
     );
   }
 
@@ -1442,6 +1756,107 @@ class MpScreenValidator {
     }
   }
 
+  static void _validateSingleChild(
+    List<_MpNode> children, {
+    required String nodeType,
+    required String path,
+  }) {
+    if (children.length != 1) {
+      _fail('Mp $nodeType requires exactly one child.', path: '$path.children');
+    }
+  }
+
+  static Map<String, dynamic> _parseSpacing(
+    Object? value, {
+    required String path,
+  }) {
+    if (value == null) {
+      return const <String, dynamic>{};
+    }
+    if (value is! Map) {
+      _fail('Mp spacing must be an object.', path: path);
+    }
+    final spacing = Map<String, dynamic>.from(value);
+    _validateObjectKeys(spacing, const <String>{
+      'left',
+      'top',
+      'right',
+      'bottom',
+    }, path: path);
+    return <String, dynamic>{
+      if (spacing.containsKey('bottom'))
+        'bottom': _optionalNonNegativeNumberValue(
+          spacing['bottom'],
+          path: '$path.bottom',
+        ),
+      if (spacing.containsKey('left'))
+        'left': _optionalNonNegativeNumberValue(
+          spacing['left'],
+          path: '$path.left',
+        ),
+      if (spacing.containsKey('right'))
+        'right': _optionalNonNegativeNumberValue(
+          spacing['right'],
+          path: '$path.right',
+        ),
+      if (spacing.containsKey('top'))
+        'top': _optionalNonNegativeNumberValue(
+          spacing['top'],
+          path: '$path.top',
+        ),
+    };
+  }
+
+  static String _requiredHexColor(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = _requiredStableString(json, key, path: path);
+    if (!_hexColorPattern.hasMatch(value)) {
+      _fail(
+        'Mp "$key" must be a hex color in #RRGGBB or #AARRGGBB format.',
+        path: '$path.$key',
+      );
+    }
+    return value;
+  }
+
+  static String _requiredIconName(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = _requiredStableString(json, key, path: path);
+    if (!_iconNames.contains(value)) {
+      _fail(
+        'Mp "$key" is not an allowed icon name.',
+        path: '$path.$key',
+        details: <String, dynamic>{'iconName': value},
+      );
+    }
+    return value;
+  }
+
+  static String? _optionalTone(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!_toneNames.contains(value)) {
+      _fail(
+        'Mp "$key" must be one of: ${_toneNames.join(', ')}.',
+        path: '$path.$key',
+        details: <String, dynamic>{'tone': value},
+      );
+    }
+    return value;
+  }
+
   static String _requiredStableString(
     Map<String, dynamic> json,
     String key, {
@@ -1578,6 +1993,19 @@ class MpScreenValidator {
     if (value is! num || value < 0 || !value.isFinite) {
       _fail('Mp numeric value must be finite and non-negative.', path: path);
     }
+  }
+
+  static num? _optionalNonNegativeNumberValue(
+    Object? value, {
+    required String path,
+  }) {
+    if (value == null) {
+      return null;
+    }
+    if (value is! num || value < 0 || !value.isFinite) {
+      _fail('Mp numeric value must be finite and non-negative.', path: path);
+    }
+    return value;
   }
 
   static void _validateImageUrl(String src, {required String path}) {

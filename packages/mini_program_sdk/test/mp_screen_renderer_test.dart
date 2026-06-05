@@ -147,6 +147,53 @@ void main() {
       );
     });
 
+    test('accepts author-generated core design widget JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.padding(all: 12, child: Mp.text('Padded')),
+                Mp.container(
+                  paddingAll: 8,
+                  backgroundColor: '#FFFFFFFF',
+                  borderColor: '#E5E7EB',
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  child: Mp.text('Box'),
+                ),
+                Mp.scrollView(
+                  paddingVertical: 4,
+                  child: Mp.column(children: <MpNode>[Mp.text('Scrollable')]),
+                ),
+                Mp.divider(),
+                Mp.icon('settings', semanticLabel: 'Settings'),
+                Mp.listTile(
+                  title: 'Profile',
+                  subtitle: 'Manage account',
+                  leadingIcon: 'person',
+                  badge: 'New',
+                  action: Mp.state.set('selected.profile', true),
+                ),
+                Mp.chip(
+                  label: 'Featured',
+                  tone: 'success',
+                  leadingIcon: 'star',
+                  action: Mp.state.set('filter.featured', true),
+                ),
+                Mp.badge(label: 'Beta', tone: 'warning'),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -255,6 +302,49 @@ void main() {
             'children': <Object?>[],
           };
         }),
+        'invalid widget color': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'icon',
+            'props': <String, dynamic>{'name': 'settings', 'color': 'red'},
+            'children': <Object?>[],
+          };
+        }),
+        'unknown widget icon': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'icon',
+            'props': <String, dynamic>{'name': 'video'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid widget tone': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'badge',
+            'props': <String, dynamic>{'label': 'New', 'tone': 'brand'},
+            'children': <Object?>[],
+          };
+        }),
+        'negative widget spacing': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'padding',
+            'props': <String, dynamic>{
+              'padding': <String, dynamic>{'left': -1},
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'missing widget child': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'container',
+            'props': <String, dynamic>{},
+            'children': <Object?>[],
+          };
+        }),
         'invalid ui action': _screenWith((json) {
           json['root'] = <String, dynamic>{
             'type': 'primaryButton',
@@ -309,6 +399,99 @@ void main() {
       expect(find.text('Sign in'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
       expect(find.byType(Image), findsOneWidget);
+    });
+
+    testWidgets('renders core design widgets and dispatches row actions', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.stateBuilder(
+                  keys: const <String>['selected.profile', 'filter.featured'],
+                  child: Mp.text(
+                    'Profile: {{state.selected.profile}} '
+                    'Featured: {{state.filter.featured}}',
+                  ),
+                ),
+                Mp.padding(all: 12, child: Mp.text('Padded')),
+                Mp.container(
+                  paddingAll: 8,
+                  backgroundColor: '#FFFFFFFF',
+                  borderColor: '#E5E7EB',
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  child: Mp.text('Box'),
+                ),
+                Mp.scrollView(
+                  paddingVertical: 4,
+                  child: Mp.column(
+                    children: <MpNode>[
+                      Mp.text('Scrollable item'),
+                      Mp.text('Scrollable item 2'),
+                    ],
+                  ),
+                ),
+                Mp.divider(thickness: 2, spacing: 10),
+                Mp.icon('settings', semanticLabel: 'Settings'),
+                Mp.listTile(
+                  title: 'Profile',
+                  subtitle: 'Manage account',
+                  leadingIcon: 'person',
+                  badge: 'New',
+                  action: Mp.state.set('selected.profile', true),
+                ),
+                Mp.chip(
+                  label: 'Featured',
+                  tone: 'success',
+                  leadingIcon: 'star',
+                  action: Mp.state.set('filter.featured', true),
+                ),
+                Mp.badge(label: 'Beta', tone: 'warning'),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+
+      expect(find.text('Padded'), findsOneWidget);
+      expect(find.text('Box'), findsOneWidget);
+      expect(find.text('Scrollable item'), findsOneWidget);
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Manage account'), findsOneWidget);
+      expect(find.text('Featured'), findsOneWidget);
+      expect(find.text('Beta'), findsOneWidget);
+      expect(find.byType(Icon), findsWidgets);
+      expect(find.byType(SingleChildScrollView), findsAtLeastNWidgets(2));
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SizedBox && widget.height == 2,
+        ),
+        findsWidgets,
+      );
+
+      await tester.tap(find.text('Profile'));
+      await tester.pump();
+      expect(find.text('Profile: true Featured: '), findsOneWidget);
+
+      await tester.tap(find.text('Featured'));
+      await tester.pump();
+      expect(find.text('Profile: true Featured: true'), findsOneWidget);
+
+      stateManager.dispose();
+      backendStore.dispose();
     });
 
     testWidgets('auth button opens the SDK email auth sheet without tokens', (

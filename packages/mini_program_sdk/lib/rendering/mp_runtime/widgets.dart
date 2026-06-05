@@ -483,6 +483,17 @@ class _MpNodeView extends StatelessWidget {
           child: _MpNodeView(node: node.children.single, bindings: bindings),
         ),
       ),
+      'padding' => Padding(
+        padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
+      'container' => _MpContainer(node: node, bindings: bindings),
+      'scrollView' => _MpScrollView(node: node, bindings: bindings),
+      'divider' => _MpDivider(node: node),
+      'icon' => _MpIcon(node: node, bindings: bindings),
+      'listTile' => _MpListTile(node: node, bindings: bindings),
+      'chip' => _MpChip(node: node, bindings: bindings),
+      'badge' => _MpBadge(node: node, bindings: bindings),
       'primaryButton' => _MpButton(
         label: bindings.resolveString(node.props['label'] as String),
         action: node.props['action'] as _MpAction,
@@ -513,6 +524,528 @@ class _MpNodeView extends StatelessWidget {
     };
   }
 }
+
+class _MpContainer extends StatelessWidget {
+  const _MpContainer({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget child = _MpNodeView(node: node.children.single, bindings: bindings);
+    final padding = _mpInsets(node.props['padding'] as Map<String, dynamic>?);
+    if (padding != EdgeInsets.zero) {
+      child = Padding(padding: padding, child: child);
+    }
+
+    final decoration = _containerDecoration(node);
+    if (decoration != null) {
+      child = DecoratedBox(decoration: decoration, child: child);
+    }
+
+    final width = _optionalDouble(node, 'width');
+    final height = _optionalDouble(node, 'height');
+    if (width != null || height != null) {
+      child = SizedBox(width: width, height: height, child: child);
+    }
+    return child;
+  }
+}
+
+class _MpScrollView extends StatelessWidget {
+  const _MpScrollView({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 420),
+        child: SingleChildScrollView(
+          primary: false,
+          padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
+          child: _MpNodeView(node: node.children.single, bindings: bindings),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpDivider extends StatelessWidget {
+  const _MpDivider({required this.node});
+
+  final _MpNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = _double(node, 'spacing', fallback: 12);
+    final thickness = _double(node, 'thickness', fallback: 1);
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: spacing / 2),
+      child: SizedBox(
+        height: thickness,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: _mpColor(
+              node.props['color'] as String?,
+              fallback: const Color(0xFFE5E7EB),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpIcon extends StatelessWidget {
+  const _MpIcon({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final semanticLabel = node.props['semanticLabel'] as String?;
+    return _MpIconGlyph(
+      name: _string(node, 'name'),
+      size: _double(node, 'size', fallback: 20),
+      color: _mpColor(
+        node.props['color'] as String?,
+        fallback: const Color(0xFF4B5563),
+      ),
+      semanticLabel: semanticLabel == null
+          ? null
+          : bindings.resolveString(semanticLabel),
+    );
+  }
+}
+
+class _MpListTile extends StatelessWidget {
+  const _MpListTile({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = bindings.resolveString(_string(node, 'title'));
+    final subtitle = _optionalResolvedString(node, bindings, 'subtitle');
+    final badge = _optionalResolvedString(node, bindings, 'badge');
+    final action = node.props['action'] as _MpAction?;
+    final leadingIcon = node.props['leadingIcon'] as String?;
+    final trailingIcon = node.props['trailingIcon'] as String?;
+
+    final row = DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              if (leadingIcon != null) ...<Widget>[
+                _MpIconGlyph(
+                  name: leadingIcon,
+                  size: 20,
+                  color: const Color(0xFF4B5563),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (subtitle != null) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 13,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (badge != null) ...<Widget>[
+                const SizedBox(width: 10),
+                _MpBadgePill(label: badge, tone: 'info'),
+              ],
+              if (trailingIcon != null || action != null) ...<Widget>[
+                const SizedBox(width: 10),
+                _MpIconGlyph(
+                  name: trailingIcon ?? 'chevronRight',
+                  size: 20,
+                  color: const Color(0xFF6B7280),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (action == null) {
+      return row;
+    }
+    return _MpActionTap(
+      label: title,
+      action: action,
+      bindings: bindings,
+      child: row,
+    );
+  }
+}
+
+class _MpChip extends StatelessWidget {
+  const _MpChip({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = bindings.resolveString(_string(node, 'label'));
+    Widget child = _MpChipPill(
+      label: label,
+      tone: _string(node, 'tone'),
+      leadingIcon: node.props['leadingIcon'] as String?,
+    );
+    final action = node.props['action'] as _MpAction?;
+    if (action != null) {
+      child = _MpActionTap(
+        label: label,
+        action: action,
+        bindings: bindings,
+        child: child,
+      );
+    }
+    return Align(alignment: Alignment.centerLeft, child: child);
+  }
+}
+
+class _MpBadge extends StatelessWidget {
+  const _MpBadge({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: _MpBadgePill(
+        label: bindings.resolveString(_string(node, 'label')),
+        tone: _string(node, 'tone'),
+      ),
+    );
+  }
+}
+
+class _MpActionTap extends StatelessWidget {
+  const _MpActionTap({
+    required this.label,
+    required this.action,
+    required this.bindings,
+    required this.child,
+  });
+
+  final String label;
+  final _MpAction action;
+  final _MpRenderBindings bindings;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: FocusableActionDetector(
+        mouseCursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => unawaited(
+            _MpActionDispatcher.dispatch(context, action, bindings),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _MpChipPill extends StatelessWidget {
+  const _MpChipPill({
+    required this.label,
+    required this.tone,
+    this.leadingIcon,
+  });
+
+  final String label;
+  final String tone;
+  final String? leadingIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _mpToneStyle(tone);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.background,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (leadingIcon != null) ...<Widget>[
+              _MpIconGlyph(
+                name: leadingIcon!,
+                size: 14,
+                color: colors.foreground,
+              ),
+              const SizedBox(width: 5),
+            ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colors.foreground,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MpBadgePill extends StatelessWidget {
+  const _MpBadgePill({required this.label, required this.tone});
+
+  final String label;
+  final String tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _mpToneStyle(tone);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.background,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 160),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.foreground,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpIconGlyph extends StatelessWidget {
+  const _MpIconGlyph({
+    required this.name,
+    required this.size,
+    required this.color,
+    this.semanticLabel,
+  });
+
+  final String name;
+  final double size;
+  final Color color;
+  final String? semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      _mpIconData(name),
+      size: size,
+      color: color,
+      semanticLabel: semanticLabel,
+    );
+  }
+}
+
+class _MpToneColors {
+  const _MpToneColors({
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
+
+  final Color background;
+  final Color foreground;
+  final Color border;
+}
+
+BoxDecoration? _containerDecoration(_MpNode node) {
+  final backgroundColor = node.props['backgroundColor'] as String?;
+  final borderColor = node.props['borderColor'] as String?;
+  final borderWidth = _optionalDouble(node, 'borderWidth');
+  final borderRadius = _optionalDouble(node, 'borderRadius');
+  if (backgroundColor == null &&
+      borderColor == null &&
+      borderWidth == null &&
+      borderRadius == null) {
+    return null;
+  }
+  return BoxDecoration(
+    color: backgroundColor == null
+        ? null
+        : _mpColor(backgroundColor, fallback: const Color(0xFFFFFFFF)),
+    border: borderColor == null && borderWidth == null
+        ? null
+        : Border.all(
+            color: _mpColor(borderColor, fallback: const Color(0xFFE5E7EB)),
+            width: borderWidth ?? 1,
+          ),
+    borderRadius: BorderRadius.circular(borderRadius ?? 0),
+  );
+}
+
+EdgeInsets _mpInsets(Map<String, dynamic>? padding) {
+  return EdgeInsets.only(
+    bottom: _mapDouble(padding, 'bottom'),
+    left: _mapDouble(padding, 'left'),
+    right: _mapDouble(padding, 'right'),
+    top: _mapDouble(padding, 'top'),
+  );
+}
+
+Color _mpColor(String? value, {required Color fallback}) {
+  if (value == null) {
+    return fallback;
+  }
+  final hex = value.substring(1);
+  if (hex.length == 6) {
+    return Color(0xFF000000 | int.parse(hex, radix: 16));
+  }
+  return Color(int.parse(hex, radix: 16));
+}
+
+_MpToneColors _mpToneStyle(String tone) {
+  return switch (tone) {
+    'info' => const _MpToneColors(
+      background: Color(0xFFEFF6FF),
+      foreground: Color(0xFF1D4ED8),
+      border: Color(0xFFBFDBFE),
+    ),
+    'success' => const _MpToneColors(
+      background: Color(0xFFECFDF5),
+      foreground: Color(0xFF047857),
+      border: Color(0xFFA7F3D0),
+    ),
+    'warning' => const _MpToneColors(
+      background: Color(0xFFFFFBEB),
+      foreground: Color(0xFFB45309),
+      border: Color(0xFFFDE68A),
+    ),
+    'danger' => const _MpToneColors(
+      background: Color(0xFFFEF2F2),
+      foreground: Color(0xFFB91C1C),
+      border: Color(0xFFFECACA),
+    ),
+    _ => const _MpToneColors(
+      background: Color(0xFFF3F4F6),
+      foreground: Color(0xFF374151),
+      border: Color(0xFFE5E7EB),
+    ),
+  };
+}
+
+IconData _mpIconData(String name) {
+  final codePoint = _mpIconCodePoints[name];
+  if (codePoint == null) {
+    throw MiniProgramRenderException(
+      message: 'Unsupported Mp icon "$name".',
+      details: <String, dynamic>{'iconName': name},
+    );
+  }
+  return IconData(
+    codePoint,
+    fontFamily: 'MaterialIcons',
+    matchTextDirection: name == 'chevronRight',
+  );
+}
+
+String? _optionalResolvedString(
+  _MpNode node,
+  _MpRenderBindings bindings,
+  String key,
+) {
+  final value = node.props[key] as String?;
+  return value == null ? null : bindings.resolveString(value);
+}
+
+double _double(_MpNode node, String key, {required double fallback}) {
+  return (node.props[key] as num?)?.toDouble() ?? fallback;
+}
+
+double? _optionalDouble(_MpNode node, String key) {
+  return (node.props[key] as num?)?.toDouble();
+}
+
+double _mapDouble(Map<String, dynamic>? map, String key) {
+  return (map?[key] as num?)?.toDouble() ?? 0;
+}
+
+const Map<String, int> _mpIconCodePoints = <String, int>{
+  'person': 0xe491,
+  'settings': 0xe57f,
+  'chevronRight': 0xe15f,
+  'star': 0xe5f9,
+  'gift': 0xe13e,
+  'check': 0xe156,
+  'warning': 0xe6cb,
+  'info': 0xe33d,
+  'lock': 0xe3b1,
+  'mail': 0xe3c4,
+  'home': 0xf107,
+  'search': 0xe567,
+};
 
 class _MpStateBuilder extends StatelessWidget {
   const _MpStateBuilder({required this.node, required this.bindings});

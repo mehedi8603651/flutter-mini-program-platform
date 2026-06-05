@@ -200,6 +200,184 @@ void main() {
       });
     });
 
+    test('serializes core design widgets deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'design_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.padding(
+                all: 16,
+                horizontal: 20,
+                left: 8,
+                child: Mp.text('Padded'),
+              ),
+              Mp.container(
+                width: 120,
+                height: 44,
+                paddingAll: 8,
+                paddingVertical: 10,
+                paddingRight: 12,
+                backgroundColor: '#FFFFFFFF',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                borderRadius: 6,
+                child: Mp.text('Box'),
+              ),
+              Mp.scrollView(
+                paddingVertical: 4,
+                child: Mp.column(children: <MpNode>[Mp.text('Scrollable')]),
+              ),
+              Mp.divider(thickness: 2, spacing: 10, color: '#D1D5DB'),
+              Mp.icon(
+                'settings',
+                size: 24,
+                color: '#FF0000',
+                semanticLabel: 'Settings',
+              ),
+              Mp.listTile(
+                title: 'Profile',
+                subtitle: 'Manage account',
+                leadingIcon: 'person',
+                trailingIcon: 'chevronRight',
+                badge: 'New',
+                action: Mp.navigation.openScreen('profile'),
+              ),
+              Mp.chip(
+                label: 'Featured',
+                tone: 'success',
+                leadingIcon: 'star',
+                action: Mp.state.set('filter.featured', true),
+              ),
+              Mp.badge(label: 'Beta', tone: 'warning'),
+            ],
+          ),
+        },
+      ).buildScreensJson()['design_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'padding',
+            'props': <String, Object?>{
+              'padding': <String, Object?>{
+                'bottom': 16,
+                'left': 8,
+                'right': 20,
+                'top': 16,
+              },
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Padded'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'container',
+            'props': <String, Object?>{
+              'backgroundColor': '#FFFFFFFF',
+              'borderColor': '#E5E7EB',
+              'borderRadius': 6,
+              'borderWidth': 1,
+              'height': 44,
+              'padding': <String, Object?>{
+                'bottom': 10,
+                'left': 8,
+                'right': 12,
+                'top': 10,
+              },
+              'width': 120,
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Box'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'scrollView',
+            'props': <String, Object?>{
+              'padding': <String, Object?>{'bottom': 4, 'top': 4},
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'column',
+                'props': <String, Object?>{},
+                'children': <Object?>[
+                  <String, Object?>{
+                    'type': 'text',
+                    'props': <String, Object?>{'data': 'Scrollable'},
+                    'children': <Object?>[],
+                  },
+                ],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'divider',
+            'props': <String, Object?>{
+              'color': '#D1D5DB',
+              'spacing': 10,
+              'thickness': 2,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'icon',
+            'props': <String, Object?>{
+              'color': '#FF0000',
+              'name': 'settings',
+              'semanticLabel': 'Settings',
+              'size': 24,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'listTile',
+            'props': <String, Object?>{
+              'action': <String, Object?>{
+                'type': 'navigation.openScreen',
+                'props': <String, Object?>{'screenId': 'profile'},
+              },
+              'badge': 'New',
+              'leadingIcon': 'person',
+              'subtitle': 'Manage account',
+              'title': 'Profile',
+              'trailingIcon': 'chevronRight',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'chip',
+            'props': <String, Object?>{
+              'action': <String, Object?>{
+                'type': 'state.set',
+                'props': <String, Object?>{
+                  'key': 'filter.featured',
+                  'value': true,
+                },
+              },
+              'label': 'Featured',
+              'leadingIcon': 'star',
+              'tone': 'success',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'badge',
+            'props': <String, Object?>{'label': 'Beta', 'tone': 'warning'},
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes form nodes and feedback actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{
