@@ -1,5 +1,33 @@
 part of '../mp_screen_renderer.dart';
 
+/// Runs validated Mp JSON actions against the active SDK scope.
+class MpActionRunner {
+  /// Creates an Mp action runner.
+  const MpActionRunner();
+
+  /// Parses and runs a single action JSON object.
+  Future<Object?> run(
+    BuildContext context,
+    Map<String, dynamic> actionJson, {
+    Map<String, dynamic>? item,
+    Map<String, dynamic>? form,
+  }) {
+    final action = const MpScreenValidator()._parseAction(
+      actionJson,
+      path: r'$.action',
+    );
+    return _MpActionDispatcher.dispatch(
+      context,
+      action,
+      _MpRenderBindings(
+        scope: MiniProgramSdkScope.maybeOf(context),
+        item: item,
+        form: form,
+      ),
+    );
+  }
+}
+
 abstract final class _MpActionDispatcher {
   static Future<Object?> dispatch(
     BuildContext context,
@@ -34,6 +62,17 @@ abstract final class _MpActionDispatcher {
         'form.submit' => _submitForm(scope, props),
         'ui.toast' => _showToast(context, props),
         'ui.dialog' => _showDialog(context, props),
+        'state.set' || 'state.put' => _setState(scope, action.type, props),
+        'state.increment' => _incrementState(scope, props),
+        'state.remove' => _removeState(scope, props),
+        'state.clear' => _clearState(scope),
+        'sequence' => _runSequence(context, props, bindings),
+        'router.push' => _routerPush(scope, props),
+        'router.replace' => _routerReplace(scope, props),
+        'router.reset' => _routerReset(scope, props),
+        'router.pop' => _routerPop(scope, props),
+        'router.popToRoot' => _routerPopToRoot(scope, props),
+        'router.popToScreen' => _routerPopToScreen(scope, props),
         'navigation.openScreen' => scope.openMiniProgramScreen(
           OpenMiniProgramScreenActionPayload(
             screenId: _stringProp(props, 'screenId'),
@@ -260,6 +299,201 @@ abstract final class _MpActionDispatcher {
     return HostActionResult.success(actionName: 'ui.dialog');
   }
 
+  static Future<HostActionResult> _setState(
+    MiniProgramSdkScope scope,
+    String actionName,
+    Map<String, dynamic> props,
+  ) async {
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    state.set(_stringProp(props, 'key'), props['value']);
+    return HostActionResult.success(actionName: actionName);
+  }
+
+  static Future<HostActionResult> _incrementState(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable('state.increment');
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current != null && current is! num) {
+      return HostActionResult.failed(
+        actionName: 'state.increment',
+        message: 'Mp state.increment requires a numeric current value.',
+        errorCode: 'state_invalid_value',
+      );
+    }
+    final by = _numProp(props, 'by', fallback: 1);
+    final next = (current as num? ?? 0) + by;
+    state.set(key, next);
+    return HostActionResult.success(actionName: 'state.increment');
+  }
+
+  static Future<HostActionResult> _removeState(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable('state.remove');
+    }
+    state.remove(_stringProp(props, 'key'));
+    return HostActionResult.success(actionName: 'state.remove');
+  }
+
+  static Future<HostActionResult> _clearState(MiniProgramSdkScope scope) async {
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable('state.clear');
+    }
+    state.clear();
+    return HostActionResult.success(actionName: 'state.clear');
+  }
+
+  static Future<HostActionResult> _runSequence(
+    BuildContext context,
+    Map<String, dynamic> props,
+    _MpRenderBindings bindings,
+  ) async {
+    final steps = props['steps'];
+    if (steps is! List || steps.any((step) => step is! _MpAction)) {
+      return HostActionResult.failed(
+        actionName: 'sequence',
+        message: 'Mp sequence requires parsed action steps.',
+        errorCode: MiniProgramErrorCodes.unknownAction,
+      );
+    }
+    Object? lastResult;
+    for (final step in steps) {
+      lastResult = await dispatch(context, step as _MpAction, bindings);
+      if (lastResult is HostActionResult && !lastResult.isSuccess) {
+        return lastResult;
+      }
+    }
+    return HostActionResult.success(
+      actionName: 'sequence',
+      data: <String, dynamic>{
+        if (lastResult is HostActionResult) 'lastResult': lastResult.toJson(),
+      },
+    );
+  }
+
+  static Future<HostActionResult> _routerPush(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) {
+    final router = scope.router;
+    if (router == null) {
+      return Future<HostActionResult>.value(_routerUnavailable('router.push'));
+    }
+    return router.push(
+      _stringProp(props, 'screenId'),
+      _mapProp(props, 'params'),
+      _optionalStringProp(props, 'requestId'),
+    );
+  }
+
+  static Future<HostActionResult> _routerReplace(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) {
+    final router = scope.router;
+    if (router == null) {
+      return Future<HostActionResult>.value(
+        _routerUnavailable('router.replace'),
+      );
+    }
+    return router.replace(
+      _stringProp(props, 'screenId'),
+      _mapProp(props, 'params'),
+      _optionalStringProp(props, 'requestId'),
+    );
+  }
+
+  static Future<HostActionResult> _routerReset(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) {
+    final router = scope.router;
+    if (router == null) {
+      return Future<HostActionResult>.value(_routerUnavailable('router.reset'));
+    }
+    return router.reset(
+      _stringProp(props, 'screenId'),
+      _mapProp(props, 'params'),
+      _optionalStringProp(props, 'requestId'),
+    );
+  }
+
+  static Future<HostActionResult> _routerPop(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) {
+    final router = scope.router;
+    if (router == null) {
+      return Future<HostActionResult>.value(_routerUnavailable('router.pop'));
+    }
+    return router.pop(
+      _mapProp(props, 'result'),
+      _optionalStringProp(props, 'requestId'),
+    );
+  }
+
+  static Future<HostActionResult> _routerPopToRoot(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) {
+    final router = scope.router;
+    if (router == null) {
+      return Future<HostActionResult>.value(
+        _routerUnavailable('router.popToRoot'),
+      );
+    }
+    return router.popToRoot(
+      _mapProp(props, 'result'),
+      _optionalStringProp(props, 'requestId'),
+    );
+  }
+
+  static Future<HostActionResult> _routerPopToScreen(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) {
+    final router = scope.router;
+    if (router == null) {
+      return Future<HostActionResult>.value(
+        _routerUnavailable('router.popToScreen'),
+      );
+    }
+    return router.popToScreen(
+      _stringProp(props, 'screenId'),
+      _mapProp(props, 'result'),
+      _optionalStringProp(props, 'requestId'),
+    );
+  }
+
+  static HostActionResult _stateUnavailable(String actionName) {
+    return HostActionResult.failed(
+      actionName: actionName,
+      message: 'Mp state manager is unavailable.',
+      errorCode: 'state_unavailable',
+    );
+  }
+
+  static HostActionResult _routerUnavailable(String actionName) {
+    return HostActionResult.failed(
+      actionName: actionName,
+      message: 'Mp router is unavailable.',
+      errorCode: 'router_unavailable',
+    );
+  }
+
   static Future<MiniProgramBackendRequest> _authorize(
     MiniProgramSdkScope scope,
     MiniProgramBackendRequest request,
@@ -354,5 +588,20 @@ abstract final class _MpActionDispatcher {
       return value;
     }
     throw FormatException('Mp action "$key" must be an integer.');
+  }
+
+  static num _numProp(
+    Map<String, dynamic> props,
+    String key, {
+    required num fallback,
+  }) {
+    final value = props[key];
+    if (value == null) {
+      return fallback;
+    }
+    if (value is num) {
+      return value;
+    }
+    throw FormatException('Mp action "$key" must be numeric.');
   }
 }

@@ -355,5 +355,108 @@ void main() {
         ],
       });
     });
+
+    test(
+      'serializes state, router, and sequence helpers deterministically',
+      () {
+        final screen = MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'counter_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.stateBuilder(
+                  keys: const <String>['count', 'product.selected'],
+                  child: Mp.text('{{state.count}}'),
+                ),
+                Mp.primaryButton(
+                  label: 'Add',
+                  action: Mp.action.sequence(<MpAction>[
+                    Mp.state.put('product.selected', <String, Object?>{
+                      'id': '{{item.id}}',
+                    }),
+                    Mp.state.increment('count', by: 2),
+                    Mp.router.push(
+                      'product_detail',
+                      params: <String, Object?>{'productId': '{{item.id}}'},
+                    ),
+                  ]),
+                ),
+                Mp.secondaryButton(
+                  label: 'Back',
+                  action: Mp.router.pop(
+                    result: const <String, Object?>{'saved': true},
+                  ),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['counter_home']!;
+
+        expect(screen['root'], <String, Object?>{
+          'type': 'column',
+          'props': <String, Object?>{},
+          'children': <Object?>[
+            <String, Object?>{
+              'type': 'stateBuilder',
+              'props': <String, Object?>{
+                'child': <String, Object?>{
+                  'type': 'text',
+                  'props': <String, Object?>{'data': '{{state.count}}'},
+                  'children': <Object?>[],
+                },
+                'keys': <Object?>['count', 'product.selected'],
+              },
+              'children': <Object?>[],
+            },
+            <String, Object?>{
+              'type': 'primaryButton',
+              'props': <String, Object?>{
+                'action': <String, Object?>{
+                  'type': 'sequence',
+                  'props': <String, Object?>{
+                    'steps': <Object?>[
+                      <String, Object?>{
+                        'type': 'state.put',
+                        'props': <String, Object?>{
+                          'key': 'product.selected',
+                          'value': <String, Object?>{'id': '{{item.id}}'},
+                        },
+                      },
+                      <String, Object?>{
+                        'type': 'state.increment',
+                        'props': <String, Object?>{'by': 2, 'key': 'count'},
+                      },
+                      <String, Object?>{
+                        'type': 'router.push',
+                        'props': <String, Object?>{
+                          'params': <String, Object?>{
+                            'productId': '{{item.id}}',
+                          },
+                          'screenId': 'product_detail',
+                        },
+                      },
+                    ],
+                  },
+                },
+                'label': 'Add',
+              },
+              'children': <Object?>[],
+            },
+            <String, Object?>{
+              'type': 'secondaryButton',
+              'props': <String, Object?>{
+                'action': <String, Object?>{
+                  'type': 'router.pop',
+                  'props': <String, Object?>{
+                    'result': <String, Object?>{'saved': true},
+                  },
+                },
+                'label': 'Back',
+              },
+              'children': <Object?>[],
+            },
+          ],
+        });
+      },
+    );
   });
 }

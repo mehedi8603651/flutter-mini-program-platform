@@ -13,6 +13,15 @@ abstract final class Mp {
   /// Mini-program screen navigation actions.
   static const navigation = MpNavigationActions();
 
+  /// Mini-program route actions with params/results support.
+  static const router = MpRouterActions();
+
+  /// Mini-program memory state actions.
+  static const state = MpStateActions();
+
+  /// Generic action composition helpers.
+  static const action = MpActionActions();
+
   /// Creates a vertical layout.
   static MpNode column({required List<MpNode> children}) =>
       MpNode('column', children: children);
@@ -342,6 +351,15 @@ abstract final class Mp {
     },
   );
 
+  /// Rebuilds [child] when any declared state key changes.
+  static MpNode stateBuilder({
+    required List<String> keys,
+    required MpNode child,
+  }) => MpNode(
+    'stateBuilder',
+    props: <String, Object?>{'keys': _requiredStateKeys(keys), 'child': child},
+  );
+
   /// Creates a toast/snackbar-style UI feedback action.
   static MpAction toast({required String message, int durationMs = 2400}) =>
       MpAction(
@@ -364,6 +382,154 @@ abstract final class Mp {
       'message': _requiredString(message, 'message'),
       'confirmLabel': _requiredString(confirmLabel, 'confirmLabel'),
     },
+  );
+}
+
+/// Mini-program memory state action builders.
+final class MpStateActions {
+  /// Creates state action helpers.
+  const MpStateActions();
+
+  /// Creates or replaces [key] with [value].
+  MpAction put(String key, Object? value) => MpAction(
+    'state.put',
+    props: <String, Object?>{
+      'key': _requiredStateKey(key, 'key'),
+      'value': value,
+    },
+  );
+
+  /// Replaces [key] with [value].
+  MpAction set(String key, Object? value) => MpAction(
+    'state.set',
+    props: <String, Object?>{
+      'key': _requiredStateKey(key, 'key'),
+      'value': value,
+    },
+  );
+
+  /// Adds [by] to the numeric state value at [key].
+  MpAction increment(String key, {num by = 1}) => MpAction(
+    'state.increment',
+    props: <String, Object?>{'key': _requiredStateKey(key, 'key'), 'by': by},
+  );
+
+  /// Removes [key] from memory state.
+  MpAction remove(String key) => MpAction(
+    'state.remove',
+    props: <String, Object?>{'key': _requiredStateKey(key, 'key')},
+  );
+
+  /// Clears all memory state for the current mini-program instance.
+  MpAction clear() => MpAction('state.clear');
+}
+
+/// Mini-program router action builders with route params/results.
+final class MpRouterActions {
+  /// Creates router action helpers.
+  const MpRouterActions();
+
+  /// Pushes [screenId] and exposes [params] under `{{route.*}}`.
+  MpAction push(
+    String screenId, {
+    Map<String, Object?> params = const <String, Object?>{},
+    String? requestId,
+  }) => _screenAction(
+    'router.push',
+    screenId,
+    params: params,
+    requestId: requestId,
+  );
+
+  /// Replaces the active screen.
+  MpAction replace(
+    String screenId, {
+    Map<String, Object?> params = const <String, Object?>{},
+    String? requestId,
+  }) => _screenAction(
+    'router.replace',
+    screenId,
+    params: params,
+    requestId: requestId,
+  );
+
+  /// Resets the stack to [screenId].
+  MpAction reset(
+    String screenId, {
+    Map<String, Object?> params = const <String, Object?>{},
+    String? requestId,
+  }) => _screenAction(
+    'router.reset',
+    screenId,
+    params: params,
+    requestId: requestId,
+  );
+
+  /// Pops the current screen and returns [result] to the revealed screen.
+  MpAction pop({
+    Map<String, Object?> result = const <String, Object?>{},
+    String? requestId,
+  }) => _resultAction('router.pop', result: result, requestId: requestId);
+
+  /// Pops to the root screen and returns [result].
+  MpAction popToRoot({
+    Map<String, Object?> result = const <String, Object?>{},
+    String? requestId,
+  }) => _resultAction('router.popToRoot', result: result, requestId: requestId);
+
+  /// Pops to [screenId] and returns [result].
+  MpAction popToScreen(
+    String screenId, {
+    Map<String, Object?> result = const <String, Object?>{},
+    String? requestId,
+  }) => MpAction(
+    'router.popToScreen',
+    props: <String, Object?>{
+      'screenId': _requiredString(screenId, 'screenId'),
+      if (result.isNotEmpty) 'result': result,
+      if (requestId != null)
+        'requestId': _requiredString(requestId, 'requestId'),
+    },
+  );
+
+  MpAction _screenAction(
+    String type,
+    String screenId, {
+    required Map<String, Object?> params,
+    String? requestId,
+  }) => MpAction(
+    type,
+    props: <String, Object?>{
+      'screenId': _requiredString(screenId, 'screenId'),
+      if (params.isNotEmpty) 'params': params,
+      if (requestId != null)
+        'requestId': _requiredString(requestId, 'requestId'),
+    },
+  );
+
+  MpAction _resultAction(
+    String type, {
+    required Map<String, Object?> result,
+    String? requestId,
+  }) => MpAction(
+    type,
+    props: <String, Object?>{
+      if (result.isNotEmpty) 'result': result,
+      if (requestId != null)
+        'requestId': _requiredString(requestId, 'requestId'),
+    },
+  );
+}
+
+/// Generic action composition helpers.
+final class MpActionActions {
+  /// Creates action composition helpers.
+  const MpActionActions();
+
+  /// Runs [steps] in order and stops when a step fails.
+  MpAction sequence(List<MpAction> steps) => MpAction(
+    'sequence',
+    props: <String, Object?>{'steps': _requiredActions(steps)},
   );
 }
 
@@ -621,6 +787,44 @@ List<MpNode> _requiredChildren(List<MpNode> children, String name) {
   return children;
 }
 
+List<MpAction> _requiredActions(List<MpAction> actions) {
+  if (actions.isEmpty) {
+    throw ArgumentError.value(actions, 'steps', 'Actions cannot be empty.');
+  }
+  return actions;
+}
+
+List<String> _requiredStateKeys(List<String> keys) {
+  if (keys.isEmpty) {
+    throw ArgumentError.value(keys, 'keys', 'State keys cannot be empty.');
+  }
+  return keys
+      .map((key) => _requiredStateKey(key, 'key'))
+      .toList(growable: false);
+}
+
+String _requiredStateKey(String value, String name) {
+  final normalized = _requiredString(value, name);
+  if (!_stateKeyPattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Mp state keys must be lowercase dot paths.',
+    );
+  }
+  for (final segment in normalized.split('.')) {
+    final compact = segment.replaceAll('_', '').toLowerCase();
+    if (_blockedStateSegments.contains(compact)) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'Mp state keys cannot contain secret-like segments.',
+      );
+    }
+  }
+  return normalized;
+}
+
 void _validateInitialOptionValue(List<MpOption> options, String? value) {
   if (value == null) {
     return;
@@ -633,3 +837,17 @@ void _validateInitialOptionValue(List<MpOption> options, String? value) {
     );
   }
 }
+
+final RegExp _stateKeyPattern = RegExp(
+  r'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$',
+);
+
+const Set<String> _blockedStateSegments = <String>{
+  'authorization',
+  'credential',
+  'idtoken',
+  'password',
+  'refreshtoken',
+  'secret',
+  'token',
+};

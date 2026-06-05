@@ -75,6 +75,9 @@ class _MpRenderBindings {
     return <String, dynamic>{
       'backend':
           activeScope?.backendStore.toBindingData() ?? <String, dynamic>{},
+      'route': activeScope?.routeParams ?? <String, dynamic>{},
+      'state':
+          activeScope?.stateManager?.toBindingData() ?? <String, dynamic>{},
       if (item != null) 'item': item!,
       if (form != null) 'form': form!,
       if (authSnapshot != null) 'auth': authSnapshot.toBindingData(),
@@ -89,12 +92,16 @@ abstract final class _MpBindingResolver {
     'backend',
     'form',
     'item',
+    'route',
+    'state',
   };
   static const Set<String> _blockedSegments = <String>{
     'authorization',
+    'credential',
     'idtoken',
     'password',
     'refreshtoken',
+    'secret',
     'token',
   };
 

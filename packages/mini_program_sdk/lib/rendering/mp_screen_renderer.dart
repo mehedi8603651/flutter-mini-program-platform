@@ -8,6 +8,7 @@ import '../auth/mini_program_auth.dart';
 import '../network/mini_program_backend_connector.dart';
 import '../network/mini_program_backend_store.dart';
 import '../sdk_context.dart';
+import '../state/mp_state.dart';
 import '../widgets/sdk_email_auth_sheet.dart';
 import 'mini_program_screen_renderer.dart';
 

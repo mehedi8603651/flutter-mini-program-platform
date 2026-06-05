@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0-dev.5
+
+- add memory-only Mp state with `MpStore`, `MpStateManager`, `MpRouter`, and
+  `MpActionRunner`
+- add Mp `stateBuilder`, namespaced `state.*` and `route.*` bindings, state
+  actions, router params/results, and action sequences
+
 ## 0.4.0-dev.3
 
 - make Mp JSON the only built-in screen renderer

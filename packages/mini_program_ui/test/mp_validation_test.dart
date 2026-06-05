@@ -54,6 +54,17 @@ void main() {
       expect(() => Mp.navigation.openScreen(''), throwsArgumentError);
     });
 
+    test('state and router helpers reject invalid configuration', () {
+      expect(
+        () => Mp.stateBuilder(keys: const <String>[], child: Mp.text('Count')),
+        throwsArgumentError,
+      );
+      expect(() => Mp.state.set('auth.token', 'secret'), throwsArgumentError);
+      expect(() => Mp.state.increment('Count'), throwsArgumentError);
+      expect(() => Mp.action.sequence(const <MpAction>[]), throwsArgumentError);
+      expect(() => Mp.router.push(''), throwsArgumentError);
+    });
+
     test('form helpers reject invalid configuration', () {
       const options = <MpOption>[
         MpOption(value: 'stem', label: 'STEM'),

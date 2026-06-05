@@ -7,6 +7,7 @@ import 'host_bridge.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
 import 'observability/sdk_logger.dart';
+import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 
 typedef MiniProgramOpenScreenHandler =
@@ -51,6 +52,9 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.backendConnector,
     this.authController,
     required this.backendStore,
+    this.stateManager,
+    this.router,
+    this.routeParams = const <String, dynamic>{},
     required this.featureFlagEvaluator,
     required this.logger,
     required this.openMiniProgramScreen,
@@ -67,6 +71,9 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramAuthController? authController;
   final MiniProgramBackendStore backendStore;
+  final MpStateManager? stateManager;
+  final MpRouter? router;
+  final Map<String, dynamic> routeParams;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
   final MiniProgramOpenScreenHandler openMiniProgramScreen;
@@ -94,6 +101,9 @@ class MiniProgramSdkScope extends InheritedWidget {
         backendConnector != oldWidget.backendConnector ||
         authController != oldWidget.authController ||
         backendStore != oldWidget.backendStore ||
+        stateManager != oldWidget.stateManager ||
+        router != oldWidget.router ||
+        routeParams != oldWidget.routeParams ||
         featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
         logger != oldWidget.logger ||
         openMiniProgramScreen != oldWidget.openMiniProgramScreen ||

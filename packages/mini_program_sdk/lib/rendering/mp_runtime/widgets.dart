@@ -505,11 +505,37 @@ class _MpNodeView extends StatelessWidget {
       'authBuilder' => _MpAuthBuilder(node: node),
       'backendBuilder' => _MpBackendBuilder(node: node),
       'pagedBackendBuilder' => _MpPagedBackendBuilder(node: node),
+      'stateBuilder' => _MpStateBuilder(node: node, bindings: bindings),
       _ => throw MiniProgramRenderException(
         message: 'Unsupported Mp node type "${node.type}".',
         details: <String, dynamic>{'nodeType': node.type},
       ),
     };
+  }
+}
+
+class _MpStateBuilder extends StatelessWidget {
+  const _MpStateBuilder({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = MiniProgramSdkScope.maybeOf(context);
+    final state = scope?.stateManager;
+    final child = node.props['child'] as _MpNode;
+    if (state == null) {
+      return _MpNodeView(node: child, bindings: bindings);
+    }
+    final keys = List<String>.from(node.props['keys'] as List);
+    final listenable = Listenable.merge(
+      keys.map(state.watch).toList(growable: false),
+    );
+    return AnimatedBuilder(
+      animation: listenable,
+      builder: (context, _) => _MpNodeView(node: child, bindings: bindings),
+    );
   }
 }
 

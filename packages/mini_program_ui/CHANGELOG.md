@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev.5
+
+- add Mp state, router, sequence, and `stateBuilder` authoring helpers
+- keep `Mp.navigation` compatibility while adding `Mp.router` params/results
+
 ## 0.1.0-dev.2
 
 - add Mp authoring helpers for auth, backend, paged backend, and navigation

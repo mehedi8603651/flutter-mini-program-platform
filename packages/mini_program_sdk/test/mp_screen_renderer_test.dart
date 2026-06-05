@@ -114,6 +114,39 @@ void main() {
       );
     });
 
+    test('accepts author-generated state and router JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.stateBuilder(
+                  keys: const <String>['count'],
+                  child: Mp.text('Count: {{state.count}}'),
+                ),
+                Mp.primaryButton(
+                  label: 'Increment',
+                  action: Mp.state.increment('count'),
+                ),
+                Mp.secondaryButton(
+                  label: 'Detail',
+                  action: Mp.router.push(
+                    'coupon_detail',
+                    params: const <String, Object?>{'productId': 'p1'},
+                  ),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -545,6 +578,66 @@ void main() {
 
       expect(openedScreenId, 'coupon_details');
 
+      backendStore.dispose();
+    });
+
+    testWidgets('stateBuilder rebuilds from state actions and sequence', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.stateBuilder(
+                  keys: const <String>['count'],
+                  child: Mp.text('Count: {{state.count}}'),
+                ),
+                Mp.primaryButton(
+                  label: 'Add one',
+                  action: Mp.state.increment('count'),
+                ),
+                Mp.secondaryButton(
+                  label: 'Set two',
+                  action: Mp.action.sequence(<MpAction>[
+                    Mp.state.set('count', 1),
+                    Mp.state.increment('count'),
+                  ]),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+
+      expect(find.text('Count: '), findsOneWidget);
+
+      await tester.tap(find.text('Add one'));
+      await tester.pump();
+
+      expect(find.text('Count: 1'), findsOneWidget);
+
+      stateManager.set('unrelated', 99);
+      await tester.pump();
+
+      expect(find.text('Count: 1'), findsOneWidget);
+
+      await tester.tap(find.text('Set two'));
+      await tester.pump();
+
+      expect(find.text('Count: 2'), findsOneWidget);
+
+      stateManager.dispose();
       backendStore.dispose();
     });
 
@@ -1048,6 +1141,9 @@ Widget _scopedApp({
   MiniProgramBackendConnector? backendConnector,
   MiniProgramAuthController? authController,
   MiniProgramOpenScreenHandler? openMiniProgramScreen,
+  MpStateManager? stateManager,
+  MpRouter? router,
+  Map<String, dynamic> routeParams = const <String, dynamic>{},
 }) {
   return MaterialApp(
     home: MiniProgramSdkScope(
@@ -1059,6 +1155,9 @@ Widget _scopedApp({
       backendConnector: backendConnector,
       authController: authController,
       backendStore: backendStore,
+      stateManager: stateManager,
+      router: router,
+      routeParams: routeParams,
       featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
       logger: const DebugPrintSdkLogger(),
       openMiniProgramScreen:

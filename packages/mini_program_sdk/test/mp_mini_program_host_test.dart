@@ -24,6 +24,37 @@ void main() {
 
     expect(find.text('Mp-only host screen'), findsOneWidget);
   });
+
+  testWidgets('Mp router passes params and returns pop results', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: MiniProgramHost(
+          miniProgramId: 'mp_router_test',
+          sdkVersion: '1.0.0',
+          source: const _RouterMpSource(),
+          hostBridge: const _HostBridge(),
+          capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved: '), findsOneWidget);
+
+    await tester.tap(find.text('Open detail'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product: p1'), findsOneWidget);
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved: true'), findsOneWidget);
+  });
 }
 
 class _MpSource implements MiniProgramSource {
@@ -56,6 +87,93 @@ class _MpSource implements MiniProgramSource {
         'type': 'text',
         'props': <String, dynamic>{'data': 'Mp-only host screen'},
         'children': <Object?>[],
+      },
+    };
+  }
+}
+
+class _RouterMpSource implements MiniProgramSource {
+  const _RouterMpSource();
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    return const MiniProgramManifest(
+      id: 'mp_router_test',
+      version: '1.0.0',
+      entry: 'mp_router_home',
+      contractVersion: '1.0.0',
+      sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+      requiredCapabilities: <CapabilityId>[],
+      screenFormat: MiniProgramScreenFormats.mp,
+      screenSchemaVersion: 1,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    if (screenId == 'mp_router_detail') {
+      return const <String, dynamic>{
+        'schemaVersion': 1,
+        'screenId': 'mp_router_detail',
+        'root': <String, dynamic>{
+          'type': 'column',
+          'props': <String, dynamic>{},
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{
+                'data': 'Product: {{route.productId}}',
+              },
+              'children': <Object?>[],
+            },
+            <String, dynamic>{
+              'type': 'primaryButton',
+              'props': <String, dynamic>{
+                'label': 'Done',
+                'action': <String, dynamic>{
+                  'type': 'router.pop',
+                  'props': <String, dynamic>{
+                    'result': <String, dynamic>{'saved': true},
+                  },
+                },
+              },
+              'children': <Object?>[],
+            },
+          ],
+        },
+      };
+    }
+    return const <String, dynamic>{
+      'schemaVersion': 1,
+      'screenId': 'mp_router_home',
+      'root': <String, dynamic>{
+        'type': 'column',
+        'props': <String, dynamic>{},
+        'children': <Object?>[
+          <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Saved: {{route.result.saved}}'},
+            'children': <Object?>[],
+          },
+          <String, dynamic>{
+            'type': 'primaryButton',
+            'props': <String, dynamic>{
+              'label': 'Open detail',
+              'action': <String, dynamic>{
+                'type': 'router.push',
+                'props': <String, dynamic>{
+                  'screenId': 'mp_router_detail',
+                  'params': <String, dynamic>{'productId': 'p1'},
+                },
+              },
+            },
+            'children': <Object?>[],
+          },
+        ],
       },
     };
   }

@@ -19,6 +19,7 @@ import 'network/mini_program_source_exception.dart';
 import 'observability/sdk_logger.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 import 'sdk_context.dart';
+import 'state/mp_state.dart';
 import 'widgets/sdk_error_view.dart';
 import 'widgets/sdk_loading_view.dart';
 import 'widgets/sdk_offline_notice.dart';
@@ -71,6 +72,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   final ManifestLoader _manifestLoader = const ManifestLoader();
   final AssetResolver _assetResolver = AssetResolver();
   final MiniProgramBackendStore _backendStore = MiniProgramBackendStore();
+  final MpStateManager _stateManager = MpStateManager();
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late Future<void> _loadFuture;
@@ -121,12 +123,14 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _usedStaleManifestCache = false;
     _screenStack = const <_RenderedMiniProgramScreen>[];
     _backendStore.clear();
+    _stateManager.clear();
     _loadFuture = _loadMiniProgram(_loadGeneration);
   }
 
   @override
   void dispose() {
     _backendStore.dispose();
+    _stateManager.dispose();
     super.dispose();
   }
 
@@ -419,9 +423,249 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     );
   }
 
+  Future<HostActionResult> _mpRouterPush(
+    String screenId,
+    Map<String, dynamic> params,
+    String? requestId,
+  ) async {
+    final manifest = _manifest;
+    if (manifest == null) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.push',
+        message: 'Mini-program runtime is not ready for screen navigation.',
+      );
+    }
+    final screen = await _loadNavigationScreen(
+      manifest: manifest,
+      screenId: screenId,
+      routeParams: _normalizeRouteMap(params),
+    );
+    if (!mounted) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.push',
+        message: 'Mini-program host was disposed before navigation completed.',
+      );
+    }
+    setState(() {
+      _screenStack = <_RenderedMiniProgramScreen>[..._screenStack, screen];
+    });
+    return _routerResult(
+      requestId: requestId,
+      actionName: 'router.push',
+      screen: screen,
+    );
+  }
+
+  Future<HostActionResult> _mpRouterReplace(
+    String screenId,
+    Map<String, dynamic> params,
+    String? requestId,
+  ) async {
+    final manifest = _manifest;
+    if (manifest == null) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.replace',
+        message: 'Mini-program runtime is not ready for screen navigation.',
+      );
+    }
+    final screen = await _loadNavigationScreen(
+      manifest: manifest,
+      screenId: screenId,
+      routeParams: _normalizeRouteMap(params),
+    );
+    if (!mounted) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.replace',
+        message: 'Mini-program host was disposed before navigation completed.',
+      );
+    }
+    setState(() {
+      if (_screenStack.isEmpty) {
+        _screenStack = <_RenderedMiniProgramScreen>[screen];
+      } else {
+        _screenStack = List<_RenderedMiniProgramScreen>.from(_screenStack)
+          ..removeLast()
+          ..add(screen);
+      }
+    });
+    return _routerResult(
+      requestId: requestId,
+      actionName: 'router.replace',
+      screen: screen,
+    );
+  }
+
+  Future<HostActionResult> _mpRouterReset(
+    String screenId,
+    Map<String, dynamic> params,
+    String? requestId,
+  ) async {
+    final manifest = _manifest;
+    if (manifest == null) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.reset',
+        message: 'Mini-program runtime is not ready for screen navigation.',
+      );
+    }
+    final screen = await _loadNavigationScreen(
+      manifest: manifest,
+      screenId: screenId,
+      routeParams: _normalizeRouteMap(params),
+    );
+    if (!mounted) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.reset',
+        message: 'Mini-program host was disposed before navigation completed.',
+      );
+    }
+    setState(() {
+      _screenStack = <_RenderedMiniProgramScreen>[screen];
+    });
+    return _routerResult(
+      requestId: requestId,
+      actionName: 'router.reset',
+      screen: screen,
+    );
+  }
+
+  Future<HostActionResult> _mpRouterPop(
+    Map<String, dynamic> result,
+    String? requestId,
+  ) async {
+    if (_screenStack.length <= 1) {
+      return HostActionResult.cancelled(
+        requestId: requestId,
+        actionName: 'router.pop',
+        message: 'Mini-program is already showing the root screen.',
+      );
+    }
+    final routeResult = _normalizeRouteMap(result);
+    setState(() {
+      final updatedStack = List<_RenderedMiniProgramScreen>.from(_screenStack)
+        ..removeLast();
+      updatedStack[updatedStack.length - 1] = updatedStack.last.withRouteResult(
+        routeResult,
+      );
+      _screenStack = updatedStack;
+    });
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: 'router.pop',
+      message: 'Returned to the previous mini-program screen.',
+      data: <String, dynamic>{'result': routeResult},
+    );
+  }
+
+  Future<HostActionResult> _mpRouterPopToRoot(
+    Map<String, dynamic> result,
+    String? requestId,
+  ) async {
+    if (_screenStack.isEmpty) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.popToRoot',
+        message: 'Mini-program runtime is not ready for screen navigation.',
+      );
+    }
+    final routeResult = _normalizeRouteMap(result);
+    final rootScreen = _screenStack.first.withRouteResult(routeResult);
+    final didPop = _screenStack.length > 1;
+    setState(() {
+      _screenStack = <_RenderedMiniProgramScreen>[rootScreen];
+    });
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: 'router.popToRoot',
+      message: didPop
+          ? 'Returned to the root mini-program screen.'
+          : 'Mini-program is already showing the root screen.',
+      data: <String, dynamic>{
+        'screenId': rootScreen.screenId,
+        'result': routeResult,
+      },
+    );
+  }
+
+  Future<HostActionResult> _mpRouterPopToScreen(
+    String screenId,
+    Map<String, dynamic> result,
+    String? requestId,
+  ) async {
+    final targetIndex = _screenStack.lastIndexWhere(
+      (screen) => screen.screenId == screenId,
+    );
+    if (targetIndex < 0) {
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: 'router.popToScreen',
+        message:
+            'Screen "$screenId" is not present in the current mini-program stack.',
+        errorCode: MiniProgramErrorCodes.screenNotInStack,
+        data: <String, dynamic>{'screenId': screenId},
+      );
+    }
+    final routeResult = _normalizeRouteMap(result);
+    final didPop = targetIndex < _screenStack.length - 1;
+    setState(() {
+      final updatedStack = List<_RenderedMiniProgramScreen>.from(
+        _screenStack.take(targetIndex + 1),
+      );
+      updatedStack[updatedStack.length - 1] = updatedStack.last.withRouteResult(
+        routeResult,
+      );
+      _screenStack = updatedStack;
+    });
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: 'router.popToScreen',
+      message: didPop
+          ? 'Returned to mini-program screen "$screenId".'
+          : 'Mini-program is already showing screen "$screenId".',
+      data: <String, dynamic>{'screenId': screenId, 'result': routeResult},
+    );
+  }
+
+  HostActionResult _routerResult({
+    required String? requestId,
+    required String actionName,
+    required _RenderedMiniProgramScreen screen,
+  }) {
+    return screen.failure == null
+        ? HostActionResult.success(
+            requestId: requestId,
+            actionName: actionName,
+            message: 'Opened mini-program screen "${screen.screenId}".',
+            data: <String, dynamic>{
+              'screenId': screen.screenId,
+              'params': screen.routeParams,
+            },
+          )
+        : HostActionResult.failed(
+            requestId: requestId,
+            actionName: actionName,
+            message: screen.failure!.message,
+            errorCode: screen.failure!.errorCode,
+            data: <String, dynamic>{
+              'screenId': screen.screenId,
+              ...screen.failure!.details,
+            },
+          );
+  }
+
+  Map<String, dynamic> _normalizeRouteMap(Map<String, dynamic> value) {
+    return Map<String, dynamic>.from(value);
+  }
+
   Future<_RenderedMiniProgramScreen> _loadNavigationScreen({
     required MiniProgramManifest manifest,
     required String screenId,
+    Map<String, dynamic> routeParams = const <String, dynamic>{},
   }) async {
     try {
       final loadedScreen = await _manifestLoader.loadScreen(
@@ -443,6 +687,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       return _RenderedMiniProgramScreen.content(
         screenId: screenId,
         screenJson: resolvedAssets.screenJson,
+        routeParams: routeParams,
         usedStaleCache: loadedScreen.usedStaleCache,
         cachedAssetCount: resolvedAssets.cachedAssetCount,
         downloadedAssetCount: resolvedAssets.downloadedAssetCount,
@@ -459,6 +704,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       return _RenderedMiniProgramScreen.failure(
         screenId: screenId,
         failure: failure,
+        routeParams: routeParams,
       );
     }
   }
@@ -495,6 +741,14 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         }
 
         final currentScreen = _screenStack.last;
+        final router = MpRouter(
+          push: _mpRouterPush,
+          replace: _mpRouterReplace,
+          reset: _mpRouterReset,
+          pop: _mpRouterPop,
+          popToRoot: _mpRouterPopToRoot,
+          popToScreen: _mpRouterPopToScreen,
+        );
         return MiniProgramSdkScope(
           miniProgramId: manifest.id,
           hostBridge: widget.hostBridge,
@@ -502,6 +756,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           backendConnector: widget.backendConnector,
           authController: widget.authController,
           backendStore: _backendStore,
+          stateManager: _stateManager,
+          router: router,
+          routeParams: currentScreen.routeParams,
           featureFlagEvaluator: widget.featureFlagEvaluator,
           logger: widget.logger,
           openMiniProgramScreen: _openMiniProgramScreen,
@@ -646,6 +903,7 @@ class _RenderedMiniProgramScreen {
   const _RenderedMiniProgramScreen.content({
     required this.screenId,
     required this.screenJson,
+    this.routeParams = const <String, dynamic>{},
     this.usedStaleCache = false,
     this.cachedAssetCount = 0,
     this.downloadedAssetCount = 0,
@@ -655,6 +913,7 @@ class _RenderedMiniProgramScreen {
   const _RenderedMiniProgramScreen.failure({
     required this.screenId,
     required this.failure,
+    this.routeParams = const <String, dynamic>{},
   }) : screenJson = null,
        usedStaleCache = false,
        cachedAssetCount = 0,
@@ -663,6 +922,7 @@ class _RenderedMiniProgramScreen {
 
   final String screenId;
   final Map<String, dynamic>? screenJson;
+  final Map<String, dynamic> routeParams;
   final MiniProgramFailure? failure;
   final bool usedStaleCache;
   final int cachedAssetCount;
@@ -670,4 +930,27 @@ class _RenderedMiniProgramScreen {
   final int failedAssetCount;
 
   int get resolvedAssetCount => cachedAssetCount + downloadedAssetCount;
+
+  _RenderedMiniProgramScreen withRouteResult(Map<String, dynamic> result) {
+    final updatedParams = <String, dynamic>{...routeParams}..remove('result');
+    if (result.isNotEmpty) {
+      updatedParams['result'] = result;
+    }
+    if (failure != null) {
+      return _RenderedMiniProgramScreen.failure(
+        screenId: screenId,
+        failure: failure!,
+        routeParams: updatedParams,
+      );
+    }
+    return _RenderedMiniProgramScreen.content(
+      screenId: screenId,
+      screenJson: screenJson!,
+      routeParams: updatedParams,
+      usedStaleCache: usedStaleCache,
+      cachedAssetCount: cachedAssetCount,
+      downloadedAssetCount: downloadedAssetCount,
+      failedAssetCount: failedAssetCount,
+    );
+  }
 }

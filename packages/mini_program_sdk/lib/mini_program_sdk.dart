@@ -33,6 +33,7 @@ export 'rendering/mini_program_backend_binding_resolver.dart';
 export 'rendering/mini_program_screen_renderer.dart';
 export 'rendering/mp_screen_renderer.dart';
 export 'sdk_context.dart';
+export 'state/mp_state.dart';
 export 'version_validator.dart';
 export 'widgets/sdk_error_view.dart';
 export 'widgets/sdk_email_auth_sheet.dart';

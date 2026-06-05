@@ -258,6 +258,13 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'stateBuilder' => _parseStateBuilderNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
       _ => _unsupportedNode(type, path: path),
     };
   }
@@ -847,6 +854,38 @@ class MpScreenValidator {
     );
   }
 
+  _MpNode _parseStateBuilderNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'keys',
+      'child',
+    }, path: '$path.props');
+    final parsedProps = <String, dynamic>{
+      'keys': _parseStateKeys(props['keys'], path: '$path.props.keys'),
+      ..._parseTemplateProps(
+        props,
+        const <String>{'child'},
+        path: '$path.props',
+        depth: depth,
+        state: state,
+      ),
+    };
+    if (!parsedProps.containsKey('child')) {
+      _fail('Mp stateBuilder requires a child template.', path: '$path.props');
+    }
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'stateBuilder',
+      props: parsedProps,
+      children: const <_MpNode>[],
+    );
+  }
+
   _MpAction _parseAction(Object? value, {required String path}) {
     if (value is! Map) {
       _fail('Mp action must be an object.', path: path);
@@ -867,6 +906,17 @@ class MpScreenValidator {
       'form.submit' => _parseFormSubmitAction(type, props, path),
       'ui.toast' => _parseToastAction(type, props, path),
       'ui.dialog' => _parseDialogAction(type, props, path),
+      'state.set' || 'state.put' => _parseStateSetAction(type, props, path),
+      'state.increment' => _parseStateIncrementAction(type, props, path),
+      'state.remove' => _parseStateRemoveAction(type, props, path),
+      'state.clear' => _parseNoPropsAction(type, props, path),
+      'sequence' => _parseSequenceAction(type, props, path),
+      'router.push' ||
+      'router.replace' ||
+      'router.reset' => _parseRouterScreenAction(type, props, path),
+      'router.pop' ||
+      'router.popToRoot' => _parseRouterResultAction(type, props, path),
+      'router.popToScreen' => _parseRouterPopToScreenAction(type, props, path),
       'navigation.openScreen' ||
       'navigation.replaceScreen' ||
       'navigation.resetStack' ||
@@ -1116,6 +1166,168 @@ class MpScreenValidator {
         'confirmLabel': props.containsKey('confirmLabel')
             ? _requiredString(props, 'confirmLabel', path: '$path.props')
             : 'OK',
+      },
+    );
+  }
+
+  _MpAction _parseStateSetAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'value',
+    }, path: '$path.props');
+    if (!props.containsKey('value')) {
+      _fail('Mp $type requires a value.', path: '$path.props.value');
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'value': props['value'],
+      },
+    );
+  }
+
+  _MpAction _parseStateIncrementAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'by',
+    }, path: '$path.props');
+    final by = props['by'];
+    if (by != null && by is! num) {
+      _fail('Mp state.increment by must be numeric.', path: '$path.props.by');
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'by': by ?? 1,
+      },
+    );
+  }
+
+  _MpAction _parseStateRemoveAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{'key'}, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+      },
+    );
+  }
+
+  _MpAction _parseSequenceAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{'steps'}, path: '$path.props');
+    final steps = props['steps'];
+    if (steps is! List || steps.isEmpty) {
+      _fail(
+        'Mp sequence requires a non-empty steps array.',
+        path: '$path.props.steps',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'steps': <_MpAction>[
+          for (var index = 0; index < steps.length; index += 1)
+            _parseAction(steps[index], path: '$path.props.steps[$index]'),
+        ],
+      },
+    );
+  }
+
+  _MpAction _parseRouterScreenAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'screenId',
+      'params',
+      'requestId',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'screenId': _requiredStableString(
+          props,
+          'screenId',
+          path: '$path.props',
+        ),
+        'params': _optionalMap(props['params'], path: '$path.props.params'),
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+      },
+    );
+  }
+
+  _MpAction _parseRouterResultAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'result',
+      'requestId',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'result': _optionalMap(props['result'], path: '$path.props.result'),
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+      },
+    );
+  }
+
+  _MpAction _parseRouterPopToScreenAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'screenId',
+      'result',
+      'requestId',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'screenId': _requiredStableString(
+          props,
+          'screenId',
+          path: '$path.props',
+        ),
+        'result': _optionalMap(props['result'], path: '$path.props.result'),
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
       },
     );
   }
@@ -1446,6 +1658,44 @@ class MpScreenValidator {
       'label': _requiredString(json, 'label', path: path),
       'value': optionValue,
     };
+  }
+
+  static List<String> _parseStateKeys(Object? value, {required String path}) {
+    if (value is! List || value.isEmpty) {
+      _fail('Mp state keys must be a non-empty array.', path: path);
+    }
+    final keys = <String>[];
+    for (var index = 0; index < value.length; index += 1) {
+      final rawKey = value[index];
+      if (rawKey is! String) {
+        _fail('Mp state key must be a string.', path: '$path[$index]');
+      }
+      keys.add(_validateStateKey(rawKey, path: '$path[$index]'));
+    }
+    return List<String>.unmodifiable(keys);
+  }
+
+  static String _requiredStateKey(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    return _validateStateKey(
+      _requiredStableString(json, key, path: path),
+      path: '$path.$key',
+    );
+  }
+
+  static String _validateStateKey(String value, {required String path}) {
+    try {
+      return validateStateKey(value);
+    } on ArgumentError {
+      _fail(
+        'Mp state key must be a safe lowercase dot path.',
+        path: path,
+        details: <String, dynamic>{'stateKey': value},
+      );
+    }
   }
 
   static Never _unsupportedNode(String type, {required String path}) {
