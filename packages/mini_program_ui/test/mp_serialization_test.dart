@@ -378,6 +378,169 @@ void main() {
       });
     });
 
+    test('serializes future display and layout widgets deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'future_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.alert(
+                title: 'Heads up',
+                message: 'Review settings',
+                tone: 'warning',
+              ),
+              Mp.avatar(initials: 'MH', size: 48, semanticLabel: 'Mehedi'),
+              Mp.grid(
+                columns: 3,
+                spacing: 6,
+                children: <MpNode>[
+                  Mp.text('One'),
+                  Mp.text('Two'),
+                  Mp.text('Three'),
+                ],
+              ),
+              Mp.wrap(
+                spacing: 4,
+                runSpacing: 6,
+                children: <MpNode>[
+                  Mp.chip(label: 'Fast'),
+                  Mp.badge(label: 'New'),
+                ],
+              ),
+              Mp.progress(
+                value: 2,
+                max: 5,
+                label: 'Uploading',
+                tone: 'success',
+              ),
+              Mp.emptyState(
+                title: 'No coupons',
+                message: 'Try again later',
+                icon: 'search',
+                actionLabel: 'Retry',
+                action: Mp.state.set('empty.retry', true),
+              ),
+              Mp.section(
+                title: 'Featured',
+                subtitle: 'Curated for you',
+                actionLabel: 'View all',
+                action: Mp.state.set('section.more', true),
+                child: Mp.text('Section body'),
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['future_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'alert',
+            'props': <String, Object?>{
+              'icon': 'warning',
+              'message': 'Review settings',
+              'title': 'Heads up',
+              'tone': 'warning',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'avatar',
+            'props': <String, Object?>{
+              'initials': 'MH',
+              'semanticLabel': 'Mehedi',
+              'size': 48,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'grid',
+            'props': <String, Object?>{'columns': 3, 'spacing': 6},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'One'},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Two'},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Three'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'wrap',
+            'props': <String, Object?>{'runSpacing': 6, 'spacing': 4},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'chip',
+                'props': <String, Object?>{'label': 'Fast', 'tone': 'neutral'},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'badge',
+                'props': <String, Object?>{'label': 'New', 'tone': 'info'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'progress',
+            'props': <String, Object?>{
+              'label': 'Uploading',
+              'max': 5,
+              'tone': 'success',
+              'value': 2,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'emptyState',
+            'props': <String, Object?>{
+              'action': <String, Object?>{
+                'type': 'state.set',
+                'props': <String, Object?>{'key': 'empty.retry', 'value': true},
+              },
+              'actionLabel': 'Retry',
+              'icon': 'search',
+              'message': 'Try again later',
+              'title': 'No coupons',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'section',
+            'props': <String, Object?>{
+              'action': <String, Object?>{
+                'type': 'state.set',
+                'props': <String, Object?>{
+                  'key': 'section.more',
+                  'value': true,
+                },
+              },
+              'actionLabel': 'View all',
+              'subtitle': 'Curated for you',
+              'title': 'Featured',
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Section body'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+        ],
+      });
+    });
+
     test('serializes form nodes and feedback actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

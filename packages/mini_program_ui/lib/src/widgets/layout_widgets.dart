@@ -1,4 +1,5 @@
 import '../mp_node.dart';
+import '../mp_action.dart';
 import 'widget_props.dart';
 
 MpNode buildPaddingNode({
@@ -110,5 +111,60 @@ MpNode buildDividerNode({
       'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
       'thickness': nonNegativeWidgetNumber(thickness, 'thickness'),
     },
+  );
+}
+
+MpNode buildGridNode({
+  required List<MpNode> children,
+  int columns = 2,
+  num spacing = 8,
+}) {
+  return MpNode(
+    'grid',
+    props: <String, Object?>{
+      'columns': gridColumnCount(columns),
+      'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
+    },
+    children: requiredWidgetList(children, 'children'),
+  );
+}
+
+MpNode buildWrapNode({
+  required List<MpNode> children,
+  num spacing = 8,
+  num runSpacing = 8,
+}) {
+  return MpNode(
+    'wrap',
+    props: <String, Object?>{
+      'runSpacing': nonNegativeWidgetNumber(runSpacing, 'runSpacing'),
+      'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
+    },
+    children: requiredWidgetList(children, 'children'),
+  );
+}
+
+MpNode buildSectionNode({
+  required String title,
+  String? subtitle,
+  required MpNode child,
+  String? actionLabel,
+  MpAction? action,
+}) {
+  final normalizedActionLabel = pairedActionLabel(
+    action: action,
+    actionLabel: actionLabel,
+    owner: 'section',
+  );
+  return MpNode(
+    'section',
+    props: <String, Object?>{
+      if (action != null) 'action': action,
+      if (normalizedActionLabel != null) 'actionLabel': normalizedActionLabel,
+      if (subtitle != null)
+        'subtitle': requiredWidgetString(subtitle, 'subtitle'),
+      'title': requiredWidgetString(title, 'title'),
+    },
+    children: <MpNode>[child],
   );
 }

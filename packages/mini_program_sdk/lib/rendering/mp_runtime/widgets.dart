@@ -494,6 +494,13 @@ class _MpNodeView extends StatelessWidget {
       'listTile' => _MpListTile(node: node, bindings: bindings),
       'chip' => _MpChip(node: node, bindings: bindings),
       'badge' => _MpBadge(node: node, bindings: bindings),
+      'alert' => _MpAlert(node: node, bindings: bindings),
+      'avatar' => _MpAvatar(node: node, bindings: bindings),
+      'grid' => _MpGrid(node: node, bindings: bindings),
+      'wrap' => _MpWrap(node: node, bindings: bindings),
+      'progress' => _MpProgress(node: node, bindings: bindings),
+      'emptyState' => _MpEmptyState(node: node, bindings: bindings),
+      'section' => _MpSection(node: node, bindings: bindings),
       'primaryButton' => _MpButton(
         label: bindings.resolveString(node.props['label'] as String),
         action: node.props['action'] as _MpAction,
@@ -765,6 +772,371 @@ class _MpBadge extends StatelessWidget {
   }
 }
 
+class _MpAlert extends StatelessWidget {
+  const _MpAlert({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = _string(node, 'tone');
+    final colors = _mpToneStyle(tone);
+    final message = _optionalResolvedString(node, bindings, 'message');
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.background,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _MpIconGlyph(
+              name: _string(node, 'icon'),
+              size: 20,
+              color: colors.foreground,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    bindings.resolveString(_string(node, 'title')),
+                    style: TextStyle(
+                      color: colors.foreground,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (message != null) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        color: colors.foreground,
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MpAvatar extends StatelessWidget {
+  const _MpAvatar({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = _double(node, 'size', fallback: 40);
+    final semanticLabel = _optionalResolvedString(
+      node,
+      bindings,
+      'semanticLabel',
+    );
+    return Semantics(
+      image: true,
+      label: semanticLabel,
+      child: ClipOval(
+        child: SizedBox(width: size, height: size, child: _avatarChild(size)),
+      ),
+    );
+  }
+
+  Widget _avatarChild(double size) {
+    final imageUrl = node.props['imageUrl'] as String?;
+    if (imageUrl != null) {
+      final resolvedUrl = bindings.resolveString(imageUrl);
+      if (!_isRenderableImageUrl(resolvedUrl)) {
+        return _avatarFallback(size);
+      }
+      return Image.network(
+        resolvedUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _avatarFallback(size),
+      );
+    }
+    return _avatarFallback(size);
+  }
+
+  Widget _avatarFallback(double size) {
+    final initials = node.props['initials'] as String?;
+    final icon = node.props['icon'] as String?;
+    return DecoratedBox(
+      decoration: const BoxDecoration(color: Color(0xFFEFF6FF)),
+      child: Center(
+        child: initials != null
+            ? Text(
+                bindings.resolveString(initials),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: const Color(0xFF1D4ED8),
+                  fontSize: size <= 32 ? 12 : 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : _MpIconGlyph(
+                name: icon ?? 'person',
+                size: size * 0.55,
+                color: const Color(0xFF1D4ED8),
+              ),
+      ),
+    );
+  }
+}
+
+class _MpGrid extends StatelessWidget {
+  const _MpGrid({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = _int(node, 'columns', fallback: 2);
+    final spacing = _double(node, 'spacing', fallback: 8);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 360.0;
+        final itemWidth = (maxWidth - (spacing * (columns - 1))) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: <Widget>[
+            for (final child in node.children)
+              SizedBox(
+                width: itemWidth < 0 ? 0 : itemWidth,
+                child: _MpNodeView(node: child, bindings: bindings),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MpWrap extends StatelessWidget {
+  const _MpWrap({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: _double(node, 'spacing', fallback: 8),
+      runSpacing: _double(node, 'runSpacing', fallback: 8),
+      children: <Widget>[
+        for (final child in node.children)
+          _MpNodeView(node: child, bindings: bindings),
+      ],
+    );
+  }
+}
+
+class _MpProgress extends StatelessWidget {
+  const _MpProgress({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _mpToneStyle(_string(node, 'tone'));
+    final value = _double(node, 'value', fallback: 0);
+    final max = _double(node, 'max', fallback: 1);
+    final fraction = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
+    final label = _optionalResolvedString(node, bindings, 'label');
+    final bar = ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: 8,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: colors.background),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: fraction,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: colors.foreground),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (label == null) {
+      return bar;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF374151),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        bar,
+      ],
+    );
+  }
+}
+
+class _MpEmptyState extends StatelessWidget {
+  const _MpEmptyState({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final action = node.props['action'] as _MpAction?;
+    final actionLabel = _optionalResolvedString(node, bindings, 'actionLabel');
+    final message = _optionalResolvedString(node, bindings, 'message');
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _MpIconGlyph(
+              name: _string(node, 'icon'),
+              size: 34,
+              color: const Color(0xFF6B7280),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              bindings.resolveString(_string(node, 'title')),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (message != null) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 14,
+                  height: 1.35,
+                ),
+              ),
+            ],
+            if (action != null && actionLabel != null) ...<Widget>[
+              const SizedBox(height: 14),
+              _MpTapButton(
+                label: actionLabel,
+                primary: false,
+                onTap: () => unawaited(
+                  _MpActionDispatcher.dispatch(context, action, bindings),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MpSection extends StatelessWidget {
+  const _MpSection({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final action = node.props['action'] as _MpAction?;
+    final actionLabel = _optionalResolvedString(node, bindings, 'actionLabel');
+    final subtitle = _optionalResolvedString(node, bindings, 'subtitle');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    bindings.resolveString(_string(node, 'title')),
+                    style: const TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (subtitle != null) ...<Widget>[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (action != null && actionLabel != null) ...<Widget>[
+              const SizedBox(width: 12),
+              _MpActionTap(
+                label: actionLabel,
+                action: action,
+                bindings: bindings,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    actionLabel,
+                    style: const TextStyle(
+                      color: Color(0xFF0B7A75),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        _MpNodeView(node: node.children.single, bindings: bindings),
+      ],
+    );
+  }
+}
+
 class _MpActionTap extends StatelessWidget {
   const _MpActionTap({
     required this.label,
@@ -964,6 +1336,15 @@ Color _mpColor(String? value, {required Color fallback}) {
     return Color(0xFF000000 | int.parse(hex, radix: 16));
   }
   return Color(int.parse(hex, radix: 16));
+}
+
+bool _isRenderableImageUrl(String src) {
+  final uri = Uri.tryParse(src);
+  if (uri == null || !uri.hasAuthority) {
+    return false;
+  }
+  return uri.scheme == 'https' ||
+      (uri.scheme == 'http' && MpScreenValidator._isLocalPreviewHost(uri.host));
 }
 
 _MpToneColors _mpToneStyle(String tone) {

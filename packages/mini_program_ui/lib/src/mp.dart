@@ -150,6 +150,70 @@ abstract final class Mp {
     semanticLabel: semanticLabel,
   );
 
+  /// Creates a tone-colored alert message.
+  static MpNode alert({
+    required String title,
+    String? message,
+    String tone = 'info',
+    String? icon,
+  }) => buildAlertNode(title: title, message: message, tone: tone, icon: icon);
+
+  /// Creates a circular avatar from an image URL, initials, or icon.
+  static MpNode avatar({
+    String? imageUrl,
+    String? initials,
+    String? icon,
+    num size = 40,
+    String? semanticLabel,
+  }) => buildAvatarNode(
+    imageUrl: imageUrl,
+    initials: initials,
+    icon: icon,
+    size: size,
+    semanticLabel: semanticLabel,
+  );
+
+  /// Creates a fixed-column grid.
+  static MpNode grid({
+    required List<MpNode> children,
+    int columns = 2,
+    num spacing = 8,
+  }) => buildGridNode(children: children, columns: columns, spacing: spacing);
+
+  /// Creates a wrapping layout for chips, badges, and compact content.
+  static MpNode wrap({
+    required List<MpNode> children,
+    num spacing = 8,
+    num runSpacing = 8,
+  }) => buildWrapNode(
+    children: children,
+    spacing: spacing,
+    runSpacing: runSpacing,
+  );
+
+  /// Creates a linear progress indicator.
+  static MpNode progress({
+    required num value,
+    num max = 1,
+    String? label,
+    String tone = 'info',
+  }) => buildProgressNode(value: value, max: max, label: label, tone: tone);
+
+  /// Creates an empty-state placeholder with an optional action.
+  static MpNode emptyState({
+    required String title,
+    String? message,
+    String icon = 'info',
+    String? actionLabel,
+    MpAction? action,
+  }) => buildEmptyStateNode(
+    title: title,
+    message: message,
+    icon: icon,
+    actionLabel: actionLabel,
+    action: action,
+  );
+
   /// Creates an image node.
   static MpNode image({required String src, String? alt}) => MpNode(
     'image',
@@ -386,6 +450,21 @@ abstract final class Mp {
   /// Creates a small status badge.
   static MpNode badge({required String label, String tone = 'info'}) =>
       buildBadgeNode(label: label, tone: tone);
+
+  /// Creates a titled section with an optional action.
+  static MpNode section({
+    required String title,
+    String? subtitle,
+    required MpNode child,
+    String? actionLabel,
+    MpAction? action,
+  }) => buildSectionNode(
+    title: title,
+    subtitle: subtitle,
+    child: child,
+    actionLabel: actionLabel,
+    action: action,
+  );
 
   /// Creates an auth state builder.
   static MpNode authBuilder({

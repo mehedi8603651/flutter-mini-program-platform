@@ -42,6 +42,51 @@ num nonNegativeWidgetNumber(num value, String name) {
   return value;
 }
 
+num positiveWidgetNumber(num value, String name) {
+  if (!value.isFinite || value <= 0) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Value must be finite and positive.',
+    );
+  }
+  return value;
+}
+
+List<T> requiredWidgetList<T>(List<T> values, String name) {
+  if (values.isEmpty) {
+    throw ArgumentError.value(values, name, 'Values cannot be empty.');
+  }
+  return values;
+}
+
+int gridColumnCount(int value) {
+  if (value < 1 || value > 6) {
+    throw ArgumentError.value(
+      value,
+      'columns',
+      'Grid columns must be between 1 and 6.',
+    );
+  }
+  return value;
+}
+
+String? pairedActionLabel({
+  required Object? action,
+  required String? actionLabel,
+  required String owner,
+}) {
+  if (action == null && actionLabel == null) {
+    return null;
+  }
+  if (action == null || actionLabel == null) {
+    throw ArgumentError(
+      'Provide both action and actionLabel for Mp.$owner, or neither.',
+    );
+  }
+  return requiredWidgetString(actionLabel, 'actionLabel');
+}
+
 String widgetColor(String value, String name) {
   final trimmed = requiredWidgetString(value, name);
   if (!_hexColorPattern.hasMatch(trimmed)) {

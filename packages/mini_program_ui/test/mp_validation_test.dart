@@ -64,6 +64,55 @@ void main() {
       expect(() => Mp.badge(label: 'New', tone: 'brand'), throwsArgumentError);
     });
 
+    test('future display and layout helpers reject invalid configuration', () {
+      expect(() => Mp.alert(title: '', tone: 'info'), throwsArgumentError);
+      expect(() => Mp.alert(title: 'Hi', tone: 'brand'), throwsArgumentError);
+      expect(() => Mp.alert(title: 'Hi', icon: 'video'), throwsArgumentError);
+      expect(() => Mp.avatar(), throwsArgumentError);
+      expect(
+        () => Mp.avatar(initials: 'MH', icon: 'person'),
+        throwsArgumentError,
+      );
+      expect(() => Mp.avatar(icon: 'person', size: 0), throwsArgumentError);
+      expect(
+        () => Mp.grid(children: const <MpNode>[], columns: 2),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.grid(children: <MpNode>[Mp.text('Hi')], columns: 7),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.wrap(children: const <MpNode>[], spacing: 8),
+        throwsArgumentError,
+      );
+      expect(() => Mp.progress(value: -1), throwsArgumentError);
+      expect(() => Mp.progress(value: 2, max: 1), throwsArgumentError);
+      expect(
+        () => Mp.emptyState(
+          title: 'Empty',
+          action: Mp.state.set('empty.retry', true),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.emptyState(title: 'Empty', actionLabel: 'Retry'),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.section(title: '', child: Mp.text('Body')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.section(
+          title: 'Featured',
+          child: Mp.text('Body'),
+          actionLabel: 'View all',
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('runtime parity helpers reject invalid required fields', () {
       expect(
         () => Mp.backendBuilder(requestId: '', endpoint: 'home/bootstrap'),

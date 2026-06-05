@@ -194,6 +194,45 @@ void main() {
       );
     });
 
+    test('accepts author-generated future display and layout widget JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.alert(title: 'Heads up', message: 'Review settings'),
+                Mp.avatar(initials: 'MH', semanticLabel: 'Mehedi'),
+                Mp.grid(children: <MpNode>[Mp.text('One'), Mp.text('Two')]),
+                Mp.wrap(
+                  children: <MpNode>[
+                    Mp.chip(label: 'Fast'),
+                    Mp.badge(label: 'New'),
+                  ],
+                ),
+                Mp.progress(value: 0.4, label: 'Loading'),
+                Mp.emptyState(
+                  title: 'No coupons',
+                  actionLabel: 'Retry',
+                  action: Mp.state.set('empty.retry', true),
+                ),
+                Mp.section(
+                  title: 'Featured',
+                  child: Mp.text('Section body'),
+                  actionLabel: 'View all',
+                  action: Mp.state.set('section.more', true),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -345,6 +384,76 @@ void main() {
             'children': <Object?>[],
           };
         }),
+        'invalid avatar source count': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'avatar',
+            'props': <String, dynamic>{'initials': 'MH', 'icon': 'person'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid avatar image url': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'avatar',
+            'props': <String, dynamic>{'imageUrl': 'http://example.com/a.png'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid grid columns': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'grid',
+            'props': <String, dynamic>{'columns': 0},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'empty wrap': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'wrap',
+            'props': <String, dynamic>{},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid progress range': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'progress',
+            'props': <String, dynamic>{'value': 2, 'max': 1},
+            'children': <Object?>[],
+          };
+        }),
+        'emptyState action missing label': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'emptyState',
+            'props': <String, dynamic>{
+              'title': 'Empty',
+              'action': <String, dynamic>{
+                'type': 'state.set',
+                'props': <String, dynamic>{'key': 'empty.retry', 'value': true},
+              },
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'section label missing action': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'section',
+            'props': <String, dynamic>{
+              'title': 'Featured',
+              'actionLabel': 'View all',
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Body'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
         'invalid ui action': _screenWith((json) {
           json['root'] = <String, dynamic>{
             'type': 'primaryButton',
@@ -489,6 +598,109 @@ void main() {
       await tester.tap(find.text('Featured'));
       await tester.pump();
       expect(find.text('Profile: true Featured: true'), findsOneWidget);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('renders future display and layout widgets with actions', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.stateBuilder(
+                  keys: const <String>['empty.retry', 'section.more'],
+                  child: Mp.text(
+                    'Retry: {{state.empty.retry}} '
+                    'More: {{state.section.more}}',
+                  ),
+                ),
+                Mp.alert(
+                  title: 'Network notice',
+                  message: 'Some data may be delayed',
+                  tone: 'warning',
+                ),
+                Mp.row(
+                  children: <MpNode>[
+                    Mp.avatar(initials: 'MH', semanticLabel: 'Mehedi'),
+                    Mp.avatar(icon: 'person', semanticLabel: 'Profile'),
+                  ],
+                ),
+                Mp.grid(
+                  columns: 2,
+                  spacing: 8,
+                  children: <MpNode>[
+                    Mp.container(paddingAll: 8, child: Mp.text('Tile one')),
+                    Mp.container(paddingAll: 8, child: Mp.text('Tile two')),
+                  ],
+                ),
+                Mp.wrap(
+                  children: <MpNode>[
+                    Mp.chip(label: 'Alpha'),
+                    Mp.badge(label: 'Ready'),
+                  ],
+                ),
+                Mp.progress(
+                  value: 3,
+                  max: 6,
+                  label: 'Setup progress',
+                  tone: 'success',
+                ),
+                Mp.emptyState(
+                  title: 'Nothing here',
+                  message: 'Try refreshing this view',
+                  icon: 'search',
+                  actionLabel: 'Retry empty',
+                  action: Mp.state.set('empty.retry', true),
+                ),
+                Mp.section(
+                  title: 'Latest',
+                  subtitle: 'Fresh picks',
+                  actionLabel: 'Open all',
+                  action: Mp.state.set('section.more', true),
+                  child: Mp.text('Section body'),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+
+      expect(find.text('Network notice'), findsOneWidget);
+      expect(find.text('Some data may be delayed'), findsOneWidget);
+      expect(find.text('MH'), findsOneWidget);
+      expect(find.text('Tile one'), findsOneWidget);
+      expect(find.text('Tile two'), findsOneWidget);
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Ready'), findsOneWidget);
+      expect(find.text('Setup progress'), findsOneWidget);
+      expect(find.text('Nothing here'), findsOneWidget);
+      expect(find.text('Section body'), findsOneWidget);
+      expect(find.byType(Wrap), findsAtLeastNWidgets(2));
+      expect(find.byType(FractionallySizedBox), findsWidgets);
+
+      await tester.ensureVisible(find.text('Retry empty'));
+      await tester.tap(find.text('Retry empty'));
+      await tester.pump();
+      expect(find.text('Retry: true More: '), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Open all'));
+      await tester.tap(find.text('Open all'));
+      await tester.pump();
+      expect(find.text('Retry: true More: true'), findsOneWidget);
 
       stateManager.dispose();
       backendStore.dispose();

@@ -263,6 +263,41 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'alert' => _parseAlertNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'avatar' => _parseAvatarNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'grid' => _parseGridNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'wrap' => _parseWrapNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'progress' => _parseProgressNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'emptyState' => _parseEmptyStateNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'section' => _parseSectionNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'primaryButton' || 'secondaryButton' => _parseButtonNode(
         type: type,
         props: props,
@@ -666,6 +701,250 @@ class MpScreenValidator {
       },
       children: const <_MpNode>[],
     );
+  }
+
+  _MpNode _parseAlertNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'title',
+      'message',
+      'tone',
+      'icon',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final tone = _optionalTone(props, 'tone', path: '$path.props') ?? 'info';
+    return _MpNode(
+      type: 'alert',
+      props: <String, dynamic>{
+        'icon': props.containsKey('icon')
+            ? _requiredIconName(props, 'icon', path: '$path.props')
+            : _defaultAlertIcon(tone),
+        if (props.containsKey('message'))
+          'message': _requiredString(props, 'message', path: '$path.props'),
+        'title': _requiredString(props, 'title', path: '$path.props'),
+        'tone': tone,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseAvatarNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'imageUrl',
+      'initials',
+      'icon',
+      'size',
+      'semanticLabel',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    _validateAvatarSource(props, path: '$path.props');
+    final parsedProps = <String, dynamic>{
+      if (props.containsKey('icon'))
+        'icon': _requiredIconName(props, 'icon', path: '$path.props'),
+      if (props.containsKey('imageUrl'))
+        'imageUrl': _requiredString(props, 'imageUrl', path: '$path.props'),
+      if (props.containsKey('initials'))
+        'initials': _requiredString(props, 'initials', path: '$path.props'),
+      if (props.containsKey('semanticLabel'))
+        'semanticLabel': _requiredString(
+          props,
+          'semanticLabel',
+          path: '$path.props',
+        ),
+      'size':
+          _optionalPositiveNumberValue(
+            props['size'],
+            path: '$path.props.size',
+          ) ??
+          40,
+    };
+    final imageUrl = parsedProps['imageUrl'] as String?;
+    if (imageUrl != null && !_MpBindingResolver.containsBinding(imageUrl)) {
+      _validateImageUrl(imageUrl, path: '$path.props.imageUrl');
+    }
+    return _MpNode(
+      type: 'avatar',
+      props: parsedProps,
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseGridNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'columns',
+      'spacing',
+    }, path: '$path.props');
+    _validateNonEmptyChildren(children, nodeType: 'grid', path: path);
+    return _MpNode(
+      type: 'grid',
+      props: <String, dynamic>{
+        'columns':
+            _optionalGridColumns(
+              props['columns'],
+              path: '$path.props.columns',
+            ) ??
+            2,
+        'spacing':
+            _optionalNonNegativeNumberValue(
+              props['spacing'],
+              path: '$path.props.spacing',
+            ) ??
+            8,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseWrapNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'spacing',
+      'runSpacing',
+    }, path: '$path.props');
+    _validateNonEmptyChildren(children, nodeType: 'wrap', path: path);
+    return _MpNode(
+      type: 'wrap',
+      props: <String, dynamic>{
+        'runSpacing':
+            _optionalNonNegativeNumberValue(
+              props['runSpacing'],
+              path: '$path.props.runSpacing',
+            ) ??
+            8,
+        'spacing':
+            _optionalNonNegativeNumberValue(
+              props['spacing'],
+              path: '$path.props.spacing',
+            ) ??
+            8,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseProgressNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'value',
+      'max',
+      'label',
+      'tone',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final value = _requiredNonNegativeNumber(
+      props,
+      'value',
+      path: '$path.props',
+    );
+    final max =
+        _optionalPositiveNumberValue(props['max'], path: '$path.props.max') ??
+        1;
+    if (value > max) {
+      _fail(
+        'Mp progress value must be less than or equal to max.',
+        path: '$path.props.value',
+      );
+    }
+    return _MpNode(
+      type: 'progress',
+      props: <String, dynamic>{
+        if (props.containsKey('label'))
+          'label': _requiredString(props, 'label', path: '$path.props'),
+        'max': max,
+        'tone': _optionalTone(props, 'tone', path: '$path.props') ?? 'info',
+        'value': value,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseEmptyStateNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'title',
+      'message',
+      'icon',
+      'actionLabel',
+      'action',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final actionProps = _parseActionLabelPair(props, path: '$path.props');
+    return _MpNode(
+      type: 'emptyState',
+      props: <String, dynamic>{
+        ...actionProps,
+        'icon': props.containsKey('icon')
+            ? _requiredIconName(props, 'icon', path: '$path.props')
+            : 'info',
+        if (props.containsKey('message'))
+          'message': _requiredString(props, 'message', path: '$path.props'),
+        'title': _requiredString(props, 'title', path: '$path.props'),
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseSectionNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'title',
+      'subtitle',
+      'actionLabel',
+      'action',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'section', path: path);
+    final actionProps = _parseActionLabelPair(props, path: '$path.props');
+    return _MpNode(
+      type: 'section',
+      props: <String, dynamic>{
+        ...actionProps,
+        if (props.containsKey('subtitle'))
+          'subtitle': _requiredString(props, 'subtitle', path: '$path.props'),
+        'title': _requiredString(props, 'title', path: '$path.props'),
+      },
+      children: children,
+    );
+  }
+
+  Map<String, dynamic> _parseActionLabelPair(
+    Map<String, dynamic> props, {
+    required String path,
+  }) {
+    final hasAction = props.containsKey('action');
+    final hasActionLabel = props.containsKey('actionLabel');
+    if (!hasAction && !hasActionLabel) {
+      return const <String, dynamic>{};
+    }
+    if (!hasAction || !hasActionLabel) {
+      _fail('Mp action and actionLabel must be provided together.', path: path);
+    }
+    return <String, dynamic>{
+      'action': _parseAction(props['action'], path: '$path.action'),
+      'actionLabel': _requiredString(props, 'actionLabel', path: path),
+    };
   }
 
   _MpNode _parseButtonNode({
@@ -1766,6 +2045,36 @@ class MpScreenValidator {
     }
   }
 
+  static void _validateNonEmptyChildren(
+    List<_MpNode> children, {
+    required String nodeType,
+    required String path,
+  }) {
+    if (children.isEmpty) {
+      _fail(
+        'Mp $nodeType requires at least one child.',
+        path: '$path.children',
+      );
+    }
+  }
+
+  static void _validateAvatarSource(
+    Map<String, dynamic> props, {
+    required String path,
+  }) {
+    final sourceCount = <String>[
+      'imageUrl',
+      'initials',
+      'icon',
+    ].where(props.containsKey).length;
+    if (sourceCount != 1) {
+      _fail(
+        'Mp avatar requires exactly one of imageUrl, initials, or icon.',
+        path: path,
+      );
+    }
+  }
+
   static Map<String, dynamic> _parseSpacing(
     Object? value, {
     required String path,
@@ -1804,6 +2113,14 @@ class MpScreenValidator {
           spacing['top'],
           path: '$path.top',
         ),
+    };
+  }
+
+  static String _defaultAlertIcon(String tone) {
+    return switch (tone) {
+      'success' => 'check',
+      'warning' || 'danger' => 'warning',
+      _ => 'info',
     };
   }
 
@@ -1983,6 +2300,31 @@ class MpScreenValidator {
     return value;
   }
 
+  static int? _optionalGridColumns(Object? value, {required String path}) {
+    if (value == null) {
+      return null;
+    }
+    if (value is! int || value < 1 || value > 6) {
+      _fail('Mp grid columns must be an integer from 1 to 6.', path: path);
+    }
+    return value;
+  }
+
+  static num _requiredNonNegativeNumber(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = json[key];
+    if (value is! num || value < 0 || !value.isFinite) {
+      _fail(
+        'Mp "$key" must be a finite non-negative number.',
+        path: '$path.$key',
+      );
+    }
+    return value;
+  }
+
   static void _optionalNonNegativeNumber(
     Object? value, {
     required String path,
@@ -2004,6 +2346,19 @@ class MpScreenValidator {
     }
     if (value is! num || value < 0 || !value.isFinite) {
       _fail('Mp numeric value must be finite and non-negative.', path: path);
+    }
+    return value;
+  }
+
+  static num? _optionalPositiveNumberValue(
+    Object? value, {
+    required String path,
+  }) {
+    if (value == null) {
+      return null;
+    }
+    if (value is! num || value <= 0 || !value.isFinite) {
+      _fail('Mp numeric value must be finite and positive.', path: path);
     }
     return value;
   }
