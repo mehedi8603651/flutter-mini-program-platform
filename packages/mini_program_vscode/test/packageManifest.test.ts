@@ -24,7 +24,7 @@ test('package manifest exposes cloud publisher backend commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.2.0-dev.2');
+  assert.equal(manifest.version, '0.2.0-dev.3');
   for (const commandId of [
     'miniProgramTools.publisherBackendAwsOutputs',
     'miniProgramTools.publisherBackendAwsSmoke',
@@ -56,6 +56,10 @@ test('package manifest exposes cloud publisher backend commands', () => {
     'miniProgramTools.publisherBackendFirebaseDataImportDryRun',
     'miniProgramTools.publisherBackendFirebaseDataRedemptions',
     'miniProgramTools.publisherBackendFirebaseDestroy',
+    'miniProgramTools.publisherBackendContractInit',
+    'miniProgramTools.publisherBackendContractValidate',
+    'miniProgramTools.publisherBackendContractSmoke',
+    'miniProgramTools.publisherBackendContractHandoff',
   ]) {
     assert.equal(commandIds.has(commandId), true, `${commandId} is contributed`);
     if (commandId !== 'miniProgramTools.configureFirebaseEnvironment') {

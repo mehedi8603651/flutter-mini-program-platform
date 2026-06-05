@@ -23,6 +23,7 @@ export interface PublisherBackendAwsCliCapability {
   readonly supportsFirebaseHostingPublish?: boolean;
   readonly supportsWriteSmoke: boolean;
   readonly supportsAwsPagedRoutes?: boolean;
+  readonly supportsPublisherBackendContract?: boolean;
   readonly supportsDataManagement: boolean;
   readonly supportsFirebaseScaffold?: boolean;
   readonly supportsFirebaseOperations?: boolean;
@@ -85,6 +86,7 @@ export async function detectPublisherBackendAwsCliCapabilitiesUncached(
         capability.supportsLegacyStacAdapter ||
         capability.supportsWriteSmoke ||
         capability.supportsAwsPagedRoutes ||
+        capability.supportsPublisherBackendContract ||
         capability.supportsDataManagement ||
         capability.supportsFirebaseOperations ||
         capability.supportsFirebaseHostCommand ||
@@ -192,6 +194,15 @@ export function capabilityFromCliCapabilitiesJson(
   const supportsAwsPagedRoutes =
     hasFeature('publisherBackendAwsPagedRoutes') ||
     hasCapability('publisher_backend.aws.paged_routes');
+  const supportsPublisherBackendContract =
+    (hasFeature('publisherBackendContractInit') &&
+      hasFeature('publisherBackendContractValidate') &&
+      hasFeature('publisherBackendContractSmoke') &&
+      hasFeature('publisherBackendContractHandoff')) ||
+    (hasCapability('publisher_backend.contract.init') &&
+      hasCapability('publisher_backend.contract.validate') &&
+      hasCapability('publisher_backend.contract.smoke') &&
+      hasCapability('publisher_backend.contract.handoff'));
   const supportsDataManagement =
     (hasFeature('publisherBackendAwsDynamoDbDataExport') &&
       hasFeature('publisherBackendAwsDynamoDbDataImport') &&
@@ -270,6 +281,9 @@ export function capabilityFromCliCapabilitiesJson(
     supportsAwsPagedRoutes
       ? undefined
       : 'Configured CLI capabilities do not include AWS paged backend routes.',
+    supportsPublisherBackendContract
+      ? undefined
+      : 'Configured CLI capabilities do not include provider-neutral publisher backend contract commands.',
     supportsFirebaseScaffold
       ? undefined
       : 'Configured CLI capabilities do not include Firebase Functions scaffold.',
@@ -313,6 +327,7 @@ export function capabilityFromCliCapabilitiesJson(
     supportsFirebaseHostingPublish,
     supportsWriteSmoke,
     supportsAwsPagedRoutes,
+    supportsPublisherBackendContract,
     supportsDataManagement,
     supportsFirebaseScaffold,
     supportsFirebaseOperations,
@@ -561,6 +576,35 @@ export async function ensurePublisherBackendFirebaseStarterUiCli049(
     : '';
   const message =
     'MiniProgram CLI 0.4.0-dev.3 or newer is required for Mp-aware Firebase starter UI generation. ' +
+    `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
+  output.appendLine(message);
+  if (capability.detail) {
+    output.appendLine(capability.detail);
+  }
+  vscode.window.showWarningMessage(message);
+  return false;
+}
+
+export async function ensurePublisherBackendContractCli0405(
+  workspacePath: string,
+  output: vscode.OutputChannel,
+): Promise<boolean> {
+  output.show(true);
+  const capability = await detectPublisherBackendAwsCliCapabilities(
+    workspacePath,
+    output,
+  );
+  if (
+    capability.supportsPublisherBackendContract &&
+    toolingVersionAtLeast(capability.toolingVersion, '0.4.0')
+  ) {
+    return true;
+  }
+  const versionDetail = capability.toolingVersion
+    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
+    : '';
+  const message =
+    'MiniProgram CLI 0.4.0-dev.5 or newer is required for provider-neutral publisher backend API contracts. ' +
     `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {

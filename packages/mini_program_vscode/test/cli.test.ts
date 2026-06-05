@@ -44,6 +44,10 @@ import {
   buildPublisherBackendAwsSeedArgs,
   buildPublisherBackendAwsSmokeArgs,
   buildPublisherBackendAwsStatusArgs,
+  buildPublisherBackendContractHandoffArgs,
+  buildPublisherBackendContractInitArgs,
+  buildPublisherBackendContractSmokeArgs,
+  buildPublisherBackendContractValidateArgs,
   buildPublisherBackendFirebaseDataExportArgs,
   buildPublisherBackendFirebaseDataImportArgs,
   buildPublisherBackendFirebaseDataRedemptionsArgs,
@@ -716,6 +720,96 @@ test('builds backend command arguments', () => {
     '--port',
     '9091',
   ]);
+  assert.deepEqual(
+    buildPublisherBackendContractInitArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      backendBaseUrl: ' https://api.publisher.example/ ',
+      public: true,
+      healthEndpoint: ' health ',
+      allowLocalHttp: true,
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'contract',
+      'init',
+      '--backend-base-url',
+      'https://api.publisher.example/',
+      '--public',
+      '--health-endpoint',
+      'health',
+      '--allow-local-http',
+      '--json',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendContractValidateArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      contractPath: 'D:/work/coupon_demo/publisher_backend.json',
+      allowLocalHttp: true,
+    }),
+    [
+      'publisher-backend',
+      'contract',
+      'validate',
+      '--contract',
+      'D:/work/coupon_demo/publisher_backend.json',
+      '--allow-local-http',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendContractSmokeArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      accessKey: ' mpk_live_secret ',
+      authToken: ' user_token ',
+      timeoutSeconds: 45,
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'contract',
+      'smoke',
+      '--access-key',
+      'mpk_live_secret',
+      '--auth-token',
+      'user_token',
+      '--timeout-seconds',
+      '45',
+      '--json',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
+  assert.deepEqual(
+    buildPublisherBackendContractHandoffArgs({
+      miniProgramRoot: 'D:/work/coupon_demo',
+      deliveryUrl: ' https://cdn.example.com/coupon_demo ',
+      title: 'Coupon Demo',
+      accessKey: ' mpk_live_secret ',
+      outputPath: 'D:/work/coupon_demo.company-a.partner.json',
+      json: true,
+    }),
+    [
+      'publisher-backend',
+      'contract',
+      'handoff',
+      '--delivery-url',
+      'https://cdn.example.com/coupon_demo',
+      '--title',
+      'Coupon Demo',
+      '--access-key',
+      'mpk_live_secret',
+      '--output',
+      'D:/work/coupon_demo.company-a.partner.json',
+      '--json',
+      '--mini-program-root',
+      'D:/work/coupon_demo',
+    ],
+  );
   assert.deepEqual(
     buildPublisherBackendScaffoldArgs({
       miniProgramRoot: 'D:/work/coupon_demo',
@@ -1579,4 +1673,14 @@ test('redacts access keys in command output', () => {
   ]);
   assert.match(partnerPackageCommandLine, /--access-key "?<redacted>"?/);
   assert.doesNotMatch(partnerPackageCommandLine, /partner_should_not_print/);
+
+  const smokeTokenCommandLine = formatRedactedCommandLine('miniprogram', [
+    'publisher-backend',
+    'contract',
+    'smoke',
+    '--auth-token',
+    'id_token_should_not_print',
+  ]);
+  assert.match(smokeTokenCommandLine, /--auth-token "?<redacted>"?/);
+  assert.doesNotMatch(smokeTokenCommandLine, /id_token_should_not_print/);
 });

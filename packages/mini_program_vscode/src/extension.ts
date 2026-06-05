@@ -88,6 +88,12 @@ import {
   publisherBackendAwsStatus,
 } from './commands/publisherBackendAwsCommands';
 import {
+  publisherBackendContractHandoff,
+  publisherBackendContractInit,
+  publisherBackendContractSmoke,
+  publisherBackendContractValidate,
+} from './commands/publisherBackendContractCommands';
+import {
   publisherBackendFirebaseDataExport,
   publisherBackendFirebaseDataImportDryRun,
   publisherBackendFirebaseDataRedemptions,
@@ -263,6 +269,18 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendStatus', () =>
       publisherBackendStatus(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendContractInit', () =>
+      publisherBackendContractInit(output, refreshStatus),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendContractValidate', () =>
+      publisherBackendContractValidate(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendContractSmoke', () =>
+      publisherBackendContractSmoke(output),
+    ),
+    vscode.commands.registerCommand('miniProgramTools.publisherBackendContractHandoff', () =>
+      publisherBackendContractHandoff(output, refreshStatus),
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDeploy', () =>
       publisherBackendAwsDeploy(output, refreshStatus),

@@ -211,6 +211,41 @@ export interface PublisherBackendUrlsArgsOptions {
   readonly port?: number | string;
 }
 
+export interface PublisherBackendContractBaseArgsOptions {
+  readonly miniProgramRoot?: string;
+  readonly contractPath?: string;
+  readonly allowLocalHttp?: boolean;
+  readonly json?: boolean;
+}
+
+export interface PublisherBackendContractInitArgsOptions
+  extends PublisherBackendContractBaseArgsOptions {
+  readonly backendBaseUrl: string;
+  readonly appId?: string;
+  readonly public?: boolean;
+  readonly healthEndpoint?: string;
+  readonly outputPath?: string;
+}
+
+export interface PublisherBackendContractValidateArgsOptions
+  extends PublisherBackendContractBaseArgsOptions {}
+
+export interface PublisherBackendContractSmokeArgsOptions
+  extends PublisherBackendContractBaseArgsOptions {
+  readonly accessKey?: string;
+  readonly authToken?: string;
+  readonly timeoutSeconds?: number | string;
+}
+
+export interface PublisherBackendContractHandoffArgsOptions
+  extends PublisherBackendContractBaseArgsOptions {
+  readonly deliveryUrl: string;
+  readonly title?: string;
+  readonly accessKey?: string;
+  readonly public?: boolean;
+  readonly outputPath?: string;
+}
+
 export interface PublisherBackendAwsBaseArgsOptions {
   readonly envName: string;
   readonly miniProgramRoot?: string;
@@ -846,6 +881,80 @@ export function buildPublisherBackendUrlsArgs(
     args.push('--port', `${options.port}`.trim());
   }
   return args;
+}
+
+export function buildPublisherBackendContractInitArgs(
+  options: PublisherBackendContractInitArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'contract',
+    'init',
+    '--backend-base-url',
+    options.backendBaseUrl.trim(),
+  ];
+  if (options.appId?.trim()) {
+    args.push('--app-id', options.appId.trim());
+  }
+  if (options.public) {
+    args.push('--public');
+  }
+  if (options.healthEndpoint?.trim()) {
+    args.push('--health-endpoint', options.healthEndpoint.trim());
+  }
+  if (options.outputPath?.trim()) {
+    args.push('--output', options.outputPath.trim());
+  }
+  return withPublisherBackendContractOptions(args, options);
+}
+
+export function buildPublisherBackendContractValidateArgs(
+  options: PublisherBackendContractValidateArgsOptions = {},
+): string[] {
+  return withPublisherBackendContractOptions(
+    ['publisher-backend', 'contract', 'validate'],
+    options,
+  );
+}
+
+export function buildPublisherBackendContractSmokeArgs(
+  options: PublisherBackendContractSmokeArgsOptions = {},
+): string[] {
+  const args = ['publisher-backend', 'contract', 'smoke'];
+  if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
+  if (options.authToken?.trim()) {
+    args.push('--auth-token', options.authToken.trim());
+  }
+  if (options.timeoutSeconds !== undefined && `${options.timeoutSeconds}`.trim()) {
+    args.push('--timeout-seconds', `${options.timeoutSeconds}`.trim());
+  }
+  return withPublisherBackendContractOptions(args, options);
+}
+
+export function buildPublisherBackendContractHandoffArgs(
+  options: PublisherBackendContractHandoffArgsOptions,
+): string[] {
+  const args = [
+    'publisher-backend',
+    'contract',
+    'handoff',
+    '--delivery-url',
+    options.deliveryUrl.trim(),
+  ];
+  if (options.title?.trim()) {
+    args.push('--title', options.title.trim());
+  }
+  if (options.public) {
+    args.push('--public');
+  } else if (options.accessKey?.trim()) {
+    args.push('--access-key', options.accessKey.trim());
+  }
+  if (options.outputPath?.trim()) {
+    args.push('--output', options.outputPath.trim());
+  }
+  return withPublisherBackendContractOptions(args, options);
 }
 
 export function buildPublisherBackendAwsDeployArgs(
@@ -1554,8 +1663,24 @@ function withPublisherBackendFirebaseOptions(
   return withMiniProgramRoot(args, options.miniProgramRoot);
 }
 
+function withPublisherBackendContractOptions(
+  args: string[],
+  options: PublisherBackendContractBaseArgsOptions,
+): string[] {
+  if (options.contractPath?.trim()) {
+    args.push('--contract', options.contractPath.trim());
+  }
+  if (options.allowLocalHttp) {
+    args.push('--allow-local-http');
+  }
+  if (options.json ?? false) {
+    args.push('--json');
+  }
+  return withMiniProgramRoot(args, options.miniProgramRoot);
+}
+
 function redactSecretArgs(args: readonly string[]): string[] {
-  const secretOptions = new Set(['--access-key', '--key']);
+  const secretOptions = new Set(['--access-key', '--key', '--auth-token']);
   const redacted = [...args];
   for (let index = 0; index < redacted.length; index += 1) {
     if (secretOptions.has(redacted[index]) && index + 1 < redacted.length) {
@@ -1564,6 +1689,8 @@ function redactSecretArgs(args: readonly string[]): string[] {
       redacted[index] = '--access-key=<redacted>';
     } else if (redacted[index].startsWith('--key=')) {
       redacted[index] = '--key=<redacted>';
+    } else if (redacted[index].startsWith('--auth-token=')) {
+      redacted[index] = '--auth-token=<redacted>';
     }
   }
   return redacted;

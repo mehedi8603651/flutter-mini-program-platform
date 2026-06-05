@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.2.0-dev.2",
+  "version": "0.2.0-dev.3",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -211,6 +211,26 @@
         "command": "miniProgramTools.publisherBackendStatus",
         "title": "MiniProgram: Publisher Backend Status",
         "icon": "$(pulse)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendContractInit",
+        "title": "MiniProgram: Init Publisher API Contract",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendContractValidate",
+        "title": "MiniProgram: Validate Publisher API Contract",
+        "icon": "$(verified)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendContractSmoke",
+        "title": "MiniProgram: Smoke Test Publisher API Contract",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "miniProgramTools.publisherBackendContractHandoff",
+        "title": "MiniProgram: Create Publisher API Handoff Package",
+        "icon": "$(file-code)"
       },
       {
         "command": "miniProgramTools.publisherBackendAwsDeploy",
@@ -579,6 +599,26 @@
           "command": "miniProgramTools.publisherBackendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.2"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendContractInit",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.21"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendContractValidate",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.22"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendContractSmoke",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.23"
+        },
+        {
+          "command": "miniProgramTools.publisherBackendContractHandoff",
+          "when": "view == miniProgramTools.statusView",
+          "group": "navigation@12.24"
         },
         {
           "command": "miniProgramTools.publisherBackendAwsDeploy",
