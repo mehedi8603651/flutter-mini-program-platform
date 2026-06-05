@@ -1,4 +1,5 @@
 import 'mp_action.dart';
+import 'mp_json.dart';
 import 'mp_node.dart';
 
 /// Author-friendly namespace for Mp widget and action builders.
@@ -51,6 +52,181 @@ abstract final class Mp {
   /// Creates a simple card container.
   static MpNode card({required MpNode child}) =>
       MpNode('card', children: <MpNode>[child]);
+
+  /// Creates a single-line text input controlled by the SDK form state.
+  static MpNode textInput({
+    required String name,
+    required String label,
+    String? hint,
+    String? initialValue,
+    bool required = false,
+    int? minLength,
+    int? maxLength,
+    bool obscureText = false,
+    String keyboardType = 'text',
+  }) => MpNode(
+    'textInput',
+    props: _inputProps(
+      name: name,
+      label: label,
+      hint: hint,
+      initialValue: initialValue,
+      required: required,
+      minLength: minLength,
+      maxLength: maxLength,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+    ),
+  );
+
+  /// Creates a multi-line text input controlled by the SDK form state.
+  static MpNode textArea({
+    required String name,
+    required String label,
+    String? hint,
+    String? initialValue,
+    bool required = false,
+    int? minLength,
+    int? maxLength,
+    int minLines = 3,
+    int maxLines = 6,
+  }) {
+    if (minLines <= 0) {
+      throw ArgumentError.value(
+        minLines,
+        'minLines',
+        'Value must be positive.',
+      );
+    }
+    if (maxLines < minLines) {
+      throw ArgumentError.value(
+        maxLines,
+        'maxLines',
+        'Value must be greater than or equal to minLines.',
+      );
+    }
+    return MpNode(
+      'textArea',
+      props: <String, Object?>{
+        ..._inputProps(
+          name: name,
+          label: label,
+          hint: hint,
+          initialValue: initialValue,
+          required: required,
+          minLength: minLength,
+          maxLength: maxLength,
+          includeKeyboardType: false,
+        ),
+        'minLines': minLines,
+        'maxLines': maxLines,
+      },
+    );
+  }
+
+  /// Creates a select menu controlled by the SDK form state.
+  static MpNode dropdown({
+    required String name,
+    required String label,
+    required List<MpOption> options,
+    String? hint,
+    String? initialValue,
+    bool required = false,
+  }) {
+    final normalizedOptions = _requiredOptions(options);
+    final normalizedInitialValue = initialValue == null
+        ? null
+        : _requiredString(initialValue, 'initialValue');
+    _validateInitialOptionValue(normalizedOptions, normalizedInitialValue);
+    return MpNode(
+      'dropdown',
+      props: <String, Object?>{
+        'name': _requiredString(name, 'name'),
+        'label': _requiredString(label, 'label'),
+        if (hint != null) 'hint': _requiredString(hint, 'hint'),
+        'options': normalizedOptions,
+        if (normalizedInitialValue != null)
+          'initialValue': normalizedInitialValue,
+        if (required) 'required': true,
+      },
+    );
+  }
+
+  /// Creates a boolean checkbox controlled by the SDK form state.
+  static MpNode checkbox({
+    required String name,
+    required String label,
+    bool initialValue = false,
+    bool requiredTrue = false,
+  }) => MpNode(
+    'checkbox',
+    props: <String, Object?>{
+      'name': _requiredString(name, 'name'),
+      'label': _requiredString(label, 'label'),
+      if (initialValue) 'initialValue': true,
+      if (requiredTrue) 'requiredTrue': true,
+    },
+  );
+
+  /// Creates a radio option group controlled by the SDK form state.
+  static MpNode radioGroup({
+    required String name,
+    required String label,
+    required List<MpOption> options,
+    String? initialValue,
+    bool required = false,
+  }) {
+    final normalizedOptions = _requiredOptions(options);
+    final normalizedInitialValue = initialValue == null
+        ? null
+        : _requiredString(initialValue, 'initialValue');
+    _validateInitialOptionValue(normalizedOptions, normalizedInitialValue);
+    return MpNode(
+      'radioGroup',
+      props: <String, Object?>{
+        'name': _requiredString(name, 'name'),
+        'label': _requiredString(label, 'label'),
+        'options': normalizedOptions,
+        if (normalizedInitialValue != null)
+          'initialValue': normalizedInitialValue,
+        if (required) 'required': true,
+      },
+    );
+  }
+
+  /// Creates an SDK-owned form scope.
+  static MpNode form({String id = 'form', required List<MpNode> children}) =>
+      MpNode(
+        'form',
+        props: <String, Object?>{'id': _requiredString(id, 'id')},
+        children: _requiredChildren(children, 'children'),
+      );
+
+  /// Creates a submit button for the nearest Mp form.
+  static MpNode formSubmit({
+    required String label,
+    required String endpoint,
+    String? requestId,
+    String method = 'POST',
+    Map<String, Object?> body = const <String, Object?>{},
+    int? cacheTtlSeconds,
+    MpAction? onSuccess,
+    MpAction? onError,
+  }) => MpNode(
+    'formSubmit',
+    props: <String, Object?>{
+      'label': _requiredString(label, 'label'),
+      'endpoint': _requiredString(endpoint, 'endpoint'),
+      if (requestId != null)
+        'requestId': _requiredString(requestId, 'requestId'),
+      'method': _requiredString(method, 'method'),
+      if (body.isNotEmpty) 'body': body,
+      if (cacheTtlSeconds != null)
+        'cacheTtlSeconds': _positiveInt(cacheTtlSeconds, 'cacheTtlSeconds'),
+      if (onSuccess != null) 'onSuccess': onSuccess,
+      if (onError != null) 'onError': onError,
+    },
+  );
 
   /// Creates the primary button style.
   static MpNode primaryButton({
@@ -165,6 +341,48 @@ abstract final class Mp {
       if (loadMore != null) 'loadMore': loadMore,
     },
   );
+
+  /// Creates a toast/snackbar-style UI feedback action.
+  static MpAction toast({required String message, int durationMs = 2400}) =>
+      MpAction(
+        'ui.toast',
+        props: <String, Object?>{
+          'message': _requiredString(message, 'message'),
+          'durationMs': _positiveInt(durationMs, 'durationMs'),
+        },
+      );
+
+  /// Creates a modal confirmation/info dialog action.
+  static MpAction dialog({
+    String? title,
+    required String message,
+    String confirmLabel = 'OK',
+  }) => MpAction(
+    'ui.dialog',
+    props: <String, Object?>{
+      if (title != null) 'title': _requiredString(title, 'title'),
+      'message': _requiredString(message, 'message'),
+      'confirmLabel': _requiredString(confirmLabel, 'confirmLabel'),
+    },
+  );
+}
+
+/// Serializable option used by Mp dropdown and radioGroup controls.
+final class MpOption implements MpJsonEncodable {
+  /// Creates a serializable form option.
+  const MpOption({required this.value, required this.label});
+
+  /// Wire value submitted through form state.
+  final String value;
+
+  /// User-facing label rendered in the SDK.
+  final String label;
+
+  @override
+  Map<String, Object?> toJson() => <String, Object?>{
+    'label': _requiredString(label, 'label'),
+    'value': _requiredString(value, 'value'),
+  };
 }
 
 /// Email authentication action builders.
@@ -328,4 +546,90 @@ int _positiveInt(int value, String name) {
     throw ArgumentError.value(value, name, 'Value must be positive.');
   }
   return value;
+}
+
+Map<String, Object?> _inputProps({
+  required String name,
+  required String label,
+  String? hint,
+  String? initialValue,
+  bool required = false,
+  int? minLength,
+  int? maxLength,
+  bool obscureText = false,
+  String keyboardType = 'text',
+  bool includeKeyboardType = true,
+}) {
+  if (minLength != null && minLength < 0) {
+    throw ArgumentError.value(
+      minLength,
+      'minLength',
+      'Value cannot be negative.',
+    );
+  }
+  if (maxLength != null && maxLength <= 0) {
+    throw ArgumentError.value(
+      maxLength,
+      'maxLength',
+      'Value must be positive.',
+    );
+  }
+  if (minLength != null && maxLength != null && minLength > maxLength) {
+    throw ArgumentError.value(
+      minLength,
+      'minLength',
+      'Value must be less than or equal to maxLength.',
+    );
+  }
+  return <String, Object?>{
+    'name': _requiredString(name, 'name'),
+    'label': _requiredString(label, 'label'),
+    if (hint != null) 'hint': _requiredString(hint, 'hint'),
+    if (initialValue != null) 'initialValue': initialValue,
+    if (required) 'required': true,
+    if (minLength != null) 'minLength': minLength,
+    if (maxLength != null) 'maxLength': maxLength,
+    if (includeKeyboardType && obscureText) 'obscureText': true,
+    if (includeKeyboardType)
+      'keyboardType': _requiredString(keyboardType, 'keyboardType'),
+  };
+}
+
+List<MpOption> _requiredOptions(List<MpOption> options) {
+  if (options.isEmpty) {
+    throw ArgumentError.value(options, 'options', 'Options cannot be empty.');
+  }
+  final values = <String>{};
+  for (final option in options) {
+    final value = _requiredString(option.value, 'option.value');
+    _requiredString(option.label, 'option.label');
+    if (!values.add(value)) {
+      throw ArgumentError.value(
+        value,
+        'option.value',
+        'Option values must be unique.',
+      );
+    }
+  }
+  return options;
+}
+
+List<MpNode> _requiredChildren(List<MpNode> children, String name) {
+  if (children.isEmpty) {
+    throw ArgumentError.value(children, name, 'Children cannot be empty.');
+  }
+  return children;
+}
+
+void _validateInitialOptionValue(List<MpOption> options, String? value) {
+  if (value == null) {
+    return;
+  }
+  if (!options.any((option) => option.value == value)) {
+    throw ArgumentError.value(
+      value,
+      'initialValue',
+      'Value must match one option value.',
+    );
+  }
 }

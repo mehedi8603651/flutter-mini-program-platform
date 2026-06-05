@@ -61,6 +61,59 @@ void main() {
       );
     });
 
+    test('accepts author-generated form JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.form(
+              children: <MpNode>[
+                Mp.textInput(
+                  name: 'full_name',
+                  label: 'Full name',
+                  required: true,
+                  minLength: 2,
+                ),
+                Mp.textArea(name: 'essay', label: 'Essay', maxLength: 500),
+                Mp.dropdown(
+                  name: 'program',
+                  label: 'Program',
+                  options: const <MpOption>[
+                    MpOption(value: 'stem', label: 'STEM'),
+                    MpOption(value: 'arts', label: 'Arts'),
+                  ],
+                ),
+                Mp.radioGroup(
+                  name: 'level',
+                  label: 'Level',
+                  options: const <MpOption>[
+                    MpOption(value: 'undergraduate', label: 'Undergraduate'),
+                    MpOption(value: 'graduate', label: 'Graduate'),
+                  ],
+                  required: true,
+                ),
+                Mp.checkbox(
+                  name: 'terms',
+                  label: 'I confirm',
+                  requiredTrue: true,
+                ),
+                Mp.formSubmit(
+                  label: 'Submit',
+                  endpoint: 'applications/submit',
+                  onSuccess: Mp.toast(message: 'Submitted', durationMs: 1),
+                  onError: Mp.dialog(message: 'Failed'),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -128,6 +181,56 @@ void main() {
             'props': <String, dynamic>{
               'requestId': 'coupons',
               'endpoint': 'coupons/page',
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'empty form': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'form',
+            'props': <String, dynamic>{'id': 'application'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid form field name': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'form',
+            'props': <String, dynamic>{'id': 'application'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'textInput',
+                'props': <String, dynamic>{
+                  'name': 'FullName',
+                  'label': 'Full name',
+                },
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'dropdown initial value mismatch': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'dropdown',
+            'props': <String, dynamic>{
+              'name': 'program',
+              'label': 'Program',
+              'initialValue': 'missing',
+              'options': <Object?>[
+                <String, dynamic>{'value': 'stem', 'label': 'STEM'},
+              ],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'invalid ui action': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'primaryButton',
+            'props': <String, dynamic>{
+              'label': 'Save',
+              'action': <String, dynamic>{
+                'type': 'ui.toast',
+                'props': <String, dynamic>{'message': ''},
+              },
             },
             'children': <Object?>[],
           };
@@ -444,6 +547,95 @@ void main() {
 
       backendStore.dispose();
     });
+
+    testWidgets('form controls validate and submit through backend connector', (
+      tester,
+    ) async {
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: 'applications/submit',
+            method: 'POST',
+            data: const <String, dynamic>{'ok': true},
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          screenJson: _formScreen,
+        ),
+      );
+
+      await tester.tap(find.text('Submit application'));
+      await tester.pump();
+
+      expect(connector.calls, isEmpty);
+      expect(find.text('Check the highlighted fields.'), findsOneWidget);
+      expect(find.text('This field is required.'), findsWidgets);
+
+      await tester.enterText(find.byType(EditableText).at(0), 'Mehedi Hasan');
+      await tester.enterText(
+        find.byType(EditableText).at(1),
+        'Scholarship essay',
+      );
+      await tester.tap(find.text('Choose a program'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('STEM'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Undergraduate'));
+      await tester.tap(find.text('I confirm this application is accurate'));
+      await tester.pump();
+      await tester.tap(find.text('Submit application'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(connector.calls, hasLength(1));
+      expect(connector.calls.single.endpoint, 'applications/submit');
+      expect(connector.calls.single.method, 'POST');
+      expect(connector.calls.single.body, <String, dynamic>{
+        'full_name': 'Mehedi Hasan',
+        'essay': 'Scholarship essay',
+        'program': 'stem',
+        'level': 'undergraduate',
+        'terms': true,
+      });
+      expect(find.text('Submitted'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump();
+
+      backendStore.dispose();
+    });
+
+    testWidgets('toast and dialog actions render SDK-owned feedback', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: _feedbackScreen),
+      );
+
+      await tester.tap(find.text('Show toast'));
+      await tester.pump();
+      expect(find.text('Saved'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump();
+
+      await tester.tap(find.text('Show dialog'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm'), findsOneWidget);
+      expect(find.text('Continue?'), findsOneWidget);
+
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.text('Continue?'), findsNothing);
+
+      backendStore.dispose();
+    });
   });
 }
 
@@ -631,6 +823,128 @@ const Map<String, dynamic> _navigationScreen = <String, dynamic>{
       },
     },
     'children': <Object?>[],
+  },
+};
+
+const Map<String, dynamic> _formScreen = <String, dynamic>{
+  'schemaVersion': 1,
+  'screenId': 'coupon_home',
+  'root': <String, dynamic>{
+    'type': 'form',
+    'props': <String, dynamic>{'id': 'application'},
+    'children': <Object?>[
+      <String, dynamic>{
+        'type': 'textInput',
+        'props': <String, dynamic>{
+          'name': 'full_name',
+          'label': 'Full name',
+          'hint': 'Use your legal name',
+          'required': true,
+          'minLength': 2,
+          'keyboardType': 'text',
+        },
+        'children': <Object?>[],
+      },
+      <String, dynamic>{
+        'type': 'textArea',
+        'props': <String, dynamic>{
+          'name': 'essay',
+          'label': 'Essay',
+          'maxLength': 500,
+          'minLines': 3,
+          'maxLines': 6,
+        },
+        'children': <Object?>[],
+      },
+      <String, dynamic>{
+        'type': 'dropdown',
+        'props': <String, dynamic>{
+          'name': 'program',
+          'label': 'Program',
+          'hint': 'Choose a program',
+          'required': true,
+          'options': <Object?>[
+            <String, dynamic>{'value': 'stem', 'label': 'STEM'},
+            <String, dynamic>{'value': 'arts', 'label': 'Arts'},
+          ],
+        },
+        'children': <Object?>[],
+      },
+      <String, dynamic>{
+        'type': 'radioGroup',
+        'props': <String, dynamic>{
+          'name': 'level',
+          'label': 'Level',
+          'required': true,
+          'options': <Object?>[
+            <String, dynamic>{
+              'value': 'undergraduate',
+              'label': 'Undergraduate',
+            },
+            <String, dynamic>{'value': 'graduate', 'label': 'Graduate'},
+          ],
+        },
+        'children': <Object?>[],
+      },
+      <String, dynamic>{
+        'type': 'checkbox',
+        'props': <String, dynamic>{
+          'name': 'terms',
+          'label': 'I confirm this application is accurate',
+          'requiredTrue': true,
+        },
+        'children': <Object?>[],
+      },
+      <String, dynamic>{
+        'type': 'formSubmit',
+        'props': <String, dynamic>{
+          'label': 'Submit application',
+          'endpoint': 'applications/submit',
+          'method': 'POST',
+          'onSuccess': <String, dynamic>{
+            'type': 'ui.toast',
+            'props': <String, dynamic>{'message': 'Submitted', 'durationMs': 1},
+          },
+        },
+        'children': <Object?>[],
+      },
+    ],
+  },
+};
+
+const Map<String, dynamic> _feedbackScreen = <String, dynamic>{
+  'schemaVersion': 1,
+  'screenId': 'coupon_home',
+  'root': <String, dynamic>{
+    'type': 'column',
+    'props': <String, dynamic>{},
+    'children': <Object?>[
+      <String, dynamic>{
+        'type': 'primaryButton',
+        'props': <String, dynamic>{
+          'label': 'Show toast',
+          'action': <String, dynamic>{
+            'type': 'ui.toast',
+            'props': <String, dynamic>{'message': 'Saved', 'durationMs': 1},
+          },
+        },
+        'children': <Object?>[],
+      },
+      <String, dynamic>{
+        'type': 'secondaryButton',
+        'props': <String, dynamic>{
+          'label': 'Show dialog',
+          'action': <String, dynamic>{
+            'type': 'ui.dialog',
+            'props': <String, dynamic>{
+              'title': 'Confirm',
+              'message': 'Continue?',
+            },
+          },
+        },
+        'children': <Object?>[],
+      },
+    ],
   },
 };
 

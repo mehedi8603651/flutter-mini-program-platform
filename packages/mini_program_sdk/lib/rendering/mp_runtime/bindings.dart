@@ -1,15 +1,23 @@
 part of '../mp_screen_renderer.dart';
 
 class _MpRenderBindings {
-  const _MpRenderBindings({this.scope, this.item});
+  const _MpRenderBindings({this.scope, this.item, this.form});
 
   static final RegExp _bindingPattern = RegExp(r'\{\{\s*([^}]+?)\s*\}\}');
 
   final MiniProgramSdkScope? scope;
   final Map<String, dynamic>? item;
+  final Map<String, dynamic>? form;
 
-  _MpRenderBindings copyWith({Map<String, dynamic>? item}) {
-    return _MpRenderBindings(scope: scope, item: item ?? this.item);
+  _MpRenderBindings copyWith({
+    Map<String, dynamic>? item,
+    Map<String, dynamic>? form,
+  }) {
+    return _MpRenderBindings(
+      scope: scope,
+      item: item ?? this.item,
+      form: form ?? this.form,
+    );
   }
 
   Object? resolveValue(Object? value) {
@@ -68,6 +76,7 @@ class _MpRenderBindings {
       'backend':
           activeScope?.backendStore.toBindingData() ?? <String, dynamic>{},
       if (item != null) 'item': item!,
+      if (form != null) 'form': form!,
       if (authSnapshot != null) 'auth': authSnapshot.toBindingData(),
     };
   }
@@ -75,7 +84,12 @@ class _MpRenderBindings {
 
 abstract final class _MpBindingResolver {
   static final RegExp _bindingPattern = _MpRenderBindings._bindingPattern;
-  static const Set<String> _allowedRoots = <String>{'auth', 'backend', 'item'};
+  static const Set<String> _allowedRoots = <String>{
+    'auth',
+    'backend',
+    'form',
+    'item',
+  };
   static const Set<String> _blockedSegments = <String>{
     'authorization',
     'idtoken',

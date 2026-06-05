@@ -21,6 +21,409 @@ class _MpScreenView extends StatelessWidget {
   }
 }
 
+class _MpTapButton extends StatefulWidget {
+  const _MpTapButton({
+    required this.label,
+    required this.primary,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final String label;
+  final bool primary;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  State<_MpTapButton> createState() => _MpTapButtonState();
+}
+
+class _MpTapButtonState extends State<_MpTapButton> {
+  bool _hovered = false;
+  bool _focused = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.enabled && widget.onTap != null;
+    final background = !enabled
+        ? const Color(0xFFE5E7EB)
+        : widget.primary
+        ? (_pressed
+              ? const Color(0xFF065F56)
+              : _hovered || _focused
+              ? const Color(0xFF0F766E)
+              : const Color(0xFF0B7A75))
+        : const Color(0xFFFFFFFF);
+    final foreground = !enabled
+        ? const Color(0xFF6B7280)
+        : widget.primary
+        ? const Color(0xFFFFFFFF)
+        : const Color(0xFF0B7A75);
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      child: FocusableActionDetector(
+        enabled: enabled,
+        mouseCursor: enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        onShowHoverHighlight: (value) => setState(() => _hovered = value),
+        onShowFocusHighlight: (value) => setState(() => _focused = value),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+          onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+          onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+          onTap: enabled ? widget.onTap : null,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: background,
+              border: Border.all(
+                color: enabled
+                    ? const Color(0xFF0B7A75)
+                    : const Color(0xFFD1D5DB),
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              child: Center(
+                widthFactor: 1,
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpFieldFrame extends StatelessWidget {
+  const _MpFieldFrame({
+    required this.label,
+    required this.child,
+    this.hint,
+    this.error,
+  });
+
+  final String label;
+  final String? hint;
+  final String? error;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (label.isNotEmpty) ...<Widget>[
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          child,
+          if (hint != null && hint!.isNotEmpty && error == null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              hint!,
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
+          ],
+          if (error != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              error!,
+              style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+BoxDecoration _fieldDecoration({String? error, bool focused = false}) {
+  return BoxDecoration(
+    color: const Color(0xFFFFFFFF),
+    border: Border.all(
+      color: error != null
+          ? const Color(0xFFDC2626)
+          : focused
+          ? const Color(0xFF0B7A75)
+          : const Color(0xFFD1D5DB),
+    ),
+    borderRadius: BorderRadius.circular(8),
+  );
+}
+
+TextInputType _keyboardType(String? value) {
+  return switch (value) {
+    'email' => TextInputType.emailAddress,
+    'number' => TextInputType.number,
+    'phone' => TextInputType.phone,
+    'url' => TextInputType.url,
+    _ => TextInputType.text,
+  };
+}
+
+List<Map<String, dynamic>> _options(_MpNode node) {
+  return (node.props['options'] as List)
+      .whereType<Map>()
+      .map((option) => Map<String, dynamic>.from(option))
+      .toList(growable: false);
+}
+
+Map<String, dynamic>? _optionForValue(_MpNode node, String value) {
+  for (final option in _options(node)) {
+    if (option['value'] == value) {
+      return option;
+    }
+  }
+  return null;
+}
+
+class _MpOptionDialog extends StatelessWidget {
+  const _MpOptionDialog({
+    required this.title,
+    required this.options,
+    required this.onSelected,
+  });
+
+  final String title;
+  final List<Map<String, dynamic>> options;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFFFF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (final option in options)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onSelected(option['value'] as String),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        option['label'] as String,
+                        style: const TextStyle(
+                          color: Color(0xFF111827),
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpCheckMark extends StatelessWidget {
+  const _MpCheckMark({required this.checked});
+
+  final bool checked;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: checked ? const Color(0xFF0B7A75) : const Color(0xFFFFFFFF),
+        border: Border.all(color: const Color(0xFF0B7A75), width: 1.5),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: Center(
+          child: checked
+              ? const DecoratedBox(
+                  decoration: BoxDecoration(color: Color(0xFFFFFFFF)),
+                  child: SizedBox(width: 10, height: 10),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpRadioMark extends StatelessWidget {
+  const _MpRadioMark({required this.checked});
+
+  final bool checked;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFF0B7A75), width: 1.5),
+      ),
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: Center(
+          child: checked
+              ? const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0xFF0B7A75),
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox(width: 10, height: 10),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoopListenable implements Listenable {
+  const _NoopListenable();
+
+  static const instance = _NoopListenable();
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
+}
+
+class _MpToastView extends StatelessWidget {
+  const _MpToastView({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpDialogView extends StatelessWidget {
+  const _MpDialogView({
+    required this.message,
+    required this.confirmLabel,
+    this.title,
+  });
+
+  final String? title;
+  final String message;
+  final String confirmLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFFFF),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                if (title != null) ...<Widget>[
+                  Text(
+                    title!,
+                    style: const TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Color(0xFF263238),
+                    fontSize: 15,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _MpTapButton(
+                    label: confirmLabel,
+                    primary: true,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MpNodeView extends StatelessWidget {
   const _MpNodeView({required this.node, required this.bindings});
 
@@ -92,6 +495,13 @@ class _MpNodeView extends StatelessWidget {
         primary: false,
         bindings: bindings,
       ),
+      'textInput' => _MpTextInputField(node: node, multiline: false),
+      'textArea' => _MpTextInputField(node: node, multiline: true),
+      'dropdown' => _MpDropdownField(node: node),
+      'checkbox' => _MpCheckboxField(node: node),
+      'radioGroup' => _MpRadioGroupField(node: node),
+      'form' => _MpForm(node: node, bindings: bindings),
+      'formSubmit' => _MpFormSubmitButton(node: node, bindings: bindings),
       'authBuilder' => _MpAuthBuilder(node: node),
       'backendBuilder' => _MpBackendBuilder(node: node),
       'pagedBackendBuilder' => _MpPagedBackendBuilder(node: node),
@@ -100,6 +510,597 @@ class _MpNodeView extends StatelessWidget {
         details: <String, dynamic>{'nodeType': node.type},
       ),
     };
+  }
+}
+
+class _MpForm extends StatefulWidget {
+  const _MpForm({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  State<_MpForm> createState() => _MpFormState();
+}
+
+class _MpFormState extends State<_MpForm> {
+  late _MpFormController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = _MpFormController(id: _string(widget.node, 'id'));
+  }
+
+  @override
+  void didUpdateWidget(covariant _MpForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_string(oldWidget.node, 'id') != _string(widget.node, 'id')) {
+      _controller.dispose();
+      _controller = _MpFormController(id: _string(widget.node, 'id'));
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _MpFormScope(
+      controller: _controller,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final bindings = widget.bindings.copyWith(
+            form: _controller.toBindingData(),
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (final child in widget.node.children)
+                _MpNodeView(node: child, bindings: bindings),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MpTextInputField extends StatefulWidget {
+  const _MpTextInputField({required this.node, required this.multiline});
+
+  final _MpNode node;
+  final bool multiline;
+
+  @override
+  State<_MpTextInputField> createState() => _MpTextInputFieldState();
+}
+
+class _MpTextInputFieldState extends State<_MpTextInputField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  _MpFormController? _form;
+
+  String get _name => _string(widget.node, 'name');
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.node.props['initialValue'] as String? ?? '',
+    );
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindForm();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MpTextInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_string(oldWidget.node, 'name') != _name) {
+      _form?.unregisterField(_string(oldWidget.node, 'name'));
+      _bindForm(force: true);
+    }
+  }
+
+  void _bindForm({bool force = false}) {
+    final form = _MpFormScope.maybeOf(context);
+    if (!force && identical(form, _form)) {
+      return;
+    }
+    _form?.removeListener(_onFormChanged);
+    _form = form;
+    form?.registerField(
+      name: _name,
+      initialValue: _controller.text,
+      validator: (value) => _requiredTextValidator(
+        value,
+        required: _bool(widget.node, 'required'),
+        minLength: widget.node.props['minLength'] as int?,
+        maxLength: widget.node.props['maxLength'] as int?,
+      ),
+    );
+    final formValue = form?.value(_name);
+    if (formValue is String && formValue != _controller.text) {
+      _controller.text = formValue;
+    }
+    form?.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _form?.unregisterField(_name);
+    _form?.removeListener(_onFormChanged);
+    _focusNode.removeListener(_onFocusChanged);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _form?.error(_name);
+    return _MpFieldFrame(
+      label: _string(widget.node, 'label'),
+      hint: widget.node.props['hint'] as String?,
+      error: error,
+      child: DecoratedBox(
+        decoration: _fieldDecoration(
+          error: error,
+          focused: _focusNode.hasFocus,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          child: EditableText(
+            controller: _controller,
+            focusNode: _focusNode,
+            keyboardType: _keyboardType(
+              widget.node.props['keyboardType'] as String?,
+            ),
+            obscureText: widget.node.props['obscureText'] == true,
+            minLines: widget.multiline
+                ? widget.node.props['minLines'] as int? ?? 3
+                : 1,
+            maxLines: widget.multiline
+                ? widget.node.props['maxLines'] as int? ?? 6
+                : 1,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 15,
+              height: 1.35,
+            ),
+            cursorColor: const Color(0xFF0B7A75),
+            backgroundCursorColor: const Color(0xFFE5E7EB),
+            onChanged: (value) => _form?.setValue(_name, value),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpDropdownField extends StatefulWidget {
+  const _MpDropdownField({required this.node});
+
+  final _MpNode node;
+
+  @override
+  State<_MpDropdownField> createState() => _MpDropdownFieldState();
+}
+
+class _MpDropdownFieldState extends State<_MpDropdownField> {
+  _MpFormController? _form;
+
+  String get _name => _string(widget.node, 'name');
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindForm();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MpDropdownField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_string(oldWidget.node, 'name') != _name) {
+      _form?.unregisterField(_string(oldWidget.node, 'name'));
+      _bindForm(force: true);
+    }
+  }
+
+  void _bindForm({bool force = false}) {
+    final form = _MpFormScope.maybeOf(context);
+    if (!force && identical(form, _form)) {
+      return;
+    }
+    _form?.removeListener(_onFormChanged);
+    _form = form;
+    form?.registerField(
+      name: _name,
+      initialValue: widget.node.props['initialValue'] as String? ?? '',
+      validator: (value) => _requiredChoiceValidator(
+        value,
+        required: _bool(widget.node, 'required'),
+      ),
+    );
+    form?.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _form?.unregisterField(_name);
+    _form?.removeListener(_onFormChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _form?.error(_name);
+    final value = _form?.value(_name)?.toString() ?? '';
+    final selected = _optionForValue(widget.node, value);
+    final label =
+        selected?['label'] as String? ??
+        widget.node.props['hint'] as String? ??
+        'Choose';
+    return _MpFieldFrame(
+      label: _string(widget.node, 'label'),
+      hint: widget.node.props['hint'] as String?,
+      error: error,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => unawaited(_chooseOption(context)),
+        child: DecoratedBox(
+          decoration: _fieldDecoration(error: error),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: selected == null
+                          ? const Color(0xFF6B7280)
+                          : const Color(0xFF111827),
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const Text(
+                  'v',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _chooseOption(BuildContext context) async {
+    final options = _options(widget.node);
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Choose option',
+      barrierColor: const Color(0x66000000),
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (context, animation, secondaryAnimation) => _MpOptionDialog(
+        title: _string(widget.node, 'label'),
+        options: options,
+        onSelected: (value) {
+          _form?.setValue(_name, value);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+}
+
+class _MpCheckboxField extends StatefulWidget {
+  const _MpCheckboxField({required this.node});
+
+  final _MpNode node;
+
+  @override
+  State<_MpCheckboxField> createState() => _MpCheckboxFieldState();
+}
+
+class _MpCheckboxFieldState extends State<_MpCheckboxField> {
+  _MpFormController? _form;
+
+  String get _name => _string(widget.node, 'name');
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindForm();
+  }
+
+  void _bindForm() {
+    final form = _MpFormScope.maybeOf(context);
+    if (identical(form, _form)) {
+      return;
+    }
+    _form?.removeListener(_onFormChanged);
+    _form = form;
+    form?.registerField(
+      name: _name,
+      initialValue: widget.node.props['initialValue'] == true,
+      validator: (value) => _requiredTrueValidator(
+        value,
+        requiredTrue: _bool(widget.node, 'requiredTrue'),
+      ),
+    );
+    form?.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _form?.unregisterField(_name);
+    _form?.removeListener(_onFormChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = _form?.value(_name) == true;
+    final error = _form?.error(_name);
+    return _MpFieldFrame(
+      label: '',
+      error: error,
+      child: Semantics(
+        checked: value,
+        button: true,
+        label: _string(widget.node, 'label'),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _form?.setValue(_name, !value),
+          child: Row(
+            children: <Widget>[
+              _MpCheckMark(checked: value),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _string(widget.node, 'label'),
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpRadioGroupField extends StatefulWidget {
+  const _MpRadioGroupField({required this.node});
+
+  final _MpNode node;
+
+  @override
+  State<_MpRadioGroupField> createState() => _MpRadioGroupFieldState();
+}
+
+class _MpRadioGroupFieldState extends State<_MpRadioGroupField> {
+  _MpFormController? _form;
+
+  String get _name => _string(widget.node, 'name');
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindForm();
+  }
+
+  void _bindForm() {
+    final form = _MpFormScope.maybeOf(context);
+    if (identical(form, _form)) {
+      return;
+    }
+    _form?.removeListener(_onFormChanged);
+    _form = form;
+    form?.registerField(
+      name: _name,
+      initialValue: widget.node.props['initialValue'] as String? ?? '',
+      validator: (value) => _requiredChoiceValidator(
+        value,
+        required: _bool(widget.node, 'required'),
+      ),
+    );
+    form?.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _form?.unregisterField(_name);
+    _form?.removeListener(_onFormChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedValue = _form?.value(_name)?.toString() ?? '';
+    return _MpFieldFrame(
+      label: _string(widget.node, 'label'),
+      error: _form?.error(_name),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (final option in _options(widget.node))
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _form?.setValue(_name, option['value']),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: <Widget>[
+                    _MpRadioMark(checked: selectedValue == option['value']),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        option['label'] as String,
+                        style: const TextStyle(
+                          color: Color(0xFF111827),
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MpFormSubmitButton extends StatefulWidget {
+  const _MpFormSubmitButton({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  State<_MpFormSubmitButton> createState() => _MpFormSubmitButtonState();
+}
+
+class _MpFormSubmitButtonState extends State<_MpFormSubmitButton> {
+  String? _message;
+
+  @override
+  Widget build(BuildContext context) {
+    final form = _MpFormScope.maybeOf(context);
+    return AnimatedBuilder(
+      animation: form ?? _NoopListenable.instance,
+      builder: (context, _) {
+        final submitting = form?.submitting == true;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _MpTapButton(
+              label: submitting
+                  ? 'Submitting...'
+                  : widget.bindings.resolveString(
+                      widget.node.props['label'] as String,
+                    ),
+              primary: true,
+              enabled: form != null && !submitting,
+              onTap: form == null ? null : () => unawaited(_submit(form)),
+            ),
+            if (_message != null) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                _message!,
+                style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _submit(_MpFormController form) async {
+    if (form.submitting) {
+      return;
+    }
+    if (!form.validate()) {
+      setState(() => _message = 'Check the highlighted fields.');
+      return;
+    }
+    form.setSubmitting(true);
+    setState(() => _message = null);
+    final formBindings = widget.bindings.copyWith(form: form.toBindingData());
+    final rawBody =
+        widget.node.props['body'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final body = rawBody.isEmpty
+        ? form.values
+        : formBindings.resolveMap(rawBody);
+    final action = _MpAction(
+      type: 'form.submit',
+      props: <String, dynamic>{
+        'endpoint': widget.node.props['endpoint'],
+        if (widget.node.props['requestId'] != null)
+          'requestId': widget.node.props['requestId'],
+        'method': widget.node.props['method'],
+        'body': body,
+        if (widget.node.props['cacheTtlSeconds'] != null)
+          'cacheTtlSeconds': widget.node.props['cacheTtlSeconds'],
+      },
+    );
+    final result = await _MpActionDispatcher.dispatch(
+      context,
+      action,
+      formBindings,
+    );
+    if (!mounted) {
+      form.setSubmitting(false);
+      return;
+    }
+    form.setSubmitting(false);
+    final success = result is MiniProgramBackendResult && result.isSuccess;
+    final nextAction = success
+        ? widget.node.props['onSuccess'] as _MpAction?
+        : widget.node.props['onError'] as _MpAction?;
+    if (nextAction != null) {
+      await _MpActionDispatcher.dispatch(context, nextAction, formBindings);
+    }
+    if (!success) {
+      final message = result is MiniProgramBackendResult
+          ? result.message ?? 'Form submission failed.'
+          : 'Form submission failed.';
+      setState(() => _message = message);
+    }
   }
 }
 

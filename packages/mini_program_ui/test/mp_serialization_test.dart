@@ -199,5 +199,161 @@ void main() {
         ],
       });
     });
+
+    test('serializes form nodes and feedback actions deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'application_home': () => Mp.form(
+            id: 'application',
+            children: <MpNode>[
+              Mp.textInput(
+                name: 'full_name',
+                label: 'Full name',
+                hint: 'Use your legal name',
+                required: true,
+                minLength: 2,
+                maxLength: 80,
+              ),
+              Mp.textArea(
+                name: 'essay',
+                label: 'Essay',
+                minLines: 4,
+                maxLines: 8,
+                maxLength: 500,
+              ),
+              Mp.dropdown(
+                name: 'program',
+                label: 'Program',
+                hint: 'Choose a program',
+                options: const <MpOption>[
+                  MpOption(value: 'stem', label: 'STEM'),
+                  MpOption(value: 'arts', label: 'Arts'),
+                ],
+                initialValue: 'stem',
+              ),
+              Mp.radioGroup(
+                name: 'level',
+                label: 'Level',
+                options: const <MpOption>[
+                  MpOption(value: 'undergraduate', label: 'Undergraduate'),
+                  MpOption(value: 'graduate', label: 'Graduate'),
+                ],
+                required: true,
+              ),
+              Mp.checkbox(
+                name: 'terms',
+                label: 'I confirm this application is accurate',
+                requiredTrue: true,
+              ),
+              Mp.formSubmit(
+                label: 'Submit application',
+                endpoint: 'applications/submit',
+                requestId: 'application_submit',
+                onSuccess: Mp.toast(message: 'Submitted', durationMs: 1200),
+                onError: Mp.dialog(
+                  title: 'Submission failed',
+                  message: '{{backend.application_submit.message}}',
+                ),
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['application_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'form',
+        'props': <String, Object?>{'id': 'application'},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'textInput',
+            'props': <String, Object?>{
+              'name': 'full_name',
+              'label': 'Full name',
+              'hint': 'Use your legal name',
+              'required': true,
+              'minLength': 2,
+              'maxLength': 80,
+              'keyboardType': 'text',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'textArea',
+            'props': <String, Object?>{
+              'name': 'essay',
+              'label': 'Essay',
+              'maxLength': 500,
+              'minLines': 4,
+              'maxLines': 8,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'dropdown',
+            'props': <String, Object?>{
+              'name': 'program',
+              'label': 'Program',
+              'hint': 'Choose a program',
+              'options': <Object?>[
+                <String, Object?>{'label': 'STEM', 'value': 'stem'},
+                <String, Object?>{'label': 'Arts', 'value': 'arts'},
+              ],
+              'initialValue': 'stem',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'radioGroup',
+            'props': <String, Object?>{
+              'name': 'level',
+              'label': 'Level',
+              'options': <Object?>[
+                <String, Object?>{
+                  'label': 'Undergraduate',
+                  'value': 'undergraduate',
+                },
+                <String, Object?>{'label': 'Graduate', 'value': 'graduate'},
+              ],
+              'required': true,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'checkbox',
+            'props': <String, Object?>{
+              'name': 'terms',
+              'label': 'I confirm this application is accurate',
+              'requiredTrue': true,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'formSubmit',
+            'props': <String, Object?>{
+              'label': 'Submit application',
+              'endpoint': 'applications/submit',
+              'requestId': 'application_submit',
+              'method': 'POST',
+              'onSuccess': <String, Object?>{
+                'type': 'ui.toast',
+                'props': <String, Object?>{
+                  'message': 'Submitted',
+                  'durationMs': 1200,
+                },
+              },
+              'onError': <String, Object?>{
+                'type': 'ui.dialog',
+                'props': <String, Object?>{
+                  'title': 'Submission failed',
+                  'message': '{{backend.application_submit.message}}',
+                  'confirmLabel': 'OK',
+                },
+              },
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
   });
 }

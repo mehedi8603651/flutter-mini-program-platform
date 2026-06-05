@@ -13,5 +13,6 @@ import 'mini_program_screen_renderer.dart';
 
 part 'mp_runtime/action_dispatcher.dart';
 part 'mp_runtime/bindings.dart';
+part 'mp_runtime/forms.dart';
 part 'mp_runtime/models_validator.dart';
 part 'mp_runtime/widgets.dart';

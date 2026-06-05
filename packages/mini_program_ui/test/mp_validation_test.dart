@@ -53,5 +53,64 @@ void main() {
       );
       expect(() => Mp.navigation.openScreen(''), throwsArgumentError);
     });
+
+    test('form helpers reject invalid configuration', () {
+      const options = <MpOption>[
+        MpOption(value: 'stem', label: 'STEM'),
+        MpOption(value: 'arts', label: 'Arts'),
+      ];
+
+      expect(() => Mp.form(children: const <MpNode>[]), throwsArgumentError);
+      expect(
+        () => Mp.textInput(name: 'email', label: 'Email', minLength: -1),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.textArea(
+          name: 'essay',
+          label: 'Essay',
+          minLines: 6,
+          maxLines: 4,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.dropdown(
+          name: 'program',
+          label: 'Program',
+          options: const <MpOption>[],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.radioGroup(
+          name: 'level',
+          label: 'Level',
+          options: options,
+          initialValue: 'missing',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.dropdown(
+          name: 'program',
+          label: 'Program',
+          options: const <MpOption>[
+            MpOption(value: 'stem', label: 'STEM'),
+            MpOption(value: 'stem', label: 'Duplicate'),
+          ],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.formSubmit(label: 'Submit', endpoint: ''),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.toast(message: 'Saved', durationMs: 0),
+        throwsArgumentError,
+      );
+      expect(() => Mp.dialog(message: ''), throwsArgumentError);
+    });
   });
 }

@@ -47,6 +47,7 @@ class MpScreenValidator {
   static const int maxUrlLength = 2048;
 
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
+  static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
 
   /// Validates an Mp screen document without rendering it.
   void validate(Map<String, dynamic> json, {required String expectedScreenId}) {
@@ -204,6 +205,38 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'textInput' => _parseTextInputNode(
+        type: type,
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'textArea' => _parseTextAreaNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'dropdown' || 'radioGroup' => _parseChoiceNode(
+        type: type,
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'checkbox' => _parseCheckboxNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'form' => _parseFormNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'formSubmit' => _parseFormSubmitNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'authBuilder' => _parseAuthBuilderNode(
         props: props,
         children: parsedChildren,
@@ -330,6 +363,295 @@ class MpScreenValidator {
     return _MpNode(
       type: type,
       props: <String, dynamic>{'label': props['label'], 'action': action},
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseTextInputNode({
+    required String type,
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'name',
+      'label',
+      'hint',
+      'initialValue',
+      'required',
+      'minLength',
+      'maxLength',
+      'obscureText',
+      'keyboardType',
+    }, path: '$path.props');
+    final parsedProps = _parseTextInputProps(props, path: path);
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(type: type, props: parsedProps, children: const <_MpNode>[]);
+  }
+
+  _MpNode _parseTextAreaNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'name',
+      'label',
+      'hint',
+      'initialValue',
+      'required',
+      'minLength',
+      'maxLength',
+      'minLines',
+      'maxLines',
+    }, path: '$path.props');
+    final minLines =
+        _optionalPositiveInt(props['minLines'], path: '$path.props.minLines') ??
+        3;
+    final maxLines =
+        _optionalPositiveInt(props['maxLines'], path: '$path.props.maxLines') ??
+        6;
+    if (maxLines < minLines) {
+      _fail(
+        'Mp textArea maxLines must be greater than or equal to minLines.',
+        path: '$path.props.maxLines',
+      );
+    }
+    final parsedProps = <String, dynamic>{
+      ..._parseTextInputProps(props, path: path, includeKeyboardType: false),
+      'minLines': minLines,
+      'maxLines': maxLines,
+    };
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'textArea',
+      props: parsedProps,
+      children: const <_MpNode>[],
+    );
+  }
+
+  Map<String, dynamic> _parseTextInputProps(
+    Map<String, dynamic> props, {
+    required String path,
+    bool includeKeyboardType = true,
+  }) {
+    final minLength = _optionalNonNegativeInt(
+      props['minLength'],
+      path: '$path.props.minLength',
+    );
+    final maxLength = _optionalPositiveInt(
+      props['maxLength'],
+      path: '$path.props.maxLength',
+    );
+    if (minLength != null && maxLength != null && minLength > maxLength) {
+      _fail(
+        'Mp minLength must be less than or equal to maxLength.',
+        path: '$path.props.minLength',
+      );
+    }
+    String? initialValue;
+    if (props.containsKey('initialValue')) {
+      final rawInitialValue = props['initialValue'];
+      if (rawInitialValue is! String) {
+        _fail(
+          'Mp "initialValue" must be a string.',
+          path: '$path.props.initialValue',
+        );
+      }
+      if (rawInitialValue.length > maxLiteralTextLength) {
+        _fail(
+          'Mp string literal exceeds the maximum length.',
+          path: '$path.props.initialValue',
+          details: <String, dynamic>{
+            'length': rawInitialValue.length,
+            'maxLiteralTextLength': maxLiteralTextLength,
+          },
+        );
+      }
+      initialValue = rawInitialValue;
+    }
+    final parsed = <String, dynamic>{
+      'name': _requiredFieldName(props, 'name', path: '$path.props'),
+      'label': _requiredString(props, 'label', path: '$path.props'),
+      if (props.containsKey('hint'))
+        'hint': _requiredString(props, 'hint', path: '$path.props'),
+      if (props.containsKey('initialValue')) 'initialValue': initialValue,
+      'required':
+          _optionalBool(props['required'], path: '$path.props.required') ??
+          false,
+      if (minLength != null) 'minLength': minLength,
+      if (maxLength != null) 'maxLength': maxLength,
+    };
+    if (includeKeyboardType) {
+      final keyboardType =
+          _optionalStableString(props, 'keyboardType', path: '$path.props') ??
+          'text';
+      if (!const <String>{
+        'text',
+        'email',
+        'number',
+        'phone',
+        'url',
+      }.contains(keyboardType)) {
+        _fail(
+          'Mp textInput keyboardType is unsupported.',
+          path: '$path.props.keyboardType',
+        );
+      }
+      parsed['keyboardType'] = keyboardType;
+      parsed['obscureText'] =
+          _optionalBool(
+            props['obscureText'],
+            path: '$path.props.obscureText',
+          ) ??
+          false;
+    }
+    return parsed;
+  }
+
+  _MpNode _parseChoiceNode({
+    required String type,
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'name',
+      'label',
+      'hint',
+      'options',
+      'initialValue',
+      'required',
+    }, path: '$path.props');
+    final options = _parseOptions(
+      props['options'],
+      path: '$path.props.options',
+    );
+    final initialValue = props.containsKey('initialValue')
+        ? _requiredStableString(props, 'initialValue', path: '$path.props')
+        : null;
+    if (initialValue != null &&
+        !options.any((option) => option['value'] == initialValue)) {
+      _fail(
+        'Mp $type initialValue must match one option value.',
+        path: '$path.props.initialValue',
+      );
+    }
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: type,
+      props: <String, dynamic>{
+        'name': _requiredFieldName(props, 'name', path: '$path.props'),
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        if (props.containsKey('hint'))
+          'hint': _requiredString(props, 'hint', path: '$path.props'),
+        'options': options,
+        if (initialValue != null) 'initialValue': initialValue,
+        'required':
+            _optionalBool(props['required'], path: '$path.props.required') ??
+            false,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseCheckboxNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'name',
+      'label',
+      'initialValue',
+      'requiredTrue',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'checkbox',
+      props: <String, dynamic>{
+        'name': _requiredFieldName(props, 'name', path: '$path.props'),
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        'initialValue':
+            _optionalBool(
+              props['initialValue'],
+              path: '$path.props.initialValue',
+            ) ??
+            false,
+        'requiredTrue':
+            _optionalBool(
+              props['requiredTrue'],
+              path: '$path.props.requiredTrue',
+            ) ??
+            false,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseFormNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{'id'}, path: '$path.props');
+    if (children.isEmpty) {
+      _fail('Mp form must contain at least one child.', path: '$path.children');
+    }
+    return _MpNode(
+      type: 'form',
+      props: <String, dynamic>{
+        'id': props.containsKey('id')
+            ? _requiredFieldName(props, 'id', path: '$path.props')
+            : 'form',
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseFormSubmitNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'label',
+      'endpoint',
+      'requestId',
+      'method',
+      'body',
+      'cacheTtlSeconds',
+      'onSuccess',
+      'onError',
+    }, path: '$path.props');
+    final parsedProps = <String, dynamic>{
+      'label': _requiredString(props, 'label', path: '$path.props'),
+      'endpoint': _requiredStableString(props, 'endpoint', path: '$path.props'),
+      if (props.containsKey('requestId'))
+        'requestId': _requiredStableString(
+          props,
+          'requestId',
+          path: '$path.props',
+        ),
+      'method':
+          _optionalStableString(props, 'method', path: '$path.props') ?? 'POST',
+      'body': _optionalMap(props['body'], path: '$path.props.body'),
+      'cacheTtlSeconds': _optionalPositiveInt(
+        props['cacheTtlSeconds'],
+        path: '$path.props.cacheTtlSeconds',
+      ),
+      if (props.containsKey('onSuccess'))
+        'onSuccess': _parseAction(
+          props['onSuccess'],
+          path: '$path.props.onSuccess',
+        ),
+      if (props.containsKey('onError'))
+        'onError': _parseAction(props['onError'], path: '$path.props.onError'),
+    };
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'formSubmit',
+      props: parsedProps,
       children: const <_MpNode>[],
     );
   }
@@ -542,6 +864,9 @@ class MpScreenValidator {
       'backend.call' => _parseBackendCallAction(type, props, path),
       'backend.query' => _parseBackendQueryAction(type, props, path),
       'backend.loadMore' => _parseBackendLoadMoreAction(type, props, path),
+      'form.submit' => _parseFormSubmitAction(type, props, path),
+      'ui.toast' => _parseToastAction(type, props, path),
+      'ui.dialog' => _parseDialogAction(type, props, path),
       'navigation.openScreen' ||
       'navigation.replaceScreen' ||
       'navigation.resetStack' ||
@@ -709,6 +1034,92 @@ class MpScreenValidator {
     return _MpAction(type: type, props: parsed);
   }
 
+  _MpAction _parseFormSubmitAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'endpoint',
+      'requestId',
+      'method',
+      'body',
+      'cacheTtlSeconds',
+      'onSuccess',
+      'onError',
+    }, path: '$path.props');
+    final parsed = <String, dynamic>{
+      'endpoint': _requiredStableString(props, 'endpoint', path: '$path.props'),
+      if (props.containsKey('requestId'))
+        'requestId': _requiredStableString(
+          props,
+          'requestId',
+          path: '$path.props',
+        ),
+      'method':
+          _optionalStableString(props, 'method', path: '$path.props') ?? 'POST',
+      'body': _optionalMap(props['body'], path: '$path.props.body'),
+      'cacheTtlSeconds': _optionalPositiveInt(
+        props['cacheTtlSeconds'],
+        path: '$path.props.cacheTtlSeconds',
+      ),
+      if (props.containsKey('onSuccess'))
+        'onSuccess': _parseAction(
+          props['onSuccess'],
+          path: '$path.props.onSuccess',
+        ),
+      if (props.containsKey('onError'))
+        'onError': _parseAction(props['onError'], path: '$path.props.onError'),
+    };
+    return _MpAction(type: type, props: parsed);
+  }
+
+  _MpAction _parseToastAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'message',
+      'durationMs',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'message': _requiredString(props, 'message', path: '$path.props'),
+        'durationMs':
+            _optionalPositiveInt(
+              props['durationMs'],
+              path: '$path.props.durationMs',
+            ) ??
+            2400,
+      },
+    );
+  }
+
+  _MpAction _parseDialogAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'title',
+      'message',
+      'confirmLabel',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('title'))
+          'title': _requiredString(props, 'title', path: '$path.props'),
+        'message': _requiredString(props, 'message', path: '$path.props'),
+        'confirmLabel': props.containsKey('confirmLabel')
+            ? _requiredString(props, 'confirmLabel', path: '$path.props')
+            : 'OK',
+      },
+    );
+  }
+
   _MpAction _parseScreenNavigationAction(
     String type,
     Map<String, dynamic> props,
@@ -831,6 +1242,22 @@ class MpScreenValidator {
     return value;
   }
 
+  static String _requiredFieldName(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = _requiredStableString(json, key, path: path);
+    if (!_fieldNamePattern.hasMatch(value)) {
+      _fail(
+        'Mp "$key" must match ^[a-z][a-z0-9_]*\$.',
+        path: '$path.$key',
+        details: <String, dynamic>{key: value},
+      );
+    }
+    return value;
+  }
+
   static String? _optionalStableString(
     Map<String, dynamic> json,
     String key, {
@@ -909,6 +1336,16 @@ class MpScreenValidator {
     return value;
   }
 
+  static int? _optionalNonNegativeInt(Object? value, {required String path}) {
+    if (value == null) {
+      return null;
+    }
+    if (value is! int || value < 0) {
+      _fail('Mp numeric value must be a non-negative integer.', path: path);
+    }
+    return value;
+  }
+
   static bool? _optionalBool(Object? value, {required String path}) {
     if (value == null) {
       return null;
@@ -967,6 +1404,48 @@ class MpScreenValidator {
         normalized == '::1' ||
         normalized == '0.0.0.0' ||
         normalized == '10.0.2.2';
+  }
+
+  static List<Map<String, dynamic>> _parseOptions(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! List || value.isEmpty) {
+      _fail('Mp options must be a non-empty array.', path: path);
+    }
+    final seenValues = <String>{};
+    return <Map<String, dynamic>>[
+      for (var index = 0; index < value.length; index += 1)
+        _parseOption(
+          value[index],
+          path: '$path[$index]',
+          seenValues: seenValues,
+        ),
+    ];
+  }
+
+  static Map<String, dynamic> _parseOption(
+    Object? value, {
+    required String path,
+    required Set<String> seenValues,
+  }) {
+    if (value is! Map) {
+      _fail('Mp option must be an object.', path: path);
+    }
+    final json = Map<String, dynamic>.from(value);
+    _validateObjectKeys(json, const <String>{'label', 'value'}, path: path);
+    final optionValue = _requiredStableString(json, 'value', path: path);
+    if (!seenValues.add(optionValue)) {
+      _fail(
+        'Mp option values must be unique.',
+        path: '$path.value',
+        details: <String, dynamic>{'value': optionValue},
+      );
+    }
+    return <String, dynamic>{
+      'label': _requiredString(json, 'label', path: path),
+      'value': optionValue,
+    };
   }
 
   static Never _unsupportedNode(String type, {required String path}) {
