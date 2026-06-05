@@ -9,7 +9,7 @@ backend delivery, host apps, and runtime/tooling packages.
 
 - manifest models and cache policy types
 - value-based capability IDs
-- screen format metadata for legacy Stac and Mp JSON screens
+- screen format metadata for Mp JSON screens
 - stable action names
 - typed action payload models
 - host action request/result envelopes
@@ -30,8 +30,8 @@ the shared wire-level types and constants.
 
 ## Screen formats
 
-Older manifests do not need a `screenFormat`; missing values decode as
-`stac`. New Mp JSON manifests should declare:
+Mp JSON is the default screen format. Missing values decode as `mp` with
+schema version `1`. Manifests may declare the format explicitly:
 
 ```json
 {

@@ -150,7 +150,7 @@ export function buildStatusTreeSections(
       rows: compactRows([
         row('App ID', asString(miniProgram.appId, 'unknown')),
         row('Version', asString(miniProgram.version, 'unknown')),
-        row('Screen format', asString(miniProgram.screenFormat, 'stac')),
+        row('Screen format', asString(miniProgram.screenFormat, 'mp')),
         row(
           'Schema version',
           screenSchemaVersion > 0 ? String(screenSchemaVersion) : '',
@@ -217,7 +217,6 @@ export function buildStatusTreeSections(
 
   if (asBoolean(hostApp.detected)) {
     const endpointCount = asNumber(hostApp.endpointCount);
-    const legacyStac = asRecord(hostApp.legacyStac);
     const endpoints = Array.isArray(hostApp.endpoints) ? hostApp.endpoints : [];
     const endpointModes = endpoints
       .map((entry) => {
@@ -245,16 +244,6 @@ export function buildStatusTreeSections(
       icon: 'device-mobile',
       rows: compactRows([
         row('Runtime setup', yesNo(asBoolean(hostApp.runtimeSetupExists))),
-        row('Legacy Stac adapter', asString(legacyStac.status, 'disabled')),
-        row(
-          'Legacy dependency',
-          optionalYesNo(legacyStac.dependencyConfigured),
-        ),
-        row(
-          'Legacy renderer',
-          optionalYesNo(legacyStac.rendererConfigured),
-        ),
-        row('Legacy issues', asStringList(legacyStac.issues).join('; ')),
         row('Endpoint map', yesNo(asBoolean(hostApp.endpointMapExists))),
         row('Endpoint count', String(endpointCount)),
         row('Endpoint app IDs', asStringList(hostApp.endpointAppIds).join(', ')),

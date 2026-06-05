@@ -112,7 +112,8 @@ test('builds copyable workflow command templates', () => {
     projectRoot: 'D:\\host_app',
     deviceId: 'emulator-5554',
   });
-  assert.match(host, /embed init --with-demo --project-root "D:\\host_app"/);
+  assert.match(host, /embed init --project-root "D:\\host_app"/);
+  assert.doesNotMatch(host, /--with-demo/);
   assert.match(host, /flutter build apk --release/);
 });
 

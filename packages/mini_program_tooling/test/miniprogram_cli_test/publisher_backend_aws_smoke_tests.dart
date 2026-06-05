@@ -383,10 +383,7 @@ void _registerPublisherBackendAwsSmokeTests() {
       stdoutBuffer.toString(),
       contains('For protected backend smoke, append --access-key <key>.'),
     );
-    expect(
-      stdoutBuffer.toString(),
-      contains('(--access-key <key>|--public)'),
-    );
+    expect(stdoutBuffer.toString(), contains('(--access-key <key>|--public)'));
     expect(
       stdoutBuffer.toString(),
       contains('publisher-backend aws logs --env my-aws-prod'),
@@ -490,7 +487,7 @@ void _registerPublisherBackendAwsSmokeTests() {
       await File(
         p.join(
           standaloneRoot,
-          'stac',
+          'mp',
           'screens',
           'firebase_starter_scaffold_home.dart',
         ),

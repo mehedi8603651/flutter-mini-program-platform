@@ -64,14 +64,13 @@ void main() {
       expect(decoded.requiresCapability(Capability.auth), isTrue);
       expect(decoded.requiresCapability(CapabilityIds.analytics), isFalse);
       expect(decoded.usesMpScreenFormat, isTrue);
-      expect(decoded.usesLegacyStacScreenFormat, isFalse);
       expect(decoded.allowsManifestStaleCache, isTrue);
       expect(decoded.allowsEntryScreenStaleCache, isFalse);
       expect(decoded.manifestMaxStaleAge, const Duration(days: 1));
       expect(decoded.entryScreenMaxStaleAge, const Duration(hours: 1));
     });
 
-    test('decodes old manifests without screenFormat as legacy Stac', () {
+    test('decodes manifests without screenFormat as Mp', () {
       final manifest = MiniProgramManifest.fromJson({
         'id': 'profile_center',
         'version': '1.2.3',
@@ -81,9 +80,9 @@ void main() {
         'requiredCapabilities': ['auth'],
       });
 
-      expect(manifest.screenFormat, MiniProgramScreenFormats.stac);
-      expect(manifest.screenSchemaVersion, isNull);
-      expect(manifest.usesLegacyStacScreenFormat, isTrue);
+      expect(manifest.screenFormat, MiniProgramScreenFormats.mp);
+      expect(manifest.screenSchemaVersion, 1);
+      expect(manifest.usesMpScreenFormat, isTrue);
     });
 
     test('round-trips unknown but valid capability IDs', () {
@@ -122,7 +121,7 @@ void main() {
       );
     });
 
-    test('rejects Mp manifests without a screen schema version', () {
+    test('defaults Mp manifests without a screen schema version to v1', () {
       final json = {
         'id': 'profile_center',
         'version': '1.2.3',
@@ -133,7 +132,10 @@ void main() {
         'screenFormat': 'mp',
       };
 
-      expect(() => MiniProgramManifest.fromJson(json), throwsA(anything));
+      final manifest = MiniProgramManifest.fromJson(json);
+
+      expect(manifest.screenFormat, MiniProgramScreenFormats.mp);
+      expect(manifest.screenSchemaVersion, 1);
     });
 
     test('rejects non-positive screen schema versions', () {
@@ -164,7 +166,6 @@ void main() {
 
       expect(manifest.screenFormat, 'future');
       expect(manifest.usesMpScreenFormat, isFalse);
-      expect(manifest.usesLegacyStacScreenFormat, isFalse);
     });
 
     test('rejects malformed manifest payloads', () {

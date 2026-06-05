@@ -22,7 +22,7 @@ class AssetResolutionResult {
   int get resolvedAssetCount => cachedAssetCount + downloadedAssetCount;
 }
 
-/// Resolves standard Stac image widgets to local file-backed assets when the
+/// Resolves standard Mp image nodes to local file-backed assets when the
 /// manifest allows entry-screen caching.
 class AssetResolver {
   AssetResolver({http.Client? client}) : _client = client ?? http.Client();

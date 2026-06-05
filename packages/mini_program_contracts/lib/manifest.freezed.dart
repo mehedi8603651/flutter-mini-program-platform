@@ -852,7 +852,7 @@ as String?,
 /// @nodoc
 mixin _$MiniProgramManifest {
 
- String get id; String get version; String get entry; String get contractVersion;@SdkVersionRangeConverter() SdkVersionRange get sdkVersionRange;@CapabilityIdListConverter() List<CapabilityId> get requiredCapabilities;@MiniProgramScreenFormatConverter() MiniProgramScreenFormat get screenFormat;@JsonKey(includeIfNull: false) int? get screenSchemaVersion; List<FeatureFlagKey> get featureFlags; MiniProgramCachePolicy get cachePolicy; MiniProgramFallback? get fallback;
+ String get id; String get version; String get entry; String get contractVersion;@SdkVersionRangeConverter() SdkVersionRange get sdkVersionRange;@CapabilityIdListConverter() List<CapabilityId> get requiredCapabilities;@MiniProgramScreenFormatConverter() MiniProgramScreenFormat get screenFormat; int? get screenSchemaVersion; List<FeatureFlagKey> get featureFlags; MiniProgramCachePolicy get cachePolicy; MiniProgramFallback? get fallback;
 /// Create a copy of MiniProgramManifest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -885,7 +885,7 @@ abstract mixin class $MiniProgramManifestCopyWith<$Res>  {
   factory $MiniProgramManifestCopyWith(MiniProgramManifest value, $Res Function(MiniProgramManifest) _then) = _$MiniProgramManifestCopyWithImpl;
 @useResult
 $Res call({
- String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange,@CapabilityIdListConverter() List<CapabilityId> requiredCapabilities,@MiniProgramScreenFormatConverter() MiniProgramScreenFormat screenFormat,@JsonKey(includeIfNull: false) int? screenSchemaVersion, List<FeatureFlagKey> featureFlags, MiniProgramCachePolicy cachePolicy, MiniProgramFallback? fallback
+ String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange,@CapabilityIdListConverter() List<CapabilityId> requiredCapabilities,@MiniProgramScreenFormatConverter() MiniProgramScreenFormat screenFormat, int? screenSchemaVersion, List<FeatureFlagKey> featureFlags, MiniProgramCachePolicy cachePolicy, MiniProgramFallback? fallback
 });
 
 
@@ -1030,7 +1030,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange, @CapabilityIdListConverter()  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter()  MiniProgramScreenFormat screenFormat, @JsonKey(includeIfNull: false)  int? screenSchemaVersion,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange, @CapabilityIdListConverter()  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter()  MiniProgramScreenFormat screenFormat,  int? screenSchemaVersion,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MiniProgramManifest() when $default != null:
 return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.screenFormat,_that.screenSchemaVersion,_that.featureFlags,_that.cachePolicy,_that.fallback);case _:
@@ -1051,7 +1051,7 @@ return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange, @CapabilityIdListConverter()  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter()  MiniProgramScreenFormat screenFormat, @JsonKey(includeIfNull: false)  int? screenSchemaVersion,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange, @CapabilityIdListConverter()  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter()  MiniProgramScreenFormat screenFormat,  int? screenSchemaVersion,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)  $default,) {final _that = this;
 switch (_that) {
 case _MiniProgramManifest():
 return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.screenFormat,_that.screenSchemaVersion,_that.featureFlags,_that.cachePolicy,_that.fallback);case _:
@@ -1071,7 +1071,7 @@ return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange, @CapabilityIdListConverter()  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter()  MiniProgramScreenFormat screenFormat, @JsonKey(includeIfNull: false)  int? screenSchemaVersion,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String version,  String entry,  String contractVersion, @SdkVersionRangeConverter()  SdkVersionRange sdkVersionRange, @CapabilityIdListConverter()  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter()  MiniProgramScreenFormat screenFormat,  int? screenSchemaVersion,  List<FeatureFlagKey> featureFlags,  MiniProgramCachePolicy cachePolicy,  MiniProgramFallback? fallback)?  $default,) {final _that = this;
 switch (_that) {
 case _MiniProgramManifest() when $default != null:
 return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.sdkVersionRange,_that.requiredCapabilities,_that.screenFormat,_that.screenSchemaVersion,_that.featureFlags,_that.cachePolicy,_that.fallback);case _:
@@ -1086,7 +1086,7 @@ return $default(_that.id,_that.version,_that.entry,_that.contractVersion,_that.s
 
 @JsonSerializable(checked: true, explicitToJson: true)
 class _MiniProgramManifest implements MiniProgramManifest {
-  const _MiniProgramManifest({required this.id, required this.version, required this.entry, required this.contractVersion, @SdkVersionRangeConverter() required this.sdkVersionRange, @CapabilityIdListConverter() required final  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter() this.screenFormat = MiniProgramScreenFormats.stac, @JsonKey(includeIfNull: false) this.screenSchemaVersion, final  List<FeatureFlagKey> featureFlags = const <FeatureFlagKey>[], this.cachePolicy = const MiniProgramCachePolicy(), this.fallback}): assert(screenFormat != 'mp' || screenSchemaVersion != null, 'screenSchemaVersion is required when screenFormat is "mp".'),assert(screenSchemaVersion == null || screenSchemaVersion > 0, 'screenSchemaVersion must be greater than zero when provided.'),_requiredCapabilities = requiredCapabilities,_featureFlags = featureFlags;
+  const _MiniProgramManifest({required this.id, required this.version, required this.entry, required this.contractVersion, @SdkVersionRangeConverter() required this.sdkVersionRange, @CapabilityIdListConverter() required final  List<CapabilityId> requiredCapabilities, @MiniProgramScreenFormatConverter() this.screenFormat = MiniProgramScreenFormats.mp, this.screenSchemaVersion = 1, final  List<FeatureFlagKey> featureFlags = const <FeatureFlagKey>[], this.cachePolicy = const MiniProgramCachePolicy(), this.fallback}): assert(screenFormat != 'mp' || screenSchemaVersion != null, 'screenSchemaVersion is required when screenFormat is "mp".'),assert(screenSchemaVersion == null || screenSchemaVersion > 0, 'screenSchemaVersion must be greater than zero when provided.'),_requiredCapabilities = requiredCapabilities,_featureFlags = featureFlags;
   factory _MiniProgramManifest.fromJson(Map<String, dynamic> json) => _$MiniProgramManifestFromJson(json);
 
 @override final  String id;
@@ -1102,7 +1102,7 @@ class _MiniProgramManifest implements MiniProgramManifest {
 }
 
 @override@JsonKey()@MiniProgramScreenFormatConverter() final  MiniProgramScreenFormat screenFormat;
-@override@JsonKey(includeIfNull: false) final  int? screenSchemaVersion;
+@override@JsonKey() final  int? screenSchemaVersion;
  final  List<FeatureFlagKey> _featureFlags;
 @override@JsonKey() List<FeatureFlagKey> get featureFlags {
   if (_featureFlags is EqualUnmodifiableListView) return _featureFlags;
@@ -1146,7 +1146,7 @@ abstract mixin class _$MiniProgramManifestCopyWith<$Res> implements $MiniProgram
   factory _$MiniProgramManifestCopyWith(_MiniProgramManifest value, $Res Function(_MiniProgramManifest) _then) = __$MiniProgramManifestCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange,@CapabilityIdListConverter() List<CapabilityId> requiredCapabilities,@MiniProgramScreenFormatConverter() MiniProgramScreenFormat screenFormat,@JsonKey(includeIfNull: false) int? screenSchemaVersion, List<FeatureFlagKey> featureFlags, MiniProgramCachePolicy cachePolicy, MiniProgramFallback? fallback
+ String id, String version, String entry, String contractVersion,@SdkVersionRangeConverter() SdkVersionRange sdkVersionRange,@CapabilityIdListConverter() List<CapabilityId> requiredCapabilities,@MiniProgramScreenFormatConverter() MiniProgramScreenFormat screenFormat, int? screenSchemaVersion, List<FeatureFlagKey> featureFlags, MiniProgramCachePolicy cachePolicy, MiniProgramFallback? fallback
 });
 
 

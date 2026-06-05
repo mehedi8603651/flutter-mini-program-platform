@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -100,20 +103,14 @@ void main() {
     await _pumpUntilFound(tester, find.text('Super App Host'));
 
     expect(find.text('Super App Host'), findsOneWidget);
-    expect(find.text('Profile Center'), findsOneWidget);
+    expect(find.text('Mp Profile Center'), findsOneWidget);
     expect(find.text('Delivery: Bundled assets'), findsOneWidget);
     expect(find.text('Cached'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
-    await tester.pumpAndSettle();
-    expect(find.text('Feedback Form'), findsOneWidget);
-    expect(find.text('Cached'), findsWidgets);
-    expect(find.text('Open mini-program'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('Mp Profile Center'), 300);
-    await tester.pumpAndSettle();
-    expect(find.text('Mp Profile Center'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Mp Rewards Center'), 300);
     await tester.pumpAndSettle();
     expect(find.text('Mp Rewards Center'), findsOneWidget);
+    expect(find.text('Cached'), findsWidgets);
+    expect(find.text('Open mini-program'), findsWidgets);
   });
 
   testWidgets(
@@ -121,7 +118,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         SuperAppHostApp(
-          source: const _SuperLaneMiniProgramSource(),
+          source: const _BundledAssetMiniProgramSource(),
           sourceDescription: 'Injected source',
           cacheBundle: MiniProgramCacheBundle.inMemory(),
         ),
@@ -137,21 +134,21 @@ void main() {
       await tester.tap(find.text('Open mini-program').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Portable account module'), findsOneWidget);
-      expect(find.text('Open Native Edit Screen'), findsOneWidget);
+      expect(find.text('Portable Mp profile'), findsOneWidget);
+      expect(find.text('Open Mp profile details'), findsOneWidget);
     },
   );
 
-  testWidgets('opens the local profile center mini-program', (tester) async {
+  testWidgets('opens the local Mp profile center mini-program', (tester) async {
     final navigatorKey = GlobalKey<NavigatorState>();
 
     await tester.pumpWidget(
       MaterialApp(
         navigatorKey: navigatorKey,
         home: MiniProgramEntryPage(
-          program: LocalMiniProgramCatalog.profileCenter,
+          program: LocalMiniProgramCatalog.mpProfileCenter,
           sdkVersion: superAppHostSdkVersion,
-          source: const _SuperLaneMiniProgramSource(),
+          source: const _BundledAssetMiniProgramSource(),
           hostBridge: HostBridgeImpl(
             navigatorKey: navigatorKey,
             secureApiService: _RecordingSecureApiService(),
@@ -163,39 +160,16 @@ void main() {
       ),
     );
     await tester.pump();
-    await _pumpUntilFound(tester, find.text('Open Native Edit Screen'));
+    await _pumpUntilFound(tester, find.text('Open Mp profile details'));
 
-    expect(find.text('Portable account module'), findsOneWidget);
-    expect(find.text('Active release: Profile Center v1.1.0'), findsOneWidget);
-    expect(find.text('Open Native Edit Screen'), findsOneWidget);
-  });
-
-  testWidgets('opens the local feedback form mini-program', (tester) async {
-    final navigatorKey = GlobalKey<NavigatorState>();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        navigatorKey: navigatorKey,
-        home: MiniProgramEntryPage(
-          program: LocalMiniProgramCatalog.feedbackForm,
-          sdkVersion: superAppHostSdkVersion,
-          source: const _SuperLaneMiniProgramSource(),
-          hostBridge: HostBridgeImpl(
-            navigatorKey: navigatorKey,
-            secureApiService: _RecordingSecureApiService(),
-          ),
-          capabilityRegistry: superAppCapabilityRegistry,
-          featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
-          cacheBundle: MiniProgramCacheBundle.inMemory(),
-        ),
+    expect(find.text('Portable Mp profile'), findsOneWidget);
+    expect(
+      find.text(
+        'This screen is authored with Mp.* and bundled as versioned Mp JSON.',
       ),
+      findsOneWidget,
     );
-    await tester.pump();
-    await _pumpUntilFound(tester, find.text('Validate and continue'));
-
-    expect(find.text('Portable feedback lane'), findsOneWidget);
-    expect(find.text('Release lane: Feedback Form v1.1.0'), findsOneWidget);
-    expect(find.text('Track feedback view'), findsOneWidget);
+    expect(find.text('Open Mp profile details'), findsOneWidget);
   });
 
   testWidgets('shows the SDK fallback when host capabilities are missing', (
@@ -207,7 +181,7 @@ void main() {
       MaterialApp(
         navigatorKey: navigatorKey,
         home: MiniProgramEntryPage(
-          program: LocalMiniProgramCatalog.profileCenter,
+          program: LocalMiniProgramCatalog.mpProfileCenter,
           sdkVersion: superAppHostSdkVersion,
           source: const _MissingCapabilityMiniProgramSource(),
           hostBridge: HostBridgeImpl(
@@ -225,7 +199,9 @@ void main() {
 
     expect(find.text('Host capability mismatch'), findsOneWidget);
     expect(
-      find.text('Profile Center is temporarily unavailable in this host app.'),
+      find.text(
+        'Mp Profile Center is temporarily unavailable in this host app.',
+      ),
       findsOneWidget,
     );
     expect(
@@ -541,15 +517,16 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
     return const MiniProgramManifest(
-      id: 'profile_center',
+      id: 'mp_profile_center',
       version: '1.0.0',
-      entry: 'profile_center_home',
+      entry: 'mp_profile_center_home',
       contractVersion: '1.0.0',
       sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
       requiredCapabilities: <CapabilityId>[CapabilityIds.nativeNavigation],
       fallback: MiniProgramFallback(
         strategy: MiniProgramFallbackStrategy.errorView,
-        message: 'Profile Center is temporarily unavailable in this host app.',
+        message:
+            'Mp Profile Center is temporarily unavailable in this host app.',
       ),
     );
   }
@@ -574,52 +551,15 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
   }
 }
 
-class _SuperLaneMiniProgramSource implements MiniProgramSource {
-  const _SuperLaneMiniProgramSource();
+class _BundledAssetMiniProgramSource implements MiniProgramSource {
+  const _BundledAssetMiniProgramSource();
+
+  static const String _basePath = 'assets/mini_programs';
 
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
-    switch (miniProgramId) {
-      case 'profile_center':
-        return const MiniProgramManifest(
-          id: 'profile_center',
-          version: '1.1.0',
-          entry: 'profile_center_home',
-          contractVersion: '1.0.0',
-          sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-          requiredCapabilities: <CapabilityId>[
-            CapabilityIds.analytics,
-            CapabilityIds.nativeNavigation,
-          ],
-          fallback: MiniProgramFallback(
-            strategy: MiniProgramFallbackStrategy.errorView,
-            message:
-                'Profile Center is temporarily unavailable in this host app.',
-          ),
-        );
-      case 'feedback_form':
-        return const MiniProgramManifest(
-          id: 'feedback_form',
-          version: '1.1.0',
-          entry: 'feedback_form_home',
-          contractVersion: '1.0.0',
-          sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-          requiredCapabilities: <CapabilityId>[
-            CapabilityIds.analytics,
-            CapabilityIds.secureApi,
-            CapabilityIds.nativeNavigation,
-          ],
-          fallback: MiniProgramFallback(
-            strategy: MiniProgramFallbackStrategy.errorView,
-            message:
-                'Feedback Form is temporarily unavailable in this host app.',
-          ),
-        );
-      default:
-        throw StateError(
-          'Unsupported super-host mini-program "$miniProgramId".',
-        );
-    }
+    final json = await _readJson('$_basePath/$miniProgramId/manifest.json');
+    return MiniProgramManifest.fromJson(json);
   }
 
   @override
@@ -627,136 +567,21 @@ class _SuperLaneMiniProgramSource implements MiniProgramSource {
     required String miniProgramId,
     required String version,
     required String screenId,
-  }) async {
-    switch (miniProgramId) {
-      case 'profile_center':
-        return const <String, dynamic>{
-          'type': 'scaffold',
-          'appBar': <String, dynamic>{
-            'type': 'appBar',
-            'title': <String, dynamic>{
-              'type': 'text',
-              'data': 'Profile Center',
-            },
-          },
-          'body': <String, dynamic>{
-            'type': 'safeArea',
-            'child': <String, dynamic>{
-              'type': 'singleChildScrollView',
-              'padding': <String, dynamic>{
-                'left': 24.0,
-                'top': 24.0,
-                'right': 24.0,
-                'bottom': 24.0,
-              },
-              'child': <String, dynamic>{
-                'type': 'column',
-                'crossAxisAlignment': 'start',
-                'children': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Portable account module',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Active release: Profile Center v1.1.0',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
-                  <String, dynamic>{
-                    'type': 'filledButton',
-                    'child': <String, dynamic>{
-                      'type': 'text',
-                      'data': 'Open Native Edit Screen',
-                    },
-                    'onPressed': <String, dynamic>{
-                      'actionType': 'hostAction',
-                      'requestId': 'profile-open-native-editor',
-                      'action': 'openNativeScreen',
-                      'payload': <String, dynamic>{
-                        'route': 'profile_editor',
-                        'args': <String, dynamic>{
-                          'userId': 'guest_001',
-                          'source': 'profile_center',
-                        },
-                        'expectResult': true,
-                      },
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        };
-      case 'feedback_form':
-        return const <String, dynamic>{
-          'type': 'scaffold',
-          'appBar': <String, dynamic>{
-            'type': 'appBar',
-            'title': <String, dynamic>{'type': 'text', 'data': 'Feedback Form'},
-          },
-          'body': <String, dynamic>{
-            'type': 'safeArea',
-            'child': <String, dynamic>{
-              'type': 'singleChildScrollView',
-              'padding': <String, dynamic>{
-                'left': 24.0,
-                'top': 24.0,
-                'right': 24.0,
-                'bottom': 24.0,
-              },
-              'child': <String, dynamic>{
-                'type': 'column',
-                'crossAxisAlignment': 'start',
-                'children': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Portable feedback lane',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Release lane: Feedback Form v1.1.0',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
-                  <String, dynamic>{
-                    'type': 'filledButton',
-                    'child': <String, dynamic>{
-                      'type': 'text',
-                      'data': 'Validate and continue',
-                    },
-                    'onPressed': <String, dynamic>{
-                      'actionType': 'hostAction',
-                      'requestId': 'feedback-open-follow-up',
-                      'action': 'openNativeScreen',
-                      'payload': <String, dynamic>{
-                        'route': 'feedback_follow_up',
-                        'args': <String, dynamic>{
-                          'source': 'feedback_form',
-                          'channel': 'mini_program',
-                        },
-                        'expectResult': true,
-                      },
-                    },
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
-                  <String, dynamic>{
-                    'type': 'outlinedButton',
-                    'child': <String, dynamic>{
-                      'type': 'text',
-                      'data': 'Track feedback view',
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        };
-      default:
-        throw StateError(
-          'Unsupported super-host mini-program "$miniProgramId".',
-        );
+  }) {
+    return _readJson('$_basePath/$miniProgramId/screens/$screenId.json');
+  }
+
+  Future<Map<String, dynamic>> _readJson(String path) {
+    final decoded = jsonDecode(File(path).readAsStringSync());
+    if (decoded is Map<String, dynamic>) {
+      return Future<Map<String, dynamic>>.value(decoded);
     }
+    if (decoded is Map) {
+      return Future<Map<String, dynamic>>.value(
+        decoded.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+    throw StateError('Expected JSON object at $path.');
   }
 }
 

@@ -36,9 +36,10 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       )
       ..addOption(
         'screen-format',
-        allowed: const <String>['mp', 'stac'],
+        allowed: const <String>['mp'],
         defaultsTo: 'mp',
-        help: 'Screen authoring format for the scaffold.',
+        help:
+            'Screen authoring format for the scaffold. Mp is the only supported format.',
       )
       ..addFlag(
         'force',
@@ -162,15 +163,11 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       )
       ..addOption(
         'repo-root',
-        help: 'Optional repo root used for vendored Stac CLI resolution.',
+        help: 'Optional repo root used for mini-program discovery.',
       )
       ..addOption(
         'mini-program-root',
         help: 'Optional exact mini-program root path.',
-      )
-      ..addOption(
-        'stac-cli-script',
-        help: 'Optional explicit path to bin/stac_cli.dart.',
       )
       ..addOption(
         'mp-build-script',
@@ -214,7 +211,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         repoRootPath: resolved.repoRootPath,
         miniProgramId: miniProgramId,
         miniProgramRootPath: resolved.miniProgramRootPath,
-        stacCliScriptPath: results.option('stac-cli-script'),
         mpBuildScriptPath: results.option('mp-build-script'),
         skipPubGet: results.flag('skip-pub-get'),
       ),
@@ -245,10 +241,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ..addOption(
         'mini-program-root',
         help: 'Optional exact mini-program root path.',
-      )
-      ..addOption(
-        'stac-cli-script',
-        help: 'Optional explicit path to bin/stac_cli.dart.',
       )
       ..addOption(
         'mp-build-script',
@@ -299,7 +291,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         miniProgramRootPath: resolved.miniProgramRootPath,
         repoRootPath: resolved.repoRootPath,
         deviceId: deviceId,
-        stacCliScriptPath: results.option('stac-cli-script'),
         mpBuildScriptPath: results.option('mp-build-script'),
       ),
       stdoutSink: _stdout,
@@ -398,10 +389,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ..addOption(
         'mini-program-root',
         help: 'Optional exact mini-program root path.',
-      )
-      ..addOption(
-        'stac-cli-script',
-        help: 'Optional explicit path to bin/stac_cli.dart.',
       )
       ..addOption(
         'mp-build-script',
@@ -503,7 +490,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
           miniProgramRootPath: resolved.isRepoManaged
               ? null
               : resolved.miniProgramRootPath,
-          stacCliScriptPath: results.option('stac-cli-script'),
           mpBuildScriptPath: results.option('mp-build-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
         ),
@@ -527,7 +513,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
           miniProgramRootPath: resolved.isRepoManaged
               ? null
               : resolved.miniProgramRootPath,
-          stacCliScriptPath: results.option('stac-cli-script'),
           mpBuildScriptPath: results.option('mp-build-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
           clean: results.flag('clean'),
@@ -550,7 +535,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
           miniProgramRootPath: resolved.miniProgramRootPath,
           outputPath: results.option('output'),
           siteId: results.option('site'),
-          stacCliScriptPath: results.option('stac-cli-script'),
           mpBuildScriptPath: results.option('mp-build-script'),
           skipBuildPubGet: results.flag('skip-build-pub-get'),
           clean: results.flag('clean'),
@@ -580,7 +564,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         miniProgramRootPath: resolved.isRepoManaged
             ? null
             : resolved.miniProgramRootPath,
-        stacCliScriptPath: results.option('stac-cli-script'),
         mpBuildScriptPath: results.option('mp-build-script'),
         skipBuildPubGet: results.flag('skip-build-pub-get'),
       ),
@@ -769,18 +752,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         'force',
         negatable: false,
         help: 'Overwrite scaffold-managed files if the target already exists.',
-      )
-      ..addFlag(
-        'with-demo',
-        negatable: false,
-        help:
-            'Add the public legacy Stac GitHub/jsDelivr demo endpoint and enable its adapter.',
-      )
-      ..addFlag(
-        'with-legacy-stac',
-        negatable: false,
-        help:
-            'Add and register the optional legacy Stac renderer adapter.',
       );
 
     final results = parser.parse(arguments);
@@ -803,8 +774,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         hostVersion: results.option('host-version'),
         nativeRoutePath: results.option('native-route-path')!,
         force: results.flag('force'),
-        withDemo: results.flag('with-demo'),
-        withLegacyStac: results.flag('with-legacy-stac'),
       ),
     );
 

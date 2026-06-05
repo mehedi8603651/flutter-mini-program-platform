@@ -714,42 +714,21 @@ export async function chooseFirebaseStarterUiMode(): Promise<
 }
 
 export interface HostRendererChoice {
-  readonly withDemo: boolean;
-  readonly withLegacyStac: boolean;
+  readonly enabled: boolean;
 }
 
-export async function chooseHostRendererChoice(): Promise<
-  HostRendererChoice | undefined
-> {
+export async function chooseHostRendererChoice(): Promise<HostRendererChoice | undefined> {
   const choice = await vscode.window.showQuickPick(
     [
       {
         label: 'Mp-only host',
-        description: 'Recommended default; smallest host with the Mp renderer only',
-        withDemo: false,
-        withLegacyStac: false,
-      },
-      {
-        label: 'Mp + legacy Stac',
-        description: 'Adds the optional adapter for existing Stac mini-programs',
-        withDemo: false,
-        withLegacyStac: true,
-      },
-      {
-        label: 'Public legacy Stac demo',
-        description: 'Adds the adapter and public jsDelivr/GitHub demo endpoint',
-        withDemo: true,
-        withLegacyStac: false,
+        description: 'Recommended default; smallest host with the Mp renderer',
+        enabled: true,
       },
     ],
     { title: 'MiniProgram host renderer support', ignoreFocusOut: true },
   );
-  return choice
-    ? {
-        withDemo: choice.withDemo,
-        withLegacyStac: choice.withLegacyStac,
-      }
-    : undefined;
+  return choice ? { enabled: choice.enabled } : undefined;
 }
 
 export async function chooseStaticOutputFolder(): Promise<string | undefined> {

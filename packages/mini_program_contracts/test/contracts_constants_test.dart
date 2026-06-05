@@ -24,7 +24,6 @@ void main() {
     });
 
     test('screen format values stay stable', () {
-      expect(MiniProgramScreenFormats.stac, 'stac');
       expect(MiniProgramScreenFormats.mp, 'mp');
     });
 

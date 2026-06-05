@@ -130,13 +130,13 @@ void _registerPublisherBackendFirebaseSetupDeployTests() {
       stdoutBuffer.toString(),
       contains('Entry screen: firebase_starter_ui_home'),
     );
-    expect(stdoutBuffer.toString(), contains('Screen format: stac'));
+    expect(stdoutBuffer.toString(), contains('Screen format: mp'));
     expect(stdoutBuffer.toString(), contains('Source root:'));
     expect(
       await File(
         p.join(
           standaloneRoot,
-          'stac',
+          'mp',
           'screens',
           'firebase_starter_ui_home.dart',
         ),
@@ -180,9 +180,9 @@ void _registerPublisherBackendFirebaseSetupDeployTests() {
     expect(json['command'], 'publisher-backend firebase starter-ui');
     expect(json['provider'], 'firebase');
     expect(json['miniProgramId'], 'firebase_starter_ui_json');
-    expect(json['screenFormat'], 'stac');
-    expect(json['sourceRootPath'], p.join(standaloneRoot, 'stac'));
-    expect(json['writtenFileCount'], 5);
+    expect(json['screenFormat'], 'mp');
+    expect(json['sourceRootPath'], p.join(standaloneRoot, 'mp'));
+    expect(json['writtenFileCount'], 6);
     expect(
       json['writtenPaths'].toString(),
       contains('firebase_starter_ui_json_home.dart'),

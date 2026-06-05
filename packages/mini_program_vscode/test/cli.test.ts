@@ -197,7 +197,7 @@ test('builds core workflow command arguments', () => {
       title: 'Coupon Demo',
       outputRoot: 'D:/work/coupon_demo',
       backendTemplate: 'mock',
-      screenFormat: 'stac',
+      screenFormat: 'mp',
       force: true,
     }),
     [
@@ -205,7 +205,7 @@ test('builds core workflow command arguments', () => {
       '--output-root',
       'D:/work/coupon_demo',
       '--screen-format',
-      'stac',
+      'mp',
       '--title',
       'Coupon Demo',
       '--with-backend',
@@ -339,18 +339,8 @@ test('builds host app command arguments', () => {
     '--force',
   ]);
   assert.deepEqual(
-    buildEmbedInitArgs({ projectRoot: 'D:/host', withDemo: true }),
-    ['embed', 'init', '--project-root', 'D:/host', '--with-demo'],
-  );
-  assert.deepEqual(
-    buildEmbedInitArgs({ projectRoot: 'D:/host', withLegacyStac: true }),
-    ['embed', 'init', '--project-root', 'D:/host', '--with-legacy-stac'],
-  );
-  assert.deepEqual(
     buildEmbedInitArgs({
       projectRoot: 'D:/host',
-      withLegacyStac: true,
-      withDemo: true,
       force: true,
     }),
     [
@@ -358,8 +348,6 @@ test('builds host app command arguments', () => {
       'init',
       '--project-root',
       'D:/host',
-      '--with-legacy-stac',
-      '--with-demo',
       '--force',
     ],
   );

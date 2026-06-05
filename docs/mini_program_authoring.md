@@ -3,10 +3,7 @@
 New mini-programs should use the platform-owned Mp JSON engine. Authors write
 pure Dart with `Mp.*` helpers, build deterministic JSON, validate it, then
 preview or publish through the same provider-neutral delivery layout used by
-legacy Stac mini-programs.
-
-Legacy Stac projects remain supported during the migration. Use
-`--screen-format stac` only when you intentionally need the old Stac path.
+all delivery targets.
 
 ## Quick Start
 
@@ -47,18 +44,6 @@ mp/.build/screens/<screenId>.json
 
 Do not edit `mp/.build` directly. Edit `mp/program.dart` and
 `mp/screens/*.dart`, then run `miniprogram build`.
-
-## Legacy Stac
-
-Create a legacy Stac mini-program only when you are testing compatibility or
-migrating an existing package:
-
-```powershell
-miniprogram create old_profile_flow --screen-format stac
-```
-
-Missing `screenFormat` is treated as legacy `stac` by contracts, tooling, and
-the SDK.
 
 ## Mp Source Pattern
 

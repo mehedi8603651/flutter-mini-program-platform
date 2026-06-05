@@ -16,14 +16,6 @@ test('renders mini-program and host status rows', () => {
     hostApp: {
       detected: true,
       runtimeSetupExists: true,
-      legacyStac: {
-        dependencyConfigured: true,
-        rendererConfigured: true,
-        enabled: true,
-        ready: true,
-        status: 'ready',
-        issues: [],
-      },
       endpointMapExists: true,
       endpointCount: 2,
       endpointAppIds: ['coupon_demo', 'rewards'],
@@ -119,9 +111,9 @@ test('renders mini-program and host status rows', () => {
 
   const text = flattenStatusSections(buildStatusTreeSections(report));
   assert.match(text, /Host app/);
-  assert.match(text, /Legacy Stac adapter: ready/);
-  assert.match(text, /Legacy dependency: yes/);
-  assert.match(text, /Legacy renderer: yes/);
+  assert.doesNotMatch(text, /Legacy Stac adapter/);
+  assert.doesNotMatch(text, /Legacy dependency/);
+  assert.doesNotMatch(text, /Legacy renderer/);
   assert.match(text, /Screen format: mp/);
   assert.match(text, /Schema version: 1/);
   assert.match(text, /Source root: D:\/coupon\/mp/);

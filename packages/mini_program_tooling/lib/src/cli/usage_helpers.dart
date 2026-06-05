@@ -5,7 +5,7 @@ extension _MiniprogramCliUsageHelpers on MiniprogramCli {
 Usage: miniprogram <command> [arguments]
 
 Commands:
-  create <mini-program-id> [--screen-format mp|stac] [--with-backend mock]
+  create <mini-program-id> [--screen-format mp] [--with-backend mock]
   capabilities [--json]
   doctor [--json]
   env init|list|status
@@ -24,7 +24,7 @@ Commands:
   host run -d <device> [--env <env-name>]
   host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
   host endpoint import <partner-package.json>
-  embed init [--project-root <path>] [--with-legacy-stac] [--with-demo]
+  embed init [--project-root <path>]
   embed cloud configure [--env <env-name>]
   backend init [--root <path>]
   backend start --port 8080

@@ -33,42 +33,13 @@ class LocalMiniProgramDefinition {
 }
 
 abstract final class LocalMiniProgramCatalog {
-  static const LocalMiniProgramDefinition profileCenter =
-      LocalMiniProgramDefinition(
-        id: 'profile_center',
-        title: 'Profile Center',
-        description:
-            'A mobile-friendly account module authored in Stac DSL and '
-            'rendered through mini_program_sdk inside the first-party host.',
-        requiredCapabilities: <CapabilityId>[
-          CapabilityIds.analytics,
-          CapabilityIds.nativeNavigation,
-        ],
-      );
-
-  static const LocalMiniProgramDefinition feedbackForm =
-      LocalMiniProgramDefinition(
-        id: 'feedback_form',
-        title: 'Feedback Form',
-        description:
-            'A portable feedback flow authored in Stac DSL that validates '
-            'locally, submits through a host-owned secure API, tracks '
-            'analytics through the shared bridge, and opens a host-owned '
-            'follow-up screen.',
-        requiredCapabilities: <CapabilityId>[
-          CapabilityIds.analytics,
-          CapabilityIds.secureApi,
-          CapabilityIds.nativeNavigation,
-        ],
-      );
-
   static const LocalMiniProgramDefinition mpProfileCenter =
       LocalMiniProgramDefinition(
         id: 'mp_profile_center',
         title: 'Mp Profile Center',
         description:
             'A bundled Mp JSON profile fixture that proves the SDK-owned '
-            'renderer can open lightweight screens without Stac.',
+            'renderer can open lightweight screens.',
         requiredCapabilities: <CapabilityId>[CapabilityIds.analytics],
       );
 
@@ -86,12 +57,7 @@ abstract final class LocalMiniProgramCatalog {
       );
 
   static const List<LocalMiniProgramDefinition> availablePrograms =
-      <LocalMiniProgramDefinition>[
-        profileCenter,
-        feedbackForm,
-        mpProfileCenter,
-        mpRewardsCenter,
-      ];
+      <LocalMiniProgramDefinition>[mpProfileCenter, mpRewardsCenter];
 
   static LocalMiniProgramDefinition byId(String miniProgramId) {
     for (final program in availablePrograms) {

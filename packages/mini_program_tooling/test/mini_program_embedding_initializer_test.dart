@@ -59,8 +59,6 @@ void main() {
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
-      expect(result.withDemo, isFalse);
-      expect(result.legacyStacEnabled, isFalse);
       expect(result.createdPaths, hasLength(6));
       expect(
         runtimeSetup,
@@ -128,7 +126,6 @@ void main() {
       expect(updatedPubspec, isNot(contains('mini_program_legacy_stac:')));
       expect(readme, contains('mini_program_sdk: ^0.4.0'));
       expect(readme, contains('mini_program_contracts: ^0.2.0'));
-      expect(readme, contains('Mp-only runtime'));
       expect(readme, contains('MiniProgramScope('));
       expect(
         readme,
@@ -146,137 +143,16 @@ void main() {
         readme,
         isNot(contains("import 'mini_program/mini_program.dart';")),
       );
-      expect(readme, contains('flutter run -d emulator-5554'));
       expect(readme, contains('MINI_PROGRAM_BACKEND_HOST'));
-      expect(readme, contains('adb reverse'));
-      expect(readme, contains('resolved backend base URL'));
-      expect(
-        readme,
-        contains(
-          'This package does not own your Flutter app. It only provides mini-program',
-        ),
-      );
       expect(readme, contains('MiniProgramConfig` is immutable'));
       expect(readme, contains('MiniProgram access key'));
-      expect(readme, contains('miniprogram partner package'));
       expect(readme, contains('miniprogram host endpoint import'));
-      expect(readme, contains('miniprogram host endpoint add'));
-      expect(readme, contains('class MiniProgramInfo'));
-      expect(readme, contains('class MiniPrograms'));
-      expect(
-        readme,
-        contains('It keeps appId and title together, which avoids typo bugs'),
-      );
-      expect(readme, contains('MiniPrograms.coupon.appId'));
       expect(readme, contains('buildMiniProgramEndpoints()'));
-      expect(readme, contains('miniprogram embed init --with-demo --force'));
-      expect(readme, isNot(contains('MiniPrograms.publicDemo.appId')));
-      expect(readme, contains('ProviderScope('));
-      expect(readme, contains('MultiProvider('));
-      expect(readme, contains('MultiBlocProvider('));
-      expect(readme, contains('flutter build apk --release'));
+      expect(readme, contains('State management still stays app-owned'));
+      expect(readme, contains('Riverpod, Provider, Bloc, GetX'));
       expect(readme, contains('openAppMiniProgram('));
       expect(readme, isNot(contains('MiniProgramAppShell')));
     });
-
-    test('withDemo generates public endpoint and registry files', () async {
-      final result = await const MiniProgramEmbeddingInitializer().initialize(
-        MiniProgramEmbeddingInitRequest(
-          projectRootPath: tempDir.path,
-          withDemo: true,
-        ),
-      );
-
-      final integrationRootPath = p.join(tempDir.path, 'lib', 'mini_program');
-      final endpointSource = await File(
-        p.join(integrationRootPath, 'mini_program_endpoints.dart'),
-      ).readAsString();
-      final registrySource = await File(
-        p.join(integrationRootPath, 'mini_program_registry.dart'),
-      ).readAsString();
-      final barrel = await File(
-        p.join(integrationRootPath, 'mini_program.dart'),
-      ).readAsString();
-      final readme = await File(
-        p.join(integrationRootPath, 'README.md'),
-      ).readAsString();
-      final runtimeSetup = await File(
-        p.join(integrationRootPath, 'mini_program_runtime_setup.dart'),
-      ).readAsString();
-      final pubspec = await File(
-        p.join(tempDir.path, 'pubspec.yaml'),
-      ).readAsString();
-
-      expect(result.withDemo, isTrue);
-      expect(result.legacyStacEnabled, isTrue);
-      expect(
-        result.createdPaths,
-        contains(p.join(integrationRootPath, 'mini_program_endpoints.dart')),
-      );
-      expect(
-        result.createdPaths,
-        contains(p.join(integrationRootPath, 'mini_program_registry.dart')),
-      );
-      expect(endpointSource, contains('"accessMode":"public"'));
-      expect(endpointSource, contains('MiniProgramEndpoint.public('));
-      expect(endpointSource, contains('MiniPrograms.publicDemo.appId'));
-      expect(
-        endpointSource,
-        contains(
-          'https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/',
-        ),
-      );
-      expect(registrySource, contains("appId: 'profile'"));
-      expect(registrySource, contains("title: 'Public Demo'"));
-      expect(registrySource, contains('static const values'));
-      expect(registrySource, contains('static const byAppId'));
-      expect(registrySource, contains("'profile': publicDemo"));
-      expect(registrySource, isNot(contains('publicDemo.appId:')));
-      expect(barrel, contains("export 'mini_program_endpoints.dart';"));
-      expect(barrel, contains("export 'mini_program_registry.dart';"));
-      expect(readme, contains('Public demo endpoint'));
-      expect(readme, contains('Legacy Stac compatibility'));
-      expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0'));
-      expect(runtimeSetup, contains('legacyStacRenderers'));
-      expect(runtimeSetup, contains('mini_program_legacy_stac'));
-      expect(readme, contains('MiniPrograms.publicDemo.appId'));
-      expect(readme, contains('Open Public Demo'));
-      expect(
-        readme,
-        contains('https://cdn.jsdelivr.net/gh/mehedi8603651/<repo>@main/'),
-      );
-    });
-
-    test(
-      'withLegacyStac enables the optional adapter without demo files',
-      () async {
-        final result = await const MiniProgramEmbeddingInitializer().initialize(
-          MiniProgramEmbeddingInitRequest(
-            projectRootPath: tempDir.path,
-            withLegacyStac: true,
-          ),
-        );
-
-        final integrationRootPath = p.join(tempDir.path, 'lib', 'mini_program');
-        final runtimeSetup = await File(
-          p.join(integrationRootPath, 'mini_program_runtime_setup.dart'),
-        ).readAsString();
-        final pubspec = await File(
-          p.join(tempDir.path, 'pubspec.yaml'),
-        ).readAsString();
-
-        expect(result.withDemo, isFalse);
-        expect(result.legacyStacEnabled, isTrue);
-        expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0'));
-        expect(runtimeSetup, contains('renderers: legacyStacRenderers'));
-        expect(
-          await File(
-            p.join(integrationRootPath, 'mini_program_endpoints.dart'),
-          ).exists(),
-          isFalse,
-        );
-      },
-    );
 
     test('supports custom host metadata and route path', () async {
       final result = await const MiniProgramEmbeddingInitializer().initialize(

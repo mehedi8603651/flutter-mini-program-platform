@@ -32,12 +32,10 @@ Confirm the CLI reports:
 
 ```text
 mini_program_tooling 0.4.0
-host.legacy_stac_adapter
 publisher_backend.aws.access_key_enforcement
 ```
 
-New Mp-only hosts use plain `embed init`. Do not add the optional legacy Stac
-adapter unless the host must open legacy Stac mini-programs.
+New hosts use plain `embed init`; the generated runtime is Mp-only.
 
 ## Common Mp Publisher Checks
 

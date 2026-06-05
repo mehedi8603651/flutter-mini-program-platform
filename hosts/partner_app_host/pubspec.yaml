@@ -14,8 +14,6 @@ dependencies:
     path: ../../packages/mini_program_contracts
   mini_program_sdk:
     path: ../../packages/mini_program_sdk
-  mini_program_legacy_stac:
-    path: ../../packages/mini_program_legacy_stac
 
 dev_dependencies:
   flutter_test:

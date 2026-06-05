@@ -72,7 +72,6 @@ void main() {
 
       final doctor = MiniprogramDoctor(
         stateStore: stateStore,
-        managedStacBuilder: const _ReadyManagedStacBuilder(),
         backendController: _HealthyBackendController(repoRoot.path),
         shellRunner: _okShellRunner,
         workingDirectory: workspaceRoot.path,
@@ -92,7 +91,7 @@ void main() {
       expect(
         result.checks.any(
           (check) =>
-              check.label == 'Pinned Stac builder' &&
+              check.label == 'Platform repo' &&
               check.status == MiniprogramDoctorCheckStatus.ok,
         ),
         isTrue,
@@ -113,7 +112,6 @@ void main() {
 
       final doctor = MiniprogramDoctor(
         stateStore: stateStore,
-        managedStacBuilder: const _ReadyManagedStacBuilder(),
         backendController: const LocalBackendController(),
         shellRunner: _missingShellRunner,
         workingDirectory: workspaceRoot.path,
@@ -185,7 +183,6 @@ void main() {
 
         final doctor = MiniprogramDoctor(
           stateStore: stateStore,
-          managedStacBuilder: const _ReadyManagedStacBuilder(),
           backendController: _HealthyBackendController(backendRoot),
           shellRunner: _okShellRunner,
           workingDirectory: workspaceRoot.path,
@@ -267,7 +264,6 @@ void main() {
 
         final doctor = MiniprogramDoctor(
           stateStore: stateStore,
-          managedStacBuilder: const _ReadyManagedStacBuilder(),
           backendController: _HealthyBackendController(backendRoot),
           shellRunner: _okShellRunner,
           workingDirectory: workspaceRoot.path,
@@ -336,22 +332,6 @@ class _HealthyBackendController extends LocalBackendController {
       processAlive: true,
       healthy: true,
       healthStatusCode: 200,
-    );
-  }
-}
-
-class _ReadyManagedStacBuilder extends ManagedStacBuilder {
-  const _ReadyManagedStacBuilder();
-
-  @override
-  Future<ManagedStacBuilderStatus> inspect() async {
-    return const ManagedStacBuilderStatus(
-      pinnedVersion: ManagedStacBuilder.pinnedVersion,
-      templateRootPath: 'template',
-      cacheRootPath: 'cache',
-      bundledTemplateAvailable: true,
-      cachePrepared: true,
-      dependenciesResolved: true,
     );
   }
 }

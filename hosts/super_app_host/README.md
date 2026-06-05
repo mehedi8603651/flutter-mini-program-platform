@@ -15,13 +15,13 @@ First-party Flutter host app for the portable mini-program platform.
 - can switch between bundled asset delivery and local backend HTTP delivery
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 - shows an offline notice when stale cached content is rendered
-- persists standard Stac network image assets to local files when entry-screen caching is allowed
+- persists standard network image assets to local files when entry-screen caching is allowed
 - shows list-level delivery badges before open: `Cached`, `Live`, `Offline`, or `Unavailable`
 
 ## Current local flow
 
 1. Launch the app.
-2. Open `Profile Center` or `Feedback Form` from the host list.
+2. Open `Mp Profile Center` or `Mp Rewards Center` from the host list.
 3. Render the portable screen through `MiniProgramHost`.
 4. Trigger `callSecureApi`, `trackEvent`, or `openNativeScreen` from the mini-program.
 5. Use `Preview capability failure` to confirm the SDK rejects unsupported capability sets with controlled fallback UI.
@@ -47,23 +47,23 @@ The local auth model now supports seeded states for testing:
 
 ## Source of truth
 
-The actual Stac-authored mini-programs live in:
+The actual Mp-authored mini-programs live in:
 
-- `mini_programs/profile_center`
-- `mini_programs/feedback_form`
+- `mini_programs/mp_profile_center`
+- `mini_programs/mp_rewards_center`
 
 For local host proof, this app currently bundles a copied snapshot of:
 
-- `mini_programs/profile_center/manifest.json`
-- `mini_programs/profile_center/stac/.build/screens/profile_center_home.json`
-- `mini_programs/feedback_form/manifest.json`
-- `mini_programs/feedback_form/stac/.build/screens/feedback_form_home.json`
+- `mini_programs/mp_profile_center/manifest.json`
+- `mini_programs/mp_profile_center/mp/.build/screens/mp_profile_center_home.json`
+- `mini_programs/mp_rewards_center/manifest.json`
+- `mini_programs/mp_rewards_center/mp/.build/screens/mp_rewards_center_home.json`
 
 Those files are loaded as Flutter assets through `LocalMiniProgramSource`.
 The current bundled snapshots are:
 
-- `profile_center` `1.1.0`
-- `feedback_form` `1.1.0`
+- `mp_profile_center` `1.0.0`
+- `mp_rewards_center` `1.0.0`
 Refresh them after rebuilding the mini-program:
 
 ```powershell
@@ -111,8 +111,8 @@ the backend discovery and `latest` manifest routes:
 
 With the current rollout sample, that context resolves:
 
-- `profile_center` `latest` -> `1.1.0`
-- `feedback_form` `latest` -> `1.1.0`
+- `mp_profile_center` `latest` -> current bundled version
+- `mp_rewards_center` `latest` -> current bundled version
 
 In remote mode, the host list now discovers compatible published mini-programs
 through `/api/discovery/mini-programs.json`, so newly published backend

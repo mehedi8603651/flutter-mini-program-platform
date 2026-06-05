@@ -52,7 +52,7 @@ test('mini-program missing build suggests build', async () => {
         build: {
           exists: false,
           screenCount: 0,
-          screensDirectory: path.join(workspacePath, 'stac', '.build', 'screens'),
+          screensDirectory: path.join(workspacePath, 'mp', '.build', 'screens'),
         },
         validation: { status: 'not_run' },
         partnerPackages: [],

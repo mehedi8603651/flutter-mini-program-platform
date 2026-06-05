@@ -60,8 +60,8 @@ Date: 2026-06-04
 - Host app: `hosts/super_app_host`
 - Flutter: `3.38.9`
 - Dart: `3.10.8`
-- Scope: Mp fixtures are bundled and rendered by the base SDK, while legacy Stac
-  support is still present in the base SDK.
+- Scope: interim Mp fixtures are bundled and rendered by the base SDK before
+  the old runtime path was removed.
 
 Command:
 
@@ -86,12 +86,10 @@ Selected AOT symbol groups from this interim branch:
 - `package:mini_program_sdk`: `206 KB`
 - `package:dio`: `58 KB`
 
-This is not the final reduction measurement. The base SDK still includes Stac
-for legacy compatibility, so the expected size reduction is blocked until the
-later `mini_program_legacy_stac` adapter extraction and base SDK dependency
-cleanup milestone.
+This was not the final reduction measurement because the old runtime path was
+still present at that point.
 
-## Milestone 9 Optional Adapter Extraction
+## Milestone 9 Mp-Only Runtime Cleanup
 
 Date: 2026-06-04
 
@@ -114,7 +112,6 @@ The base `mini_program_sdk` dependency graph contains none of:
 - `flutter_svg`
 - `shared_preferences`
 - `sqflite`
-- `mini_program_legacy_stac`
 
 ### Mp-Only Host
 
@@ -132,7 +129,7 @@ flutter build apk --release --analyze-size --target-platform android-arm64
 - `package:mini_program_sdk`: `133 KB`
 - Stac, Stac core, and Dio groups: absent
 
-### Mixed Legacy-Compatible Host
+### Super App Host
 
 ```powershell
 cd D:\flutter-mini-program-platform-mp-engine\hosts\super_app_host
@@ -153,11 +150,9 @@ flutter build apk --release --analyze-size --target-platform android-arm64
 ### Comparison
 
 - Mp-only host versus stable Stac baseline: `5,890,290` bytes smaller (`26.3%`)
-- Mp-only host versus mixed host: `5,959,527` bytes smaller (`26.53%`)
-- Mixed host size is unchanged from the Milestone 8 measurement, confirming
-  that legacy compatibility cost is paid only by hosts that install the
-  optional adapter.
+- Mp-only host versus the pre-cleanup super app host: `5,959,527` bytes smaller
+  (`26.53%`)
 
 The dependency-cleanliness and release-size gates pass. Protected Firebase and
 AWS host flows plus interactive Chrome, Android, and Windows runtime checks
-remain Milestone 10 release gates.
+remain release gates.

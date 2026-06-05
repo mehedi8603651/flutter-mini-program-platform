@@ -14,7 +14,6 @@ class MiniProgramStaticPublishRequest {
     required this.outputPath,
     this.miniProgramId,
     this.miniProgramRootPath,
-    this.stacCliScriptPath,
     this.mpBuildScriptPath,
     this.skipBuildPubGet = false,
     this.clean = false,
@@ -24,7 +23,6 @@ class MiniProgramStaticPublishRequest {
   final String outputPath;
   final String? miniProgramId;
   final String? miniProgramRootPath;
-  final String? stacCliScriptPath;
   final String? mpBuildScriptPath;
   final bool skipBuildPubGet;
   final bool clean;
@@ -93,7 +91,6 @@ class MiniProgramStaticPublisher {
         repoRootPath: repoRootPath,
         miniProgramId: request.miniProgramId,
         miniProgramRootPath: request.miniProgramRootPath,
-        stacCliScriptPath: request.stacCliScriptPath,
         mpBuildScriptPath: request.mpBuildScriptPath,
         skipPubGet: request.skipBuildPubGet,
       ),

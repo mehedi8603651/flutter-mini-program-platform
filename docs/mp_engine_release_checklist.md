@@ -49,10 +49,9 @@ keys are not.
 - [ ] Contracts tests and analyze pass.
 - [ ] Pure-Dart UI tests and analyze pass.
 - [ ] Base SDK tests and analyze pass.
-- [ ] Legacy Stac adapter tests and analyze pass.
 - [ ] Tooling tests and analyze pass.
 - [ ] VS Code tests pass.
-- [ ] Mp-only, mixed, and partner host tests pass.
+- [ ] Mp-only, super app, and partner host tests pass.
 - [ ] Mp fixtures build, validate, and static-publish.
 - [ ] Base SDK dependency boundary check passes.
 
@@ -70,7 +69,6 @@ powershell -ExecutionPolicy Bypass -File tools\verify_mp_engine_release.ps1
 - [ ] Auth, backend, paging, assets, and navigation work through Mp JSON.
 - [ ] Unsupported formats and schema versions fail safely.
 - [ ] Mp-only host has no legacy adapter or Stac dependency.
-- [ ] Mixed host renders legacy Stac only through `mini_program_legacy_stac`.
 
 ## 4. Firebase Live Gate
 
@@ -112,7 +110,7 @@ Use [Mp engine cloud end-to-end guide](mp_engine_cloud_e2e_guide.md).
 - [ ] Record APK size, commit, Flutter version, and analysis file.
 - [ ] Compare against the stable Stac baseline.
 - [ ] Confirm Stac dependencies are absent from the Mp-only host.
-- [ ] Build the mixed legacy-compatible host separately.
+- [ ] Build the super app host separately for the full reference app size.
 
 Commands:
 
@@ -155,7 +153,6 @@ Recommended publish order after the stable merge:
 mini_program_contracts
 mini_program_ui
 mini_program_sdk
-mini_program_legacy_stac
 mini_program_tooling
 mini_program_vscode
 ```

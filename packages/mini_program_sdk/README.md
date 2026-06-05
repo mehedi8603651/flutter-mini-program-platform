@@ -15,7 +15,7 @@ shared platform contracts.
 - capability registry and feature-flag evaluation
 - host bridge dispatch for native actions
 - Mp JSON parsing, validation, and SDK-owned rendering
-- renderer registration for optional compatibility or feature adapters
+- renderer registration for optional feature adapters
 - in-memory cache helpers for manifests, screens, and assets
 - publisher-owned email/password auth runtime with per-mini-program cached
   sessions
@@ -34,7 +34,7 @@ uses the local `mini_program_contracts` checkout.
 
 Publish these versions only after the Mp engine release gates pass.
 
-## Mp Renderer And Legacy Stac
+## Mp Renderer
 
 `MiniProgramHost` chooses a renderer from manifest metadata:
 
@@ -45,10 +45,8 @@ Publish these versions only after the Mp engine release gates pass.
 }
 ```
 
-Missing `screenFormat` means legacy `stac`. The Mp-only base SDK renders a
-controlled unsupported-format error until the optional legacy adapter is
-registered. Unknown formats also fail safely instead of executing unknown
-content.
+Missing `screenFormat` means `mp` with schema version `1`. Unknown formats
+fail safely instead of executing unknown content.
 
 Mp screens support:
 
@@ -60,26 +58,7 @@ Mp screens support:
 - safe bindings such as `{{auth.user.email}}`, `{{backend.home.data.title}}`,
   and `{{item.title}}`
 
-The base SDK contains only the Mp renderer. Hosts that still consume legacy
-Stac screens add and register the optional adapter:
-
-```yaml
-dependencies:
-  mini_program_legacy_stac: ^0.1.0
-```
-
-```dart
-import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';
-
-final config = MiniProgramConfig(
-  // Existing runtime configuration...
-  renderers: legacyStacRenderers,
-);
-```
-
-Use `miniprogram embed init --with-legacy-stac` to generate that setup. The
-public demo is currently Stac, so `miniprogram embed init --with-demo` enables
-the adapter automatically.
+The base SDK contains the Mp renderer and has no Stac runtime dependency.
 
 ## VS Code extension
 
@@ -104,22 +83,10 @@ see the repo's
 
 ## Minimal usage
 
-For most host apps, prefer generating the adapter with
+For most host apps, prefer generating the host wiring with
 `miniprogram embed init`. That creates `lib/mini_program/`, adds the SDK
 dependencies to `pubspec.yaml`, and gives you `buildMiniProgramConfig(...)`
 plus `openAppMiniProgram(...)`.
-
-For first-run testing without AWS or access keys, use:
-
-```bash
-miniprogram embed init --with-demo
-```
-
-That adds a public jsDelivr demo endpoint and registry entry using:
-
-```text
-https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/
-```
 
 This package does not own your Flutter app. It only provides mini-program
 capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,
@@ -586,5 +553,5 @@ typedef MiniProgramRouteBuilder<T> = Route<T> Function(
 
 - This package is the runtime only. Authoring and local backend workflows live
   in `mini_program_tooling`.
-- No manifest loading, network request, optional adapter initialization,
-  mini-program route, or overlay work starts until a mini-program is opened.
+- No manifest loading, network request, mini-program route, or overlay work
+  starts until a mini-program is opened.

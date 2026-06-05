@@ -110,12 +110,12 @@ _MiniProgramManifest _$MiniProgramManifestFromJson(Map<String, dynamic> json) =>
         screenFormat: $checkedConvert(
           'screenFormat',
           (v) => v == null
-              ? MiniProgramScreenFormats.stac
+              ? MiniProgramScreenFormats.mp
               : const MiniProgramScreenFormatConverter().fromJson(v),
         ),
         screenSchemaVersion: $checkedConvert(
           'screenSchemaVersion',
-          (v) => (v as num?)?.toInt(),
+          (v) => (v as num?)?.toInt() ?? 1,
         ),
         featureFlags: $checkedConvert(
           'featureFlags',
@@ -155,7 +155,7 @@ Map<String, dynamic> _$MiniProgramManifestToJson(
   'screenFormat': const MiniProgramScreenFormatConverter().toJson(
     instance.screenFormat,
   ),
-  'screenSchemaVersion': ?instance.screenSchemaVersion,
+  'screenSchemaVersion': instance.screenSchemaVersion,
   'featureFlags': instance.featureFlags,
   'cachePolicy': instance.cachePolicy.toJson(),
   'fallback': instance.fallback?.toJson(),

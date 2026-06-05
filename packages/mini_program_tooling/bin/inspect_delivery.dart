@@ -29,10 +29,7 @@ Future<void> main(List<String> arguments) async {
     ..addOption('locale', help: 'Locale value sent to backend.')
     ..addOption('tenant-id', help: 'Optional tenant identifier.')
     ..addOption('pinned-version', help: 'Optional pinned mini-program version.')
-    ..addOption(
-      'capabilities',
-      help: 'Comma-separated capability wire values.',
-    )
+    ..addOption('capabilities', help: 'Comma-separated capability wire values.')
     ..addOption(
       'request-id',
       help: 'Optional request ID to reuse as backend trace ID.',

@@ -85,24 +85,6 @@ export async function createMiniProgram(output: vscode.OutputChannel): Promise<v
   if (!backendChoice) {
     return;
   }
-  const screenFormatChoice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Mp JSON',
-        description: 'Default lightweight Mp engine',
-        screenFormat: 'mp' as const,
-      },
-      {
-        label: 'Legacy Stac',
-        description: 'Use the existing Stac builder compatibility path',
-        screenFormat: 'stac' as const,
-      },
-    ],
-    { title: 'Mini-program screen format', ignoreFocusOut: true },
-  );
-  if (!screenFormatChoice) {
-    return;
-  }
   const outputRoot = resolveCreateOutputRoot(parentFolder, appId);
   let force = false;
   if (directoryHasEntries(outputRoot)) {
@@ -133,9 +115,9 @@ export async function createMiniProgram(output: vscode.OutputChannel): Promise<v
     appId,
     title,
     outputRoot,
-    backendTemplate: backendChoice.backendTemplate,
-    screenFormat: screenFormatChoice.screenFormat,
-    force,
+      backendTemplate: backendChoice.backendTemplate,
+      screenFormat: 'mp',
+      force,
   });
   const ok = await runCliCommand('Create MiniProgram', args, parentFolder, output);
   if (!ok) {

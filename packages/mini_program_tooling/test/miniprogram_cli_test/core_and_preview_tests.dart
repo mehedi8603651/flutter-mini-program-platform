@@ -17,7 +17,7 @@ void _registerCoreAndPreviewTests() {
     expect(stderrBuffer.toString(), isEmpty);
     expect(
       stdoutBuffer.toString(),
-      contains('create <mini-program-id> [--screen-format mp|stac]'),
+      contains('create <mini-program-id> [--screen-format mp]'),
     );
     expect(
       stdoutBuffer.toString(),
@@ -60,9 +60,7 @@ void _registerCoreAndPreviewTests() {
     );
     expect(
       stdoutBuffer.toString(),
-      contains(
-        'embed init [--project-root <path>] [--with-legacy-stac] [--with-demo]',
-      ),
+      contains('embed init [--project-root <path>]'),
     );
     expect(
       stdoutBuffer.toString(),
@@ -100,7 +98,7 @@ void _registerCoreAndPreviewTests() {
     expect(exitCode, 0);
     expect(stdoutBuffer.toString(), contains('--screen-format'));
     expect(stdoutBuffer.toString(), contains('mp'));
-    expect(stdoutBuffer.toString(), contains('stac'));
+    expect(stdoutBuffer.toString(), isNot(contains('stac')));
   });
 
   test('build and preview help expose Mp build script override', () async {
@@ -232,7 +230,7 @@ void _registerCoreAndPreviewTests() {
     expect(json['toolingVersion'], '0.4.0');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
-    expect(json['capabilityIds'], contains('host.legacy_stac_adapter'));
+    expect(json['capabilityIds'], isNot(contains('host.legacy_stac_adapter')));
     expect(
       json['capabilityIds'],
       contains('publisher_backend.aws.dynamodb.data.redemptions'),
@@ -303,7 +301,7 @@ void _registerCoreAndPreviewTests() {
       contains('publisher_backend.firebase.destroy.data_loss_guard'),
     );
     final features = json['features'] as Map<String, dynamic>;
-    expect(features['hostLegacyStacAdapter'], isTrue);
+    expect(features.containsKey('hostLegacyStacAdapter'), isFalse);
     expect(features['firebaseHostingPublish'], isTrue);
     expect(features['publisherBackendAwsWriteSmoke'], isTrue);
     expect(features['publisherBackendAwsAccessKeyEnforcement'], isTrue);
@@ -614,9 +612,6 @@ void _registerCoreAndPreviewTests() {
       miniProgramId: 'coupon_center',
       version: '1.0.0',
     );
-    final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-    await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
     final stdoutBuffer = StringBuffer();
     final cli = MiniprogramCli(
       stateStore: stateStore,
@@ -628,8 +623,6 @@ void _registerCoreAndPreviewTests() {
     final exitCode = await cli.run(<String>[
       'build',
       'coupon_center',
-      '--stac-cli-script',
-      fakeCliPath,
       '--skip-pub-get',
     ]);
 
@@ -642,7 +635,7 @@ void _registerCoreAndPreviewTests() {
       await File(
         p.join(
           miniProgramRoot,
-          'stac',
+          'mp',
           '.build',
           'screens',
           'coupon_center_home.json',
@@ -659,9 +652,6 @@ void _registerCoreAndPreviewTests() {
       miniProgramId: 'coupon_center',
       version: '1.0.0',
     );
-    final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-    await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
     final stdoutBuffer = StringBuffer();
     final cli = MiniprogramCli(
       stateStore: stateStore,
@@ -670,12 +660,7 @@ void _registerCoreAndPreviewTests() {
       workingDirectory: standaloneRoot,
     );
 
-    final exitCode = await cli.run(<String>[
-      'build',
-      '--stac-cli-script',
-      fakeCliPath,
-      '--skip-pub-get',
-    ]);
+    final exitCode = await cli.run(<String>['build', '--skip-pub-get']);
 
     expect(exitCode, 0);
     expect(
@@ -863,9 +848,7 @@ void _registerCoreAndPreviewTests() {
         miniProgramId: 'coupon_center',
         version: '1.0.0',
       );
-      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
       final fakeMpBuildScriptPath = p.join(repoRoot.path, 'fake_build_mp.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
       await File(fakeMpBuildScriptPath).writeAsString('// mp');
       final previewController = _FakeMiniProgramPreviewController();
 
@@ -882,8 +865,6 @@ void _registerCoreAndPreviewTests() {
             'windows',
             '--repo-root',
             repoRoot.path,
-            '--stac-cli-script',
-            fakeCliPath,
             '--mp-build-script',
             fakeMpBuildScriptPath,
           ]);
@@ -891,7 +872,6 @@ void _registerCoreAndPreviewTests() {
       expect(exitCode, 0);
       expect(previewController.lastRequest, isNotNull);
       expect(previewController.lastRequest!.repoRootPath, repoRoot.path);
-      expect(previewController.lastRequest!.stacCliScriptPath, fakeCliPath);
       expect(
         previewController.lastRequest!.mpBuildScriptPath,
         fakeMpBuildScriptPath,

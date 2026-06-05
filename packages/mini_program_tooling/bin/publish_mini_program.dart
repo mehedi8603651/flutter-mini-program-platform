@@ -20,14 +20,7 @@ Future<void> main(List<String> arguments) async {
       'mini-program-root',
       help: 'Exact mini-program root path for standalone authoring.',
     )
-    ..addOption(
-      'id',
-      help: 'Mini-program ID to build, validate, and publish.',
-    )
-    ..addOption(
-      'stac-cli-script',
-      help: 'Optional explicit path to bin/stac_cli.dart.',
-    )
+    ..addOption('id', help: 'Mini-program ID to build, validate, and publish.')
     ..addFlag(
       'skip-build-pub-get',
       negatable: false,
@@ -61,13 +54,14 @@ Future<void> main(List<String> arguments) async {
         repoRootPath: results.option('repo-root') ?? Directory.current.path,
         miniProgramId: results.option('id'),
         miniProgramRootPath: results.option('mini-program-root'),
-        stacCliScriptPath: results.option('stac-cli-script'),
         skipBuildPubGet: results.flag('skip-build-pub-get'),
       ),
     );
 
     if (results.option('output') == 'json') {
-      stdout.writeln(const JsonEncoder.withIndent('  ').convert(result.toJson()));
+      stdout.writeln(
+        const JsonEncoder.withIndent('  ').convert(result.toJson()),
+      );
     } else {
       stdout.writeln(_formatResult(result));
     }

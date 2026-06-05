@@ -1,5 +1,5 @@
 name: mp_only_host
-description: Mp-only reference host without the legacy Stac adapter.
+description: Mp-only reference host for the lightweight mini-program runtime.
 publish_to: 'none'
 version: 1.0.0+1
 

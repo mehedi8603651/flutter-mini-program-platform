@@ -170,13 +170,13 @@ void main() {
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp('preview_watcher_');
       projectRoot = p.join(tempDir.path, 'coupon_center');
-      watchedFilePath = p.join(projectRoot, 'stac', 'screens', 'home.dart');
+      watchedFilePath = p.join(projectRoot, 'mp', 'screens', 'home.dart');
       await Directory(p.dirname(watchedFilePath)).create(recursive: true);
       await File(p.join(projectRoot, 'manifest.json')).writeAsString('{}');
       await Directory(p.join(projectRoot, 'assets')).create(recursive: true);
-      await Directory(p.join(projectRoot, 'lib')).create(recursive: true);
+      await Directory(p.join(projectRoot, 'tool')).create(recursive: true);
       await File(
-        p.join(projectRoot, 'lib', 'default_stac_options.dart'),
+        p.join(projectRoot, 'tool', 'build_mp.dart'),
       ).writeAsString('// options');
       await File(watchedFilePath).writeAsString('// screen');
     });
@@ -246,8 +246,8 @@ void main() {
       expect(rebuildCount, 2);
     });
 
-    test('ignores exact stac/.build directory paths', () {
-      final ignoredPath = p.join(projectRoot, 'stac', '.build');
+    test('ignores exact mp/.build directory paths', () {
+      final ignoredPath = p.join(projectRoot, 'mp', '.build');
 
       expect(
         MiniProgramPreviewWatcher.isRelevantPath(
@@ -1263,7 +1263,7 @@ Future<_PreviewBuildFixture> _writePreviewBuildFixture(
   );
   final screensRootPath = p.join(
     miniProgramRootPath,
-    'stac',
+    'mp',
     '.build',
     'screens',
   );
@@ -1283,20 +1283,28 @@ Future<_PreviewBuildFixture> _writePreviewBuildFixture(
   "entry": "${miniProgramId}_home",
   "contractVersion": "1.0.0",
   "sdkVersionRange": ">=1.0.0 <2.0.0",
-  "requiredCapabilities": ["analytics", "native_navigation"]
+  "requiredCapabilities": ["analytics", "native_navigation"],
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1
 }
 ''');
   await File(
     p.join(screensRootPath, '${miniProgramId}_home.json'),
   ).writeAsString('''
 {
+  "schemaVersion": 1,
+  "screenId": "${miniProgramId}_home",
+  "root": {
   "type": "column",
   "children": [
     {
       "type": "image",
-      "src": "assets/hero.png"
+      "props": {
+        "src": "assets/hero.png"
+      }
     }
   ]
+  }
 }
 ''');
 
@@ -1307,7 +1315,7 @@ Future<_PreviewBuildFixture> _writePreviewBuildFixture(
       repoRootPath: repoRootPath,
       miniProgramRootPath: miniProgramRootPath,
       miniProgramId: miniProgramId,
-      outputDirectoryPath: p.join(miniProgramRootPath, 'stac', '.build'),
+      outputDirectoryPath: p.join(miniProgramRootPath, 'mp', '.build'),
       screensDirectoryPath: screensRootPath,
       entryScreenJsonPath: p.join(
         screensRootPath,

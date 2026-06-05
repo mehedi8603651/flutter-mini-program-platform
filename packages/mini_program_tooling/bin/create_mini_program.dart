@@ -12,10 +12,7 @@ Future<void> main(List<String> arguments) async {
       negatable: false,
       help: 'Show usage information.',
     )
-    ..addOption(
-      'repo-root',
-      help: 'Repository root containing mini_programs/.',
-    )
+    ..addOption('repo-root', help: 'Repository root containing mini_programs/.')
     ..addOption(
       'output-root',
       help:
@@ -28,7 +25,8 @@ Future<void> main(List<String> arguments) async {
     )
     ..addOption(
       'title',
-      help: 'Optional human-readable title. Defaults to a titleized form of the ID.',
+      help:
+          'Optional human-readable title. Defaults to a titleized form of the ID.',
     )
     ..addOption(
       'description',
@@ -80,7 +78,9 @@ Future<void> main(List<String> arguments) async {
     final result = await const MiniProgramScaffolder().scaffold(request);
 
     if (results.option('output') == 'json') {
-      stdout.writeln(const JsonEncoder.withIndent('  ').convert(result.toJson()));
+      stdout.writeln(
+        const JsonEncoder.withIndent('  ').convert(result.toJson()),
+      );
     } else {
       stdout.writeln(_formatResult(result));
     }
@@ -106,7 +106,7 @@ String _formatResult(MiniProgramScaffoldResult result) {
     ...result.createdPaths.map((path) => '- $path'),
     'Next steps:',
     '- Edit manifest.json and the starter screen.',
-    '- Build with the vendored Stac CLI.',
+    '- Build with miniprogram build.',
     '- Run validate_delivery before publish.',
   ];
 

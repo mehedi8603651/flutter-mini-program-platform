@@ -18,8 +18,8 @@ Mini-program Dart source using Mp.*
   -> Flutter core widgets
 ```
 
-Implementation is intentionally incremental. Keep the shipped Stac platform
-stable while work proceeds on `feature/mp-json-engine`.
+Implementation is now Mp-first. The old Stac runtime/builder path has been
+removed from this repository; do not reintroduce it in new work.
 
 Decision-complete roadmap:
 
@@ -35,7 +35,7 @@ Milestone order:
 6. Mp publish and host E2E parity
 7. Mp starter UI and VS Code workflow parity
 8. fixture migration, documentation, and interim release-size comparison
-9. optional `mini_program_legacy_stac` extraction and base SDK cleanup
+9. remove old Stac runtime, builder, fixtures, and compatibility package
 10. final release-size comparison and stable merge
 
 Milestone 8 adds tracked Mp fixtures:
@@ -43,8 +43,8 @@ Milestone 8 adds tracked Mp fixtures:
 - `mini_programs/mp_profile_center`
 - `mini_programs/mp_rewards_center`
 
-The super host bundles both fixtures alongside the legacy Stac fixtures. The
-Mp-only reference host is `hosts/mp_only_host`.
+The super host bundles both fixtures. The Mp-only reference host is
+`hosts/mp_only_host`.
 
 Do not publish the release packages before all release gates pass.
 
@@ -53,10 +53,9 @@ Do not publish the release packages before all release gates pass.
 Milestone 9 is complete:
 
 - `mini_program_sdk` is Mp-only by default
-- `mini_program_legacy_stac` owns legacy Stac rendering and parser behavior
-- generated and managed-preview Mp hosts do not install the adapter
-- mixed hosts register `legacyStacRenderers` explicitly
-- workflow status and VS Code report adapter readiness
+- the old Stac runtime, managed builder, fixtures, and compatibility package
+  have been removed
+- generated and managed-preview hosts are Mp-only
 - `hosts/mp_only_host` is the dependency and size reference
 - the Mp-only arm64 APK is `16,503,270` bytes, a `26.3%` reduction from the
   stable Stac baseline
@@ -348,7 +347,7 @@ change:
   - avoid requiring manual `backend init` or `backend start` for normal preview
   - avoid publishing into `backend/api/` for the normal preview loop
   - use current build artifacts directly for preview
-  - watch `manifest.json`, `stac/**`, and `assets/**`
+  - watch `manifest.json`, `mp/**`, `tool/build_mp.dart`, and `assets/**`
   - rebuild on save and trigger full preview refresh
   - keep the last successful preview running if a rebuild fails
 - preview transport behavior:
@@ -360,7 +359,6 @@ change:
   - desktop and Chrome default `127.0.0.1:8080`
   - Android emulator supports `10.0.2.2:8080`
   - Android USB support through `adb reverse`
-- managed pinned Stac builder inside the tooling package
 - managed preview host under `.mini_program/preview_host`
 - internal preview server with watch, rebuild, and full preview refresh for
   the managed preview flow

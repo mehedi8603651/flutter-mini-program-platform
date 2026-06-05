@@ -19,7 +19,6 @@ import {
 
 export interface PublisherBackendAwsCliCapability {
   readonly checked: boolean;
-  readonly supportsLegacyStacAdapter?: boolean;
   readonly supportsFirebaseHostingPublish?: boolean;
   readonly supportsWriteSmoke: boolean;
   readonly supportsAwsPagedRoutes?: boolean;
@@ -83,7 +82,6 @@ export async function detectPublisherBackendAwsCliCapabilitiesUncached(
       const capability = capabilityFromCliCapabilitiesJson(decoded);
       if (
         capability.supportsFirebaseHostingPublish ||
-        capability.supportsLegacyStacAdapter ||
         capability.supportsWriteSmoke ||
         capability.supportsAwsPagedRoutes ||
         capability.supportsPublisherBackendContract ||
@@ -188,9 +186,6 @@ export function capabilityFromCliCapabilitiesJson(
   const supportsWriteSmoke =
     hasFeature('publisherBackendAwsWriteSmoke') ||
     hasCapability('publisher_backend.aws.smoke.write');
-  const supportsLegacyStacAdapter =
-    hasFeature('hostLegacyStacAdapter') ||
-    hasCapability('host.legacy_stac_adapter');
   const supportsAwsPagedRoutes =
     hasFeature('publisherBackendAwsPagedRoutes') ||
     hasCapability('publisher_backend.aws.paged_routes');
@@ -266,9 +261,6 @@ export function capabilityFromCliCapabilitiesJson(
       hasCapability('publisher_backend.firebase.firestore.data.redemptions') &&
       hasCapability('publisher_backend.firebase.destroy.data_loss_guard'));
   const details = [
-    supportsLegacyStacAdapter
-      ? undefined
-      : 'Configured CLI capabilities do not include host.legacy_stac_adapter.',
     supportsFirebaseHostingPublish
       ? undefined
       : 'Configured CLI capabilities do not include Firebase Hosting publish.',
@@ -323,7 +315,6 @@ export function capabilityFromCliCapabilitiesJson(
   ].filter((value): value is string => Boolean(value));
   return {
     checked: true,
-    supportsLegacyStacAdapter,
     supportsFirebaseHostingPublish,
     supportsWriteSmoke,
     supportsAwsPagedRoutes,
@@ -605,35 +596,6 @@ export async function ensurePublisherBackendContractCli0405(
     : '';
   const message =
     'MiniProgram CLI 0.4.0 or newer is required for provider-neutral publisher backend API contracts. ' +
-    `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
-  output.appendLine(message);
-  if (capability.detail) {
-    output.appendLine(capability.detail);
-  }
-  vscode.window.showWarningMessage(message);
-  return false;
-}
-
-export async function ensureLegacyStacAdapterCli040(
-  workspacePath: string,
-  output: vscode.OutputChannel,
-): Promise<boolean> {
-  output.show(true);
-  const capability = await detectPublisherBackendAwsCliCapabilities(
-    workspacePath,
-    output,
-  );
-  if (
-    capability.supportsLegacyStacAdapter &&
-    toolingVersionAtLeast(capability.toolingVersion, '0.4.0')
-  ) {
-    return true;
-  }
-  const versionDetail = capability.toolingVersion
-    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
-    : '';
-  const message =
-    'MiniProgram CLI 0.4.0 or newer is required for optional legacy Stac host setup. ' +
     `${versionDetail}Use the local Mp engine tooling from D:\\flutter-mini-program-platform-mp-engine\\packages\\mini_program_tooling.`;
   output.appendLine(message);
   if (capability.detail) {

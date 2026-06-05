@@ -5,13 +5,11 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
   group('MiniProgramScreenRendererRegistry', () {
-    test('selects Mp by default and rejects legacy Stac without adapter', () {
+    test('selects Mp by default and rejects unsupported formats', () {
       final registry = MiniProgramScreenRendererRegistry.withDefaults();
 
       expect(
-        () => registry.resolve(
-          _manifest(screenFormat: MiniProgramScreenFormats.stac),
-        ),
+        () => registry.resolve(_manifest(screenFormat: 'legacy-test')),
         throwsA(isA<MiniProgramRenderException>()),
       );
       expect(
@@ -52,16 +50,14 @@ void main() {
       );
     });
 
-    test('accepts an explicit legacy-format renderer', () {
+    test('accepts an explicit custom-format renderer', () {
       final registry = MiniProgramScreenRendererRegistry.withDefaults(
-        const <MiniProgramScreenRenderer>[_TestStacRenderer()],
+        const <MiniProgramScreenRenderer>[_TestCustomRenderer()],
       );
 
       expect(
-        registry.resolve(
-          _manifest(screenFormat: MiniProgramScreenFormats.stac),
-        ),
-        isA<_TestStacRenderer>(),
+        registry.resolve(_manifest(screenFormat: 'custom')),
+        isA<_TestCustomRenderer>(),
       );
     });
   });
@@ -96,11 +92,11 @@ class _DuplicateMpRenderer extends MiniProgramScreenRenderer {
   Widget render(MiniProgramRenderRequest request) => const SizedBox.shrink();
 }
 
-class _TestStacRenderer extends MiniProgramScreenRenderer {
-  const _TestStacRenderer();
+class _TestCustomRenderer extends MiniProgramScreenRenderer {
+  const _TestCustomRenderer();
 
   @override
-  String get screenFormat => MiniProgramScreenFormats.stac;
+  String get screenFormat => 'custom';
 
   @override
   Set<int> get supportedSchemaVersions => const <int>{};

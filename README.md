@@ -4,7 +4,7 @@ Portable mini-program platform built around:
 
 - shared contracts
 - a shared Flutter runtime SDK
-- Mp JSON-authored portable UI with optional legacy Stac compatibility
+- Mp JSON-authored portable UI
 - local and AWS cloud delivery
 - Firebase Functions publisher backend support
 - controlled host-native bridges
@@ -45,8 +45,6 @@ Already shipped:
 - standalone local backend workspace
 - standalone local authoring flow
 - host-app embedding flow for Flutter apps
-- opt-in `miniprogram embed init --with-demo` flow for a public jsDelivr demo
-  endpoint without AWS or access keys
 - opt-in mock publisher backend starter with backend-bound starter UI for local
   business API testing
 - AWS cloud publishing through S3
@@ -168,7 +166,6 @@ It is responsible for:
 - validating SDK compatibility
 - enforcing declared capabilities
 - rendering Mp JSON safely
-- registering optional renderers such as `mini_program_legacy_stac`
 - dispatching approved actions through the host bridge
 
 ### Tooling CLI
@@ -190,9 +187,8 @@ This package exposes the global `miniprogram` command used for:
 - backend init/start/stop/status/reset-local
 
 ### Mini-Program Authoring
-New mini-programs are authored with `Mp.*` helpers and built into versioned Mp
-JSON. The base SDK is Mp-only. Legacy Stac mini-programs remain supported when
-a host explicitly installs and registers `mini_program_legacy_stac`.
+Mini-programs are authored with `Mp.*` helpers and built into versioned Mp JSON.
+The base SDK is Mp-only; this repo no longer ships a Stac runtime or builder.
 
 Safe assumption:
 
@@ -367,9 +363,8 @@ Publisher workspace:
      --auth-web-api-key "<firebase-web-api-key>"
    ```
 
-4. Edit portable UI in `mp/screens/<appId>_home.dart` for Mp projects. Legacy
-   Stac projects still use `stac/screens/<appId>_home.dart`. Edit Firestore
-   seed source data in:
+4. Edit portable UI in `mp/screens/<appId>_home.dart`. Edit Firestore seed
+   source data in:
 
    ```text
    backend/firebase_functions/functions/data/home_bootstrap.json
@@ -380,8 +375,7 @@ Publisher workspace:
    Use `Mp.backendBuilder(...)` for single publisher backend reads,
    `Mp.pagedBackendBuilder(...)` for large lists with Load more, and
    `Mp.authBuilder(...)` with `Mp.auth.*` actions for email
-   sign-in/sign-up/sign-out UI. Do not edit `mp/.build` or `stac/.build`
-   directly.
+   sign-in/sign-up/sign-out UI. Do not edit `mp/.build` directly.
 
 5. Deploy backend, seed Firestore, and verify:
 
@@ -517,8 +511,7 @@ Preview behavior:
 - builds the current mini-program
 - generates a hidden managed host under `.mini_program/preview_host`
 - starts a tiny internal localhost preview transport when needed
-- watches `manifest.json`, `mp/**`, `tool/build_mp.dart`, `assets/**`, and
-  legacy `stac/**`
+- watches `manifest.json`, `mp/**`, `tool/build_mp.dart`, and `assets/**`
 - rebuilds and fully refreshes the preview after a successful save
 
 Preview mode rules:

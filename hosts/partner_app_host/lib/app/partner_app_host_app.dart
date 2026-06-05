@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import '../bridge/host_bridge_impl.dart';
@@ -107,7 +106,6 @@ class _PartnerAppHostAppState extends State<PartnerAppHostApp> {
       capabilityRegistry: _capabilityRegistry,
       featureFlagEvaluator: widget.featureFlagEvaluator,
       cacheBundle: _cacheBundle,
-      renderers: legacyStacRenderers,
     );
   }
 

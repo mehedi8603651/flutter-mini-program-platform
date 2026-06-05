@@ -3,7 +3,7 @@
 ## 0.2.0
 
 - add `screenFormat` and `screenSchemaVersion` manifest metadata for the Mp JSON engine
-- default missing `screenFormat` to legacy `stac`
+- default missing `screenFormat` to `mp` with schema version `1`
 - switch manifest required capabilities to value-based capability IDs
 - add dotted capability IDs for future optional media/document/browser features
 - keep the old `Capability` enum as deprecated compatibility API

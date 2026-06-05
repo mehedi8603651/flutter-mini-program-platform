@@ -87,7 +87,6 @@ function Assert-BaseSdkDependencyClean {
       'flutter_svg',
       'shared_preferences',
       'sqflite',
-      'mini_program_legacy_stac'
     )
     foreach ($packageName in $forbiddenPackages) {
       if ($dependencyOutput -match "(?m)^\s*(?:-\s*)?$([regex]::Escape($packageName))\s") {
@@ -107,8 +106,6 @@ if (-not $SkipPackageTests) {
   Invoke-Step 'sdk tests' (Join-Path $RepoRoot 'packages\mini_program_sdk') 'flutter' @('test')
   Invoke-Step 'sdk analyze' (Join-Path $RepoRoot 'packages\mini_program_sdk') 'flutter' @('analyze')
   Assert-BaseSdkDependencyClean
-  Invoke-Step 'legacy Stac adapter tests' (Join-Path $RepoRoot 'packages\mini_program_legacy_stac') 'flutter' @('test')
-  Invoke-Step 'legacy Stac adapter analyze' (Join-Path $RepoRoot 'packages\mini_program_legacy_stac') 'flutter' @('analyze')
   Invoke-Step 'tooling tests' (Join-Path $RepoRoot 'packages\mini_program_tooling') 'dart' @(
     'test',
     '--concurrency=1',

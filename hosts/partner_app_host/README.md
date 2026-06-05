@@ -15,7 +15,7 @@ Reference Flutter host app for portable mini-program partner integration.
 - keeps `secure_api` host-owned and allowlisted through host-side services behind its bridge
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 - shows an offline notice when stale cached content is rendered
-- persists standard Stac network image assets to local files when entry-screen caching is allowed
+- persists standard network image assets to local files when entry-screen caching is allowed
 - shows list-level delivery badges before open: `Live`, `Offline`, or `Unavailable`
 
 ## Current flow

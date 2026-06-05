@@ -22,7 +22,6 @@ class MiniProgramFirebaseHostingPublishRequest {
     this.miniProgramId,
     this.outputPath,
     this.siteId,
-    this.stacCliScriptPath,
     this.mpBuildScriptPath,
     this.skipBuildPubGet = false,
     this.clean = false,
@@ -35,7 +34,6 @@ class MiniProgramFirebaseHostingPublishRequest {
   final String? miniProgramId;
   final String? outputPath;
   final String? siteId;
-  final String? stacCliScriptPath;
   final String? mpBuildScriptPath;
   final bool skipBuildPubGet;
   final bool clean;
@@ -159,7 +157,6 @@ class MiniProgramFirebaseHostingPublisher {
         outputPath: outputPath,
         miniProgramId: request.miniProgramId,
         miniProgramRootPath: rootPath,
-        stacCliScriptPath: request.stacCliScriptPath,
         mpBuildScriptPath: request.mpBuildScriptPath,
         skipBuildPubGet: request.skipBuildPubGet,
         clean: request.clean,

@@ -82,7 +82,6 @@ class MiniProgramPreviewRequest {
     required this.miniProgramRootPath,
     required this.deviceId,
     this.repoRootPath,
-    this.stacCliScriptPath,
     this.mpBuildScriptPath,
   });
 
@@ -90,7 +89,6 @@ class MiniProgramPreviewRequest {
   final String miniProgramRootPath;
   final String deviceId;
   final String? repoRootPath;
-  final String? stacCliScriptPath;
   final String? mpBuildScriptPath;
 }
 
@@ -159,11 +157,6 @@ class MiniProgramPreviewWatcher {
     final normalizedRootPath = p.normalize(p.absolute(rootPath));
     final normalizedPath = p.normalize(p.absolute(path));
     final manifestPath = p.join(normalizedRootPath, 'manifest.json');
-    final defaultOptionsPath = p.join(
-      normalizedRootPath,
-      'lib',
-      'default_stac_options.dart',
-    );
     final mpBuildScriptPath = p.join(
       normalizedRootPath,
       'tool',
@@ -171,7 +164,6 @@ class MiniProgramPreviewWatcher {
     );
 
     if (p.equals(normalizedPath, manifestPath) ||
-        p.equals(normalizedPath, defaultOptionsPath) ||
         p.equals(normalizedPath, mpBuildScriptPath)) {
       return true;
     }
@@ -184,8 +176,7 @@ class MiniProgramPreviewWatcher {
       return false;
     }
 
-    return p.isWithin(p.join(normalizedRootPath, 'stac'), normalizedPath) ||
-        p.isWithin(p.join(normalizedRootPath, 'mp'), normalizedPath) ||
+    return p.isWithin(p.join(normalizedRootPath, 'mp'), normalizedPath) ||
         p.isWithin(p.join(normalizedRootPath, 'assets'), normalizedPath);
   }
 
@@ -193,7 +184,6 @@ class MiniProgramPreviewWatcher {
     return _pathEqualsOrIsWithin(p.join(rootPath, '.mini_program'), path) ||
         _pathEqualsOrIsWithin(p.join(rootPath, '.dart_tool'), path) ||
         _pathEqualsOrIsWithin(p.join(rootPath, 'build'), path) ||
-        _pathEqualsOrIsWithin(p.join(rootPath, 'stac', '.build'), path) ||
         _pathEqualsOrIsWithin(p.join(rootPath, 'mp', '.build'), path);
   }
 
@@ -433,7 +423,6 @@ class MiniProgramPreviewController {
         repoRootPath: request.repoRootPath,
         miniProgramId: request.miniProgramId,
         miniProgramRootPath: request.miniProgramRootPath,
-        stacCliScriptPath: request.stacCliScriptPath,
         mpBuildScriptPath: request.mpBuildScriptPath,
         skipPubGet: skipPubGet,
       ),

@@ -14,8 +14,6 @@ dependencies:
     path: ../../packages/mini_program_contracts
   mini_program_sdk:
     path: ../../packages/mini_program_sdk
-  mini_program_legacy_stac:
-    path: ../../packages/mini_program_legacy_stac
 
 dev_dependencies:
   flutter_test:
@@ -25,10 +23,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/mini_programs/profile_center/manifest.json
-    - assets/mini_programs/profile_center/screens/profile_center_home.json
-    - assets/mini_programs/feedback_form/manifest.json
-    - assets/mini_programs/feedback_form/screens/feedback_form_home.json
     - assets/mini_programs/mp_profile_center/manifest.json
     - assets/mini_programs/mp_profile_center/screens/mp_profile_center_home.json
     - assets/mini_programs/mp_profile_center/screens/mp_profile_center_details.json

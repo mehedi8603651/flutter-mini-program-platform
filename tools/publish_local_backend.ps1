@@ -1,5 +1,5 @@
 param(
-  [string]$MiniProgramId = 'profile_center'
+  [string]$MiniProgramId = 'mp_profile_center'
 )
 
 Set-StrictMode -Version Latest
@@ -21,7 +21,7 @@ $miniProgramRoot = Join-Path $repoRoot "mini_programs\$MiniProgramId"
 $backendRoot = Join-Path $repoRoot 'backend'
 $apiRoot = Join-Path $backendRoot 'api'
 $manifestSource = Join-Path $miniProgramRoot 'manifest.json'
-$screensSource = Join-Path $miniProgramRoot 'stac\.build\screens'
+$screensSource = Join-Path $miniProgramRoot 'mp\.build\screens'
 
 function Assert-ExistingPath {
   param(

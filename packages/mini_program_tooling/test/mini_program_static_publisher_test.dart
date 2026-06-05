@@ -23,11 +23,11 @@ void main() {
         p.join(miniProgramRoot.path, 'assets'),
       ).create(recursive: true);
       await Directory(
-        p.join(miniProgramRoot.path, 'stac', '.build', 'screens'),
+        p.join(miniProgramRoot.path, 'mp', '.build', 'screens'),
       ).create(recursive: true);
       screensDirectoryPath = p.join(
         miniProgramRoot.path,
-        'stac',
+        'mp',
         '.build',
         'screens',
       );
@@ -68,7 +68,7 @@ void main() {
             miniProgramRootPath: miniProgramRoot.path,
             cliSource: 'fake',
             invocation: const <String>['dart', 'fake'],
-            outputDirectoryPath: p.join(miniProgramRoot.path, 'stac', '.build'),
+            outputDirectoryPath: p.join(miniProgramRoot.path, 'mp', '.build'),
             screensDirectoryPath: screensDirectoryPath,
             entryScreenJsonPath: p.join(
               screensDirectoryPath,
@@ -221,7 +221,7 @@ void main() {
             miniProgramRootPath: miniProgramRoot.path,
             cliSource: 'fake',
             invocation: const <String>['dart', 'fake'],
-            outputDirectoryPath: p.join(miniProgramRoot.path, 'stac', '.build'),
+            outputDirectoryPath: p.join(miniProgramRoot.path, 'mp', '.build'),
             screensDirectoryPath: screensDirectoryPath,
             entryScreenJsonPath: p.join(
               screensDirectoryPath,

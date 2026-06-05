@@ -52,7 +52,6 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'toolingVersion': _miniProgramToolingVersion,
       'capabilityIds': _capabilityIds,
       'features': <String, bool>{
-        'hostLegacyStacAdapter': true,
         'firebaseHostingPublish': true,
         'publisherBackendAwsStatus': true,
         'publisherBackendAwsOutputs': true,
@@ -93,7 +92,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'publisherBackendFirebaseDestroyDataLossGuard': true,
       },
       'commands': <String>[
-        'embed init --with-legacy-stac',
+        'embed init',
         'publish --target firebase-hosting',
         'publisher-backend scaffold --template firebase-functions --storage firestore',
         'publisher-backend firebase deploy',

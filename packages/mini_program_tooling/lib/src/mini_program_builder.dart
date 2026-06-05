@@ -3,8 +3,6 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'managed_stac_builder.dart';
-
 typedef ProcessRunner =
     Future<ProcessResult> Function(
       String executable,
@@ -18,7 +16,6 @@ class MiniProgramBuildRequest {
     this.repoRootPath,
     this.miniProgramId,
     this.miniProgramRootPath,
-    this.stacCliScriptPath,
     this.mpBuildScriptPath,
     this.skipPubGet = false,
   });
@@ -26,7 +23,6 @@ class MiniProgramBuildRequest {
   final String? repoRootPath;
   final String? miniProgramId;
   final String? miniProgramRootPath;
-  final String? stacCliScriptPath;
   final String? mpBuildScriptPath;
   final bool skipPubGet;
 }
@@ -39,7 +35,7 @@ class MiniProgramBuildResult {
     required this.outputDirectoryPath,
     required this.screensDirectoryPath,
     required this.entryScreenJsonPath,
-    this.screenFormat = 'stac',
+    this.screenFormat = 'mp',
     this.screenSchemaVersion,
     required this.cliSource,
     required this.invocation,
@@ -85,12 +81,9 @@ class MiniProgramBuildException implements Exception {
 class MiniProgramBuilder {
   const MiniProgramBuilder({
     ProcessRunner processRunner = _defaultProcessRunner,
-    ManagedStacBuilder managedStacBuilder = const ManagedStacBuilder(),
-  }) : _processRunner = processRunner,
-       _managedStacBuilder = managedStacBuilder;
+  }) : _processRunner = processRunner;
 
   final ProcessRunner _processRunner;
-  final ManagedStacBuilder _managedStacBuilder;
 
   Future<MiniProgramBuildResult> build(MiniProgramBuildRequest request) async {
     final repoRootPath = request.repoRootPath == null
@@ -159,11 +152,8 @@ class MiniProgramBuilder {
     );
 
     final command = await _resolveBuildCommand(
-      repoRootPath: repoRootPath,
       miniProgramRootPath: miniProgramRootPath,
       outputDirectoryPath: outputDirectoryPath,
-      screenFormat: screenFormat,
-      stacCliScriptPath: request.stacCliScriptPath,
       mpBuildScriptPath: request.mpBuildScriptPath,
     );
 
@@ -182,8 +172,7 @@ class MiniProgramBuilder {
       arguments: command.arguments,
       workingDirectory: command.workingDirectory,
       environment: command.environment,
-      failureLabel:
-          '${screenFormat == 'mp' ? 'Mp' : 'Stac'} build failed for $resolvedMiniProgramId',
+      failureLabel: 'Mp build failed for $resolvedMiniProgramId',
     );
 
     if (!await File(entryScreenJsonPath).exists()) {
@@ -219,148 +208,18 @@ class MiniProgramBuilder {
     required String miniProgramRootPath,
     required String screenFormat,
   }) async {
-    if (screenFormat == 'mp') {
-      return p.normalize(p.join(miniProgramRootPath, 'mp', '.build'));
-    }
-
-    final defaultOptionsPath = p.join(
-      miniProgramRootPath,
-      'lib',
-      'default_stac_options.dart',
-    );
-    var outputDir = 'stac/.build';
-
-    final defaultOptionsFile = File(defaultOptionsPath);
-    if (await defaultOptionsFile.exists()) {
-      final source = await defaultOptionsFile.readAsString();
-      final match = RegExp(r"outputDir:\s*'([^']*)'").firstMatch(source);
-      if (match != null) {
-        outputDir = match.group(1) ?? outputDir;
-      }
-    }
-
-    final normalizedOutputDir = outputDir.replaceAll('/', p.separator);
-    if (p.isAbsolute(normalizedOutputDir)) {
-      return p.normalize(normalizedOutputDir);
-    }
-
-    return p.normalize(p.join(miniProgramRootPath, normalizedOutputDir));
+    return p.normalize(p.join(miniProgramRootPath, 'mp', '.build'));
   }
 
   Future<_BuildCommand> _resolveBuildCommand({
-    required String? repoRootPath,
     required String miniProgramRootPath,
     required String outputDirectoryPath,
-    required String screenFormat,
-    required String? stacCliScriptPath,
     required String? mpBuildScriptPath,
   }) async {
-    if (screenFormat == 'mp') {
-      return _resolveMpBuildCommand(
-        miniProgramRootPath: miniProgramRootPath,
-        outputDirectoryPath: outputDirectoryPath,
-        mpBuildScriptPath: mpBuildScriptPath,
-      );
-    }
-
-    if (stacCliScriptPath != null && stacCliScriptPath.trim().isNotEmpty) {
-      final explicitPath = p.normalize(p.absolute(stacCliScriptPath.trim()));
-      if (!await File(explicitPath).exists()) {
-        throw MiniProgramBuildException(
-          'Explicit Stac CLI script was not found: $explicitPath',
-        );
-      }
-
-      return _BuildCommand(
-        source: 'explicit_script',
-        executable: 'dart',
-        arguments: <String>[
-          'run',
-          explicitPath,
-          'build',
-          '--project',
-          miniProgramRootPath,
-        ],
-        workingDirectory: repoRootPath ?? miniProgramRootPath,
-        environment: _stacCliEnvironment(),
-      );
-    }
-
-    ManagedStacBuilderException? managedBuilderError;
-    final managedStatus = await _managedStacBuilder.inspect();
-    if (managedStatus.bundledTemplateAvailable) {
-      try {
-        final managedResolution = await _managedStacBuilder.ensureReady();
-        return _BuildCommand(
-          source: 'managed_pinned_stac',
-          executable: 'dart',
-          arguments: <String>[
-            'run',
-            managedResolution.entrypointPath,
-            'build',
-            '--project',
-            miniProgramRootPath,
-          ],
-          workingDirectory: managedResolution.packageRootPath,
-          environment: _stacCliEnvironment(),
-        );
-      } on ManagedStacBuilderException catch (error) {
-        managedBuilderError = error;
-      }
-    }
-
-    if (repoRootPath != null) {
-      final vendoredScriptPath = p.join(
-        repoRootPath,
-        'stac-dev',
-        'packages',
-        'stac_cli',
-        'bin',
-        'stac_cli.dart',
-      );
-      if (await File(vendoredScriptPath).exists()) {
-        return _BuildCommand(
-          source: 'vendored_script',
-          executable: 'dart',
-          arguments: <String>[
-            'run',
-            vendoredScriptPath,
-            'build',
-            '--project',
-            miniProgramRootPath,
-          ],
-          workingDirectory: repoRootPath,
-          environment: _stacCliEnvironment(),
-        );
-      }
-    }
-
-    final globalStacResult = await _processRunner('stac', const <String>[
-      '--version',
-    ], workingDirectory: repoRootPath ?? miniProgramRootPath);
-    if (globalStacResult.exitCode == 0) {
-      return _BuildCommand(
-        source: 'global_stac',
-        executable: 'stac',
-        arguments: <String>['build', '--project', miniProgramRootPath],
-        workingDirectory: repoRootPath ?? miniProgramRootPath,
-        environment: _stacCliEnvironment(),
-      );
-    }
-
-    if (managedBuilderError != null) {
-      throw MiniProgramBuildException(
-        '${managedBuilderError.message}\n'
-        'Fallbacks: provide --stac-cli-script, restore '
-        'stac-dev/packages/stac_cli/bin/stac_cli.dart, or install a global '
-        '`stac` command.',
-      );
-    }
-
-    throw const MiniProgramBuildException(
-      'No Stac builder was found. The managed pinned builder template is '
-      'missing, and no explicit script, vendored stac-dev CLI, or global '
-      '`stac` command was available.',
+    return _resolveMpBuildCommand(
+      miniProgramRootPath: miniProgramRootPath,
+      outputDirectoryPath: outputDirectoryPath,
+      mpBuildScriptPath: mpBuildScriptPath,
     );
   }
 
@@ -397,13 +256,13 @@ class MiniProgramBuilder {
     String manifestPath,
   ) {
     final rawValue = manifest['screenFormat'];
-    final screenFormat = rawValue == null ? 'stac' : '$rawValue'.trim();
+    final screenFormat = rawValue == null ? 'mp' : '$rawValue'.trim();
     if (screenFormat.isEmpty) {
       throw MiniProgramBuildException(
         'Manifest screenFormat must not be empty: $manifestPath',
       );
     }
-    if (screenFormat == 'stac' || screenFormat == 'mp') {
+    if (screenFormat == 'mp') {
       return screenFormat;
     }
     throw MiniProgramBuildException(
@@ -417,24 +276,8 @@ class MiniProgramBuilder {
     required String screenFormat,
   }) {
     final rawValue = manifest['screenSchemaVersion'];
-    if (screenFormat == 'stac') {
-      if (rawValue == null) {
-        return null;
-      }
-      if (rawValue is int && rawValue > 0) {
-        return rawValue;
-      }
-      throw MiniProgramBuildException(
-        'Manifest screenSchemaVersion must be a positive integer when provided: '
-        '$manifestPath',
-      );
-    }
-
     if (rawValue == null) {
-      throw MiniProgramBuildException(
-        'Manifest screenSchemaVersion is required when screenFormat is "mp": '
-        '$manifestPath',
-      );
+      return 1;
     }
     if (rawValue is! int || rawValue <= 0) {
       throw MiniProgramBuildException(
@@ -534,22 +377,6 @@ class MiniProgramBuilder {
       environment: environment,
       runInShell: true,
     );
-  }
-
-  Map<String, String> _stacCliEnvironment() {
-    final environment = <String, String>{};
-
-    if (!Platform.environment.containsKey('STAC_BASE_API_URL')) {
-      environment['STAC_BASE_API_URL'] = 'http://127.0.0.1:3000';
-    }
-    if (!Platform.environment.containsKey('STAC_GOOGLE_CLIENT_ID')) {
-      environment['STAC_GOOGLE_CLIENT_ID'] = 'local_stub_google_client';
-    }
-    if (!Platform.environment.containsKey('STAC_FIREBASE_API_KEY')) {
-      environment['STAC_FIREBASE_API_KEY'] = 'local_stub_firebase_key';
-    }
-
-    return environment;
   }
 
   String _resolveMiniProgramRootPath({

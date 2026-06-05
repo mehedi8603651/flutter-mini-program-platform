@@ -36,14 +36,10 @@ void main() {
         version: '1.2.0',
       );
 
-      final fakeCliPath = p.join(tempDir.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
       final result = await const MiniProgramPublisher().publish(
         MiniProgramPublishRequest(
           repoRootPath: tempDir.path,
           miniProgramRootPath: miniProgramRoot,
-          stacCliScriptPath: fakeCliPath,
           skipBuildPubGet: true,
         ),
       );
@@ -119,15 +115,11 @@ void main() {
         version: '1.2.0',
       );
 
-      final fakeCliPath = p.join(tempDir.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
       final result = await const MiniProgramPublisher().publish(
         MiniProgramPublishRequest(
           repoRootPath: repoRoot,
           backendRootPath: backendRoot,
           miniProgramRootPath: miniProgramRoot,
-          stacCliScriptPath: fakeCliPath,
           skipBuildPubGet: true,
         ),
       );
@@ -202,15 +194,11 @@ void main() {
 }
 ''');
 
-        final fakeCliPath = p.join(tempDir.path, 'fake_stac_cli.dart');
-        await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
         expect(
           () => const MiniProgramPublisher().publish(
             MiniProgramPublishRequest(
               repoRootPath: tempDir.path,
               miniProgramRootPath: miniProgramRoot,
-              stacCliScriptPath: fakeCliPath,
               skipBuildPubGet: true,
             ),
           ),
@@ -240,10 +228,7 @@ Future<void> _writeMiniProgramFixture(
   required String miniProgramId,
   required String version,
 }) async {
-  await Directory(
-    p.join(miniProgramRootPath, 'stac', 'screens'),
-  ).create(recursive: true);
-  await Directory(p.join(miniProgramRootPath, 'lib')).create(recursive: true);
+  await Directory(p.join(miniProgramRootPath, 'tool')).create(recursive: true);
 
   await File(p.join(miniProgramRootPath, 'manifest.json')).writeAsString('''
 {
@@ -253,6 +238,8 @@ Future<void> _writeMiniProgramFixture(
   "contractVersion": "1.0.0",
   "sdkVersionRange": ">=1.0.0 <2.0.0",
   "requiredCapabilities": ["analytics", "native_navigation"],
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1,
   "cachePolicy": {
     "manifest": {"mode": "staleWhileError", "maxStaleSeconds": 3600},
     "entryScreen": {"mode": "staleWhileError", "maxStaleSeconds": 1800}
@@ -270,42 +257,28 @@ environment:
 ''');
 
   await File(
-    p.join(miniProgramRootPath, 'lib', 'default_stac_options.dart'),
+    p.join(miniProgramRootPath, 'tool', 'build_mp.dart'),
   ).writeAsString('''
-import 'package:stac_core/stac_core.dart';
-
-StacOptions get defaultStacOptions => const StacOptions(
-  name: '$miniProgramId',
-  description: 'Fixture',
-  projectId: '${miniProgramId}_local',
-  sourceDir: 'stac',
-  outputDir: 'stac/.build',
-);
-''');
-}
-
-const String _fakeStacCliSource = r'''
 import 'dart:convert';
 import 'dart:io';
 
 Future<void> main(List<String> arguments) async {
-  final projectIndex = arguments.indexOf('--project');
-  if (projectIndex == -1 || projectIndex == arguments.length - 1) {
-    stderr.writeln('missing --project');
-    exitCode = 1;
-    return;
-  }
-
-  final projectRoot = arguments[projectIndex + 1];
-  final manifest = jsonDecode(
-    await File(joinPaths(projectRoot, 'manifest.json')).readAsString(),
-  ) as Map<String, dynamic>;
-  final entry = manifest['entry'] as String;
+  final outputIndex = arguments.indexOf('--output');
+  final output = outputIndex == -1 ? 'mp/.build' : arguments[outputIndex + 1];
   final outputDir = Directory(
-    joinPaths(projectRoot, 'stac', '.build', 'screens'),
+    joinPaths(output, 'screens'),
   );
   await outputDir.create(recursive: true);
-  await File(joinPaths(outputDir.path, '$entry.json')).writeAsString('{}');
+  await File(joinPaths(outputDir.path, '${miniProgramId}_home.json')).writeAsString(
+    jsonEncode(<String, Object?>{
+      'schemaVersion': 1,
+      'screenId': '${miniProgramId}_home',
+      'root': <String, Object?>{
+        'type': 'text',
+        'props': <String, Object?>{'data': 'Hello'},
+      },
+    }),
+  );
 }
 
 String joinPaths(String first, String second, [String? third, String? fourth]) {
@@ -319,4 +292,5 @@ String joinPaths(String first, String second, [String? third, String? fourth]) {
 
   return values.join(Platform.pathSeparator);
 }
-''';
+''');
+}

@@ -16,8 +16,7 @@ class OpenMiniProgramScreenActionPayload {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is OpenMiniProgramScreenActionPayload &&
-          other.screenId == screenId;
+      other is OpenMiniProgramScreenActionPayload && other.screenId == screenId;
 
   @override
   int get hashCode => screenId.hashCode;
@@ -41,8 +40,7 @@ class ResetMiniProgramStackActionPayload {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ResetMiniProgramStackActionPayload &&
-          other.screenId == screenId;
+      other is ResetMiniProgramStackActionPayload && other.screenId == screenId;
 
   @override
   int get hashCode => screenId.hashCode;

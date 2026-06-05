@@ -47,13 +47,11 @@ import {
   chooseMiniProgramBackendStarter,
   choosePartnerPackageFile,
   choosePartnerPackageOutputPath,
-  chooseHostRendererChoice,
   configuredCliPath,
   configuredDefaultPreviewDevice,
   detectPublisherBackendAwsCli027,
   diagnosticCommandTitle,
   errorMessage,
-  ensureLegacyStacAdapterCli040,
   extractAccessKey,
   parseJsonObject,
   promptAppId,
@@ -384,19 +382,9 @@ export async function guidedSetupHostApp(output: vscode.OutputChannel): Promise<
   if (force === undefined) {
     return false;
   }
-  const rendererChoice = await chooseHostRendererChoice();
-  if (!rendererChoice) {
-    return false;
-  }
-  if (
-    (rendererChoice.withLegacyStac || rendererChoice.withDemo) &&
-    !(await ensureLegacyStacAdapterCli040(projectRoot, output))
-  ) {
-    return false;
-  }
   if (!(await runGuidedCliStep(
     'Embed Init',
-    buildEmbedInitArgs({ projectRoot, force, ...rendererChoice }),
+    buildEmbedInitArgs({ projectRoot, force }),
     projectRoot,
     output,
   ))) {

@@ -163,10 +163,7 @@ class MiniProgramWorkflowStatusController {
     final screenSchemaVersion = _resolveMiniProgramScreenSchemaVersion(
       manifest,
     );
-    final sourceRootPath = p.join(
-      workspacePath,
-      screenFormat == 'mp' ? 'mp' : 'stac',
-    );
+    final sourceRootPath = p.join(workspacePath, 'mp');
     final outputRootPath = _resolveMiniProgramBuildOutputPath(
       workspacePath: workspacePath,
       screenFormat: screenFormat,
@@ -225,10 +222,10 @@ class MiniProgramWorkflowStatusController {
   String _resolveMiniProgramScreenFormat(Map<String, dynamic>? manifest) {
     final rawScreenFormat = manifest?['screenFormat'];
     if (rawScreenFormat == null) {
-      return 'stac';
+      return 'mp';
     }
     final screenFormat = rawScreenFormat.toString().trim();
-    return screenFormat.isEmpty ? 'stac' : screenFormat;
+    return screenFormat.isEmpty ? 'mp' : screenFormat;
   }
 
   int? _resolveMiniProgramScreenSchemaVersion(Map<String, dynamic>? manifest) {
@@ -249,35 +246,10 @@ class MiniProgramWorkflowStatusController {
     required String workspacePath,
     required String screenFormat,
   }) {
-    if (screenFormat == 'mp') {
-      return p.join(workspacePath, 'mp', '.build');
-    }
-    if (screenFormat != 'stac') {
+    if (screenFormat != 'mp') {
       return p.join(workspacePath, screenFormat, '.build');
     }
-
-    final defaultOptionsPath = p.join(
-      workspacePath,
-      'lib',
-      'default_stac_options.dart',
-    );
-    try {
-      final source = File(defaultOptionsPath).readAsStringSync();
-      final match = RegExp(
-        r'''outputDir\s*:\s*(['"])(.*?)\1''',
-      ).firstMatch(source);
-      final outputDir = match?.group(2)?.trim();
-      if (outputDir != null && outputDir.isNotEmpty) {
-        return p.normalize(
-          p.isAbsolute(outputDir)
-              ? outputDir
-              : p.join(workspacePath, outputDir),
-        );
-      }
-    } catch (_) {
-      // Keep workflow status best-effort.
-    }
-    return p.join(workspacePath, 'stac', '.build');
+    return p.join(workspacePath, 'mp', '.build');
   }
 
   Future<Map<String, Object?>> _inspectHostApp(
@@ -313,24 +285,6 @@ class MiniProgramWorkflowStatusController {
       'mini_program_registry.dart',
     );
     final pubspecPath = p.join(workspacePath, 'pubspec.yaml');
-    final pubspecSource = await _readTextBestEffort(File(pubspecPath));
-    final runtimeSetupSource = await _readTextBestEffort(
-      File(runtimeSetupPath),
-    );
-    final legacyStacDependencyConfigured =
-        pubspecSource?.contains('mini_program_legacy_stac:') ?? false;
-    final legacyStacRendererConfigured =
-        runtimeSetupSource?.contains('legacyStacRenderers') ?? false;
-    final legacyStacReady =
-        legacyStacDependencyConfigured && legacyStacRendererConfigured;
-    final legacyStacIssues = <String>[
-      if (legacyStacDependencyConfigured && !legacyStacRendererConfigured)
-        'The legacy Stac adapter dependency is present but '
-            'legacyStacRenderers is not registered.',
-      if (!legacyStacDependencyConfigured && legacyStacRendererConfigured)
-        'legacyStacRenderers is registered but the '
-            'mini_program_legacy_stac dependency is missing.',
-    ];
     final endpoints = await _readEndpointMetadata(File(endpointPath));
     final registryEntries = await _readRegistryMetadata(File(registryPath));
     final hostCloud = await _stateStore.readHostCloudConfiguration(
@@ -359,19 +313,6 @@ class MiniProgramWorkflowStatusController {
             },
           )
           .toList(),
-      'legacyStac': <String, Object?>{
-        'dependencyConfigured': legacyStacDependencyConfigured,
-        'rendererConfigured': legacyStacRendererConfigured,
-        'enabled':
-            legacyStacDependencyConfigured || legacyStacRendererConfigured,
-        'ready': legacyStacReady,
-        'status': legacyStacIssues.isNotEmpty
-            ? 'misconfigured'
-            : legacyStacReady
-            ? 'ready'
-            : 'disabled',
-        'issues': legacyStacIssues,
-      },
       'endpoints': endpoints.entries
           .map(
             (entry) => <String, Object?>{
@@ -801,12 +742,6 @@ class MiniProgramWorkflowStatusController {
         if (hostApp['runtimeSetupExists'] != true) {
           actions.add('Run `miniprogram embed init`.');
         }
-        if (((hostApp['legacyStac'] as Map?)?['status']) == 'misconfigured') {
-          actions.add(
-            'Run `miniprogram embed init --with-legacy-stac --force` '
-            'or remove the partial legacy adapter configuration.',
-          );
-        }
         if ((hostApp['endpointCount'] as int? ?? 0) == 0) {
           actions.add('Run `miniprogram host endpoint import <partner.json>`.');
         }
@@ -844,9 +779,6 @@ class MiniProgramWorkflowStatusController {
             (hostApp['endpointCount'] as int? ?? 0) == 0) {
           return 'warning';
         }
-        if (((hostApp['legacyStac'] as Map?)?['status']) == 'misconfigured') {
-          return 'warning';
-        }
         return 'ok';
       default:
         return 'warning';
@@ -865,14 +797,6 @@ class MiniProgramWorkflowStatusController {
       return decoded.cast<String, dynamic>();
     }
     return null;
-  }
-
-  Future<String?> _readTextBestEffort(File file) async {
-    try {
-      return await file.exists() ? await file.readAsString() : null;
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<List<Map<String, Object?>>> _findPartnerPackages(
@@ -994,7 +918,6 @@ class MiniProgramWorkflowStatusController {
   ) async {
     final roots = <Directory>[
       Directory(p.join(workspacePath, 'lib')),
-      Directory(p.join(workspacePath, 'stac')),
       Directory(p.join(workspacePath, 'mp')),
     ];
     final sources = <String>[];

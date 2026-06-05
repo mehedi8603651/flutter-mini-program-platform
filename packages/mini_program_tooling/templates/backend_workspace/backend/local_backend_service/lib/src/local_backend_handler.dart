@@ -85,10 +85,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
     }
 
     if (_matchesSegments(segments, const ['health'])) {
-      response = buildJsonResponse(
-        body: buildHealthBody(),
-        traceId: traceId,
-      );
+      response = buildJsonResponse(body: buildHealthBody(), traceId: traceId);
       return finalize(response, routeKind: 'health');
     }
 
@@ -205,12 +202,16 @@ class _PublishedArtifactRepository {
     final manifestsDirectory = Directory(path.join(apiRootPath, 'manifests'));
     if (!await manifestsDirectory.exists()) {
       return buildJsonResponse(
-        body: buildMiniProgramCatalogBody(entries: const <Map<String, Object?>>[]),
+        body: buildMiniProgramCatalogBody(
+          entries: const <Map<String, Object?>>[],
+        ),
         traceId: traceId,
       );
     }
 
-    final miniProgramIds = await _listPublishedMiniProgramIds(manifestsDirectory);
+    final miniProgramIds = await _listPublishedMiniProgramIds(
+      manifestsDirectory,
+    );
     final entries = <Map<String, Object?>>[];
 
     for (final miniProgramId in miniProgramIds) {
@@ -250,7 +251,8 @@ class _PublishedArtifactRepository {
     }
 
     entries.sort(
-      (left, right) => (left['title'] as String).compareTo(right['title'] as String),
+      (left, right) =>
+          (left['title'] as String).compareTo(right['title'] as String),
     );
 
     logBackendEvent(
@@ -266,7 +268,9 @@ class _PublishedArtifactRepository {
     return buildJsonResponse(
       body: buildMiniProgramCatalogBody(entries: entries),
       traceId: traceId,
-      extraHeaders: <String, String>{'x-mini-program-catalog-count': '${entries.length}'},
+      extraHeaders: <String, String>{
+        'x-mini-program-catalog-count': '${entries.length}',
+      },
     );
   }
 
@@ -301,7 +305,7 @@ class _PublishedArtifactRepository {
             ...selection.decision.toJson(),
             'traceId': traceId,
           },
-      );
+        );
       final headers = <String, String>{
         HttpHeaders.contentTypeHeader: backendJsonContentType,
         'x-mini-program-id': miniProgramId,
@@ -436,10 +440,7 @@ class _PublishedArtifactRepository {
     );
 
     return buildJsonResponse(
-      body: buildInspectionBody(
-        body: report.toJson()
-          ..['traceId'] = traceId,
-      ),
+      body: buildInspectionBody(body: report.toJson()..['traceId'] = traceId),
       traceId: traceId,
       extraHeaders: <String, String>{
         'x-debug-route': 'manifest_decision_inspect',

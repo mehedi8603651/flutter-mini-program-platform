@@ -157,9 +157,9 @@ abstract class MiniProgramManifest with _$MiniProgramManifest {
     @CapabilityIdListConverter()
     required List<CapabilityId> requiredCapabilities,
     @MiniProgramScreenFormatConverter()
-    @Default(MiniProgramScreenFormats.stac)
+    @Default(MiniProgramScreenFormats.mp)
     MiniProgramScreenFormat screenFormat,
-    @JsonKey(includeIfNull: false) int? screenSchemaVersion,
+    @Default(1) int? screenSchemaVersion,
     @Default(<FeatureFlagKey>[]) List<FeatureFlagKey> featureFlags,
     @Default(MiniProgramCachePolicy()) MiniProgramCachePolicy cachePolicy,
     MiniProgramFallback? fallback,
@@ -179,10 +179,6 @@ extension MiniProgramManifestX on MiniProgramManifest {
 
   /// Whether this manifest points at an Mp JSON screen document.
   bool get usesMpScreenFormat => screenFormat == MiniProgramScreenFormats.mp;
-
-  /// Whether this manifest points at a legacy Stac screen document.
-  bool get usesLegacyStacScreenFormat =>
-      screenFormat == MiniProgramScreenFormats.stac;
 
   /// Whether the manifest itself may be reused from stale cache on backend
   /// errors.

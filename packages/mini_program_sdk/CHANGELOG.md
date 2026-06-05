@@ -7,16 +7,13 @@
 - add Mp `stateBuilder`, namespaced `state.*` and `route.*` bindings, state
   actions, router params/results, and action sequences
 - make Mp JSON the only built-in screen renderer
-- move legacy Stac compatibility to the optional `mini_program_legacy_stac`
-  package
-- remove Stac and its transitive runtime dependencies from the base SDK
+- remove the old Stac runtime path and its transitive runtime dependencies from
+  the base SDK
 - add Mp runtime parity support for auth, backend data, paged backend data,
   bindings, and mini-program navigation
-- add Mp-native runtime widgets and actions while keeping legacy Stac rendering
-  unchanged
+- add Mp-native runtime widgets and actions
 - add the SDK Mp screen renderer seam and default renderer registry
 - add strict Mp JSON validation and basic Flutter-core node rendering
-- keep legacy Stac screen rendering as the default for older manifests
 
 ## 0.3.7
 

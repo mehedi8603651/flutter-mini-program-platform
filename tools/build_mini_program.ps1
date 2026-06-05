@@ -2,7 +2,6 @@ param(
     [string]$MiniProgramId,
     [string]$MiniProgramRoot,
     [string]$RepoRoot,
-    [string]$StacCliScript,
     [switch]$SkipPubGet,
     [ValidateSet("text", "json")]
     [string]$Output = "text"
@@ -72,7 +71,6 @@ function Invoke-LegacyBuildTool {
     if ($MiniProgramRoot) { $arguments += @("--mini-program-root", $MiniProgramRoot) }
     if ($RepoRoot) { $arguments += @("--repo-root", $RepoRoot) }
     if ($MiniProgramId) { $arguments += @("--id", $MiniProgramId) }
-    if ($StacCliScript) { $arguments += @("--stac-cli-script", $StacCliScript) }
     if ($SkipPubGet) { $arguments += "--skip-pub-get" }
 
     Push-Location $RepoRoot
@@ -97,7 +95,6 @@ $arguments = @("build", $resolvedMiniProgramId)
 
 if ($MiniProgramRoot) { $arguments += @("--mini-program-root", $MiniProgramRoot) }
 if ($RepoRoot) { $arguments += @("--repo-root", $RepoRoot) }
-if ($StacCliScript) { $arguments += @("--stac-cli-script", $StacCliScript) }
 if ($SkipPubGet) { $arguments += "--skip-pub-get" }
 
 Push-Location $RepoRoot

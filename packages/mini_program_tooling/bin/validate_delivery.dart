@@ -23,7 +23,8 @@ Future<void> main(List<String> arguments) async {
     )
     ..addOption(
       'mini-program-root',
-      help: 'Optional standalone mini-program root to validate alongside the repo.',
+      help:
+          'Optional standalone mini-program root to validate alongside the repo.',
     )
     ..addOption(
       'output',

@@ -10,8 +10,6 @@ class MiniProgramEmbeddingInitRequest {
     this.hostVersion,
     this.nativeRoutePath = '/native/profile-editor',
     this.force = false,
-    this.withDemo = false,
-    this.withLegacyStac = false,
   });
 
   final String projectRootPath;
@@ -20,8 +18,6 @@ class MiniProgramEmbeddingInitRequest {
   final String? hostVersion;
   final String nativeRoutePath;
   final bool force;
-  final bool withDemo;
-  final bool withLegacyStac;
 }
 
 class MiniProgramEmbeddingInitResult {
@@ -32,8 +28,6 @@ class MiniProgramEmbeddingInitResult {
     required this.hostAppId,
     required this.hostVersion,
     required this.nativeRoutePath,
-    required this.withDemo,
-    required this.legacyStacEnabled,
     required this.createdPaths,
   });
 
@@ -43,8 +37,6 @@ class MiniProgramEmbeddingInitResult {
   final String hostAppId;
   final String hostVersion;
   final String nativeRoutePath;
-  final bool withDemo;
-  final bool legacyStacEnabled;
   final List<String> createdPaths;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -54,8 +46,6 @@ class MiniProgramEmbeddingInitResult {
     'hostAppId': hostAppId,
     'hostVersion': hostVersion,
     'nativeRoutePath': nativeRoutePath,
-    'withDemo': withDemo,
-    'legacyStacEnabled': legacyStacEnabled,
     'createdPaths': createdPaths,
   };
 }
@@ -74,11 +64,6 @@ class MiniProgramEmbeddingInitializer {
 
   static const String _miniProgramSdkConstraint = '^0.4.0';
   static const String _miniProgramContractsConstraint = '^0.2.0';
-  static const String _miniProgramLegacyStacConstraint = '^0.1.0';
-  static const String _publicDemoAppId = 'profile';
-  static const String _publicDemoTitle = 'Public Demo';
-  static const String _publicDemoApiBaseUri =
-      'https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
     MiniProgramEmbeddingInitRequest request,
@@ -122,12 +107,10 @@ class MiniProgramEmbeddingInitializer {
         ? request.hostVersion!.trim()
         : _extractVersion(pubspecSource);
     final normalizedRoutePath = _normalizeRoutePath(request.nativeRoutePath);
-    final legacyStacEnabled = request.withDemo || request.withLegacyStac;
     final updatedPubspecSource = _ensureDependencies(
       pubspecSource,
       projectRootPath: projectRootPath,
       repoRootPath: repoRootPath,
-      legacyStacEnabled: legacyStacEnabled,
     );
 
     final integrationRootPath = p.join(projectRootPath, 'lib', 'mini_program');
@@ -143,28 +126,17 @@ class MiniProgramEmbeddingInitializer {
       ): _buildRuntimeSetup(
         hostAppId: resolvedHostAppId,
         hostVersion: resolvedHostVersion,
-        legacyStacEnabled: legacyStacEnabled,
       ),
       p.join(integrationRootPath, 'mini_program_launcher.dart'):
           _buildLauncher(),
-      p.join(integrationRootPath, 'mini_program.dart'): _buildBarrel(
-        withDemo: request.withDemo,
-      ),
+      p.join(integrationRootPath, 'mini_program.dart'): _buildBarrel(),
       p.join(integrationRootPath, 'README.md'): _buildReadme(
         packageName: packageName,
         repoRootPath: repoRootPath,
         hostAppId: resolvedHostAppId,
         hostVersion: resolvedHostVersion,
-        withDemo: request.withDemo,
-        legacyStacEnabled: legacyStacEnabled,
       ),
     };
-    if (request.withDemo) {
-      managedFiles[p.join(integrationRootPath, 'mini_program_endpoints.dart')] =
-          _buildDemoEndpointFile();
-      managedFiles[p.join(integrationRootPath, 'mini_program_registry.dart')] =
-          _buildDemoRegistryFile();
-    }
     managedFiles.addAll(
       _buildPlatformIntegrationFiles(projectRootPath: projectRootPath),
     );
@@ -199,8 +171,6 @@ class MiniProgramEmbeddingInitializer {
       hostAppId: resolvedHostAppId,
       hostVersion: resolvedHostVersion,
       nativeRoutePath: normalizedRoutePath,
-      withDemo: request.withDemo,
-      legacyStacEnabled: legacyStacEnabled,
       createdPaths: createdPaths,
     );
   }
@@ -253,7 +223,6 @@ class MiniProgramEmbeddingInitializer {
     String source, {
     required String projectRootPath,
     required String? repoRootPath,
-    required bool legacyStacEnabled,
   }) {
     final managedDependencies = <String, List<String>>{
       'mini_program_sdk': <String>[
@@ -262,18 +231,12 @@ class MiniProgramEmbeddingInitializer {
       'mini_program_contracts': <String>[
         '  mini_program_contracts: $_miniProgramContractsConstraint',
       ],
-      if (legacyStacEnabled)
-        'mini_program_legacy_stac': <String>[
-          '  mini_program_legacy_stac: $_miniProgramLegacyStacConstraint',
-        ],
     };
     var updated = _upsertPackageSection(
       source,
       sectionName: 'dependencies',
       managedPackages: managedDependencies,
-      removePackages: legacyStacEnabled
-          ? const <String>{}
-          : const <String>{'mini_program_legacy_stac'},
+      removePackages: const <String>{'mini_program_legacy_stac'},
     );
     if (repoRootPath == null) {
       return updated;
@@ -300,15 +263,8 @@ class MiniProgramEmbeddingInitializer {
           '  mini_program_contracts:',
           '    path: ${relativePackagePath('mini_program_contracts')}',
         ],
-        if (legacyStacEnabled)
-          'mini_program_legacy_stac': <String>[
-            '  mini_program_legacy_stac:',
-            '    path: ${relativePackagePath('mini_program_legacy_stac')}',
-          ],
       },
-      removePackages: legacyStacEnabled
-          ? const <String>{}
-          : const <String>{'mini_program_legacy_stac'},
+      removePackages: const <String>{'mini_program_legacy_stac'},
     );
     return updated;
   }
@@ -535,95 +491,25 @@ class AppMiniProgramLauncher extends StatelessWidget {
 ''';
   }
 
-  String _buildBarrel({required bool withDemo}) {
-    final demoExports = withDemo
-        ? '''
-export 'mini_program_endpoints.dart';
-export 'mini_program_registry.dart';
-'''
-        : '';
+  String _buildBarrel() {
     return '''
 export 'package:mini_program_sdk/mini_program_sdk.dart';
 
 export 'app_host_bridge.dart';
 export 'mini_program_launcher.dart';
 export 'mini_program_runtime_setup.dart';
-$demoExports''';
-  }
-
-  String _buildDemoEndpointFile() {
-    return '''
-// Generated by `miniprogram embed init --with-demo`.
-// Keep endpoint ownership in host config, not button code.
-// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"$_publicDemoAppId":{"apiBaseUri":"$_publicDemoApiBaseUri","accessMode":"public"}}
-// END MINI_PROGRAM_ENDPOINTS_JSON
-
-import 'package:mini_program_sdk/mini_program_sdk.dart';
-
-import 'mini_program_registry.dart';
-
-Map<String, MiniProgramEndpoint> buildMiniProgramEndpoints() {
-  return <String, MiniProgramEndpoint>{
-    MiniPrograms.publicDemo.appId: MiniProgramEndpoint.public(
-      apiBaseUri: Uri.parse('$_publicDemoApiBaseUri'),
-    ),
-  };
-}
-''';
-  }
-
-  String _buildDemoRegistryFile() {
-    return '''
-// Generated by `miniprogram embed init --with-demo`.
-// Keep mini-program appId/title pairs in one place when a host app opens
-// multiple mini-programs.
-
-class MiniProgramInfo {
-  const MiniProgramInfo({
-    required this.appId,
-    required this.title,
-  });
-
-  final String appId;
-  final String title;
-}
-
-class MiniPrograms {
-  const MiniPrograms._();
-
-  static const publicDemo = MiniProgramInfo(
-    appId: '$_publicDemoAppId',
-    title: '$_publicDemoTitle',
-  );
-
-  static const values = <MiniProgramInfo>[
-    publicDemo,
-  ];
-
-  static const byAppId = <String, MiniProgramInfo>{
-    '$_publicDemoAppId': publicDemo,
-  };
-}
 ''';
   }
 
   String _buildRuntimeSetup({
     required String hostAppId,
     required String hostVersion,
-    required bool legacyStacEnabled,
   }) {
-    final legacyStacImport = legacyStacEnabled
-        ? "import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';\n"
-        : '';
-    final legacyStacConfig = legacyStacEnabled
-        ? '    renderers: legacyStacRenderers,\n'
-        : '';
     return '''
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
-${legacyStacImport}import 'package:mini_program_sdk/mini_program_sdk.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import 'app_host_bridge.dart';
 
@@ -681,7 +567,7 @@ MiniProgramConfig buildMiniProgramConfig({
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,
     cacheBundle: MiniProgramCacheBundle.inMemory(),
-$legacyStacConfig  );
+  );
 }
 
 MiniProgramSource _buildDefaultHttpSource(
@@ -775,113 +661,7 @@ String _platformName() {
     required String? repoRootPath,
     required String hostAppId,
     required String hostVersion,
-    required bool withDemo,
-    required bool legacyStacEnabled,
   }) {
-    final legacyStacDependency = legacyStacEnabled
-        ? '\n  mini_program_legacy_stac: $_miniProgramLegacyStacConstraint'
-        : '';
-    final legacyStacSection = legacyStacEnabled
-        ? '''
-## Legacy Stac compatibility
-
-This host explicitly enables the optional legacy Stac renderer:
-
-```dart
-MiniProgramConfig(
-  renderers: legacyStacRenderers,
-  // ...
-)
-```
-
-Remove the `mini_program_legacy_stac` dependency, import, and renderer
-registration when this host no longer opens legacy Stac mini-programs.
-
-'''
-        : '''
-## Mp-only runtime
-
-This host uses the Mp renderer included in `mini_program_sdk` and does not
-install the optional legacy Stac adapter. Add it later with:
-
-```bash
-miniprogram embed init --with-legacy-stac --force
-```
-
-''';
-    final demoSection = withDemo
-        ? '''
-## Public demo endpoint
-
-This adapter was generated with `--with-demo`, so it includes a public
-GitHub/jsDelivr mini-program endpoint for first-run testing:
-
-- appId: `$_publicDemoAppId`
-- title: `$_publicDemoTitle`
-- endpoint: `$_publicDemoApiBaseUri`
-
-Use this in `main.dart`:
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
-
-import 'mini_program/mini_program_endpoints.dart';
-import 'mini_program/mini_program_launcher.dart';
-import 'mini_program/mini_program_registry.dart';
-import 'mini_program/mini_program_runtime_setup.dart';
-
-void main() {
-  runApp(
-    MiniProgramScope(
-      config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-      child: const MyApp(),
-    ),
-  );
-}
-```
-
-Then add a normal host-owned button anywhere in your UI:
-
-```dart
-FilledButton(
-  onPressed: () {
-    openAppMiniProgram(
-      context,
-      appId: MiniPrograms.publicDemo.appId,
-      title: MiniPrograms.publicDemo.title,
-    );
-  },
-  child: const Text('Open Public Demo'),
-)
-```
-
-Public demo delivery has no MiniProgram access key and no backend setup. For
-your own public mini-program, publish static output to GitHub Pages/CDN and use
-a jsDelivr base URL like:
-
-```text
-https://cdn.jsdelivr.net/gh/mehedi8603651/<repo>@main/
-```
-
-Replace the generated endpoint URL after publishing your own repo.
-
-'''
-        : '''
-## Optional first-run public demo
-
-If you want this host app to open a public demo mini-program immediately,
-rerun the scaffold with:
-
-```bash
-miniprogram embed init --with-demo --force
-```
-
-That adds `mini_program_endpoints.dart`, `mini_program_registry.dart`, and a
-button snippet using a public GitHub/jsDelivr endpoint. No AWS setup or
-MiniProgram access key is required for the public demo.
-
-''';
     return '''
 # Embedded Mini-Program Adapter
 
@@ -893,8 +673,6 @@ Generated files:
 - `app_host_bridge.dart`
 - `mini_program_runtime_setup.dart`
 - `mini_program_launcher.dart`
-- `mini_program_endpoints.dart` and `mini_program_registry.dart` when
-  `--with-demo` is used
 - `android/app/src/debug/AndroidManifest.xml` when the Flutter app has an
   Android target
 - `android/app/src/debug/res/xml/mini_program_network_security_config.xml`
@@ -905,14 +683,13 @@ Generated files:
 ```yaml
 dependencies:
   mini_program_sdk: $_miniProgramSdkConstraint
-  mini_program_contracts: $_miniProgramContractsConstraint$legacyStacDependency
+  mini_program_contracts: $_miniProgramContractsConstraint
 ```
 
 `embed init` updates `pubspec.yaml` to add these hosted packages if they are
 missing or still using local `path:` entries. Run `flutter pub get` after the
 scaffold is generated.
 
-$legacyStacSection
 ## 2. Keep main.dart small
 
 ```dart
@@ -928,18 +705,6 @@ void main() {
       child: const MyApp(),
     ),
   );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const HomePage(),
-    );
-  }
 }
 ```
 
@@ -965,130 +730,29 @@ const AppMiniProgramLauncher(
 )
 ```
 
-## 4. Optional registry for many mini-programs
+## 4. Optional endpoint registry
 
 For one or two buttons, inline strings are easiest to read. When one host app
-opens many mini-programs, keep each `appId` and display title together in a
-small registry so buttons, menus, analytics, and tests do not repeat strings:
+opens many mini-programs, keep each `appId`, title, delivery URL, backend URL,
+and access mode in generated endpoint files from partner handoff import:
+
+```bash
+miniprogram host endpoint import ../my_program.partner.json
+```
+
+Then wire the generated endpoint map into runtime setup:
 
 ```dart
-// Optional: use this only when the host opens many mini-programs.
-// It keeps appId and title together, which avoids typo bugs across buttons,
-// menus, analytics events, and tests.
-class MiniProgramInfo {
-  const MiniProgramInfo({
-    required this.appId,
-    required this.title,
-  });
-
-  final String appId;
-  final String title;
-}
-
-// Constants-only namespace. The private constructor prevents MiniPrograms()
-// from being created accidentally.
-class MiniPrograms {
-  const MiniPrograms._();
-
-  static const coupon = MiniProgramInfo(
-    appId: 'coupon',
-    title: 'Coupon',
-  );
-
-  static const profile = MiniProgramInfo(
-    appId: 'profile',
-    title: 'Profile',
-  );
-}
-```
-
-Then use the registry from ordinary host UI code:
-
-```dart
-openAppMiniProgram(
-  context,
-  appId: MiniPrograms.coupon.appId,
-  title: MiniPrograms.coupon.title,
-);
-```
-
-$demoSection
-## 5. Optional multi-publisher endpoints
-
-If different partners publish mini-programs to different backends, keep app UI
-appId-only and register each endpoint once in runtime config:
-
-Publisher handoff file:
-
-```bash
-miniprogram partner package aws_coupon_demo --title "AWS Coupon Demo" --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --env my-aws-prod --output aws_coupon_demo.partner.json
-```
-
-Public/static handoff files are also supported for GitHub Pages, CDN, and other
-public hosting:
-
-```bash
-miniprogram partner package public_coupon_demo --title "Public Coupon Demo" --public --api-base-url https://user.github.io/repo/public_mini_program/ --output public_coupon_demo.partner.json
-```
-
-Host import:
-
-```bash
-miniprogram host endpoint import ../aws_coupon_demo.partner.json
-```
-
-Manual host entry is also available:
-
-```bash
-miniprogram host endpoint add aws_coupon_demo --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-miniprogram host endpoint add public_coupon_demo --api-base-url https://user.github.io/repo/public_mini_program/ --public
-miniprogram host endpoint add rewards --api-base-url https://aws.example.com/prod/api/ --access-key mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx --backend-base-url https://publisher.example.com/api/
-```
-
-```dart
-import 'mini_program/mini_program_endpoints.dart';
-
 MiniProgramScope(
-  config: buildMiniProgramConfig(
-    endpoints: buildMiniProgramEndpoints(),
-  ),
+  config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
   child: const MyApp(),
 );
 ```
 
-Then open each mini-program normally:
-
-```dart
-openAppMiniProgram(
-  context,
-  appId: 'aws_coupon_demo',
-  title: 'AWS Coupon Demo',
-);
-```
-
-Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
-For protected cloud delivery, the backend should validate the
-`X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
-revoking one partner key does not affect other partners using the same
-mini-program.
-
-If a mini-program needs its publisher-owned Firebase/AWS/custom backend, pass
-`--backend-base-url` in the partner package or host endpoint command. Generated
-runtime setup wires that backend lazily, and generated mini-program helpers can
-call it with `miniProgramBackendAction(...)`, `miniProgramBackendQueryAction(...)`,
-or `miniProgramBackendBuilder(...)`.
-
-Use `miniProgramBackendBuilder(...)` when UI should load JSON and bind values
-like `{{backend.home.data.title}}` or repeat simple list item templates with
-`{{item.title}}`. Use batch endpoints such as `home/bootstrap`, CDN image URLs,
-short timeouts, and explicit cache TTLs only for safe `GET` responses. Backend
-secrets must stay on the publisher server; never put them in JSON, source, APK,
-IPA, or web JavaScript.
-
-This package does not own your Flutter app. It only provides mini-program
-capability through `MiniProgramScope`. Your `MaterialApp`, `GetMaterialApp`,
-`MaterialApp.router`, GoRouter, theme, localization, state management, routes,
-and navigator setup remain fully yours.
+Rule: host UI knows `appId`; host config owns delivery URLs, backend URLs, and
+MiniProgram access keys. Provider credentials and backend secrets stay on the
+publisher backend, never in Mp JSON, APK, IPA, web JavaScript, logs, or handoff
+docs.
 
 ## Generated defaults
 
@@ -1100,16 +764,14 @@ and navigator setup remain fully yours.
 
 ## Host app structure
 
-- `mini_program.dart` is an optional generated barrel export if you prefer one
-  app-local import.
+- `mini_program.dart` is an optional generated barrel export.
 - `mini_program_launcher.dart` exposes `openAppMiniProgram(...)` and
   `AppMiniProgramLauncher`.
 - `mini_program_runtime_setup.dart` resolves `MINI_PROGRAM_BACKEND_BASE_URL`
   and builds `MiniProgramConfig`.
 - `app_host_bridge.dart` is app-owned. Edit it for real analytics,
   host-native routes, and secure API behavior.
-- your app `lib/main.dart` stays app-owned. Add buttons, tabs, or menu items
-  that call `openAppMiniProgram(...)`.
+- your app `lib/main.dart` stays app-owned.
 
 ## Runtime ownership
 
@@ -1122,195 +784,29 @@ and navigator setup remain fully yours.
 - `MiniProgramConfig.sdkVersion` is the runtime compatibility version checked
   against manifest `sdkVersionRange`, not the `mini_program_sdk` pub package
   version.
-- `MiniProgramScope` does not load a manifest, start a network request,
-  initialize Stac, insert an overlay, or push a route until you open a
-  mini-program.
+- `MiniProgramScope` does not load a manifest, start a network request, insert
+  an overlay, or push a route until you open a mini-program.
 
-Full demo `lib/main.dart` after importing partner endpoints:
+## Local backend defaults
 
-```dart
-import 'package:flutter/material.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
-
-import 'mini_program/mini_program_endpoints.dart';
-import 'mini_program/mini_program_launcher.dart';
-import 'mini_program/mini_program_runtime_setup.dart';
-
-void main() {
-  runApp(
-    MiniProgramScope(
-      config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-      child: const MyApp(),
-    ),
-  );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MiniProgram Host',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('MiniProgram Host')),
-      body: Center(
-        child: FilledButton(
-          onPressed: () {
-            openAppMiniProgram(
-              context,
-              appId: 'aws_coupon_demo',
-              title: 'AWS Coupon Demo',
-            );
-          },
-          child: const Text('Open Coupon MiniProgram'),
-        ),
-      ),
-    );
-  }
-}
-```
-
-State management still stays app-owned. `MiniProgramScope` can compose with
-your normal root wrappers.
-
-Riverpod:
-
-```dart
-void main() {
-  runApp(
-    ProviderScope(
-      child: MiniProgramScope(
-        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
-```
-
-Provider:
-
-```dart
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppState()),
-      ],
-      child: MiniProgramScope(
-        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
-```
-
-Bloc:
-
-```dart
-void main() {
-  runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => AuthBloc()),
-      ],
-      child: MiniProgramScope(
-        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
-```
-
-These snippets do not mean the SDK depends on Riverpod, Provider, Bloc, GetX,
-or GoRouter. They only show that host apps can keep their own architecture.
-
-## Cloud host run and APK build
-
-After `miniprogram cloud deploy`, bind this host app to the environment:
-
-```text
-miniprogram embed cloud configure --env my-aws-prod
-miniprogram host run -d chrome --env my-aws-prod
-```
-
-For release Android APK builds, use the deployed backend API URL:
-
-```text
-miniprogram cloud outputs --format dart-define
-flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
-```
-
-Use the `BackendApiBaseUrl` printed by `miniprogram cloud outputs`; do not use
-the S3 bucket URL directly.
-
-## Notes
-
-- `app_host_bridge.dart` is app-owned. Replace analytics, secure API behavior,
-  and optional native-route handling with your real implementation.
-- This package does not own your Flutter app. It only provides mini-program
-  capability through `MiniProgramScope`. Your `MaterialApp`,
-  `GetMaterialApp`, `MaterialApp.router`, GoRouter, theme, localization, state
-  management, routes, and navigator setup remain fully yours.
-- Multiple scopes are technically allowed for isolated runtimes, but normal
-  apps should keep one `MiniProgramScope` near the app root.
-- `mini_program_launcher.dart` is the developer-friendly entrypoint for feature
-  pages. It keeps widget code from repeating Navigator glue.
-- `mini_program_runtime_setup.dart` defaults to:
-  - Android local default: `http://10.0.2.2:8080/api/`
-  - desktop, Chrome on the same machine, and iOS simulators:
-    `http://127.0.0.1:8080/api/`
-- the shared SDK retries local loopback between `10.0.2.2` and `127.0.0.1`
-  for transport failures, so Android USB `adb reverse` workflows can still use
-  the generated local default
-- `embed init` also adds Android release `INTERNET` permission for cloud/API
-  delivery and debug-only cleartext config for the local backend, so generated
-  host apps can load AWS mini-programs in release APKs and reach local HTTP
-  backend URLs during development without manual manifest edits
-- local backend conditions:
-  - backend should already be running on port `8080`
-  - Android USB or emulator loopback may still depend on an active
-    `adb reverse` session when the device cannot route to `10.0.2.2`
-  - if the Android device/emulator connects after backend start, rerun backend
-    start or reapply `adb reverse`
-  - physical devices over Wi-Fi should override `MINI_PROGRAM_BACKEND_HOST`
-    with the computer's LAN IP
-- generated runtime logs the resolved backend base URL and resolution source on
-  startup, which helps diagnose host/port mistakes during local development
-- When your local backend is already running on port `8080`, Android emulator
-  development should usually work with:
-
-```text
-flutter run -d emulator-5554
-```
-
-- Override the backend with a full URL when needed:
+- Android local default: `http://10.0.2.2:8080/api/`
+- desktop, Chrome on the same machine, and iOS simulators:
+  `http://127.0.0.1:8080/api/`
+- override the backend with a full URL when needed:
 
 ```text
 --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://host:8080/api/
 ```
 
-- Or override only the host/port for cases like physical-device Wi-Fi testing:
+- or override only the host/port for physical-device Wi-Fi testing:
 
 ```text
 --dart-define=MINI_PROGRAM_BACKEND_HOST=192.168.1.25
 --dart-define=MINI_PROGRAM_BACKEND_PORT=8080
 ```
+
+State management still stays app-owned. `MiniProgramScope` can compose with
+Riverpod, Provider, Bloc, GetX, GoRouter, custom architecture, or plain Flutter.
 ''';
   }
 

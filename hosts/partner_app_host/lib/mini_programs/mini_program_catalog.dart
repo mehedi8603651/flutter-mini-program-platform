@@ -33,36 +33,31 @@ class PartnerMiniProgramDefinition {
 }
 
 abstract final class PartnerMiniProgramCatalog {
-  static const PartnerMiniProgramDefinition profileCenter =
+  static const PartnerMiniProgramDefinition mpProfileCenter =
       PartnerMiniProgramDefinition(
-        id: 'profile_center',
-        title: 'Profile Center',
+        id: 'mp_profile_center',
+        title: 'Mp Profile Center',
         description:
-            'The same portable Stac mini-program delivered into a smaller '
-            'partner host lane through backend selection.',
+            'A lightweight Mp profile flow delivered into a smaller partner '
+            'host lane through backend selection.',
+        requiredCapabilities: <CapabilityId>[CapabilityIds.analytics],
+        expectedLaneVersion: '1.0.0',
+      );
+
+  static const PartnerMiniProgramDefinition mpRewardsCenter =
+      PartnerMiniProgramDefinition(
+        id: 'mp_rewards_center',
+        title: 'Mp Rewards Center',
+        description:
+            'An Mp rewards flow with auth, backend state, paged data, and '
+            'manual Load more behavior.',
         requiredCapabilities: <CapabilityId>[
+          CapabilityIds.auth,
           CapabilityIds.analytics,
-          CapabilityIds.nativeNavigation,
         ],
         expectedLaneVersion: '1.0.0',
       );
 
-  static const PartnerMiniProgramDefinition feedbackForm =
-      PartnerMiniProgramDefinition(
-        id: 'feedback_form',
-        title: 'Feedback Form',
-        description:
-            'A second portable Stac mini-program delivered through the same '
-            'SDK and backend path, with partner-owned secure API handling and '
-            'native follow-up.',
-        requiredCapabilities: <CapabilityId>[
-          CapabilityIds.analytics,
-          CapabilityIds.secureApi,
-          CapabilityIds.nativeNavigation,
-        ],
-        expectedLaneVersion: '1.1.0',
-      );
-
   static const List<PartnerMiniProgramDefinition> availablePrograms =
-      <PartnerMiniProgramDefinition>[profileCenter, feedbackForm];
+      <PartnerMiniProgramDefinition>[mpProfileCenter, mpRewardsCenter];
 }

@@ -5,9 +5,6 @@ typedef MiniProgramScreenFormat = String;
 
 /// Standard mini-program screen document formats.
 abstract final class MiniProgramScreenFormats {
-  /// Legacy Stac screen JSON.
-  static const MiniProgramScreenFormat stac = 'stac';
-
   /// Native Mp JSON screen documents.
   static const MiniProgramScreenFormat mp = 'mp';
 
@@ -33,7 +30,7 @@ class MiniProgramScreenFormatConverter
   @override
   MiniProgramScreenFormat fromJson(Object? json) {
     if (json == null) {
-      return MiniProgramScreenFormats.stac;
+      return MiniProgramScreenFormats.mp;
     }
     if (json is String) {
       return MiniProgramScreenFormats.normalize(json);

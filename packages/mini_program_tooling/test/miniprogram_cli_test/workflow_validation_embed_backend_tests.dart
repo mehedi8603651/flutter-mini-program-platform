@@ -28,17 +28,29 @@ void _registerWorkflowValidationEmbedBackendTests() {
       version: '1.0.0',
     );
     await Directory(
-      p.join(miniProgramRoot, 'stac', '.build', 'screens'),
+      p.join(miniProgramRoot, 'mp', '.build', 'screens'),
     ).create(recursive: true);
     await File(
       p.join(
         miniProgramRoot,
-        'stac',
+        'mp',
         '.build',
         'screens',
         'coupon_center_home.json',
       ),
-    ).writeAsString('{}');
+    ).writeAsString(
+      jsonEncode(<String, Object?>{
+        'schemaVersion': 1,
+        'screenId': 'coupon_center_home',
+        'root': <String, Object?>{
+          'type': 'backendBuilder',
+          'props': <String, Object?>{
+            'requestId': 'home',
+            'endpoint': 'home/bootstrap',
+          },
+        },
+      }),
+    );
     await File(
       p.join(miniProgramRoot, 'coupon_center.partner.json'),
     ).writeAsString(
@@ -53,14 +65,17 @@ void _registerWorkflowValidationEmbedBackendTests() {
         'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
       }),
     );
+    await Directory(
+      p.join(miniProgramRoot, 'mp', 'screens'),
+    ).create(recursive: true);
     await File(
-      p.join(miniProgramRoot, 'stac', 'screens', 'coupon_center_home.dart'),
+      p.join(miniProgramRoot, 'mp', 'screens', 'coupon_center_home.dart'),
     ).writeAsString('''
-  miniProgramBackendBuilder(
+  Mp.backendBuilder(
     requestId: 'home',
     endpoint: 'home/bootstrap',
   );
-  miniProgramBackendQueryAction(
+  Mp.backend.query(
     requestId: 'home',
     endpoint: 'home/bootstrap',
   );
@@ -255,17 +270,26 @@ Mp.pagedBackendBuilder(
         version: '1.0.0',
       );
       await Directory(
-        p.join(standaloneRoot, 'stac', '.build', 'screens'),
+        p.join(standaloneRoot, 'mp', '.build', 'screens'),
       ).create(recursive: true);
       await File(
         p.join(
           standaloneRoot,
-          'stac',
+          'mp',
           '.build',
           'screens',
           'firebase_coupon_home.json',
         ),
-      ).writeAsString('{}');
+      ).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'screenId': 'firebase_coupon_home',
+          'root': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'Hello'},
+          },
+        }),
+      );
       await const PublisherBackendStarter().scaffold(
         PublisherBackendScaffoldRequest(
           miniProgramRootPath: standaloneRoot,
@@ -365,47 +389,6 @@ Mp.pagedBackendBuilder(
     expect(couponEndpoint['backendMode'], 'remote');
     expect(rewardsEndpoint['accessMode'], 'public');
     expect(rewardsEndpoint['backendMode'], 'none');
-    expect(json['hostApp']['legacyStac']['status'], 'disabled');
-    expect(json['hostApp']['legacyStac']['ready'], isFalse);
-  });
-
-  test('workflow status warns about partial legacy Stac setup', () async {
-    final hostRoot = p.join(tempDir.path, 'host_app');
-    await _writeEmbeddedHostFixture(hostRoot);
-    await File(p.join(hostRoot, 'pubspec.yaml')).writeAsString('''
-name: host_app
-publish_to: none
-version: 1.0.0
-
-environment:
-  sdk: ^3.10.0
-
-dependencies:
-  mini_program_legacy_stac: ^0.1.0
-''');
-    final stdoutBuffer = StringBuffer();
-
-    final exitCode = await MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      workingDirectory: hostRoot,
-    ).run(<String>['workflow', 'status', '--json']);
-
-    expect(exitCode, 0);
-    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-    expect(json['severity'], 'warning');
-    expect(json['ready'], isFalse);
-    expect(json['hostApp']['legacyStac']['status'], 'misconfigured');
-    expect(json['hostApp']['legacyStac']['dependencyConfigured'], isTrue);
-    expect(json['hostApp']['legacyStac']['rendererConfigured'], isFalse);
-    expect(
-      (json['nextActions'] as List).cast<String>(),
-      contains(
-        'Run `miniprogram embed init --with-legacy-stac --force` '
-        'or remove the partial legacy adapter configuration.',
-      ),
-    );
   });
 
   test(
@@ -834,9 +817,6 @@ dependencies:
       miniProgramId: 'coupon_center',
       version: '1.2.0',
     );
-    final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-    await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
     final stdoutBuffer = StringBuffer();
     final cli = MiniprogramCli(
       stateStore: stateStore,
@@ -848,8 +828,6 @@ dependencies:
     final exitCode = await cli.run(<String>[
       'publish',
       'coupon_center',
-      '--stac-cli-script',
-      fakeCliPath,
       '--skip-build-pub-get',
     ]);
 
@@ -879,9 +857,6 @@ dependencies:
         miniProgramId: 'coupon_center',
         version: '1.2.0',
       );
-      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
       final cli = MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: StringBuffer(),
@@ -904,8 +879,6 @@ dependencies:
       final exitCode = await publishCli.run(<String>[
         'publish',
         'coupon_center',
-        '--stac-cli-script',
-        fakeCliPath,
         '--skip-build-pub-get',
       ]);
 
@@ -949,9 +922,6 @@ dependencies:
         miniProgramId: 'coupon_center',
         version: '1.2.0',
       );
-      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
       final cli = MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: StringBuffer(),
@@ -973,8 +943,6 @@ dependencies:
       );
       final exitCode = await publishCli.run(<String>[
         'publish',
-        '--stac-cli-script',
-        fakeCliPath,
         '--skip-build-pub-get',
       ]);
 
@@ -1026,9 +994,6 @@ dependencies:
         ),
       );
 
-      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
       final envCli = MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: StringBuffer(),
@@ -1050,8 +1015,6 @@ dependencies:
       final exitCode = await publishCli.run(<String>[
         'publish',
         'coupon_center',
-        '--stac-cli-script',
-        fakeCliPath,
         '--skip-build-pub-get',
       ]);
 
@@ -1108,9 +1071,6 @@ dependencies:
       );
       await _initializeBackendWorkspaceState(stateStore, backendRoot);
 
-      final fakeCliPath = p.join(repoRoot.path, 'fake_stac_cli.dart');
-      await File(fakeCliPath).writeAsString(_fakeStacCliSource);
-
       final envCli = MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: StringBuffer(),
@@ -1129,8 +1089,6 @@ dependencies:
       final exitCode = await publishCli.run(<String>[
         'publish',
         'coupon_center',
-        '--stac-cli-script',
-        fakeCliPath,
         '--skip-build-pub-get',
       ]);
 
@@ -1196,67 +1154,6 @@ dependencies:
       await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
       contains('mini_program_sdk: ^0.4.0'),
     );
-  });
-
-  test('embed init with demo generates public demo endpoint files', () async {
-    final projectRoot = p.join(tempDir.path, 'host_app');
-    await Directory(p.join(projectRoot, 'lib')).create(recursive: true);
-    await File(p.join(projectRoot, 'pubspec.yaml')).writeAsString('''
-  name: host_app
-  version: 1.0.0+1
-
-  dependencies:
-    flutter:
-  sdk: flutter
-  ''');
-
-    final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      workingDirectory: repoRoot.path,
-    );
-
-    final exitCode = await cli.run(<String>[
-      'embed',
-      'init',
-      '--project-root',
-      projectRoot,
-      '--with-demo',
-    ]);
-
-    expect(exitCode, 0);
-    expect(stdoutBuffer.toString(), contains('Public demo: profile via'));
-    expect(stdoutBuffer.toString(), contains('Legacy Stac adapter: enabled'));
-    final pubspecSource = await File(
-      p.join(projectRoot, 'pubspec.yaml'),
-    ).readAsString();
-    final runtimeSource = await File(
-      p.join(
-        projectRoot,
-        'lib',
-        'mini_program',
-        'mini_program_runtime_setup.dart',
-      ),
-    ).readAsString();
-    expect(pubspecSource, contains('mini_program_legacy_stac: ^0.1.0'));
-    expect(runtimeSource, contains('legacyStacRenderers'));
-    final endpointSource = await File(
-      p.join(projectRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
-    ).readAsString();
-    final registrySource = await File(
-      p.join(projectRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
-    ).readAsString();
-    expect(endpointSource, contains('MiniProgramEndpoint.public('));
-    expect(
-      endpointSource,
-      contains(
-        'https://cdn.jsdelivr.net/gh/mehedi8603651/miniprogram-public@main/',
-      ),
-    );
-    expect(registrySource, contains("appId: 'profile'"));
-    expect(registrySource, contains("title: 'Public Demo'"));
   });
 
   test('embed init defaults to the current working directory', () async {

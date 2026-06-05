@@ -29,7 +29,14 @@ Future<void> _pumpUntilFound(
     await tester.pump(step);
   }
 
-  throw TestFailure('Timed out waiting for finder: $finder');
+  final visibleTexts = tester
+      .widgetList<Text>(find.byType(Text))
+      .map((text) => text.data ?? text.textSpan?.toPlainText())
+      .whereType<String>()
+      .toList();
+  throw TestFailure(
+    'Timed out waiting for finder: $finder\nVisible text: $visibleTexts',
+  );
 }
 
 void main() {
@@ -96,14 +103,14 @@ void main() {
     await _pumpUntilFound(tester, find.text('Partner App Host'));
 
     expect(find.text('Partner App Host'), findsOneWidget);
-    expect(find.text('Profile Center'), findsOneWidget);
+    expect(find.text('Mp Profile Center'), findsOneWidget);
     expect(find.text('Live'), findsOneWidget);
     expect(find.text('Resolved v1.0.0'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
+    await tester.scrollUntilVisible(find.text('Mp Rewards Center'), 300);
     await tester.pumpAndSettle();
-    expect(find.text('Feedback Form'), findsOneWidget);
+    expect(find.text('Mp Rewards Center'), findsOneWidget);
     expect(find.text('Live'), findsWidgets);
-    expect(find.text('Resolved v1.1.0'), findsOneWidget);
+    expect(find.text('Resolved v1.0.0'), findsWidgets);
     expect(find.text('Open mini-program'), findsWidgets);
   });
 
@@ -128,8 +135,8 @@ void main() {
       await tester.tap(find.text('Open mini-program').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Portable account module'), findsOneWidget);
-      expect(find.text('Open Native Edit Screen'), findsOneWidget);
+      expect(find.text('Portable Mp profile'), findsOneWidget);
+      expect(find.text('Open Mp profile details'), findsOneWidget);
     },
   );
 
@@ -140,11 +147,11 @@ void main() {
       final now = DateTime.now();
       await cacheBundle.manifestCache.write(
         CachedManifestEntry(
-          miniProgramId: 'profile_center',
+          miniProgramId: 'mp_profile_center',
           manifest: const MiniProgramManifest(
-            id: 'profile_center',
+            id: 'mp_profile_center',
             version: '1.0.0',
-            entry: 'profile_center_home',
+            entry: 'mp_profile_center_home',
             contractVersion: '1.0.0',
             sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
             requiredCapabilities: <CapabilityId>[
@@ -157,12 +164,19 @@ void main() {
       );
       await cacheBundle.screenCache.write(
         CachedScreenEntry(
-          miniProgramId: 'profile_center',
+          miniProgramId: 'mp_profile_center',
           version: '1.0.0',
-          screenId: 'profile_center_home',
+          screenId: 'mp_profile_center_home',
           screenJson: const <String, dynamic>{
-            'type': 'text',
-            'data': 'Cached partner profile center screen',
+            'schemaVersion': 1,
+            'screenId': 'mp_profile_center_home',
+            'root': <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{
+                'data': 'Cached partner Mp profile screen',
+              },
+              'children': <Map<String, dynamic>>[],
+            },
           },
           cachedAt: now,
         ),
@@ -184,7 +198,7 @@ void main() {
         findsOneWidget,
       );
       final profileCard = find.ancestor(
-        of: find.text('Profile Center'),
+        of: find.text('Mp Profile Center'),
         matching: find.byType(Card),
       );
       final profileOpenButton = tester.widget<FilledButton>(
@@ -195,12 +209,12 @@ void main() {
       );
       expect(profileOpenButton.onPressed, isNotNull);
 
-      await tester.scrollUntilVisible(find.text('Feedback Form'), 300);
+      await tester.scrollUntilVisible(find.text('Mp Rewards Center'), 300);
       await tester.pumpAndSettle();
       expect(find.text('Unavailable'), findsOneWidget);
       expect(find.text('No valid offline copy is available.'), findsOneWidget);
       final feedbackCard = find.ancestor(
-        of: find.text('Feedback Form'),
+        of: find.text('Mp Rewards Center'),
         matching: find.byType(Card),
       );
       final feedbackOpenButton = tester.widget<FilledButton>(
@@ -213,14 +227,16 @@ void main() {
     },
   );
 
-  testWidgets('opens profile center in the partner 1.0.0 lane', (tester) async {
+  testWidgets('opens Mp profile center in the partner 1.0.0 lane', (
+    tester,
+  ) async {
     final navigatorKey = GlobalKey<NavigatorState>();
 
     await tester.pumpWidget(
       MaterialApp(
         navigatorKey: navigatorKey,
         home: MiniProgramEntryPage(
-          program: PartnerMiniProgramCatalog.profileCenter,
+          program: PartnerMiniProgramCatalog.mpProfileCenter,
           sdkVersion: partnerAppHostSdkVersion,
           source: const _PartnerLaneMiniProgramSource(),
           hostBridge: HostBridgeImpl(
@@ -234,45 +250,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await _pumpUntilFound(tester, find.text('Open Native Edit Screen'));
+    await _pumpUntilFound(tester, find.text('Open Mp profile details'));
 
-    expect(find.text('Portable account module'), findsOneWidget);
+    expect(find.text('Portable Mp profile'), findsOneWidget);
     expect(
-      find.text(
-        'This mini-program is delivered through the shared SDK and keeps '
-        'native work behind the host bridge.',
-      ),
+      find.text('This partner lane renders Mp JSON without a legacy adapter.'),
       findsOneWidget,
     );
-    expect(find.text('Active release: Profile Center v1.1.0'), findsNothing);
-  });
-
-  testWidgets('opens feedback form in the partner 1.1.0 lane', (tester) async {
-    final navigatorKey = GlobalKey<NavigatorState>();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        navigatorKey: navigatorKey,
-        home: MiniProgramEntryPage(
-          program: PartnerMiniProgramCatalog.feedbackForm,
-          sdkVersion: partnerAppHostSdkVersion,
-          source: const _PartnerLaneMiniProgramSource(),
-          hostBridge: HostBridgeImpl(
-            navigatorKey: navigatorKey,
-            secureApiService: _RecordingSecureApiService(),
-          ),
-          capabilityRegistry: partnerAppCapabilityRegistry,
-          featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
-          cacheBundle: MiniProgramCacheBundle.inMemory(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await _pumpUntilFound(tester, find.text('Validate and continue'));
-
-    expect(find.text('Portable feedback lane'), findsOneWidget);
-    expect(find.text('Release lane: Feedback Form v1.1.0'), findsOneWidget);
-    expect(find.text('Track feedback view'), findsOneWidget);
   });
 
   testWidgets('shows the SDK fallback when partner capabilities are missing', (
@@ -284,7 +268,7 @@ void main() {
       MaterialApp(
         navigatorKey: navigatorKey,
         home: MiniProgramEntryPage(
-          program: PartnerMiniProgramCatalog.profileCenter,
+          program: PartnerMiniProgramCatalog.mpProfileCenter,
           sdkVersion: partnerAppHostSdkVersion,
           source: const _MissingCapabilityMiniProgramSource(),
           hostBridge: HostBridgeImpl(
@@ -302,7 +286,9 @@ void main() {
 
     expect(find.text('Host capability mismatch'), findsOneWidget);
     expect(
-      find.text('Profile Center is temporarily unavailable in this host app.'),
+      find.text(
+        'Mp Profile Center is temporarily unavailable in this host app.',
+      ),
       findsOneWidget,
     );
     expect(
@@ -581,7 +567,7 @@ void main() {
     final client = MockClient((request) async {
       requestUri = request.url;
       return http.Response(
-        '{"id":"profile_center","version":"1.0.0","entry":"profile_center_home","contractVersion":"1.0.0","sdkVersionRange":">=1.0.0 <2.0.0","requiredCapabilities":["analytics","native_navigation"]}',
+        '{"id":"mp_profile_center","version":"1.0.0","entry":"mp_profile_center_home","contractVersion":"1.0.0","sdkVersionRange":">=1.0.0 <2.0.0","screenFormat":"mp","screenSchemaVersion":1,"requiredCapabilities":["analytics"]}',
         200,
         headers: <String, String>{'content-type': 'application/json'},
       );
@@ -603,10 +589,10 @@ void main() {
       capabilityRegistry: partnerAppCapabilityRegistry,
     );
 
-    final manifest = await source.loadManifest('profile_center');
+    final manifest = await source.loadManifest('mp_profile_center');
 
     expect(manifest.version, '1.0.0');
-    expect(requestUri.path, '/api/manifests/profile_center/latest.json');
+    expect(requestUri.path, '/api/manifests/mp_profile_center/latest.json');
     expect(requestUri.queryParameters['hostApp'], partnerAppHostId);
     expect(requestUri.queryParameters['sdkVersion'], partnerAppHostSdkVersion);
     expect(requestUri.queryParameters['hostVersion'], '1.2.3');
@@ -630,39 +616,35 @@ class _PartnerLaneMiniProgramSource implements MiniProgramSource {
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
     switch (miniProgramId) {
-      case 'profile_center':
+      case 'mp_profile_center':
         return const MiniProgramManifest(
-          id: 'profile_center',
+          id: 'mp_profile_center',
           version: '1.0.0',
-          entry: 'profile_center_home',
+          entry: 'mp_profile_center_home',
           contractVersion: '1.0.0',
           sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
-          requiredCapabilities: <CapabilityId>[
-            CapabilityIds.analytics,
-            CapabilityIds.nativeNavigation,
-          ],
+          requiredCapabilities: <CapabilityId>[CapabilityIds.analytics],
           fallback: MiniProgramFallback(
             strategy: MiniProgramFallbackStrategy.errorView,
             message:
-                'Profile Center is temporarily unavailable in this host app.',
+                'Mp Profile Center is temporarily unavailable in this host app.',
           ),
         );
-      case 'feedback_form':
+      case 'mp_rewards_center':
         return const MiniProgramManifest(
-          id: 'feedback_form',
-          version: '1.1.0',
-          entry: 'feedback_form_home',
+          id: 'mp_rewards_center',
+          version: '1.0.0',
+          entry: 'mp_rewards_center_home',
           contractVersion: '1.0.0',
           sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
           requiredCapabilities: <CapabilityId>[
+            CapabilityIds.auth,
             CapabilityIds.analytics,
-            CapabilityIds.secureApi,
-            CapabilityIds.nativeNavigation,
           ],
           fallback: MiniProgramFallback(
             strategy: MiniProgramFallbackStrategy.errorView,
             message:
-                'Feedback Form is temporarily unavailable in this host app.',
+                'Mp Rewards Center is temporarily unavailable in this host app.',
           ),
         );
       default:
@@ -679,129 +661,58 @@ class _PartnerLaneMiniProgramSource implements MiniProgramSource {
     required String screenId,
   }) async {
     switch (miniProgramId) {
-      case 'profile_center':
+      case 'mp_profile_center':
         return const <String, dynamic>{
-          'type': 'scaffold',
-          'appBar': <String, dynamic>{
-            'type': 'appBar',
-            'title': <String, dynamic>{
-              'type': 'text',
-              'data': 'Profile Center',
-            },
-          },
-          'body': <String, dynamic>{
-            'type': 'safeArea',
-            'child': <String, dynamic>{
-              'type': 'singleChildScrollView',
-              'padding': <String, dynamic>{
-                'left': 24.0,
-                'top': 24.0,
-                'right': 24.0,
-                'bottom': 24.0,
+          'schemaVersion': 1,
+          'screenId': 'mp_profile_center_home',
+          'root': <String, dynamic>{
+            'type': 'column',
+            'props': <String, dynamic>{},
+            'children': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'type': 'heading',
+                'props': <String, dynamic>{'data': 'Portable Mp profile'},
+                'children': <Map<String, dynamic>>[],
               },
-              'child': <String, dynamic>{
-                'type': 'column',
-                'crossAxisAlignment': 'start',
-                'children': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Portable account module',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data':
-                        'This mini-program is delivered through the shared SDK '
-                        'and keeps native work behind the host bridge.',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
-                  <String, dynamic>{
-                    'type': 'filledButton',
-                    'child': <String, dynamic>{
-                      'type': 'text',
-                      'data': 'Open Native Edit Screen',
-                    },
-                    'onPressed': <String, dynamic>{
-                      'actionType': 'hostAction',
-                      'requestId': 'profile-open-native-editor',
-                      'action': 'openNativeScreen',
-                      'payload': <String, dynamic>{
-                        'route': 'profile_editor',
-                        'args': <String, dynamic>{
-                          'userId': 'guest_001',
-                          'source': 'profile_center',
-                        },
-                        'expectResult': true,
-                      },
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{
+                  'data':
+                      'This partner lane renders Mp JSON without a legacy adapter.',
+                },
+                'children': <Map<String, dynamic>>[],
+              },
+              <String, dynamic>{
+                'type': 'primaryButton',
+                'props': <String, dynamic>{
+                  'label': 'Open Mp profile details',
+                  'action': <String, dynamic>{
+                    'type': 'state.set',
+                    'props': <String, dynamic>{
+                      'key': 'profile.opened',
+                      'value': true,
                     },
                   },
-                ],
+                },
+                'children': <Map<String, dynamic>>[],
               },
-            },
+            ],
           },
         };
-      case 'feedback_form':
+      case 'mp_rewards_center':
         return const <String, dynamic>{
-          'type': 'scaffold',
-          'appBar': <String, dynamic>{
-            'type': 'appBar',
-            'title': <String, dynamic>{'type': 'text', 'data': 'Feedback Form'},
-          },
-          'body': <String, dynamic>{
-            'type': 'safeArea',
-            'child': <String, dynamic>{
-              'type': 'singleChildScrollView',
-              'padding': <String, dynamic>{
-                'left': 24.0,
-                'top': 24.0,
-                'right': 24.0,
-                'bottom': 24.0,
+          'schemaVersion': 1,
+          'screenId': 'mp_rewards_center_home',
+          'root': <String, dynamic>{
+            'type': 'column',
+            'props': <String, dynamic>{},
+            'children': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'type': 'heading',
+                'props': <String, dynamic>{'data': 'Portable Mp rewards'},
+                'children': <Map<String, dynamic>>[],
               },
-              'child': <String, dynamic>{
-                'type': 'column',
-                'crossAxisAlignment': 'start',
-                'children': <Map<String, dynamic>>[
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Portable feedback lane',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
-                  <String, dynamic>{
-                    'type': 'text',
-                    'data': 'Release lane: Feedback Form v1.1.0',
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 24.0},
-                  <String, dynamic>{
-                    'type': 'filledButton',
-                    'child': <String, dynamic>{
-                      'type': 'text',
-                      'data': 'Validate and continue',
-                    },
-                    'onPressed': <String, dynamic>{
-                      'actionType': 'hostAction',
-                      'requestId': 'feedback-open-follow-up',
-                      'action': 'openNativeScreen',
-                      'payload': <String, dynamic>{
-                        'route': 'feedback_follow_up',
-                        'args': <String, dynamic>{
-                          'source': 'feedback_form',
-                          'channel': 'mini_program',
-                        },
-                        'expectResult': true,
-                      },
-                    },
-                  },
-                  <String, dynamic>{'type': 'sizedBox', 'height': 12.0},
-                  <String, dynamic>{
-                    'type': 'outlinedButton',
-                    'child': <String, dynamic>{
-                      'type': 'text',
-                      'data': 'Track feedback view',
-                    },
-                  },
-                ],
-              },
-            },
+            ],
           },
         };
       default:
@@ -818,15 +729,16 @@ class _MissingCapabilityMiniProgramSource implements MiniProgramSource {
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
     return const MiniProgramManifest(
-      id: 'profile_center',
+      id: 'mp_profile_center',
       version: '1.0.0',
-      entry: 'profile_center_home',
+      entry: 'mp_profile_center_home',
       contractVersion: '1.0.0',
       sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
       requiredCapabilities: <CapabilityId>[CapabilityIds.nativeNavigation],
       fallback: MiniProgramFallback(
         strategy: MiniProgramFallbackStrategy.errorView,
-        message: 'Profile Center is temporarily unavailable in this host app.',
+        message:
+            'Mp Profile Center is temporarily unavailable in this host app.',
       ),
     );
   }

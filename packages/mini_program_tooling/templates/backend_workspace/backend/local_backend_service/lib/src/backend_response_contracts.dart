@@ -53,9 +53,7 @@ Map<String, Object?> buildHealthBody() => <String, Object?>{
   'service': 'local_backend_service',
 };
 
-Map<String, Object?> buildInspectionBody({
-  required Map<String, Object?> body,
-}) {
+Map<String, Object?> buildInspectionBody({required Map<String, Object?> body}) {
   return <String, Object?>{
     'responseType': 'manifest_decision_inspection',
     'statusCode': HttpStatus.ok,

@@ -197,7 +197,7 @@ Publisher workspace:
 3. Run `MiniProgram: Configure Firebase Environment`. Enter the Firebase
    project id, region, function name, and Firebase Web API key when
    email/password auth should be enabled.
-4. Edit UI in `stac/screens/<appId>_home.dart`. For an existing Firebase
+4. Edit UI in `mp/screens/<appId>_home.dart`. For an existing Firebase
    scaffold that does not have the generated UI, run
    `MiniProgram: Add Firebase Starter UI`; choose **Add safely** to skip
    existing screen/seed files or **Replace starter files** to pass `--force`.

@@ -323,16 +323,13 @@ void _registerScaffoldTests() {
 
     expect(result.miniProgramId, 'coupon_app');
     expect(result.entryScreen, 'coupon_app_home');
-    expect(result.screenFormat, 'stac');
-    expect(result.screenSchemaVersion, isNull);
-    expect(result.sourceRootPath, p.join(miniProgramRoot.path, 'stac'));
-    expect(result.writtenPaths, hasLength(5));
+    expect(result.screenFormat, 'mp');
+    expect(result.screenSchemaVersion, 1);
+    expect(result.sourceRootPath, p.join(miniProgramRoot.path, 'mp'));
+    expect(result.writtenPaths, hasLength(6));
     expect(result.skippedPaths, isEmpty);
-    final helper = await File(
-      p.join(miniProgramRoot.path, 'lib', 'host_action_helpers.dart'),
-    ).readAsString();
     final screen = await File(
-      p.join(miniProgramRoot.path, 'stac', 'screens', 'coupon_app_home.dart'),
+      p.join(miniProgramRoot.path, 'mp', 'screens', 'coupon_app_home.dart'),
     ).readAsString();
     final homeData =
         jsonDecode(
@@ -349,11 +346,7 @@ void _registerScaffoldTests() {
             )
             as Map<String, dynamic>;
 
-    expect(helper, contains('miniProgramShowEmailAuthAction'));
-    expect(helper, contains('miniProgramAuthBuilder'));
-    expect(helper, contains('miniProgramPagedBackendBuilder'));
-    expect(helper, contains('miniProgramLoadMore'));
-    expect(screen, contains('miniProgramAuthBuilder'));
+    expect(screen, contains('Mp.authBuilder('));
     expect(screen, contains("endpoint: 'auth/session'"));
     expect(screen, contains("endpoint: 'coupons/page'"));
     expect(screen, contains('Load more coupons'));
@@ -365,7 +358,7 @@ void _registerScaffoldTests() {
       ),
     );
     expect(second.writtenPaths, isEmpty);
-    expect(second.unchangedPaths, hasLength(5));
+    expect(second.unchangedPaths, hasLength(6));
     expect(second.skippedPaths, isEmpty);
   });
 
@@ -423,13 +416,6 @@ void _registerScaffoldTests() {
       ).exists(),
       isFalse,
     );
-    expect(
-      await File(
-        p.join(miniProgramRoot.path, 'stac', 'screens', 'coupon_app_home.dart'),
-      ).exists(),
-      isFalse,
-    );
-
     final second = await starter.firebaseStarterUi(
       PublisherBackendFirebaseStarterUiRequest(
         miniProgramRootPath: miniProgramRoot.path,
@@ -457,16 +443,11 @@ void _registerScaffoldTests() {
       );
 
       expect(result.starterUi, isNotNull);
-      expect(result.starterUi!.screenFormat, 'stac');
+      expect(result.starterUi!.screenFormat, 'mp');
       expect(result.starterUi!.writtenPaths, isNotEmpty);
       expect(
         await File(
-          p.join(
-            miniProgramRoot.path,
-            'stac',
-            'screens',
-            'coupon_app_home.dart',
-          ),
+          p.join(miniProgramRoot.path, 'mp', 'screens', 'coupon_app_home.dart'),
         ).exists(),
         isTrue,
       );

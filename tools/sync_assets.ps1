@@ -1,5 +1,5 @@
 param(
-  [string]$MiniProgramId = 'profile_center',
+  [string]$MiniProgramId = 'mp_profile_center',
   [string]$HostId = 'super_app_host'
 )
 
@@ -21,7 +21,7 @@ $repoRoot = (Resolve-Path (Join-Path $scriptRoot '..')).Path
 $miniProgramRoot = Join-Path $repoRoot "mini_programs\$MiniProgramId"
 $hostRoot = Join-Path $repoRoot "hosts\$HostId"
 $manifestSource = Join-Path $miniProgramRoot 'manifest.json'
-$screensSource = Join-Path $miniProgramRoot 'stac\.build\screens'
+$screensSource = Join-Path $miniProgramRoot 'mp\.build\screens'
 $assetRoot = Join-Path $hostRoot "assets\mini_programs\$MiniProgramId"
 $screenTarget = Join-Path $assetRoot 'screens'
 

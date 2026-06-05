@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mini_program_legacy_stac/mini_program_legacy_stac.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 import 'local_mini_program_catalog.dart';
@@ -45,7 +44,6 @@ class MiniProgramEntryPage extends StatelessWidget {
         disposeAuthController: disposeAuthController,
         featureFlagEvaluator: featureFlagEvaluator,
         cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
-        renderers: legacyStacRenderers,
       ),
     );
   }

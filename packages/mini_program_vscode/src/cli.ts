@@ -39,7 +39,7 @@ export interface CreateArgsOptions {
   readonly title?: string;
   readonly outputRoot: string;
   readonly backendTemplate?: 'mock';
-  readonly screenFormat?: 'mp' | 'stac';
+  readonly screenFormat?: 'mp';
   readonly force?: boolean;
 }
 
@@ -72,8 +72,6 @@ export interface BuildArgsOptions extends WorkspaceMiniProgramArgsOptions {
 export interface EmbedInitArgsOptions {
   readonly projectRoot: string;
   readonly force?: boolean;
-  readonly withLegacyStac?: boolean;
-  readonly withDemo?: boolean;
 }
 
 export interface EmbedCloudConfigureArgsOptions {
@@ -591,12 +589,6 @@ export function buildPublishArgs(options: PublishArgsOptions): string[] {
 
 export function buildEmbedInitArgs(options: EmbedInitArgsOptions): string[] {
   const args = ['embed', 'init', '--project-root', options.projectRoot];
-  if (options.withLegacyStac) {
-    args.push('--with-legacy-stac');
-  }
-  if (options.withDemo) {
-    args.push('--with-demo');
-  }
   if (options.force) {
     args.push('--force');
   }

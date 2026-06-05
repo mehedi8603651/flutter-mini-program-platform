@@ -200,10 +200,12 @@ async function buildMiniProgramChecks(
   const partnerPackages = Array.isArray(miniProgram.partnerPackages)
     ? miniProgram.partnerPackages.length
     : 0;
-  const buildExists = asBoolean(build.exists) || (await countJsonFiles(path.join(workspacePath, 'stac', '.build', 'screens'))) > 0;
+  const defaultScreensDirectory = path.join(workspacePath, 'mp', '.build', 'screens');
+  const screensDirectory = asString(build.screensDirectory, defaultScreensDirectory);
+  const buildExists = asBoolean(build.exists) || (await countJsonFiles(defaultScreensDirectory)) > 0;
   const entry = manifest.entry || asString(miniProgram.entry);
   const entryPath = entry
-    ? path.join(workspacePath, 'stac', '.build', 'screens', `${entry}.json`)
+    ? path.join(screensDirectory, `${entry}.json`)
     : '';
   const entryExists = entryPath ? await exists(entryPath) : false;
   const validationStatus = asString(validation.status, 'not_run');
@@ -256,7 +258,7 @@ async function buildMiniProgramChecks(
       'Build output',
       buildExists ? 'ok' : 'warning',
       buildExists ? 'Build output exists.' : 'Build output is missing.',
-      asString(build.screensDirectory, path.join(workspacePath, 'stac', '.build', 'screens')),
+      screensDirectory,
       buildExists ? undefined : 'Run MiniProgram: Build.',
     ),
     check(

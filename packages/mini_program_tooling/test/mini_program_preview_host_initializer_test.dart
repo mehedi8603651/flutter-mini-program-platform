@@ -71,7 +71,6 @@ void main() {
 
         expect(result.usedPathDependencies, isTrue);
         expect(result.screenFormat, 'mp');
-        expect(result.legacyStacEnabled, isFalse);
         expect(invocations, hasLength(1));
 
         final pubspec = await File(
@@ -390,69 +389,23 @@ void main() {
       expect(pubspec, contains('http: ^1.5.0'));
     });
 
-    test('Stac preview enables and registers the optional adapter', () async {
+    test('rejects non-Mp preview formats', () async {
       final hostRootPath = p.join(
         tempDir.path,
         'legacy_profile',
         '.mini_program',
         'preview_host',
       );
-      final repoRootPath = p.join(tempDir.path, 'repo');
-      for (final packageName in <String>[
-        'mini_program_sdk',
-        'mini_program_contracts',
-        'mini_program_legacy_stac',
-      ]) {
-        await Directory(
-          p.join(repoRootPath, 'packages', packageName),
-        ).create(recursive: true);
-      }
 
-      final initializer = MiniProgramPreviewHostInitializer(
-        shellRunner:
-            (
-              String executable,
-              List<String> arguments, {
-              String? workingDirectory,
-              Map<String, String>? environment,
-            }) async {
-              final resolvedHostRoot = p.join(
-                workingDirectory!,
-                arguments.last,
-              );
-              await Directory(
-                p.join(resolvedHostRoot, 'web'),
-              ).create(recursive: true);
-              await Directory(
-                p.join(resolvedHostRoot, 'windows'),
-              ).create(recursive: true);
-              await Directory(
-                p.join(resolvedHostRoot, 'lib'),
-              ).create(recursive: true);
-              return ProcessResult(0, 0, '', '');
-            },
-      );
-
-      final result = await initializer.initialize(
-        MiniProgramPreviewHostInitRequest(
-          hostRootPath: hostRootPath,
-          repoRootPath: repoRootPath,
-          screenFormat: 'stac',
+      await expectLater(
+        const MiniProgramPreviewHostInitializer().initialize(
+          MiniProgramPreviewHostInitRequest(
+            hostRootPath: hostRootPath,
+            screenFormat: 'unsupported',
+          ),
         ),
+        throwsA(isA<MiniProgramPreviewHostInitException>()),
       );
-      final pubspec = await File(
-        p.join(hostRootPath, 'pubspec.yaml'),
-      ).readAsString();
-      final mainDart = await File(
-        p.join(hostRootPath, 'lib', 'main.dart'),
-      ).readAsString();
-
-      expect(result.screenFormat, 'stac');
-      expect(result.legacyStacEnabled, isTrue);
-      expect(pubspec, contains('mini_program_legacy_stac: ^0.1.0'));
-      expect(pubspec, contains('packages/mini_program_legacy_stac'));
-      expect(mainDart, contains('mini_program_legacy_stac'));
-      expect(mainDart, contains('renderers: legacyStacRenderers'));
     });
   });
 }
