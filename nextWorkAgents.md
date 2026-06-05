@@ -103,6 +103,10 @@ provider-neutral publisher backend foundation. It should let mini-program
 developers build full web-style server systems without adding Firebase, AWS, or
 other provider SDKs to the Flutter host app.
 
+Decision-complete backend direction:
+
+- [docs/publisher_backend_https_api_roadmap.md](docs/publisher_backend_https_api_roadmap.md)
+
 Target architecture:
 
 ```text
@@ -145,42 +149,21 @@ publisher backend uses the same HTTPS boundary.
 - Native-sensitive features such as payments, camera, contacts, and push
   notifications still require explicit host capability and bridge contracts.
 
-### Proposed Package Boundaries
+### Backend Scope
 
-Start with local-only development packages:
+The first backend milestone should not create provider-specific runtime
+packages. The first milestone should define a small protected HTTPS API
+contract that any backend developer can implement with any stack:
 
 ```text
-mini_program_backend_contracts
-mini_program_backend_dart
-mini_program_backend_node
-mini_program_backend_firebase
-mini_program_backend_aws
+Node / Dart / Go / Java / Python / .NET / PHP
+Firebase Functions / AWS Lambda / Cloud Run / Docker / VPS / Kubernetes
+Firestore / DynamoDB / PostgreSQL / S3 / Stripe / email / SMS / AI APIs
 ```
 
-Responsibilities:
-
-- `mini_program_backend_contracts`
-  - versioned request/response/error envelopes
-  - access-key and authenticated-session context
-  - cursor pagination
-  - upload-intent and background-job contracts
-  - request IDs, API versions, and capability metadata
-- `mini_program_backend_dart`
-  - standalone Dart server runtime
-  - route registration and typed handlers
-  - access-key/auth middleware
-  - validation, CORS, safe logs, errors, and pagination helpers
-- `mini_program_backend_node`
-  - equivalent TypeScript/Node runtime and middleware
-  - no provider-specific dependency in the core runtime
-- `mini_program_backend_firebase`
-  - Firebase Functions, Firestore, Firebase Auth, Storage, and task adapters
-- `mini_program_backend_aws`
-  - Lambda/API Gateway, DynamoDB, S3, SQS/EventBridge, and job adapters
-
-Cloud Run, Docker, VPS, Kubernetes, Azure, Supabase, or another custom server
-should work through the standalone Dart/Node runtime without needing a new
-mini-program SDK architecture.
+Optional examples or templates can come later for Dart, Node, Firebase, AWS,
+Cloud Run, Docker, or other targets. They are developer conveniences, not a new
+mini-program backend architecture.
 
 ### Backend Contract V1
 
@@ -265,19 +248,17 @@ The CLI remains the source of truth. VS Code only wraps these commands.
 
 ### Implementation Milestones
 
-1. Write a decision-complete backend contract and threat model.
-2. Add `mini_program_backend_contracts` with deterministic JSON fixtures and
-   compatibility tests.
-3. Add a standalone Dart runtime with custom routes, access-key/auth
-   middleware, pagination, errors, CORS, safe logs, and Docker support.
-4. Add an equivalent Node/TypeScript runtime using the same fixtures.
-5. Update tooling to scaffold, run, validate, smoke-test, package, and create
-   partner handoffs for standalone backends.
-6. Refactor generated Firebase and AWS publisher backends to implement the
-   shared contract through provider adapters without changing existing client
-   behavior.
-7. Add signed upload URL and background-job contracts.
-8. Add VS Code guided workflows and diagnostics.
+1. Write a decision-complete backend HTTPS contract and threat model.
+2. Add deterministic JSON fixtures and compatibility tests for the contract.
+3. Update tooling to validate and smoke-test any backend URL that claims the
+   contract.
+4. Add generic handoff guidance for existing publisher backends.
+5. Add optional starter templates for one or two popular stacks after the
+   contract is stable.
+6. Refactor generated Firebase and AWS publisher backends to match the shared
+   contract without changing existing client behavior.
+7. Add signed upload URL and background-job contract sections.
+8. Add VS Code guided workflows and diagnostics around contract validation.
 9. Verify one custom multi-provider backend, for example:
 
    ```text
@@ -304,7 +285,8 @@ The CLI remains the source of truth. VS Code only wraps these commands.
 - Uploads use signed provider URLs; large files do not pass through the SDK as
   JSON.
 - Long-running work returns a job ID; requests must not wait indefinitely.
-- Provider adapters pass the same shared contract fixtures and smoke suite.
+- Firebase, AWS, and custom backends pass the same shared contract fixtures and
+  smoke suite.
 - A host with many providers must show no meaningful binary-size increase
   compared with the same host using one provider.
 - Do not publish backend framework packages until Dart, Node, Firebase, AWS,
@@ -446,11 +428,11 @@ MiniProgramScope(
     endpoints: {
       'aws_coupon_demo': MiniProgramEndpoint(
         apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        accessKey: '<partner-access-key-for-aws-coupon-demo>',
       ),
       'gcp_rewards': MiniProgramEndpoint(
         apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
-        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+        accessKey: '<partner-access-key-for-gcp-rewards>',
       ),
     },
   ),

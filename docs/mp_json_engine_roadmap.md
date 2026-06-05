@@ -21,6 +21,11 @@ The SDK owns one consistent visual system. Mini-program authors use `Mp.*`
 components instead of Material, Cupertino, or host-specific widgets. Host apps
 continue to embed mini-programs through the existing SDK boundary.
 
+The Mp frontend stays declarative and frontend-only. Publisher business logic
+runs behind a protected HTTPS API owned by the publisher. The future backend
+direction is tracked in
+[Publisher backend HTTPS API roadmap](publisher_backend_https_api_roadmap.md).
+
 ## Development Rules
 
 Develop this engine on the isolated `feature/mp-json-engine` worktree. Keep the
@@ -312,6 +317,8 @@ Release blockers:
 - The CLI remains the source of truth. VS Code remains a wrapper.
 - Delivery screen JSON, publisher backends, auth, access keys, and handoff
   remain provider-neutral.
+- Production publisher backend calls use HTTPS. HTTP is only for local preview
+  or loopback development.
 - Existing Stac screens remain usable through the optional adapter.
 - The SDK owns one consistent Mp visual system.
 - iOS verification is required before claiming iOS support, but does not block
