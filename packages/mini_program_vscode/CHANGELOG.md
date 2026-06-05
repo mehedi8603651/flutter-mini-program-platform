@@ -1,9 +1,16 @@
 # Changelog
 
-## 0.2.0
+## 0.2.1
 
 - Make Mp-only create, host setup, and workflow status the default.
 - Remove the old legacy Stac adapter host choices from the VS Code wrapper.
+
+## 0.2.0
+
+- Make Mp-only host setup the recommended default.
+- Add explicit Mp plus legacy Stac and public legacy Stac demo host choices.
+- Show optional legacy Stac adapter dependency, renderer registration, and
+  readiness from workflow status.
 
 ## 0.1.39
 

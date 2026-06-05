@@ -567,7 +567,7 @@ test('diagnostics accept CLI with AWS data management support', async () => {
         supportsFirebaseFirestoreData: true,
         supportsFirebaseDataManagement: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.4.0',
+        toolingVersion: '0.4.1',
       },
     });
 
@@ -576,7 +576,7 @@ test('diagnostics accept CLI with AWS data management support', async () => {
       text,
       /Configured CLI supports AWS DynamoDB, AWS\/Firebase paged routes, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery/,
     );
-    assert.match(text, /Version: 0.4.0/);
+    assert.match(text, /Version: 0.4.1/);
     assert.doesNotMatch(text, /mini_program_tooling 0.4.0/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });

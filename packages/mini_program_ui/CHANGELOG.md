@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- refresh package metadata for the post-`0.1.0` patch release
+
 ## 0.1.0
 
 - add Mp state, router, sequence, and `stateBuilder` authoring helpers

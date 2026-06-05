@@ -1152,7 +1152,7 @@ Mp.pagedBackendBuilder(
     );
     expect(
       await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-      contains('mini_program_sdk: ^0.4.0'),
+      contains('mini_program_sdk: ^0.4.1'),
     );
   });
 

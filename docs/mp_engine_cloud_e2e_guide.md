@@ -31,7 +31,7 @@ miniprogram capabilities --json
 Confirm the CLI reports:
 
 ```text
-mini_program_tooling 0.4.0
+mini_program_tooling 0.4.1
 publisher_backend.aws.access_key_enforcement
 ```
 

@@ -1,9 +1,17 @@
 # Changelog
-## 0.4.0
+## 0.4.1
 - make create, build, preview, publish, generated hosts, and managed-preview
   hosts Mp-only
 - remove the old managed Stac builder, Stac scaffold path, and legacy host
   adapter commands
+
+## 0.4.0
+- make generated and managed-preview hosts Mp-only by default
+- add `embed init --with-legacy-stac` and automatically enable the optional
+  adapter for the public legacy Stac demo
+- report legacy Stac adapter dependency, renderer registration, and readiness
+  through workflow status
+- expose the `host.legacy_stac_adapter` CLI capability
 - fix new Mp scaffolds to declare the established `1.x` runtime compatibility
   range instead of using the `mini_program_sdk` package version
 - generate explicit 20-second delivery and 30-second publisher-backend
