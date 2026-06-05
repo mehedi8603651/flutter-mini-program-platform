@@ -96,6 +96,20 @@ Android run, execute the release verification script from a clean checkout,
 map local dev versions to reviewed stable versions, and prepare the stable
 merge. Do not publish the dev packages before all required release gates pass.
 
+Provider-neutral standalone API support is available through the contract
+commands:
+
+```text
+miniprogram publisher-backend contract init
+miniprogram publisher-backend contract validate
+miniprogram publisher-backend contract smoke
+miniprogram publisher-backend contract handoff
+```
+
+Use this path when the publisher already has a custom HTTPS server. The
+mini-program keeps only relative endpoints; the handoff package carries
+`backendBaseUrl` and optional access-key configuration into the host app.
+
 ## Next Architecture Wave: Provider-Neutral Publisher Backend
 
 After the Mp engine release gates pass, the next major implementation wave is a

@@ -16,6 +16,49 @@ publisher backend.
 Production backend calls should use HTTPS. Plain HTTP is only for local preview
 or loopback development.
 
+## Current Usable Model
+
+The standalone API model is already usable through the existing backend
+endpoint configuration. A mini-program screen does not store the real server
+URL. It stores only relative endpoints:
+
+```dart
+Mp.backendBuilder(
+  requestId: 'scholarshipHome',
+  endpoint: 'scholarships/home',
+  child: Mp.text('{{backend.scholarshipHome.data.title}}'),
+)
+
+Mp.pagedBackendBuilder(
+  requestId: 'scholarships',
+  endpoint: 'scholarships/page',
+  itemTemplate: Mp.text('{{item.title}}'),
+)
+
+Mp.formSubmit(
+  requestId: 'applicationSubmit',
+  endpoint: 'applications/submit',
+  body: {'scholarshipId': '{{state.application.selected.id}}'},
+)
+```
+
+The host import or partner handoff supplies the standalone HTTPS API base URL:
+
+```text
+backendBaseUrl = https://api.publisher.example
+```
+
+At runtime the SDK combines both parts:
+
+```text
+scholarships/page
+-> https://api.publisher.example/scholarships/page
+```
+
+This is the same runtime path for a custom server, Cloud Run, Docker, Lambda,
+Firebase Functions, VPS, or Kubernetes. Firebase and AWS helper commands are
+conveniences; they are not required by the Mp frontend model.
+
 ## Core Architecture
 
 Mp screens call relative publisher backend endpoints:
@@ -235,14 +278,19 @@ without requiring a specific backend stack:
 
 ```text
 miniprogram publisher-backend contract init
-miniprogram publisher-backend start
 miniprogram publisher-backend validate
 miniprogram publisher-backend smoke
 miniprogram publisher-backend handoff
 ```
 
-Optional examples or templates can come later for Dart, Node, Firebase
-Functions, AWS Lambda, Cloud Run, Docker, or other targets, but those are
+The contract commands are the provider-neutral path for an existing standalone
+API. `init` writes `publisher_backend.json` with the backend base URL and smoke
+cases, `validate` checks the contract without network calls, `smoke` calls the
+configured API with MiniProgram headers, and `handoff` creates the host package
+that carries `backendBaseUrl`.
+
+Optional server examples or templates can come later for Dart, Node, Cloud Run,
+Docker, Firebase Functions, AWS Lambda, or other targets, but those are
 developer conveniences. A publisher can also bring an existing backend and only
 implement the HTTPS contract.
 

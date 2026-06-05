@@ -5,10 +5,11 @@ Developer tooling for the portable Flutter mini-program platform.
 This package exposes the global `miniprogram` CLI used to create mini-programs,
 build and validate authored flows, preview with watch/rebuild/refresh, publish
 to local, public static, Firebase Hosting, or AWS cloud delivery, deploy managed AWS and Firebase
-publisher backends, initialize embedding adapters for existing Flutter apps,
-bind host apps to cloud environments, manage MiniProgram access keys, generate
-host endpoint maps, exchange partner handoff packages between publishers and
-host app teams, and manage the local backend lifecycle.
+publisher backends, validate provider-neutral standalone HTTPS API contracts,
+initialize embedding adapters for existing Flutter apps, bind host apps to
+cloud environments, manage MiniProgram access keys, generate host endpoint
+maps, exchange partner handoff packages between publishers and host app teams,
+and manage the local backend lifecycle.
 
 ## Install
 
@@ -90,6 +91,10 @@ miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
 miniprogram publisher-backend status [--mini-program-root <path>] [--json]
 miniprogram publisher-backend stop [--mini-program-root <path>]
 miniprogram publisher-backend urls [--port 9090]
+miniprogram publisher-backend contract init --backend-base-url <url> [--mini-program-root <path>] [--public] [--allow-local-http]
+miniprogram publisher-backend contract validate [--mini-program-root <path>] [--contract <file>] [--allow-local-http] [--json]
+miniprogram publisher-backend contract smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--allow-local-http] [--json]
+miniprogram publisher-backend contract handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] (--access-key <key>|--public) [--output <file>] [--allow-local-http] [--json]
 miniprogram publisher-backend aws deploy --env <env-name> [--mini-program-root <path>]
 miniprogram publisher-backend aws status --env <env-name> [--mini-program-root <path>] [--json]
 miniprogram publisher-backend aws outputs --env <env-name> [--mini-program-root <path>] [--json]
@@ -200,6 +205,33 @@ cd coupon_center
 miniprogram publisher-backend run --port 9090
 miniprogram publisher-backend urls --port 9090
 ```
+
+Use a standalone HTTPS API when the publisher already owns a backend or wants
+to use a provider that the CLI does not scaffold. The mini-program still uses
+relative Mp endpoints; the contract file stores the API base URL and smoke
+checks without storing secrets:
+
+```bash
+miniprogram publisher-backend contract init \
+  --backend-base-url https://api.publisher.example \
+  --mini-program-root .
+
+miniprogram publisher-backend contract validate --mini-program-root .
+
+miniprogram publisher-backend contract smoke \
+  --mini-program-root . \
+  --access-key <partner-access-key>
+
+miniprogram publisher-backend contract handoff \
+  --mini-program-root . \
+  --delivery-url https://delivery.publisher.example/ \
+  --access-key <partner-access-key> \
+  --output scholarship_demo.company-a.partner.json
+```
+
+That package imports into a Flutter host exactly like Firebase or AWS handoff
+packages. The host receives `backendBaseUrl`; the host does not need the
+publisher's database, payment, Firebase, AWS, or provider SDKs.
 
 The default scaffold uses only `analytics`, so it opens in a minimal generated
 host app without native-route wiring. Add `native_navigation` only when your

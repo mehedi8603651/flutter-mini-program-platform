@@ -74,6 +74,15 @@ The current system is strongest for **local developer workflows**,
 **AWS-backed cloud delivery**, **Firebase publisher-owned business backends**,
 and **portable Flutter-hosted mini-programs**.
 
+Provider-neutral standalone APIs are also supported through host handoff
+configuration. Mini-program screens use relative endpoints such as
+`scholarships/page`; the host endpoint map supplies `backendBaseUrl`, for
+example `https://api.publisher.example`, and the SDK calls that HTTPS API
+without adding Firebase, AWS, database, payment, or provider SDKs to the host
+app. See the
+[Publisher backend HTTPS API roadmap](docs/publisher_backend_https_api_roadmap.md)
+for the contract and command flow.
+
 Future-only roadmap is tracked in:
 
 - [nextWorkAgents.md](nextWorkAgents.md)

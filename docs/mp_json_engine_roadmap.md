@@ -25,6 +25,9 @@ The Mp frontend stays declarative and frontend-only. Publisher business logic
 runs behind a protected HTTPS API owned by the publisher. The future backend
 direction is tracked in
 [Publisher backend HTTPS API roadmap](publisher_backend_https_api_roadmap.md).
+For custom backends, Mp screens use only relative endpoints and the host
+handoff supplies `backendBaseUrl`; Firebase and AWS are optional deployment
+helpers, not requirements of the Mp runtime.
 
 ## Development Rules
 
