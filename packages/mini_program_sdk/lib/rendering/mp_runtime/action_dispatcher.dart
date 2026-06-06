@@ -63,6 +63,11 @@ abstract final class _MpActionDispatcher {
         'state.increment' => _incrementState(scope, props),
         'state.remove' => _removeState(scope, props),
         'state.clear' => _clearState(scope),
+        'cache.set' => _cacheSet(scope, props),
+        'cache.get' => _cacheGet(scope, props),
+        'cache.has' => _cacheHas(scope, props),
+        'cache.remove' => _cacheRemove(scope, props),
+        'cache.clear' => _cacheClear(scope, props),
         'sequence' => _runSequence(context, props, bindings),
         'router.push' => _routerPush(scope, props),
         'router.replace' => _routerReplace(scope, props),
@@ -367,6 +372,148 @@ abstract final class _MpActionDispatcher {
     return HostActionResult.success(actionName: 'state.clear');
   }
 
+  static Future<HostActionResult> _cacheSet(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final actionName = 'cache.set';
+    final requestId = _optionalStringProp(props, 'requestId');
+    final cache = scope.cacheManager.forApp(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    await cache.set(
+      _stringProp(props, 'key'),
+      props['value'],
+      bucket: _cacheBucketProp(props),
+      ttl: _optionalDurationMs(props, 'ttlMs'),
+      priority: _cachePriorityProp(props),
+    );
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: const <String, dynamic>{'stored': true},
+    );
+  }
+
+  static Future<HostActionResult> _cacheGet(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final actionName = 'cache.get';
+    final requestId = _optionalStringProp(props, 'requestId');
+    final cache = scope.cacheManager.forApp(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    final key = _stringProp(props, 'key');
+    final bucket = _cacheBucketProp(props);
+    final found = await cache.has(key, bucket: bucket);
+    final value = found ? await cache.get<Object?>(key, bucket: bucket) : null;
+    final targetState = _optionalStringProp(props, 'targetState');
+    final skipMissing = _boolProp(props, 'skipMissing');
+    if (targetState != null && (found || !skipMissing)) {
+      final state = scope.stateManager;
+      if (state == null) {
+        return _stateUnavailable(actionName, requestId: requestId);
+      }
+      state.set(targetState, value);
+    }
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: <String, dynamic>{'found': found, 'value': value},
+    );
+  }
+
+  static Future<HostActionResult> _cacheHas(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final actionName = 'cache.has';
+    final requestId = _optionalStringProp(props, 'requestId');
+    final cache = scope.cacheManager.forApp(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    final found = await cache.has(
+      _stringProp(props, 'key'),
+      bucket: _cacheBucketProp(props),
+    );
+    final targetState = _optionalStringProp(props, 'targetState');
+    if (targetState != null) {
+      final state = scope.stateManager;
+      if (state == null) {
+        return _stateUnavailable(actionName, requestId: requestId);
+      }
+      state.set(targetState, found);
+    }
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: <String, dynamic>{'found': found},
+    );
+  }
+
+  static Future<HostActionResult> _cacheRemove(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final actionName = 'cache.remove';
+    final requestId = _optionalStringProp(props, 'requestId');
+    final cache = scope.cacheManager.forApp(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    final key = _stringProp(props, 'key');
+    final bucket = _cacheBucketProp(props);
+    final existed = await cache.has(key, bucket: bucket);
+    await cache.remove(key, bucket: bucket);
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: <String, dynamic>{'removed': existed},
+    );
+  }
+
+  static Future<HostActionResult> _cacheClear(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    final actionName = 'cache.clear';
+    final requestId = _optionalStringProp(props, 'requestId');
+    final cache = scope.cacheManager.forApp(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    final bucketName = _optionalStringProp(props, 'bucket');
+    if (bucketName != null) {
+      final bucket = _cacheBucketFromName(bucketName);
+      await cache.clear(bucket: bucket);
+      return HostActionResult.success(
+        requestId: requestId,
+        actionName: actionName,
+        data: <String, dynamic>{
+          'cleared': true,
+          'clearedBuckets': <String>[bucket.name],
+        },
+      );
+    }
+    final clearedBuckets = <String>[];
+    for (final bucket in _miniProgramCacheActionBuckets) {
+      await cache.clear(bucket: bucket);
+      clearedBuckets.add(bucket.name);
+    }
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: <String, dynamic>{
+        'cleared': true,
+        'clearedBuckets': clearedBuckets,
+      },
+    );
+  }
+
   static Future<HostActionResult> _runSequence(
     BuildContext context,
     Map<String, dynamic> props,
@@ -489,8 +636,12 @@ abstract final class _MpActionDispatcher {
     );
   }
 
-  static HostActionResult _stateUnavailable(String actionName) {
+  static HostActionResult _stateUnavailable(
+    String actionName, {
+    String? requestId,
+  }) {
     return HostActionResult.failed(
+      requestId: requestId,
       actionName: actionName,
       message: 'Mp state manager is unavailable.',
       errorCode: 'state_unavailable',
@@ -586,6 +737,42 @@ abstract final class _MpActionDispatcher {
     return value is bool && value;
   }
 
+  static Duration? _optionalDurationMs(Map<String, dynamic> props, String key) {
+    final value = props[key];
+    if (value == null) {
+      return null;
+    }
+    if (value is int && value > 0) {
+      return Duration(milliseconds: value);
+    }
+    throw FormatException('Mp action "$key" must be a positive integer.');
+  }
+
+  static MiniProgramCacheBucket _cacheBucketProp(Map<String, dynamic> props) {
+    return _cacheBucketFromName(_optionalStringProp(props, 'bucket') ?? 'data');
+  }
+
+  static MiniProgramCachePriority _cachePriorityProp(
+    Map<String, dynamic> props,
+  ) {
+    return switch (_optionalStringProp(props, 'priority') ?? 'normal') {
+      'low' => MiniProgramCachePriority.low,
+      'normal' => MiniProgramCachePriority.normal,
+      'high' => MiniProgramCachePriority.high,
+      _ => throw const FormatException('Unsupported Mp cache priority.'),
+    };
+  }
+
+  static MiniProgramCacheBucket _cacheBucketFromName(String name) {
+    return switch (name) {
+      'memory' => MiniProgramCacheBucket.memory,
+      'data' => MiniProgramCacheBucket.data,
+      'image' => MiniProgramCacheBucket.image,
+      'state' => MiniProgramCacheBucket.state,
+      _ => throw const FormatException('Unsupported Mp cache bucket.'),
+    };
+  }
+
   static int _intProp(
     Map<String, dynamic> props,
     String key, {
@@ -616,3 +803,11 @@ abstract final class _MpActionDispatcher {
     throw FormatException('Mp action "$key" must be numeric.');
   }
 }
+
+const List<MiniProgramCacheBucket> _miniProgramCacheActionBuckets =
+    <MiniProgramCacheBucket>[
+      MiniProgramCacheBucket.memory,
+      MiniProgramCacheBucket.data,
+      MiniProgramCacheBucket.image,
+      MiniProgramCacheBucket.state,
+    ];

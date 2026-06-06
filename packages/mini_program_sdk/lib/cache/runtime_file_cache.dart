@@ -72,7 +72,7 @@ class FileMiniProgramCacheStore implements MiniProgramIndexedCacheStore {
     if (!await _directory.exists()) {
       return;
     }
-    await for (final file in _entryFiles()) {
+    for (final file in await _entryFiles()) {
       final entry = await _readEntry(file);
       if (entry == null) {
         await _safeDelete(file);
@@ -98,7 +98,7 @@ class FileMiniProgramCacheStore implements MiniProgramIndexedCacheStore {
     if (!await _directory.exists()) {
       return;
     }
-    await for (final file in _entryFiles()) {
+    for (final file in await _entryFiles()) {
       final entry = await _readEntry(file);
       if (entry == null) {
         await _safeDelete(file);
@@ -189,20 +189,22 @@ class FileMiniProgramCacheStore implements MiniProgramIndexedCacheStore {
     if (!await _directory.exists()) {
       return;
     }
-    await for (final file in _entryFiles()) {
+    for (final file in await _entryFiles()) {
       await _readEntry(file);
     }
   }
 
-  Stream<File> _entryFiles() async* {
+  Future<List<File>> _entryFiles() async {
     if (!await _directory.exists()) {
-      return;
+      return const <File>[];
     }
+    final files = <File>[];
     await for (final entity in _directory.list()) {
       if (entity is File && p.extension(entity.path) == '.json') {
-        yield entity;
+        files.add(entity);
       }
     }
+    return files;
   }
 
   File _fileFor(String namespacedKey) {

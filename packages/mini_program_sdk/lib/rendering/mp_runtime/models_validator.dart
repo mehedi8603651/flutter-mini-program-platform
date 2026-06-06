@@ -139,7 +139,16 @@ class MpScreenValidator {
     Map<String, dynamic> json, {
     required String expectedScreenId,
   }) {
-    final payloadBytes = utf8.encode(jsonEncode(json)).length;
+    final int payloadBytes;
+    try {
+      payloadBytes = utf8.encode(jsonEncode(json)).length;
+    } catch (error) {
+      _fail(
+        'Mp screen payload must be JSON-safe.',
+        path: r'$',
+        details: <String, dynamic>{'error': error.toString()},
+      );
+    }
     if (payloadBytes > maxPayloadBytes) {
       _fail(
         'Mp screen payload exceeds the $maxPayloadBytes byte limit.',
@@ -2227,6 +2236,11 @@ class MpScreenValidator {
       'state.increment' => _parseStateIncrementAction(type, props, path),
       'state.remove' => _parseStateRemoveAction(type, props, path),
       'state.clear' => _parseNoPropsAction(type, props, path),
+      'cache.set' => _parseCacheSetAction(type, props, path),
+      'cache.get' => _parseCacheGetAction(type, props, path),
+      'cache.has' => _parseCacheHasAction(type, props, path),
+      'cache.remove' => _parseCacheRemoveAction(type, props, path),
+      'cache.clear' => _parseCacheClearAction(type, props, path),
       'sequence' => _parseSequenceAction(type, props, path),
       'router.push' ||
       'router.replace' ||
@@ -2540,6 +2554,166 @@ class MpScreenValidator {
       type: type,
       props: <String, dynamic>{
         'key': _requiredStateKey(props, 'key', path: '$path.props'),
+      },
+    );
+  }
+
+  _MpAction _parseCacheSetAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'requestId',
+      'key',
+      'bucket',
+      'value',
+      'ttlMs',
+      'priority',
+    }, path: '$path.props');
+    if (!props.containsKey('value')) {
+      _fail('Mp cache.set requires a value.', path: '$path.props.value');
+    }
+    _validateCacheValue(props['value'], path: '$path.props.value');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        'key': _requiredCacheKey(props, 'key', path: '$path.props'),
+        'bucket': _optionalCacheBucket(props, path: '$path.props') ?? 'data',
+        'value': props['value'],
+        if (props.containsKey('ttlMs'))
+          'ttlMs': _optionalPositiveInt(
+            props['ttlMs'],
+            path: '$path.props.ttlMs',
+          ),
+        'priority':
+            _optionalCachePriority(props, path: '$path.props') ?? 'normal',
+      },
+    );
+  }
+
+  _MpAction _parseCacheGetAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'requestId',
+      'key',
+      'bucket',
+      'targetState',
+      'skipMissing',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        'key': _requiredCacheKey(props, 'key', path: '$path.props'),
+        'bucket': _optionalCacheBucket(props, path: '$path.props') ?? 'data',
+        if (props.containsKey('targetState'))
+          'targetState': _requiredStateKey(
+            props,
+            'targetState',
+            path: '$path.props',
+          ),
+        'skipMissing':
+            _optionalBool(
+              props['skipMissing'],
+              path: '$path.props.skipMissing',
+            ) ??
+            false,
+      },
+    );
+  }
+
+  _MpAction _parseCacheHasAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'requestId',
+      'key',
+      'bucket',
+      'targetState',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        'key': _requiredCacheKey(props, 'key', path: '$path.props'),
+        'bucket': _optionalCacheBucket(props, path: '$path.props') ?? 'data',
+        if (props.containsKey('targetState'))
+          'targetState': _requiredStateKey(
+            props,
+            'targetState',
+            path: '$path.props',
+          ),
+      },
+    );
+  }
+
+  _MpAction _parseCacheRemoveAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'requestId',
+      'key',
+      'bucket',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        'key': _requiredCacheKey(props, 'key', path: '$path.props'),
+        'bucket': _optionalCacheBucket(props, path: '$path.props') ?? 'data',
+      },
+    );
+  }
+
+  _MpAction _parseCacheClearAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'requestId',
+      'bucket',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        if (props.containsKey('bucket'))
+          'bucket': _optionalCacheBucket(props, path: '$path.props'),
       },
     );
   }
@@ -3725,6 +3899,89 @@ class MpScreenValidator {
     }
   }
 
+  static String _requiredCacheKey(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = _requiredStableString(json, key, path: path).trim();
+    if (_unsafeCacheKeyPattern.hasMatch(value)) {
+      _fail(
+        'Mp cache key cannot contain path traversal, separators, or file path markers.',
+        path: '$path.$key',
+        details: <String, dynamic>{key: value},
+      );
+    }
+    return value;
+  }
+
+  static String? _optionalCacheBucket(
+    Map<String, dynamic> json, {
+    required String path,
+  }) {
+    final bucket = _optionalStableString(json, 'bucket', path: path);
+    if (bucket == null) {
+      return null;
+    }
+    if (!_allowedMiniProgramCacheBuckets.contains(bucket)) {
+      _fail(
+        'Mp cache bucket is not allowed for mini-program actions.',
+        path: '$path.bucket',
+        details: <String, dynamic>{'bucket': bucket},
+      );
+    }
+    return bucket;
+  }
+
+  static String? _optionalCachePriority(
+    Map<String, dynamic> json, {
+    required String path,
+  }) {
+    final priority = _optionalStableString(json, 'priority', path: path);
+    if (priority == null) {
+      return null;
+    }
+    if (!_allowedMiniProgramCachePriorities.contains(priority)) {
+      _fail(
+        'Mp cache priority is not allowed for mini-program actions.',
+        path: '$path.priority',
+        details: <String, dynamic>{'priority': priority},
+      );
+    }
+    return priority;
+  }
+
+  static void _validateCacheValue(Object? value, {required String path}) {
+    if (value == null || value is String || value is bool) {
+      return;
+    }
+    if (value is num) {
+      if (!value.isFinite) {
+        _fail('Mp cache value numbers must be finite.', path: path);
+      }
+      return;
+    }
+    if (value is List) {
+      for (var index = 0; index < value.length; index += 1) {
+        _validateCacheValue(value[index], path: '$path[$index]');
+      }
+      return;
+    }
+    if (value is Map) {
+      for (final entry in value.entries) {
+        if (entry.key is! String || entry.key.toString().trim().isEmpty) {
+          _fail(
+            'Mp cache value map keys must be non-empty strings.',
+            path: path,
+          );
+        }
+        _validateCacheValue(entry.value, path: '$path.${entry.key}');
+      }
+      return;
+    }
+    _fail('Mp cache value must be JSON-safe.', path: path);
+  }
+
   static Never _unsupportedNode(String type, {required String path}) {
     _fail(
       'Unsupported Mp node type "$type".',
@@ -3752,6 +4009,21 @@ class MpScreenValidator {
     );
   }
 }
+
+final RegExp _unsafeCacheKeyPattern = RegExp(r'(^\.)|(\.\.)|[\\/:]');
+
+const Set<String> _allowedMiniProgramCacheBuckets = <String>{
+  'memory',
+  'data',
+  'image',
+  'state',
+};
+
+const Set<String> _allowedMiniProgramCachePriorities = <String>{
+  'low',
+  'normal',
+  'high',
+};
 
 class _MpScreen {
   const _MpScreen({required this.screenId, required this.root});

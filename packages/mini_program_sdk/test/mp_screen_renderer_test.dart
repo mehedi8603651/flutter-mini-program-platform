@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:collection';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -470,6 +471,62 @@ void main() {
 
       const MpScreenValidator().validate(
         screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
+    test('accepts cache action JSON', () {
+      const MpScreenValidator().validate(
+        _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'primaryButton',
+            'props': <String, dynamic>{
+              'label': 'Cache products',
+              'action': <String, dynamic>{
+                'type': 'sequence',
+                'props': <String, dynamic>{
+                  'steps': <Object?>[
+                    <String, dynamic>{
+                      'type': 'cache.set',
+                      'props': <String, dynamic>{
+                        'requestId': 'cache-set',
+                        'key': 'products_page_1',
+                        'bucket': 'data',
+                        'value': <String, Object?>{'items': <Object?>[]},
+                        'ttlMs': 86400000,
+                        'priority': 'normal',
+                      },
+                    },
+                    <String, dynamic>{
+                      'type': 'cache.has',
+                      'props': <String, dynamic>{
+                        'key': 'products_page_1',
+                        'targetState': 'cache.has_products',
+                      },
+                    },
+                    <String, dynamic>{
+                      'type': 'cache.get',
+                      'props': <String, dynamic>{
+                        'key': 'products_page_1',
+                        'targetState': 'cache.products',
+                        'skipMissing': true,
+                      },
+                    },
+                    <String, dynamic>{
+                      'type': 'cache.remove',
+                      'props': <String, dynamic>{'key': 'products_page_1'},
+                    },
+                    <String, dynamic>{
+                      'type': 'cache.clear',
+                      'props': <String, dynamic>{'bucket': 'state'},
+                    },
+                  ],
+                },
+              },
+            },
+            'children': <Object?>[],
+          };
+        }),
         expectedScreenId: 'coupon_home',
       );
     });
@@ -1336,6 +1393,54 @@ void main() {
             'children': <Object?>[],
           };
         }),
+        'invalid cache key': _cacheActionScreen('cache.set', <String, dynamic>{
+          'key': '../products',
+          'value': true,
+        }),
+        'invalid cache bucket': _cacheActionScreen(
+          'cache.get',
+          <String, dynamic>{'key': 'products', 'bucket': 'session'},
+        ),
+        'invalid cache video bucket': _cacheActionScreen(
+          'cache.get',
+          <String, dynamic>{'key': 'products', 'bucket': 'video'},
+        ),
+        'invalid cache priority': _cacheActionScreen(
+          'cache.set',
+          <String, dynamic>{
+            'key': 'products',
+            'value': true,
+            'priority': 'protected',
+          },
+        ),
+        'invalid cache ttl': _cacheActionScreen('cache.set', <String, dynamic>{
+          'key': 'products',
+          'value': true,
+          'ttlMs': 0,
+        }),
+        'invalid cache skipMissing': _cacheActionScreen(
+          'cache.get',
+          <String, dynamic>{'key': 'products', 'skipMissing': 'yes'},
+        ),
+        'invalid cache target state': _cacheActionScreen(
+          'cache.get',
+          <String, dynamic>{'key': 'products', 'targetState': 'auth.token'},
+        ),
+        'invalid cache value': _cacheActionScreen(
+          'cache.set',
+          <String, dynamic>{
+            'key': 'products',
+            'value': <String, Object?>{'': true},
+          },
+        ),
+        'invalid cache non-finite value': _cacheActionScreen(
+          'cache.set',
+          <String, dynamic>{'key': 'products', 'value': double.infinity},
+        ),
+        'invalid cache unknown prop': _cacheActionScreen(
+          'cache.clear',
+          <String, dynamic>{'all': true},
+        ),
       };
 
       for (final entry in cases.entries) {
@@ -2913,6 +3018,412 @@ void main() {
       backendStore.dispose();
     });
 
+    testWidgets('cache actions store read update state remove and clear', (
+      tester,
+    ) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      final stateManager = MpStateManager();
+
+      final result =
+          await _runMpAction(
+                tester,
+                <String, dynamic>{
+                  'type': 'sequence',
+                  'props': <String, dynamic>{
+                    'steps': <Object?>[
+                      <String, dynamic>{
+                        'type': 'state.set',
+                        'props': <String, dynamic>{
+                          'key': 'source.products',
+                          'value': <String, Object?>{
+                            'items': <Object?>['one', 'two'],
+                          },
+                        },
+                      },
+                      <String, dynamic>{
+                        'type': 'cache.set',
+                        'props': <String, dynamic>{
+                          'requestId': 'set-products',
+                          'key': 'products_page_1',
+                          'value': '{{state.source.products}}',
+                          'ttlMs': 86400000,
+                          'priority': 'normal',
+                        },
+                      },
+                      <String, dynamic>{
+                        'type': 'cache.has',
+                        'props': <String, dynamic>{
+                          'key': 'products_page_1',
+                          'targetState': 'cache.has_products',
+                        },
+                      },
+                      <String, dynamic>{
+                        'type': 'cache.get',
+                        'props': <String, dynamic>{
+                          'key': 'products_page_1',
+                          'targetState': 'cache.products',
+                        },
+                      },
+                      <String, dynamic>{
+                        'type': 'cache.remove',
+                        'props': <String, dynamic>{'key': 'products_page_1'},
+                      },
+                      <String, dynamic>{
+                        'type': 'cache.has',
+                        'props': <String, dynamic>{
+                          'key': 'products_page_1',
+                          'targetState': 'cache.has_after_remove',
+                        },
+                      },
+                    ],
+                  },
+                },
+                cacheManager: cacheManager,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(stateManager.get<bool>('cache.has_products'), isTrue);
+      expect(
+        stateManager.get<Map<String, dynamic>>('cache.products'),
+        <String, dynamic>{
+          'items': <Object?>['one', 'two'],
+        },
+      );
+      expect(stateManager.get<bool>('cache.has_after_remove'), isFalse);
+
+      await cacheManager.set(
+        appId: 'coupon',
+        key: 'session',
+        value: 'keep',
+        bucket: MiniProgramCacheBucket.session,
+      );
+      await cacheManager
+          .forApp('coupon')
+          .set('state', 'drop', bucket: MiniProgramCacheBucket.state);
+      await cacheManager
+          .forApp('coupon')
+          .set('image', 'drop', bucket: MiniProgramCacheBucket.image);
+      await cacheManager
+          .forApp('coupon')
+          .set('memory', 'drop', bucket: MiniProgramCacheBucket.memory);
+
+      final clearResult =
+          await _runMpAction(
+                tester,
+                <String, dynamic>{
+                  'type': 'cache.clear',
+                  'props': <String, dynamic>{'requestId': 'clear-all'},
+                },
+                cacheManager: cacheManager,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(clearResult.isSuccess, isTrue);
+      expect(clearResult.requestId, 'clear-all');
+      expect(clearResult.data['clearedBuckets'], <String>[
+        'memory',
+        'data',
+        'image',
+        'state',
+      ]);
+      expect(
+        await cacheManager.has(
+          appId: 'coupon',
+          key: 'session',
+          bucket: MiniProgramCacheBucket.session,
+        ),
+        isTrue,
+      );
+      expect(
+        await cacheManager
+            .forApp('coupon')
+            .has('state', bucket: MiniProgramCacheBucket.state),
+        isFalse,
+      );
+      expect(
+        await cacheManager
+            .forApp('coupon')
+            .has('image', bucket: MiniProgramCacheBucket.image),
+        isFalse,
+      );
+      expect(
+        await cacheManager
+            .forApp('coupon')
+            .has('memory', bucket: MiniProgramCacheBucket.memory),
+        isFalse,
+      );
+
+      stateManager.dispose();
+    });
+
+    testWidgets('cache get handles missing and cached null values', (
+      tester,
+    ) async {
+      final stateManager = MpStateManager();
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      stateManager.set('cache.missing', 'keep');
+
+      await _runMpAction(
+        tester,
+        <String, dynamic>{
+          'type': 'cache.get',
+          'props': <String, dynamic>{
+            'key': 'missing',
+            'targetState': 'cache.missing',
+            'skipMissing': true,
+          },
+        },
+        cacheManager: cacheManager,
+        stateManager: stateManager,
+      );
+      expect(stateManager.get<String>('cache.missing'), 'keep');
+
+      await _runMpAction(
+        tester,
+        <String, dynamic>{
+          'type': 'cache.get',
+          'props': <String, dynamic>{
+            'key': 'missing',
+            'targetState': 'cache.missing',
+          },
+        },
+        cacheManager: cacheManager,
+        stateManager: stateManager,
+      );
+      final stateDataAfterMissing = stateManager.toBindingData();
+      expect(
+        (stateDataAfterMissing['cache'] as Map<String, dynamic>).containsKey(
+          'missing',
+        ),
+        isTrue,
+      );
+      expect(stateManager.get<Object?>('cache.missing'), isNull);
+
+      await _runMpAction(
+        tester,
+        <String, dynamic>{
+          'type': 'cache.set',
+          'props': <String, dynamic>{'key': 'nullable', 'value': null},
+        },
+        cacheManager: cacheManager,
+        stateManager: stateManager,
+      );
+      final result =
+          await _runMpAction(
+                tester,
+                <String, dynamic>{
+                  'type': 'cache.get',
+                  'props': <String, dynamic>{
+                    'key': 'nullable',
+                    'targetState': 'cache.nullable',
+                    'skipMissing': true,
+                  },
+                },
+                cacheManager: cacheManager,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.data['found'], isTrue);
+      expect(result.data['value'], isNull);
+      final stateDataAfterNull = stateManager.toBindingData();
+      expect(
+        (stateDataAfterNull['cache'] as Map<String, dynamic>).containsKey(
+          'nullable',
+        ),
+        isTrue,
+      );
+      expect(stateManager.get<Object?>('cache.nullable'), isNull);
+
+      stateManager.dispose();
+    });
+
+    testWidgets('cache action TTL is clamped by host policy', (tester) async {
+      final clock = _TestClock(DateTime.utc(2026, 6, 7, 8));
+      final stateManager = MpStateManager();
+      final cacheManager = MiniProgramCacheManager.inMemory(clock: clock.now);
+      const policy = MiniProgramCachePolicy(dataTtl: Duration(milliseconds: 1));
+
+      await _runMpAction(
+        tester,
+        <String, dynamic>{
+          'type': 'cache.set',
+          'props': <String, dynamic>{
+            'key': 'short_lived',
+            'value': 'live',
+            'ttlMs': 60000,
+          },
+        },
+        cacheManager: cacheManager,
+        cachePolicy: policy,
+        stateManager: stateManager,
+      );
+
+      clock.advance(const Duration(milliseconds: 2));
+
+      final result =
+          await _runMpAction(
+                tester,
+                <String, dynamic>{
+                  'type': 'cache.get',
+                  'props': <String, dynamic>{
+                    'key': 'short_lived',
+                    'targetState': 'cache.expired',
+                  },
+                },
+                cacheManager: cacheManager,
+                cachePolicy: policy,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.data['found'], isFalse);
+      expect(stateManager.get<Object?>('cache.expired'), isNull);
+
+      stateManager.dispose();
+    });
+
+    testWidgets('cache actions are scoped by mini-program id', (tester) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+
+      await _runMpAction(
+        tester,
+        <String, dynamic>{
+          'type': 'cache.set',
+          'props': <String, dynamic>{'key': 'shared', 'value': 'coupon'},
+        },
+        cacheManager: cacheManager,
+        miniProgramId: 'coupon',
+      );
+      await _runMpAction(
+        tester,
+        <String, dynamic>{
+          'type': 'cache.set',
+          'props': <String, dynamic>{'key': 'shared', 'value': 'shop'},
+        },
+        cacheManager: cacheManager,
+        miniProgramId: 'shop',
+      );
+
+      expect(
+        await cacheManager.forApp('coupon').get<String>('shared'),
+        'coupon',
+      );
+      expect(await cacheManager.forApp('shop').get<String>('shared'), 'shop');
+    });
+
+    testWidgets('cache actions work with file-backed persistent cache', (
+      tester,
+    ) async {
+      final directory = (await tester.runAsync<Directory>(
+        () =>
+            Directory.systemTemp.createTemp('mini_program_cache_action_test_'),
+      ))!;
+      try {
+        await _runMpAction(tester, <String, dynamic>{
+          'type': 'sequence',
+          'props': <String, dynamic>{
+            'steps': <Object?>[
+              <String, dynamic>{
+                'type': 'cache.set',
+                'props': <String, dynamic>{
+                  'key': 'products',
+                  'value': 'persisted_data',
+                },
+              },
+              <String, dynamic>{
+                'type': 'cache.set',
+                'props': <String, dynamic>{
+                  'key': 'selected_tab',
+                  'bucket': 'state',
+                  'value': 'saved_state',
+                },
+              },
+              <String, dynamic>{
+                'type': 'cache.set',
+                'props': <String, dynamic>{
+                  'key': 'runtime',
+                  'bucket': 'memory',
+                  'value': 'memory_only',
+                },
+              },
+            ],
+          },
+        }, cacheManager: _fileCacheManager(directory));
+
+        final coldState = MpStateManager();
+        await _runMpAction(
+          tester,
+          <String, dynamic>{
+            'type': 'sequence',
+            'props': <String, dynamic>{
+              'steps': <Object?>[
+                <String, dynamic>{
+                  'type': 'cache.get',
+                  'props': <String, dynamic>{
+                    'key': 'products',
+                    'targetState': 'cache.products',
+                  },
+                },
+                <String, dynamic>{
+                  'type': 'cache.get',
+                  'props': <String, dynamic>{
+                    'key': 'selected_tab',
+                    'bucket': 'state',
+                    'targetState': 'cache.tab',
+                  },
+                },
+                <String, dynamic>{
+                  'type': 'cache.get',
+                  'props': <String, dynamic>{
+                    'key': 'runtime',
+                    'bucket': 'memory',
+                    'targetState': 'cache.runtime',
+                  },
+                },
+                <String, dynamic>{
+                  'type': 'cache.clear',
+                  'props': <String, dynamic>{'bucket': 'data'},
+                },
+              ],
+            },
+          },
+          cacheManager: _fileCacheManager(directory),
+          stateManager: coldState,
+        );
+
+        expect(coldState.get<String>('cache.products'), 'persisted_data');
+        expect(coldState.get<String>('cache.tab'), 'saved_state');
+        expect(coldState.get<Object?>('cache.runtime'), isNull);
+        final productsAfterClear = await tester.runAsync(
+          () => _fileCacheManager(
+            directory,
+          ).forApp('coupon').get<String>('products'),
+        );
+        final stateAfterClear = await tester.runAsync(
+          () => _fileCacheManager(directory)
+              .forApp('coupon')
+              .get<String>(
+                'selected_tab',
+                bucket: MiniProgramCacheBucket.state,
+              ),
+        );
+        expect(productsAfterClear, isNull);
+        expect(stateAfterClear, 'saved_state');
+
+        coldState.dispose();
+      } finally {
+        await tester.runAsync(() async {
+          if (await directory.exists()) {
+            await directory.delete(recursive: true);
+          }
+        });
+      }
+    });
+
     testWidgets('form controls validate and submit through backend connector', (
       tester,
     ) async {
@@ -3034,6 +3545,22 @@ Map<String, dynamic> _screenWith(void Function(Map<String, dynamic>) mutate) {
   final json = _uiGeneratedScreen();
   mutate(json);
   return json;
+}
+
+Map<String, dynamic> _cacheActionScreen(
+  String type,
+  Map<String, dynamic> props,
+) {
+  return _screenWith((json) {
+    json['root'] = <String, dynamic>{
+      'type': 'primaryButton',
+      'props': <String, dynamic>{
+        'label': 'Run cache',
+        'action': <String, dynamic>{'type': type, 'props': props},
+      },
+      'children': <Object?>[],
+    };
+  });
 }
 
 Map<String, dynamic> _jsonMap(Map<String, Object?> json) {
@@ -3405,6 +3932,74 @@ MiniProgramAuthSession _session() {
     refreshToken: 'refresh-token',
     expiresAtUtc: _fixedNow().add(const Duration(hours: 1)),
   );
+}
+
+Future<Object?> _runMpAction(
+  WidgetTester tester,
+  Map<String, dynamic> actionJson, {
+  String miniProgramId = 'coupon',
+  MiniProgramCacheManager? cacheManager,
+  MiniProgramCachePolicy cachePolicy = const MiniProgramCachePolicy(),
+  MpStateManager? stateManager,
+}) async {
+  final backendStore = MiniProgramBackendStore();
+  late BuildContext actionContext;
+  await tester.pumpWidget(
+    MaterialApp(
+      home: MiniProgramSdkScope(
+        miniProgramId: miniProgramId,
+        hostBridge: _NoopHostBridge(),
+        capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
+          CapabilityIds.auth,
+        ]),
+        cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
+        cachePolicy: cachePolicy,
+        backendStore: backendStore,
+        stateManager: stateManager,
+        featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
+        logger: const DebugPrintSdkLogger(),
+        openMiniProgramScreen: (_, _) async => _ok('openMiniProgramScreen'),
+        resetMiniProgramStack: (_, _) async => _ok('resetMiniProgramStack'),
+        replaceMiniProgramScreen: (_, _) async =>
+            _ok('replaceMiniProgramScreen'),
+        popMiniProgramScreen: (_, _) async => _ok('popMiniProgramScreen'),
+        popToMiniProgramRoot: (_, _) async => _ok('popToMiniProgramRoot'),
+        popToMiniProgramScreen: (_, _) async => _ok('popToMiniProgramScreen'),
+        child: Builder(
+          builder: (context) {
+            actionContext = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  try {
+    return await tester.runAsync<Object?>(
+      () => const MpActionRunner().run(actionContext, actionJson),
+    );
+  } finally {
+    backendStore.dispose();
+  }
+}
+
+MiniProgramCacheManager _fileCacheManager(Directory directory) {
+  return MiniProgramCacheManager(
+    store: FileMiniProgramCacheStore(directory: directory),
+  );
+}
+
+class _TestClock {
+  _TestClock(this._now);
+
+  DateTime _now;
+
+  DateTime now() => _now;
+
+  void advance(Duration duration) {
+    _now = _now.add(duration);
+  }
 }
 
 Widget _scopedApp({
