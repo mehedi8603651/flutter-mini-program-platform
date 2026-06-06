@@ -170,6 +170,25 @@ void main() {
       expect(autoImage.props['src'], 'not base64!');
     });
 
+    test('skeleton helpers reject invalid configuration', () {
+      expect(() => Mp.skeleton.box(), returnsNormally);
+      expect(() => Mp.skeleton.box(width: 0), throwsArgumentError);
+      expect(() => Mp.skeleton.box(height: -1), throwsArgumentError);
+      expect(() => Mp.skeleton.box(radius: -1), throwsArgumentError);
+      expect(
+        () => Mp.skeleton.box(colorToken: 'bad-token'),
+        throwsArgumentError,
+      );
+      expect(() => Mp.skeleton.text(height: 0), throwsArgumentError);
+      expect(() => Mp.skeleton.text(radius: -1), throwsArgumentError);
+      expect(() => Mp.skeleton.circle(size: 0), throwsArgumentError);
+      expect(() => Mp.skeleton.card(height: 0), throwsArgumentError);
+      expect(() => Mp.skeleton.card(radius: -1), throwsArgumentError);
+      expect(() => Mp.skeleton.list(count: 0), throwsArgumentError);
+      expect(() => Mp.skeleton.list(itemHeight: 0), throwsArgumentError);
+      expect(() => Mp.skeleton.list(spacing: -1), throwsArgumentError);
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

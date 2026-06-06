@@ -509,6 +509,7 @@ class _MpNodeView extends StatelessWidget {
         height: (node.props['height'] as num?)?.toDouble(),
       ),
       'image' => _MpImage(node: node, bindings: bindings),
+      'skeleton' => _MpSkeleton(node: node, bindings: bindings),
       'card' => _MpCard(node: node, bindings: bindings),
       'theme' => _MpTheme(node: node, bindings: bindings),
       'padding' => Padding(
@@ -779,6 +780,94 @@ class _MpListView extends StatelessWidget {
       separatorBuilder: (context, index) => SizedBox(height: spacing),
       itemBuilder: (context, index) =>
           _MpNodeView(node: node.children[index], bindings: bindings),
+    );
+  }
+}
+
+class _MpSkeleton extends StatelessWidget {
+  const _MpSkeleton({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _mpSkeletonColor(
+      bindings.theme,
+      node.props['colorToken'] as String?,
+    );
+    return switch (_string(node, 'variant')) {
+      'circle' => _block(
+        width: _double(node, 'size', fallback: 40),
+        height: _double(node, 'size', fallback: 40),
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      'text' => _block(
+        width: _optionalDouble(node, 'width'),
+        height: _double(node, 'height', fallback: 14),
+        radius: _double(node, 'radius', fallback: 4),
+        color: color,
+      ),
+      'card' => _block(
+        width: _optionalDouble(node, 'width'),
+        height: _double(node, 'height', fallback: 160),
+        radius: _double(node, 'radius', fallback: 12),
+        color: color,
+      ),
+      'list' => _list(color),
+      _ => _block(
+        width: _optionalDouble(node, 'width'),
+        height: _optionalDouble(node, 'height'),
+        radius: _double(node, 'radius', fallback: 8),
+        color: color,
+      ),
+    };
+  }
+
+  Widget _list(Color color) {
+    final count = _int(node, 'count', fallback: 3);
+    final spacing = _double(node, 'spacing', fallback: 12);
+    final children = <Widget>[];
+    for (var index = 0; index < count; index += 1) {
+      if (index > 0 && spacing > 0) {
+        children.add(SizedBox(height: spacing));
+      }
+      children.add(
+        _block(
+          width: _optionalDouble(node, 'width'),
+          height: _double(node, 'itemHeight', fallback: 72),
+          radius: _double(node, 'radius', fallback: 8),
+          color: color,
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: children,
+    );
+  }
+
+  static Widget _block({
+    required Color color,
+    double? width,
+    double? height,
+    double radius = 0,
+    BoxShape shape = BoxShape.rectangle,
+  }) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color,
+          shape: shape,
+          borderRadius: shape == BoxShape.circle
+              ? null
+              : BorderRadius.circular(radius),
+        ),
+      ),
     );
   }
 }
@@ -1914,6 +2003,17 @@ Color _mpThemeColor(
     return fallback;
   }
   return _mpColor(tokenColor, fallback: fallback);
+}
+
+Color _mpSkeletonColor(_MpThemeData? theme, String? colorToken) {
+  const fallback = Color(0xFFE5E7EB);
+  if (colorToken != null) {
+    final explicitColor = theme?.colors[colorToken];
+    if (explicitColor != null) {
+      return _mpColor(explicitColor, fallback: fallback);
+    }
+  }
+  return _mpThemeToken(theme, 'skeleton', fallback: fallback);
 }
 
 TextStyle _mpThemeTextStyle(

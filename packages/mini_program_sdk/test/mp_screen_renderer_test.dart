@@ -449,6 +449,30 @@ void main() {
       );
     });
 
+    test('accepts author-generated skeleton JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.skeleton.box(),
+                Mp.skeleton.box(width: 120, height: 120),
+                Mp.skeleton.text(width: 200),
+                Mp.skeleton.circle(size: 48),
+                Mp.skeleton.card(width: 320),
+                Mp.skeleton.list(count: 5),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -563,6 +587,57 @@ void main() {
                 'children': <Object?>[],
               },
             },
+            'children': <Object?>[],
+          };
+        }),
+        'invalid skeleton variant': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'skeleton',
+            'props': <String, dynamic>{'variant': 'shimmer'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid skeleton width': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'skeleton',
+            'props': <String, dynamic>{'variant': 'box', 'width': 0},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid skeleton token': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'skeleton',
+            'props': <String, dynamic>{
+              'variant': 'box',
+              'colorToken': 'bad-token',
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'skeleton does not accept children': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'skeleton',
+            'props': <String, dynamic>{'variant': 'box'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Child'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'skeleton rejects incompatible props': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'skeleton',
+            'props': <String, dynamic>{'variant': 'circle', 'radius': 8},
+            'children': <Object?>[],
+          };
+        }),
+        'skeleton circle requires size': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'skeleton',
+            'props': <String, dynamic>{'variant': 'circle'},
             'children': <Object?>[],
           };
         }),
@@ -1615,6 +1690,104 @@ void main() {
       expect(find.text('Semantic fallback'), findsOneWidget);
       expect(find.text('Legacy alt fallback'), findsOneWidget);
       expect(find.text('Image unavailable'), findsOneWidget);
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders theme-aware skeleton components', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.theme(
+                  colors: const <String, String>{
+                    'placeholder': '#222222',
+                    'skeleton': '#111111',
+                  },
+                  child: Mp.column(
+                    children: <MpNode>[
+                      Mp.skeleton.box(
+                        width: 24,
+                        height: 24,
+                        colorToken: 'placeholder',
+                      ),
+                      Mp.skeleton.box(
+                        width: 26,
+                        height: 26,
+                        colorToken: 'missingToken',
+                      ),
+                      Mp.skeleton.text(width: 120),
+                      Mp.skeleton.circle(size: 32),
+                      Mp.skeleton.card(width: 160),
+                      Mp.skeleton.list(count: 2, width: 140, spacing: 3),
+                      Mp.image(
+                        src: 'https://example.com/a.png',
+                        placeholder: Mp.skeleton.box(
+                          width: 30,
+                          height: 30,
+                          colorToken: 'placeholder',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Mp.skeleton.box(width: 28, height: 28),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      final decorations = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .toList();
+      expect(
+        decorations.where(
+          (decoration) => decoration.color == const Color(0xFF222222),
+        ),
+        hasLength(greaterThanOrEqualTo(2)),
+      );
+      expect(
+        decorations.any(
+          (decoration) => decoration.color == const Color(0xFF111111),
+        ),
+        isTrue,
+      );
+      expect(
+        decorations.any(
+          (decoration) => decoration.color == const Color(0xFFE5E7EB),
+        ),
+        isTrue,
+      );
+      expect(
+        decorations.any(
+          (decoration) =>
+              decoration.shape == BoxShape.circle &&
+              decoration.color == const Color(0xFF111111),
+        ),
+        isTrue,
+      );
+      expect(tester.widgetList<ListView>(find.byType(ListView)), isEmpty);
+      expect(
+        tester
+            .widgetList<Column>(find.byType(Column))
+            .any(
+              (column) =>
+                  column.children.length == 3 &&
+                  column.children.whereType<SizedBox>().any(
+                    (box) => box.height == 3,
+                  ),
+            ),
+        isTrue,
+      );
 
       backendStore.dispose();
     });

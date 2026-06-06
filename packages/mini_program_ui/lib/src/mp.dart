@@ -2,6 +2,7 @@ import 'mp_action.dart';
 import 'mp_image.dart';
 import 'mp_json.dart';
 import 'mp_node.dart';
+import 'mp_skeleton.dart';
 import 'widgets/display_widgets.dart';
 import 'widgets/image_widgets.dart';
 import 'widgets/layout_widgets.dart';
@@ -28,6 +29,9 @@ abstract final class Mp {
 
   /// Generic action composition helpers.
   static const action = MpActionActions();
+
+  /// Static loading placeholder builders.
+  static const skeleton = MpSkeleton();
 
   /// Creates a vertical layout.
   static MpNode column({required List<MpNode> children}) =>

@@ -8,3 +8,4 @@ export 'src/mp_image.dart';
 export 'src/mp_node.dart';
 export 'src/mp_program.dart';
 export 'src/mp_schema.dart';
+export 'src/mp_skeleton.dart';

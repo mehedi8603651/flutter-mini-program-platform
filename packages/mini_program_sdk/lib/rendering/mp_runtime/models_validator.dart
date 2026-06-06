@@ -100,6 +100,13 @@ class MpScreenValidator {
     'fitHeight',
     'none',
   };
+  static const Set<String> _skeletonVariantNames = <String>{
+    'box',
+    'text',
+    'circle',
+    'card',
+    'list',
+  };
   static const Set<String> _textWeightNames = <String>{
     'regular',
     'medium',
@@ -268,6 +275,11 @@ class MpScreenValidator {
         path: path,
         depth: depth,
         state: state,
+      ),
+      'skeleton' => _parseSkeletonNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
       ),
       'card' => _parseCardNode(
         props: props,
@@ -680,6 +692,164 @@ class MpScreenValidator {
           state: state,
         ),
       },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseSkeletonNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    final variant = _requiredSkeletonVariant(props, 'variant', path: path);
+    final allowedProps = switch (variant) {
+      'box' => const <String>{
+        'colorToken',
+        'height',
+        'radius',
+        'variant',
+        'width',
+      },
+      'text' => const <String>{
+        'colorToken',
+        'height',
+        'radius',
+        'variant',
+        'width',
+      },
+      'circle' => const <String>{'colorToken', 'size', 'variant'},
+      'card' => const <String>{
+        'colorToken',
+        'height',
+        'radius',
+        'variant',
+        'width',
+      },
+      _ => const <String>{
+        'colorToken',
+        'count',
+        'itemHeight',
+        'radius',
+        'spacing',
+        'variant',
+        'width',
+      },
+    };
+    _validateObjectKeys(props, allowedProps, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final normalizedProps = <String, dynamic>{'variant': variant};
+    if (props.containsKey('colorToken')) {
+      normalizedProps['colorToken'] = _requiredThemeTokenNameValue(
+        props['colorToken'],
+        path: '$path.props.colorToken',
+      );
+    }
+    switch (variant) {
+      case 'box':
+        normalizedProps['radius'] =
+            _optionalNonNegativeNumberValue(
+              props['radius'],
+              path: '$path.props.radius',
+            ) ??
+            8;
+        if (props.containsKey('height')) {
+          normalizedProps['height'] = _requiredPositiveNumber(
+            props,
+            'height',
+            path: '$path.props',
+          );
+        }
+        if (props.containsKey('width')) {
+          normalizedProps['width'] = _requiredPositiveNumber(
+            props,
+            'width',
+            path: '$path.props',
+          );
+        }
+        break;
+      case 'text':
+        normalizedProps['height'] =
+            _optionalPositiveNumberValue(
+              props['height'],
+              path: '$path.props.height',
+            ) ??
+            14;
+        normalizedProps['radius'] =
+            _optionalNonNegativeNumberValue(
+              props['radius'],
+              path: '$path.props.radius',
+            ) ??
+            4;
+        if (props.containsKey('width')) {
+          normalizedProps['width'] = _requiredPositiveNumber(
+            props,
+            'width',
+            path: '$path.props',
+          );
+        }
+        break;
+      case 'circle':
+        normalizedProps['size'] = _requiredPositiveNumber(
+          props,
+          'size',
+          path: '$path.props',
+        );
+        break;
+      case 'card':
+        normalizedProps['height'] =
+            _optionalPositiveNumberValue(
+              props['height'],
+              path: '$path.props.height',
+            ) ??
+            160;
+        normalizedProps['radius'] =
+            _optionalNonNegativeNumberValue(
+              props['radius'],
+              path: '$path.props.radius',
+            ) ??
+            12;
+        if (props.containsKey('width')) {
+          normalizedProps['width'] = _requiredPositiveNumber(
+            props,
+            'width',
+            path: '$path.props',
+          );
+        }
+        break;
+      case 'list':
+        normalizedProps['count'] =
+            _optionalPositiveInt(props['count'], path: '$path.props.count') ??
+            3;
+        normalizedProps['itemHeight'] =
+            _optionalPositiveNumberValue(
+              props['itemHeight'],
+              path: '$path.props.itemHeight',
+            ) ??
+            72;
+        normalizedProps['radius'] =
+            _optionalNonNegativeNumberValue(
+              props['radius'],
+              path: '$path.props.radius',
+            ) ??
+            8;
+        normalizedProps['spacing'] =
+            _optionalNonNegativeNumberValue(
+              props['spacing'],
+              path: '$path.props.spacing',
+            ) ??
+            12;
+        if (props.containsKey('width')) {
+          normalizedProps['width'] = _requiredPositiveNumber(
+            props,
+            'width',
+            path: '$path.props',
+          );
+        }
+        break;
+    }
+    return _MpNode(
+      type: 'skeleton',
+      props: normalizedProps,
       children: const <_MpNode>[],
     );
   }
@@ -2752,6 +2922,22 @@ class MpScreenValidator {
     };
   }
 
+  static String _requiredSkeletonVariant(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = _requiredStableString(json, key, path: path);
+    if (!_skeletonVariantNames.contains(value)) {
+      _fail(
+        'Mp "$key" must be one of: ${_skeletonVariantNames.join(', ')}.',
+        path: '$path.$key',
+        details: <String, dynamic>{'variant': value},
+      );
+    }
+    return value;
+  }
+
   static Map<String, dynamic> _parsePositionedConstraints(
     Map<String, dynamic> props, {
     required String path,
@@ -3056,6 +3242,16 @@ class MpScreenValidator {
       );
     }
     return value;
+  }
+
+  static String _requiredThemeTokenNameValue(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! String) {
+      _fail('Mp theme token name must be a string.', path: path);
+    }
+    return _themeTokenName(value, path: path);
   }
 
   static String _themeHexColor(Object? value, {required String path}) {

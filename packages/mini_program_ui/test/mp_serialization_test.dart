@@ -341,6 +341,88 @@ void main() {
       });
     });
 
+    test('serializes skeleton nodes deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'skeleton_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.skeleton.box(),
+              Mp.skeleton.box(
+                width: 120,
+                height: 120,
+                radius: 10,
+                colorToken: 'skeletonAccent',
+              ),
+              Mp.skeleton.text(width: 220),
+              Mp.skeleton.circle(size: 48),
+              Mp.skeleton.card(width: 320),
+              Mp.skeleton.list(count: 5, width: 300),
+            ],
+          ),
+        },
+      ).buildScreensJson()['skeleton_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{'radius': 8.0, 'variant': 'box'},
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{
+              'colorToken': 'skeletonAccent',
+              'height': 120.0,
+              'radius': 10.0,
+              'variant': 'box',
+              'width': 120.0,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{
+              'height': 14.0,
+              'radius': 4.0,
+              'variant': 'text',
+              'width': 220.0,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{'size': 48.0, 'variant': 'circle'},
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{
+              'height': 160.0,
+              'radius': 12.0,
+              'variant': 'card',
+              'width': 320.0,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{
+              'count': 5,
+              'itemHeight': 72.0,
+              'radius': 8.0,
+              'spacing': 12.0,
+              'variant': 'list',
+              'width': 300.0,
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{
