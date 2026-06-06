@@ -87,6 +87,17 @@ abstract final class Mp {
   /// Creates flexible empty space inside Mp row or column.
   static MpNode spacer({int flex = 1}) => buildSpacerNode(flex: flex);
 
+  /// Expands [child] inside a bounded Mp row or column.
+  static MpNode expanded({required MpNode child, int flex = 1}) =>
+      buildExpandedNode(child: child, flex: flex);
+
+  /// Sizes [child] flexibly inside a bounded Mp row or column.
+  static MpNode flexible({
+    required MpNode child,
+    int flex = 1,
+    String fit = 'loose',
+  }) => buildFlexibleNode(child: child, flex: flex, fit: fit);
+
   /// Creates a styled container around [child].
   static MpNode container({
     required MpNode child,

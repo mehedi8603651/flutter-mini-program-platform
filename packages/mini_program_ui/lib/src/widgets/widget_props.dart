@@ -33,6 +33,8 @@ const Set<String> mpAlignmentNames = <String>{
   'bottomRight',
 };
 
+const Set<String> mpFlexFitNames = <String>{'loose', 'tight'};
+
 final RegExp _hexColorPattern = RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$');
 
 String requiredWidgetString(String value, String name) {
@@ -161,6 +163,18 @@ String widgetAlignment(String value) {
     );
   }
   return alignment;
+}
+
+String widgetFlexFit(String value) {
+  final fit = requiredWidgetString(value, 'fit');
+  if (!mpFlexFitNames.contains(fit)) {
+    throw ArgumentError.value(
+      value,
+      'fit',
+      'Flex fit must be one of: ${mpFlexFitNames.join(', ')}.',
+    );
+  }
+  return fit;
 }
 
 String widgetColor(String value, String name) {

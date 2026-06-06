@@ -304,6 +304,35 @@ void main() {
       );
     });
 
+    test('accepts author-generated flex sizing primitive JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.row(
+                  children: <MpNode>[
+                    Mp.expanded(flex: 2, child: Mp.text('Expanded')),
+                    Mp.flexible(
+                      flex: 3,
+                      fit: 'tight',
+                      child: Mp.text('Flexible'),
+                    ),
+                  ],
+                ),
+                Mp.flexible(child: Mp.text('Fallback')),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -695,6 +724,57 @@ void main() {
           json['root'] = <String, dynamic>{
             'type': 'positioned',
             'props': <String, dynamic>{'left': 1, 'right': 1, 'width': 10},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid expanded flex': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'expanded',
+            'props': <String, dynamic>{'flex': 0},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'expanded missing child': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'expanded',
+            'props': <String, dynamic>{'flex': 1},
+            'children': <Object?>[],
+          };
+        }),
+        'flexible extra children': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'flexible',
+            'props': <String, dynamic>{'fit': 'loose', 'flex': 1},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'One'},
+                'children': <Object?>[],
+              },
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Two'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid flexible fit': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'flexible',
+            'props': <String, dynamic>{'fit': 'fill', 'flex': 1},
             'children': <Object?>[
               <String, dynamic>{
                 'type': 'text',
@@ -1171,6 +1251,173 @@ void main() {
         backendStore.dispose();
       },
     );
+
+    testWidgets('renders flex sizing primitives in bounded row and column', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.row(
+                  children: <MpNode>[
+                    Mp.expanded(flex: 2, child: Mp.text('Row expanded')),
+                    Mp.flexible(
+                      flex: 3,
+                      fit: 'tight',
+                      child: Mp.text('Row flexible'),
+                    ),
+                  ],
+                ),
+                Mp.container(
+                  height: 200,
+                  child: Mp.column(
+                    children: <MpNode>[
+                      Mp.expanded(flex: 4, child: Mp.text('Column expanded')),
+                      Mp.flexible(child: Mp.text('Column flexible')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Row expanded'), findsOneWidget);
+      expect(find.text('Row flexible'), findsOneWidget);
+      expect(find.text('Column expanded'), findsOneWidget);
+      expect(find.text('Column flexible'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Expanded && widget.flex == 2,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Flexible && widget.flex == 3,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Expanded && widget.flex == 4,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Flexible &&
+              widget.fit == FlexFit.loose &&
+              widget.flex == 1,
+        ),
+        findsAtLeastNWidgets(1),
+      );
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders unbounded column flex nodes as safe fallback', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.scrollView(
+              child: Mp.column(
+                children: <MpNode>[
+                  Mp.expanded(flex: 5, child: Mp.text('Unbounded expanded')),
+                  Mp.flexible(
+                    flex: 6,
+                    fit: 'tight',
+                    child: Mp.text('Unbounded flexible'),
+                  ),
+                ],
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Unbounded expanded'), findsOneWidget);
+      expect(find.text('Unbounded flexible'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Expanded && widget.flex == 5,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Flexible && widget.flex == 6,
+        ),
+        findsNothing,
+      );
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders standalone and nested flex nodes as normal fallback', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.expanded(flex: 7, child: Mp.text('Standalone expanded')),
+                Mp.row(
+                  children: <MpNode>[
+                    Mp.container(
+                      child: Mp.flexible(
+                        flex: 8,
+                        fit: 'tight',
+                        child: Mp.text('Nested flexible'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Standalone expanded'), findsOneWidget);
+      expect(find.text('Nested flexible'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Expanded && widget.flex == 7,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Flexible && widget.flex == 8,
+        ),
+        findsNothing,
+      );
+
+      backendStore.dispose();
+    });
 
     testWidgets('renders standalone spacer as safe zero-size fallback', (
       tester,

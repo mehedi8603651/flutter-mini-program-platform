@@ -783,6 +783,74 @@ void main() {
       });
     });
 
+    test('serializes flex sizing primitives deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'flex_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.row(
+                children: <MpNode>[
+                  Mp.expanded(flex: 2, child: Mp.text('Expanded')),
+                  Mp.flexible(
+                    flex: 3,
+                    fit: 'tight',
+                    child: Mp.text('Flexible'),
+                  ),
+                ],
+              ),
+              Mp.flexible(child: Mp.text('Default flexible')),
+            ],
+          ),
+        },
+      ).buildScreensJson()['flex_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'row',
+            'props': <String, Object?>{},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'expanded',
+                'props': <String, Object?>{'flex': 2},
+                'children': <Object?>[
+                  <String, Object?>{
+                    'type': 'text',
+                    'props': <String, Object?>{'data': 'Expanded'},
+                    'children': <Object?>[],
+                  },
+                ],
+              },
+              <String, Object?>{
+                'type': 'flexible',
+                'props': <String, Object?>{'fit': 'tight', 'flex': 3},
+                'children': <Object?>[
+                  <String, Object?>{
+                    'type': 'text',
+                    'props': <String, Object?>{'data': 'Flexible'},
+                    'children': <Object?>[],
+                  },
+                ],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'flexible',
+            'props': <String, Object?>{'fit': 'loose', 'flex': 1},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Default flexible'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+        ],
+      });
+    });
+
     test('serializes form nodes and feedback actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

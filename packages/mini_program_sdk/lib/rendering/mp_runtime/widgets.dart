@@ -440,23 +440,8 @@ class _MpNodeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (node.type) {
-      'column' => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: _mpFlexChildren(
-          node.children,
-          bindings: bindings,
-          isRow: false,
-        ),
-      ),
-      'row' => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _mpFlexChildren(
-          node.children,
-          bindings: bindings,
-          isRow: true,
-        ),
-      ),
+      'column' => _MpColumn(node: node, bindings: bindings),
+      'row' => _MpRow(node: node, bindings: bindings),
       'text' => Text(
         bindings.resolveString(node.props['data'] as String),
         style: const TextStyle(
@@ -502,6 +487,8 @@ class _MpNodeView extends StatelessWidget {
         child: _MpNodeView(node: node.children.single, bindings: bindings),
       ),
       'spacer' => const SizedBox.shrink(),
+      'expanded' => _MpNodeView(node: node.children.single, bindings: bindings),
+      'flexible' => _MpNodeView(node: node.children.single, bindings: bindings),
       'container' => _MpContainer(node: node, bindings: bindings),
       'scrollView' => _MpScrollView(node: node, bindings: bindings),
       'listView' => _MpListView(node: node, bindings: bindings),
@@ -567,6 +554,51 @@ class _MpNodeView extends StatelessWidget {
         details: <String, dynamic>{'nodeType': node.type},
       ),
     };
+  }
+}
+
+class _MpColumn extends StatelessWidget {
+  const _MpColumn({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: _mpFlexChildren(
+          node.children,
+          bindings: bindings,
+          isRow: false,
+          hasBoundedMainAxis: constraints.hasBoundedHeight,
+        ),
+      ),
+    );
+  }
+}
+
+class _MpRow extends StatelessWidget {
+  const _MpRow({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _mpFlexChildren(
+          node.children,
+          bindings: bindings,
+          isRow: true,
+          hasBoundedMainAxis: constraints.hasBoundedWidth,
+        ),
+      ),
+    );
   }
 }
 
@@ -1446,16 +1478,42 @@ List<Widget> _mpFlexChildren(
   List<_MpNode> children, {
   required _MpRenderBindings bindings,
   required bool isRow,
+  required bool hasBoundedMainAxis,
 }) {
   return children
       .map((child) {
         if (child.type == 'spacer') {
           return Spacer(flex: _int(child, 'flex', fallback: 1));
         }
+        if (child.type == 'expanded' || child.type == 'flexible') {
+          final view = _MpNodeView(
+            node: child.children.single,
+            bindings: bindings,
+          );
+          if (!hasBoundedMainAxis) {
+            return view;
+          }
+          final flex = _int(child, 'flex', fallback: 1);
+          if (child.type == 'expanded') {
+            return Expanded(flex: flex, child: view);
+          }
+          return Flexible(
+            flex: flex,
+            fit: _mpFlexFit(_string(child, 'fit')),
+            child: view,
+          );
+        }
         final view = _MpNodeView(node: child, bindings: bindings);
         return isRow ? Flexible(child: view) : view;
       })
       .toList(growable: false);
+}
+
+FlexFit _mpFlexFit(String value) {
+  return switch (value) {
+    'tight' => FlexFit.tight,
+    _ => FlexFit.loose,
+  };
 }
 
 Alignment _mpAlignment(String value) {

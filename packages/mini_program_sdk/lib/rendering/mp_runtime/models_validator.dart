@@ -83,6 +83,7 @@ class MpScreenValidator {
     'bottomCenter',
     'bottomRight',
   };
+  static const Set<String> _flexFitNames = <String>{'loose', 'tight'};
 
   /// Validates an Mp screen document without rendering it.
   void validate(Map<String, dynamic> json, {required String expectedScreenId}) {
@@ -250,6 +251,16 @@ class MpScreenValidator {
         path: path,
       ),
       'spacer' => _parseSpacerNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'expanded' => _parseExpandedNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'flexible' => _parseFlexibleNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -578,6 +589,44 @@ class MpScreenValidator {
             _optionalPositiveInt(props['flex'], path: '$path.props.flex') ?? 1,
       },
       children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseExpandedNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{'flex'}, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'expanded', path: path);
+    return _MpNode(
+      type: 'expanded',
+      props: <String, dynamic>{
+        'flex':
+            _optionalPositiveInt(props['flex'], path: '$path.props.flex') ?? 1,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseFlexibleNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'flex',
+      'fit',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'flexible', path: path);
+    return _MpNode(
+      type: 'flexible',
+      props: <String, dynamic>{
+        'fit': _optionalFlexFit(props, 'fit', path: '$path.props') ?? 'loose',
+        'flex':
+            _optionalPositiveInt(props['flex'], path: '$path.props.flex') ?? 1,
+      },
+      children: children,
     );
   }
 
@@ -2534,6 +2583,25 @@ class MpScreenValidator {
         'Mp "$key" is not an allowed alignment.',
         path: '$path.$key',
         details: <String, dynamic>{'alignment': value},
+      );
+    }
+    return value;
+  }
+
+  static String? _optionalFlexFit(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!_flexFitNames.contains(value)) {
+      _fail(
+        'Mp "$key" must be one of: ${_flexFitNames.join(', ')}.',
+        path: '$path.$key',
+        details: <String, dynamic>{'fit': value},
       );
     }
     return value;

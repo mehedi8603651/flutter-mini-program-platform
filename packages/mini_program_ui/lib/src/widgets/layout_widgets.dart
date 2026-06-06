@@ -48,6 +48,29 @@ MpNode buildSpacerNode({int flex = 1}) {
   );
 }
 
+MpNode buildExpandedNode({required MpNode child, int flex = 1}) {
+  return MpNode(
+    'expanded',
+    props: <String, Object?>{'flex': positiveWidgetInt(flex, 'flex')},
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildFlexibleNode({
+  required MpNode child,
+  int flex = 1,
+  String fit = 'loose',
+}) {
+  return MpNode(
+    'flexible',
+    props: <String, Object?>{
+      'fit': widgetFlexFit(fit),
+      'flex': positiveWidgetInt(flex, 'flex'),
+    },
+    children: <MpNode>[child],
+  );
+}
+
 MpNode buildContainerNode({
   required MpNode child,
   num? width,

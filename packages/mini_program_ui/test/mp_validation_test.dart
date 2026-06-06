@@ -167,6 +167,26 @@ void main() {
       );
     });
 
+    test('flex sizing primitives reject invalid configuration', () {
+      expect(
+        () => Mp.expanded(flex: 0, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.flexible(flex: -1, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.flexible(fit: 'fill', child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+
+      final expanded = Mp.expanded(child: Mp.text('Hi'));
+      final flexible = Mp.flexible(child: Mp.text('Hi'));
+      expect(expanded.props, <String, Object?>{'flex': 1});
+      expect(flexible.props, <String, Object?>{'fit': 'loose', 'flex': 1});
+    });
+
     test('runtime parity helpers reject invalid required fields', () {
       expect(
         () => Mp.backendBuilder(requestId: '', endpoint: 'home/bootstrap'),
