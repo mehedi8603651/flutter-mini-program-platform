@@ -113,6 +113,26 @@ void main() {
       );
     });
 
+    test('safe layout primitives reject invalid configuration', () {
+      expect(
+        () => Mp.align(alignment: 'middle', child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(() => Mp.spacer(flex: 0), throwsArgumentError);
+      expect(
+        () => Mp.listView(children: const <MpNode>[]),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.listView(children: <MpNode>[Mp.text('Hi')], spacing: -1),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.listView(children: <MpNode>[Mp.text('Hi')], paddingLeft: -1),
+        throwsArgumentError,
+      );
+    });
+
     test('runtime parity helpers reject invalid required fields', () {
       expect(
         () => Mp.backendBuilder(requestId: '', endpoint: 'home/bootstrap'),

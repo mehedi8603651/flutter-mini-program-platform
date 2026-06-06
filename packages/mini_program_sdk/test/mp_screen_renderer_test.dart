@@ -233,6 +233,39 @@ void main() {
       );
     });
 
+    test('accepts author-generated safe layout primitive JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.align(alignment: 'bottomRight', child: Mp.text('Aligned')),
+                Mp.center(child: Mp.text('Centered')),
+                Mp.row(
+                  children: <MpNode>[
+                    Mp.text('Left'),
+                    Mp.spacer(flex: 2),
+                    Mp.text('Right'),
+                  ],
+                ),
+                Mp.listView(
+                  spacing: 6,
+                  paddingVertical: 4,
+                  children: <MpNode>[Mp.text('One'), Mp.text('Two')],
+                ),
+                Mp.safeArea(left: false, bottom: false, child: Mp.text('Safe')),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -449,6 +482,61 @@ void main() {
               <String, dynamic>{
                 'type': 'text',
                 'props': <String, dynamic>{'data': 'Body'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid align value': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'align',
+            'props': <String, dynamic>{'alignment': 'middle'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid spacer flex': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'spacer',
+            'props': <String, dynamic>{'flex': 0},
+            'children': <Object?>[],
+          };
+        }),
+        'empty listView': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'listView',
+            'props': <String, dynamic>{},
+            'children': <Object?>[],
+          };
+        }),
+        'negative listView padding': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'listView',
+            'props': <String, dynamic>{
+              'padding': <String, dynamic>{'top': -1},
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid safeArea flag': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'safeArea',
+            'props': <String, dynamic>{'left': 'yes'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
                 'children': <Object?>[],
               },
             ],
@@ -703,6 +791,103 @@ void main() {
       expect(find.text('Retry: true More: true'), findsOneWidget);
 
       stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('renders safe layout primitives without nested scrolling', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.align(alignment: 'bottomRight', child: Mp.text('Aligned')),
+                Mp.center(child: Mp.text('Centered')),
+                Mp.row(
+                  children: <MpNode>[
+                    Mp.text('Left'),
+                    Mp.spacer(flex: 2),
+                    Mp.text('Right'),
+                  ],
+                ),
+                Mp.container(
+                  height: 80,
+                  child: Mp.column(
+                    children: <MpNode>[
+                      Mp.text('Top'),
+                      Mp.spacer(),
+                      Mp.text('Bottom'),
+                    ],
+                  ),
+                ),
+                Mp.listView(
+                  spacing: 5,
+                  paddingVertical: 3,
+                  children: <MpNode>[Mp.text('List one'), Mp.text('List two')],
+                ),
+                Mp.safeArea(
+                  left: false,
+                  bottom: false,
+                  child: Mp.text('Safe child'),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Aligned'), findsOneWidget);
+      expect(find.text('Centered'), findsOneWidget);
+      expect(find.text('Left'), findsOneWidget);
+      expect(find.text('Right'), findsOneWidget);
+      expect(find.text('Top'), findsOneWidget);
+      expect(find.text('Bottom'), findsOneWidget);
+      expect(find.text('List one'), findsOneWidget);
+      expect(find.text('List two'), findsOneWidget);
+      expect(find.text('Safe child'), findsOneWidget);
+      expect(find.byType(Center), findsWidgets);
+      expect(find.byType(Spacer), findsNWidgets(2));
+      expect(find.byType(SafeArea), findsAtLeastNWidgets(2));
+
+      final listView = tester.widget<ListView>(find.byType(ListView).last);
+      expect(listView.shrinkWrap, isTrue);
+      expect(listView.primary, isFalse);
+      expect(listView.physics, isA<NeverScrollableScrollPhysics>());
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders standalone spacer as safe zero-size fallback', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.spacer(flex: 3),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.byType(Spacer), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SizedBox && widget.width == 0 && widget.height == 0,
+        ),
+        findsWidgets,
+      );
+
       backendStore.dispose();
     });
 

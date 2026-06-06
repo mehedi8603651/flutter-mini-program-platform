@@ -29,6 +29,25 @@ MpNode buildPaddingNode({
   );
 }
 
+MpNode buildAlignNode({required MpNode child, String alignment = 'center'}) {
+  return MpNode(
+    'align',
+    props: <String, Object?>{'alignment': widgetAlignment(alignment)},
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildCenterNode({required MpNode child}) {
+  return MpNode('center', children: <MpNode>[child]);
+}
+
+MpNode buildSpacerNode({int flex = 1}) {
+  return MpNode(
+    'spacer',
+    props: <String, Object?>{'flex': positiveWidgetInt(flex, 'flex')},
+  );
+}
+
 MpNode buildContainerNode({
   required MpNode child,
   num? width,
@@ -95,6 +114,55 @@ MpNode buildScrollViewNode({
   return MpNode(
     'scrollView',
     props: <String, Object?>{if (padding.isNotEmpty) 'padding': padding},
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildListViewNode({
+  required List<MpNode> children,
+  num spacing = 0,
+  num? paddingAll,
+  num? paddingHorizontal,
+  num? paddingVertical,
+  num? paddingLeft,
+  num? paddingTop,
+  num? paddingRight,
+  num? paddingBottom,
+}) {
+  final padding = widgetSpacing(
+    all: paddingAll,
+    horizontal: paddingHorizontal,
+    vertical: paddingVertical,
+    left: paddingLeft,
+    top: paddingTop,
+    right: paddingRight,
+    bottom: paddingBottom,
+  );
+  return MpNode(
+    'listView',
+    props: <String, Object?>{
+      if (padding.isNotEmpty) 'padding': padding,
+      'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
+    },
+    children: requiredWidgetList(children, 'children'),
+  );
+}
+
+MpNode buildSafeAreaNode({
+  required MpNode child,
+  bool left = true,
+  bool top = true,
+  bool right = true,
+  bool bottom = true,
+}) {
+  return MpNode(
+    'safeArea',
+    props: <String, Object?>{
+      'bottom': bottom,
+      'left': left,
+      'right': right,
+      'top': top,
+    },
     children: <MpNode>[child],
   );
 }

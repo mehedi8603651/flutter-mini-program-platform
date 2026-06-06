@@ -72,6 +72,17 @@ class MpScreenValidator {
     'home',
     'search',
   };
+  static const Set<String> _alignmentNames = <String>{
+    'topLeft',
+    'topCenter',
+    'topRight',
+    'centerLeft',
+    'center',
+    'centerRight',
+    'bottomLeft',
+    'bottomCenter',
+    'bottomRight',
+  };
 
   /// Validates an Mp screen document without rendering it.
   void validate(Map<String, dynamic> json, {required String expectedScreenId}) {
@@ -228,12 +239,37 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'align' => _parseAlignNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'center' => _parseCenterNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'spacer' => _parseSpacerNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'container' => _parseContainerNode(
         props: props,
         children: parsedChildren,
         path: path,
       ),
       'scrollView' => _parseScrollViewNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'listView' => _parseListViewNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'safeArea' => _parseSafeAreaNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -469,6 +505,57 @@ class MpScreenValidator {
     );
   }
 
+  _MpNode _parseAlignNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'alignment',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'align', path: path);
+    return _MpNode(
+      type: 'align',
+      props: <String, dynamic>{
+        'alignment':
+            _optionalAlignment(props, 'alignment', path: '$path.props') ??
+            'center',
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseCenterNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateNoProps(props, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'center', path: path);
+    return _MpNode(
+      type: 'center',
+      props: const <String, dynamic>{},
+      children: children,
+    );
+  }
+
+  _MpNode _parseSpacerNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{'flex'}, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'spacer',
+      props: <String, dynamic>{
+        'flex':
+            _optionalPositiveInt(props['flex'], path: '$path.props.flex') ?? 1,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
   _MpNode _parseContainerNode({
     required Map<String, dynamic> props,
     required List<_MpNode> children,
@@ -538,6 +625,61 @@ class MpScreenValidator {
             props['padding'],
             path: '$path.props.padding',
           ),
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseListViewNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'spacing',
+      'padding',
+    }, path: '$path.props');
+    _validateNonEmptyChildren(children, nodeType: 'listView', path: path);
+    return _MpNode(
+      type: 'listView',
+      props: <String, dynamic>{
+        if (props.containsKey('padding'))
+          'padding': _parseSpacing(
+            props['padding'],
+            path: '$path.props.padding',
+          ),
+        'spacing':
+            _optionalNonNegativeNumberValue(
+              props['spacing'],
+              path: '$path.props.spacing',
+            ) ??
+            0,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseSafeAreaNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'left',
+      'top',
+      'right',
+      'bottom',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'safeArea', path: path);
+    return _MpNode(
+      type: 'safeArea',
+      props: <String, dynamic>{
+        'bottom':
+            _optionalBool(props['bottom'], path: '$path.props.bottom') ?? true,
+        'left': _optionalBool(props['left'], path: '$path.props.left') ?? true,
+        'right':
+            _optionalBool(props['right'], path: '$path.props.right') ?? true,
+        'top': _optionalBool(props['top'], path: '$path.props.top') ?? true,
       },
       children: children,
     );
@@ -2169,6 +2311,25 @@ class MpScreenValidator {
         'Mp "$key" must be one of: ${_toneNames.join(', ')}.',
         path: '$path.$key',
         details: <String, dynamic>{'tone': value},
+      );
+    }
+    return value;
+  }
+
+  static String? _optionalAlignment(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!_alignmentNames.contains(value)) {
+      _fail(
+        'Mp "$key" is not an allowed alignment.',
+        path: '$path.$key',
+        details: <String, dynamic>{'alignment': value},
       );
     }
     return value;

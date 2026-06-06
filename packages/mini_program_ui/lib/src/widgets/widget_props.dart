@@ -21,6 +21,18 @@ const Set<String> mpIconNames = <String>{
   'search',
 };
 
+const Set<String> mpAlignmentNames = <String>{
+  'topLeft',
+  'topCenter',
+  'topRight',
+  'centerLeft',
+  'center',
+  'centerRight',
+  'bottomLeft',
+  'bottomCenter',
+  'bottomRight',
+};
+
 final RegExp _hexColorPattern = RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$');
 
 String requiredWidgetString(String value, String name) {
@@ -49,6 +61,13 @@ num positiveWidgetNumber(num value, String name) {
       name,
       'Value must be finite and positive.',
     );
+  }
+  return value;
+}
+
+int positiveWidgetInt(int value, String name) {
+  if (value <= 0) {
+    throw ArgumentError.value(value, name, 'Value must be positive.');
   }
   return value;
 }
@@ -85,6 +104,18 @@ String? pairedActionLabel({
     );
   }
   return requiredWidgetString(actionLabel, 'actionLabel');
+}
+
+String widgetAlignment(String value) {
+  final alignment = requiredWidgetString(value, 'alignment');
+  if (!mpAlignmentNames.contains(alignment)) {
+    throw ArgumentError.value(
+      value,
+      'alignment',
+      'Alignment must be one of: ${mpAlignmentNames.join(', ')}.',
+    );
+  }
+  return alignment;
 }
 
 String widgetColor(String value, String name) {

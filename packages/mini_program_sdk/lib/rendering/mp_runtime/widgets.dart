@@ -436,19 +436,19 @@ class _MpNodeView extends StatelessWidget {
       'column' => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
-        children: node.children
-            .map((child) => _MpNodeView(node: child, bindings: bindings))
-            .toList(growable: false),
+        children: _mpFlexChildren(
+          node.children,
+          bindings: bindings,
+          isRow: false,
+        ),
       ),
       'row' => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: node.children
-            .map(
-              (child) => Flexible(
-                child: _MpNodeView(node: child, bindings: bindings),
-              ),
-            )
-            .toList(growable: false),
+        children: _mpFlexChildren(
+          node.children,
+          bindings: bindings,
+          isRow: true,
+        ),
       ),
       'text' => Text(
         bindings.resolveString(node.props['data'] as String),
@@ -487,8 +487,24 @@ class _MpNodeView extends StatelessWidget {
         padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
         child: _MpNodeView(node: node.children.single, bindings: bindings),
       ),
+      'align' => Align(
+        alignment: _mpAlignment(_string(node, 'alignment')),
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
+      'center' => Center(
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
+      'spacer' => const SizedBox.shrink(),
       'container' => _MpContainer(node: node, bindings: bindings),
       'scrollView' => _MpScrollView(node: node, bindings: bindings),
+      'listView' => _MpListView(node: node, bindings: bindings),
+      'safeArea' => SafeArea(
+        left: _bool(node, 'left'),
+        top: _bool(node, 'top'),
+        right: _bool(node, 'right'),
+        bottom: _bool(node, 'bottom'),
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
       'divider' => _MpDivider(node: node),
       'icon' => _MpIcon(node: node, bindings: bindings),
       'listTile' => _MpListTile(node: node, bindings: bindings),
@@ -577,6 +593,28 @@ class _MpScrollView extends StatelessWidget {
           child: _MpNodeView(node: node.children.single, bindings: bindings),
         ),
       ),
+    );
+  }
+}
+
+class _MpListView extends StatelessWidget {
+  const _MpListView({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = _double(node, 'spacing', fallback: 0);
+    return ListView.separated(
+      shrinkWrap: true,
+      primary: false,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
+      itemCount: node.children.length,
+      separatorBuilder: (context, index) => SizedBox(height: spacing),
+      itemBuilder: (context, index) =>
+          _MpNodeView(node: node.children[index], bindings: bindings),
     );
   }
 }
@@ -1316,6 +1354,36 @@ BoxDecoration? _containerDecoration(_MpNode node) {
           ),
     borderRadius: BorderRadius.circular(borderRadius ?? 0),
   );
+}
+
+List<Widget> _mpFlexChildren(
+  List<_MpNode> children, {
+  required _MpRenderBindings bindings,
+  required bool isRow,
+}) {
+  return children
+      .map((child) {
+        if (child.type == 'spacer') {
+          return Spacer(flex: _int(child, 'flex', fallback: 1));
+        }
+        final view = _MpNodeView(node: child, bindings: bindings);
+        return isRow ? Flexible(child: view) : view;
+      })
+      .toList(growable: false);
+}
+
+Alignment _mpAlignment(String value) {
+  return switch (value) {
+    'topLeft' => Alignment.topLeft,
+    'topCenter' => Alignment.topCenter,
+    'topRight' => Alignment.topRight,
+    'centerLeft' => Alignment.centerLeft,
+    'centerRight' => Alignment.centerRight,
+    'bottomLeft' => Alignment.bottomLeft,
+    'bottomCenter' => Alignment.bottomCenter,
+    'bottomRight' => Alignment.bottomRight,
+    _ => Alignment.center,
+  };
 }
 
 EdgeInsets _mpInsets(Map<String, dynamic>? padding) {

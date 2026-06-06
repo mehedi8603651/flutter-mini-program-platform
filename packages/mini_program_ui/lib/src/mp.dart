@@ -76,6 +76,17 @@ abstract final class Mp {
     bottom: bottom,
   );
 
+  /// Aligns [child] within the available space.
+  static MpNode align({required MpNode child, String alignment = 'center'}) =>
+      buildAlignNode(child: child, alignment: alignment);
+
+  /// Centers [child] within the available space.
+  static MpNode center({required MpNode child}) =>
+      buildCenterNode(child: child);
+
+  /// Creates flexible empty space inside Mp row or column.
+  static MpNode spacer({int flex = 1}) => buildSpacerNode(flex: flex);
+
   /// Creates a styled container around [child].
   static MpNode container({
     required MpNode child,
@@ -128,6 +139,44 @@ abstract final class Mp {
     paddingTop: paddingTop,
     paddingRight: paddingRight,
     paddingBottom: paddingBottom,
+  );
+
+  /// Creates a small or medium section-level list.
+  static MpNode listView({
+    required List<MpNode> children,
+    num spacing = 0,
+    num? paddingAll,
+    num? paddingHorizontal,
+    num? paddingVertical,
+    num? paddingLeft,
+    num? paddingTop,
+    num? paddingRight,
+    num? paddingBottom,
+  }) => buildListViewNode(
+    children: children,
+    spacing: spacing,
+    paddingAll: paddingAll,
+    paddingHorizontal: paddingHorizontal,
+    paddingVertical: paddingVertical,
+    paddingLeft: paddingLeft,
+    paddingTop: paddingTop,
+    paddingRight: paddingRight,
+    paddingBottom: paddingBottom,
+  );
+
+  /// Insets [child] away from unsafe display areas.
+  static MpNode safeArea({
+    required MpNode child,
+    bool left = true,
+    bool top = true,
+    bool right = true,
+    bool bottom = true,
+  }) => buildSafeAreaNode(
+    child: child,
+    left: left,
+    top: top,
+    right: right,
+    bottom: bottom,
   );
 
   /// Creates a horizontal divider.

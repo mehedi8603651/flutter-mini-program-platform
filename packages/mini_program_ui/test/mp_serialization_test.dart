@@ -541,6 +541,123 @@ void main() {
       });
     });
 
+    test('serializes safe layout primitives deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'layout_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.align(alignment: 'topRight', child: Mp.text('Aligned')),
+              Mp.center(child: Mp.text('Centered')),
+              Mp.row(
+                children: <MpNode>[
+                  Mp.text('Left'),
+                  Mp.spacer(flex: 2),
+                  Mp.text('Right'),
+                ],
+              ),
+              Mp.listView(
+                spacing: 6,
+                paddingHorizontal: 4,
+                paddingVertical: 2,
+                children: <MpNode>[Mp.text('One'), Mp.text('Two')],
+              ),
+              Mp.safeArea(left: false, bottom: false, child: Mp.text('Safe')),
+            ],
+          ),
+        },
+      ).buildScreensJson()['layout_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'align',
+            'props': <String, Object?>{'alignment': 'topRight'},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Aligned'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'center',
+            'props': <String, Object?>{},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Centered'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'row',
+            'props': <String, Object?>{},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Left'},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'spacer',
+                'props': <String, Object?>{'flex': 2},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Right'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'listView',
+            'props': <String, Object?>{
+              'padding': <String, Object?>{
+                'bottom': 2,
+                'left': 4,
+                'right': 4,
+                'top': 2,
+              },
+              'spacing': 6,
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'One'},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Two'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'safeArea',
+            'props': <String, Object?>{
+              'bottom': false,
+              'left': false,
+              'right': true,
+              'top': true,
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Safe'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+        ],
+      });
+    });
+
     test('serializes form nodes and feedback actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{
