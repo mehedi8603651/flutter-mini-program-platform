@@ -409,6 +409,46 @@ void main() {
       );
     });
 
+    test('accepts author-generated async image JSON', () {
+      const base64Image =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.image(
+                  src: 'https://example.com/a.png',
+                  headers: const <String, String>{'x-image': 'product'},
+                  semanticLabel: 'Product image',
+                  width: 120,
+                  height: 120,
+                ),
+                Mp.image(
+                  src: 'assets/logo.png',
+                  source: MpImageSource.asset,
+                  fit: MpImageFit.contain,
+                  alt: 'Logo asset',
+                ),
+                Mp.image(
+                  src: base64Image,
+                  source: MpImageSource.base64,
+                  placeholder: Mp.text('Loading image...'),
+                  error: Mp.text('Image failed'),
+                  fadeInDuration: const Duration(milliseconds: 80),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -435,10 +475,94 @@ void main() {
                   as Map<String, dynamic>)['type'] =
               'host.run';
         }),
-        'unsafe image url': _screenWith((json) {
+        'invalid network image scheme': _screenWith((json) {
           json['root'] = <String, dynamic>{
             'type': 'image',
-            'props': <String, dynamic>{'src': 'http://example.com/a.png'},
+            'props': <String, dynamic>{
+              'src': 'ftp://example.com/a.png',
+              'source': 'network',
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'invalid image source': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{
+              'src': 'assets/logo.png',
+              'source': 'file',
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'invalid image fit': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{'src': 'assets/logo.png', 'fit': 'crop'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid image width': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{'src': 'assets/logo.png', 'width': 0},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid image headers': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{
+              'src': 'assets/logo.png',
+              'headers': 'bad',
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'invalid image header value': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{
+              'src': 'assets/logo.png',
+              'headers': <String, dynamic>{'x-test': ''},
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'invalid base64 image': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{
+              'src': 'not base64!',
+              'source': 'base64',
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'image does not accept children': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{'src': 'assets/logo.png'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Child'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'malformed image placeholder': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'image',
+            'props': <String, dynamic>{
+              'src': 'assets/logo.png',
+              'placeholder': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': ''},
+                'children': <Object?>[],
+              },
+            },
             'children': <Object?>[],
           };
         }),
@@ -1383,6 +1507,114 @@ void main() {
       expect(nestedTitle.style?.fontSize, 25);
       expect(nestedTitle.style?.fontWeight, FontWeight.w500);
       expect(nestedTitle.style?.color, const Color(0xFF222222));
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders async image sources and placeholders', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+      const base64Image =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.image(
+                  src: 'https://example.com/a.png',
+                  headers: const <String, String>{'x-image': 'product'},
+                  semanticLabel: 'Network image',
+                  width: 120,
+                  height: 80,
+                  fit: MpImageFit.fitHeight,
+                  placeholder: Mp.text('Loading network image'),
+                ),
+                Mp.image(
+                  src: 'assets/logo.png',
+                  fit: MpImageFit.contain,
+                  semanticLabel: 'Asset image',
+                ),
+                Mp.image(
+                  src: base64Image,
+                  fit: MpImageFit.none,
+                  semanticLabel: 'Base64 image',
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Loading network image'), findsOneWidget);
+
+      final images = tester.widgetList<Image>(find.byType(Image)).toList();
+      final network = images.firstWhere((image) => image.image is NetworkImage);
+      final networkProvider = network.image as NetworkImage;
+      expect(networkProvider.url, 'https://example.com/a.png');
+      expect(networkProvider.headers, <String, String>{'x-image': 'product'});
+      expect(network.fit, BoxFit.fitHeight);
+      expect(network.semanticLabel, 'Network image');
+
+      final asset = images.firstWhere((image) => image.image is AssetImage);
+      final assetProvider = asset.image as AssetImage;
+      expect(assetProvider.assetName, 'assets/logo.png');
+      expect(asset.fit, BoxFit.contain);
+      expect(asset.semanticLabel, 'Asset image');
+
+      final memory = images.firstWhere((image) => image.image is MemoryImage);
+      expect(memory.fit, BoxFit.none);
+      expect(memory.semanticLabel, 'Base64 image');
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders async image error fallbacks in priority order', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.image(
+                  src: 'assets/missing-error.png',
+                  source: MpImageSource.asset,
+                  error: Mp.text('Image failed'),
+                ),
+                Mp.image(
+                  src: 'assets/missing-semantic.png',
+                  source: MpImageSource.asset,
+                  semanticLabel: 'Semantic fallback',
+                ),
+                Mp.image(
+                  src: 'assets/missing-alt.png',
+                  source: MpImageSource.asset,
+                  alt: 'Legacy alt fallback',
+                ),
+                Mp.image(
+                  src: 'assets/missing-default.png',
+                  source: MpImageSource.asset,
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Image failed'), findsOneWidget);
+      expect(find.text('Semantic fallback'), findsOneWidget);
+      expect(find.text('Legacy alt fallback'), findsOneWidget);
+      expect(find.text('Image unavailable'), findsOneWidget);
 
       backendStore.dispose();
     });

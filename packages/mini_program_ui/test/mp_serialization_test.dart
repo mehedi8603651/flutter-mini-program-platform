@@ -248,6 +248,99 @@ void main() {
       });
     });
 
+    test('serializes async image nodes deterministically', () {
+      const base64Image =
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'image_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.image(
+                src: 'https://example.com/a.png',
+                width: 120,
+                height: 120,
+                fit: MpImageFit.cover,
+                semanticLabel: 'Product image',
+                headers: const <String, String>{'x-image': 'product'},
+                cacheKey: 'product_1',
+              ),
+              Mp.image(
+                src: 'assets/logo.png',
+                source: MpImageSource.asset,
+                fit: MpImageFit.contain,
+                alt: 'Logo asset',
+              ),
+              Mp.image(
+                src: base64Image,
+                source: MpImageSource.base64,
+                fit: MpImageFit.none,
+                placeholder: Mp.text('Loading image...'),
+                error: Mp.text('Image failed'),
+                fadeInDuration: const Duration(milliseconds: 80),
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['image_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'image',
+            'props': <String, Object?>{
+              'cache': true,
+              'cacheKey': 'product_1',
+              'fadeInDurationMs': 200,
+              'fit': 'cover',
+              'headers': <String, Object?>{'x-image': 'product'},
+              'height': 120.0,
+              'semanticLabel': 'Product image',
+              'source': 'auto',
+              'src': 'https://example.com/a.png',
+              'width': 120.0,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'image',
+            'props': <String, Object?>{
+              'alt': 'Logo asset',
+              'cache': true,
+              'fadeInDurationMs': 200,
+              'fit': 'contain',
+              'semanticLabel': 'Logo asset',
+              'source': 'asset',
+              'src': 'assets/logo.png',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'image',
+            'props': <String, Object?>{
+              'cache': true,
+              'error': <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Image failed'},
+                'children': <Object?>[],
+              },
+              'fadeInDurationMs': 80,
+              'fit': 'none',
+              'placeholder': <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Loading image...'},
+                'children': <Object?>[],
+              },
+              'source': 'base64',
+              'src': base64Image,
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

@@ -1,7 +1,9 @@
 import 'mp_action.dart';
+import 'mp_image.dart';
 import 'mp_json.dart';
 import 'mp_node.dart';
 import 'widgets/display_widgets.dart';
+import 'widgets/image_widgets.dart';
 import 'widgets/layout_widgets.dart';
 import 'widgets/list_widgets.dart';
 import 'widgets/text_widgets.dart';
@@ -391,10 +393,35 @@ abstract final class Mp {
     action: action,
   );
 
-  /// Creates an image node.
-  static MpNode image({required String src, String? alt}) => MpNode(
-    'image',
-    props: <String, Object?>{'src': src, if (alt != null) 'alt': alt},
+  /// Creates an async image node.
+  static MpNode image({
+    required String src,
+    MpImageSource source = MpImageSource.auto,
+    double? width,
+    double? height,
+    MpImageFit fit = MpImageFit.cover,
+    MpNode? placeholder,
+    MpNode? error,
+    String? semanticLabel,
+    Map<String, String>? headers,
+    bool cache = true,
+    String? cacheKey,
+    Duration fadeInDuration = const Duration(milliseconds: 200),
+    String? alt,
+  }) => buildImageNode(
+    src: src,
+    source: source,
+    width: width,
+    height: height,
+    fit: fit,
+    placeholder: placeholder,
+    error: error,
+    semanticLabel: semanticLabel,
+    headers: headers,
+    cache: cache,
+    cacheKey: cacheKey,
+    fadeInDuration: fadeInDuration,
+    alt: alt,
   );
 
   /// Creates a simple card container.

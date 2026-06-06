@@ -1816,6 +1816,17 @@ TextOverflow _mpTextOverflow(String value) {
   };
 }
 
+BoxFit _mpBoxFit(String value) {
+  return switch (value) {
+    'contain' => BoxFit.contain,
+    'fill' => BoxFit.fill,
+    'fitWidth' => BoxFit.fitWidth,
+    'fitHeight' => BoxFit.fitHeight,
+    'none' => BoxFit.none,
+    _ => BoxFit.cover,
+  };
+}
+
 TextDirection _mpTextDirection(String value, String data) {
   return switch (value) {
     'ltr' => TextDirection.ltr,
@@ -2039,6 +2050,37 @@ bool _isRenderableImageUrl(String src) {
   }
   return uri.scheme == 'https' ||
       (uri.scheme == 'http' && MpScreenValidator._isLocalPreviewHost(uri.host));
+}
+
+bool _isHttpImageSrc(String src) {
+  final uri = Uri.tryParse(src);
+  return uri != null &&
+      uri.hasAuthority &&
+      (uri.scheme == 'http' || uri.scheme == 'https');
+}
+
+bool _isDataUriBase64Image(String src) {
+  return RegExp(
+    r'^data:image\/[-+.\w]+;base64,',
+    caseSensitive: false,
+  ).hasMatch(src.trim());
+}
+
+bool _isAssetLikeImageSrc(String src) {
+  final normalized = src.trim().toLowerCase();
+  if (normalized.startsWith('assets/') ||
+      normalized.startsWith('asset/') ||
+      normalized.startsWith('images/') ||
+      normalized.startsWith('packages/')) {
+    return true;
+  }
+  return normalized.endsWith('.png') ||
+      normalized.endsWith('.jpg') ||
+      normalized.endsWith('.jpeg') ||
+      normalized.endsWith('.gif') ||
+      normalized.endsWith('.webp') ||
+      normalized.endsWith('.bmp') ||
+      normalized.endsWith('.avif');
 }
 
 _MpToneColors _mpToneStyle(String tone, [_MpThemeData? theme]) {
@@ -2757,32 +2799,151 @@ class _MpImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final src = bindings.resolveString(node.props['src'] as String);
-    final uri = Uri.tryParse(src);
-    if (uri == null ||
-        !uri.hasAuthority ||
-        (uri.scheme != 'https' &&
-            !(uri.scheme == 'http' &&
-                MpScreenValidator._isLocalPreviewHost(uri.host)))) {
-      return _imageFallback();
+    final source = _resolvedImageSource(src);
+    Widget image;
+    switch (source) {
+      case 'network':
+        if (!_isHttpImageSrc(src)) {
+          image = _imageErrorFallback(context);
+          break;
+        }
+        image = Image.network(
+          src,
+          errorBuilder: (context, error, stackTrace) =>
+              _imageErrorFallback(context),
+          fit: _mpBoxFit(_string(node, 'fit')),
+          frameBuilder: _imageFrameBuilder,
+          headers: _resolvedHeaders(),
+          semanticLabel: _semanticLabel,
+        );
+        break;
+      case 'asset':
+        image = Image.asset(
+          src,
+          errorBuilder: (context, error, stackTrace) =>
+              _imageErrorFallback(context),
+          fit: _mpBoxFit(_string(node, 'fit')),
+          frameBuilder: _imageFrameBuilder,
+          semanticLabel: _semanticLabel,
+        );
+        break;
+      case 'base64':
+        try {
+          image = Image.memory(
+            base64Decode(
+              MpScreenValidator._paddedBase64(
+                MpScreenValidator._base64ImagePayload(src),
+              ),
+            ),
+            errorBuilder: (context, error, stackTrace) =>
+                _imageErrorFallback(context),
+            fit: _mpBoxFit(_string(node, 'fit')),
+            frameBuilder: _imageFrameBuilder,
+            semanticLabel: _semanticLabel,
+          );
+        } on FormatException {
+          image = _imageErrorFallback(context);
+        }
+        break;
+      default:
+        image = _imageErrorFallback(context);
+        break;
     }
-    return Image.network(
-      src,
-      semanticLabel: node.props['alt'] == null
-          ? null
-          : bindings.resolveString(node.props['alt'] as String),
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _imageFallback(),
+
+    final width = _optionalDouble(node, 'width');
+    final height = _optionalDouble(node, 'height');
+    if (width == null && height == null) {
+      return image;
+    }
+    return SizedBox(width: width, height: height, child: image);
+  }
+
+  String? get _semanticLabel {
+    final label = node.props['semanticLabel'] ?? node.props['alt'];
+    return label == null ? null : bindings.resolveString(label as String);
+  }
+
+  String _resolvedImageSource(String src) {
+    final configured = _string(node, 'source');
+    if (configured != 'auto') {
+      return configured;
+    }
+    if (_isHttpImageSrc(src)) {
+      return 'network';
+    }
+    if (_isDataUriBase64Image(src)) {
+      return 'base64';
+    }
+    if (_isAssetLikeImageSrc(src)) {
+      return 'asset';
+    }
+    try {
+      base64Decode(
+        MpScreenValidator._paddedBase64(
+          MpScreenValidator._base64ImagePayload(src),
+        ),
+      );
+      return 'base64';
+    } on FormatException {
+      return 'asset';
+    }
+  }
+
+  Map<String, String>? _resolvedHeaders() {
+    final headers = node.props['headers'] as Map<String, dynamic>?;
+    if (headers == null || headers.isEmpty) {
+      return null;
+    }
+    return <String, String>{
+      for (final entry in headers.entries)
+        entry.key: bindings.resolveString(entry.value as String),
+    };
+  }
+
+  Widget _imageFrameBuilder(
+    BuildContext context,
+    Widget child,
+    int? frame,
+    bool wasSynchronouslyLoaded,
+  ) {
+    if (wasSynchronouslyLoaded || frame != null) {
+      return _fadeIn(child, wasSynchronouslyLoaded: wasSynchronouslyLoaded);
+    }
+    return _imageLoadingFallback(context);
+  }
+
+  Widget _fadeIn(Widget child, {required bool wasSynchronouslyLoaded}) {
+    final durationMs = _int(node, 'fadeInDurationMs', fallback: 200);
+    if (wasSynchronouslyLoaded || durationMs <= 0) {
+      return child;
+    }
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: Duration(milliseconds: durationMs),
+      builder: (context, opacity, child) =>
+          Opacity(opacity: opacity, child: child),
+      child: child,
     );
   }
 
-  Widget _imageFallback() {
-    return const DecoratedBox(
-      decoration: BoxDecoration(color: Color(0xFFE5E7EB)),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('Image unavailable'),
-      ),
-    );
+  Widget _imageLoadingFallback(BuildContext context) {
+    final placeholder = node.props['placeholder'] as _MpNode?;
+    if (placeholder == null) {
+      return const SizedBox.shrink();
+    }
+    return _MpNodeView(node: placeholder, bindings: bindings);
+  }
+
+  Widget _imageErrorFallback(BuildContext context) {
+    final error = node.props['error'] as _MpNode?;
+    if (error != null) {
+      return _MpNodeView(node: error, bindings: bindings);
+    }
+    final label = _semanticLabel;
+    if (label != null && label.isNotEmpty) {
+      return Text(label);
+    }
+    return const Text('Image unavailable');
   }
 }
 

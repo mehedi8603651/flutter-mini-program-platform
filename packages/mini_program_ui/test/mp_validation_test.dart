@@ -124,6 +124,52 @@ void main() {
       );
     });
 
+    test('async image helpers reject invalid configuration', () {
+      expect(() => Mp.image(src: ''), throwsArgumentError);
+      expect(
+        () => Mp.image(src: 'assets/logo.png', width: 0),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(src: 'assets/logo.png', height: -1),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(
+          src: 'assets/logo.png',
+          headers: const <String, String>{'': 'ok'},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(
+          src: 'assets/logo.png',
+          headers: const <String, String>{'x-test': ''},
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(src: 'assets/logo.png', cacheKey: ''),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(src: 'assets/logo.png', semanticLabel: ''),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(src: 'assets/logo.png', alt: ''),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.image(src: 'not base64!', source: MpImageSource.base64),
+        throwsArgumentError,
+      );
+
+      final autoImage = Mp.image(src: 'not base64!');
+      expect(autoImage.props['source'], 'auto');
+      expect(autoImage.props['src'], 'not base64!');
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

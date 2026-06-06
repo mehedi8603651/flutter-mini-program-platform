@@ -86,6 +86,20 @@ class MpScreenValidator {
     'bottomRight',
   };
   static const Set<String> _flexFitNames = <String>{'loose', 'tight'};
+  static const Set<String> _imageSourceNames = <String>{
+    'auto',
+    'network',
+    'asset',
+    'base64',
+  };
+  static const Set<String> _imageFitNames = <String>{
+    'cover',
+    'contain',
+    'fill',
+    'fitWidth',
+    'fitHeight',
+    'none',
+  };
   static const Set<String> _textWeightNames = <String>{
     'regular',
     'medium',
@@ -252,6 +266,8 @@ class MpScreenValidator {
         props: props,
         children: parsedChildren,
         path: path,
+        depth: depth,
+        state: state,
       ),
       'card' => _parseCardNode(
         props: props,
@@ -589,20 +605,83 @@ class MpScreenValidator {
     required Map<String, dynamic> props,
     required List<_MpNode> children,
     required String path,
+    required int depth,
+    required _MpValidationState state,
   }) {
     _validateObjectKeys(props, const <String>{
-      'src',
       'alt',
+      'cache',
+      'cacheKey',
+      'error',
+      'fadeInDurationMs',
+      'fit',
+      'headers',
+      'height',
+      'placeholder',
+      'semanticLabel',
+      'source',
+      'src',
+      'width',
     }, path: '$path.props');
-    final src = _requiredString(props, 'src', path: '$path.props');
-    if (!_MpBindingResolver.containsBinding(src)) {
-      _validateImageUrl(src, path: '$path.props.src');
-    }
-    if (props.containsKey('alt')) {
-      _requiredString(props, 'alt', path: '$path.props');
-    }
+    final src = _requiredImageSrc(props['src'], path: '$path.props.src');
     _validateNoChildren(children, path: '$path.children');
-    return _MpNode(type: 'image', props: props, children: const <_MpNode>[]);
+    final source =
+        _optionalImageSource(props, 'source', path: '$path.props') ?? 'auto';
+    if (!_MpBindingResolver.containsBinding(src)) {
+      _validateImageSourceSrc(src, source: source, path: '$path.props.src');
+    }
+    return _MpNode(
+      type: 'image',
+      props: <String, dynamic>{
+        if (props.containsKey('alt'))
+          'alt': _requiredString(props, 'alt', path: '$path.props'),
+        'cache': props.containsKey('cache')
+            ? _requiredBoolValue(props['cache'], path: '$path.props.cache')
+            : true,
+        if (props.containsKey('cacheKey'))
+          'cacheKey': _requiredStableString(
+            props,
+            'cacheKey',
+            path: '$path.props',
+          ),
+        'fadeInDurationMs': props.containsKey('fadeInDurationMs')
+            ? _requiredNonNegativeIntValue(
+                props['fadeInDurationMs'],
+                path: '$path.props.fadeInDurationMs',
+              )
+            : 200,
+        'fit': _optionalImageFit(props, 'fit', path: '$path.props') ?? 'cover',
+        if (props.containsKey('headers'))
+          'headers': _parseImageHeaders(
+            props['headers'],
+            path: '$path.props.headers',
+          ),
+        if (props.containsKey('height'))
+          'height': _requiredPositiveNumber(
+            props,
+            'height',
+            path: '$path.props',
+          ),
+        if (props.containsKey('semanticLabel'))
+          'semanticLabel': _requiredString(
+            props,
+            'semanticLabel',
+            path: '$path.props',
+          ),
+        'source': source,
+        'src': src,
+        if (props.containsKey('width'))
+          'width': _requiredPositiveNumber(props, 'width', path: '$path.props'),
+        ..._parseTemplateProps(
+          props,
+          const <String>{'placeholder', 'error'},
+          path: '$path.props',
+          depth: depth,
+          state: state,
+        ),
+      },
+      children: const <_MpNode>[],
+    );
   }
 
   _MpNode _parseCardNode({
@@ -2608,6 +2687,27 @@ class MpScreenValidator {
     };
   }
 
+  static Map<String, dynamic> _parseImageHeaders(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! Map) {
+      _fail('Mp image headers must be an object.', path: path);
+    }
+    final parsed = <String, dynamic>{};
+    for (final entry in value.entries) {
+      final key = entry.key;
+      if (key is! String) {
+        _fail('Mp image header names must be strings.', path: path);
+      }
+      parsed[_imageHeaderName(key, path: '$path.$key')] = _imageHeaderValue(
+        entry.value,
+        path: '$path.$key',
+      );
+    }
+    return parsed;
+  }
+
   static Map<String, dynamic> _parseThemeTypography(
     Object? value, {
     required String path,
@@ -2792,6 +2892,44 @@ class MpScreenValidator {
     return value;
   }
 
+  static String? _optionalImageSource(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!_imageSourceNames.contains(value)) {
+      _fail(
+        'Mp "$key" must be one of: ${_imageSourceNames.join(', ')}.',
+        path: '$path.$key',
+        details: <String, dynamic>{'source': value},
+      );
+    }
+    return value;
+  }
+
+  static String? _optionalImageFit(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!_imageFitNames.contains(value)) {
+      _fail(
+        'Mp "$key" must be one of: ${_imageFitNames.join(', ')}.',
+        path: '$path.$key',
+        details: <String, dynamic>{'fit': value},
+      );
+    }
+    return value;
+  }
+
   static String? _optionalTextWeight(
     Map<String, dynamic> json,
     String key, {
@@ -2881,6 +3019,30 @@ class MpScreenValidator {
         path: '$path.$key',
         details: <String, dynamic>{'locale': value},
       );
+    }
+    return value;
+  }
+
+  static String _requiredImageSrc(Object? value, {required String path}) {
+    if (value is! String || value.trim().isEmpty) {
+      _fail('Mp image src must be a non-empty string.', path: path);
+    }
+    return value.trim();
+  }
+
+  static String _imageHeaderName(String value, {required String path}) {
+    if (value.trim().isEmpty || _MpBindingResolver.containsBinding(value)) {
+      _fail(
+        'Mp image header name must be a non-empty static string.',
+        path: path,
+      );
+    }
+    return value.trim();
+  }
+
+  static String _imageHeaderValue(Object? value, {required String path}) {
+    if (value is! String || value.trim().isEmpty) {
+      _fail('Mp image header value must be a non-empty string.', path: path);
     }
     return value;
   }
@@ -3053,6 +3215,16 @@ class MpScreenValidator {
     return value;
   }
 
+  static int _requiredNonNegativeIntValue(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! int || value < 0) {
+      _fail('Mp numeric value must be a non-negative integer.', path: path);
+    }
+    return value;
+  }
+
   static int? _optionalNonNegativeInt(Object? value, {required String path}) {
     if (value == null) {
       return null;
@@ -3194,6 +3366,77 @@ class MpScreenValidator {
       path: path,
       details: <String, dynamic>{'scheme': uri.scheme, 'host': uri.host},
     );
+  }
+
+  static void _validateImageSourceSrc(
+    String src, {
+    required String source,
+    required String path,
+  }) {
+    switch (source) {
+      case 'network':
+        _validateAsyncImageNetworkUrl(src, path: path);
+      case 'base64':
+        _validateBase64Image(src, path: path);
+      case 'asset' || 'auto':
+        return;
+    }
+  }
+
+  static void _validateAsyncImageNetworkUrl(
+    String src, {
+    required String path,
+  }) {
+    if (src.length > maxUrlLength) {
+      _fail(
+        'Mp image URL exceeds the maximum length.',
+        path: path,
+        details: <String, dynamic>{
+          'length': src.length,
+          'maxUrlLength': maxUrlLength,
+        },
+      );
+    }
+    final uri = Uri.tryParse(src);
+    if (uri == null || !uri.hasAuthority) {
+      _fail('Mp network image src must be an absolute URL.', path: path);
+    }
+    if (uri.scheme != 'http' && uri.scheme != 'https') {
+      _fail(
+        'Mp network image src must use http or https.',
+        path: path,
+        details: <String, dynamic>{'scheme': uri.scheme},
+      );
+    }
+  }
+
+  static void _validateBase64Image(String src, {required String path}) {
+    final payload = _base64ImagePayload(src);
+    if (payload.replaceAll(RegExp(r'\s+'), '').isEmpty) {
+      _fail('Mp base64 image src must be valid base64 data.', path: path);
+    }
+    try {
+      base64Decode(_paddedBase64(payload));
+    } on FormatException {
+      _fail('Mp base64 image src must be valid base64 data.', path: path);
+    }
+  }
+
+  static String _base64ImagePayload(String value) {
+    final trimmed = value.trim();
+    final match = RegExp(
+      r'^data:image\/[-+.\w]+;base64,',
+      caseSensitive: false,
+    ).firstMatch(trimmed);
+    return match == null ? trimmed : trimmed.substring(match.end);
+  }
+
+  static String _paddedBase64(String value) {
+    final compact = value.replaceAll(RegExp(r'\s+'), '');
+    final remainder = compact.length % 4;
+    return remainder == 0
+        ? compact
+        : compact.padRight(compact.length + 4 - remainder, '=');
   }
 
   static bool _isLocalPreviewHost(String host) {
