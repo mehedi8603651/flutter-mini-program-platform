@@ -658,6 +658,131 @@ void main() {
       });
     });
 
+    test('serializes visual layout primitives deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'visual_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.visibility(
+                visible: false,
+                maintainSize: true,
+                child: Mp.text('Hidden'),
+              ),
+              Mp.opacity(
+                opacity: 0.5,
+                alwaysIncludeSemantics: true,
+                child: Mp.text('Faded'),
+              ),
+              Mp.aspectRatio(aspectRatio: 2, child: Mp.text('Ratio')),
+              Mp.stack(
+                alignment: 'bottomRight',
+                clip: false,
+                children: <MpNode>[
+                  Mp.text('Base'),
+                  Mp.positioned(
+                    top: 8,
+                    right: 12,
+                    width: 50,
+                    height: 20,
+                    child: Mp.badge(label: 'New'),
+                  ),
+                ],
+              ),
+              Mp.positioned(top: 4, child: Mp.text('Fallback')),
+            ],
+          ),
+        },
+      ).buildScreensJson()['visual_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'visibility',
+            'props': <String, Object?>{
+              'maintainSize': true,
+              'maintainState': false,
+              'visible': false,
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Hidden'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'opacity',
+            'props': <String, Object?>{
+              'alwaysIncludeSemantics': true,
+              'opacity': 0.5,
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Faded'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'aspectRatio',
+            'props': <String, Object?>{'aspectRatio': 2},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Ratio'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'stack',
+            'props': <String, Object?>{
+              'alignment': 'bottomRight',
+              'clip': false,
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Base'},
+                'children': <Object?>[],
+              },
+              <String, Object?>{
+                'type': 'positioned',
+                'props': <String, Object?>{
+                  'height': 20,
+                  'right': 12,
+                  'top': 8,
+                  'width': 50,
+                },
+                'children': <Object?>[
+                  <String, Object?>{
+                    'type': 'badge',
+                    'props': <String, Object?>{'label': 'New', 'tone': 'info'},
+                    'children': <Object?>[],
+                  },
+                ],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'positioned',
+            'props': <String, Object?>{'top': 4},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Fallback'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+        ],
+      });
+    });
+
     test('serializes form nodes and feedback actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

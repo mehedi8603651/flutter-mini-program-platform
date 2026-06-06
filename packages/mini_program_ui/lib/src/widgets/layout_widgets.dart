@@ -167,6 +167,86 @@ MpNode buildSafeAreaNode({
   );
 }
 
+MpNode buildVisibilityNode({
+  required MpNode child,
+  bool visible = true,
+  bool maintainSize = false,
+  bool maintainState = false,
+}) {
+  return MpNode(
+    'visibility',
+    props: <String, Object?>{
+      'maintainSize': maintainSize,
+      'maintainState': maintainState,
+      'visible': visible,
+    },
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildOpacityNode({
+  required MpNode child,
+  num opacity = 1,
+  bool alwaysIncludeSemantics = false,
+}) {
+  return MpNode(
+    'opacity',
+    props: <String, Object?>{
+      'alwaysIncludeSemantics': alwaysIncludeSemantics,
+      'opacity': unitIntervalWidgetNumber(opacity, 'opacity'),
+    },
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildAspectRatioNode({required MpNode child, required num aspectRatio}) {
+  return MpNode(
+    'aspectRatio',
+    props: <String, Object?>{
+      'aspectRatio': positiveWidgetNumber(aspectRatio, 'aspectRatio'),
+    },
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildStackNode({
+  required List<MpNode> children,
+  String alignment = 'topLeft',
+  bool clip = true,
+}) {
+  return MpNode(
+    'stack',
+    props: <String, Object?>{
+      'alignment': widgetAlignment(alignment),
+      'clip': clip,
+    },
+    children: requiredWidgetList(children, 'children'),
+  );
+}
+
+MpNode buildPositionedNode({
+  required MpNode child,
+  num? left,
+  num? top,
+  num? right,
+  num? bottom,
+  num? width,
+  num? height,
+}) {
+  return MpNode(
+    'positioned',
+    props: positionedConstraints(
+      left: left,
+      top: top,
+      right: right,
+      bottom: bottom,
+      width: width,
+      height: height,
+    ),
+    children: <MpNode>[child],
+  );
+}
+
 MpNode buildDividerNode({
   num thickness = 1,
   num spacing = 12,

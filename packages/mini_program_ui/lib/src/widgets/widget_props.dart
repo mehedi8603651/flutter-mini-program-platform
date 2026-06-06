@@ -65,6 +65,17 @@ num positiveWidgetNumber(num value, String name) {
   return value;
 }
 
+num unitIntervalWidgetNumber(num value, String name) {
+  if (!value.isFinite || value < 0 || value > 1) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Value must be finite and between 0 and 1.',
+    );
+  }
+  return value;
+}
+
 int positiveWidgetInt(int value, String name) {
   if (value <= 0) {
     throw ArgumentError.value(value, name, 'Value must be positive.');
@@ -104,6 +115,40 @@ String? pairedActionLabel({
     );
   }
   return requiredWidgetString(actionLabel, 'actionLabel');
+}
+
+Map<String, Object?> positionedConstraints({
+  num? left,
+  num? top,
+  num? right,
+  num? bottom,
+  num? width,
+  num? height,
+}) {
+  if (left == null &&
+      top == null &&
+      right == null &&
+      bottom == null &&
+      width == null &&
+      height == null) {
+    throw ArgumentError('Provide at least one constraint for Mp.positioned.');
+  }
+  if (left != null && right != null && width != null) {
+    throw ArgumentError('Mp.positioned cannot combine left, right, and width.');
+  }
+  if (top != null && bottom != null && height != null) {
+    throw ArgumentError(
+      'Mp.positioned cannot combine top, bottom, and height.',
+    );
+  }
+  return <String, Object?>{
+    if (bottom != null) 'bottom': nonNegativeWidgetNumber(bottom, 'bottom'),
+    if (height != null) 'height': nonNegativeWidgetNumber(height, 'height'),
+    if (left != null) 'left': nonNegativeWidgetNumber(left, 'left'),
+    if (right != null) 'right': nonNegativeWidgetNumber(right, 'right'),
+    if (top != null) 'top': nonNegativeWidgetNumber(top, 'top'),
+    if (width != null) 'width': nonNegativeWidgetNumber(width, 'width'),
+  };
 }
 
 String widgetAlignment(String value) {

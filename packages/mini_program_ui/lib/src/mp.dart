@@ -179,6 +179,62 @@ abstract final class Mp {
     bottom: bottom,
   );
 
+  /// Shows or hides [child] while optionally preserving layout/state.
+  static MpNode visibility({
+    required MpNode child,
+    bool visible = true,
+    bool maintainSize = false,
+    bool maintainState = false,
+  }) => buildVisibilityNode(
+    child: child,
+    visible: visible,
+    maintainSize: maintainSize,
+    maintainState: maintainState,
+  );
+
+  /// Paints [child] with the provided opacity.
+  static MpNode opacity({
+    required MpNode child,
+    num opacity = 1,
+    bool alwaysIncludeSemantics = false,
+  }) => buildOpacityNode(
+    child: child,
+    opacity: opacity,
+    alwaysIncludeSemantics: alwaysIncludeSemantics,
+  );
+
+  /// Sizes [child] to a fixed width-to-height ratio.
+  static MpNode aspectRatio({
+    required MpNode child,
+    required num aspectRatio,
+  }) => buildAspectRatioNode(child: child, aspectRatio: aspectRatio);
+
+  /// Overlays [children] in paint order.
+  static MpNode stack({
+    required List<MpNode> children,
+    String alignment = 'topLeft',
+    bool clip = true,
+  }) => buildStackNode(children: children, alignment: alignment, clip: clip);
+
+  /// Positions [child] when used directly inside Mp.stack.
+  static MpNode positioned({
+    required MpNode child,
+    num? left,
+    num? top,
+    num? right,
+    num? bottom,
+    num? width,
+    num? height,
+  }) => buildPositionedNode(
+    child: child,
+    left: left,
+    top: top,
+    right: right,
+    bottom: bottom,
+    width: width,
+    height: height,
+  );
+
   /// Creates a horizontal divider.
   static MpNode divider({
     num thickness = 1,

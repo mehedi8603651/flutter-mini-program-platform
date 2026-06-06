@@ -21,6 +21,8 @@ class _MpScreenView extends StatelessWidget {
   }
 }
 
+enum _MpParentKind { normal, stack }
+
 class _MpTapButton extends StatefulWidget {
   const _MpTapButton({
     required this.label,
@@ -425,10 +427,15 @@ class _MpDialogView extends StatelessWidget {
 }
 
 class _MpNodeView extends StatelessWidget {
-  const _MpNodeView({required this.node, required this.bindings});
+  const _MpNodeView({
+    required this.node,
+    required this.bindings,
+    this.parentKind = _MpParentKind.normal,
+  });
 
   final _MpNode node;
   final _MpRenderBindings bindings;
+  final _MpParentKind parentKind;
 
   @override
   Widget build(BuildContext context) {
@@ -505,6 +512,21 @@ class _MpNodeView extends StatelessWidget {
         bottom: _bool(node, 'bottom'),
         child: _MpNodeView(node: node.children.single, bindings: bindings),
       ),
+      'visibility' => _MpVisibility(node: node, bindings: bindings),
+      'opacity' => Opacity(
+        opacity: _double(node, 'opacity', fallback: 1),
+        alwaysIncludeSemantics: _bool(node, 'alwaysIncludeSemantics'),
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
+      'aspectRatio' => AspectRatio(
+        aspectRatio: _double(node, 'aspectRatio', fallback: 1),
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
+      'stack' => _MpStack(node: node, bindings: bindings),
+      'positioned' =>
+        parentKind == _MpParentKind.stack
+            ? _MpPositioned(node: node, bindings: bindings)
+            : _MpNodeView(node: node.children.single, bindings: bindings),
       'divider' => _MpDivider(node: node),
       'icon' => _MpIcon(node: node, bindings: bindings),
       'listTile' => _MpListTile(node: node, bindings: bindings),
@@ -615,6 +637,70 @@ class _MpListView extends StatelessWidget {
       separatorBuilder: (context, index) => SizedBox(height: spacing),
       itemBuilder: (context, index) =>
           _MpNodeView(node: node.children[index], bindings: bindings),
+    );
+  }
+}
+
+class _MpVisibility extends StatelessWidget {
+  const _MpVisibility({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final maintainSize = _bool(node, 'maintainSize');
+    final maintainState = maintainSize || _bool(node, 'maintainState');
+    return Visibility(
+      visible: _bool(node, 'visible'),
+      maintainSize: maintainSize,
+      maintainState: maintainState,
+      maintainAnimation: maintainSize,
+      child: _MpNodeView(node: node.children.single, bindings: bindings),
+    );
+  }
+}
+
+class _MpStack extends StatelessWidget {
+  const _MpStack({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: _mpAlignment(_string(node, 'alignment')),
+      clipBehavior: _bool(node, 'clip') ? Clip.hardEdge : Clip.none,
+      children: node.children
+          .map(
+            (child) => _MpNodeView(
+              node: child,
+              bindings: bindings,
+              parentKind: _MpParentKind.stack,
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+}
+
+class _MpPositioned extends StatelessWidget {
+  const _MpPositioned({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: _optionalDouble(node, 'bottom'),
+      height: _optionalDouble(node, 'height'),
+      left: _optionalDouble(node, 'left'),
+      right: _optionalDouble(node, 'right'),
+      top: _optionalDouble(node, 'top'),
+      width: _optionalDouble(node, 'width'),
+      child: _MpNodeView(node: node.children.single, bindings: bindings),
     );
   }
 }

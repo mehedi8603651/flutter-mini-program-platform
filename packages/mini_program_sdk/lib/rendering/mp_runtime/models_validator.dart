@@ -274,6 +274,31 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'visibility' => _parseVisibilityNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'opacity' => _parseOpacityNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'aspectRatio' => _parseAspectRatioNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'stack' => _parseStackNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'positioned' => _parsePositionedNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'divider' => _parseDividerNode(
         props: props,
         children: parsedChildren,
@@ -681,6 +706,141 @@ class MpScreenValidator {
             _optionalBool(props['right'], path: '$path.props.right') ?? true,
         'top': _optionalBool(props['top'], path: '$path.props.top') ?? true,
       },
+      children: children,
+    );
+  }
+
+  _MpNode _parseVisibilityNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'visible',
+      'maintainSize',
+      'maintainState',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'visibility', path: path);
+    return _MpNode(
+      type: 'visibility',
+      props: <String, dynamic>{
+        'maintainSize':
+            _optionalBool(
+              props['maintainSize'],
+              path: '$path.props.maintainSize',
+            ) ??
+            false,
+        'maintainState':
+            _optionalBool(
+              props['maintainState'],
+              path: '$path.props.maintainState',
+            ) ??
+            false,
+        'visible':
+            _optionalBool(props['visible'], path: '$path.props.visible') ??
+            true,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseOpacityNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'opacity',
+      'alwaysIncludeSemantics',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'opacity', path: path);
+    return _MpNode(
+      type: 'opacity',
+      props: <String, dynamic>{
+        'alwaysIncludeSemantics':
+            _optionalBool(
+              props['alwaysIncludeSemantics'],
+              path: '$path.props.alwaysIncludeSemantics',
+            ) ??
+            false,
+        'opacity':
+            _optionalUnitIntervalNumberValue(
+              props['opacity'],
+              path: '$path.props.opacity',
+            ) ??
+            1,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseAspectRatioNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'aspectRatio',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'aspectRatio', path: path);
+    if (!props.containsKey('aspectRatio')) {
+      _fail(
+        'Mp aspectRatio requires an aspectRatio prop.',
+        path: '$path.props.aspectRatio',
+      );
+    }
+    return _MpNode(
+      type: 'aspectRatio',
+      props: <String, dynamic>{
+        'aspectRatio': _requiredPositiveNumber(
+          props,
+          'aspectRatio',
+          path: '$path.props',
+        ),
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseStackNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'alignment',
+      'clip',
+    }, path: '$path.props');
+    _validateNonEmptyChildren(children, nodeType: 'stack', path: path);
+    return _MpNode(
+      type: 'stack',
+      props: <String, dynamic>{
+        'alignment':
+            _optionalAlignment(props, 'alignment', path: '$path.props') ??
+            'topLeft',
+        'clip': _optionalBool(props['clip'], path: '$path.props.clip') ?? true,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parsePositionedNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'left',
+      'top',
+      'right',
+      'bottom',
+      'width',
+      'height',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'positioned', path: path);
+    return _MpNode(
+      type: 'positioned',
+      props: _parsePositionedConstraints(props, path: '$path.props'),
       children: children,
     );
   }
@@ -2258,6 +2418,50 @@ class MpScreenValidator {
     };
   }
 
+  static Map<String, dynamic> _parsePositionedConstraints(
+    Map<String, dynamic> props, {
+    required String path,
+  }) {
+    const constraintKeys = <String>{
+      'left',
+      'top',
+      'right',
+      'bottom',
+      'width',
+      'height',
+    };
+    if (!props.keys.any(constraintKeys.contains)) {
+      _fail('Mp positioned requires at least one constraint.', path: path);
+    }
+    if (props.containsKey('left') &&
+        props.containsKey('right') &&
+        props.containsKey('width')) {
+      _fail('Mp positioned cannot combine left, right, and width.', path: path);
+    }
+    if (props.containsKey('top') &&
+        props.containsKey('bottom') &&
+        props.containsKey('height')) {
+      _fail(
+        'Mp positioned cannot combine top, bottom, and height.',
+        path: path,
+      );
+    }
+    return <String, dynamic>{
+      if (props.containsKey('bottom'))
+        'bottom': _requiredNonNegativeNumber(props, 'bottom', path: path),
+      if (props.containsKey('height'))
+        'height': _requiredNonNegativeNumber(props, 'height', path: path),
+      if (props.containsKey('left'))
+        'left': _requiredNonNegativeNumber(props, 'left', path: path),
+      if (props.containsKey('right'))
+        'right': _requiredNonNegativeNumber(props, 'right', path: path),
+      if (props.containsKey('top'))
+        'top': _requiredNonNegativeNumber(props, 'top', path: path),
+      if (props.containsKey('width'))
+        'width': _requiredNonNegativeNumber(props, 'width', path: path),
+    };
+  }
+
   static String _defaultAlertIcon(String tone) {
     return switch (tone) {
       'success' => 'check',
@@ -2486,6 +2690,18 @@ class MpScreenValidator {
     return value;
   }
 
+  static num _requiredPositiveNumber(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = json[key];
+    if (value is! num || value <= 0 || !value.isFinite) {
+      _fail('Mp "$key" must be a finite positive number.', path: '$path.$key');
+    }
+    return value;
+  }
+
   static void _optionalNonNegativeNumber(
     Object? value, {
     required String path,
@@ -2520,6 +2736,19 @@ class MpScreenValidator {
     }
     if (value is! num || value <= 0 || !value.isFinite) {
       _fail('Mp numeric value must be finite and positive.', path: path);
+    }
+    return value;
+  }
+
+  static num? _optionalUnitIntervalNumberValue(
+    Object? value, {
+    required String path,
+  }) {
+    if (value == null) {
+      return null;
+    }
+    if (value is! num || value < 0 || value > 1 || !value.isFinite) {
+      _fail('Mp numeric value must be finite and between 0 and 1.', path: path);
     }
     return value;
   }

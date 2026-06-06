@@ -133,6 +133,40 @@ void main() {
       );
     });
 
+    test('visual layout primitives reject invalid configuration', () {
+      expect(
+        () => Mp.opacity(opacity: -0.1, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.opacity(opacity: 1.1, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.aspectRatio(aspectRatio: 0, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(() => Mp.stack(children: const <MpNode>[]), throwsArgumentError);
+      expect(
+        () => Mp.stack(alignment: 'middle', children: <MpNode>[Mp.text('Hi')]),
+        throwsArgumentError,
+      );
+      expect(() => Mp.positioned(child: Mp.text('Hi')), throwsArgumentError);
+      expect(
+        () => Mp.positioned(top: -1, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.positioned(left: 1, right: 1, width: 10, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+      expect(
+        () =>
+            Mp.positioned(top: 1, bottom: 1, height: 10, child: Mp.text('Hi')),
+        throwsArgumentError,
+      );
+    });
+
     test('runtime parity helpers reject invalid required fields', () {
       expect(
         () => Mp.backendBuilder(requestId: '', endpoint: 'home/bootstrap'),

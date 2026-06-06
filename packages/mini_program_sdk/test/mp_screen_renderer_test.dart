@@ -266,6 +266,44 @@ void main() {
       );
     });
 
+    test('accepts author-generated visual layout primitive JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.visibility(
+                  visible: false,
+                  maintainSize: true,
+                  child: Mp.text('Hidden'),
+                ),
+                Mp.opacity(opacity: 0.5, child: Mp.text('Faded')),
+                Mp.aspectRatio(aspectRatio: 2, child: Mp.text('Ratio')),
+                Mp.stack(
+                  alignment: 'bottomRight',
+                  clip: false,
+                  children: <MpNode>[
+                    Mp.text('Base'),
+                    Mp.positioned(
+                      top: 8,
+                      right: 8,
+                      child: Mp.badge(label: 'New'),
+                    ),
+                  ],
+                ),
+                Mp.positioned(top: 4, child: Mp.text('Fallback')),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -533,6 +571,130 @@ void main() {
           json['root'] = <String, dynamic>{
             'type': 'safeArea',
             'props': <String, dynamic>{'left': 'yes'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid visibility flag': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'visibility',
+            'props': <String, dynamic>{'visible': 'yes'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid opacity value': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'opacity',
+            'props': <String, dynamic>{'opacity': 2},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'missing aspectRatio value': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'aspectRatio',
+            'props': <String, dynamic>{},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid aspectRatio value': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'aspectRatio',
+            'props': <String, dynamic>{'aspectRatio': 0},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'empty stack': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'stack',
+            'props': <String, dynamic>{},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid stack alignment': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'stack',
+            'props': <String, dynamic>{'alignment': 'middle'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid stack clip flag': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'stack',
+            'props': <String, dynamic>{'clip': 'no'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'positioned without constraints': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'positioned',
+            'props': <String, dynamic>{},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid positioned value': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'positioned',
+            'props': <String, dynamic>{'top': -1},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'invalid positioned horizontal combo': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'positioned',
+            'props': <String, dynamic>{'left': 1, 'right': 1, 'width': 10},
             'children': <Object?>[
               <String, dynamic>{
                 'type': 'text',
@@ -862,6 +1024,153 @@ void main() {
 
       backendStore.dispose();
     });
+
+    testWidgets('renders visual layout primitives with stack positioning', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.visibility(
+                  visible: false,
+                  maintainSize: true,
+                  child: Mp.text('Hidden kept'),
+                ),
+                Mp.opacity(
+                  opacity: 0,
+                  alwaysIncludeSemantics: true,
+                  child: Mp.text('Invisible paint'),
+                ),
+                Mp.aspectRatio(aspectRatio: 2, child: Mp.text('Ratio child')),
+                Mp.container(
+                  height: 120,
+                  child: Mp.stack(
+                    alignment: 'bottomRight',
+                    clip: false,
+                    children: <MpNode>[
+                      Mp.text('Base layer'),
+                      Mp.positioned(
+                        top: 8,
+                        right: 8,
+                        child: Mp.badge(label: 'New'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Invisible paint'), findsOneWidget);
+      expect(find.text('Ratio child'), findsOneWidget);
+      expect(find.text('Base layer'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
+
+      final visibility = tester
+          .widgetList<Visibility>(find.byType(Visibility))
+          .singleWhere((widget) => widget.maintainSize);
+      expect(visibility.visible, isFalse);
+      expect(visibility.maintainState, isTrue);
+      expect(visibility.maintainAnimation, isTrue);
+
+      final opacity = tester
+          .widgetList<Opacity>(find.byType(Opacity))
+          .singleWhere(
+            (widget) => widget.opacity == 0 && widget.alwaysIncludeSemantics,
+          );
+      expect(opacity.alwaysIncludeSemantics, isTrue);
+
+      final ratio = tester
+          .widgetList<AspectRatio>(find.byType(AspectRatio))
+          .singleWhere((widget) => widget.aspectRatio == 2);
+      expect(ratio.aspectRatio, 2);
+
+      final stack = tester
+          .widgetList<Stack>(find.byType(Stack))
+          .singleWhere((widget) => widget.clipBehavior == Clip.none);
+      expect(stack.alignment, Alignment.bottomRight);
+
+      final positioned = tester
+          .widgetList<Positioned>(find.byType(Positioned))
+          .singleWhere((widget) => widget.top == 8 && widget.right == 8);
+      expect(positioned.child, isNotNull);
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders positioned outside stack as normal child fallback', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () =>
+                Mp.positioned(top: 8, child: Mp.text('Outside fallback')),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Outside fallback'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Positioned && widget.top == 8,
+        ),
+        findsNothing,
+      );
+
+      backendStore.dispose();
+    });
+
+    testWidgets(
+      'renders nested positioned inside stack as normal child fallback',
+      (tester) async {
+        final backendStore = MiniProgramBackendStore();
+        final screenJson = _jsonMap(
+          MpProgram(
+            screens: <String, MpScreenBuilder>{
+              'coupon_home': () => Mp.stack(
+                children: <MpNode>[
+                  Mp.container(
+                    child: Mp.positioned(
+                      top: 8,
+                      child: Mp.text('Nested fallback'),
+                    ),
+                  ),
+                ],
+              ),
+            },
+          ).buildScreensJson()['coupon_home']!,
+        );
+
+        await tester.pumpWidget(
+          _scopedApp(backendStore: backendStore, screenJson: screenJson),
+        );
+
+        expect(find.text('Nested fallback'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is Positioned && widget.top == 8,
+          ),
+          findsNothing,
+        );
+
+        backendStore.dispose();
+      },
+    );
 
     testWidgets('renders standalone spacer as safe zero-size fallback', (
       tester,
