@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    hide MiniProgramCachePolicy;
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
@@ -106,6 +107,33 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       (connector as DisposableMiniProgramBackendConnector).dispose();
+    });
+
+    test('exposes per-app cache policy from endpoint routing', () {
+      final source = EndpointRoutingMiniProgramSource(
+        endpoints: <String, MiniProgramEndpoint>{
+          'temporary': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://tmp.example.com/api/'),
+            accessKey: 'mpk_tmp',
+            cachePolicy: const MiniProgramCachePolicy(
+              dataTtl: Duration(hours: 12),
+              maxBytes: 5 * 1024 * 1024,
+            ),
+          ),
+          'normal': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://normal.example.com/api/'),
+            accessKey: 'mpk_normal',
+          ),
+        },
+        deliveryContext: _deliveryContext,
+      );
+
+      expect(
+        source.cachePolicyFor('temporary').dataTtl,
+        const Duration(hours: 12),
+      );
+      expect(source.cachePolicyFor('temporary').maxBytes, 5 * 1024 * 1024);
+      expect(source.cachePolicyFor('normal').dataTtl, const Duration(days: 30));
     });
 
     test('rejects a blank protected access key', () {

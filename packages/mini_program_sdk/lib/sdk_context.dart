@@ -2,13 +2,15 @@ import 'package:flutter/widgets.dart';
 
 import 'capability_registry.dart';
 import 'auth/mini_program_auth.dart';
+import 'cache/runtime_cache.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
 import 'observability/sdk_logger.dart';
 import 'state/mp_state.dart';
-import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    hide MiniProgramCachePolicy;
 
 typedef MiniProgramOpenScreenHandler =
     Future<HostActionResult> Function(
@@ -51,6 +53,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     required this.capabilityRegistry,
     this.backendConnector,
     this.authController,
+    required this.cacheManager,
+    required this.cachePolicy,
     required this.backendStore,
     this.stateManager,
     this.router,
@@ -70,6 +74,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramAuthController? authController;
+  final MiniProgramCacheManager cacheManager;
+  final MiniProgramCachePolicy cachePolicy;
   final MiniProgramBackendStore backendStore;
   final MpStateManager? stateManager;
   final MpRouter? router;
@@ -100,6 +106,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         capabilityRegistry != oldWidget.capabilityRegistry ||
         backendConnector != oldWidget.backendConnector ||
         authController != oldWidget.authController ||
+        cacheManager != oldWidget.cacheManager ||
+        cachePolicy != oldWidget.cachePolicy ||
         backendStore != oldWidget.backendStore ||
         stateManager != oldWidget.stateManager ||
         router != oldWidget.router ||

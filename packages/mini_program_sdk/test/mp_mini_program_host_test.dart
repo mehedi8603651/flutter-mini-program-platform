@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    hide MiniProgramCachePolicy;
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
@@ -55,6 +56,56 @@ void main() {
 
     expect(find.text('Saved: true'), findsOneWidget);
   });
+
+  testWidgets(
+    'MiniProgramHost updates cache metadata and clears memory on close',
+    (tester) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      const source = _CachePolicyMpSource();
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: MiniProgramHost(
+            miniProgramId: 'mp_cache_test',
+            sdkVersion: '1.0.0',
+            source: source,
+            hostBridge: const _HostBridge(),
+            capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+            cacheManager: cacheManager,
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(cacheManager.getMetadata('mp_cache_test'), isNotNull);
+
+      await cacheManager
+          .forApp('mp_cache_test')
+          .set('runtime_value', true, bucket: MiniProgramCacheBucket.memory);
+      expect(
+        await cacheManager.has(
+          appId: 'mp_cache_test',
+          key: 'runtime_value',
+          bucket: MiniProgramCacheBucket.memory,
+        ),
+        isTrue,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+
+      expect(
+        await cacheManager.has(
+          appId: 'mp_cache_test',
+          key: 'runtime_value',
+          bucket: MiniProgramCacheBucket.memory,
+        ),
+        isFalse,
+      );
+    },
+  );
 }
 
 class _MpSource implements MiniProgramSource {
@@ -174,6 +225,50 @@ class _RouterMpSource implements MiniProgramSource {
             'children': <Object?>[],
           },
         ],
+      },
+    };
+  }
+}
+
+class _CachePolicyMpSource
+    implements MiniProgramSource, MiniProgramCachePolicyProvider {
+  const _CachePolicyMpSource();
+
+  @override
+  MiniProgramCachePolicy cachePolicyFor(String miniProgramId) {
+    return const MiniProgramCachePolicy(
+      memoryTtl: Duration(minutes: 5),
+      clearMemoryOnExit: true,
+    );
+  }
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    return const MiniProgramManifest(
+      id: 'mp_cache_test',
+      version: '1.0.0',
+      entry: 'mp_cache_home',
+      contractVersion: '1.0.0',
+      sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+      requiredCapabilities: <CapabilityId>[],
+      screenFormat: MiniProgramScreenFormats.mp,
+      screenSchemaVersion: 1,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    return const <String, dynamic>{
+      'schemaVersion': 1,
+      'screenId': 'mp_cache_home',
+      'root': <String, dynamic>{
+        'type': 'text',
+        'props': <String, dynamic>{'data': 'Cache policy host screen'},
+        'children': <Object?>[],
       },
     };
   }

@@ -34,6 +34,7 @@ class MiniProgramPage extends StatelessWidget {
       assetCache: resolvedRuntime.cacheBundle.assetCache,
       manifestCache: resolvedRuntime.cacheBundle.manifestCache,
       screenCache: resolvedRuntime.cacheBundle.screenCache,
+      cacheManager: resolvedRuntime.cacheBundle.runtimeCache,
       logger: resolvedRuntime.logger,
       renderers: resolvedRuntime.renderers,
       loadingBuilder: (context) {

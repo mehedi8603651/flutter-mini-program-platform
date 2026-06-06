@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    hide MiniProgramCachePolicy;
 
+import '../cache/runtime_cache.dart';
 import 'http_mini_program_source.dart';
 import 'mini_program_delivery_context.dart';
 import 'mini_program_backend_connector.dart';
@@ -30,6 +32,7 @@ class MiniProgramEndpoint {
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
     this.backend,
+    this.cachePolicy = const MiniProgramCachePolicy(),
   });
 
   /// Creates a public/static mini-program endpoint.
@@ -43,6 +46,7 @@ class MiniProgramEndpoint {
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
     this.backend,
+    this.cachePolicy = const MiniProgramCachePolicy(),
   }) : accessKey = null;
 
   final Uri apiBaseUri;
@@ -51,6 +55,7 @@ class MiniProgramEndpoint {
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
   final MiniProgramBackendEndpoint? backend;
+  final MiniProgramCachePolicy cachePolicy;
 }
 
 MiniProgramBackendConnector? buildEndpointRoutingBackendConnector({
@@ -85,7 +90,8 @@ MiniProgramBackendConnector? buildEndpointRoutingBackendConnector({
 }
 
 /// Routes manifest and screen requests to per-app delivery endpoints.
-class EndpointRoutingMiniProgramSource implements DisposableMiniProgramSource {
+class EndpointRoutingMiniProgramSource
+    implements DisposableMiniProgramSource, MiniProgramCachePolicyProvider {
   EndpointRoutingMiniProgramSource({
     required Map<String, MiniProgramEndpoint> endpoints,
     required MiniProgramDeliveryContext deliveryContext,
@@ -133,6 +139,21 @@ class EndpointRoutingMiniProgramSource implements DisposableMiniProgramSource {
       }
     }
     _sources.clear();
+  }
+
+  @override
+  MiniProgramCachePolicy cachePolicyFor(String miniProgramId) {
+    final normalizedAppId = _normalizeAppId(miniProgramId);
+    final endpoint = _endpoints[normalizedAppId];
+    if (endpoint == null) {
+      throw MiniProgramSourceException(
+        message:
+            'No MiniProgramEndpoint is configured for appId "$normalizedAppId".',
+        errorCode: MiniProgramErrorCodes.endpointNotConfigured,
+        details: <String, dynamic>{'miniProgramId': normalizedAppId},
+      );
+    }
+    return endpoint.cachePolicy;
   }
 
   MiniProgramSource _sourceFor(String miniProgramId) {

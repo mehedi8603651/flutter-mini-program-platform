@@ -4,7 +4,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    hide MiniProgramCachePolicy;
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 import 'package:mini_program_ui/mini_program_ui.dart';
 
@@ -2584,6 +2585,8 @@ void main() {
             ]),
             backendConnector: connector,
             authController: controller,
+            cacheManager: MiniProgramCacheManager.inMemory(),
+            cachePolicy: const MiniProgramCachePolicy(),
             backendStore: backendStore,
             featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
             logger: const DebugPrintSdkLogger(),
@@ -2635,11 +2638,19 @@ void main() {
       await controller.restore(miniProgramId: 'coupon', connector: null);
 
       final backendStore = MiniProgramBackendStore();
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      await cacheManager.set(
+        appId: 'coupon',
+        key: 'login_state',
+        value: true,
+        bucket: MiniProgramCacheBucket.session,
+      );
       await tester.pumpWidget(
         _scopedApp(
           backendStore: backendStore,
           authController: controller,
           backendConnector: _AuthConnector(),
+          cacheManager: cacheManager,
           screenJson: _authBuilderScreen,
         ),
       );
@@ -2653,6 +2664,14 @@ void main() {
 
       expect(controller.snapshot('coupon').signedOut, isTrue);
       expect(find.text('Signed out'), findsOneWidget);
+      expect(
+        await cacheManager.has(
+          appId: 'coupon',
+          key: 'login_state',
+          bucket: MiniProgramCacheBucket.session,
+        ),
+        isFalse,
+      );
 
       backendStore.dispose();
     });
@@ -3393,6 +3412,8 @@ Widget _scopedApp({
   required Map<String, dynamic> screenJson,
   MiniProgramBackendConnector? backendConnector,
   MiniProgramAuthController? authController,
+  MiniProgramCacheManager? cacheManager,
+  MiniProgramCachePolicy cachePolicy = const MiniProgramCachePolicy(),
   MiniProgramOpenScreenHandler? openMiniProgramScreen,
   MpStateManager? stateManager,
   MpRouter? router,
@@ -3407,6 +3428,8 @@ Widget _scopedApp({
       ]),
       backendConnector: backendConnector,
       authController: authController,
+      cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
+      cachePolicy: cachePolicy,
       backendStore: backendStore,
       stateManager: stateManager,
       router: router,

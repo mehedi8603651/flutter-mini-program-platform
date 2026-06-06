@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import 'asset_cache.dart';
 import 'manifest_cache.dart';
+import 'runtime_cache.dart';
 import 'screen_cache.dart';
 
 /// Cache bundle used by hosts to pass both manifest and screen cache stores.
@@ -14,6 +15,7 @@ class MiniProgramCacheBundle {
     required this.manifestCache,
     required this.screenCache,
     required this.assetCache,
+    required this.runtimeCache,
   });
 
   factory MiniProgramCacheBundle.inMemory() {
@@ -21,6 +23,7 @@ class MiniProgramCacheBundle {
       manifestCache: InMemoryManifestCache(),
       screenCache: InMemoryScreenCache(),
       assetCache: NoOpAssetCache.shared,
+      runtimeCache: MiniProgramCacheManager.inMemory(),
     );
   }
 
@@ -37,10 +40,12 @@ class MiniProgramCacheBundle {
       assetCache: FileAssetCache(
         directory: Directory(p.join(rootDirectory.path, 'assets')),
       ),
+      runtimeCache: MiniProgramCacheManager.inMemory(),
     );
   }
 
   final ManifestCache manifestCache;
   final ScreenCache screenCache;
   final AssetCache assetCache;
+  final MiniProgramCacheManager runtimeCache;
 }

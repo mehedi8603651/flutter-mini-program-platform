@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    hide MiniProgramCachePolicy;
 
 import 'cache/asset_cache.dart';
 import 'cache/manifest_cache.dart';
+import 'cache/runtime_cache.dart';
 import 'cache/screen_cache.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
@@ -41,6 +45,7 @@ class MiniProgramHost extends StatefulWidget {
     this.assetCache,
     this.manifestCache,
     this.screenCache,
+    this.cacheManager,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
     this.logger = const DebugPrintSdkLogger(),
     this.renderers = const <MiniProgramScreenRenderer>[],
@@ -58,6 +63,7 @@ class MiniProgramHost extends StatefulWidget {
   final AssetCache? assetCache;
   final ManifestCache? manifestCache;
   final ScreenCache? screenCache;
+  final MiniProgramCacheManager? cacheManager;
   final FeatureFlagEvaluator featureFlagEvaluator;
   final SdkLogger logger;
   final List<MiniProgramScreenRenderer> renderers;
@@ -75,9 +81,12 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   final MpStateManager _stateManager = MpStateManager();
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
+  late MiniProgramCacheManager _cacheManager;
   late Future<void> _loadFuture;
   int _loadGeneration = 0;
   MiniProgramManifest? _manifest;
+  String? _activeCacheAppId;
+  MiniProgramCachePolicy? _activeCachePolicy;
   bool _usedStaleManifestCache = false;
   List<_RenderedMiniProgramScreen> _screenStack =
       const <_RenderedMiniProgramScreen>[];
@@ -85,6 +94,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   @override
   void initState() {
     super.initState();
+    _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
     _rebuildRendererRegistry();
     _restartLoad();
   }
@@ -103,9 +113,14 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
         widget.screenCache != oldWidget.screenCache ||
+        widget.cacheManager != oldWidget.cacheManager ||
         widget.featureFlagEvaluator != oldWidget.featureFlagEvaluator ||
         widget.logger != oldWidget.logger ||
         !listEquals(widget.renderers, oldWidget.renderers)) {
+      if (widget.cacheManager != oldWidget.cacheManager) {
+        _closeActiveCacheApp();
+      }
+      _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
       _rebuildRendererRegistry();
       _restartLoad();
     }
@@ -118,8 +133,11 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   }
 
   void _restartLoad() {
+    _closeActiveCacheApp();
     _loadGeneration++;
     _manifest = null;
+    _activeCacheAppId = null;
+    _activeCachePolicy = null;
     _usedStaleManifestCache = false;
     _screenStack = const <_RenderedMiniProgramScreen>[];
     _backendStore.clear();
@@ -129,6 +147,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
   @override
   void dispose() {
+    _closeActiveCacheApp();
     _backendStore.dispose();
     _stateManager.dispose();
     super.dispose();
@@ -161,6 +180,20 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       return;
     }
 
+    final cachePolicy = _cachePolicyFor(loadedMiniProgram.manifest.id);
+    await _cacheManager.openApp(
+      loadedMiniProgram.manifest.id,
+      policy: cachePolicy,
+    );
+
+    if (!mounted || generation != _loadGeneration) {
+      await _cacheManager.closeApp(
+        loadedMiniProgram.manifest.id,
+        policy: cachePolicy,
+      );
+      return;
+    }
+
     await widget.authController?.restore(
       miniProgramId: loadedMiniProgram.manifest.id,
       connector: widget.backendConnector,
@@ -172,9 +205,29 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
     setState(() {
       _manifest = loadedMiniProgram.manifest;
+      _activeCacheAppId = loadedMiniProgram.manifest.id;
+      _activeCachePolicy = cachePolicy;
       _usedStaleManifestCache = loadedMiniProgram.usedStaleManifestCache;
       _screenStack = <_RenderedMiniProgramScreen>[initialScreen];
     });
+  }
+
+  MiniProgramCachePolicy _cachePolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramCachePolicyProvider) {
+      return (source as MiniProgramCachePolicyProvider).cachePolicyFor(appId);
+    }
+    return _cacheManager.defaultPolicy;
+  }
+
+  void _closeActiveCacheApp() {
+    final appId = _activeCacheAppId;
+    if (appId == null) {
+      return;
+    }
+    unawaited(_cacheManager.closeApp(appId, policy: _activeCachePolicy));
+    _activeCacheAppId = null;
+    _activeCachePolicy = null;
   }
 
   Future<HostActionResult> _openMiniProgramScreen(
@@ -755,6 +808,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           capabilityRegistry: widget.capabilityRegistry,
           backendConnector: widget.backendConnector,
           authController: widget.authController,
+          cacheManager: _cacheManager,
+          cachePolicy: _activeCachePolicy ?? _cachePolicyFor(manifest.id),
           backendStore: _backendStore,
           stateManager: _stateManager,
           router: router,

@@ -47,10 +47,7 @@ abstract final class _MpActionDispatcher {
     try {
       return switch (action.type) {
         'auth.showEmailAuth' => _showEmailAuth(context, scope, props),
-        'auth.signOut' => scope.authController?.signOut(
-          miniProgramId: scope.miniProgramId,
-          connector: scope.backendConnector,
-        ),
+        'auth.signOut' => _signOut(scope),
         'auth.restore' => scope.authController?.restore(
           miniProgramId: scope.miniProgramId,
           connector: scope.backendConnector,
@@ -171,6 +168,20 @@ abstract final class _MpActionDispatcher {
       miniProgramId: scope.miniProgramId,
       connector: connector,
     );
+  }
+
+  static Future<MiniProgramAuthResult?> _signOut(
+    MiniProgramSdkScope scope,
+  ) async {
+    final result = await scope.authController?.signOut(
+      miniProgramId: scope.miniProgramId,
+      connector: scope.backendConnector,
+    );
+    await scope.cacheManager.clearOnLogout(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    return result;
   }
 
   static Future<MiniProgramBackendResult> _callBackend(
