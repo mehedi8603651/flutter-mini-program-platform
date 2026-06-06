@@ -94,12 +94,14 @@ class _MpTapButton extends StatefulWidget {
     required this.primary,
     required this.onTap,
     this.enabled = true,
+    this.theme,
   });
 
   final String label;
   final bool primary;
   final bool enabled;
   final VoidCallback? onTap;
+  final _MpThemeData? theme;
 
   @override
   State<_MpTapButton> createState() => _MpTapButtonState();
@@ -113,20 +115,16 @@ class _MpTapButtonState extends State<_MpTapButton> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.enabled && widget.onTap != null;
-    final background = !enabled
-        ? const Color(0xFFE5E7EB)
-        : widget.primary
-        ? (_pressed
-              ? const Color(0xFF065F56)
-              : _hovered || _focused
-              ? const Color(0xFF0F766E)
-              : const Color(0xFF0B7A75))
-        : const Color(0xFFFFFFFF);
-    final foreground = !enabled
-        ? const Color(0xFF6B7280)
-        : widget.primary
-        ? const Color(0xFFFFFFFF)
-        : const Color(0xFF0B7A75);
+    final colors = _mpButtonColors(
+      primary: widget.primary,
+      enabled: enabled,
+      hoveredOrFocused: _hovered || _focused,
+      pressed: _pressed,
+      theme: widget.theme,
+    );
+    final background = !enabled ? colors.disabledBackground : colors.background;
+    final foreground = !enabled ? colors.disabledForeground : colors.foreground;
+    final border = !enabled ? colors.disabledBorder : colors.border;
 
     return Semantics(
       button: true,
@@ -148,11 +146,7 @@ class _MpTapButtonState extends State<_MpTapButton> {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: background,
-              border: Border.all(
-                color: enabled
-                    ? const Color(0xFF0B7A75)
-                    : const Color(0xFFD1D5DB),
-              ),
+              border: Border.all(color: border),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
@@ -161,10 +155,12 @@ class _MpTapButtonState extends State<_MpTapButton> {
                 widthFactor: 1,
                 child: Text(
                   widget.label,
-                  style: TextStyle(
-                    color: foreground,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  style: _mpThemeTextStyle(
+                    widget.theme,
+                    'button',
+                    defaultColor: foreground,
+                    defaultSize: 15,
+                    defaultWeight: 'semibold',
                   ),
                 ),
               ),
@@ -513,17 +509,7 @@ class _MpNodeView extends StatelessWidget {
         height: (node.props['height'] as num?)?.toDouble(),
       ),
       'image' => _MpImage(node: node, bindings: bindings),
-      'card' => DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: _MpNodeView(node: node.children.single, bindings: bindings),
-        ),
-      ),
+      'card' => _MpCard(node: node, bindings: bindings),
       'theme' => _MpTheme(node: node, bindings: bindings),
       'padding' => Padding(
         padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
@@ -564,7 +550,7 @@ class _MpNodeView extends StatelessWidget {
         parentKind == _MpParentKind.stack
             ? _MpPositioned(node: node, bindings: bindings)
             : _MpNodeView(node: node.children.single, bindings: bindings),
-      'divider' => _MpDivider(node: node),
+      'divider' => _MpDivider(node: node, bindings: bindings),
       'icon' => _MpIcon(node: node, bindings: bindings),
       'listTile' => _MpListTile(node: node, bindings: bindings),
       'chip' => _MpChip(node: node, bindings: bindings),
@@ -861,10 +847,43 @@ class _MpPositioned extends StatelessWidget {
   }
 }
 
-class _MpDivider extends StatelessWidget {
-  const _MpDivider({required this.node});
+class _MpCard extends StatelessWidget {
+  const _MpCard({required this.node, required this.bindings});
 
   final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _mpThemeToken(
+          bindings.theme,
+          'surface',
+          fallback: const Color(0xFFFFFFFF),
+        ),
+        border: Border.all(
+          color: _mpThemeToken(
+            bindings.theme,
+            'border',
+            fallback: const Color(0xFFE5E7EB),
+          ),
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: _MpNodeView(node: node.children.single, bindings: bindings),
+      ),
+    );
+  }
+}
+
+class _MpDivider extends StatelessWidget {
+  const _MpDivider({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
 
   @override
   Widget build(BuildContext context) {
@@ -876,10 +895,16 @@ class _MpDivider extends StatelessWidget {
         height: thickness,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: _mpColor(
-              node.props['color'] as String?,
-              fallback: const Color(0xFFE5E7EB),
-            ),
+            color: node.props['color'] == null
+                ? _mpThemeToken(
+                    bindings.theme,
+                    'border',
+                    fallback: const Color(0xFFE5E7EB),
+                  )
+                : _mpColor(
+                    node.props['color'] as String?,
+                    fallback: const Color(0xFFE5E7EB),
+                  ),
           ),
         ),
       ),
@@ -899,10 +924,20 @@ class _MpIcon extends StatelessWidget {
     return _MpIconGlyph(
       name: _string(node, 'name'),
       size: _double(node, 'size', fallback: 20),
-      color: _mpColor(
-        node.props['color'] as String?,
-        fallback: const Color(0xFF4B5563),
-      ),
+      color: node.props['color'] == null
+          ? _mpThemeToken(
+              bindings.theme,
+              'icon',
+              fallback: _mpThemeToken(
+                bindings.theme,
+                'textMuted',
+                fallback: const Color(0xFF4B5563),
+              ),
+            )
+          : _mpColor(
+              node.props['color'] as String?,
+              fallback: const Color(0xFF4B5563),
+            ),
       semanticLabel: semanticLabel == null
           ? null
           : bindings.resolveString(semanticLabel),
@@ -924,11 +959,36 @@ class _MpListTile extends StatelessWidget {
     final action = node.props['action'] as _MpAction?;
     final leadingIcon = node.props['leadingIcon'] as String?;
     final trailingIcon = node.props['trailingIcon'] as String?;
+    final surface = _mpThemeToken(
+      bindings.theme,
+      'surface',
+      fallback: const Color(0xFFFFFFFF),
+    );
+    final border = _mpThemeToken(
+      bindings.theme,
+      'border',
+      fallback: const Color(0xFFE5E7EB),
+    );
+    final text = _mpThemeToken(
+      bindings.theme,
+      'text',
+      fallback: const Color(0xFF111827),
+    );
+    final textMuted = _mpThemeToken(
+      bindings.theme,
+      'textMuted',
+      fallback: const Color(0xFF6B7280),
+    );
+    final iconColor = _mpThemeToken(
+      bindings.theme,
+      'icon',
+      fallback: const Color(0xFF4B5563),
+    );
 
     final row = DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: surface,
+        border: Border.all(color: border),
         borderRadius: BorderRadius.circular(8),
       ),
       child: ConstrainedBox(
@@ -939,11 +999,7 @@ class _MpListTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               if (leadingIcon != null) ...<Widget>[
-                _MpIconGlyph(
-                  name: leadingIcon,
-                  size: 20,
-                  color: const Color(0xFF4B5563),
-                ),
+                _MpIconGlyph(name: leadingIcon, size: 20, color: iconColor),
                 const SizedBox(width: 10),
               ],
               Expanded(
@@ -955,10 +1011,12 @@ class _MpListTile extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF111827),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                      style: _mpThemeTextStyle(
+                        bindings.theme,
+                        'listTileTitle',
+                        defaultColor: text,
+                        defaultSize: 15,
+                        defaultWeight: 'semibold',
                       ),
                     ),
                     if (subtitle != null) ...<Widget>[
@@ -967,10 +1025,13 @@ class _MpListTile extends StatelessWidget {
                         subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 13,
-                          height: 1.25,
+                        style: _mpThemeTextStyle(
+                          bindings.theme,
+                          'listTileSubtitle',
+                          defaultColor: textMuted,
+                          defaultSize: 13,
+                          defaultWeight: 'regular',
+                          defaultHeight: 1.25,
                         ),
                       ),
                     ],
@@ -979,14 +1040,14 @@ class _MpListTile extends StatelessWidget {
               ),
               if (badge != null) ...<Widget>[
                 const SizedBox(width: 10),
-                _MpBadgePill(label: badge, tone: 'info'),
+                _MpBadgePill(label: badge, tone: 'info', theme: bindings.theme),
               ],
               if (trailingIcon != null || action != null) ...<Widget>[
                 const SizedBox(width: 10),
                 _MpIconGlyph(
                   name: trailingIcon ?? 'chevronRight',
                   size: 20,
-                  color: const Color(0xFF6B7280),
+                  color: textMuted,
                 ),
               ],
             ],
@@ -1020,6 +1081,7 @@ class _MpChip extends StatelessWidget {
       label: label,
       tone: _string(node, 'tone'),
       leadingIcon: node.props['leadingIcon'] as String?,
+      theme: bindings.theme,
     );
     final action = node.props['action'] as _MpAction?;
     if (action != null) {
@@ -1047,6 +1109,7 @@ class _MpBadge extends StatelessWidget {
       child: _MpBadgePill(
         label: bindings.resolveString(_string(node, 'label')),
         tone: _string(node, 'tone'),
+        theme: bindings.theme,
       ),
     );
   }
@@ -1061,7 +1124,7 @@ class _MpAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tone = _string(node, 'tone');
-    final colors = _mpToneStyle(tone);
+    final colors = _mpToneStyle(tone, bindings.theme);
     final message = _optionalResolvedString(node, bindings, 'message');
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1087,20 +1150,25 @@ class _MpAlert extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     bindings.resolveString(_string(node, 'title')),
-                    style: TextStyle(
-                      color: colors.foreground,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: _mpThemeTextStyle(
+                      bindings.theme,
+                      'alertTitle',
+                      defaultColor: colors.foreground,
+                      defaultSize: 14,
+                      defaultWeight: 'bold',
                     ),
                   ),
                   if (message != null) ...<Widget>[
                     const SizedBox(height: 4),
                     Text(
                       message,
-                      style: TextStyle(
-                        color: colors.foreground,
-                        fontSize: 13,
-                        height: 1.3,
+                      style: _mpThemeTextStyle(
+                        bindings.theme,
+                        'alertMessage',
+                        defaultColor: colors.foreground,
+                        defaultSize: 13,
+                        defaultWeight: 'regular',
+                        defaultHeight: 1.3,
                       ),
                     ),
                   ],
@@ -1239,7 +1307,7 @@ class _MpProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _mpToneStyle(_string(node, 'tone'));
+    final colors = _mpToneStyle(_string(node, 'tone'), bindings.theme);
     final value = _double(node, 'value', fallback: 0);
     final max = _double(node, 'max', fallback: 1);
     final fraction = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
@@ -1270,10 +1338,16 @@ class _MpProgress extends StatelessWidget {
       children: <Widget>[
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF374151),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          style: _mpThemeTextStyle(
+            bindings.theme,
+            'progressLabel',
+            defaultColor: _mpThemeToken(
+              bindings.theme,
+              'text',
+              fallback: const Color(0xFF374151),
+            ),
+            defaultSize: 13,
+            defaultWeight: 'semibold',
           ),
         ),
         const SizedBox(height: 6),
@@ -1294,6 +1368,16 @@ class _MpEmptyState extends StatelessWidget {
     final action = node.props['action'] as _MpAction?;
     final actionLabel = _optionalResolvedString(node, bindings, 'actionLabel');
     final message = _optionalResolvedString(node, bindings, 'message');
+    final text = _mpThemeToken(
+      bindings.theme,
+      'text',
+      fallback: const Color(0xFF111827),
+    );
+    final textMuted = _mpThemeToken(
+      bindings.theme,
+      'textMuted',
+      fallback: const Color(0xFF6B7280),
+    );
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
@@ -1303,16 +1387,18 @@ class _MpEmptyState extends StatelessWidget {
             _MpIconGlyph(
               name: _string(node, 'icon'),
               size: 34,
-              color: const Color(0xFF6B7280),
+              color: _mpThemeToken(bindings.theme, 'icon', fallback: textMuted),
             ),
             const SizedBox(height: 10),
             Text(
               bindings.resolveString(_string(node, 'title')),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF111827),
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              style: _mpThemeTextStyle(
+                bindings.theme,
+                'emptyStateTitle',
+                defaultColor: text,
+                defaultSize: 16,
+                defaultWeight: 'bold',
               ),
             ),
             if (message != null) ...<Widget>[
@@ -1320,10 +1406,13 @@ class _MpEmptyState extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 14,
-                  height: 1.35,
+                style: _mpThemeTextStyle(
+                  bindings.theme,
+                  'emptyStateMessage',
+                  defaultColor: textMuted,
+                  defaultSize: 14,
+                  defaultWeight: 'regular',
+                  defaultHeight: 1.35,
                 ),
               ),
             ],
@@ -1332,6 +1421,7 @@ class _MpEmptyState extends StatelessWidget {
               _MpTapButton(
                 label: actionLabel,
                 primary: false,
+                theme: bindings.theme,
                 onTap: () => unawaited(
                   _MpActionDispatcher.dispatch(context, action, bindings),
                 ),
@@ -1355,6 +1445,21 @@ class _MpSection extends StatelessWidget {
     final action = node.props['action'] as _MpAction?;
     final actionLabel = _optionalResolvedString(node, bindings, 'actionLabel');
     final subtitle = _optionalResolvedString(node, bindings, 'subtitle');
+    final text = _mpThemeToken(
+      bindings.theme,
+      'text',
+      fallback: const Color(0xFF111827),
+    );
+    final textMuted = _mpThemeToken(
+      bindings.theme,
+      'textMuted',
+      fallback: const Color(0xFF6B7280),
+    );
+    final primary = _mpThemeToken(
+      bindings.theme,
+      'primary',
+      fallback: const Color(0xFF0B7A75),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -1369,20 +1474,25 @@ class _MpSection extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     bindings.resolveString(_string(node, 'title')),
-                    style: const TextStyle(
-                      color: Color(0xFF111827),
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
+                    style: _mpThemeTextStyle(
+                      bindings.theme,
+                      'sectionTitle',
+                      defaultColor: text,
+                      defaultSize: 17,
+                      defaultWeight: 'bold',
                     ),
                   ),
                   if (subtitle != null) ...<Widget>[
                     const SizedBox(height: 3),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 13,
-                        height: 1.3,
+                      style: _mpThemeTextStyle(
+                        bindings.theme,
+                        'sectionSubtitle',
+                        defaultColor: textMuted,
+                        defaultSize: 13,
+                        defaultWeight: 'regular',
+                        defaultHeight: 1.3,
                       ),
                     ),
                   ],
@@ -1399,10 +1509,12 @@ class _MpSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Text(
                     actionLabel,
-                    style: const TextStyle(
-                      color: Color(0xFF0B7A75),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                    style: _mpThemeTextStyle(
+                      bindings.theme,
+                      'sectionAction',
+                      defaultColor: primary,
+                      defaultSize: 13,
+                      defaultWeight: 'bold',
                     ),
                   ),
                 ),
@@ -1454,15 +1566,17 @@ class _MpChipPill extends StatelessWidget {
     required this.label,
     required this.tone,
     this.leadingIcon,
+    this.theme,
   });
 
   final String label;
   final String tone;
   final String? leadingIcon;
+  final _MpThemeData? theme;
 
   @override
   Widget build(BuildContext context) {
-    final colors = _mpToneStyle(tone);
+    final colors = _mpToneStyle(tone, theme);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.background,
@@ -1489,9 +1603,18 @@ class _MpChipPill extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: colors.foreground,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  color: _mpTypographyColor(
+                    theme,
+                    'chip',
+                    fallback: colors.foreground,
+                  ),
+                  fontSize: _mpTypographySize(theme, 'chip', fallback: 13),
+                  fontWeight: _mpTypographyWeight(
+                    theme,
+                    'chip',
+                    fallback: 'semibold',
+                  ),
+                  height: _mpTypographyHeight(theme, 'chip'),
                 ),
               ),
             ),
@@ -1503,14 +1626,15 @@ class _MpChipPill extends StatelessWidget {
 }
 
 class _MpBadgePill extends StatelessWidget {
-  const _MpBadgePill({required this.label, required this.tone});
+  const _MpBadgePill({required this.label, required this.tone, this.theme});
 
   final String label;
   final String tone;
+  final _MpThemeData? theme;
 
   @override
   Widget build(BuildContext context) {
-    final colors = _mpToneStyle(tone);
+    final colors = _mpToneStyle(tone, theme);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.background,
@@ -1526,9 +1650,14 @@ class _MpBadgePill extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: colors.foreground,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+              color: _mpTypographyColor(
+                theme,
+                'badge',
+                fallback: colors.foreground,
+              ),
+              fontSize: _mpTypographySize(theme, 'badge', fallback: 12),
+              fontWeight: _mpTypographyWeight(theme, 'badge', fallback: 'bold'),
+              height: _mpTypographyHeight(theme, 'badge'),
             ),
           ),
         ),
@@ -1571,6 +1700,24 @@ class _MpToneColors {
   final Color background;
   final Color foreground;
   final Color border;
+}
+
+class _MpButtonColors {
+  const _MpButtonColors({
+    required this.background,
+    required this.foreground,
+    required this.border,
+    required this.disabledBackground,
+    required this.disabledForeground,
+    required this.disabledBorder,
+  });
+
+  final Color background;
+  final Color foreground;
+  final Color border;
+  final Color disabledBackground;
+  final Color disabledForeground;
+  final Color disabledBorder;
 }
 
 BoxDecoration? _containerDecoration(_MpNode node) {
@@ -1735,6 +1882,14 @@ Color _mpColor(String? value, {required Color fallback}) {
   return Color(int.parse(hex, radix: 16));
 }
 
+Color _mpThemeToken(
+  _MpThemeData? theme,
+  String token, {
+  required Color fallback,
+}) {
+  return _mpThemeColor(token, theme, fallback: fallback);
+}
+
 Color _mpThemeColor(
   String value,
   _MpThemeData? theme, {
@@ -1750,6 +1905,133 @@ Color _mpThemeColor(
   return _mpColor(tokenColor, fallback: fallback);
 }
 
+TextStyle _mpThemeTextStyle(
+  _MpThemeData? theme,
+  String variant, {
+  required Color defaultColor,
+  required double defaultSize,
+  required String defaultWeight,
+  double? defaultHeight,
+}) {
+  return TextStyle(
+    color: _mpTypographyColor(theme, variant, fallback: defaultColor),
+    fontSize: _mpTypographySize(theme, variant, fallback: defaultSize),
+    fontWeight: _mpTypographyWeight(theme, variant, fallback: defaultWeight),
+    height: _mpTypographyHeight(theme, variant) ?? defaultHeight,
+  );
+}
+
+Color _mpTypographyColor(
+  _MpThemeData? theme,
+  String variant, {
+  required Color fallback,
+}) {
+  final color = theme?.typography[variant]?.color;
+  return color == null
+      ? fallback
+      : _mpThemeColor(color, theme, fallback: fallback);
+}
+
+double _mpTypographySize(
+  _MpThemeData? theme,
+  String variant, {
+  required double fallback,
+}) {
+  return theme?.typography[variant]?.size ?? fallback;
+}
+
+FontWeight _mpTypographyWeight(
+  _MpThemeData? theme,
+  String variant, {
+  required String fallback,
+}) {
+  return _mpFontWeight(theme?.typography[variant]?.weight ?? fallback);
+}
+
+double? _mpTypographyHeight(_MpThemeData? theme, String variant) {
+  return theme?.typography[variant]?.lineHeight;
+}
+
+_MpButtonColors _mpButtonColors({
+  required bool primary,
+  required bool enabled,
+  required bool hoveredOrFocused,
+  required bool pressed,
+  required _MpThemeData? theme,
+}) {
+  final primaryColor = _mpThemeToken(
+    theme,
+    'primary',
+    fallback: const Color(0xFF0B7A75),
+  );
+  final onPrimary = _mpThemeToken(
+    theme,
+    'onPrimary',
+    fallback: const Color(0xFFFFFFFF),
+  );
+  final surface = _mpThemeToken(
+    theme,
+    'surface',
+    fallback: const Color(0xFFFFFFFF),
+  );
+  final surfaceMuted = _mpThemeToken(
+    theme,
+    'surfaceMuted',
+    fallback: const Color(0xFFE5E7EB),
+  );
+  final border = _mpThemeToken(
+    theme,
+    'border',
+    fallback: const Color(0xFFD1D5DB),
+  );
+  final textMuted = _mpThemeToken(
+    theme,
+    'textMuted',
+    fallback: const Color(0xFF6B7280),
+  );
+  if (!enabled) {
+    return _MpButtonColors(
+      background: surfaceMuted,
+      foreground: textMuted,
+      border: border,
+      disabledBackground: surfaceMuted,
+      disabledForeground: textMuted,
+      disabledBorder: border,
+    );
+  }
+  if (!primary) {
+    final background = hoveredOrFocused || pressed
+        ? _mpThemeToken(theme, 'surfaceMuted', fallback: surface)
+        : surface;
+    return _MpButtonColors(
+      background: background,
+      foreground: primaryColor,
+      border: primaryColor,
+      disabledBackground: surfaceMuted,
+      disabledForeground: textMuted,
+      disabledBorder: border,
+    );
+  }
+
+  final background = pressed
+      ? _mpThemeToken(
+          theme,
+          'primaryPressed',
+          fallback: const Color(0xFF065F56),
+        )
+      : hoveredOrFocused
+      ? _mpThemeToken(theme, 'primaryHover', fallback: const Color(0xFF0F766E))
+      : primaryColor;
+  return _MpButtonColors(
+    background: background,
+    foreground: onPrimary,
+    border: primaryColor,
+    disabledBackground: surfaceMuted,
+    disabledForeground: textMuted,
+    disabledBorder: border,
+  );
+}
+
 bool _isRenderableImageUrl(String src) {
   final uri = Uri.tryParse(src);
   if (uri == null || !uri.hasAuthority) {
@@ -1759,8 +2041,8 @@ bool _isRenderableImageUrl(String src) {
       (uri.scheme == 'http' && MpScreenValidator._isLocalPreviewHost(uri.host));
 }
 
-_MpToneColors _mpToneStyle(String tone) {
-  return switch (tone) {
+_MpToneColors _mpToneStyle(String tone, [_MpThemeData? theme]) {
+  final defaults = switch (tone) {
     'info' => const _MpToneColors(
       background: Color(0xFFEFF6FF),
       foreground: Color(0xFF1D4ED8),
@@ -1787,6 +2069,15 @@ _MpToneColors _mpToneStyle(String tone) {
       border: Color(0xFFE5E7EB),
     ),
   };
+  return _MpToneColors(
+    background: _mpThemeToken(
+      theme,
+      '${tone}Bg',
+      fallback: defaults.background,
+    ),
+    foreground: _mpThemeToken(theme, tone, fallback: defaults.foreground),
+    border: _mpThemeToken(theme, '${tone}Border', fallback: defaults.border),
+  );
 }
 
 IconData _mpIconData(String name) {
@@ -2386,6 +2677,7 @@ class _MpFormSubmitButtonState extends State<_MpFormSubmitButton> {
                     ),
               primary: true,
               enabled: form != null && !submitting,
+              theme: widget.bindings.theme,
               onTap: form == null ? null : () => unawaited(_submit(form)),
             ),
             if (_message != null) ...<Widget>[
@@ -2518,16 +2810,13 @@ class _MpButtonState extends State<_MpButton> {
 
   @override
   Widget build(BuildContext context) {
-    final background = widget.primary
-        ? (_pressed
-              ? const Color(0xFF065F56)
-              : _hovered || _focused
-              ? const Color(0xFF0F766E)
-              : const Color(0xFF0B7A75))
-        : const Color(0xFFFFFFFF);
-    final foreground = widget.primary
-        ? const Color(0xFFFFFFFF)
-        : const Color(0xFF0B7A75);
+    final colors = _mpButtonColors(
+      primary: widget.primary,
+      enabled: true,
+      hoveredOrFocused: _hovered || _focused,
+      pressed: _pressed,
+      theme: widget.bindings.theme,
+    );
 
     return Semantics(
       button: true,
@@ -2550,8 +2839,8 @@ class _MpButtonState extends State<_MpButton> {
           ),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: background,
-              border: Border.all(color: const Color(0xFF0B7A75)),
+              color: colors.background,
+              border: Border.all(color: colors.border),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Padding(
@@ -2560,10 +2849,12 @@ class _MpButtonState extends State<_MpButton> {
                 widthFactor: 1,
                 child: Text(
                   widget.label,
-                  style: TextStyle(
-                    color: foreground,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  style: _mpThemeTextStyle(
+                    widget.bindings.theme,
+                    'button',
+                    defaultColor: colors.foreground,
+                    defaultSize: 15,
+                    defaultWeight: 'semibold',
                   ),
                 ),
               ),

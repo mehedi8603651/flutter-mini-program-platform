@@ -1387,6 +1387,171 @@ void main() {
       backendStore.dispose();
     });
 
+    testWidgets('renders theme-aware component polish', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.theme(
+              colors: const <String, String>{
+                'primary': '#880000',
+                'primaryHover': '#990000',
+                'primaryPressed': '#660000',
+                'onPrimary': '#FFFFFF',
+                'surface': '#FAFAFA',
+                'surfaceMuted': '#F5EEEE',
+                'border': '#008800',
+                'text': '#101010',
+                'textMuted': '#606060',
+                'icon': '#303030',
+                'info': '#000088',
+                'infoBg': '#EEEEFF',
+                'infoBorder': '#CCCCFF',
+                'success': '#008800',
+                'successBg': '#EEFFEE',
+                'successBorder': '#CCFFCC',
+                'warning': '#884400',
+                'warningBg': '#FFF4DD',
+                'warningBorder': '#FFD699',
+              },
+              typography: const <String, Map<String, Object?>>{
+                'button': <String, Object?>{
+                  'size': 16,
+                  'weight': 'bold',
+                  'lineHeight': 1.1,
+                },
+                'listTileTitle': <String, Object?>{
+                  'size': 18,
+                  'weight': 'bold',
+                },
+                'listTileSubtitle': <String, Object?>{
+                  'size': 12,
+                  'color': 'textMuted',
+                },
+                'chip': <String, Object?>{'size': 14, 'weight': 'medium'},
+                'badge': <String, Object?>{'size': 11, 'weight': 'regular'},
+                'alertTitle': <String, Object?>{'size': 15, 'weight': 'bold'},
+                'alertMessage': <String, Object?>{
+                  'size': 12,
+                  'lineHeight': 1.4,
+                },
+              },
+              child: Mp.column(
+                children: <MpNode>[
+                  Mp.card(child: Mp.text('Themed card body')),
+                  Mp.primaryButton(
+                    label: 'Primary themed',
+                    action: Mp.state.set('theme.primary', true),
+                  ),
+                  Mp.secondaryButton(
+                    label: 'Secondary themed',
+                    action: Mp.state.set('theme.secondary', true),
+                  ),
+                  Mp.listTile(
+                    title: 'Themed tile',
+                    subtitle: 'Tile subtitle',
+                    leadingIcon: 'person',
+                    badge: 'Tile badge',
+                    action: Mp.state.set('theme.tile', true),
+                  ),
+                  Mp.chip(
+                    label: 'Chip themed',
+                    tone: 'success',
+                    leadingIcon: 'star',
+                  ),
+                  Mp.badge(label: 'Badge themed', tone: 'warning'),
+                  Mp.alert(
+                    title: 'Alert themed',
+                    message: 'Alert message',
+                    tone: 'info',
+                  ),
+                  Mp.divider(),
+                  Mp.icon('settings', semanticLabel: 'Theme icon'),
+                ],
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      final primaryButton = tester.widget<Text>(find.text('Primary themed'));
+      expect(primaryButton.style?.color, const Color(0xFFFFFFFF));
+      expect(primaryButton.style?.fontSize, 16);
+      expect(primaryButton.style?.fontWeight, FontWeight.w700);
+      expect(primaryButton.style?.height, 1.1);
+
+      final secondaryButton = tester.widget<Text>(
+        find.text('Secondary themed'),
+      );
+      expect(secondaryButton.style?.color, const Color(0xFF880000));
+      expect(secondaryButton.style?.fontSize, 16);
+
+      final tileTitle = tester.widget<Text>(find.text('Themed tile'));
+      expect(tileTitle.style?.color, const Color(0xFF101010));
+      expect(tileTitle.style?.fontSize, 18);
+      expect(tileTitle.style?.fontWeight, FontWeight.w700);
+
+      final tileSubtitle = tester.widget<Text>(find.text('Tile subtitle'));
+      expect(tileSubtitle.style?.color, const Color(0xFF606060));
+      expect(tileSubtitle.style?.fontSize, 12);
+
+      final tileBadge = tester.widget<Text>(find.text('Tile badge'));
+      expect(tileBadge.style?.color, const Color(0xFF000088));
+      expect(tileBadge.style?.fontSize, 11);
+
+      final chip = tester.widget<Text>(find.text('Chip themed'));
+      expect(chip.style?.color, const Color(0xFF008800));
+      expect(chip.style?.fontSize, 14);
+      expect(chip.style?.fontWeight, FontWeight.w500);
+
+      final badge = tester.widget<Text>(find.text('Badge themed'));
+      expect(badge.style?.color, const Color(0xFF884400));
+      expect(badge.style?.fontSize, 11);
+      expect(badge.style?.fontWeight, FontWeight.w400);
+
+      final alertTitle = tester.widget<Text>(find.text('Alert themed'));
+      expect(alertTitle.style?.color, const Color(0xFF000088));
+      expect(alertTitle.style?.fontSize, 15);
+
+      final alertMessage = tester.widget<Text>(find.text('Alert message'));
+      expect(alertMessage.style?.color, const Color(0xFF000088));
+      expect(alertMessage.style?.fontSize, 12);
+      expect(alertMessage.style?.height, 1.4);
+
+      final themedDecorations = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((widget) => widget.decoration)
+          .whereType<BoxDecoration>();
+      expect(
+        themedDecorations.any(
+          (decoration) => decoration.color == const Color(0xFFFAFAFA),
+        ),
+        isTrue,
+      );
+      expect(
+        themedDecorations.any(
+          (decoration) =>
+              decoration.color == const Color(0xFFEEEEFF) &&
+              decoration.border is Border &&
+              (decoration.border! as Border).top.color ==
+                  const Color(0xFFCCCCFF),
+        ),
+        isTrue,
+      );
+
+      final icons = tester.widgetList<Icon>(find.byType(Icon));
+      expect(
+        icons.any((icon) => icon.color == const Color(0xFF303030)),
+        isTrue,
+      );
+
+      backendStore.dispose();
+    });
+
     testWidgets('renders core design widgets and dispatches row actions', (
       tester,
     ) async {
