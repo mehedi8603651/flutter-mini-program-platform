@@ -201,7 +201,12 @@ abstract interface class MiniProgramCacheStore {
   Future<int> totalBytes(String appId);
 }
 
-class MiniProgramMemoryCacheStore implements MiniProgramCacheStore {
+abstract interface class MiniProgramIndexedCacheStore
+    implements MiniProgramCacheStore {
+  Future<List<String>> appIds();
+}
+
+class MiniProgramMemoryCacheStore implements MiniProgramIndexedCacheStore {
   final Map<String, MiniProgramCacheEntry> _entries =
       <String, MiniProgramCacheEntry>{};
 
@@ -245,6 +250,14 @@ class MiniProgramMemoryCacheStore implements MiniProgramCacheStore {
     return (await entries(
       appId,
     )).fold<int>(0, (total, entry) => total + entry.sizeBytes);
+  }
+
+  @override
+  Future<List<String>> appIds() async {
+    return _entries.values
+        .map((entry) => entry.appId)
+        .toSet()
+        .toList(growable: false);
   }
 }
 
@@ -472,7 +485,7 @@ class MiniProgramCacheManager {
     MiniProgramCachePolicy? policy,
   }) async {
     final now = _clock();
-    final appIds = appId == null ? _knownAppIds.toList() : <String>[appId];
+    final appIds = await _trackedAppIds(appId: appId, policy: policy);
     for (final candidate in appIds) {
       final normalizedAppId = _rememberApp(candidate, policy: policy);
       final entries = await store.entries(normalizedAppId);
@@ -486,7 +499,7 @@ class MiniProgramCacheManager {
   }
 
   Future<void> clearLowPriority({String? appId}) async {
-    final appIds = appId == null ? _knownAppIds.toList() : <String>[appId];
+    final appIds = await _trackedAppIds(appId: appId);
     for (final candidate in appIds) {
       final normalizedAppId = _rememberApp(candidate);
       final entries = await store.entries(normalizedAppId);
@@ -500,7 +513,7 @@ class MiniProgramCacheManager {
   }
 
   Future<void> clearAllThirdParty() async {
-    for (final appId in _knownAppIds.toList()) {
+    for (final appId in await _trackedAppIds()) {
       final entries = await store.entries(appId);
       for (final entry in entries) {
         if (entry.priority != MiniProgramCachePriority.protected) {
@@ -566,7 +579,7 @@ class MiniProgramCacheManager {
       return store.totalBytes(_normalizeAppId(appId));
     }
     var total = 0;
-    for (final knownAppId in _knownAppIds) {
+    for (final knownAppId in await _trackedAppIds()) {
       total += await store.totalBytes(knownAppId);
     }
     return total;
@@ -766,6 +779,21 @@ class MiniProgramCacheManager {
     MiniProgramCachePolicy? override,
   ) {
     return override ?? _policies[appId] ?? defaultPolicy;
+  }
+
+  Future<List<String>> _trackedAppIds({
+    String? appId,
+    MiniProgramCachePolicy? policy,
+  }) async {
+    if (appId != null) {
+      return <String>[_rememberApp(appId, policy: policy)];
+    }
+    final appIds = <String>{..._knownAppIds};
+    final indexedStore = store;
+    if (indexedStore is MiniProgramIndexedCacheStore) {
+      appIds.addAll(await indexedStore.appIds());
+    }
+    return appIds.toList(growable: false);
   }
 
   Future<void> _touchApp(String appId) async {

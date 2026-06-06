@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import 'asset_cache.dart';
 import 'manifest_cache.dart';
+import 'runtime_file_cache.dart';
 import 'runtime_cache.dart';
 import 'screen_cache.dart';
 
@@ -40,7 +41,11 @@ class MiniProgramCacheBundle {
       assetCache: FileAssetCache(
         directory: Directory(p.join(rootDirectory.path, 'assets')),
       ),
-      runtimeCache: MiniProgramCacheManager.inMemory(),
+      runtimeCache: MiniProgramCacheManager(
+        store: FileMiniProgramCacheStore(
+          directory: Directory(p.join(rootDirectory.path, 'runtime')),
+        ),
+      ),
     );
   }
 
