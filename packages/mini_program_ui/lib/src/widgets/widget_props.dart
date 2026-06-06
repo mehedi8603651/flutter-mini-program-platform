@@ -35,7 +35,33 @@ const Set<String> mpAlignmentNames = <String>{
 
 const Set<String> mpFlexFitNames = <String>{'loose', 'tight'};
 
+const Set<String> mpTextWeightNames = <String>{
+  'regular',
+  'medium',
+  'semibold',
+  'bold',
+};
+
+const Set<String> mpTextAlignNames = <String>{
+  'left',
+  'center',
+  'right',
+  'start',
+  'end',
+  'justify',
+};
+
+const Set<String> mpTextOverflowNames = <String>{
+  'clip',
+  'ellipsis',
+  'fade',
+  'visible',
+};
+
+const Set<String> mpTextDirectionNames = <String>{'auto', 'ltr', 'rtl'};
+
 final RegExp _hexColorPattern = RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$');
+final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
 
 String requiredWidgetString(String value, String name) {
   final trimmed = value.trim();
@@ -81,6 +107,17 @@ num unitIntervalWidgetNumber(num value, String name) {
 int positiveWidgetInt(int value, String name) {
   if (value <= 0) {
     throw ArgumentError.value(value, name, 'Value must be positive.');
+  }
+  return value;
+}
+
+int headingLevel(int value) {
+  if (value < 1 || value > 6) {
+    throw ArgumentError.value(
+      value,
+      'level',
+      'Heading level must be between 1 and 6.',
+    );
   }
   return value;
 }
@@ -175,6 +212,66 @@ String widgetFlexFit(String value) {
     );
   }
   return fit;
+}
+
+String widgetTextWeight(String value) {
+  final weight = requiredWidgetString(value, 'weight');
+  if (!mpTextWeightNames.contains(weight)) {
+    throw ArgumentError.value(
+      value,
+      'weight',
+      'Text weight must be one of: ${mpTextWeightNames.join(', ')}.',
+    );
+  }
+  return weight;
+}
+
+String widgetTextAlign(String value) {
+  final align = requiredWidgetString(value, 'align');
+  if (!mpTextAlignNames.contains(align)) {
+    throw ArgumentError.value(
+      value,
+      'align',
+      'Text align must be one of: ${mpTextAlignNames.join(', ')}.',
+    );
+  }
+  return align;
+}
+
+String widgetTextOverflow(String value) {
+  final overflow = requiredWidgetString(value, 'overflow');
+  if (!mpTextOverflowNames.contains(overflow)) {
+    throw ArgumentError.value(
+      value,
+      'overflow',
+      'Text overflow must be one of: ${mpTextOverflowNames.join(', ')}.',
+    );
+  }
+  return overflow;
+}
+
+String widgetTextDirection(String value) {
+  final direction = requiredWidgetString(value, 'textDirection');
+  if (!mpTextDirectionNames.contains(direction)) {
+    throw ArgumentError.value(
+      value,
+      'textDirection',
+      'Text direction must be one of: ${mpTextDirectionNames.join(', ')}.',
+    );
+  }
+  return direction;
+}
+
+String widgetLocale(String value) {
+  final locale = requiredWidgetString(value, 'locale');
+  if (!_localePattern.hasMatch(locale)) {
+    throw ArgumentError.value(
+      value,
+      'locale',
+      'Locale must look like en, bn, zh, ar, hi, en-US, or pt-BR.',
+    );
+  }
+  return locale;
 }
 
 String widgetColor(String value, String name) {

@@ -36,6 +36,23 @@ void main() {
       expect(() => Mp.sizedBox(), throwsArgumentError);
     });
 
+    test('text style helpers reject invalid configuration', () {
+      expect(() => Mp.text(''), throwsArgumentError);
+      expect(() => Mp.heading(''), throwsArgumentError);
+      expect(() => Mp.text('Hi', size: 0), throwsArgumentError);
+      expect(() => Mp.text('Hi', color: '#FFF'), throwsArgumentError);
+      expect(() => Mp.text('Hi', weight: 'heavy'), throwsArgumentError);
+      expect(() => Mp.text('Hi', align: 'middle'), throwsArgumentError);
+      expect(() => Mp.text('Hi', overflow: 'truncate'), throwsArgumentError);
+      expect(() => Mp.text('Hi', maxLines: 0), throwsArgumentError);
+      expect(() => Mp.text('Hi', lineHeight: 0), throwsArgumentError);
+      expect(() => Mp.text('Hi', textDirection: 'both'), throwsArgumentError);
+      expect(() => Mp.text('Hi', locale: 'en_us'), throwsArgumentError);
+      expect(() => Mp.text('Hi', variant: ''), throwsArgumentError);
+      expect(() => Mp.heading('Hi', level: 0), throwsArgumentError);
+      expect(() => Mp.heading('Hi', level: 7), throwsArgumentError);
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

@@ -333,6 +333,42 @@ void main() {
       );
     });
 
+    test('accepts author-generated lightweight text style JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.text(
+                  'বাংলা লেখা এখানে',
+                  size: 16,
+                  color: '#111827',
+                  weight: 'semibold',
+                  align: 'center',
+                  maxLines: 2,
+                  overflow: 'ellipsis',
+                  lineHeight: 1.4,
+                  locale: 'bn',
+                  variant: 'title',
+                ),
+                Mp.heading(
+                  'مرحبا',
+                  level: 2,
+                  textDirection: 'auto',
+                  variant: 'section_title',
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -391,6 +427,104 @@ void main() {
           json['root'] = <String, dynamic>{
             'type': 'text',
             'props': <String, dynamic>{'data': '{{secrets.value}}'},
+            'children': <Object?>[],
+          };
+        }),
+        'empty text data': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': ''},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text size': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'size': 0},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text color': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'color': '#FFF'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text weight': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'weight': 'heavy'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text align': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'align': 'middle'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text overflow': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'overflow': 'truncate'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text maxLines': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'maxLines': 0},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text lineHeight': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'lineHeight': 0},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text direction': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'textDirection': 'both'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text locale': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'locale': 'en_us'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text variant': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'variant': ''},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid text softWrap': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'softWrap': 'no'},
+            'children': <Object?>[],
+          };
+        }),
+        'invalid heading level': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'heading',
+            'props': <String, dynamic>{'data': 'Hi', 'level': 7},
+            'children': <Object?>[],
+          };
+        }),
+        'text does not support heading level': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Hi', 'level': 2},
             'children': <Object?>[],
           };
         }),
@@ -838,6 +972,85 @@ void main() {
       expect(find.text('Sign in'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
       expect(find.byType(Image), findsOneWidget);
+    });
+
+    testWidgets('renders lightweight text styles and UTF-8 text safely', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      const bangla = 'বাংলা লেখা এখানে';
+      const arabic = 'مرحبا';
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.text(
+                  'Styled body',
+                  size: 18,
+                  color: '#112233',
+                  weight: 'semibold',
+                  align: 'center',
+                  maxLines: 2,
+                  overflow: 'ellipsis',
+                  softWrap: false,
+                  lineHeight: 1.4,
+                  textDirection: 'ltr',
+                  locale: 'en-US',
+                  variant: 'body_large',
+                ),
+                Mp.heading(
+                  'Styled heading',
+                  level: 3,
+                  color: '#FF111827',
+                  align: 'right',
+                  overflow: 'fade',
+                  textDirection: 'rtl',
+                ),
+                Mp.text(bangla, locale: 'bn'),
+                Mp.text(arabic, textDirection: 'auto'),
+                Mp.text('Plain auto', textDirection: 'auto'),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      final styledBody = tester.widget<Text>(find.text('Styled body'));
+      expect(styledBody.maxLines, 2);
+      expect(styledBody.overflow, TextOverflow.ellipsis);
+      expect(styledBody.softWrap, isFalse);
+      expect(styledBody.textAlign, TextAlign.center);
+      expect(styledBody.textDirection, TextDirection.ltr);
+      expect(styledBody.locale, const Locale('en', 'US'));
+      expect(styledBody.style?.fontSize, 18);
+      expect(styledBody.style?.height, 1.4);
+      expect(styledBody.style?.fontWeight, FontWeight.w600);
+      expect(styledBody.style?.color, const Color(0xFF112233));
+
+      final styledHeading = tester.widget<Text>(find.text('Styled heading'));
+      expect(styledHeading.textAlign, TextAlign.right);
+      expect(styledHeading.textDirection, TextDirection.rtl);
+      expect(styledHeading.overflow, TextOverflow.fade);
+      expect(styledHeading.style?.fontSize, 20);
+      expect(styledHeading.style?.fontWeight, FontWeight.w700);
+      expect(styledHeading.style?.color, const Color(0xFF111827));
+
+      final banglaText = tester.widget<Text>(find.text(bangla));
+      expect(banglaText.locale, const Locale('bn'));
+      expect(banglaText.textDirection, TextDirection.ltr);
+
+      final arabicText = tester.widget<Text>(find.text(arabic));
+      expect(arabicText.textDirection, TextDirection.rtl);
+
+      final plainAutoText = tester.widget<Text>(find.text('Plain auto'));
+      expect(plainAutoText.textDirection, TextDirection.ltr);
+
+      backendStore.dispose();
     });
 
     testWidgets('renders core design widgets and dispatches row actions', (

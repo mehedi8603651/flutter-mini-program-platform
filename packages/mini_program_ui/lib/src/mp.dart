@@ -4,6 +4,7 @@ import 'mp_node.dart';
 import 'widgets/display_widgets.dart';
 import 'widgets/layout_widgets.dart';
 import 'widgets/list_widgets.dart';
+import 'widgets/text_widgets.dart';
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
@@ -34,12 +35,64 @@ abstract final class Mp {
       MpNode('row', children: children);
 
   /// Creates body text.
-  static MpNode text(String data) =>
-      MpNode('text', props: <String, Object?>{'data': data});
+  static MpNode text(
+    String data, {
+    num? size,
+    String? color,
+    String weight = 'regular',
+    String align = 'start',
+    int? maxLines,
+    String overflow = 'clip',
+    bool softWrap = true,
+    num? lineHeight,
+    String textDirection = 'auto',
+    String? locale,
+    String? variant,
+  }) => buildTextNode(
+    data,
+    size: size,
+    color: color,
+    weight: weight,
+    align: align,
+    maxLines: maxLines,
+    overflow: overflow,
+    softWrap: softWrap,
+    lineHeight: lineHeight,
+    textDirection: textDirection,
+    locale: locale,
+    variant: variant,
+  );
 
   /// Creates heading text.
-  static MpNode heading(String data) =>
-      MpNode('heading', props: <String, Object?>{'data': data});
+  static MpNode heading(
+    String data, {
+    int level = 1,
+    num? size,
+    String? color,
+    String weight = 'bold',
+    String align = 'start',
+    int? maxLines,
+    String overflow = 'clip',
+    bool softWrap = true,
+    num? lineHeight,
+    String textDirection = 'auto',
+    String? locale,
+    String? variant,
+  }) => buildHeadingNode(
+    data,
+    level: level,
+    size: size,
+    color: color,
+    weight: weight,
+    align: align,
+    maxLines: maxLines,
+    overflow: overflow,
+    softWrap: softWrap,
+    lineHeight: lineHeight,
+    textDirection: textDirection,
+    locale: locale,
+    variant: variant,
+  );
 
   /// Creates fixed empty space.
   static MpNode sizedBox({num? width, num? height}) {

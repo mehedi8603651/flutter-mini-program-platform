@@ -23,6 +23,8 @@ class _MpScreenView extends StatelessWidget {
 
 enum _MpParentKind { normal, stack }
 
+final RegExp _rtlTextPattern = RegExp(r'[\u0590-\u08FF]');
+
 class _MpTapButton extends StatefulWidget {
   const _MpTapButton({
     required this.label,
@@ -442,23 +444,7 @@ class _MpNodeView extends StatelessWidget {
     return switch (node.type) {
       'column' => _MpColumn(node: node, bindings: bindings),
       'row' => _MpRow(node: node, bindings: bindings),
-      'text' => Text(
-        bindings.resolveString(node.props['data'] as String),
-        style: const TextStyle(
-          fontSize: 15,
-          height: 1.35,
-          color: Color(0xFF263238),
-        ),
-      ),
-      'heading' => Text(
-        bindings.resolveString(node.props['data'] as String),
-        style: const TextStyle(
-          fontSize: 24,
-          height: 1.2,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF111827),
-        ),
-      ),
+      'text' || 'heading' => _MpText(node: node, bindings: bindings),
       'sizedBox' => SizedBox(
         width: (node.props['width'] as num?)?.toDouble(),
         height: (node.props['height'] as num?)?.toDouble(),
@@ -597,6 +583,38 @@ class _MpRow extends StatelessWidget {
           isRow: true,
           hasBoundedMainAxis: constraints.hasBoundedWidth,
         ),
+      ),
+    );
+  }
+}
+
+class _MpText extends StatelessWidget {
+  const _MpText({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = bindings.resolveString(_string(node, 'data'));
+    final isHeading = node.type == 'heading';
+    final defaultColor = isHeading
+        ? const Color(0xFF111827)
+        : const Color(0xFF263238);
+    final defaultHeight = isHeading ? 1.2 : 1.35;
+    return Text(
+      data,
+      maxLines: node.props['maxLines'] as int?,
+      overflow: _mpTextOverflow(_string(node, 'overflow')),
+      softWrap: _bool(node, 'softWrap'),
+      textAlign: _mpTextAlign(_string(node, 'align')),
+      textDirection: _mpTextDirection(_string(node, 'textDirection'), data),
+      locale: _mpLocale(node.props['locale'] as String?),
+      style: TextStyle(
+        color: _mpColor(node.props['color'] as String?, fallback: defaultColor),
+        fontSize: _optionalDouble(node, 'size') ?? _defaultTextSize(node),
+        fontWeight: _mpFontWeight(_string(node, 'weight')),
+        height: _optionalDouble(node, 'lineHeight') ?? defaultHeight,
       ),
     );
   }
@@ -1513,6 +1531,67 @@ FlexFit _mpFlexFit(String value) {
   return switch (value) {
     'tight' => FlexFit.tight,
     _ => FlexFit.loose,
+  };
+}
+
+FontWeight _mpFontWeight(String value) {
+  return switch (value) {
+    'medium' => FontWeight.w500,
+    'semibold' => FontWeight.w600,
+    'bold' => FontWeight.w700,
+    _ => FontWeight.w400,
+  };
+}
+
+TextAlign _mpTextAlign(String value) {
+  return switch (value) {
+    'left' => TextAlign.left,
+    'center' => TextAlign.center,
+    'right' => TextAlign.right,
+    'end' => TextAlign.end,
+    'justify' => TextAlign.justify,
+    _ => TextAlign.start,
+  };
+}
+
+TextOverflow _mpTextOverflow(String value) {
+  return switch (value) {
+    'ellipsis' => TextOverflow.ellipsis,
+    'fade' => TextOverflow.fade,
+    'visible' => TextOverflow.visible,
+    _ => TextOverflow.clip,
+  };
+}
+
+TextDirection _mpTextDirection(String value, String data) {
+  return switch (value) {
+    'ltr' => TextDirection.ltr,
+    'rtl' => TextDirection.rtl,
+    _ => _rtlTextPattern.hasMatch(data) ? TextDirection.rtl : TextDirection.ltr,
+  };
+}
+
+Locale? _mpLocale(String? value) {
+  if (value == null) {
+    return null;
+  }
+  final parts = value.split('-');
+  return parts.length == 1
+      ? Locale(parts.first)
+      : Locale(parts.first, parts[1]);
+}
+
+double _defaultTextSize(_MpNode node) {
+  if (node.type != 'heading') {
+    return 15;
+  }
+  return switch (_int(node, 'level', fallback: 1)) {
+    2 => 22,
+    3 => 20,
+    4 => 18,
+    5 => 16,
+    6 => 15,
+    _ => 24,
   };
 }
 

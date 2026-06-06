@@ -48,6 +48,7 @@ class MpScreenValidator {
 
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
+  static final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
   static final RegExp _hexColorPattern = RegExp(
     r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$',
   );
@@ -84,6 +85,27 @@ class MpScreenValidator {
     'bottomRight',
   };
   static const Set<String> _flexFitNames = <String>{'loose', 'tight'};
+  static const Set<String> _textWeightNames = <String>{
+    'regular',
+    'medium',
+    'semibold',
+    'bold',
+  };
+  static const Set<String> _textAlignNames = <String>{
+    'left',
+    'center',
+    'right',
+    'start',
+    'end',
+    'justify',
+  };
+  static const Set<String> _textOverflowNames = <String>{
+    'clip',
+    'ellipsis',
+    'fade',
+    'visible',
+  };
+  static const Set<String> _textDirectionNames = <String>{'auto', 'ltr', 'rtl'};
 
   /// Validates an Mp screen document without rendering it.
   void validate(Map<String, dynamic> json, {required String expectedScreenId}) {
@@ -460,10 +482,31 @@ class MpScreenValidator {
     required List<_MpNode> children,
     required String path,
   }) {
-    _validateObjectKeys(props, const <String>{'data'}, path: '$path.props');
-    _requiredString(props, 'data', path: '$path.props');
+    const textKeys = <String>{
+      'data',
+      'size',
+      'color',
+      'weight',
+      'align',
+      'maxLines',
+      'overflow',
+      'softWrap',
+      'lineHeight',
+      'textDirection',
+      'locale',
+      'variant',
+    };
+    _validateObjectKeys(
+      props,
+      type == 'heading' ? const <String>{...textKeys, 'level'} : textKeys,
+      path: '$path.props',
+    );
     _validateNoChildren(children, path: '$path.children');
-    return _MpNode(type: type, props: props, children: const <_MpNode>[]);
+    return _MpNode(
+      type: type,
+      props: _parseTextProps(type: type, props: props, path: '$path.props'),
+      children: const <_MpNode>[],
+    );
   }
 
   _MpNode _parseSizedBoxNode({
@@ -487,6 +530,48 @@ class MpScreenValidator {
     _optionalNonNegativeNumber(height, path: '$path.props.height');
     _validateNoChildren(children, path: '$path.children');
     return _MpNode(type: 'sizedBox', props: props, children: const <_MpNode>[]);
+  }
+
+  Map<String, dynamic> _parseTextProps({
+    required String type,
+    required Map<String, dynamic> props,
+    required String path,
+  }) {
+    final defaultWeight = type == 'heading' ? 'bold' : 'regular';
+    final parsed = <String, dynamic>{
+      'align': _optionalTextAlign(props, 'align', path: path) ?? 'start',
+      if (props.containsKey('color'))
+        'color': _requiredHexColor(props, 'color', path: path),
+      'data': _requiredString(props, 'data', path: path),
+      if (props.containsKey('lineHeight'))
+        'lineHeight': _requiredPositiveNumber(props, 'lineHeight', path: path),
+      if (props.containsKey('locale'))
+        'locale': _requiredLocale(props, 'locale', path: path),
+      if (props.containsKey('maxLines'))
+        'maxLines': _requiredPositiveIntValue(
+          props['maxLines'],
+          path: '$path.maxLines',
+        ),
+      'overflow':
+          _optionalTextOverflow(props, 'overflow', path: path) ?? 'clip',
+      if (props.containsKey('size'))
+        'size': _requiredPositiveNumber(props, 'size', path: path),
+      'softWrap': props.containsKey('softWrap')
+          ? _requiredBoolValue(props['softWrap'], path: '$path.softWrap')
+          : true,
+      'textDirection':
+          _optionalTextDirection(props, 'textDirection', path: path) ?? 'auto',
+      if (props.containsKey('variant'))
+        'variant': _requiredStableString(props, 'variant', path: path),
+      'weight':
+          _optionalTextWeight(props, 'weight', path: path) ?? defaultWeight,
+    };
+    if (type == 'heading') {
+      parsed['level'] = props.containsKey('level')
+          ? _requiredHeadingLevelValue(props['level'], path: '$path.level')
+          : 1;
+    }
+    return parsed;
   }
 
   _MpNode _parseImageNode({
@@ -2607,6 +2692,106 @@ class MpScreenValidator {
     return value;
   }
 
+  static String? _optionalTextWeight(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    return _optionalTextChoice(
+      json,
+      key,
+      path: path,
+      allowedValues: _textWeightNames,
+      label: 'text weight',
+    );
+  }
+
+  static String? _optionalTextAlign(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    return _optionalTextChoice(
+      json,
+      key,
+      path: path,
+      allowedValues: _textAlignNames,
+      label: 'text align',
+    );
+  }
+
+  static String? _optionalTextOverflow(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    return _optionalTextChoice(
+      json,
+      key,
+      path: path,
+      allowedValues: _textOverflowNames,
+      label: 'text overflow',
+    );
+  }
+
+  static String? _optionalTextDirection(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    return _optionalTextChoice(
+      json,
+      key,
+      path: path,
+      allowedValues: _textDirectionNames,
+      label: 'text direction',
+    );
+  }
+
+  static String? _optionalTextChoice(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+    required Set<String> allowedValues,
+    required String label,
+  }) {
+    if (!json.containsKey(key)) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!allowedValues.contains(value)) {
+      _fail(
+        'Mp "$key" must be one of: ${allowedValues.join(', ')}.',
+        path: '$path.$key',
+        details: <String, dynamic>{label: value},
+      );
+    }
+    return value;
+  }
+
+  static String _requiredLocale(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    final value = _requiredStableString(json, key, path: path);
+    if (!_localePattern.hasMatch(value)) {
+      _fail(
+        'Mp "$key" must be a simple locale tag.',
+        path: '$path.$key',
+        details: <String, dynamic>{'locale': value},
+      );
+    }
+    return value;
+  }
+
+  static int _requiredHeadingLevelValue(Object? value, {required String path}) {
+    if (value is! int || value < 1 || value > 6) {
+      _fail('Mp heading level must be an integer from 1 to 6.', path: path);
+    }
+    return value;
+  }
+
   static String _requiredStableString(
     Map<String, dynamic> json,
     String key, {
@@ -2713,6 +2898,13 @@ class MpScreenValidator {
     return value;
   }
 
+  static int _requiredPositiveIntValue(Object? value, {required String path}) {
+    if (value is! int || value <= 0) {
+      _fail('Mp numeric value must be a positive integer.', path: path);
+    }
+    return value;
+  }
+
   static int? _optionalNonNegativeInt(Object? value, {required String path}) {
     if (value == null) {
       return null;
@@ -2727,6 +2919,13 @@ class MpScreenValidator {
     if (value == null) {
       return null;
     }
+    if (value is! bool) {
+      _fail('Mp value must be a boolean.', path: path);
+    }
+    return value;
+  }
+
+  static bool _requiredBoolValue(Object? value, {required String path}) {
     if (value is! bool) {
       _fail('Mp value must be a boolean.', path: path);
     }

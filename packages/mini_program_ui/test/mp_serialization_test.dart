@@ -54,6 +54,96 @@ void main() {
       });
     });
 
+    test('serializes lightweight text styles deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'text_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.text('Plain body'),
+              Mp.text(
+                'বাংলা লেখা এখানে',
+                size: 16,
+                color: '#111827',
+                weight: 'semibold',
+                align: 'center',
+                maxLines: 2,
+                overflow: 'ellipsis',
+                softWrap: false,
+                lineHeight: 1.4,
+                locale: 'bn',
+                variant: 'title',
+              ),
+              Mp.heading('Plain heading'),
+              Mp.heading(
+                'Styled heading',
+                level: 3,
+                size: 20,
+                color: '#FF111827',
+                weight: 'medium',
+                align: 'right',
+                maxLines: 1,
+                overflow: 'fade',
+                lineHeight: 1.1,
+                textDirection: 'rtl',
+                variant: 'section_title',
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['text_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'Plain body'},
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{
+              'align': 'center',
+              'color': '#111827',
+              'data': 'বাংলা লেখা এখানে',
+              'lineHeight': 1.4,
+              'locale': 'bn',
+              'maxLines': 2,
+              'overflow': 'ellipsis',
+              'size': 16,
+              'softWrap': false,
+              'variant': 'title',
+              'weight': 'semibold',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'heading',
+            'props': <String, Object?>{'data': 'Plain heading'},
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'heading',
+            'props': <String, Object?>{
+              'align': 'right',
+              'color': '#FF111827',
+              'data': 'Styled heading',
+              'level': 3,
+              'lineHeight': 1.1,
+              'maxLines': 1,
+              'overflow': 'fade',
+              'size': 20,
+              'textDirection': 'rtl',
+              'variant': 'section_title',
+              'weight': 'medium',
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{
