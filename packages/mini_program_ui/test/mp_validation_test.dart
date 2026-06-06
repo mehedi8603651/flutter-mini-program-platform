@@ -53,6 +53,77 @@ void main() {
       expect(() => Mp.heading('Hi', level: 7), throwsArgumentError);
     });
 
+    test('lightweight theme helpers reject invalid configuration', () {
+      expect(
+        () => Mp.theme(
+          colors: const <String, String>{'primary': '#FFF'},
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          colors: const <String, String>{'bad-token': '#FFFFFF'},
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          typography: const <String, Map<String, Object?>>{
+            '': <String, Object?>{'size': 16},
+          },
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          typography: const <String, Map<String, Object?>>{
+            'title': <String, Object?>{'size': 0},
+          },
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          typography: const <String, Map<String, Object?>>{
+            'title': <String, Object?>{'weight': 'heavy'},
+          },
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          typography: const <String, Map<String, Object?>>{
+            'title': <String, Object?>{'lineHeight': 0},
+          },
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          typography: const <String, Map<String, Object?>>{
+            'title': <String, Object?>{'color': 'bad-token'},
+          },
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.theme(
+          typography: const <String, Map<String, Object?>>{
+            'title': <String, Object?>{'fontFamily': 'Inter'},
+          },
+          child: Mp.text('Hi'),
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

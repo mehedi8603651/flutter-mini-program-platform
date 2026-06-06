@@ -25,6 +25,69 @@ enum _MpParentKind { normal, stack }
 
 final RegExp _rtlTextPattern = RegExp(r'[\u0590-\u08FF]');
 
+class _MpThemeData {
+  const _MpThemeData({
+    this.colors = const <String, String>{},
+    this.typography = const <String, _MpTypographyStyle>{},
+  });
+
+  final Map<String, String> colors;
+  final Map<String, _MpTypographyStyle> typography;
+
+  factory _MpThemeData.fromNode(_MpNode node) {
+    final rawColors =
+        node.props['colors'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final rawTypography =
+        node.props['typography'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    return _MpThemeData(
+      colors: <String, String>{
+        for (final entry in rawColors.entries) entry.key: entry.value as String,
+      },
+      typography: <String, _MpTypographyStyle>{
+        for (final entry in rawTypography.entries)
+          entry.key: _MpTypographyStyle.fromMap(
+            Map<String, dynamic>.from(entry.value as Map),
+          ),
+      },
+    );
+  }
+
+  _MpThemeData merge(_MpThemeData child) {
+    return _MpThemeData(
+      colors: <String, String>{...colors, ...child.colors},
+      typography: <String, _MpTypographyStyle>{
+        ...typography,
+        ...child.typography,
+      },
+    );
+  }
+}
+
+class _MpTypographyStyle {
+  const _MpTypographyStyle({
+    this.size,
+    this.weight,
+    this.lineHeight,
+    this.color,
+  });
+
+  factory _MpTypographyStyle.fromMap(Map<String, dynamic> style) {
+    return _MpTypographyStyle(
+      size: (style['size'] as num?)?.toDouble(),
+      weight: style['weight'] as String?,
+      lineHeight: (style['lineHeight'] as num?)?.toDouble(),
+      color: style['color'] as String?,
+    );
+  }
+
+  final double? size;
+  final String? weight;
+  final double? lineHeight;
+  final String? color;
+}
+
 class _MpTapButton extends StatefulWidget {
   const _MpTapButton({
     required this.label,
@@ -461,6 +524,7 @@ class _MpNodeView extends StatelessWidget {
           child: _MpNodeView(node: node.children.single, bindings: bindings),
         ),
       ),
+      'theme' => _MpTheme(node: node, bindings: bindings),
       'padding' => Padding(
         padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
         child: _MpNodeView(node: node.children.single, bindings: bindings),
@@ -531,9 +595,12 @@ class _MpNodeView extends StatelessWidget {
       'radioGroup' => _MpRadioGroupField(node: node),
       'form' => _MpForm(node: node, bindings: bindings),
       'formSubmit' => _MpFormSubmitButton(node: node, bindings: bindings),
-      'authBuilder' => _MpAuthBuilder(node: node),
-      'backendBuilder' => _MpBackendBuilder(node: node),
-      'pagedBackendBuilder' => _MpPagedBackendBuilder(node: node),
+      'authBuilder' => _MpAuthBuilder(node: node, bindings: bindings),
+      'backendBuilder' => _MpBackendBuilder(node: node, bindings: bindings),
+      'pagedBackendBuilder' => _MpPagedBackendBuilder(
+        node: node,
+        bindings: bindings,
+      ),
       'stateBuilder' => _MpStateBuilder(node: node, bindings: bindings),
       _ => throw MiniProgramRenderException(
         message: 'Unsupported Mp node type "${node.type}".',
@@ -588,6 +655,23 @@ class _MpRow extends StatelessWidget {
   }
 }
 
+class _MpTheme extends StatelessWidget {
+  const _MpTheme({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final parentTheme = bindings.theme ?? const _MpThemeData();
+    final mergedTheme = parentTheme.merge(_MpThemeData.fromNode(node));
+    return _MpNodeView(
+      node: node.children.single,
+      bindings: bindings.copyWith(theme: mergedTheme),
+    );
+  }
+}
+
 class _MpText extends StatelessWidget {
   const _MpText({required this.node, required this.bindings});
 
@@ -602,6 +686,28 @@ class _MpText extends StatelessWidget {
         ? const Color(0xFF111827)
         : const Color(0xFF263238);
     final defaultHeight = isHeading ? 1.2 : 1.35;
+    final explicitProps = Set<String>.from(
+      node.props['_explicitTextProps'] as List? ?? const <String>[],
+    );
+    final variantName = node.props['variant'] as String?;
+    final variant = variantName == null
+        ? null
+        : bindings.theme?.typography[variantName];
+    final variantColor = variant?.color;
+    final resolvedColor = explicitProps.contains('color')
+        ? _mpColor(node.props['color'] as String?, fallback: defaultColor)
+        : variantColor == null
+        ? defaultColor
+        : _mpThemeColor(variantColor, bindings.theme, fallback: defaultColor);
+    final resolvedSize = explicitProps.contains('size')
+        ? _optionalDouble(node, 'size') ?? _defaultTextSize(node)
+        : variant?.size ?? _defaultTextSize(node);
+    final resolvedWeight = explicitProps.contains('weight')
+        ? _string(node, 'weight')
+        : variant?.weight ?? _string(node, 'weight');
+    final resolvedHeight = explicitProps.contains('lineHeight')
+        ? _optionalDouble(node, 'lineHeight') ?? defaultHeight
+        : variant?.lineHeight ?? defaultHeight;
     return Text(
       data,
       maxLines: node.props['maxLines'] as int?,
@@ -611,10 +717,10 @@ class _MpText extends StatelessWidget {
       textDirection: _mpTextDirection(_string(node, 'textDirection'), data),
       locale: _mpLocale(node.props['locale'] as String?),
       style: TextStyle(
-        color: _mpColor(node.props['color'] as String?, fallback: defaultColor),
-        fontSize: _optionalDouble(node, 'size') ?? _defaultTextSize(node),
-        fontWeight: _mpFontWeight(_string(node, 'weight')),
-        height: _optionalDouble(node, 'lineHeight') ?? defaultHeight,
+        color: resolvedColor,
+        fontSize: resolvedSize,
+        fontWeight: _mpFontWeight(resolvedWeight),
+        height: resolvedHeight,
       ),
     );
   }
@@ -1629,6 +1735,21 @@ Color _mpColor(String? value, {required Color fallback}) {
   return Color(int.parse(hex, radix: 16));
 }
 
+Color _mpThemeColor(
+  String value,
+  _MpThemeData? theme, {
+  required Color fallback,
+}) {
+  if (value.startsWith('#')) {
+    return _mpColor(value, fallback: fallback);
+  }
+  final tokenColor = theme?.colors[value];
+  if (tokenColor == null) {
+    return fallback;
+  }
+  return _mpColor(tokenColor, fallback: fallback);
+}
+
 bool _isRenderableImageUrl(String src) {
   final uri = Uri.tryParse(src);
   if (uri == null || !uri.hasAuthority) {
@@ -2455,9 +2576,10 @@ class _MpButtonState extends State<_MpButton> {
 }
 
 class _MpAuthBuilder extends StatelessWidget {
-  const _MpAuthBuilder({required this.node});
+  const _MpAuthBuilder({required this.node, required this.bindings});
 
   final _MpNode node;
+  final _MpRenderBindings bindings;
 
   @override
   Widget build(BuildContext context) {
@@ -2476,7 +2598,7 @@ class _MpAuthBuilder extends StatelessWidget {
         }
         return _MpNodeView(
           node: template,
-          bindings: _MpRenderBindings(scope: scope),
+          bindings: bindings.copyWith(scope: scope),
         );
       },
     );
@@ -2497,9 +2619,10 @@ class _MpAuthBuilder extends StatelessWidget {
 }
 
 class _MpBackendBuilder extends StatefulWidget {
-  const _MpBackendBuilder({required this.node});
+  const _MpBackendBuilder({required this.node, required this.bindings});
 
   final _MpNode node;
+  final _MpRenderBindings bindings;
 
   @override
   State<_MpBackendBuilder> createState() => _MpBackendBuilderState();
@@ -2548,7 +2671,7 @@ class _MpBackendBuilderState extends State<_MpBackendBuilder> {
       if (activeScope == null) {
         return;
       }
-      final bindings = _MpRenderBindings(scope: activeScope);
+      final bindings = widget.bindings.copyWith(scope: activeScope);
       activeScope.backendStore.runQuery(
         connector: activeScope.backendConnector,
         miniProgramId: activeScope.miniProgramId,
@@ -2629,7 +2752,7 @@ class _MpBackendBuilderState extends State<_MpBackendBuilder> {
         for (final rawItem in rawItems)
           _MpNodeView(
             node: itemTemplate,
-            bindings: _MpRenderBindings(
+            bindings: widget.bindings.copyWith(
               scope: scope,
               item: rawItem is Map
                   ? Map<String, dynamic>.from(rawItem)
@@ -2646,15 +2769,16 @@ class _MpBackendBuilderState extends State<_MpBackendBuilder> {
     }
     return _MpNodeView(
       node: template,
-      bindings: _MpRenderBindings(scope: scope),
+      bindings: widget.bindings.copyWith(scope: scope),
     );
   }
 }
 
 class _MpPagedBackendBuilder extends StatefulWidget {
-  const _MpPagedBackendBuilder({required this.node});
+  const _MpPagedBackendBuilder({required this.node, required this.bindings});
 
   final _MpNode node;
+  final _MpRenderBindings bindings;
 
   @override
   State<_MpPagedBackendBuilder> createState() => _MpPagedBackendBuilderState();
@@ -2763,7 +2887,7 @@ class _MpPagedBackendBuilderState extends State<_MpPagedBackendBuilder> {
       for (final rawItem in snapshot.items)
         _MpNodeView(
           node: widget.node.props['itemTemplate'] as _MpNode,
-          bindings: _MpRenderBindings(
+          bindings: widget.bindings.copyWith(
             scope: scope,
             item: rawItem is Map
                 ? Map<String, dynamic>.from(rawItem)
@@ -2815,7 +2939,7 @@ class _MpPagedBackendBuilderState extends State<_MpPagedBackendBuilder> {
     }
     return _MpNodeView(
       node: template,
-      bindings: _MpRenderBindings(scope: scope),
+      bindings: widget.bindings.copyWith(scope: scope),
     );
   }
 }

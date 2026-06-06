@@ -5,6 +5,7 @@ import 'widgets/display_widgets.dart';
 import 'widgets/layout_widgets.dart';
 import 'widgets/list_widgets.dart';
 import 'widgets/text_widgets.dart';
+import 'widgets/theme_widgets.dart';
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
@@ -93,6 +94,13 @@ abstract final class Mp {
     locale: locale,
     variant: variant,
   );
+
+  /// Applies lightweight theme tokens to [child].
+  static MpNode theme({
+    required MpNode child,
+    Map<String, String>? colors,
+    Map<String, Map<String, Object?>>? typography,
+  }) => buildThemeNode(child: child, colors: colors, typography: typography);
 
   /// Creates fixed empty space.
   static MpNode sizedBox({num? width, num? height}) {

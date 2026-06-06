@@ -369,6 +369,46 @@ void main() {
       );
     });
 
+    test('accepts author-generated lightweight theme JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.theme(
+              colors: const <String, String>{
+                'text': '#111827',
+                'accent': '#2563EB',
+              },
+              typography: const <String, Map<String, Object?>>{
+                'title': <String, Object?>{
+                  'size': 20,
+                  'weight': 'bold',
+                  'lineHeight': 1.2,
+                  'color': 'text',
+                },
+                'caption': <String, Object?>{
+                  'size': 12,
+                  'weight': 'regular',
+                  'lineHeight': 1.35,
+                  'color': '#6B7280',
+                },
+              },
+              child: Mp.column(
+                children: <MpNode>[
+                  Mp.text('Theme title', variant: 'title'),
+                  Mp.heading('Theme caption', level: 4, variant: 'caption'),
+                ],
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed Mp screen JSON', () {
       final cases = <String, Map<String, dynamic>>{
         'bad schema': _screenWith((json) {
@@ -525,6 +565,171 @@ void main() {
           json['root'] = <String, dynamic>{
             'type': 'text',
             'props': <String, dynamic>{'data': 'Hi', 'level': 2},
+            'children': <Object?>[],
+          };
+        }),
+        'theme colors must be object': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{'colors': 'bad'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme color must be hex': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'colors': <String, dynamic>{'text': 'red'},
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme token name must be valid': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'colors': <String, dynamic>{'bad-token': '#FFFFFF'},
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography must be object': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{'typography': 'bad'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography variant must be valid': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'typography': <String, dynamic>{
+                '': <String, dynamic>{'size': 16},
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography field must be supported': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'typography': <String, dynamic>{
+                'title': <String, dynamic>{'fontFamily': 'Inter'},
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography size must be positive': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'typography': <String, dynamic>{
+                'title': <String, dynamic>{'size': 0},
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography weight must be valid': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'typography': <String, dynamic>{
+                'title': <String, dynamic>{'weight': 'heavy'},
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography lineHeight must be positive': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'typography': <String, dynamic>{
+                'title': <String, dynamic>{'lineHeight': 0},
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme typography color must be valid': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{
+              'typography': <String, dynamic>{
+                'title': <String, dynamic>{'color': 'bad-token'},
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Hi'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'theme requires one child': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'theme',
+            'props': <String, dynamic>{},
             'children': <Object?>[],
           };
         }),
@@ -1049,6 +1254,135 @@ void main() {
 
       final plainAutoText = tester.widget<Text>(find.text('Plain auto'));
       expect(plainAutoText.textDirection, TextDirection.ltr);
+
+      backendStore.dispose();
+    });
+
+    testWidgets('renders lightweight theme typography variants', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.theme(
+                  colors: const <String, String>{'text': '#123456'},
+                  typography: const <String, Map<String, Object?>>{
+                    'title': <String, Object?>{
+                      'size': 21,
+                      'weight': 'bold',
+                      'lineHeight': 1.2,
+                      'color': 'text',
+                    },
+                    'ghost': <String, Object?>{
+                      'size': 13,
+                      'color': 'missingColor',
+                    },
+                  },
+                  child: Mp.column(
+                    children: <MpNode>[
+                      Mp.text('Theme title', variant: 'title'),
+                      Mp.text(
+                        'Direct wins',
+                        variant: 'title',
+                        size: 30,
+                        color: '#FF0000',
+                        weight: 'medium',
+                        lineHeight: 1.7,
+                      ),
+                      Mp.text('Missing variant', variant: 'missing'),
+                      Mp.text('Missing token', variant: 'ghost'),
+                    ],
+                  ),
+                ),
+                Mp.text('Outside title', variant: 'title'),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      final themedTitle = tester.widget<Text>(find.text('Theme title'));
+      expect(themedTitle.style?.fontSize, 21);
+      expect(themedTitle.style?.fontWeight, FontWeight.w700);
+      expect(themedTitle.style?.height, 1.2);
+      expect(themedTitle.style?.color, const Color(0xFF123456));
+
+      final directWins = tester.widget<Text>(find.text('Direct wins'));
+      expect(directWins.style?.fontSize, 30);
+      expect(directWins.style?.fontWeight, FontWeight.w500);
+      expect(directWins.style?.height, 1.7);
+      expect(directWins.style?.color, const Color(0xFFFF0000));
+
+      final missingVariant = tester.widget<Text>(find.text('Missing variant'));
+      expect(missingVariant.style?.fontSize, 15);
+      expect(missingVariant.style?.color, const Color(0xFF263238));
+
+      final missingToken = tester.widget<Text>(find.text('Missing token'));
+      expect(missingToken.style?.fontSize, 13);
+      expect(missingToken.style?.color, const Color(0xFF263238));
+
+      final outsideTitle = tester.widget<Text>(find.text('Outside title'));
+      expect(outsideTitle.style?.fontSize, 15);
+      expect(outsideTitle.style?.color, const Color(0xFF263238));
+
+      backendStore.dispose();
+    });
+
+    testWidgets('merges nested lightweight themes', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.theme(
+              colors: const <String, String>{'text': '#111111'},
+              typography: const <String, Map<String, Object?>>{
+                'title': <String, Object?>{
+                  'size': 20,
+                  'weight': 'bold',
+                  'color': 'text',
+                },
+              },
+              child: Mp.column(
+                children: <MpNode>[
+                  Mp.text('Parent title', variant: 'title'),
+                  Mp.theme(
+                    colors: const <String, String>{'text': '#222222'},
+                    typography: const <String, Map<String, Object?>>{
+                      'title': <String, Object?>{
+                        'size': 25,
+                        'weight': 'medium',
+                        'color': 'text',
+                      },
+                    },
+                    child: Mp.text('Nested title', variant: 'title'),
+                  ),
+                ],
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      final parentTitle = tester.widget<Text>(find.text('Parent title'));
+      expect(parentTitle.style?.fontSize, 20);
+      expect(parentTitle.style?.fontWeight, FontWeight.w700);
+      expect(parentTitle.style?.color, const Color(0xFF111111));
+
+      final nestedTitle = tester.widget<Text>(find.text('Nested title'));
+      expect(nestedTitle.style?.fontSize, 25);
+      expect(nestedTitle.style?.fontWeight, FontWeight.w500);
+      expect(nestedTitle.style?.color, const Color(0xFF222222));
 
       backendStore.dispose();
     });

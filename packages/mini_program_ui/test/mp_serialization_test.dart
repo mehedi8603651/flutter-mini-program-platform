@@ -144,6 +144,110 @@ void main() {
       });
     });
 
+    test('serializes lightweight themes deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'theme_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.theme(child: Mp.text('Plain themed')),
+              Mp.theme(
+                colors: const <String, String>{
+                  'text': '#111827',
+                  'brandAccent': '#FF00AA',
+                },
+                typography: const <String, Map<String, Object?>>{
+                  'title': <String, Object?>{
+                    'size': 20,
+                    'weight': 'bold',
+                    'lineHeight': 1.25,
+                    'color': 'text',
+                  },
+                  'caption': <String, Object?>{
+                    'size': 12,
+                    'weight': 'regular',
+                    'lineHeight': 1.3,
+                    'color': '#6B7280',
+                  },
+                },
+                child: Mp.column(
+                  children: <MpNode>[
+                    Mp.text('Product title', variant: 'title'),
+                    Mp.heading('Caption heading', level: 4, variant: 'caption'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['theme_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'theme',
+            'props': <String, Object?>{},
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': 'Plain themed'},
+                'children': <Object?>[],
+              },
+            ],
+          },
+          <String, Object?>{
+            'type': 'theme',
+            'props': <String, Object?>{
+              'colors': <String, Object?>{
+                'brandAccent': '#FF00AA',
+                'text': '#111827',
+              },
+              'typography': <String, Object?>{
+                'caption': <String, Object?>{
+                  'color': '#6B7280',
+                  'lineHeight': 1.3,
+                  'size': 12,
+                  'weight': 'regular',
+                },
+                'title': <String, Object?>{
+                  'color': 'text',
+                  'lineHeight': 1.25,
+                  'size': 20,
+                  'weight': 'bold',
+                },
+              },
+            },
+            'children': <Object?>[
+              <String, Object?>{
+                'type': 'column',
+                'props': <String, Object?>{},
+                'children': <Object?>[
+                  <String, Object?>{
+                    'type': 'text',
+                    'props': <String, Object?>{
+                      'data': 'Product title',
+                      'variant': 'title',
+                    },
+                    'children': <Object?>[],
+                  },
+                  <String, Object?>{
+                    'type': 'heading',
+                    'props': <String, Object?>{
+                      'data': 'Caption heading',
+                      'level': 4,
+                      'variant': 'caption',
+                    },
+                    'children': <Object?>[],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

@@ -1,22 +1,26 @@
 part of '../mp_screen_renderer.dart';
 
 class _MpRenderBindings {
-  const _MpRenderBindings({this.scope, this.item, this.form});
+  const _MpRenderBindings({this.scope, this.item, this.form, this.theme});
 
   static final RegExp _bindingPattern = RegExp(r'\{\{\s*([^}]+?)\s*\}\}');
 
   final MiniProgramSdkScope? scope;
   final Map<String, dynamic>? item;
   final Map<String, dynamic>? form;
+  final _MpThemeData? theme;
 
   _MpRenderBindings copyWith({
+    MiniProgramSdkScope? scope,
     Map<String, dynamic>? item,
     Map<String, dynamic>? form,
+    _MpThemeData? theme,
   }) {
     return _MpRenderBindings(
-      scope: scope,
+      scope: scope ?? this.scope,
       item: item ?? this.item,
       form: form ?? this.form,
+      theme: theme ?? this.theme,
     );
   }
 

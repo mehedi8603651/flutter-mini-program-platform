@@ -62,6 +62,7 @@ const Set<String> mpTextDirectionNames = <String>{'auto', 'ltr', 'rtl'};
 
 final RegExp _hexColorPattern = RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$');
 final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
+final RegExp _themeTokenPattern = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
 
 String requiredWidgetString(String value, String name) {
   final trimmed = value.trim();
@@ -272,6 +273,26 @@ String widgetLocale(String value) {
     );
   }
   return locale;
+}
+
+String themeTokenName(String value, String name) {
+  final token = requiredWidgetString(value, name);
+  if (!_themeTokenPattern.hasMatch(token)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      r'Theme token names must match ^[a-zA-Z][a-zA-Z0-9_]*$.',
+    );
+  }
+  return token;
+}
+
+String themeTypographyColor(String value) {
+  final color = requiredWidgetString(value, 'color');
+  if (_hexColorPattern.hasMatch(color)) {
+    return color;
+  }
+  return themeTokenName(color, 'color');
 }
 
 String widgetColor(String value, String name) {

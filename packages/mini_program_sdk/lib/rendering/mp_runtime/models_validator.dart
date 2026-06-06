@@ -49,6 +49,7 @@ class MpScreenValidator {
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
+  static final RegExp _themeTokenPattern = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
   static final RegExp _hexColorPattern = RegExp(
     r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$',
   );
@@ -253,6 +254,11 @@ class MpScreenValidator {
         path: path,
       ),
       'card' => _parseCardNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'theme' => _parseThemeNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -538,11 +544,16 @@ class MpScreenValidator {
     required String path,
   }) {
     final defaultWeight = type == 'heading' ? 'bold' : 'regular';
+    final explicitTextProps = <String>[
+      for (final key in const <String>{'size', 'color', 'weight', 'lineHeight'})
+        if (props.containsKey(key)) key,
+    ];
     final parsed = <String, dynamic>{
       'align': _optionalTextAlign(props, 'align', path: path) ?? 'start',
       if (props.containsKey('color'))
         'color': _requiredHexColor(props, 'color', path: path),
       'data': _requiredString(props, 'data', path: path),
+      '_explicitTextProps': explicitTextProps,
       if (props.containsKey('lineHeight'))
         'lineHeight': _requiredPositiveNumber(props, 'lineHeight', path: path),
       if (props.containsKey('locale'))
@@ -606,6 +617,34 @@ class MpScreenValidator {
     return _MpNode(
       type: 'card',
       props: const <String, dynamic>{},
+      children: children,
+    );
+  }
+
+  _MpNode _parseThemeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'colors',
+      'typography',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'theme', path: path);
+    return _MpNode(
+      type: 'theme',
+      props: <String, dynamic>{
+        if (props.containsKey('colors'))
+          'colors': _parseThemeColors(
+            props['colors'],
+            path: '$path.props.colors',
+          ),
+        if (props.containsKey('typography'))
+          'typography': _parseThemeTypography(
+            props['typography'],
+            path: '$path.props.typography',
+          ),
+      },
       children: children,
     );
   }
@@ -2552,6 +2591,67 @@ class MpScreenValidator {
     };
   }
 
+  static Map<String, dynamic> _parseThemeColors(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! Map) {
+      _fail('Mp theme colors must be an object.', path: path);
+    }
+    final colors = Map<String, dynamic>.from(value);
+    return <String, dynamic>{
+      for (final entry in colors.entries)
+        _themeTokenName(entry.key, path: '$path.${entry.key}'): _themeHexColor(
+          entry.value,
+          path: '$path.${entry.key}',
+        ),
+    };
+  }
+
+  static Map<String, dynamic> _parseThemeTypography(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! Map) {
+      _fail('Mp theme typography must be an object.', path: path);
+    }
+    final typography = Map<String, dynamic>.from(value);
+    return <String, dynamic>{
+      for (final entry in typography.entries)
+        _themeTokenName(entry.key, path: '$path.${entry.key}'):
+            _parseThemeTypographyStyle(entry.value, path: '$path.${entry.key}'),
+    };
+  }
+
+  static Map<String, dynamic> _parseThemeTypographyStyle(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! Map) {
+      _fail('Mp theme typography style must be an object.', path: path);
+    }
+    final style = Map<String, dynamic>.from(value);
+    _validateObjectKeys(style, const <String>{
+      'size',
+      'weight',
+      'lineHeight',
+      'color',
+    }, path: path);
+    return <String, dynamic>{
+      if (style.containsKey('color'))
+        'color': _themeTypographyColor(style['color'], path: '$path.color'),
+      if (style.containsKey('lineHeight'))
+        'lineHeight': _themePositiveNumber(
+          style['lineHeight'],
+          path: '$path.lineHeight',
+        ),
+      if (style.containsKey('size'))
+        'size': _themePositiveNumber(style['size'], path: '$path.size'),
+      if (style.containsKey('weight'))
+        'weight': _themeTextWeight(style['weight'], path: '$path.weight'),
+    };
+  }
+
   static Map<String, dynamic> _parsePositionedConstraints(
     Map<String, dynamic> props, {
     required String path,
@@ -2780,6 +2880,54 @@ class MpScreenValidator {
         'Mp "$key" must be a simple locale tag.',
         path: '$path.$key',
         details: <String, dynamic>{'locale': value},
+      );
+    }
+    return value;
+  }
+
+  static String _themeTokenName(String value, {required String path}) {
+    if (value.trim().isEmpty || !_themeTokenPattern.hasMatch(value)) {
+      _fail(
+        'Mp theme token name must match ^[a-zA-Z][a-zA-Z0-9_]*\$.',
+        path: path,
+        details: <String, dynamic>{'token': value},
+      );
+    }
+    return value;
+  }
+
+  static String _themeHexColor(Object? value, {required String path}) {
+    if (value is! String || !_hexColorPattern.hasMatch(value)) {
+      _fail(
+        'Mp theme color must be a hex color in #RRGGBB or #AARRGGBB format.',
+        path: path,
+      );
+    }
+    return value;
+  }
+
+  static String _themeTypographyColor(Object? value, {required String path}) {
+    if (value is! String || value.trim().isEmpty) {
+      _fail('Mp theme typography color must be a string.', path: path);
+    }
+    if (_hexColorPattern.hasMatch(value)) {
+      return value;
+    }
+    return _themeTokenName(value, path: path);
+  }
+
+  static num _themePositiveNumber(Object? value, {required String path}) {
+    if (value is! num || value <= 0 || !value.isFinite) {
+      _fail('Mp theme numeric value must be finite and positive.', path: path);
+    }
+    return value;
+  }
+
+  static String _themeTextWeight(Object? value, {required String path}) {
+    if (value is! String || !_textWeightNames.contains(value)) {
+      _fail(
+        'Mp theme text weight must be one of: ${_textWeightNames.join(', ')}.',
+        path: path,
       );
     }
     return value;
