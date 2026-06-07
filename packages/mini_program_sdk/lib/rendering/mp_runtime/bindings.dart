@@ -5,6 +5,7 @@ class _MpRenderBindings {
     this.scope,
     this.screenId,
     this.item,
+    this.index,
     this.form,
     this.theme,
   });
@@ -14,6 +15,7 @@ class _MpRenderBindings {
   final MiniProgramSdkScope? scope;
   final String? screenId;
   final Map<String, dynamic>? item;
+  final int? index;
   final Map<String, dynamic>? form;
   final _MpThemeData? theme;
 
@@ -21,6 +23,7 @@ class _MpRenderBindings {
     MiniProgramSdkScope? scope,
     String? screenId,
     Map<String, dynamic>? item,
+    int? index,
     Map<String, dynamic>? form,
     _MpThemeData? theme,
   }) {
@@ -28,6 +31,7 @@ class _MpRenderBindings {
       scope: scope ?? this.scope,
       screenId: screenId ?? this.screenId,
       item: item ?? this.item,
+      index: index ?? this.index,
       form: form ?? this.form,
       theme: theme ?? this.theme,
     );
@@ -92,6 +96,7 @@ class _MpRenderBindings {
       'state':
           activeScope?.stateManager?.toBindingData() ?? <String, dynamic>{},
       if (item != null) 'item': item!,
+      if (index != null) 'index': index!,
       if (form != null) 'form': form!,
       if (authSnapshot != null) 'auth': authSnapshot.toBindingData(),
     };
@@ -104,6 +109,7 @@ abstract final class _MpBindingResolver {
     'auth',
     'backend',
     'form',
+    'index',
     'item',
     'route',
     'state',
@@ -120,6 +126,11 @@ abstract final class _MpBindingResolver {
 
   static bool containsBinding(String value) {
     return _bindingPattern.hasMatch(value);
+  }
+
+  static bool isSingleBindingExpression(String value) {
+    final matches = _bindingPattern.allMatches(value).toList();
+    return matches.length == 1 && matches.single.group(0) == value;
   }
 
   static void validateSafeBindings(Object? value, {required String path}) {

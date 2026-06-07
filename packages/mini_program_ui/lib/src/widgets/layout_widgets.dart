@@ -171,6 +171,27 @@ MpNode buildListViewNode({
   );
 }
 
+MpNode buildRepeatNode({
+  required String source,
+  required MpNode itemTemplate,
+  MpNode? empty,
+  MpNode? separator,
+  num spacing = 0,
+  int limit = 100,
+}) {
+  return MpNode(
+    'repeat',
+    props: <String, Object?>{
+      if (empty != null) 'empty': empty,
+      'itemTemplate': itemTemplate,
+      'limit': repeatLimit(limit),
+      if (separator != null) 'separator': separator,
+      'source': widgetBindingExpression(source, 'source'),
+      'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
+    },
+  );
+}
+
 MpNode buildSafeAreaNode({
   required MpNode child,
   bool left = true,

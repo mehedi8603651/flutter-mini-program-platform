@@ -496,6 +496,33 @@ void main() {
       );
     });
 
+    test('accepts author-generated repeat JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.stateBuilder(
+              keys: const <String>['area.results'],
+              child: Mp.repeat(
+                source: '{{state.area.results.items}}',
+                itemTemplate: Mp.listTile(
+                  title: '{{index}}. {{item.name}}',
+                  subtitle: '{{item.lat}}, {{item.lon}}',
+                ),
+                empty: Mp.emptyState(title: 'No area found'),
+                separator: Mp.divider(spacing: 0),
+                limit: 20,
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('accepts cache action JSON', () {
       const MpScreenValidator().validate(
         _screenWith((json) {
@@ -830,6 +857,106 @@ void main() {
                 'children': <Object?>[],
               },
             ],
+          };
+        }),
+        'repeat requires itemTemplate': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{'source': '{{state.items}}'},
+            'children': <Object?>[],
+          };
+        }),
+        'repeat rejects normal children': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{
+              'source': '{{state.items}}',
+              'itemTemplate': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Wrong'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'repeat rejects non-binding source': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{
+              'source': 'state.items',
+              'itemTemplate': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'repeat rejects partial binding source': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{
+              'source': 'Items: {{state.items}}',
+              'itemTemplate': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'repeat rejects bad spacing': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{
+              'source': '{{state.items}}',
+              'spacing': -1,
+              'itemTemplate': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'repeat rejects bad limit': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{
+              'source': '{{state.items}}',
+              'limit': 501,
+              'itemTemplate': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'repeat rejects unknown prop': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'repeat',
+            'props': <String, dynamic>{
+              'source': '{{state.items}}',
+              'itemName': 'area',
+              'itemTemplate': <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+            },
+            'children': <Object?>[],
           };
         }),
         'too many children': _screenWith((json) {
@@ -3146,6 +3273,113 @@ void main() {
       await tester.pump();
 
       expect(find.text('Count: 2'), findsOneWidget);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('repeat renders state lists maps scalars index and nesting', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.stateBuilder(
+                  keys: const <String>['area.results'],
+                  child: Mp.repeat(
+                    source: '{{state.area.results.items}}',
+                    itemTemplate: Mp.listTile(
+                      title: '{{index}}. {{item.name}}',
+                      subtitle: '{{item.lat}}, {{item.lon}}',
+                    ),
+                    empty: Mp.emptyState(title: 'No area found'),
+                    separator: Mp.divider(spacing: 0),
+                    limit: 2,
+                  ),
+                ),
+                Mp.stateBuilder(
+                  keys: const <String>['tags'],
+                  child: Mp.repeat(
+                    source: '{{state.tags}}',
+                    itemTemplate: Mp.chip(label: '{{item.value}}'),
+                    spacing: 6,
+                  ),
+                ),
+                Mp.stateBuilder(
+                  keys: const <String>['groups'],
+                  child: Mp.repeat(
+                    source: '{{state.groups}}',
+                    itemTemplate: Mp.column(
+                      children: <MpNode>[
+                        Mp.text('{{item.name}}'),
+                        Mp.repeat(
+                          source: '{{item.children}}',
+                          itemTemplate: Mp.text('{{item.name}}'),
+                        ),
+                      ],
+                    ),
+                    empty: Mp.text('No groups'),
+                  ),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+
+      expect(find.text('No area found'), findsOneWidget);
+      expect(find.text('No groups'), findsOneWidget);
+
+      stateManager.set('area.results', <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'name': 'Dhaka', 'lat': 23.81, 'lon': 90.41},
+          <String, Object?>{'name': 'Khulna', 'lat': 22.82, 'lon': 89.55},
+          <String, Object?>{'name': 'Sylhet', 'lat': 24.89, 'lon': 91.87},
+        ],
+      });
+      stateManager.set('tags', <Object?>['Popular', 'Nearby']);
+      stateManager.set('groups', <Object?>[
+        <String, Object?>{
+          'name': 'Dhaka group',
+          'children': <Object?>[
+            <String, Object?>{'name': 'Dhanmondi'},
+          ],
+        },
+      ]);
+      await tester.pump();
+
+      expect(find.text('0. Dhaka'), findsOneWidget);
+      expect(find.text('23.81, 90.41'), findsOneWidget);
+      expect(find.text('1. Khulna'), findsOneWidget);
+      expect(find.text('Sylhet'), findsNothing);
+      expect(find.text('Popular'), findsOneWidget);
+      expect(find.text('Nearby'), findsOneWidget);
+      expect(find.text('Dhaka group'), findsOneWidget);
+      expect(find.text('Dhanmondi'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SizedBox && widget.height == 1,
+        ),
+        findsAtLeastNWidgets(1),
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SizedBox && widget.height == 6,
+        ),
+        findsOneWidget,
+      );
 
       stateManager.dispose();
       backendStore.dispose();

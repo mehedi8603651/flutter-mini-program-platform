@@ -259,6 +259,52 @@ void main() {
       );
     });
 
+    test('repeat helpers reject invalid configuration', () {
+      expect(
+        () => Mp.repeat(source: '', itemTemplate: Mp.text('Area')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.repeat(source: 'state.items', itemTemplate: Mp.text('Area')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.repeat(
+          source: 'Areas: {{state.items}}',
+          itemTemplate: Mp.text('Area'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.repeat(
+          source: '{{state.items}}',
+          itemTemplate: Mp.text('Area'),
+          spacing: -1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.repeat(
+          source: '{{state.items}}',
+          itemTemplate: Mp.text('Area'),
+          limit: 0,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.repeat(
+          source: '{{state.items}}',
+          itemTemplate: Mp.text('Area'),
+          limit: 501,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.forEach(source: 'bad', itemTemplate: Mp.text('Area')),
+        throwsArgumentError,
+      );
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

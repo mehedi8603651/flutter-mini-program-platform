@@ -531,6 +531,7 @@ class _MpNodeView extends StatelessWidget {
       'container' => _MpContainer(node: node, bindings: bindings),
       'scrollView' => _MpScrollView(node: node, bindings: bindings),
       'listView' => _MpListView(node: node, bindings: bindings),
+      'repeat' => _MpRepeat(node: node, bindings: bindings),
       'safeArea' => SafeArea(
         left: _bool(node, 'left'),
         top: _bool(node, 'top'),
@@ -1179,6 +1180,51 @@ class _MpListView extends StatelessWidget {
       separatorBuilder: (context, index) => SizedBox(height: spacing),
       itemBuilder: (context, index) =>
           _MpNodeView(node: node.children[index], bindings: bindings),
+    );
+  }
+}
+
+class _MpRepeat extends StatelessWidget {
+  const _MpRepeat({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = bindings.resolveStringValue(_string(node, 'source'));
+    if (resolved is! List || resolved.isEmpty) {
+      final empty = node.props['empty'] as _MpNode?;
+      return empty == null
+          ? const SizedBox.shrink()
+          : _MpNodeView(node: empty, bindings: bindings);
+    }
+
+    final itemTemplate = node.props['itemTemplate'] as _MpNode;
+    final separator = node.props['separator'] as _MpNode?;
+    final spacing = _double(node, 'spacing', fallback: 0);
+    final limit = _int(node, 'limit', fallback: 100);
+    final visibleCount = resolved.length < limit ? resolved.length : limit;
+    final children = <Widget>[];
+    for (var index = 0; index < visibleCount; index += 1) {
+      final rowBindings = bindings.copyWith(
+        item: _mpItemBinding(resolved[index]),
+        index: index,
+      );
+      children.add(_MpNodeView(node: itemTemplate, bindings: rowBindings));
+      if (index < visibleCount - 1) {
+        if (separator != null) {
+          children.add(_MpNodeView(node: separator, bindings: rowBindings));
+        } else if (spacing > 0) {
+          children.add(SizedBox(height: spacing));
+        }
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: children,
     );
   }
 }
@@ -2266,6 +2312,13 @@ List<Widget> _mpFlexChildren(
         return isRow ? Flexible(child: view) : view;
       })
       .toList(growable: false);
+}
+
+Map<String, dynamic> _mpItemBinding(Object? rawItem) {
+  if (rawItem is Map) {
+    return Map<String, dynamic>.from(rawItem);
+  }
+  return <String, dynamic>{'value': rawItem};
 }
 
 FlexFit _mpFlexFit(String value) {

@@ -498,6 +498,87 @@ void main() {
       });
     });
 
+    test('serializes repeat and forEach nodes deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'area_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.repeat(
+                source: '{{state.area.results.items}}',
+                itemTemplate: Mp.listTile(
+                  title: '{{index}}. {{item.name}}',
+                  subtitle: '{{item.lat}}, {{item.lon}}',
+                ),
+                empty: Mp.emptyState(title: 'No area found'),
+                separator: Mp.divider(spacing: 0),
+                spacing: 4,
+                limit: 20,
+              ),
+              Mp.forEach(
+                source: '{{backend.area_search.data.items}}',
+                itemTemplate: Mp.text('{{item.name}}'),
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['area_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'repeat',
+            'props': <String, Object?>{
+              'empty': <String, Object?>{
+                'type': 'emptyState',
+                'props': <String, Object?>{
+                  'icon': 'info',
+                  'title': 'No area found',
+                },
+                'children': <Object?>[],
+              },
+              'itemTemplate': <String, Object?>{
+                'type': 'listTile',
+                'props': <String, Object?>{
+                  'subtitle': '{{item.lat}}, {{item.lon}}',
+                  'title': '{{index}}. {{item.name}}',
+                },
+                'children': <Object?>[],
+              },
+              'limit': 20,
+              'separator': <String, Object?>{
+                'type': 'divider',
+                'props': <String, Object?>{
+                  'color': '#E5E7EB',
+                  'spacing': 0,
+                  'thickness': 1,
+                },
+                'children': <Object?>[],
+              },
+              'source': '{{state.area.results.items}}',
+              'spacing': 4,
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'repeat',
+            'props': <String, Object?>{
+              'itemTemplate': <String, Object?>{
+                'type': 'text',
+                'props': <String, Object?>{'data': '{{item.name}}'},
+                'children': <Object?>[],
+              },
+              'limit': 100,
+              'source': '{{backend.area_search.data.items}}',
+              'spacing': 0,
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

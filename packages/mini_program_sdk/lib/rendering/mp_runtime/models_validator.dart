@@ -352,6 +352,13 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'repeat' => _parseRepeatNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
       'safeArea' => _parseSafeAreaNode(
         props: props,
         children: parsedChildren,
@@ -1211,6 +1218,56 @@ class MpScreenValidator {
             0,
       },
       children: children,
+    );
+  }
+
+  _MpNode _parseRepeatNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'empty',
+      'itemTemplate',
+      'limit',
+      'separator',
+      'source',
+      'spacing',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final source = _requiredString(props, 'source', path: '$path.props').trim();
+    if (!_MpBindingResolver.isSingleBindingExpression(source)) {
+      _fail(
+        'Mp repeat source must be a single full binding expression.',
+        path: '$path.props.source',
+      );
+    }
+    final parsedProps = <String, dynamic>{
+      'limit': _optionalRepeatLimit(props['limit'], path: '$path.props.limit'),
+      'source': source,
+      'spacing':
+          _optionalNonNegativeNumberValue(
+            props['spacing'],
+            path: '$path.props.spacing',
+          ) ??
+          0,
+      ..._parseTemplateProps(
+        props,
+        const <String>{'itemTemplate', 'empty', 'separator'},
+        path: '$path.props',
+        depth: depth,
+        state: state,
+      ),
+    };
+    if (!parsedProps.containsKey('itemTemplate')) {
+      _fail('Mp repeat requires an itemTemplate.', path: '$path.props');
+    }
+    return _MpNode(
+      type: 'repeat',
+      props: parsedProps,
+      children: const <_MpNode>[],
     );
   }
 
@@ -3686,6 +3743,16 @@ class MpScreenValidator {
     }
     if (value is! int || value <= 0) {
       _fail('Mp numeric value must be a positive integer.', path: path);
+    }
+    return value;
+  }
+
+  static int _optionalRepeatLimit(Object? value, {required String path}) {
+    if (value == null) {
+      return 100;
+    }
+    if (value is! int || value <= 0 || value > 500) {
+      _fail('Mp repeat limit must be an integer from 1 to 500.', path: path);
     }
     return value;
   }

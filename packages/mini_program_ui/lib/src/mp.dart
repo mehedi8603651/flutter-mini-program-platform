@@ -246,6 +246,40 @@ abstract final class Mp {
     paddingBottom: paddingBottom,
   );
 
+  /// Repeats [itemTemplate] for every item resolved by [source].
+  static MpNode repeat({
+    required String source,
+    required MpNode itemTemplate,
+    MpNode? empty,
+    MpNode? separator,
+    num spacing = 0,
+    int limit = 100,
+  }) => buildRepeatNode(
+    source: source,
+    itemTemplate: itemTemplate,
+    empty: empty,
+    separator: separator,
+    spacing: spacing,
+    limit: limit,
+  );
+
+  /// Alias for [repeat].
+  static MpNode forEach({
+    required String source,
+    required MpNode itemTemplate,
+    MpNode? empty,
+    MpNode? separator,
+    num spacing = 0,
+    int limit = 100,
+  }) => repeat(
+    source: source,
+    itemTemplate: itemTemplate,
+    empty: empty,
+    separator: separator,
+    spacing: spacing,
+    limit: limit,
+  );
+
   /// Insets [child] away from unsafe display areas.
   static MpNode safeArea({
     required MpNode child,

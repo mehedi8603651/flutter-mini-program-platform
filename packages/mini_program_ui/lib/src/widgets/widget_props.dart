@@ -63,6 +63,7 @@ const Set<String> mpTextDirectionNames = <String>{'auto', 'ltr', 'rtl'};
 final RegExp _hexColorPattern = RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$');
 final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
 final RegExp _themeTokenPattern = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
+final RegExp _fullBindingPattern = RegExp(r'^\{\{\s*[^{}]+?\s*\}\}$');
 
 String requiredWidgetString(String value, String name) {
   final trimmed = value.trim();
@@ -110,6 +111,29 @@ int positiveWidgetInt(int value, String name) {
     throw ArgumentError.value(value, name, 'Value must be positive.');
   }
   return value;
+}
+
+int repeatLimit(int value) {
+  if (value <= 0 || value > 500) {
+    throw ArgumentError.value(
+      value,
+      'limit',
+      'Repeat limit must be between 1 and 500.',
+    );
+  }
+  return value;
+}
+
+String widgetBindingExpression(String value, String name) {
+  final binding = requiredWidgetString(value, name);
+  if (!_fullBindingPattern.hasMatch(binding)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Value must be a single full binding expression like {{state.items}}.',
+    );
+  }
+  return binding;
 }
 
 int headingLevel(int value) {
