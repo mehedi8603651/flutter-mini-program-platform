@@ -496,6 +496,50 @@ abstract final class Mp {
     ),
   );
 
+  /// Creates a state-driven backend search input for typeahead results.
+  static MpNode searchInput({
+    required String stateKey,
+    required String targetState,
+    required String endpoint,
+    String? requestId,
+    String queryParam = 'q',
+    String limitParam = 'limit',
+    String method = 'GET',
+    Map<String, Object?> body = const <String, Object?>{},
+    String label = 'Search',
+    String? hint,
+    String? initialValue,
+    int minLength = 2,
+    int limit = 20,
+    Duration debounce = const Duration(milliseconds: 300),
+    String? statusState,
+    String? errorState,
+    bool clearResultsBelowMinLength = true,
+    int? cacheTtlSeconds,
+  }) => MpNode(
+    'searchInput',
+    props: _searchInputProps(
+      stateKey: stateKey,
+      targetState: targetState,
+      endpoint: endpoint,
+      requestId: requestId,
+      queryParam: queryParam,
+      limitParam: limitParam,
+      method: method,
+      body: body,
+      label: label,
+      hint: hint,
+      initialValue: initialValue,
+      minLength: minLength,
+      limit: limit,
+      debounce: debounce,
+      statusState: statusState,
+      errorState: errorState,
+      clearResultsBelowMinLength: clearResultsBelowMinLength,
+      cacheTtlSeconds: cacheTtlSeconds,
+    ),
+  );
+
   /// Creates a multi-line text input controlled by the SDK form state.
   static MpNode textArea({
     required String name,
@@ -1171,6 +1215,100 @@ int _positiveInt(int value, String name) {
   return value;
 }
 
+int _nonNegativeInt(int value, String name) {
+  if (value < 0) {
+    throw ArgumentError.value(value, name, 'Value cannot be negative.');
+  }
+  return value;
+}
+
+int _searchLimit(int value) {
+  if (value <= 0 || value > 100) {
+    throw ArgumentError.value(
+      value,
+      'limit',
+      'Search limit must be between 1 and 100.',
+    );
+  }
+  return value;
+}
+
+String _searchMethod(String value) {
+  final method = _requiredString(value, 'method').toUpperCase();
+  if (method != 'GET' && method != 'POST') {
+    throw ArgumentError.value(
+      value,
+      'method',
+      'Search method must be GET or POST.',
+    );
+  }
+  return method;
+}
+
+String _fieldName(String value, String name) {
+  final normalized = _requiredString(value, name);
+  if (!_fieldNamePattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Value must match ^[a-z][a-z0-9_]*\$.',
+    );
+  }
+  return normalized;
+}
+
+String _generatedSearchRequestId(String stateKey) {
+  return 'search_${stateKey.replaceAll('.', '_')}';
+}
+
+Map<String, Object?> _searchInputProps({
+  required String stateKey,
+  required String targetState,
+  required String endpoint,
+  String? requestId,
+  String queryParam = 'q',
+  String limitParam = 'limit',
+  String method = 'GET',
+  Map<String, Object?> body = const <String, Object?>{},
+  String label = 'Search',
+  String? hint,
+  String? initialValue,
+  int minLength = 2,
+  int limit = 20,
+  Duration debounce = const Duration(milliseconds: 300),
+  String? statusState,
+  String? errorState,
+  bool clearResultsBelowMinLength = true,
+  int? cacheTtlSeconds,
+}) {
+  final normalizedStateKey = _requiredStateKey(stateKey, 'stateKey');
+  return <String, Object?>{
+    'stateKey': normalizedStateKey,
+    'targetState': _requiredStateKey(targetState, 'targetState'),
+    'endpoint': _requiredString(endpoint, 'endpoint'),
+    'requestId': requestId == null
+        ? _generatedSearchRequestId(normalizedStateKey)
+        : _requiredString(requestId, 'requestId'),
+    'queryParam': _fieldName(queryParam, 'queryParam'),
+    'limitParam': _fieldName(limitParam, 'limitParam'),
+    'method': _searchMethod(method),
+    if (body.isNotEmpty) 'body': body,
+    'label': _requiredString(label, 'label'),
+    if (hint != null) 'hint': _requiredString(hint, 'hint'),
+    if (initialValue != null) 'initialValue': initialValue,
+    'minLength': _nonNegativeInt(minLength, 'minLength'),
+    'limit': _searchLimit(limit),
+    'debounceMs': _nonNegativeInt(debounce.inMilliseconds, 'debounceMs'),
+    if (statusState != null)
+      'statusState': _requiredStateKey(statusState, 'statusState'),
+    if (errorState != null)
+      'errorState': _requiredStateKey(errorState, 'errorState'),
+    if (!clearResultsBelowMinLength) 'clearResultsBelowMinLength': false,
+    if (cacheTtlSeconds != null)
+      'cacheTtlSeconds': _positiveInt(cacheTtlSeconds, 'cacheTtlSeconds'),
+  };
+}
+
 Map<String, Object?> _inputProps({
   required String name,
   required String label,
@@ -1298,6 +1436,8 @@ void _validateInitialOptionValue(List<MpOption> options, String? value) {
 final RegExp _stateKeyPattern = RegExp(
   r'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$',
 );
+
+final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
 
 const Set<String> _blockedStateSegments = <String>{
   'authorization',

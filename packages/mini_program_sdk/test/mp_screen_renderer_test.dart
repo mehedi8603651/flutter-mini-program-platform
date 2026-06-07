@@ -523,6 +523,30 @@ void main() {
       );
     });
 
+    test('accepts author-generated backend search input JSON', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.searchInput(
+              stateKey: 'area.query',
+              targetState: 'area.results',
+              statusState: 'area.search_status',
+              errorState: 'area.search_error',
+              endpoint: '/areas/search',
+              hint: 'Search area',
+              minLength: 2,
+              limit: 20,
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('accepts cache action JSON', () {
       const MpScreenValidator().validate(
         _screenWith((json) {
@@ -958,6 +982,48 @@ void main() {
             },
             'children': <Object?>[],
           };
+        }),
+        'searchInput rejects bad state key': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{
+            'stateKey': 'Area.query',
+          });
+        }),
+        'searchInput rejects bound endpoint': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{
+            'endpoint': '{{state.endpoint}}',
+          });
+        }),
+        'searchInput rejects bad method': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{'method': 'PATCH'});
+        }),
+        'searchInput rejects bad query param': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{
+            'queryParam': 'bad-param',
+          });
+        }),
+        'searchInput rejects bad min length': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{'minLength': -1});
+        }),
+        'searchInput rejects bad limit': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{'limit': 101});
+        }),
+        'searchInput rejects bad debounce': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{'debounceMs': -1});
+        }),
+        'searchInput rejects unknown prop': _screenWith((json) {
+          json['root'] = _searchInputJson(<String, dynamic>{'path': '/areas'});
+        }),
+        'searchInput rejects normal children': _screenWith((json) {
+          json['root'] = _searchInputJson(
+            const <String, dynamic>{},
+            children: <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Wrong'},
+                'children': <Object?>[],
+              },
+            ],
+          );
         }),
         'too many children': _screenWith((json) {
           json['root'] = <String, dynamic>{
@@ -3385,6 +3451,298 @@ void main() {
       backendStore.dispose();
     });
 
+    testWidgets(
+      'searchInput debounces backend search and repeat renders results',
+      (tester) async {
+        final backendStore = MiniProgramBackendStore();
+        final stateManager = MpStateManager();
+        final connector = _RecordingBackendConnector(
+          responses: <MiniProgramBackendResult>[
+            MiniProgramBackendResult.success(
+              endpoint: '/areas/search',
+              method: 'GET',
+              data: const <String, dynamic>{
+                'items': <Object?>[
+                  <String, Object?>{
+                    'name': 'Dhaka',
+                    'lat': 23.81,
+                    'lon': 90.41,
+                    'code': 'BD-13',
+                  },
+                ],
+              },
+            ),
+          ],
+        );
+        final screenJson = _jsonMap(
+          MpProgram(
+            screens: <String, MpScreenBuilder>{
+              'coupon_home': () => Mp.column(
+                children: <MpNode>[
+                  Mp.searchInput(
+                    stateKey: 'area.query',
+                    targetState: 'area.results',
+                    statusState: 'area.search_status',
+                    endpoint: '/areas/search?country=bd',
+                    hint: 'Search area',
+                    debounce: const Duration(milliseconds: 100),
+                    minLength: 2,
+                    limit: 10,
+                  ),
+                  Mp.stateBuilder(
+                    keys: const <String>['area.results', 'area.search_status'],
+                    child: Mp.column(
+                      children: <MpNode>[
+                        Mp.text('Status: {{state.area.search_status}}'),
+                        Mp.repeat(
+                          source: '{{state.area.results.items}}',
+                          itemTemplate: Mp.listTile(
+                            title: '{{item.name}}',
+                            subtitle:
+                                '{{item.lat}}, {{item.lon}} - {{item.code}}',
+                          ),
+                          empty: Mp.emptyState(title: 'No area found'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            },
+          ).buildScreensJson()['coupon_home']!,
+        );
+
+        await tester.pumpWidget(
+          _scopedApp(
+            backendStore: backendStore,
+            backendConnector: connector,
+            stateManager: stateManager,
+            screenJson: screenJson,
+          ),
+        );
+        await tester.pump();
+
+        expect(connector.calls, isEmpty);
+        expect(find.text('Status: idle'), findsOneWidget);
+
+        await tester.enterText(find.byType(EditableText), 'd');
+        await tester.pump(const Duration(milliseconds: 150));
+
+        expect(connector.calls, isEmpty);
+        expect(find.text('No area found'), findsOneWidget);
+
+        await tester.enterText(find.byType(EditableText), 'dh');
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(connector.calls, isEmpty);
+
+        await tester.pump(const Duration(milliseconds: 60));
+        await tester.pump();
+
+        expect(connector.calls, hasLength(1));
+        expect(
+          connector.calls.single.endpoint,
+          '/areas/search?country=bd&q=dh&limit=10',
+        );
+        expect(stateManager.get<String>('area.query'), 'dh');
+        expect(find.text('Status: success'), findsOneWidget);
+        expect(find.text('Dhaka'), findsOneWidget);
+        expect(find.text('23.81, 90.41 - BD-13'), findsOneWidget);
+
+        stateManager.dispose();
+        backendStore.dispose();
+      },
+    );
+
+    testWidgets('searchInput POST merges query limit and cache policy', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/products/search',
+            method: 'POST',
+            data: const <String, dynamic>{'items': <Object?>[]},
+          ),
+        ],
+      );
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.searchInput(
+              stateKey: 'product.query',
+              targetState: 'product.results',
+              endpoint: '/products/search',
+              queryParam: 'term',
+              limitParam: 'take',
+              method: 'POST',
+              body: const <String, Object?>{'category': 'books'},
+              minLength: 1,
+              limit: 5,
+              debounce: Duration.zero,
+              cacheTtlSeconds: 30,
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(EditableText), 'dart');
+      await tester.pump();
+      await tester.pump();
+
+      expect(connector.calls, hasLength(1));
+      expect(connector.calls.single.endpoint, '/products/search');
+      expect(connector.calls.single.method, 'POST');
+      expect(connector.calls.single.body, <String, dynamic>{
+        'category': 'books',
+        'term': 'dart',
+        'take': 5,
+      });
+      expect(
+        connector.calls.single.cachePolicy.ttl,
+        const Duration(seconds: 30),
+      );
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('searchInput ignores stale slower responses', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final first = Completer<MiniProgramBackendResult>();
+      final second = Completer<MiniProgramBackendResult>();
+      final connector = _FutureBackendConnector(
+        responses: <FutureOr<MiniProgramBackendResult>>[
+          first.future,
+          second.future,
+        ],
+      );
+      final screenJson = _searchScreenJson(debounce: Duration.zero);
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+
+      await tester.enterText(find.byType(EditableText), 'dh');
+      await tester.pump();
+      await tester.enterText(find.byType(EditableText), 'dhaka');
+      await tester.pump();
+
+      expect(connector.calls, hasLength(2));
+
+      second.complete(
+        MiniProgramBackendResult.success(
+          endpoint: '/areas/search',
+          method: 'GET',
+          data: const <String, dynamic>{
+            'items': <Object?>[
+              <String, Object?>{'name': 'Dhaka'},
+            ],
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Dhaka'), findsOneWidget);
+
+      first.complete(
+        MiniProgramBackendResult.success(
+          endpoint: '/areas/search',
+          method: 'GET',
+          data: const <String, dynamic>{
+            'items': <Object?>[
+              <String, Object?>{'name': 'Old Dhaka'},
+            ],
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Dhaka'), findsOneWidget);
+      expect(find.text('Old Dhaka'), findsNothing);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('searchInput failure keeps previous results and writes error', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/areas/search',
+            method: 'GET',
+            data: const <String, dynamic>{
+              'items': <Object?>[
+                <String, Object?>{'name': 'Dhaka'},
+              ],
+            },
+          ),
+          MiniProgramBackendResult.failed(
+            endpoint: '/areas/search',
+            method: 'GET',
+            message: 'Backend down',
+            errorCode: 'backend_down',
+          ),
+        ],
+      );
+      final screenJson = _searchScreenJson(
+        debounce: Duration.zero,
+        includeError: true,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+
+      await tester.enterText(find.byType(EditableText), 'dh');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Dhaka'), findsOneWidget);
+      expect(find.text('Status: success'), findsOneWidget);
+
+      await tester.enterText(find.byType(EditableText), 'zz');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Dhaka'), findsOneWidget);
+      expect(find.text('Status: error'), findsOneWidget);
+      expect(find.text('Error: Backend down'), findsOneWidget);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
     testWidgets('cache actions store read update state remove and clear', (
       tester,
     ) async {
@@ -4305,6 +4663,73 @@ Map<String, dynamic> _cacheActionScreen(
       'children': <Object?>[],
     };
   });
+}
+
+Map<String, dynamic> _searchInputJson(
+  Map<String, dynamic> props, {
+  List<Object?> children = const <Object?>[],
+}) {
+  return <String, dynamic>{
+    'type': 'searchInput',
+    'props': <String, dynamic>{
+      'stateKey': 'area.query',
+      'targetState': 'area.results',
+      'endpoint': '/areas/search',
+      'requestId': 'area_search',
+      'queryParam': 'q',
+      'limitParam': 'limit',
+      'method': 'GET',
+      'body': <String, dynamic>{},
+      'label': 'Search area',
+      'minLength': 2,
+      'limit': 20,
+      'debounceMs': 300,
+      ...props,
+    },
+    'children': children,
+  };
+}
+
+Map<String, dynamic> _searchScreenJson({
+  Duration debounce = const Duration(milliseconds: 300),
+  bool includeError = false,
+}) {
+  final miniProgram = MpProgram(
+    screens: <String, MpScreenBuilder>{
+      'coupon_home': () => Mp.column(
+        children: <MpNode>[
+          Mp.searchInput(
+            stateKey: 'area.query',
+            targetState: 'area.results',
+            statusState: 'area.search_status',
+            errorState: includeError ? 'area.search_error' : null,
+            endpoint: '/areas/search',
+            debounce: debounce,
+            minLength: 1,
+          ),
+          Mp.stateBuilder(
+            keys: <String>[
+              'area.results',
+              'area.search_status',
+              if (includeError) 'area.search_error',
+            ],
+            child: Mp.column(
+              children: <MpNode>[
+                Mp.text('Status: {{state.area.search_status}}'),
+                if (includeError)
+                  Mp.text('Error: {{state.area.search_error.message}}'),
+                Mp.repeat(
+                  source: '{{state.area.results.items}}',
+                  itemTemplate: Mp.text('{{item.name}}'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    },
+  );
+  return _jsonMap(miniProgram.buildScreensJson()['coupon_home']!);
 }
 
 Map<String, dynamic> _lazySectionScreen({

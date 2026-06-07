@@ -305,6 +305,87 @@ void main() {
       );
     });
 
+    test('search input helper rejects invalid configuration', () {
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'Area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'auth.token',
+          endpoint: '/areas/search',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          method: 'PATCH',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          queryParam: 'bad-param',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          minLength: -1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          limit: 101,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          debounce: const Duration(milliseconds: -1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          cacheTtlSeconds: 0,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

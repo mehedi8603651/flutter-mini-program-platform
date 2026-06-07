@@ -579,6 +579,90 @@ void main() {
       });
     });
 
+    test('serializes backend search input nodes deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'area_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.searchInput(
+                stateKey: 'area.query',
+                targetState: 'area.results',
+                statusState: 'area.search_status',
+                endpoint: '/areas/search',
+                hint: 'Search area',
+              ),
+              Mp.searchInput(
+                stateKey: 'product.query',
+                targetState: 'product.results',
+                errorState: 'product.search_error',
+                endpoint: '/products/search',
+                requestId: 'product_search',
+                queryParam: 'term',
+                limitParam: 'take',
+                method: 'post',
+                body: const <String, Object?>{'category': 'books'},
+                label: 'Find product',
+                initialValue: 'dart',
+                minLength: 0,
+                limit: 10,
+                debounce: Duration.zero,
+                clearResultsBelowMinLength: false,
+                cacheTtlSeconds: 30,
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['area_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'searchInput',
+            'props': <String, Object?>{
+              'debounceMs': 300,
+              'endpoint': '/areas/search',
+              'hint': 'Search area',
+              'label': 'Search',
+              'limit': 20,
+              'limitParam': 'limit',
+              'method': 'GET',
+              'minLength': 2,
+              'queryParam': 'q',
+              'requestId': 'search_area_query',
+              'stateKey': 'area.query',
+              'statusState': 'area.search_status',
+              'targetState': 'area.results',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'searchInput',
+            'props': <String, Object?>{
+              'body': <String, Object?>{'category': 'books'},
+              'cacheTtlSeconds': 30,
+              'clearResultsBelowMinLength': false,
+              'debounceMs': 0,
+              'endpoint': '/products/search',
+              'errorState': 'product.search_error',
+              'initialValue': 'dart',
+              'label': 'Find product',
+              'limit': 10,
+              'limitParam': 'take',
+              'method': 'POST',
+              'minLength': 0,
+              'queryParam': 'term',
+              'requestId': 'product_search',
+              'stateKey': 'product.query',
+              'targetState': 'product.results',
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

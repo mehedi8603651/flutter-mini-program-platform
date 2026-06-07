@@ -461,6 +461,11 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'searchInput' => _parseSearchInputNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'textArea' => _parseTextAreaNode(
         props: props,
         children: parsedChildren,
@@ -1876,6 +1881,120 @@ class MpScreenValidator {
     final parsedProps = _parseTextInputProps(props, path: path);
     _validateNoChildren(children, path: '$path.children');
     return _MpNode(type: type, props: parsedProps, children: const <_MpNode>[]);
+  }
+
+  _MpNode _parseSearchInputNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'stateKey',
+      'targetState',
+      'endpoint',
+      'requestId',
+      'queryParam',
+      'limitParam',
+      'method',
+      'body',
+      'label',
+      'hint',
+      'initialValue',
+      'minLength',
+      'limit',
+      'debounceMs',
+      'statusState',
+      'errorState',
+      'clearResultsBelowMinLength',
+      'cacheTtlSeconds',
+    }, path: '$path.props');
+    final stateKey = _requiredStateKey(props, 'stateKey', path: '$path.props');
+    final method =
+        _optionalStableString(props, 'method', path: '$path.props') ?? 'GET';
+    if (method != 'GET' && method != 'POST') {
+      _fail(
+        'Mp searchInput method must be GET or POST.',
+        path: '$path.props.method',
+      );
+    }
+    final body = _optionalMap(props['body'], path: '$path.props.body');
+    _validateCacheValue(body, path: '$path.props.body');
+    final minLength =
+        _optionalNonNegativeInt(
+          props['minLength'],
+          path: '$path.props.minLength',
+        ) ??
+        2;
+    final limit =
+        _optionalSearchLimit(props['limit'], path: '$path.props.limit') ?? 20;
+    final debounceMs =
+        _optionalNonNegativeInt(
+          props['debounceMs'],
+          path: '$path.props.debounceMs',
+        ) ??
+        300;
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'searchInput',
+      props: <String, dynamic>{
+        'stateKey': stateKey,
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
+        'endpoint': _requiredStableString(
+          props,
+          'endpoint',
+          path: '$path.props',
+        ),
+        'requestId':
+            _optionalStableString(props, 'requestId', path: '$path.props') ??
+            'search_${stateKey.replaceAll('.', '_')}',
+        'queryParam':
+            _optionalFieldName(props, 'queryParam', path: '$path.props') ?? 'q',
+        'limitParam':
+            _optionalFieldName(props, 'limitParam', path: '$path.props') ??
+            'limit',
+        'method': method,
+        'body': body,
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        if (props.containsKey('hint'))
+          'hint': _requiredString(props, 'hint', path: '$path.props'),
+        if (props.containsKey('initialValue'))
+          'initialValue': _optionalStringLiteral(
+            props['initialValue'],
+            path: '$path.props.initialValue',
+          ),
+        'minLength': minLength,
+        'limit': limit,
+        'debounceMs': debounceMs,
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        'clearResultsBelowMinLength':
+            _optionalBool(
+              props['clearResultsBelowMinLength'],
+              path: '$path.props.clearResultsBelowMinLength',
+            ) ??
+            true,
+        if (props.containsKey('cacheTtlSeconds'))
+          'cacheTtlSeconds': _optionalPositiveInt(
+            props['cacheTtlSeconds'],
+            path: '$path.props.cacheTtlSeconds',
+          ),
+      },
+      children: const <_MpNode>[],
+    );
   }
 
   _MpNode _parseTextAreaNode({
@@ -3669,6 +3788,25 @@ class MpScreenValidator {
     return value;
   }
 
+  static String? _optionalFieldName(
+    Map<String, dynamic> json,
+    String key, {
+    required String path,
+  }) {
+    if (!json.containsKey(key) || json[key] == null) {
+      return null;
+    }
+    final value = _requiredStableString(json, key, path: path);
+    if (!_fieldNamePattern.hasMatch(value)) {
+      _fail(
+        'Mp "$key" must match ^[a-z][a-z0-9_]*\$.',
+        path: '$path.$key',
+        details: <String, dynamic>{key: value},
+      );
+    }
+    return value;
+  }
+
   static String? _optionalStableString(
     Map<String, dynamic> json,
     String key, {
@@ -3693,6 +3831,23 @@ class MpScreenValidator {
       _fail(
         'Mp string literal exceeds the maximum length.',
         path: '$path.$key',
+        details: <String, dynamic>{
+          'length': value.length,
+          'maxLiteralTextLength': maxLiteralTextLength,
+        },
+      );
+    }
+    return value;
+  }
+
+  static String _optionalStringLiteral(Object? value, {required String path}) {
+    if (value is! String) {
+      _fail('Mp field must be a string.', path: path);
+    }
+    if (value.length > maxLiteralTextLength) {
+      _fail(
+        'Mp string literal exceeds the maximum length.',
+        path: path,
         details: <String, dynamic>{
           'length': value.length,
           'maxLiteralTextLength': maxLiteralTextLength,
@@ -3753,6 +3908,16 @@ class MpScreenValidator {
     }
     if (value is! int || value <= 0 || value > 500) {
       _fail('Mp repeat limit must be an integer from 1 to 500.', path: path);
+    }
+    return value;
+  }
+
+  static int? _optionalSearchLimit(Object? value, {required String path}) {
+    if (value == null) {
+      return null;
+    }
+    if (value is! int || value <= 0 || value > 100) {
+      _fail('Mp search limit must be an integer from 1 to 100.', path: path);
     }
     return value;
   }
