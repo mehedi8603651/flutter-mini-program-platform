@@ -5,6 +5,125 @@ This document is the handoff for the **next** implementation wave.
 The local Flutter CLI foundation is already shipped. The next work must build
 on that baseline instead of redesigning it again.
 
+## not completed: for future can be add
+Mp.lazy.chunk ❌
+infinite scroll ❌
+secure persistent session ❌
+real video cache ❌
+real image disk cache ❌
+Mp.cache Dart authoring API ❌
+
+## Future Lazy Loading Roadmap
+
+Current shipped base:
+
+- `Mp.lazy.section` is implemented as the first lazy primitive.
+- It can hydrate from runtime cache, run existing Mp actions after first mount,
+  write normalized action data into state, cache successful target state, retry
+  failures, and render placeholder/error templates.
+- It is intended for one lazy section or one cached action block, not large
+  paged lists by itself.
+
+### Recommended Next Batch 1: `Mp.lazy.chunk`
+
+Goal: add manual chunk/page loading with a `Load more` button.
+
+Target flow:
+
+```text
+Open mini-program
+  -> load chunk/page 1
+  -> save page 1 to cache
+  -> user taps Load More
+  -> load page 2
+  -> merge page 2 into targetState
+  -> save page 2 to cache
+```
+
+Use cases:
+
+```text
+products list
+news feed
+messages
+orders
+comments
+videos list metadata
+search results
+medium/large table rows
+```
+
+Public API direction:
+
+```dart
+Mp.lazy.chunk({
+  required String id,
+  required MpNode itemTemplate,
+  required List<MpAction> initialActions,
+  required List<MpAction> loadMoreActions,
+  required String itemsState,
+  String? cursorState,
+  String? hasMoreState,
+  String? statusState,
+  String? cacheKeyPrefix,
+  String bucket = 'data',
+  MpNode? placeholder,
+  MpNode? empty,
+  MpNode? error,
+  MpNode? loadingMore,
+  MpNode? loadMore,
+  MpNode? end,
+  bool once = true,
+  int retry = 0,
+  Duration retryDelay = const Duration(milliseconds: 300),
+})
+```
+
+Implementation rules:
+
+- Keep existing `Mp.pagedBackendBuilder` working.
+- Do not replace `Mp.pagedBackendBuilder` in this batch.
+- Use existing Mp actions, especially current `backend.query` /
+  `backend.loadMore` shapes.
+- Do not invent `network.get`, `path`, or action-level `targetState`.
+- Start with manual `Load more`; no viewport auto-load yet.
+- Guard against duplicate in-flight initial loads and load-more requests.
+- Merge page items into `itemsState` deterministically.
+- Cache page/chunk data by page or cursor using `cacheKeyPrefix`.
+- Hydrate cached page 1 immediately when available.
+- Preserve cached visible content if refresh/load-more fails.
+- Keep `session` and `video` buckets rejected for mini-program lazy cache.
+- Treat videos list as JSON-safe metadata only; no video binary cache here.
+- Add parser validation for item template, action JSON, state keys, cache keys,
+  retry values, buckets, and unknown props.
+
+### Recommended Next Batch 2: Auto Load On Scroll
+
+Only build this after manual `Mp.lazy.chunk` is stable.
+
+Goal: automatically trigger load more when the user nears the bottom of a
+chunk/list viewport.
+
+Implementation rules:
+
+- Reuse `Mp.lazy.chunk` state/cache/action internals.
+- Add threshold control, for example `loadMoreThresholdPx` or item threshold.
+- Use an in-flight guard so scroll events cannot start duplicate requests.
+- Respect `hasMoreState` and stop once there is no more data.
+- Support retry and error templates without losing already loaded rows.
+- Keep screen-level scrolling safe; avoid nested uncontrolled scroll views.
+- Large/infinite lists should eventually graduate to `Mp.virtualList`.
+
+### Later List Systems
+
+After manual and auto lazy chunks:
+
+- `Mp.virtualList` for very large feeds and search results.
+- `Mp.dataTable` for large table data with columns, sort, and pagination.
+- Optional search/filter helpers that write query state and refresh chunks.
+- Optional skeleton presets for chunk rows/cards.
+- Optional cache invalidation helpers for stale list pages.
+
 ## Active Architecture Wave: Mp JSON Engine
 
 The next major architecture wave is the platform-owned Mp JSON engine:
