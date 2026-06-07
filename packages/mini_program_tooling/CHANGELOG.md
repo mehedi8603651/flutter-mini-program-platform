@@ -1,4 +1,8 @@
 # Changelog
+## 0.4.2
+- bump generated host apps to `mini_program_sdk: ^0.4.2`
+- bump generated mini-program workspaces to `mini_program_ui: ^0.1.2`
+
 ## 0.4.1
 - make create, build, preview, publish, generated hosts, and managed-preview
   hosts Mp-only

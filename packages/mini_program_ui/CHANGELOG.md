@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- add `Mp.lazy.section` authoring helpers for cached lazy sections, action
+  execution, status state, retry configuration, and placeholder/error templates
+
 ## 0.1.1
 
 - refresh package metadata for the post-`0.1.0` patch release

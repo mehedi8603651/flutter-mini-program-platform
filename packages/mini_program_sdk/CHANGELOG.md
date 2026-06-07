@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- add `Mp.lazy.section` runtime rendering with cache hydration, post-frame
+  action execution, retry handling, status state, and placeholder/error
+  templates
+- validate lazy Mp JSON nodes and preserve screen-scoped once behavior
+
 ## 0.4.1
 
 - make Mp JSON the only built-in screen renderer

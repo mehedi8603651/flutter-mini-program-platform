@@ -25,7 +25,7 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.4.1
+  mini_program_sdk: ^0.4.2
   mini_program_contracts: ^0.2.1
 ```
 
