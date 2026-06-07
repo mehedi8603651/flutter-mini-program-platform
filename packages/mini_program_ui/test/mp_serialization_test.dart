@@ -591,6 +591,12 @@ void main() {
                 endpoint: '/areas/search',
                 hint: 'Search area',
               ),
+              Mp.search.input(
+                stateKey: 'district.query',
+                targetState: 'district.results',
+                endpoint: '/districts/search',
+                hint: 'Search district',
+              ),
               Mp.searchInput(
                 stateKey: 'product.query',
                 targetState: 'product.results',
@@ -640,6 +646,24 @@ void main() {
           <String, Object?>{
             'type': 'searchInput',
             'props': <String, Object?>{
+              'debounceMs': 300,
+              'endpoint': '/districts/search',
+              'hint': 'Search district',
+              'label': 'Search',
+              'limit': 20,
+              'limitParam': 'limit',
+              'method': 'GET',
+              'minLength': 2,
+              'queryParam': 'q',
+              'requestId': 'search_district_query',
+              'stateKey': 'district.query',
+              'targetState': 'district.results',
+            },
+            'children': <Object?>[],
+          },
+          <String, Object?>{
+            'type': 'searchInput',
+            'props': <String, Object?>{
               'body': <String, Object?>{'category': 'books'},
               'cacheTtlSeconds': 30,
               'clearResultsBelowMinLength': false,
@@ -660,6 +684,73 @@ void main() {
             'children': <Object?>[],
           },
         ],
+      });
+    });
+
+    test('serializes backend search load more actions deterministically', () {
+      final action = Mp.search.loadMore(
+        queryState: 'area.query',
+        targetState: 'area.results',
+        statusState: 'area.search_status',
+        errorState: 'area.search_error',
+        endpoint: '/areas/search',
+      );
+      final custom = Mp.search.loadMore(
+        queryState: 'product.query',
+        targetState: 'product.results',
+        endpoint: '/products/search',
+        requestId: 'product_search_more',
+        queryParam: 'term',
+        cursorParam: 'after',
+        limitParam: 'take',
+        method: 'POST',
+        body: const <String, Object?>{'category': 'books'},
+        limit: 10,
+        itemsPath: 'data.items',
+        nextCursorPath: 'data.cursor',
+        hasMorePath: 'data.hasMore',
+        cacheTtlSeconds: 30,
+        skipWhenNoQuery: false,
+      );
+
+      expect(action.toJson(), <String, Object?>{
+        'type': 'search.loadMore',
+        'props': <String, Object?>{
+          'cursorParam': 'cursor',
+          'endpoint': '/areas/search',
+          'errorState': 'area.search_error',
+          'hasMorePath': 'hasMore',
+          'itemsPath': 'items',
+          'limit': 20,
+          'limitParam': 'limit',
+          'method': 'GET',
+          'nextCursorPath': 'nextCursor',
+          'queryParam': 'q',
+          'queryState': 'area.query',
+          'requestId': 'search_area_query_load_more',
+          'statusState': 'area.search_status',
+          'targetState': 'area.results',
+        },
+      });
+      expect(custom.toJson(), <String, Object?>{
+        'type': 'search.loadMore',
+        'props': <String, Object?>{
+          'body': <String, Object?>{'category': 'books'},
+          'cacheTtlSeconds': 30,
+          'cursorParam': 'after',
+          'endpoint': '/products/search',
+          'hasMorePath': 'data.hasMore',
+          'itemsPath': 'data.items',
+          'limit': 10,
+          'limitParam': 'take',
+          'method': 'POST',
+          'nextCursorPath': 'data.cursor',
+          'queryParam': 'term',
+          'queryState': 'product.query',
+          'requestId': 'product_search_more',
+          'skipWhenNoQuery': false,
+          'targetState': 'product.results',
+        },
       });
     });
 

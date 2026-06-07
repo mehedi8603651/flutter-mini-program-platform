@@ -19,6 +19,9 @@ abstract final class Mp {
   /// Publisher backend actions.
   static const backend = MpBackendActions();
 
+  /// Backend search and typeahead helpers.
+  static const search = MpSearch();
+
   /// Mini-program screen navigation actions.
   static const navigation = MpNavigationActions();
 
@@ -1150,6 +1153,103 @@ final class MpBackendActions {
         'cacheTtlSeconds': _positiveInt(cacheTtlSeconds, 'cacheTtlSeconds'),
     },
   );
+}
+
+/// Backend search and typeahead helper builders.
+final class MpSearch {
+  /// Creates backend search helper builders.
+  const MpSearch();
+
+  /// Creates a state-driven backend search input for typeahead results.
+  MpNode input({
+    required String stateKey,
+    required String targetState,
+    required String endpoint,
+    String? requestId,
+    String queryParam = 'q',
+    String limitParam = 'limit',
+    String method = 'GET',
+    Map<String, Object?> body = const <String, Object?>{},
+    String label = 'Search',
+    String? hint,
+    String? initialValue,
+    int minLength = 2,
+    int limit = 20,
+    Duration debounce = const Duration(milliseconds: 300),
+    String? statusState,
+    String? errorState,
+    bool clearResultsBelowMinLength = true,
+    int? cacheTtlSeconds,
+  }) => Mp.searchInput(
+    stateKey: stateKey,
+    targetState: targetState,
+    endpoint: endpoint,
+    requestId: requestId,
+    queryParam: queryParam,
+    limitParam: limitParam,
+    method: method,
+    body: body,
+    label: label,
+    hint: hint,
+    initialValue: initialValue,
+    minLength: minLength,
+    limit: limit,
+    debounce: debounce,
+    statusState: statusState,
+    errorState: errorState,
+    clearResultsBelowMinLength: clearResultsBelowMinLength,
+    cacheTtlSeconds: cacheTtlSeconds,
+  );
+
+  /// Loads the next backend search page into an existing search result state.
+  MpAction loadMore({
+    required String queryState,
+    required String targetState,
+    required String endpoint,
+    String? requestId,
+    String queryParam = 'q',
+    String cursorParam = 'cursor',
+    String limitParam = 'limit',
+    String method = 'GET',
+    Map<String, Object?> body = const <String, Object?>{},
+    int limit = 20,
+    String itemsPath = 'items',
+    String nextCursorPath = 'nextCursor',
+    String hasMorePath = 'hasMore',
+    String? statusState,
+    String? errorState,
+    int? cacheTtlSeconds,
+    bool skipWhenNoQuery = true,
+  }) {
+    final normalizedQueryState = _requiredStateKey(queryState, 'queryState');
+    return MpAction(
+      'search.loadMore',
+      props: <String, Object?>{
+        'queryState': normalizedQueryState,
+        'targetState': _requiredStateKey(targetState, 'targetState'),
+        'endpoint': _requiredString(endpoint, 'endpoint'),
+        'requestId': requestId == null
+            ? '${_generatedSearchRequestId(normalizedQueryState)}_load_more'
+            : _requiredString(requestId, 'requestId'),
+        'queryParam': _fieldName(queryParam, 'queryParam'),
+        'cursorParam': _fieldName(cursorParam, 'cursorParam'),
+        'limitParam': _fieldName(limitParam, 'limitParam'),
+        'method': _searchMethod(method),
+        if (body.isNotEmpty) 'body': body,
+        'limit': _searchLimit(limit),
+        'itemsPath': _requiredString(itemsPath, 'itemsPath'),
+        'nextCursorPath': _requiredString(nextCursorPath, 'nextCursorPath'),
+        'hasMorePath': _requiredString(hasMorePath, 'hasMorePath'),
+        if (statusState != null)
+          'statusState': _requiredStateKey(statusState, 'statusState'),
+        if (errorState != null)
+          'errorState': _requiredStateKey(errorState, 'errorState'),
+        if (cacheTtlSeconds != null)
+          'cacheTtlSeconds': _positiveInt(cacheTtlSeconds, 'cacheTtlSeconds'),
+        if (!skipWhenNoQuery) 'skipWhenNoQuery': false,
+      },
+    );
+  }
 }
 
 /// Mini-program navigation action builders.

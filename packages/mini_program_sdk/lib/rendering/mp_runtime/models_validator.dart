@@ -2504,6 +2504,7 @@ class MpScreenValidator {
       'backend.call' => _parseBackendCallAction(type, props, path),
       'backend.query' => _parseBackendQueryAction(type, props, path),
       'backend.loadMore' => _parseBackendLoadMoreAction(type, props, path),
+      'search.loadMore' => _parseSearchLoadMoreAction(type, props, path),
       'form.submit' => _parseFormSubmitAction(type, props, path),
       'ui.toast' => _parseToastAction(type, props, path),
       'ui.dialog' => _parseDialogAction(type, props, path),
@@ -2701,6 +2702,117 @@ class MpScreenValidator {
       ),
     };
     return _MpAction(type: type, props: parsed);
+  }
+
+  _MpAction _parseSearchLoadMoreAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'queryState',
+      'targetState',
+      'endpoint',
+      'requestId',
+      'queryParam',
+      'cursorParam',
+      'limitParam',
+      'method',
+      'body',
+      'limit',
+      'itemsPath',
+      'nextCursorPath',
+      'hasMorePath',
+      'statusState',
+      'errorState',
+      'cacheTtlSeconds',
+      'skipWhenNoQuery',
+    }, path: '$path.props');
+    final method =
+        _optionalStableString(props, 'method', path: '$path.props') ?? 'GET';
+    if (method != 'GET' && method != 'POST') {
+      _fail(
+        'Mp search.loadMore method must be GET or POST.',
+        path: '$path.props.method',
+      );
+    }
+    final body = _optionalMap(props['body'], path: '$path.props.body');
+    _validateCacheValue(body, path: '$path.props.body');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'queryState': _requiredStateKey(
+          props,
+          'queryState',
+          path: '$path.props',
+        ),
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
+        'endpoint': _requiredStableString(
+          props,
+          'endpoint',
+          path: '$path.props',
+        ),
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        'queryParam':
+            _optionalFieldName(props, 'queryParam', path: '$path.props') ?? 'q',
+        'cursorParam':
+            _optionalFieldName(props, 'cursorParam', path: '$path.props') ??
+            'cursor',
+        'limitParam':
+            _optionalFieldName(props, 'limitParam', path: '$path.props') ??
+            'limit',
+        'method': method,
+        'body': body,
+        'limit':
+            _optionalSearchLimit(props['limit'], path: '$path.props.limit') ??
+            20,
+        'itemsPath':
+            _optionalStableString(props, 'itemsPath', path: '$path.props') ??
+            'items',
+        'nextCursorPath':
+            _optionalStableString(
+              props,
+              'nextCursorPath',
+              path: '$path.props',
+            ) ??
+            'nextCursor',
+        'hasMorePath':
+            _optionalStableString(props, 'hasMorePath', path: '$path.props') ??
+            'hasMore',
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('cacheTtlSeconds'))
+          'cacheTtlSeconds': _optionalPositiveInt(
+            props['cacheTtlSeconds'],
+            path: '$path.props.cacheTtlSeconds',
+          ),
+        'skipWhenNoQuery':
+            _optionalBool(
+              props['skipWhenNoQuery'],
+              path: '$path.props.skipWhenNoQuery',
+            ) ??
+            true,
+      },
+    );
   }
 
   _MpAction _parseFormSubmitAction(
