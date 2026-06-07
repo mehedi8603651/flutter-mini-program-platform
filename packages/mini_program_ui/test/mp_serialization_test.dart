@@ -687,7 +687,36 @@ void main() {
       });
     });
 
-    test('serializes backend search load more actions deterministically', () {
+    test('serializes backend search namespace actions deterministically', () {
+      final clear = Mp.search.clear(
+        queryState: 'area.query',
+        targetState: 'area.results',
+        statusState: 'area.search_status',
+        errorState: 'area.search_error',
+      );
+      final refresh = Mp.search.refresh(
+        queryState: 'area.query',
+        targetState: 'area.results',
+        statusState: 'area.search_status',
+        errorState: 'area.search_error',
+        endpoint: '/areas/search',
+      );
+      final customRefresh = Mp.search.refresh(
+        queryState: 'product.query',
+        targetState: 'product.results',
+        endpoint: '/products/search',
+        requestId: 'product_search_refresh',
+        queryParam: 'term',
+        limitParam: 'take',
+        method: 'POST',
+        body: const <String, Object?>{'category': 'books'},
+        limit: 10,
+        itemsPath: 'data.items',
+        nextCursorPath: 'data.cursor',
+        hasMorePath: 'data.hasMore',
+        cacheTtlSeconds: 30,
+        skipWhenNoQuery: false,
+      );
       final action = Mp.search.loadMore(
         queryState: 'area.query',
         targetState: 'area.results',
@@ -713,6 +742,52 @@ void main() {
         skipWhenNoQuery: false,
       );
 
+      expect(clear.toJson(), <String, Object?>{
+        'type': 'search.clear',
+        'props': <String, Object?>{
+          'errorState': 'area.search_error',
+          'queryState': 'area.query',
+          'statusState': 'area.search_status',
+          'targetState': 'area.results',
+        },
+      });
+      expect(refresh.toJson(), <String, Object?>{
+        'type': 'search.refresh',
+        'props': <String, Object?>{
+          'endpoint': '/areas/search',
+          'errorState': 'area.search_error',
+          'hasMorePath': 'hasMore',
+          'itemsPath': 'items',
+          'limit': 20,
+          'limitParam': 'limit',
+          'method': 'GET',
+          'nextCursorPath': 'nextCursor',
+          'queryParam': 'q',
+          'queryState': 'area.query',
+          'requestId': 'search_area_query_refresh',
+          'statusState': 'area.search_status',
+          'targetState': 'area.results',
+        },
+      });
+      expect(customRefresh.toJson(), <String, Object?>{
+        'type': 'search.refresh',
+        'props': <String, Object?>{
+          'body': <String, Object?>{'category': 'books'},
+          'cacheTtlSeconds': 30,
+          'endpoint': '/products/search',
+          'hasMorePath': 'data.hasMore',
+          'itemsPath': 'data.items',
+          'limit': 10,
+          'limitParam': 'take',
+          'method': 'POST',
+          'nextCursorPath': 'data.cursor',
+          'queryParam': 'term',
+          'queryState': 'product.query',
+          'requestId': 'product_search_refresh',
+          'skipWhenNoQuery': false,
+          'targetState': 'product.results',
+        },
+      });
       expect(action.toJson(), <String, Object?>{
         'type': 'search.loadMore',
         'props': <String, Object?>{

@@ -1201,6 +1201,74 @@ final class MpSearch {
     cacheTtlSeconds: cacheTtlSeconds,
   );
 
+  /// Clears the current backend search query, results, status, and error state.
+  MpAction clear({
+    required String queryState,
+    required String targetState,
+    String? statusState,
+    String? errorState,
+  }) {
+    return MpAction(
+      'search.clear',
+      props: <String, Object?>{
+        'queryState': _requiredStateKey(queryState, 'queryState'),
+        'targetState': _requiredStateKey(targetState, 'targetState'),
+        if (statusState != null)
+          'statusState': _requiredStateKey(statusState, 'statusState'),
+        if (errorState != null)
+          'errorState': _requiredStateKey(errorState, 'errorState'),
+      },
+    );
+  }
+
+  /// Refreshes the first backend search page for the current query.
+  MpAction refresh({
+    required String queryState,
+    required String targetState,
+    required String endpoint,
+    String? requestId,
+    String queryParam = 'q',
+    String limitParam = 'limit',
+    String method = 'GET',
+    Map<String, Object?> body = const <String, Object?>{},
+    int limit = 20,
+    String itemsPath = 'items',
+    String nextCursorPath = 'nextCursor',
+    String hasMorePath = 'hasMore',
+    String? statusState,
+    String? errorState,
+    int? cacheTtlSeconds,
+    bool skipWhenNoQuery = true,
+  }) {
+    final normalizedQueryState = _requiredStateKey(queryState, 'queryState');
+    return MpAction(
+      'search.refresh',
+      props: <String, Object?>{
+        'queryState': normalizedQueryState,
+        'targetState': _requiredStateKey(targetState, 'targetState'),
+        'endpoint': _stableString(endpoint, 'endpoint'),
+        'requestId': requestId == null
+            ? '${_generatedSearchRequestId(normalizedQueryState)}_refresh'
+            : _stableString(requestId, 'requestId'),
+        'queryParam': _fieldName(queryParam, 'queryParam'),
+        'limitParam': _fieldName(limitParam, 'limitParam'),
+        'method': _searchMethod(method),
+        if (body.isNotEmpty) 'body': body,
+        'limit': _searchLimit(limit),
+        'itemsPath': _stableString(itemsPath, 'itemsPath'),
+        'nextCursorPath': _stableString(nextCursorPath, 'nextCursorPath'),
+        'hasMorePath': _stableString(hasMorePath, 'hasMorePath'),
+        if (statusState != null)
+          'statusState': _requiredStateKey(statusState, 'statusState'),
+        if (errorState != null)
+          'errorState': _requiredStateKey(errorState, 'errorState'),
+        if (cacheTtlSeconds != null)
+          'cacheTtlSeconds': _positiveInt(cacheTtlSeconds, 'cacheTtlSeconds'),
+        if (!skipWhenNoQuery) 'skipWhenNoQuery': false,
+      },
+    );
+  }
+
   /// Loads the next backend search page into an existing search result state.
   MpAction loadMore({
     required String queryState,
@@ -1227,19 +1295,19 @@ final class MpSearch {
       props: <String, Object?>{
         'queryState': normalizedQueryState,
         'targetState': _requiredStateKey(targetState, 'targetState'),
-        'endpoint': _requiredString(endpoint, 'endpoint'),
+        'endpoint': _stableString(endpoint, 'endpoint'),
         'requestId': requestId == null
             ? '${_generatedSearchRequestId(normalizedQueryState)}_load_more'
-            : _requiredString(requestId, 'requestId'),
+            : _stableString(requestId, 'requestId'),
         'queryParam': _fieldName(queryParam, 'queryParam'),
         'cursorParam': _fieldName(cursorParam, 'cursorParam'),
         'limitParam': _fieldName(limitParam, 'limitParam'),
         'method': _searchMethod(method),
         if (body.isNotEmpty) 'body': body,
         'limit': _searchLimit(limit),
-        'itemsPath': _requiredString(itemsPath, 'itemsPath'),
-        'nextCursorPath': _requiredString(nextCursorPath, 'nextCursorPath'),
-        'hasMorePath': _requiredString(hasMorePath, 'hasMorePath'),
+        'itemsPath': _stableString(itemsPath, 'itemsPath'),
+        'nextCursorPath': _stableString(nextCursorPath, 'nextCursorPath'),
+        'hasMorePath': _stableString(hasMorePath, 'hasMorePath'),
         if (statusState != null)
           'statusState': _requiredStateKey(statusState, 'statusState'),
         if (errorState != null)
@@ -1306,6 +1374,14 @@ String _requiredString(String value, String name) {
     throw ArgumentError.value(value, name, 'Value cannot be empty.');
   }
   return trimmed;
+}
+
+String _stableString(String value, String name) {
+  final stable = _requiredString(value, name);
+  if (stable.contains('{{') || stable.contains('}}')) {
+    throw ArgumentError.value(value, name, 'Value cannot contain bindings.');
+  }
+  return stable;
 }
 
 int _positiveInt(int value, String name) {
@@ -1385,10 +1461,10 @@ Map<String, Object?> _searchInputProps({
   return <String, Object?>{
     'stateKey': normalizedStateKey,
     'targetState': _requiredStateKey(targetState, 'targetState'),
-    'endpoint': _requiredString(endpoint, 'endpoint'),
+    'endpoint': _stableString(endpoint, 'endpoint'),
     'requestId': requestId == null
         ? _generatedSearchRequestId(normalizedStateKey)
-        : _requiredString(requestId, 'requestId'),
+        : _stableString(requestId, 'requestId'),
     'queryParam': _fieldName(queryParam, 'queryParam'),
     'limitParam': _fieldName(limitParam, 'limitParam'),
     'method': _searchMethod(method),

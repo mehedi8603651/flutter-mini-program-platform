@@ -334,6 +334,14 @@ void main() {
         () => Mp.searchInput(
           stateKey: 'area.query',
           targetState: 'area.results',
+          endpoint: '{{state.endpoint}}',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.searchInput(
+          stateKey: 'area.query',
+          targetState: 'area.results',
           endpoint: '/areas/search',
           method: 'PATCH',
         ),
@@ -388,6 +396,115 @@ void main() {
 
     test('search namespace helpers reject invalid configuration', () {
       expect(
+        () => Mp.search.clear(
+          queryState: 'Area.query',
+          targetState: 'area.results',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.clear(
+          queryState: 'area.query',
+          targetState: 'auth.token',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'Area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'auth.token',
+          endpoint: '/areas/search',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          requestId: '',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '{{state.endpoint}}',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          method: 'PATCH',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          itemsPath: '{{state.path}}',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          limitParam: 'bad-param',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          limit: 101,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          cacheTtlSeconds: 0,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+          body: <String, Object?>{'now': DateTime(2026)},
+        ),
+        throwsArgumentError,
+      );
+      expect(
         () => Mp.search.loadMore(
           queryState: 'Area.query',
           targetState: 'area.results',
@@ -408,6 +525,14 @@ void main() {
           queryState: 'area.query',
           targetState: 'area.results',
           endpoint: '',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.search.loadMore(
+          queryState: 'area.query',
+          targetState: 'area.results',
+          endpoint: '{{state.endpoint}}',
         ),
         throwsArgumentError,
       );
@@ -468,6 +593,21 @@ void main() {
       expect(
         () => Mp.search.input(
           stateKey: 'area.query',
+          targetState: 'area.results',
+          endpoint: '/areas/search',
+        ),
+        returnsNormally,
+      );
+      expect(
+        () => Mp.search.clear(
+          queryState: 'area.query',
+          targetState: 'area.results',
+        ),
+        returnsNormally,
+      );
+      expect(
+        () => Mp.search.refresh(
+          queryState: 'area.query',
           targetState: 'area.results',
           endpoint: '/areas/search',
         ),

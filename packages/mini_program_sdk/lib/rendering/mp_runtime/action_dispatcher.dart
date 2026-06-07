@@ -56,6 +56,8 @@ abstract final class _MpActionDispatcher {
         'backend.call' => _callBackend(scope, props),
         'backend.query' => _queryBackend(scope, props),
         'backend.loadMore' => _loadMore(scope, props),
+        'search.clear' => _searchClear(scope, props),
+        'search.refresh' => _searchRefresh(scope, props),
         'search.loadMore' => _searchLoadMore(scope, props),
         'form.submit' => _submitForm(scope, props),
         'ui.toast' => _showToast(context, props),
@@ -310,7 +312,7 @@ abstract final class _MpActionDispatcher {
     if (connector == null) {
       const message =
           'Publisher backend is not configured for search.loadMore.';
-      _searchLoadMoreFailed(
+      _searchPageFailed(
         state: state,
         props: props,
         targetState: targetState,
@@ -344,7 +346,7 @@ abstract final class _MpActionDispatcher {
     request = await _authorize(scope, request);
     final result = await connector.call(request);
     if (result.isFailure) {
-      _searchLoadMoreFailed(
+      _searchPageFailed(
         state: state,
         props: props,
         targetState: targetState,
@@ -393,6 +395,149 @@ abstract final class _MpActionDispatcher {
     state.set(targetState, nextState);
     _searchClearError(state, props);
     _searchWriteStatus(state, props, mergedItems.isEmpty ? 'empty' : 'success');
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: nextState,
+    );
+  }
+
+  static Future<HostActionResult> _searchClear(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'search.clear';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+
+    state.set(_stringProp(props, 'queryState'), '');
+    state.set(_stringProp(props, 'targetState'), _emptySearchState());
+    _searchWriteStatus(state, props, 'idle');
+    _searchClearError(state, props);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: const <String, dynamic>{'cleared': true},
+    );
+  }
+
+  static Future<HostActionResult> _searchRefresh(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'search.refresh';
+    final requestId =
+        _optionalStringProp(props, 'requestId') ??
+        'search_${_stringProp(props, 'queryState').replaceAll('.', '_')}_refresh';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName, requestId: requestId);
+    }
+
+    final queryState = _stringProp(props, 'queryState');
+    final targetState = _stringProp(props, 'targetState');
+    final query = state.get<Object?>(queryState)?.toString().trim() ?? '';
+    if (query.isEmpty && _boolProp(props, 'skipWhenNoQuery')) {
+      return HostActionResult.success(
+        requestId: requestId,
+        actionName: actionName,
+        data: const <String, dynamic>{'skipped': true, 'reason': 'no_query'},
+      );
+    }
+
+    final current = _searchStateMap(state.get<Object?>(targetState));
+    final existingItems = _searchListValue(current['items']);
+    state.set(targetState, <String, dynamic>{
+      ...current,
+      'items': existingItems,
+      'itemCount': existingItems.length,
+      'loadingMore': false,
+      'status': 'loading',
+    });
+    _searchWriteStatus(state, props, 'loading');
+    _searchClearError(state, props);
+
+    final connector = scope.backendConnector;
+    if (connector == null) {
+      const message = 'Publisher backend is not configured for search.refresh.';
+      _searchPageFailed(
+        state: state,
+        props: props,
+        targetState: targetState,
+        current: current,
+        existingItems: existingItems,
+        message: message,
+        errorCode: 'publisher_backend_not_configured',
+      );
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: actionName,
+        message: message,
+        errorCode: 'publisher_backend_not_configured',
+      );
+    }
+
+    final method = _optionalStringProp(props, 'method') ?? 'GET';
+    var request = MiniProgramBackendRequest(
+      miniProgramId: scope.miniProgramId,
+      requestId: requestId,
+      endpoint: method == 'GET'
+          ? _searchLoadMoreEndpoint(props, query: query, cursor: null)
+          : _stringProp(props, 'endpoint'),
+      method: method,
+      body: method == 'GET'
+          ? const <String, dynamic>{}
+          : _searchLoadMoreBody(props, query: query, cursor: null),
+      cachePolicy: _cachePolicy(props),
+    );
+    request = await _authorize(scope, request);
+    final result = await connector.call(request);
+    if (result.isFailure) {
+      _searchPageFailed(
+        state: state,
+        props: props,
+        targetState: targetState,
+        current: current,
+        existingItems: existingItems,
+        message: result.message ?? 'Search refresh failed.',
+        errorCode: result.errorCode,
+      );
+      return HostActionResult.failed(
+        requestId: requestId,
+        actionName: actionName,
+        message: result.message ?? 'Search refresh failed.',
+        errorCode: result.errorCode,
+        data: result.toJson(),
+      );
+    }
+
+    final pageItems = _searchReadList(
+      result.data,
+      _stringProp(props, 'itemsPath'),
+    );
+    final nextCursor = _searchReadPath(
+      result.data,
+      _stringProp(props, 'nextCursorPath'),
+    );
+    final hasMore = _searchReadBool(
+      result.data,
+      _stringProp(props, 'hasMorePath'),
+    );
+    final status = pageItems.isEmpty ? 'empty' : 'success';
+    final nextState = <String, dynamic>{
+      ...current,
+      'items': pageItems,
+      'itemCount': pageItems.length,
+      'pageCount': 1,
+      'hasMore': hasMore,
+      'nextCursor': nextCursor,
+      'loadingMore': false,
+      'status': status,
+    };
+    state.set(targetState, nextState);
+    _searchClearError(state, props);
+    _searchWriteStatus(state, props, status);
     return HostActionResult.success(
       requestId: requestId,
       actionName: actionName,
@@ -822,6 +967,18 @@ abstract final class _MpActionDispatcher {
     return value is List ? List<Object?>.from(value) : <Object?>[];
   }
 
+  static Map<String, dynamic> _emptySearchState() {
+    return <String, dynamic>{
+      'items': <Object?>[],
+      'itemCount': 0,
+      'pageCount': 0,
+      'hasMore': false,
+      'nextCursor': null,
+      'loadingMore': false,
+      'status': 'idle',
+    };
+  }
+
   static String _searchLoadMoreEndpoint(
     Map<String, dynamic> props, {
     required String query,
@@ -922,7 +1079,7 @@ abstract final class _MpActionDispatcher {
     }
   }
 
-  static void _searchLoadMoreFailed({
+  static void _searchPageFailed({
     required MpStateManager state,
     required Map<String, dynamic> props,
     required String targetState,
@@ -936,6 +1093,7 @@ abstract final class _MpActionDispatcher {
       'items': existingItems,
       'itemCount': existingItems.length,
       'loadingMore': false,
+      'status': 'error',
     });
     _searchWriteStatus(state, props, 'error');
     final errorState = _optionalStringProp(props, 'errorState');

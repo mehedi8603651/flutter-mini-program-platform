@@ -547,19 +547,42 @@ void main() {
       );
     });
 
-    test('accepts author-generated backend search load more JSON', () {
+    test('accepts author-generated backend search action JSON', () {
       final screen = _jsonMap(
         MpProgram(
           screens: <String, MpScreenBuilder>{
-            'coupon_home': () => Mp.secondaryButton(
-              label: 'Load more',
-              action: Mp.search.loadMore(
-                queryState: 'area.query',
-                targetState: 'area.results',
-                statusState: 'area.search_status',
-                errorState: 'area.search_error',
-                endpoint: '/areas/search',
-              ),
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.secondaryButton(
+                  label: 'Clear',
+                  action: Mp.search.clear(
+                    queryState: 'area.query',
+                    targetState: 'area.results',
+                    statusState: 'area.search_status',
+                    errorState: 'area.search_error',
+                  ),
+                ),
+                Mp.secondaryButton(
+                  label: 'Refresh',
+                  action: Mp.search.refresh(
+                    queryState: 'area.query',
+                    targetState: 'area.results',
+                    statusState: 'area.search_status',
+                    errorState: 'area.search_error',
+                    endpoint: '/areas/search',
+                  ),
+                ),
+                Mp.secondaryButton(
+                  label: 'Load more',
+                  action: Mp.search.loadMore(
+                    queryState: 'area.query',
+                    targetState: 'area.results',
+                    statusState: 'area.search_status',
+                    errorState: 'area.search_error',
+                    endpoint: '/areas/search',
+                  ),
+                ),
+              ],
             ),
           },
         ).buildScreensJson()['coupon_home']!,
@@ -1090,6 +1113,61 @@ void main() {
         'search.loadMore rejects unknown prop': _screenWith((json) {
           json['root'] = _actionButtonJson(
             _searchLoadMoreActionJson(<String, dynamic>{'path': '/areas'}),
+          );
+        }),
+        'search.clear rejects bad query state': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchClearActionJson(<String, dynamic>{
+              'queryState': 'Area.query',
+            }),
+          );
+        }),
+        'search.clear rejects unknown prop': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchClearActionJson(<String, dynamic>{'endpoint': '/areas'}),
+          );
+        }),
+        'search.refresh rejects bad target state': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{
+              'targetState': 'auth.token',
+            }),
+          );
+        }),
+        'search.refresh rejects bound endpoint': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{
+              'endpoint': '{{state.endpoint}}',
+            }),
+          );
+        }),
+        'search.refresh rejects bad method': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{'method': 'PATCH'}),
+          );
+        }),
+        'search.refresh rejects bad param': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{
+              'limitParam': 'bad-param',
+            }),
+          );
+        }),
+        'search.refresh rejects bad limit': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{'limit': 101}),
+          );
+        }),
+        'search.refresh rejects bad skip flag': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{
+              'skipWhenNoQuery': 'yes',
+            }),
+          );
+        }),
+        'search.refresh rejects unknown prop': _screenWith((json) {
+          json['root'] = _actionButtonJson(
+            _searchRefreshActionJson(<String, dynamic>{'path': '/areas'}),
           );
         }),
         'too many children': _screenWith((json) {
@@ -4072,6 +4150,301 @@ void main() {
       },
     );
 
+    testWidgets('search.clear clears query results status and error', (
+      tester,
+    ) async {
+      final stateManager = MpStateManager();
+      stateManager.set('area.query', 'dhaka');
+      stateManager.set('area.results', <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'name': 'Dhaka'},
+        ],
+        'nextCursor': 'cursor-1',
+        'hasMore': true,
+        'pageCount': 2,
+        'loadingMore': true,
+        'status': 'error',
+      });
+      stateManager.set('area.search_status', 'error');
+      stateManager.set('area.search_error', <String, Object?>{
+        'message': 'Backend down',
+      });
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.search.clear(
+                    queryState: 'area.query',
+                    targetState: 'area.results',
+                    statusState: 'area.search_status',
+                    errorState: 'area.search_error',
+                  ),
+                ),
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(stateManager.get<String>('area.query'), '');
+      expect(stateManager.get<String>('area.search_status'), 'idle');
+      expect(stateManager.get<Object?>('area.search_error'), isNull);
+      expect(
+        stateManager.get<Map<String, dynamic>>('area.results'),
+        <String, dynamic>{
+          'items': <Object?>[],
+          'itemCount': 0,
+          'pageCount': 0,
+          'hasMore': false,
+          'nextCursor': null,
+          'loadingMore': false,
+          'status': 'idle',
+        },
+      );
+
+      stateManager.dispose();
+    });
+
+    testWidgets('search.refresh replaces GET results with first page', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      stateManager.set('area.query', 'dhaka');
+      stateManager.set('area.results', <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'name': 'Old Dhaka'},
+        ],
+        'nextCursor': 'old-cursor',
+        'hasMore': true,
+        'pageCount': 3,
+      });
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/areas/search',
+            method: 'GET',
+            data: const <String, dynamic>{
+              'items': <Object?>[
+                <String, Object?>{'name': 'Dhaka'},
+              ],
+              'nextCursor': 'cursor-1',
+              'hasMore': true,
+            },
+          ),
+        ],
+      );
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.search.refresh(
+                    queryState: 'area.query',
+                    targetState: 'area.results',
+                    statusState: 'area.search_status',
+                    errorState: 'area.search_error',
+                    endpoint: '/areas/search?country=bd',
+                    limit: 2,
+                  ),
+                ),
+                backendConnector: connector,
+                backendStore: backendStore,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(connector.calls, hasLength(1));
+      expect(
+        connector.calls.single.endpoint,
+        '/areas/search?country=bd&q=dhaka&limit=2',
+      );
+      final results = stateManager.get<Map<String, dynamic>>('area.results')!;
+      expect(results['items'], <Object?>[
+        <String, Object?>{'name': 'Dhaka'},
+      ]);
+      expect(results['itemCount'], 1);
+      expect(results['pageCount'], 1);
+      expect(results['nextCursor'], 'cursor-1');
+      expect(results['hasMore'], true);
+      expect(results['loadingMore'], false);
+      expect(results['status'], 'success');
+      expect(stateManager.get<String>('area.search_status'), 'success');
+      expect(stateManager.get<Object?>('area.search_error'), isNull);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('search.refresh POST merges body query and limit', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      stateManager.set('product.query', 'dart');
+      stateManager.set('product.results', <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'name': 'Old book'},
+        ],
+      });
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/products/search',
+            method: 'POST',
+            data: const <String, dynamic>{
+              'data': <String, Object?>{
+                'items': <Object?>[],
+                'cursor': null,
+                'hasMore': false,
+              },
+            },
+          ),
+        ],
+      );
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.search.refresh(
+                    queryState: 'product.query',
+                    targetState: 'product.results',
+                    endpoint: '/products/search',
+                    queryParam: 'term',
+                    limitParam: 'take',
+                    method: 'POST',
+                    body: const <String, Object?>{'category': 'books'},
+                    limit: 5,
+                    itemsPath: 'data.items',
+                    nextCursorPath: 'data.cursor',
+                    hasMorePath: 'data.hasMore',
+                  ),
+                ),
+                backendConnector: connector,
+                backendStore: backendStore,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(connector.calls, hasLength(1));
+      expect(connector.calls.single.endpoint, '/products/search');
+      expect(connector.calls.single.method, 'POST');
+      expect(connector.calls.single.body, <String, dynamic>{
+        'category': 'books',
+        'term': 'dart',
+        'take': 5,
+      });
+      final results = stateManager.get<Map<String, dynamic>>(
+        'product.results',
+      )!;
+      expect(results['items'], isEmpty);
+      expect(results['itemCount'], 0);
+      expect(results['pageCount'], 1);
+      expect(results['hasMore'], false);
+      expect(results['status'], 'empty');
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('search.refresh skips empty query without backend call', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final connector = _RecordingBackendConnector(
+        responses: const <MiniProgramBackendResult>[],
+      );
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.search.refresh(
+                    queryState: 'area.query',
+                    targetState: 'area.results',
+                    endpoint: '/areas/search',
+                  ),
+                ),
+                backendConnector: connector,
+                backendStore: backendStore,
+                stateManager: stateManager,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data['reason'], 'no_query');
+      expect(connector.calls, isEmpty);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets(
+      'search.refresh failure keeps previous results and writes error',
+      (tester) async {
+        final backendStore = MiniProgramBackendStore();
+        final stateManager = MpStateManager();
+        stateManager.set('area.query', 'dhaka');
+        stateManager.set('area.results', <String, Object?>{
+          'items': <Object?>[
+            <String, Object?>{'name': 'Dhaka'},
+          ],
+          'nextCursor': 'cursor-1',
+          'hasMore': true,
+          'pageCount': 1,
+        });
+        final connector = _RecordingBackendConnector(
+          responses: <MiniProgramBackendResult>[
+            MiniProgramBackendResult.failed(
+              endpoint: '/areas/search',
+              method: 'GET',
+              message: 'Backend down',
+              errorCode: 'backend_down',
+            ),
+          ],
+        );
+
+        final result =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.search.refresh(
+                      queryState: 'area.query',
+                      targetState: 'area.results',
+                      statusState: 'area.search_status',
+                      errorState: 'area.search_error',
+                      endpoint: '/areas/search',
+                    ),
+                  ),
+                  backendConnector: connector,
+                  backendStore: backendStore,
+                  stateManager: stateManager,
+                )
+                as HostActionResult;
+
+        expect(result.isSuccess, isFalse);
+        final results = stateManager.get<Map<String, dynamic>>('area.results')!;
+        expect(results['items'], <Object?>[
+          <String, Object?>{'name': 'Dhaka'},
+        ]);
+        expect(results['itemCount'], 1);
+        expect(results['loadingMore'], false);
+        expect(results['status'], 'error');
+        expect(stateManager.get<String>('area.search_status'), 'error');
+        expect(
+          stateManager.get<Map<String, dynamic>>('area.search_error'),
+          <String, dynamic>{'message': 'Backend down', 'code': 'backend_down'},
+        );
+
+        stateManager.dispose();
+        backendStore.dispose();
+      },
+    );
+
     testWidgets('cache actions store read update state remove and clear', (
       tester,
     ) async {
@@ -5029,6 +5402,38 @@ Map<String, dynamic> _searchLoadMoreActionJson(Map<String, dynamic> props) {
       'requestId': 'area_search_more',
       'queryParam': 'q',
       'cursorParam': 'cursor',
+      'limitParam': 'limit',
+      'method': 'GET',
+      'body': <String, dynamic>{},
+      'limit': 20,
+      'itemsPath': 'items',
+      'nextCursorPath': 'nextCursor',
+      'hasMorePath': 'hasMore',
+      ...props,
+    },
+  };
+}
+
+Map<String, dynamic> _searchClearActionJson(Map<String, dynamic> props) {
+  return <String, dynamic>{
+    'type': 'search.clear',
+    'props': <String, dynamic>{
+      'queryState': 'area.query',
+      'targetState': 'area.results',
+      ...props,
+    },
+  };
+}
+
+Map<String, dynamic> _searchRefreshActionJson(Map<String, dynamic> props) {
+  return <String, dynamic>{
+    'type': 'search.refresh',
+    'props': <String, dynamic>{
+      'queryState': 'area.query',
+      'targetState': 'area.results',
+      'endpoint': '/areas/search',
+      'requestId': 'area_search_refresh',
+      'queryParam': 'q',
       'limitParam': 'limit',
       'method': 'GET',
       'body': <String, dynamic>{},
