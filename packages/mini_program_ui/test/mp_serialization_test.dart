@@ -423,6 +423,81 @@ void main() {
       });
     });
 
+    test('serializes lazy section nodes deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'lazy_home': () => Mp.lazy.section(
+            id: 'home_products',
+            cacheKey: 'products_page_1',
+            bucket: 'data',
+            targetState: 'products',
+            ttl: const Duration(days: 1),
+            statusState: 'products_lazy_status',
+            retry: 1,
+            retryDelay: const Duration(milliseconds: 300),
+            placeholder: Mp.skeleton.list(count: 4),
+            error: Mp.text('Failed to load products'),
+            actions: <MpAction>[
+              Mp.backend.query(
+                requestId: 'products_query',
+                endpoint: '/products',
+              ),
+            ],
+            child: Mp.text('{{state.products}}'),
+          ),
+        },
+      ).buildScreensJson()['lazy_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'lazy',
+        'props': <String, Object?>{
+          'actions': <Object?>[
+            <String, Object?>{
+              'type': 'backend.query',
+              'props': <String, Object?>{
+                'endpoint': '/products',
+                'method': 'GET',
+                'requestId': 'products_query',
+              },
+            },
+          ],
+          'bucket': 'data',
+          'cacheKey': 'products_page_1',
+          'error': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'Failed to load products'},
+            'children': <Object?>[],
+          },
+          'id': 'home_products',
+          'once': true,
+          'placeholder': <String, Object?>{
+            'type': 'skeleton',
+            'props': <String, Object?>{
+              'count': 4,
+              'itemHeight': 72.0,
+              'radius': 8.0,
+              'spacing': 12.0,
+              'variant': 'list',
+            },
+            'children': <Object?>[],
+          },
+          'refreshIfCached': false,
+          'retry': 1,
+          'retryDelayMs': 300,
+          'statusState': 'products_lazy_status',
+          'targetState': 'products',
+          'ttlMs': 86400000,
+        },
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': '{{state.products}}'},
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
+
     test('serializes runtime parity nodes and actions deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

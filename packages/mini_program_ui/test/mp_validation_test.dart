@@ -189,6 +189,76 @@ void main() {
       expect(() => Mp.skeleton.list(spacing: -1), throwsArgumentError);
     });
 
+    test('lazy helpers reject invalid configuration', () {
+      expect(
+        () => Mp.lazy.section(id: '', child: Mp.text('Body')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          cacheKey: '../products',
+          targetState: 'products',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          cacheKey: 'products',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          cacheKey: 'products',
+          targetState: 'Products',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          statusState: 'auth.token',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          bucket: 'session',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () =>
+            Mp.lazy.section(id: 'products', child: Mp.text('Body'), retry: -1),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          retryDelay: const Duration(milliseconds: -1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.section(
+          id: 'products',
+          child: Mp.text('Body'),
+          ttl: Duration.zero,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('core design widget helpers reject invalid configuration', () {
       expect(
         () => Mp.padding(all: -1, child: Mp.text('Hi')),

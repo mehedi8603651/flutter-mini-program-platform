@@ -475,6 +475,27 @@ void main() {
       );
     });
 
+    test('accepts author-generated lazy section JSON', () {
+      final screen = _lazySectionScreen(
+        id: 'home_products',
+        placeholder: Mp.skeleton.list(count: 3),
+        error: Mp.text('Failed to load products'),
+        cacheKey: 'products_page_1',
+        targetState: 'products',
+        statusState: 'products_lazy_status',
+        ttl: const Duration(days: 1),
+        retry: 1,
+        actions: <MpAction>[
+          Mp.backend.query(requestId: 'products_query', endpoint: '/products'),
+        ],
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('accepts cache action JSON', () {
       const MpScreenValidator().validate(
         _screenWith((json) {
@@ -697,6 +718,118 @@ void main() {
             'type': 'skeleton',
             'props': <String, dynamic>{'variant': 'circle'},
             'children': <Object?>[],
+          };
+        }),
+        'lazy requires one child': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{'id': 'products'},
+            'children': <Object?>[],
+          };
+        }),
+        'lazy rejects invalid action': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'actions': <Object?>[
+                <String, dynamic>{
+                  'type': 'network.get',
+                  'props': <String, dynamic>{'path': '/products'},
+                },
+              ],
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'lazy rejects session bucket': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{'id': 'products', 'bucket': 'session'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'lazy rejects video bucket': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{'id': 'products', 'bucket': 'video'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'lazy cache key requires targetState': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'cacheKey': 'products_page_1',
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'lazy rejects bad targetState': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'targetState': 'auth.token',
+            },
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'lazy rejects bad ttl': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{'id': 'products', 'ttlMs': 0},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
+          };
+        }),
+        'lazy rejects unknown prop': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazy',
+            'props': <String, dynamic>{'id': 'products', 'path': '/products'},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': 'Products'},
+                'children': <Object?>[],
+              },
+            ],
           };
         }),
         'too many children': _screenWith((json) {
@@ -3424,6 +3557,383 @@ void main() {
       }
     });
 
+    testWidgets(
+      'lazy section shows placeholder then writes backend query data',
+      (tester) async {
+        final completer = Completer<MiniProgramBackendResult>();
+        final connector = _FutureBackendConnector(
+          responses: <FutureOr<MiniProgramBackendResult>>[completer.future],
+        );
+        final backendStore = MiniProgramBackendStore();
+        final stateManager = MpStateManager();
+
+        await tester.pumpWidget(
+          _scopedApp(
+            backendStore: backendStore,
+            backendConnector: connector,
+            stateManager: stateManager,
+            screenJson: _lazySectionScreen(
+              id: 'lazy_backend_query',
+              placeholder: Mp.text('Loading products'),
+              targetState: 'products',
+              statusState: 'products_status',
+              actions: <MpAction>[
+                Mp.backend.query(
+                  requestId: 'products_query',
+                  endpoint: '/products',
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Loading products'), findsOneWidget);
+        expect(connector.calls.single.requestId, 'products_query');
+        expect(connector.calls.single.endpoint, '/products');
+        expect(stateManager.get<String>('products_status'), 'loading');
+
+        completer.complete(
+          MiniProgramBackendResult.success(
+            requestId: 'products_query',
+            endpoint: '/products',
+            data: const <String, dynamic>{'title': 'Loaded products'},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Loaded products'), findsOneWidget);
+        expect(
+          stateManager.get<Map<String, dynamic>>('products'),
+          <String, dynamic>{'title': 'Loaded products'},
+        );
+        expect(stateManager.get<String>('products_status'), 'success');
+
+        stateManager.dispose();
+        backendStore.dispose();
+      },
+    );
+
+    testWidgets('lazy section renders child immediately for empty actions', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_empty_actions',
+            child: Mp.text('Static lazy content'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Static lazy content'), findsOneWidget);
+
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy section renders error fallback after action failure', (
+      tester,
+    ) async {
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.failed(
+            requestId: 'products_query',
+            endpoint: '/products',
+            message: 'Nope',
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_error_fallback',
+            error: Mp.text('Could not load products'),
+            actions: <MpAction>[
+              Mp.backend.query(
+                requestId: 'products_query',
+                endpoint: '/products',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Could not load products'), findsOneWidget);
+      expect(find.text('Loaded products'), findsNothing);
+
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy section hydrates from cache and supports cached null', (
+      tester,
+    ) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      final stateManager = MpStateManager();
+      await cacheManager.forApp('coupon').set(
+        'lazy_cached_products',
+        <String, dynamic>{'title': 'Cached products'},
+      );
+      await cacheManager.forApp('coupon').set('lazy_cached_null', null);
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[],
+      );
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_cache_hit',
+            cacheKey: 'lazy_cached_products',
+            targetState: 'products',
+            placeholder: Mp.text('Loading from cache'),
+            actions: <MpAction>[
+              Mp.backend.query(
+                requestId: 'products_query',
+                endpoint: '/products',
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(find.text('Loading from cache'), findsNothing);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cached products'), findsOneWidget);
+      expect(connector.calls, isEmpty);
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_cache_null_hit',
+            cacheKey: 'lazy_cached_null',
+            targetState: 'nullable',
+            child: Mp.text('Cached null ready'),
+            actions: <MpAction>[
+              Mp.backend.query(
+                requestId: 'nullable_query',
+                endpoint: '/nullable',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cached null ready'), findsOneWidget);
+      expect(connector.calls, isEmpty);
+      expect(stateManager.toBindingData().containsKey('nullable'), isTrue);
+      expect(stateManager.get<Object?>('nullable'), isNull);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy section refreshes cached content in background safely', (
+      tester,
+    ) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      final stateManager = MpStateManager();
+      await cacheManager.forApp('coupon').set(
+        'lazy_refresh_products',
+        <String, dynamic>{'title': 'Cached products'},
+      );
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.failed(
+            requestId: 'products_refresh',
+            endpoint: '/products',
+            message: 'Refresh failed',
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_refresh_cached',
+            cacheKey: 'lazy_refresh_products',
+            targetState: 'products',
+            refreshIfCached: true,
+            actions: <MpAction>[
+              Mp.backend.query(
+                requestId: 'products_refresh',
+                endpoint: '/products',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cached products'), findsOneWidget);
+      expect(connector.calls, hasLength(1));
+      expect(
+        stateManager.get<Map<String, dynamic>>('products'),
+        <String, dynamic>{'title': 'Cached products'},
+      );
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy section saves success data to cache with policy TTL', (
+      tester,
+    ) async {
+      final clock = _TestClock(DateTime.utc(2026, 6, 7, 12));
+      final cacheManager = MiniProgramCacheManager.inMemory(clock: clock.now);
+      const policy = MiniProgramCachePolicy(dataTtl: Duration(milliseconds: 1));
+      final stateManager = MpStateManager();
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/products',
+            data: const <String, dynamic>{'title': 'Fresh products'},
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          cacheManager: cacheManager,
+          cachePolicy: policy,
+          stateManager: stateManager,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_cache_save',
+            cacheKey: 'lazy_cache_save_products',
+            targetState: 'products',
+            ttl: const Duration(days: 1),
+            actions: <MpAction>[Mp.backend.call(endpoint: '/products')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fresh products'), findsOneWidget);
+      final appCache = cacheManager.forApp('coupon', policy: policy);
+      expect(await appCache.has('lazy_cache_save_products'), isTrue);
+      clock.advance(const Duration(milliseconds: 2));
+      expect(await appCache.has('lazy_cache_save_products'), isFalse);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy section retries failed actions before success', (
+      tester,
+    ) async {
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.failed(endpoint: '/products'),
+          MiniProgramBackendResult.success(
+            endpoint: '/products',
+            data: const <String, dynamic>{'title': 'Retried products'},
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: _lazySectionScreen(
+            id: 'lazy_retry_success',
+            targetState: 'products',
+            retry: 1,
+            retryDelay: Duration.zero,
+            actions: <MpAction>[Mp.backend.call(endpoint: '/products')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(connector.calls, hasLength(2));
+      expect(find.text('Retried products'), findsOneWidget);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets(
+      'lazy section once skips duplicate action runs for same screen',
+      (tester) async {
+        final connector = _RecordingBackendConnector(
+          responses: <MiniProgramBackendResult>[
+            MiniProgramBackendResult.success(
+              endpoint: '/products',
+              data: const <String, dynamic>{'title': 'Once products'},
+            ),
+            MiniProgramBackendResult.success(
+              endpoint: '/products',
+              data: const <String, dynamic>{'title': 'Unexpected products'},
+            ),
+          ],
+        );
+        final backendStore = MiniProgramBackendStore();
+        final stateManager = MpStateManager();
+        final screenJson = _lazySectionScreen(
+          id: 'lazy_once_products',
+          targetState: 'products',
+          actions: <MpAction>[Mp.backend.call(endpoint: '/products')],
+        );
+
+        await tester.pumpWidget(
+          _scopedApp(
+            backendStore: backendStore,
+            backendConnector: connector,
+            stateManager: stateManager,
+            screenJson: screenJson,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Once products'), findsOneWidget);
+        expect(connector.calls, hasLength(1));
+
+        await tester.pumpWidget(
+          _scopedApp(
+            backendStore: backendStore,
+            backendConnector: connector,
+            stateManager: stateManager,
+            screenJson: screenJson,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Once products'), findsOneWidget);
+        expect(connector.calls, hasLength(1));
+
+        stateManager.dispose();
+        backendStore.dispose();
+      },
+    );
+
     testWidgets('form controls validate and submit through backend connector', (
       tester,
     ) async {
@@ -3561,6 +4071,45 @@ Map<String, dynamic> _cacheActionScreen(
       'children': <Object?>[],
     };
   });
+}
+
+Map<String, dynamic> _lazySectionScreen({
+  required String id,
+  MpNode? child,
+  List<MpAction> actions = const <MpAction>[],
+  MpNode? placeholder,
+  MpNode? error,
+  bool once = true,
+  String? statusState,
+  String? cacheKey,
+  String bucket = 'data',
+  String? targetState,
+  Duration? ttl,
+  bool refreshIfCached = false,
+  int retry = 0,
+  Duration retryDelay = const Duration(milliseconds: 300),
+}) {
+  final miniProgram = MpProgram(
+    screens: <String, MpScreenBuilder>{
+      'coupon_home': () => Mp.lazy.section(
+        id: id,
+        child: child ?? Mp.text('{{state.products.title}}'),
+        actions: actions,
+        placeholder: placeholder,
+        error: error,
+        once: once,
+        statusState: statusState,
+        cacheKey: cacheKey,
+        bucket: bucket,
+        targetState: targetState,
+        ttl: ttl,
+        refreshIfCached: refreshIfCached,
+        retry: retry,
+        retryDelay: retryDelay,
+      ),
+    },
+  );
+  return _jsonMap(miniProgram.buildScreensJson()['coupon_home']!);
 }
 
 Map<String, dynamic> _jsonMap(Map<String, Object?> json) {

@@ -285,6 +285,13 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'lazy' => _parseLazyNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
       'skeleton' => _parseSkeletonNode(
         props: props,
         children: parsedChildren,
@@ -702,6 +709,98 @@ class MpScreenValidator {
         ),
       },
       children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseLazyNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'actions',
+      'bucket',
+      'cacheKey',
+      'error',
+      'id',
+      'once',
+      'placeholder',
+      'refreshIfCached',
+      'retry',
+      'retryDelayMs',
+      'statusState',
+      'targetState',
+      'ttlMs',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'lazy', path: path);
+
+    final cacheKey = props.containsKey('cacheKey')
+        ? _requiredCacheKey(props, 'cacheKey', path: '$path.props')
+        : null;
+    final targetState = props.containsKey('targetState')
+        ? _requiredStateKey(props, 'targetState', path: '$path.props')
+        : null;
+    if (cacheKey != null && targetState == null) {
+      _fail(
+        'Mp lazy requires targetState when cacheKey is provided.',
+        path: '$path.props.targetState',
+      );
+    }
+
+    return _MpNode(
+      type: 'lazy',
+      props: <String, dynamic>{
+        'actions': _parseLazyActions(
+          props['actions'],
+          path: '$path.props.actions',
+        ),
+        'bucket': _optionalCacheBucket(props, path: '$path.props') ?? 'data',
+        if (cacheKey != null) 'cacheKey': cacheKey,
+        'id': _requiredStableString(props, 'id', path: '$path.props'),
+        'once': props.containsKey('once')
+            ? _requiredBoolValue(props['once'], path: '$path.props.once')
+            : true,
+        'refreshIfCached': props.containsKey('refreshIfCached')
+            ? _requiredBoolValue(
+                props['refreshIfCached'],
+                path: '$path.props.refreshIfCached',
+              )
+            : false,
+        'retry':
+            _optionalNonNegativeInt(
+              props['retry'],
+              path: '$path.props.retry',
+            ) ??
+            0,
+        'retryDelayMs':
+            _optionalNonNegativeInt(
+              props['retryDelayMs'],
+              path: '$path.props.retryDelayMs',
+            ) ??
+            300,
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (targetState != null) 'targetState': targetState,
+        if (props.containsKey('ttlMs'))
+          'ttlMs': _optionalPositiveInt(
+            props['ttlMs'],
+            path: '$path.props.ttlMs',
+          ),
+        ..._parseTemplateProps(
+          props,
+          const <String>{'placeholder', 'error'},
+          path: '$path.props',
+          depth: depth,
+          state: state,
+        ),
+      },
+      children: children,
     );
   }
 
@@ -2260,6 +2359,19 @@ class MpScreenValidator {
       'navigation.popToRoot' => _parseEmptyNavigationAction(type, props, path),
       _ => _unsupportedAction(type, path: path),
     };
+  }
+
+  List<_MpAction> _parseLazyActions(Object? value, {required String path}) {
+    if (value == null) {
+      return const <_MpAction>[];
+    }
+    if (value is! List) {
+      _fail('Mp lazy actions must be an array.', path: path);
+    }
+    return <_MpAction>[
+      for (var index = 0; index < value.length; index += 1)
+        _parseAction(value[index], path: '$path[$index]'),
+    ];
   }
 
   _MpAction _parseShowEmailAuthAction(

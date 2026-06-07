@@ -1,6 +1,7 @@
 import 'mp_action.dart';
 import 'mp_image.dart';
 import 'mp_json.dart';
+import 'mp_lazy.dart';
 import 'mp_node.dart';
 import 'mp_skeleton.dart';
 import 'widgets/display_widgets.dart';
@@ -32,6 +33,9 @@ abstract final class Mp {
 
   /// Static loading placeholder builders.
   static const skeleton = MpSkeleton();
+
+  /// Lazy-loading section builders.
+  static const lazy = MpLazy();
 
   /// Creates a vertical layout.
   static MpNode column({required List<MpNode> children}) =>
