@@ -981,6 +981,10 @@ class MiniProgramWorkflowStatusController {
         joined.contains('"type": "miniProgramPagedBackendBuilder"') ||
         joined.contains('"type":"pagedBackendBuilder"') ||
         joined.contains('"type": "pagedBackendBuilder"');
+    final usesLazyChunk =
+        joined.contains('Mp.lazy.chunk(') ||
+        joined.contains('"type":"lazyChunk"') ||
+        joined.contains('"type": "lazyChunk"');
     final usesLoadMore =
         joined.contains('miniProgramLoadMore(') ||
         joined.contains('Mp.backend.loadMore(') ||
@@ -997,15 +1001,21 @@ class MiniProgramWorkflowStatusController {
       'usesBackendQueryAction': usesQueryAction,
       'usesBackendBuilder': usesBuilder,
       'usesPagedBackendBuilder': usesPagedBuilder,
+      'usesLazyChunk': usesLazyChunk,
       'usesLoadMore': usesLoadMore,
       'usesAuthBuilder': usesAuthBuilder,
       'usesBackendState':
-          usesQueryAction || usesBuilder || usesPagedBuilder || usesLoadMore,
+          usesQueryAction ||
+          usesBuilder ||
+          usesPagedBuilder ||
+          usesLazyChunk ||
+          usesLoadMore,
       'usesPublisherBackend':
           usesAction ||
           usesQueryAction ||
           usesBuilder ||
           usesPagedBuilder ||
+          usesLazyChunk ||
           usesLoadMore,
       'requestIds': requestIds.toList()..sort(),
     };

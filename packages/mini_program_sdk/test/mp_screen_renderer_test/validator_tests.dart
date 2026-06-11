@@ -486,6 +486,15 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts author-generated lazy chunk JSON', () {
+      final screen = _lazyChunkScreen(cacheKeyPrefix: 'rewards_chunk');
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('accepts author-generated repeat JSON', () {
       final screen = _jsonMap(
         MpProgram(
@@ -918,6 +927,99 @@ void _mpScreenValidatorTests() {
                 'children': <Object?>[],
               },
             ],
+          };
+        }),
+        'lazyChunk requires itemTemplate': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazyChunk',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'itemsState': 'products.items',
+              'initialActions': <Object?>[_backendLoadMoreActionJson()],
+              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'lazyChunk requires initial actions': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazyChunk',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'itemsState': 'products.items',
+              'itemTemplate': _textNode('{{item.title}}'),
+              'initialActions': <Object?>[],
+              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'lazyChunk rejects bad state key': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazyChunk',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'itemsState': 'auth.token',
+              'itemTemplate': _textNode('{{item.title}}'),
+              'initialActions': <Object?>[_backendLoadMoreActionJson()],
+              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'lazyChunk rejects bad cache prefix': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazyChunk',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'itemsState': 'products.items',
+              'cacheKeyPrefix': '../products',
+              'itemTemplate': _textNode('{{item.title}}'),
+              'initialActions': <Object?>[_backendLoadMoreActionJson()],
+              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'lazyChunk rejects video bucket': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazyChunk',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'itemsState': 'products.items',
+              'bucket': 'video',
+              'itemTemplate': _textNode('{{item.title}}'),
+              'initialActions': <Object?>[_backendLoadMoreActionJson()],
+              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'lazyChunk rejects unknown prop': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'lazyChunk',
+            'props': <String, dynamic>{
+              'id': 'products',
+              'itemsState': 'products.items',
+              'endpoint': '/products',
+              'itemTemplate': _textNode('{{item.title}}'),
+              'initialActions': <Object?>[_backendLoadMoreActionJson()],
+              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
+            },
+            'children': <Object?>[],
+          };
+        }),
+        'lazy chunk load more rejects missing id': _screenWith((json) {
+          json['root'] = <String, dynamic>{
+            'type': 'secondaryButton',
+            'props': <String, dynamic>{
+              'label': 'Load more',
+              'action': <String, dynamic>{
+                'type': 'lazy.chunk.loadMore',
+                'props': <String, dynamic>{},
+              },
+            },
+            'children': <Object?>[],
           };
         }),
         'repeat requires itemTemplate': _screenWith((json) {
@@ -1916,4 +2018,22 @@ void _mpScreenValidatorTests() {
       }
     });
   });
+}
+
+Map<String, dynamic> _textNode(String data) {
+  return <String, dynamic>{
+    'type': 'text',
+    'props': <String, dynamic>{'data': data},
+    'children': <Object?>[],
+  };
+}
+
+Map<String, dynamic> _backendLoadMoreActionJson() {
+  return <String, dynamic>{
+    'type': 'backend.loadMore',
+    'props': <String, dynamic>{
+      'requestId': 'products',
+      'endpoint': '/products',
+    },
+  };
 }

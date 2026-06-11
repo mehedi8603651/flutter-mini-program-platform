@@ -86,6 +86,82 @@ MpNode buildLazySectionNode({
   );
 }
 
+MpNode buildLazyChunkNode({
+  required String id,
+  required MpNode itemTemplate,
+  required List<MpAction> initialActions,
+  required List<MpAction> loadMoreActions,
+  required String itemsState,
+  String? cursorState,
+  String? hasMoreState,
+  String? statusState,
+  String? cacheKeyPrefix,
+  required String bucket,
+  MpNode? placeholder,
+  MpNode? empty,
+  MpNode? error,
+  MpNode? loadingMore,
+  MpNode? loadMore,
+  MpNode? end,
+  required bool once,
+  required bool refreshIfCached,
+  Duration? ttl,
+  required int retry,
+  required Duration retryDelay,
+}) {
+  if (retry < 0) {
+    throw ArgumentError.value(retry, 'retry', 'Value must be non-negative.');
+  }
+  final retryDelayMs = retryDelay.inMilliseconds;
+  if (retryDelayMs < 0) {
+    throw ArgumentError.value(
+      retryDelay,
+      'retryDelay',
+      'Value must be non-negative.',
+    );
+  }
+  final ttlMs = ttl?.inMilliseconds;
+  if (ttlMs != null && ttlMs <= 0) {
+    throw ArgumentError.value(ttl, 'ttl', 'Value must be positive.');
+  }
+
+  return MpNode(
+    'lazyChunk',
+    props: <String, Object?>{
+      'bucket': lazyCacheBucket(bucket),
+      if (cacheKeyPrefix != null)
+        'cacheKeyPrefix': lazyCacheKey(cacheKeyPrefix, 'cacheKeyPrefix'),
+      if (cursorState != null)
+        'cursorState': lazyStateKey(cursorState, 'cursorState'),
+      if (empty != null) 'empty': empty,
+      if (end != null) 'end': end,
+      if (error != null) 'error': error,
+      if (hasMoreState != null)
+        'hasMoreState': lazyStateKey(hasMoreState, 'hasMoreState'),
+      'id': requiredWidgetString(id, 'id'),
+      'initialActions': requiredWidgetList(initialActions, 'initialActions'),
+      'itemTemplate': itemTemplate,
+      'itemsState': lazyStateKey(itemsState, 'itemsState'),
+      if (loadingMore != null) 'loadingMore': loadingMore,
+      'loadMoreActions': requiredWidgetList(loadMoreActions, 'loadMoreActions'),
+      if (loadMore != null) 'loadMore': loadMore,
+      'once': once,
+      if (placeholder != null) 'placeholder': placeholder,
+      'refreshIfCached': refreshIfCached,
+      'retry': retry,
+      'retryDelayMs': retryDelayMs,
+      if (statusState != null)
+        'statusState': lazyStateKey(statusState, 'statusState'),
+      if (ttlMs != null) 'ttlMs': ttlMs,
+    },
+  );
+}
+
+MpAction buildLazyChunkLoadMoreAction({required String id}) => MpAction(
+  'lazy.chunk.loadMore',
+  props: <String, Object?>{'id': requiredWidgetString(id, 'id')},
+);
+
 String lazyCacheBucket(String value) {
   final bucket = requiredWidgetString(value, 'bucket');
   if (!_lazyCacheBuckets.contains(bucket)) {

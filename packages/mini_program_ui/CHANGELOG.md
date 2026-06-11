@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- add `Mp.lazy.chunk` and `Mp.lazy.loadMore` authoring helpers for manual
+  chunk/page loading with provider-neutral backend actions
+
 ## 0.1.2
 
 - add `Mp.lazy.section` authoring helpers for cached lazy sections, action

@@ -292,6 +292,13 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'lazyChunk' => _parseLazyChunkNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
       'skeleton' => _parseSkeletonNode(
         props: props,
         children: parsedChildren,
@@ -813,6 +820,134 @@ class MpScreenValidator {
         ),
       },
       children: children,
+    );
+  }
+
+  _MpNode _parseLazyChunkNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'bucket',
+      'cacheKeyPrefix',
+      'cursorState',
+      'empty',
+      'end',
+      'error',
+      'hasMoreState',
+      'id',
+      'initialActions',
+      'itemTemplate',
+      'itemsState',
+      'loadingMore',
+      'loadMoreActions',
+      'loadMore',
+      'once',
+      'placeholder',
+      'refreshIfCached',
+      'retry',
+      'retryDelayMs',
+      'statusState',
+      'ttlMs',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    if (!props.containsKey('itemTemplate')) {
+      _fail(
+        'Mp lazyChunk requires an itemTemplate.',
+        path: '$path.props.itemTemplate',
+      );
+    }
+
+    return _MpNode(
+      type: 'lazyChunk',
+      props: <String, dynamic>{
+        'bucket': _optionalCacheBucket(props, path: '$path.props') ?? 'data',
+        if (props.containsKey('cacheKeyPrefix'))
+          'cacheKeyPrefix': _requiredCacheKey(
+            props,
+            'cacheKeyPrefix',
+            path: '$path.props',
+          ),
+        if (props.containsKey('cursorState'))
+          'cursorState': _requiredStateKey(
+            props,
+            'cursorState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('hasMoreState'))
+          'hasMoreState': _requiredStateKey(
+            props,
+            'hasMoreState',
+            path: '$path.props',
+          ),
+        'id': _requiredStableString(props, 'id', path: '$path.props'),
+        'initialActions': _parseRequiredLazyActions(
+          props['initialActions'],
+          name: 'initialActions',
+          path: '$path.props.initialActions',
+        ),
+        'itemsState': _requiredStateKey(
+          props,
+          'itemsState',
+          path: '$path.props',
+        ),
+        'loadMoreActions': _parseRequiredLazyActions(
+          props['loadMoreActions'],
+          name: 'loadMoreActions',
+          path: '$path.props.loadMoreActions',
+        ),
+        'once': props.containsKey('once')
+            ? _requiredBoolValue(props['once'], path: '$path.props.once')
+            : true,
+        'refreshIfCached': props.containsKey('refreshIfCached')
+            ? _requiredBoolValue(
+                props['refreshIfCached'],
+                path: '$path.props.refreshIfCached',
+              )
+            : false,
+        'retry':
+            _optionalNonNegativeInt(
+              props['retry'],
+              path: '$path.props.retry',
+            ) ??
+            0,
+        'retryDelayMs':
+            _optionalNonNegativeInt(
+              props['retryDelayMs'],
+              path: '$path.props.retryDelayMs',
+            ) ??
+            300,
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('ttlMs'))
+          'ttlMs': _optionalPositiveInt(
+            props['ttlMs'],
+            path: '$path.props.ttlMs',
+          ),
+        ..._parseTemplateProps(
+          props,
+          const <String>{
+            'empty',
+            'end',
+            'error',
+            'itemTemplate',
+            'loadingMore',
+            'loadMore',
+            'placeholder',
+          },
+          path: '$path.props',
+          depth: depth,
+          state: state,
+        ),
+      },
+      children: const <_MpNode>[],
     );
   }
 
@@ -2504,6 +2639,7 @@ class MpScreenValidator {
       'backend.call' => _parseBackendCallAction(type, props, path),
       'backend.query' => _parseBackendQueryAction(type, props, path),
       'backend.loadMore' => _parseBackendLoadMoreAction(type, props, path),
+      'lazy.chunk.loadMore' => _parseLazyChunkLoadMoreAction(type, props, path),
       'search.clear' => _parseSearchClearAction(type, props, path),
       'search.refresh' => _parseSearchRefreshAction(type, props, path),
       'search.loadMore' => _parseSearchLoadMoreAction(type, props, path),
@@ -2551,6 +2687,18 @@ class MpScreenValidator {
       for (var index = 0; index < value.length; index += 1)
         _parseAction(value[index], path: '$path[$index]'),
     ];
+  }
+
+  List<_MpAction> _parseRequiredLazyActions(
+    Object? value, {
+    required String name,
+    required String path,
+  }) {
+    final actions = _parseLazyActions(value, path: path);
+    if (actions.isEmpty) {
+      _fail('Mp lazyChunk requires non-empty $name.', path: path);
+    }
+    return actions;
   }
 
   _MpAction _parseShowEmailAuthAction(
@@ -2704,6 +2852,20 @@ class MpScreenValidator {
       ),
     };
     return _MpAction(type: type, props: parsed);
+  }
+
+  _MpAction _parseLazyChunkLoadMoreAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{'id'}, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'id': _requiredStableString(props, 'id', path: '$path.props'),
+      },
+    );
   }
 
   _MpAction _parseSearchLoadMoreAction(

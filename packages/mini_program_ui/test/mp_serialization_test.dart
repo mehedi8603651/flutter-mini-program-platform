@@ -498,6 +498,138 @@ void main() {
       });
     });
 
+    test('serializes lazy chunk nodes deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'lazy_chunk_home': () => Mp.lazy.chunk(
+            id: 'home_rewards',
+            cacheKeyPrefix: 'rewards_chunk',
+            itemsState: 'rewards.items',
+            cursorState: 'rewards.next_cursor',
+            hasMoreState: 'rewards.has_more',
+            statusState: 'rewards.status',
+            ttl: const Duration(minutes: 5),
+            retry: 1,
+            retryDelay: const Duration(milliseconds: 250),
+            placeholder: Mp.text('Loading rewards'),
+            empty: Mp.text('No rewards'),
+            error: Mp.text('Rewards failed'),
+            loadingMore: Mp.text('Loading more rewards'),
+            loadMore: Mp.secondaryButton(
+              label: 'Load more rewards',
+              action: Mp.lazy.loadMore(id: 'home_rewards'),
+            ),
+            end: Mp.text('No more rewards'),
+            itemTemplate: Mp.text('{{item.title}}'),
+            initialActions: <MpAction>[
+              Mp.backend.loadMore(
+                requestId: 'rewards',
+                endpoint: '/rewards',
+                limit: 10,
+              ),
+            ],
+            loadMoreActions: <MpAction>[
+              Mp.backend.loadMore(
+                requestId: 'rewards',
+                endpoint: '/rewards',
+                limit: 10,
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['lazy_chunk_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'lazyChunk',
+        'props': <String, Object?>{
+          'bucket': 'data',
+          'cacheKeyPrefix': 'rewards_chunk',
+          'cursorState': 'rewards.next_cursor',
+          'empty': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'No rewards'},
+            'children': <Object?>[],
+          },
+          'end': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'No more rewards'},
+            'children': <Object?>[],
+          },
+          'error': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'Rewards failed'},
+            'children': <Object?>[],
+          },
+          'hasMoreState': 'rewards.has_more',
+          'id': 'home_rewards',
+          'initialActions': <Object?>[
+            <String, Object?>{
+              'type': 'backend.loadMore',
+              'props': <String, Object?>{
+                'cursorParam': 'cursor',
+                'endpoint': '/rewards',
+                'hasMorePath': 'hasMore',
+                'itemsPath': 'items',
+                'limit': 10,
+                'limitParam': 'limit',
+                'nextCursorPath': 'nextCursor',
+                'requestId': 'rewards',
+              },
+            },
+          ],
+          'itemTemplate': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': '{{item.title}}'},
+            'children': <Object?>[],
+          },
+          'itemsState': 'rewards.items',
+          'loadingMore': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'Loading more rewards'},
+            'children': <Object?>[],
+          },
+          'loadMoreActions': <Object?>[
+            <String, Object?>{
+              'type': 'backend.loadMore',
+              'props': <String, Object?>{
+                'cursorParam': 'cursor',
+                'endpoint': '/rewards',
+                'hasMorePath': 'hasMore',
+                'itemsPath': 'items',
+                'limit': 10,
+                'limitParam': 'limit',
+                'nextCursorPath': 'nextCursor',
+                'requestId': 'rewards',
+              },
+            },
+          ],
+          'loadMore': <String, Object?>{
+            'type': 'secondaryButton',
+            'props': <String, Object?>{
+              'action': <String, Object?>{
+                'type': 'lazy.chunk.loadMore',
+                'props': <String, Object?>{'id': 'home_rewards'},
+              },
+              'label': 'Load more rewards',
+            },
+            'children': <Object?>[],
+          },
+          'once': true,
+          'placeholder': <String, Object?>{
+            'type': 'text',
+            'props': <String, Object?>{'data': 'Loading rewards'},
+            'children': <Object?>[],
+          },
+          'refreshIfCached': false,
+          'retry': 1,
+          'retryDelayMs': 250,
+          'statusState': 'rewards.status',
+          'ttlMs': 300000,
+        },
+        'children': <Object?>[],
+      });
+    });
+
     test('serializes repeat and forEach nodes deterministically', () {
       final screen = MpProgram(
         screens: <String, MpScreenBuilder>{

@@ -185,6 +185,17 @@ Mp.pagedBackendBuilder(
     action: Mp.backend.loadMore(requestId: 'coupons'),
   ),
 );
+Mp.lazy.chunk(
+  id: 'coupons_chunk',
+  itemsState: 'coupons.items',
+  itemTemplate: Mp.text('{{item.title}}'),
+  initialActions: [Mp.backend.loadMore(requestId: 'coupons')],
+  loadMoreActions: [Mp.backend.loadMore(requestId: 'coupons')],
+  loadMore: Mp.secondaryButton(
+    label: 'Load more',
+    action: Mp.lazy.loadMore(id: 'coupons_chunk'),
+  ),
+);
 ''');
     final stdoutBuffer = StringBuffer();
 
@@ -211,6 +222,7 @@ Mp.pagedBackendBuilder(
     expect(build['entryScreenExists'], isTrue);
     expect(backendUsage['usesAuthBuilder'], isTrue);
     expect(backendUsage['usesPagedBackendBuilder'], isTrue);
+    expect(backendUsage['usesLazyChunk'], isTrue);
     expect(backendUsage['usesLoadMore'], isTrue);
     expect(backendUsage['requestIds'], contains('coupons'));
   });

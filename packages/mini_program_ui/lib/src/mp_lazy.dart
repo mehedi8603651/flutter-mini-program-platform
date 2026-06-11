@@ -39,4 +39,55 @@ final class MpLazy {
     retry: retry,
     retryDelay: retryDelay,
   );
+
+  /// Loads repeated backend data in chunks, with manual load-more support.
+  MpNode chunk({
+    required String id,
+    required MpNode itemTemplate,
+    required List<MpAction> initialActions,
+    required List<MpAction> loadMoreActions,
+    required String itemsState,
+    String? cursorState,
+    String? hasMoreState,
+    String? statusState,
+    String? cacheKeyPrefix,
+    String bucket = 'data',
+    MpNode? placeholder,
+    MpNode? empty,
+    MpNode? error,
+    MpNode? loadingMore,
+    MpNode? loadMore,
+    MpNode? end,
+    bool once = true,
+    bool refreshIfCached = false,
+    Duration? ttl,
+    int retry = 0,
+    Duration retryDelay = const Duration(milliseconds: 300),
+  }) => buildLazyChunkNode(
+    id: id,
+    itemTemplate: itemTemplate,
+    initialActions: initialActions,
+    loadMoreActions: loadMoreActions,
+    itemsState: itemsState,
+    cursorState: cursorState,
+    hasMoreState: hasMoreState,
+    statusState: statusState,
+    cacheKeyPrefix: cacheKeyPrefix,
+    bucket: bucket,
+    placeholder: placeholder,
+    empty: empty,
+    error: error,
+    loadingMore: loadingMore,
+    loadMore: loadMore,
+    end: end,
+    once: once,
+    refreshIfCached: refreshIfCached,
+    ttl: ttl,
+    retry: retry,
+    retryDelay: retryDelay,
+  );
+
+  /// Triggers a rendered lazy chunk to load the next chunk.
+  MpAction loadMore({required String id}) =>
+      buildLazyChunkLoadMoreAction(id: id);
 }

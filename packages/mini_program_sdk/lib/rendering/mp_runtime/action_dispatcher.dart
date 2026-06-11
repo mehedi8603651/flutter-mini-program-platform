@@ -56,6 +56,7 @@ abstract final class _MpActionDispatcher {
         'backend.call' => _callBackend(scope, props),
         'backend.query' => _queryBackend(scope, props),
         'backend.loadMore' => _loadMore(scope, props),
+        'lazy.chunk.loadMore' => _lazyChunkLoadMore(scope, props, bindings),
         'search.clear' => _searchClear(scope, props),
         'search.refresh' => _searchRefresh(scope, props),
         'search.loadMore' => _searchLoadMore(scope, props),
@@ -263,6 +264,18 @@ abstract final class _MpActionDispatcher {
             requestInterceptor: interceptor,
           );
     return snapshot.toJson();
+  }
+
+  static Future<HostActionResult> _lazyChunkLoadMore(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+    _MpRenderBindings bindings,
+  ) {
+    return _MpLazyChunkRegistry.loadMore(
+      scope: scope,
+      screenId: bindings.screenId,
+      id: _stringProp(props, 'id'),
+    );
   }
 
   static Future<HostActionResult> _searchLoadMore(

@@ -19,7 +19,8 @@ shared platform contracts.
 - in-memory cache helpers for manifests, screens, and assets
 - publisher-owned email/password auth runtime with per-mini-program cached
   sessions
-- paged publisher backend list rendering with manual Load more support
+- lazy chunk and paged publisher backend list rendering with manual Load more
+  support
 
 ## Install
 
@@ -54,7 +55,7 @@ Mp screens support:
 - internal mini-program navigation
 - publisher-owned email auth builders and actions
 - publisher backend builders
-- paged backend builders with manual Load more
+- lazy chunk and paged backend builders with manual Load more
 - safe bindings such as `{{auth.user.email}}`, `{{backend.home.data.title}}`,
   and `{{item.title}}`
 
@@ -323,10 +324,11 @@ The mock publisher backend is a local HTTP JSON server for development. It is
 not a production backend and it does not add Firebase, AWS, or other backend
 SDK dependencies to this Flutter SDK.
 
-Mp screens use `Mp.backendBuilder(...)`, `Mp.pagedBackendBuilder(...)`, and
-`Mp.backend.loadMore(...)` from `mini_program_ui`. The SDK executes those
-provider-neutral JSON nodes through `MiniProgramBackendStore`; requests remain
-lazy until the corresponding runtime node or action is used.
+Mp screens use `Mp.backendBuilder(...)`, `Mp.lazy.chunk(...)`,
+`Mp.pagedBackendBuilder(...)`, and backend actions from `mini_program_ui`. The
+SDK executes those provider-neutral JSON nodes through
+`MiniProgramBackendStore`; requests remain lazy until the corresponding runtime
+node or action is used.
 
 The default provider-neutral response shape is:
 

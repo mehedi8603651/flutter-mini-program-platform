@@ -257,6 +257,94 @@ void main() {
         ),
         throwsArgumentError,
       );
+      final loadActions = <MpAction>[
+        Mp.backend.loadMore(requestId: 'products', endpoint: 'products/page'),
+      ];
+      expect(
+        () => Mp.lazy.chunk(
+          id: '',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: loadActions,
+          itemsState: 'products.items',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: const <MpAction>[],
+          loadMoreActions: loadActions,
+          itemsState: 'products.items',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: const <MpAction>[],
+          itemsState: 'products.items',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: loadActions,
+          itemsState: 'Products.items',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: loadActions,
+          itemsState: 'products.items',
+          cacheKeyPrefix: '../products',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: loadActions,
+          itemsState: 'products.items',
+          bucket: 'session',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: loadActions,
+          itemsState: 'products.items',
+          retry: -1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.lazy.chunk(
+          id: 'products',
+          itemTemplate: Mp.text('{{item.title}}'),
+          initialActions: loadActions,
+          loadMoreActions: loadActions,
+          itemsState: 'products.items',
+          ttl: Duration.zero,
+        ),
+        throwsArgumentError,
+      );
+      expect(() => Mp.lazy.loadMore(id: ''), throwsArgumentError);
     });
 
     test('repeat helpers reject invalid configuration', () {

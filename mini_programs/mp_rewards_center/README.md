@@ -6,8 +6,8 @@ It covers:
 
 - `Mp.authBuilder`
 - `Mp.backendBuilder`
-- `Mp.pagedBackendBuilder`
-- manual Load more with `Mp.backend.loadMore`
+- `Mp.lazy.chunk`
+- manual Load more with `Mp.lazy.loadMore`
 
 Build it with:
 

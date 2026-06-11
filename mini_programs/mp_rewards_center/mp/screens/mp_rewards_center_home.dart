@@ -49,14 +49,17 @@ MpNode buildMpRewardsCenterHome() {
         ),
       ),
       Mp.sizedBox(height: 16),
-      Mp.pagedBackendBuilder(
-        requestId: 'rewards',
-        endpoint: 'coupons/page',
-        limit: 1,
-        cacheTtlSeconds: 30,
-        loading: Mp.text('Loading rewards...'),
+      Mp.lazy.chunk(
+        id: 'rewards_chunk',
+        itemsState: 'rewards.items',
+        cursorState: 'rewards.next_cursor',
+        hasMoreState: 'rewards.has_more',
+        statusState: 'rewards.status',
+        cacheKeyPrefix: 'rewards_chunk',
+        ttl: const Duration(seconds: 30),
+        placeholder: Mp.text('Loading rewards...'),
         loadingMore: Mp.text('Loading more rewards...'),
-        error: Mp.text('{{backend.rewards.message}}'),
+        error: Mp.text('Rewards failed to load.'),
         empty: Mp.text('No Mp rewards yet.'),
         end: Mp.text('No more Mp rewards.'),
         itemTemplate: Mp.card(
@@ -68,9 +71,25 @@ MpNode buildMpRewardsCenterHome() {
             ],
           ),
         ),
+        initialActions: <MpAction>[
+          Mp.backend.loadMore(
+            requestId: 'rewards',
+            endpoint: 'coupons/page',
+            limit: 1,
+            cacheTtlSeconds: 30,
+          ),
+        ],
+        loadMoreActions: <MpAction>[
+          Mp.backend.loadMore(
+            requestId: 'rewards',
+            endpoint: 'coupons/page',
+            limit: 1,
+            cacheTtlSeconds: 30,
+          ),
+        ],
         loadMore: Mp.secondaryButton(
           label: 'Load more rewards',
-          action: Mp.backend.loadMore(requestId: 'rewards'),
+          action: Mp.lazy.loadMore(id: 'rewards_chunk'),
         ),
       ),
     ],

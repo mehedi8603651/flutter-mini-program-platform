@@ -160,7 +160,7 @@ foreach ($fixture in $Fixtures) {
   if ($appId -eq 'mp_rewards_center') {
     Assert-JsonValue $status 'miniProgram.backendUsage.usesAuthBuilder' $true
     Assert-JsonValue $status 'miniProgram.backendUsage.usesBackendBuilder' $true
-    Assert-JsonValue $status 'miniProgram.backendUsage.usesPagedBackendBuilder' $true
+    Assert-JsonValue $status 'miniProgram.backendUsage.usesLazyChunk' $true
     Assert-JsonValue $status 'miniProgram.backendUsage.usesLoadMore' $true
   }
 }

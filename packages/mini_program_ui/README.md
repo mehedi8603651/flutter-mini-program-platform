@@ -103,6 +103,51 @@ Mp.backendBuilder(
 
 ## Paged Lists
 
+Use `Mp.lazy.chunk` when repeated data is large, dynamic, comes from a
+publisher backend, and needs pagination or manual Load more:
+
+```dart
+Mp.lazy.chunk(
+  id: 'rewards_chunk',
+  itemsState: 'rewards.items',
+  cursorState: 'rewards.next_cursor',
+  hasMoreState: 'rewards.has_more',
+  statusState: 'rewards.status',
+  cacheKeyPrefix: 'rewards_chunk',
+  placeholder: Mp.text('Loading rewards...'),
+  loadingMore: Mp.text('Loading more...'),
+  empty: Mp.text('No rewards yet.'),
+  end: Mp.text('No more rewards.'),
+  error: Mp.text('Rewards failed to load.'),
+  itemTemplate: Mp.card(child: Mp.text('{{item.title}}')),
+  initialActions: <MpAction>[
+    Mp.backend.loadMore(
+      requestId: 'rewards',
+      endpoint: 'coupons/page',
+      limit: 20,
+    ),
+  ],
+  loadMoreActions: <MpAction>[
+    Mp.backend.loadMore(
+      requestId: 'rewards',
+      endpoint: 'coupons/page',
+      limit: 20,
+    ),
+  ],
+  loadMore: Mp.secondaryButton(
+    label: 'Load more',
+    action: Mp.lazy.loadMore(id: 'rewards_chunk'),
+  ),
+);
+```
+
+Do not use `Mp.lazy.chunk` for login pages, small settings pages, static about
+pages, single detail pages, payment forms, fixed menus, or small local JSON
+lists.
+
+`Mp.pagedBackendBuilder` remains available for direct backend-bound paged
+lists:
+
 ```dart
 Mp.pagedBackendBuilder(
   requestId: 'rewards',

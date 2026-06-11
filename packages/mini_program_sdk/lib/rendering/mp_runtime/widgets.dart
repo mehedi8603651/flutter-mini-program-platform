@@ -511,6 +511,7 @@ class _MpNodeView extends StatelessWidget {
       ),
       'image' => _MpImage(node: node, bindings: bindings),
       'lazy' => _MpLazySection(node: node, bindings: bindings),
+      'lazyChunk' => _MpLazyChunk(node: node, bindings: bindings),
       'skeleton' => _MpSkeleton(node: node, bindings: bindings),
       'card' => _MpCard(node: node, bindings: bindings),
       'theme' => _MpTheme(node: node, bindings: bindings),

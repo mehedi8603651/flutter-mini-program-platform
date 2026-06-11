@@ -373,9 +373,10 @@ Publisher workspace:
    ```
 
    Use `Mp.backendBuilder(...)` for single publisher backend reads,
-   `Mp.pagedBackendBuilder(...)` for large lists with Load more, and
-   `Mp.authBuilder(...)` with `Mp.auth.*` actions for email
-   sign-in/sign-up/sign-out UI. Do not edit `mp/.build` directly.
+   `Mp.lazy.chunk(...)` for repeated backend data with Load more,
+   `Mp.pagedBackendBuilder(...)` for direct paged backend lists, and
+   `Mp.authBuilder(...)` with `Mp.auth.*` actions for email sign-in/sign-up/
+   sign-out UI. Do not edit `mp/.build` directly.
 
 5. Deploy backend, seed Firestore, and verify:
 

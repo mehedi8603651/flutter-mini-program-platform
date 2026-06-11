@@ -3302,6 +3302,286 @@ void _mpScreenRendererTests() {
       },
     );
 
+    testWidgets('lazy chunk initial load writes state and renders items', (
+      tester,
+    ) async {
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/rewards',
+            data: const <String, dynamic>{
+              'items': <Object?>[
+                <String, dynamic>{'title': 'Reward A'},
+              ],
+              'nextCursor': 'cursor-2',
+              'hasMore': true,
+            },
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: _lazyChunkScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reward A'), findsOneWidget);
+      expect(find.text('Load more rewards'), findsOneWidget);
+      expect(connector.calls.single.requestId, 'rewards');
+      expect(connector.calls.single.endpoint, '/rewards?limit=1');
+      expect(stateManager.get<Object?>('rewards.items'), <Object?>[
+        <String, dynamic>{'title': 'Reward A'},
+      ]);
+      expect(stateManager.get<String>('rewards.next_cursor'), 'cursor-2');
+      expect(stateManager.get<bool>('rewards.has_more'), isTrue);
+      expect(stateManager.get<String>('rewards.status'), 'success');
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy chunk load more appends and guards duplicate taps', (
+      tester,
+    ) async {
+      final loadMoreCompleter = Completer<MiniProgramBackendResult>();
+      final connector = _FutureBackendConnector(
+        responses: <FutureOr<MiniProgramBackendResult>>[
+          MiniProgramBackendResult.success(
+            endpoint: '/rewards',
+            data: const <String, dynamic>{
+              'items': <Object?>[
+                <String, dynamic>{'title': 'Reward A'},
+              ],
+              'nextCursor': 'cursor-2',
+              'hasMore': true,
+            },
+          ),
+          loadMoreCompleter.future,
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: _lazyChunkScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Load more rewards'));
+      await tester.tap(find.text('Load more rewards'));
+      await tester.pump();
+
+      expect(connector.calls, hasLength(2));
+      expect(connector.calls.last.endpoint, '/rewards?limit=1&cursor=cursor-2');
+      expect(find.text('Loading more rewards'), findsOneWidget);
+
+      loadMoreCompleter.complete(
+        MiniProgramBackendResult.success(
+          endpoint: '/rewards',
+          data: const <String, dynamic>{
+            'items': <Object?>[
+              <String, dynamic>{'title': 'Reward B'},
+            ],
+            'nextCursor': null,
+            'hasMore': false,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reward A'), findsOneWidget);
+      expect(find.text('Reward B'), findsOneWidget);
+      expect(find.text('No more rewards'), findsOneWidget);
+      expect(stateManager.get<Object?>('rewards.items'), <Object?>[
+        <String, dynamic>{'title': 'Reward A'},
+        <String, dynamic>{'title': 'Reward B'},
+      ]);
+      expect(stateManager.get<bool>('rewards.has_more'), isFalse);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy chunk hydrates first page from cache', (tester) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      await cacheManager.forApp('coupon').set(
+        'rewards_chunk__initial',
+        <String, dynamic>{
+          'items': <Object?>[
+            <String, dynamic>{'title': 'Cached Reward'},
+          ],
+          'nextCursor': 'cached-cursor',
+          'hasMore': true,
+          'pageCount': 1,
+        },
+      );
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[],
+      );
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          screenJson: _lazyChunkScreen(cacheKeyPrefix: 'rewards_chunk'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cached Reward'), findsOneWidget);
+      expect(find.text('Load more rewards'), findsOneWidget);
+      expect(connector.calls, isEmpty);
+      expect(stateManager.get<String>('rewards.next_cursor'), 'cached-cursor');
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy chunk load more failure keeps previous items', (
+      tester,
+    ) async {
+      final connector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/rewards',
+            data: const <String, dynamic>{
+              'items': <Object?>[
+                <String, dynamic>{'title': 'Reward A'},
+              ],
+              'nextCursor': 'cursor-2',
+              'hasMore': true,
+            },
+          ),
+          MiniProgramBackendResult.failed(
+            endpoint: '/rewards',
+            message: 'Backend failed',
+          ),
+        ],
+      );
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          backendConnector: connector,
+          stateManager: stateManager,
+          screenJson: _lazyChunkScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Load more rewards'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reward A'), findsOneWidget);
+      expect(find.text('Rewards failed'), findsOneWidget);
+      expect(stateManager.get<Object?>('rewards.items'), <Object?>[
+        <String, dynamic>{'title': 'Reward A'},
+      ]);
+      expect(stateManager.get<String>('rewards.status'), 'error');
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('lazy chunk renders empty and end states', (tester) async {
+      final emptyStore = MiniProgramBackendStore();
+      final emptyState = MpStateManager();
+      final emptyConnector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/rewards',
+            data: const <String, dynamic>{
+              'items': <Object?>[],
+              'nextCursor': null,
+              'hasMore': false,
+            },
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: emptyStore,
+          backendConnector: emptyConnector,
+          stateManager: emptyState,
+          screenJson: _lazyChunkScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('No rewards'), findsOneWidget);
+      expect(emptyState.get<String>('rewards.status'), 'empty');
+      emptyState.dispose();
+      emptyStore.dispose();
+
+      final endStore = MiniProgramBackendStore();
+      final endState = MpStateManager();
+      final endConnector = _RecordingBackendConnector(
+        responses: <MiniProgramBackendResult>[
+          MiniProgramBackendResult.success(
+            endpoint: '/rewards',
+            data: const <String, dynamic>{
+              'items': <Object?>[
+                <String, dynamic>{'title': 'Final Reward'},
+              ],
+              'nextCursor': null,
+              'hasMore': false,
+            },
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: endStore,
+          backendConnector: endConnector,
+          stateManager: endState,
+          screenJson: _lazyChunkScreen(id: 'rewards_chunk_end'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Final Reward'), findsOneWidget);
+      expect(find.text('No more rewards'), findsOneWidget);
+      endState.dispose();
+      endStore.dispose();
+    });
+
+    testWidgets('lazy chunk shows error when backend is not configured', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: _lazyChunkScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rewards failed'), findsOneWidget);
+      expect(stateManager.get<String>('rewards.status'), 'error');
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
     testWidgets('form controls validate and submit through backend connector', (
       tester,
     ) async {

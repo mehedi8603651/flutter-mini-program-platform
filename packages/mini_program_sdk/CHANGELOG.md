@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- add `lazyChunk` Mp runtime rendering and `lazy.chunk.loadMore` actions for
+  manual chunk/page loading with state mirroring, cache hydration, and in-flight
+  guards
+
 ## 0.4.2
 
 - add `Mp.lazy.section` runtime rendering with cache hydration, post-frame

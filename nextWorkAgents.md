@@ -6,7 +6,7 @@ The local Flutter CLI foundation is already shipped. The next work must build
 on that baseline instead of redesigning it again.
 
 ## not completed: for future can be add
-Mp.lazy.chunk ❌
+Mp.lazy.chunk manual Load more v1 ✅
 infinite scroll ❌
 secure persistent session ❌
 real video cache ❌
@@ -24,9 +24,9 @@ Current shipped base:
 - It is intended for one lazy section or one cached action block, not large
   paged lists by itself.
 
-### Recommended Next Batch 1: `Mp.lazy.chunk`
+### Done: `Mp.lazy.chunk` manual Load More v1
 
-Goal: add manual chunk/page loading with a `Load more` button.
+Goal: manual chunk/page loading with a `Load more` button.
 
 Target flow:
 
@@ -96,6 +96,11 @@ Implementation rules:
 - Treat videos list as JSON-safe metadata only; no video binary cache here.
 - Add parser validation for item template, action JSON, state keys, cache keys,
   retry values, buckets, and unknown props.
+
+Use `Mp.lazy.chunk` when data is repeated, large, dynamic, comes from a
+backend/database, and needs pagination, Load more, or future infinite scroll.
+Do not use it for login pages, small settings pages, static about pages, single
+product/profile details, payment forms, fixed menus, or small local JSON lists.
 
 ### Recommended Next Batch 2: Auto Load On Scroll
 

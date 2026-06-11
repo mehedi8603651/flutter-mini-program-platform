@@ -256,6 +256,68 @@ Map<String, dynamic> _lazySectionScreen({
   return _jsonMap(miniProgram.buildScreensJson()['coupon_home']!);
 }
 
+Map<String, dynamic> _lazyChunkScreen({
+  String id = 'rewards_chunk',
+  List<MpAction>? initialActions,
+  List<MpAction>? loadMoreActions,
+  MpNode? itemTemplate,
+  String itemsState = 'rewards.items',
+  String? cursorState = 'rewards.next_cursor',
+  String? hasMoreState = 'rewards.has_more',
+  String? statusState = 'rewards.status',
+  String? cacheKeyPrefix,
+  MpNode? placeholder,
+  MpNode? empty,
+  MpNode? error,
+  MpNode? loadingMore,
+  MpNode? loadMore,
+  MpNode? end,
+}) {
+  final miniProgram = MpProgram(
+    screens: <String, MpScreenBuilder>{
+      'coupon_home': () => Mp.lazy.chunk(
+        id: id,
+        itemTemplate: itemTemplate ?? Mp.text('{{item.title}}'),
+        initialActions:
+            initialActions ??
+            <MpAction>[
+              Mp.backend.loadMore(
+                requestId: 'rewards',
+                endpoint: '/rewards',
+                limit: 1,
+              ),
+            ],
+        loadMoreActions:
+            loadMoreActions ??
+            <MpAction>[
+              Mp.backend.loadMore(
+                requestId: 'rewards',
+                endpoint: '/rewards',
+                limit: 1,
+              ),
+            ],
+        itemsState: itemsState,
+        cursorState: cursorState,
+        hasMoreState: hasMoreState,
+        statusState: statusState,
+        cacheKeyPrefix: cacheKeyPrefix,
+        placeholder: placeholder ?? Mp.text('Loading rewards'),
+        empty: empty ?? Mp.text('No rewards'),
+        error: error ?? Mp.text('Rewards failed'),
+        loadingMore: loadingMore ?? Mp.text('Loading more rewards'),
+        loadMore:
+            loadMore ??
+            Mp.secondaryButton(
+              label: 'Load more rewards',
+              action: Mp.lazy.loadMore(id: id),
+            ),
+        end: end ?? Mp.text('No more rewards'),
+      ),
+    },
+  );
+  return _jsonMap(miniProgram.buildScreensJson()['coupon_home']!);
+}
+
 Map<String, dynamic> _jsonMap(Map<String, Object?> json) {
   return Map<String, dynamic>.from(jsonDecode(jsonEncode(json)) as Map);
 }
