@@ -86,7 +86,7 @@ function Assert-BaseSdkDependencyClean {
       'cached_network_image',
       'flutter_svg',
       'shared_preferences',
-      'sqflite',
+      'sqflite'
     )
     foreach ($packageName in $forbiddenPackages) {
       if ($dependencyOutput -match "(?m)^\s*(?:-\s*)?$([regex]::Escape($packageName))\s") {
