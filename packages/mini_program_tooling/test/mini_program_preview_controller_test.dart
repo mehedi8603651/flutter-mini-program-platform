@@ -401,6 +401,63 @@ void main() {
       },
     );
 
+    test('passes preview Publisher API base URL to the host app', () async {
+      final fixture = await _writePreviewBuildFixture(
+        tempDir.path,
+        miniProgramId: 'coupon_center',
+      );
+      PreviewProcessCall? processCall;
+      final controller = MiniProgramPreviewController(
+        builder: _FakePreviewBuilder((_) async => fixture.buildResult),
+        hostInitializer: _FakePreviewHostInitializer(),
+        processStarter:
+            ({
+              required String executable,
+              required List<String> arguments,
+              required String workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              processCall = PreviewProcessCall(
+                executable: executable,
+                arguments: arguments,
+                workingDirectory: workingDirectory,
+              );
+              return StartedPreviewProcess(
+                pid: 1,
+                stdout: const Stream<List<int>>.empty(),
+                stderr: const Stream<List<int>>.empty(),
+                exitCode: Future<int>.value(0),
+                kill: ([ProcessSignal _ = ProcessSignal.sigterm]) => true,
+              );
+            },
+      );
+
+      final stdoutBuffer = StringBuffer();
+      final exitCode = await controller.preview(
+        MiniProgramPreviewRequest(
+          miniProgramId: 'coupon_center',
+          miniProgramRootPath: fixture.miniProgramRootPath,
+          repoRootPath: fixture.repoRootPath,
+          deviceId: 'chrome',
+          backendBaseUri: Uri.parse('http://127.0.0.1:9090/'),
+        ),
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(
+        processCall!.arguments,
+        contains(
+          '--dart-define=MINI_PROGRAM_PREVIEW_BACKEND_BASE_URL=http://127.0.0.1:9090/',
+        ),
+      );
+      expect(
+        stdoutBuffer.toString(),
+        contains('Publisher API: http://127.0.0.1:9090/'),
+      );
+    });
+
     test(
       'launches Edge preview with web host platform and localhost base URL',
       () async {

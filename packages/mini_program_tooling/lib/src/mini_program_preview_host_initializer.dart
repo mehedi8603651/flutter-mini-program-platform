@@ -303,6 +303,7 @@ class MiniProgramPreviewHostInitializer {
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
@@ -317,6 +318,9 @@ const String _configuredMiniProgramId = String.fromEnvironment(
 const String _configuredTitle = String.fromEnvironment(
   'MINI_PROGRAM_PREVIEW_TITLE',
   defaultValue: 'Mini Program Preview',
+);
+const String _configuredBackendBaseUrl = String.fromEnvironment(
+  'MINI_PROGRAM_PREVIEW_BACKEND_BASE_URL',
 );
 
 void main() {
@@ -338,6 +342,8 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
   late final PreviewMiniProgramSource _source;
   late final PreviewHostBridge _hostBridge;
   late final CapabilityRegistry _capabilityRegistry;
+  late final MiniProgramDeliveryContext _deliveryContext;
+  MiniProgramBackendConnector? _backendConnector;
   late MiniProgramCacheBundle _cacheBundle;
 
   Timer? _pollTimer;
@@ -359,6 +365,14 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
         CapabilityIds.secureApi,
       ],
     );
+    _deliveryContext = MiniProgramDeliveryContext(
+      hostApp: 'mini-program-preview',
+      hostVersion: 'local',
+      sdkVersion: 'local',
+      capabilities: _capabilityRegistry.supportedCapabilities,
+      platform: defaultTargetPlatform.name,
+    );
+    _backendConnector = _buildPreviewBackendConnector(_deliveryContext);
     _cacheBundle = MiniProgramCacheBundle.inMemory();
     _refreshStatus();
     _pollTimer = Timer.periodic(
@@ -372,6 +386,10 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
     _pollTimer?.cancel();
     _statusClient.close();
     _source.close();
+    final connector = _backendConnector;
+    if (connector is DisposableMiniProgramBackendConnector) {
+      connector.dispose();
+    }
     super.dispose();
   }
 
@@ -385,6 +403,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       source: _source,
       hostBridge: _hostBridge,
       capabilityRegistry: _capabilityRegistry,
+      backendConnector: _backendConnector,
       cacheBundle: _cacheBundle,
     );
 
@@ -470,6 +489,34 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
         ),
       );
     }
+  }
+
+  MiniProgramBackendConnector? _buildPreviewBackendConnector(
+    MiniProgramDeliveryContext deliveryContext,
+  ) {
+    final rawBackendBaseUrl = _configuredBackendBaseUrl.trim();
+    if (rawBackendBaseUrl.isEmpty) {
+      return null;
+    }
+
+    final backendBaseUri = Uri.tryParse(rawBackendBaseUrl);
+    if (backendBaseUri == null ||
+        !backendBaseUri.hasScheme ||
+        backendBaseUri.host.isEmpty) {
+      debugPrint(
+        '[preview][backend] Ignoring invalid Publisher API URL: $rawBackendBaseUrl',
+      );
+      return null;
+    }
+
+    return EndpointRoutingMiniProgramBackendConnector(
+      backends: <String, MiniProgramBackendEndpoint>{
+        _configuredMiniProgramId: MiniProgramBackendEndpoint(
+          baseUri: backendBaseUri,
+        ),
+      },
+      deliveryContext: deliveryContext,
+    );
   }
 }
 

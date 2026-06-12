@@ -245,6 +245,11 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ..addOption(
         'mp-build-script',
         help: 'Optional explicit path to tool/build_mp.dart for Mp projects.',
+      )
+      ..addOption(
+        'backend-base-url',
+        help:
+            'Optional Publisher API base URL for backend widgets in preview. Defaults to publisher_backend.json when present.',
       );
 
     final results = parser.parse(arguments);
@@ -284,6 +289,10 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       currentWorkingDirectory: _currentWorkingDirectory(),
       requireRepoRoot: false,
     );
+    final backendBaseUri = await _resolvePreviewBackendBaseUri(
+      miniProgramRootPath: resolved.miniProgramRootPath,
+      explicitBackendBaseUrl: results.option('backend-base-url'),
+    );
 
     return _previewController.preview(
       MiniProgramPreviewRequest(
@@ -292,10 +301,39 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         repoRootPath: resolved.repoRootPath,
         deviceId: deviceId,
         mpBuildScriptPath: results.option('mp-build-script'),
+        backendBaseUri: backendBaseUri,
       ),
       stdoutSink: _stdout,
       stderrSink: _stderr,
     );
+  }
+
+  Future<Uri?> _resolvePreviewBackendBaseUri({
+    required String miniProgramRootPath,
+    required String? explicitBackendBaseUrl,
+  }) async {
+    final explicit = explicitBackendBaseUrl?.trim() ?? '';
+    if (explicit.isNotEmpty) {
+      final uri = Uri.tryParse(explicit);
+      if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+        throw FormatException(
+          'preview --backend-base-url expected an absolute URL, got: $explicit',
+        );
+      }
+      return uri;
+    }
+
+    final contractPath = _publisherBackendContractController
+        .defaultContractPath(miniProgramRootPath);
+    if (!File(contractPath).existsSync()) {
+      return null;
+    }
+
+    final contract = await _publisherBackendContractController.readContract(
+      contractPath: contractPath,
+      allowLocalHttp: true,
+    );
+    return contract.backendBaseUri;
   }
 
   Future<int> _runValidate(List<String> arguments) async {

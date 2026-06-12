@@ -83,6 +83,7 @@ class MiniProgramPreviewRequest {
     required this.deviceId,
     this.repoRootPath,
     this.mpBuildScriptPath,
+    this.backendBaseUri,
   });
 
   final String miniProgramId;
@@ -90,6 +91,7 @@ class MiniProgramPreviewRequest {
   final String deviceId;
   final String? repoRootPath;
   final String? mpBuildScriptPath;
+  final Uri? backendBaseUri;
 }
 
 class StartedPreviewProcess {
@@ -322,6 +324,9 @@ class MiniProgramPreviewController {
           when message.trim().isNotEmpty) {
         stdoutSink.writeln(message);
       }
+      if (request.backendBaseUri case final backendBaseUri?) {
+        stdoutSink.writeln('Publisher API: $backendBaseUri');
+      }
 
       flutterRunProcess = await _processStarter(
         executable: 'flutter',
@@ -331,6 +336,7 @@ class MiniProgramPreviewController {
           previewBaseUrl: previewServer.baseUri.toString(),
           miniProgramId: request.miniProgramId,
           title: initialBundle.title,
+          backendBaseUri: request.backendBaseUri,
         ),
         workingDirectory: previewHostRootPath,
       );
@@ -867,6 +873,7 @@ class MiniProgramPreviewController {
     required String previewBaseUrl,
     required String miniProgramId,
     required String title,
+    required Uri? backendBaseUri,
   }) {
     return <String>[
       'run',
@@ -878,6 +885,8 @@ class MiniProgramPreviewController {
       '--dart-define=MINI_PROGRAM_PREVIEW_BASE_URL=$previewBaseUrl',
       '--dart-define=MINI_PROGRAM_PREVIEW_MINI_PROGRAM_ID=$miniProgramId',
       '--dart-define=MINI_PROGRAM_PREVIEW_TITLE=$title',
+      if (backendBaseUri != null)
+        '--dart-define=MINI_PROGRAM_PREVIEW_BACKEND_BASE_URL=$backendBaseUri',
     ];
   }
 
