@@ -108,6 +108,8 @@ void _registerScaffoldTests() {
     expect(template, contains('AccessPolicyBucketName'));
     expect(template, contains('PUBLISHER_BACKEND_ACCESS_POLICY_BUCKET'));
     expect(template, contains('s3:GetObject'));
+    expect(template, contains('s3:ListBucket'));
+    expect(template, contains('s3:prefix: !Ref AccessPolicyObjectKey'));
     expect(template, isNot(contains('AWS::DynamoDB::Table')));
     expect(packageJson, contains('@aws-sdk/client-s3'));
     expect(packageJson, isNot(contains('@aws-sdk/client-dynamodb')));

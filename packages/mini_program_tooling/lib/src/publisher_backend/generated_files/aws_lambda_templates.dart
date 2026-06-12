@@ -43,6 +43,13 @@ ${usesDynamoDb ? '          PUBLISHER_BACKEND_TABLE_NAME: !Ref PublisherBackendD
               Action:
                 - s3:GetObject
               Resource: !Sub 'arn:\${AWS::Partition}:s3:::\${AccessPolicyBucketName}/\${AccessPolicyObjectKey}'
+            - Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource: !Sub 'arn:\${AWS::Partition}:s3:::\${AccessPolicyBucketName}'
+              Condition:
+                StringEquals:
+                  s3:prefix: !Ref AccessPolicyObjectKey
 ${usesDynamoDb ? '''        - DynamoDBCrudPolicy:
             TableName: !Ref PublisherBackendDataTable
 ''' : ''}''';
