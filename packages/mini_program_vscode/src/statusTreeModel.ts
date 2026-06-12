@@ -42,65 +42,17 @@ export interface FirebaseHostEndpointStatus {
   readonly hostAuthIssues?: readonly string[];
 }
 
-export interface FirebaseAuthStatus {
-  readonly ready?: boolean;
-  readonly deployEnvReady?: boolean;
-  readonly environmentName?: string;
-  readonly projectId?: string;
-  readonly region?: string;
-  readonly functionName?: string;
-  readonly miniProgramId?: string;
-  readonly authWebApiKeyConfigured?: boolean;
-  readonly scaffoldExists?: boolean;
-  readonly authServiceFileExists?: boolean;
-  readonly routerAuthRoutesReady?: boolean;
-  readonly routerAllowsAuthorizationHeader?: boolean;
-  readonly packageJsonHasFirebaseAdmin?: boolean;
-  readonly envAuthKeyConfigured?: boolean;
-  readonly envUsesReservedAuthKey?: boolean;
-  readonly envFilePath?: string;
-  readonly hostAuthChecked?: boolean;
-  readonly hostProjectRootPath?: string;
-  readonly hostAuthControllerReady?: boolean;
-  readonly hostRuntimeSetupPath?: string;
-  readonly hostAuthControllerConfigured?: boolean;
-  readonly hostSecureAuthControllerConfigured?: boolean;
-  readonly hostDisposeAuthControllerConfigured?: boolean;
-  readonly issues?: readonly string[];
-  readonly warnings?: readonly string[];
-  readonly hostAuthIssues?: readonly string[];
-}
-
-export interface FirebaseAccessKeyStatus {
-  readonly environmentName?: string;
-  readonly projectId?: string;
-  readonly region?: string;
-  readonly functionName?: string;
-  readonly miniProgramId?: string;
-  readonly backendBaseUrl?: string;
-  readonly activeKeyCount?: number;
-  readonly keyCount?: number;
-  readonly activeKeyIds?: readonly string[];
-  readonly inactiveKeyIds?: readonly string[];
-}
-
 export function buildStatusTreeSections(
   report: WorkflowStatusReport | undefined,
   options: {
     readonly firebaseHostEndpoint?: FirebaseHostEndpointStatus;
-    readonly firebaseAuthStatus?: FirebaseAuthStatus;
-    readonly firebaseAccessKeys?: FirebaseAccessKeyStatus;
   } = {},
 ): StatusTreeSection[] {
   const firebaseHostEndpoint = options.firebaseHostEndpoint;
-  const firebaseAuthStatus = options.firebaseAuthStatus;
-  const firebaseAccessKeys = options.firebaseAccessKeys;
   if (!report) {
-    if (firebaseHostEndpoint || firebaseAuthStatus || firebaseAccessKeys) {
+    if (firebaseHostEndpoint) {
       return compactSections([
         firebaseHostEndpoint ? firebaseHostEndpointSection(firebaseHostEndpoint) : undefined,
-        firebaseAuthStatus ? firebaseAuthStatusSection(firebaseAuthStatus) : undefined,
-        firebaseAccessKeys ? firebaseAccessKeySection(firebaseAccessKeys) : undefined,
       ]);
     }
     return [
@@ -137,8 +89,6 @@ export function buildStatusTreeSections(
     const validation = asRecord(miniProgram.validation);
     const backendUsage = asRecord(miniProgram.backendUsage);
     const publisherBackendStarter = asRecord(miniProgram.publisherBackendStarter);
-    const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
-    const firebasePublisherBackend = asRecord(publisherBackendStarter.firebase);
     const expectedPublisherRoutes = asStringList(publisherBackendStarter.expectedRoutes);
     const screenSchemaVersion = asNumber(miniProgram.screenSchemaVersion);
     const partnerPackages = Array.isArray(miniProgram.partnerPackages)
@@ -188,29 +138,6 @@ export function buildStatusTreeSections(
             ? 'yes'
             : '',
         ),
-        row(
-          'AWS backend',
-          asBoolean(awsPublisherBackend.detected)
-            ? asString(awsPublisherBackend.backendBaseUrl, 'scaffolded')
-            : 'none',
-        ),
-        row('AWS env', asString(awsPublisherBackend.environmentName)),
-        row('AWS stack', asString(awsPublisherBackend.stackName)),
-        row('AWS region', asString(awsPublisherBackend.region)),
-        row('AWS health', asString(awsPublisherBackend.healthUrl)),
-        row('AWS function', asString(awsPublisherBackend.functionName)),
-        row(
-          'Firebase backend',
-          asBoolean(firebasePublisherBackend.detected)
-            ? asString(firebasePublisherBackend.backendBaseUrl, 'scaffolded')
-            : 'none',
-        ),
-        row('Firebase env', asString(firebasePublisherBackend.environmentName)),
-        row('Firebase project', asString(firebasePublisherBackend.projectId)),
-        row('Firebase region', asString(firebasePublisherBackend.region)),
-        row('Firebase health', asString(firebasePublisherBackend.healthUrl)),
-        row('Firebase function', asString(firebasePublisherBackend.functionName)),
-        row('Firebase storage', asString(firebasePublisherBackend.storageMode)),
       ]),
     });
   }
@@ -248,7 +175,7 @@ export function buildStatusTreeSections(
         row('Endpoint count', String(endpointCount)),
         row('Endpoint app IDs', asStringList(hostApp.endpointAppIds).join(', ')),
         row('Endpoint modes', endpointModes),
-        row('Publisher backends', endpointBackends),
+        row('Publisher APIs', endpointBackends),
         row(
           'Routing',
           endpointCount > 0
@@ -288,9 +215,6 @@ export function buildStatusTreeSections(
   const cloudStatus = asRecord(remote.cloudStatus);
   const app = asRecord(remote.app);
   const accessKeys = asRecord(remote.accessKeys);
-  const firebaseRemote = asRecord(remote.firebase);
-  const firebaseStatus = asRecord(firebaseRemote.status);
-  const firebaseDataStatus = asRecord(firebaseRemote.dataStatus);
   sections.push({
     label: 'Remote',
     icon: 'cloud',
@@ -301,22 +225,12 @@ export function buildStatusTreeSections(
       row('Stack status', asString(cloudStatus.stackStatus)),
       row('Latest version', asString(app.latestVersion)),
       row('Active access keys', optionalNumber(accessKeys.activeCount)),
-      row('Firebase healthy', optionalYesNo(firebaseStatus.healthy)),
-      row('Firestore available', optionalYesNo(firebaseDataStatus.available)),
-      row('Firestore app records', optionalNumber(firebaseDataStatus.appRecordCount)),
-      row('Firestore redemptions', optionalNumber(firebaseDataStatus.redemptionCount)),
       row('Errors', asStringList(remote.errors).join('; ')),
     ]),
   });
 
   if (firebaseHostEndpoint) {
     sections.push(firebaseHostEndpointSection(firebaseHostEndpoint));
-  }
-  if (firebaseAuthStatus) {
-    sections.push(firebaseAuthStatusSection(firebaseAuthStatus));
-  }
-  if (firebaseAccessKeys) {
-    sections.push(firebaseAccessKeySection(firebaseAccessKeys));
   }
 
   sections.push({
@@ -392,64 +306,6 @@ function firebaseHostEndpointSection(
       row('Host disposes auth', optionalYesNo(status.hostDisposeAuthControllerConfigured)),
       row('Host auth issues', (status.hostAuthIssues ?? []).join('; ')),
       row('Issues', (status.hostEndpointIssues ?? []).join('; ')),
-    ]),
-  };
-}
-
-function firebaseAuthStatusSection(status: FirebaseAuthStatus): StatusTreeSection {
-  return {
-    label: 'Firebase auth',
-    icon: status.ready === false || status.hostAuthControllerReady === false ? 'warning' : 'shield',
-    rows: compactRows([
-      row('Ready', optionalYesNo(status.ready)),
-      row('Deploy env ready', optionalYesNo(status.deployEnvReady)),
-      row('Environment', status.environmentName ?? ''),
-      row('Project', status.projectId ?? ''),
-      row('Region', status.region ?? ''),
-      row('Function', status.functionName ?? ''),
-      row('Mini-program ID', status.miniProgramId ?? ''),
-      row('Auth Web API key', optionalYesNo(status.authWebApiKeyConfigured)),
-      row('Scaffold', optionalYesNo(status.scaffoldExists)),
-      row('Auth service file', optionalYesNo(status.authServiceFileExists)),
-      row('Auth routes', optionalYesNo(status.routerAuthRoutesReady)),
-      row('Authorization CORS', optionalYesNo(status.routerAllowsAuthorizationHeader)),
-      row('Firebase Admin dependency', optionalYesNo(status.packageJsonHasFirebaseAdmin)),
-      row('Functions .env auth key', optionalYesNo(status.envAuthKeyConfigured)),
-      row('Reserved .env key present', optionalYesNo(status.envUsesReservedAuthKey)),
-      row('Functions .env', status.envFilePath ?? ''),
-      row('Host auth checked', optionalYesNo(status.hostAuthChecked)),
-      row('Host app', status.hostProjectRootPath ?? ''),
-      row('Host auth ready', optionalYesNo(status.hostAuthControllerReady)),
-      row('Host runtime setup', status.hostRuntimeSetupPath ?? ''),
-      row('Host auth configured', optionalYesNo(status.hostAuthControllerConfigured)),
-      row('Host secure auth store', optionalYesNo(status.hostSecureAuthControllerConfigured)),
-      row('Host disposes auth', optionalYesNo(status.hostDisposeAuthControllerConfigured)),
-      row('Issues', (status.issues ?? []).join('; ')),
-      row('Warnings', (status.warnings ?? []).join('; ')),
-      row('Host auth issues', (status.hostAuthIssues ?? []).join('; ')),
-    ]),
-  };
-}
-
-function firebaseAccessKeySection(
-  status: FirebaseAccessKeyStatus,
-): StatusTreeSection {
-  const activeKeyIds = (status.activeKeyIds ?? []).join(', ');
-  const inactiveKeyIds = (status.inactiveKeyIds ?? []).join(', ');
-  return {
-    label: 'Firebase access keys',
-    icon: (status.activeKeyCount ?? 0) > 0 ? 'key' : 'info',
-    rows: compactRows([
-      row('Environment', status.environmentName ?? ''),
-      row('Project', status.projectId ?? ''),
-      row('Region', status.region ?? ''),
-      row('Function', status.functionName ?? ''),
-      row('Mini-program ID', status.miniProgramId ?? ''),
-      row('Backend URL', status.backendBaseUrl ?? ''),
-      row('Active keys', optionalNumber(status.activeKeyCount)),
-      row('Total keys', optionalNumber(status.keyCount)),
-      row('Active key IDs', activeKeyIds),
-      row('Inactive key IDs', inactiveKeyIds),
     ]),
   };
 }

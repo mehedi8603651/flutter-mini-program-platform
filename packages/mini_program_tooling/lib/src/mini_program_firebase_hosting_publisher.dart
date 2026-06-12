@@ -101,8 +101,11 @@ class MiniProgramFirebaseHostingPublishResult {
     'publishedAtUtc': staticResult.publishedAtUtc,
     'deployCommand': deployCommand,
     if (deployExitCode != null) 'deployExitCode': deployExitCode,
+    'publisherApiContractCommandText':
+        'miniprogram publisher-api contract init --backend-base-url '
+        '<publisher-api-url> --public',
     'handoffCommandText':
-        'miniprogram publisher-backend firebase handoff --env $environmentName '
+        'miniprogram publisher-api contract handoff '
         '--delivery-url $deliveryApiBaseUrl --public',
   };
 }

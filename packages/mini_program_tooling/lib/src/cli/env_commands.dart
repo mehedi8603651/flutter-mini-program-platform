@@ -130,27 +130,11 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       ..addOption('bucket', help: 'AWS S3 bucket name for cloud artifacts.')
       ..addOption(
         'region',
-        help:
-            'AWS region for S3/SAM or Firebase Functions region. Firebase defaults to us-central1.',
+        help: 'AWS region for S3/SAM delivery.',
       )
       ..addOption(
         'project-id',
-        help: 'Firebase project id for Firebase publisher backend commands.',
-      )
-      ..addOption(
-        'function-name',
-        help:
-            'Firebase HTTPS function export name. Defaults to publisherBackend.',
-      )
-      ..addOption(
-        'function-url',
-        help:
-            'Optional Firebase HTTPS function URL override for status/outputs/smoke.',
-      )
-      ..addOption(
-        'auth-web-api-key',
-        help:
-            'Optional Firebase Web API key used by publisher-owned email auth routes.',
+        help: 'Firebase project id for static delivery hosting.',
       )
       ..addOption(
         'artifacts-prefix',
@@ -505,50 +489,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       );
     }
 
-    final region = results.option('region')?.trim().isNotEmpty == true
-        ? results.option('region')!.trim()
-        : 'us-central1';
-    if (!RegExp(r'^[a-z]+-[a-z0-9-]+[0-9]$').hasMatch(region)) {
-      throw FormatException(
-        '--region must look like a Firebase Functions region: $region',
-      );
-    }
-
-    final functionName =
-        results.option('function-name')?.trim().isNotEmpty == true
-        ? results.option('function-name')!.trim()
-        : 'publisherBackend';
-    if (!RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$').hasMatch(functionName)) {
-      throw FormatException(
-        '--function-name must be a valid JavaScript export name: $functionName',
-      );
-    }
-
-    final values = <String, dynamic>{
-      'projectId': projectId,
-      'region': region,
-      'functionName': functionName,
-    };
-    if (results.option('function-url') case final value?
-        when value.trim().isNotEmpty) {
-      final normalized = _normalizeAbsoluteUrl(value);
-      final uri = Uri.parse(normalized);
-      if (uri.scheme != 'https') {
-        throw const FormatException('--function-url must use https.');
-      }
-      values['functionUrl'] = normalized;
-    }
-    if (results.option('auth-web-api-key') case final value?
-        when value.trim().isNotEmpty) {
-      final normalized = value.trim();
-      if (!RegExp(r'^[A-Za-z0-9_-]{8,}$').hasMatch(normalized)) {
-        throw const FormatException(
-          '--auth-web-api-key must be a non-empty Firebase Web API key.',
-        );
-      }
-      values['authWebApiKey'] = normalized;
-    }
-    return values;
+    return <String, dynamic>{'projectId': projectId};
   }
 
   String _validateEnvironmentName(String rawName) {
@@ -600,10 +541,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
     final lines = <String>[];
     final sortedKeys = environment.values.keys.toList()..sort();
     for (final key in sortedKeys) {
-      final value = key == 'authWebApiKey'
-          ? '<configured>'
-          : environment.values[key];
-      lines.add('$key: $value');
+      lines.add('$key: ${environment.values[key]}');
     }
     return lines;
   }

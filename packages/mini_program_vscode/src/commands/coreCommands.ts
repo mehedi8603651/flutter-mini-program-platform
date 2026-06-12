@@ -21,7 +21,6 @@ import {
   ensureMpCreateCli040,
   getWorkspacePath,
   parseJsonObject,
-  promptPublisherBackendFirebaseEnvName,
   requireMiniProgramRoot,
   resolveCreateOutputRoot,
   runCliCapture,
@@ -32,9 +31,6 @@ import {
   validateOptionalSafeSegment,
   withFirebaseHostingDeliveryDiagnostics,
 } from '../extensionSupport';
-import {
-  publisherBackendFirebaseHandoff,
-} from './firebaseHostCommands';
 
 export async function createMiniProgram(output: vscode.OutputChannel): Promise<void> {
   const folders = await vscode.window.showOpenDialog({
@@ -247,7 +243,12 @@ export async function publishFirebaseHostingMiniProgram(
   if (!(await ensureFirebaseHostingPublishCli042(workspacePath, output))) {
     return;
   }
-  const envName = await promptPublisherBackendFirebaseEnvName(workspacePath);
+  const envName = await vscode.window.showInputBox({
+    prompt: 'Firebase Hosting environment name',
+    placeHolder: 'my-firebase-prod',
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
+  });
   if (!envName) {
     return;
   }
@@ -314,9 +315,7 @@ export async function publishFirebaseHostingMiniProgram(
       }
     }
     output.appendLine('Next handoff step:');
-    output.appendLine(
-      `miniprogram publisher-backend firebase handoff --env ${envName} --delivery-url ${deliveryUrl} --public`,
-    );
+    output.appendLine(publisherApiHandoffCommand(deliveryUrl));
   }
   await refreshStatus();
 
@@ -325,20 +324,21 @@ export async function publishFirebaseHostingMiniProgram(
       ? 'Firebase Hosting dry-run completed.'
       : 'Firebase Hosting publish completed.',
     ...(deliveryUrl
-      ? ['Create handoff package', 'Copy delivery URL']
+      ? ['Copy Publisher API handoff command', 'Copy delivery URL']
       : ['Close']),
   );
   if (action === 'Copy delivery URL' && deliveryUrl) {
     await vscode.env.clipboard.writeText(deliveryUrl);
     vscode.window.showInformationMessage('Firebase Hosting delivery URL copied.');
   }
-  if (action === 'Create handoff package' && deliveryUrl) {
-    await publisherBackendFirebaseHandoff(output, refreshStatus, {
-      envName,
-      deliveryUrl,
-      public: true,
-    });
+  if (action === 'Copy Publisher API handoff command' && deliveryUrl) {
+    await vscode.env.clipboard.writeText(publisherApiHandoffCommand(deliveryUrl));
+    vscode.window.showInformationMessage('Publisher API handoff command copied.');
   }
+}
+
+function publisherApiHandoffCommand(deliveryUrl: string): string {
+  return `miniprogram publisher-api contract handoff --delivery-url ${deliveryUrl} --public`;
 }
 
 export async function previewMiniProgram(): Promise<void> {

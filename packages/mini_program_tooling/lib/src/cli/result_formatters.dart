@@ -237,8 +237,10 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       if (result.deployExitCode != null)
         'Firebase CLI exit code: ${result.deployExitCode}',
       'Published at UTC: ${result.staticResult.publishedAtUtc}',
-      'Next handoff step:',
-      'miniprogram publisher-backend firebase handoff --env ${result.environmentName} --delivery-url ${result.deliveryApiBaseUrl} --public',
+      'Next Publisher API steps:',
+      'miniprogram publisher-api contract init --backend-base-url <publisher-api-url> --public',
+      'miniprogram publisher-api contract smoke',
+      'miniprogram publisher-api contract handoff --delivery-url ${result.deliveryApiBaseUrl} --public',
     ];
     return lines.join('\n');
   }

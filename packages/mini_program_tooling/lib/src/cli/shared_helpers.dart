@@ -91,6 +91,31 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
         .join(' ');
   }
 
+  Future<_MiniProgramManifestInfo> _readMiniProgramManifestInfo(
+    String miniProgramRootPath,
+  ) async {
+    final manifestPath = p.join(miniProgramRootPath, 'manifest.json');
+    final manifestFile = File(manifestPath);
+    if (!await manifestFile.exists()) {
+      throw MiniProgramPathResolutionException(
+        'Mini-program manifest was not found: $manifestPath',
+      );
+    }
+    final decoded = jsonDecode(await manifestFile.readAsString());
+    if (decoded is! Map) {
+      throw FormatException('Mini-program manifest is not a JSON object.');
+    }
+    final appId = decoded['id']?.toString().trim() ?? '';
+    if (appId.isEmpty) {
+      throw const FormatException('Mini-program manifest is missing id.');
+    }
+    final title = decoded['title']?.toString().trim();
+    return _MiniProgramManifestInfo(
+      appId: appId,
+      title: title?.isNotEmpty == true ? title : null,
+    );
+  }
+
   String _normalizeEnvironmentPathPrefix(String rawValue) {
     final normalized = rawValue.trim().replaceAll('\\', '/');
     final trimmed = normalized.replaceAll(RegExp(r'^/+|/+$'), '');

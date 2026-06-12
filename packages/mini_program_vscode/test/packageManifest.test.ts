@@ -5,7 +5,7 @@ import test from 'node:test';
 
 const packageJsonPath = path.resolve(__dirname, '..', '..', 'package.json');
 
-test('package manifest exposes cloud publisher backend commands', () => {
+test('package manifest exposes provider-neutral Publisher API commands', () => {
   const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
     readonly version: string;
     readonly contributes?: {
@@ -24,46 +24,48 @@ test('package manifest exposes cloud publisher backend commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.2.1');
-  for (const commandId of [
-    'miniProgramTools.publisherBackendAwsOutputs',
-    'miniProgramTools.publisherBackendAwsSmoke',
-    'miniProgramTools.publisherBackendAwsSmokeWrite',
-    'miniProgramTools.publisherBackendAwsSeed',
-    'miniProgramTools.publisherBackendAwsDataStatus',
-    'miniProgramTools.publisherBackendAwsDataExport',
-    'miniProgramTools.publisherBackendAwsDataImportDryRun',
-    'miniProgramTools.publisherBackendAwsDataRedemptions',
-    'miniProgramTools.publisherBackendAwsDestroy',
-    'miniProgramTools.configureFirebaseEnvironment',
-    'miniProgramTools.publisherBackendFirebaseDeploy',
-    'miniProgramTools.publisherBackendFirebaseStatus',
-    'miniProgramTools.publisherBackendFirebaseOutputs',
-    'miniProgramTools.publisherBackendFirebaseHostCommand',
-    'miniProgramTools.publisherBackendFirebaseHandoff',
-    'miniProgramTools.publisherBackendFirebaseStarterUi',
-    'miniProgramTools.publisherBackendFirebaseAccessKeyCreate',
-    'miniProgramTools.publisherBackendFirebaseAccessKeyList',
-    'miniProgramTools.publisherBackendFirebaseAccessKeyRevoke',
-    'miniProgramTools.publisherBackendFirebaseAccessKeyRotate',
-    'miniProgramTools.publisherBackendFirebaseAuthStatus',
-    'miniProgramTools.publishFirebaseHostingMiniProgram',
-    'miniProgramTools.publisherBackendFirebaseSmoke',
-    'miniProgramTools.publisherBackendFirebaseSmokeWrite',
-    'miniProgramTools.publisherBackendFirebaseSeed',
-    'miniProgramTools.publisherBackendFirebaseDataStatus',
-    'miniProgramTools.publisherBackendFirebaseDataExport',
-    'miniProgramTools.publisherBackendFirebaseDataImportDryRun',
-    'miniProgramTools.publisherBackendFirebaseDataRedemptions',
-    'miniProgramTools.publisherBackendFirebaseDestroy',
+  assert.equal(manifest.version, '0.3.0');
+  const contributedCommands = [
+    'miniProgramTools.publisherBackendSetup',
+    'miniProgramTools.publisherBackendRun',
+    'miniProgramTools.publisherBackendStatus',
+    'miniProgramTools.publisherBackendStop',
+    'miniProgramTools.copyPublisherBackendUrls',
+    'miniProgramTools.copyMockBackendHostCommand',
     'miniProgramTools.publisherBackendContractInit',
     'miniProgramTools.publisherBackendContractValidate',
     'miniProgramTools.publisherBackendContractSmoke',
     'miniProgramTools.publisherBackendContractHandoff',
-  ]) {
+    'miniProgramTools.publishFirebaseHostingMiniProgram',
+  ];
+  for (const commandId of contributedCommands) {
     assert.equal(commandIds.has(commandId), true, `${commandId} is contributed`);
-    if (commandId !== 'miniProgramTools.configureFirebaseEnvironment') {
-      assert.equal(titleMenuIds.has(commandId), true, `${commandId} is in sidebar`);
-    }
+  }
+
+  for (const commandId of [
+    'miniProgramTools.publisherBackendRun',
+    'miniProgramTools.publisherBackendStatus',
+    'miniProgramTools.copyPublisherBackendUrls',
+    'miniProgramTools.copyMockBackendHostCommand',
+    'miniProgramTools.publisherBackendContractInit',
+    'miniProgramTools.publisherBackendContractValidate',
+    'miniProgramTools.publisherBackendContractSmoke',
+    'miniProgramTools.publisherBackendContractHandoff',
+    'miniProgramTools.publishFirebaseHostingMiniProgram',
+  ]) {
+    assert.equal(titleMenuIds.has(commandId), true, `${commandId} is in sidebar`);
+  }
+
+  for (const commandId of [
+    'miniProgramTools.publisherBackendAwsDeploy',
+    'miniProgramTools.publisherBackendAwsOutputs',
+    'miniProgramTools.publisherBackendFirebaseDeploy',
+    'miniProgramTools.publisherBackendFirebaseHostCommand',
+    'miniProgramTools.publisherBackendFirebaseHandoff',
+    'miniProgramTools.publisherBackendFirebaseStarterUi',
+    'miniProgramTools.publisherBackendFirebaseAuthStatus',
+  ]) {
+    assert.equal(commandIds.has(commandId), false, `${commandId} is removed`);
+    assert.equal(titleMenuIds.has(commandId), false, `${commandId} is not in sidebar`);
   }
 });

@@ -1,13 +1,16 @@
 part of '../miniprogram_cli.dart';
 
 extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
-  Future<int> _runPublisherBackend(List<String> arguments) async {
+  Future<int> _runPublisherBackend(
+    List<String> arguments, {
+    String commandName = 'publisher-backend',
+  }) async {
     if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_publisherBackendUsage());
+      _stdout.writeln(_publisherBackendUsage(commandName: commandName));
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_publisherBackendUsage());
+      _stderr.writeln(_publisherBackendUsage(commandName: commandName));
       return 64;
     }
 
@@ -24,15 +27,11 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         return _runPublisherBackendUrls(arguments.sublist(1));
       case 'contract':
         return _runPublisherBackendContract(arguments.sublist(1));
-      case 'aws':
-        return _runPublisherBackendAws(arguments.sublist(1));
-      case 'firebase':
-        return _runPublisherBackendFirebase(arguments.sublist(1));
       default:
         _stderr.writeln(
-          'Unknown publisher-backend command: ${arguments.first}',
+          'Unknown $commandName command: ${arguments.first}',
         );
-        _stderr.writeln(_publisherBackendUsage());
+        _stderr.writeln(_publisherBackendUsage(commandName: commandName));
         return 64;
     }
   }
@@ -48,15 +47,14 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       ..addOption(
         'template',
         defaultsTo: 'mock',
-        allowed: const <String>['mock', 'aws-lambda', 'firebase-functions'],
-        help: 'Publisher backend starter template.',
+        help: 'Publisher API starter template. Only local mock is supported.',
       )
       ..addOption(
         'storage',
         defaultsTo: 'bundled',
-        allowed: const <String>['bundled', 'dynamodb', 'firestore'],
         help:
-            'Publisher backend storage mode. Use bundled|dynamodb for AWS Lambda or firestore for Firebase Functions.',
+            'Publisher API storage mode. Real storage belongs on your external API server.',
+        hide: true,
       )
       ..addOption(
         'mini-program-root',
@@ -71,7 +69,8 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         'with-starter-ui',
         negatable: false,
         help:
-            'For Firebase Functions + Firestore, also generate the matching auth/data starter UI and seed data.',
+            'Removed. Author UI against provider-neutral API endpoints instead.',
+        hide: true,
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {

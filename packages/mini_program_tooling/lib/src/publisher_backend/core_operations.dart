@@ -4,54 +4,25 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
   Future<PublisherBackendScaffoldResult> _scaffoldImpl(
     PublisherBackendScaffoldRequest request,
   ) async {
-    if (!const <String>[
-      'mock',
-      'aws-lambda',
-      'firebase-functions',
-    ].contains(request.template)) {
+    if (request.template != 'mock') {
       throw PublisherBackendException(
-        'Unsupported publisher backend template: ${request.template}',
+        'Publisher backend provider templates were removed. Use your own '
+        'middle server and connect it with '
+        '`miniprogram publisher-backend contract init --backend-base-url <url>`, '
+        'or use `--template mock` for local API testing.',
       );
     }
-    if (!const <String>[
-      _publisherBackendStorageBundled,
-      _publisherBackendStorageDynamoDb,
-      _publisherBackendStorageFirestore,
-    ].contains(request.storageMode)) {
+    if (request.storageMode != _publisherBackendStorageBundled) {
       throw PublisherBackendException(
-        'Unsupported publisher backend storage mode: ${request.storageMode}',
+        'publisher-backend scaffold --storage is not supported. The mock '
+        'publisher API uses bundled local JSON only; real storage belongs on '
+        'your external middle server.',
       );
     }
-    if (request.template == 'mock' &&
-        request.storageMode != _publisherBackendStorageBundled) {
+    if (request.withStarterUi) {
       throw const PublisherBackendException(
-        'publisher-backend scaffold --storage is not supported with '
-        '--template mock.',
-      );
-    }
-    if (request.template == 'aws-lambda' &&
-        !const <String>[
-          _publisherBackendStorageBundled,
-          _publisherBackendStorageDynamoDb,
-        ].contains(request.storageMode)) {
-      throw const PublisherBackendException(
-        'publisher-backend scaffold --template aws-lambda supports '
-        '--storage bundled or --storage dynamodb.',
-      );
-    }
-    if (request.template == 'firebase-functions' &&
-        request.storageMode != _publisherBackendStorageFirestore) {
-      throw const PublisherBackendException(
-        'publisher-backend scaffold --template firebase-functions requires '
-        '--storage firestore.',
-      );
-    }
-    if (request.withStarterUi &&
-        (request.template != 'firebase-functions' ||
-            request.storageMode != _publisherBackendStorageFirestore)) {
-      throw const PublisherBackendException(
-        'publisher-backend scaffold --with-starter-ui is only supported with '
-        '--template firebase-functions --storage firestore.',
+        'publisher-backend scaffold --with-starter-ui was removed. Author '
+        'mini-program UI with provider-neutral backend API endpoints instead.',
       );
     }
     final miniProgramRootPath = await _requireMiniProgramRoot(
@@ -60,29 +31,12 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
     final backendRootPath = p.join(
       miniProgramRootPath,
       'backend',
-      switch (request.template) {
-        'mock' => 'mock',
-        'aws-lambda' => 'aws_lambda',
-        'firebase-functions' => 'firebase_functions',
-        _ => request.template,
-      },
+      'mock',
     );
     final createdPaths = <String>[];
-    final files = switch (request.template) {
-      'mock' => buildMockPublisherBackendFiles(
-        miniProgramRootPath: miniProgramRootPath,
-      ),
-      'aws-lambda' => buildAwsLambdaPublisherBackendFiles(
-        miniProgramRootPath: miniProgramRootPath,
-        storageMode: request.storageMode,
-      ),
-      'firebase-functions' => buildFirebaseFunctionsPublisherBackendFiles(
-        miniProgramRootPath: miniProgramRootPath,
-      ),
-      _ => throw PublisherBackendException(
-        'Unsupported publisher backend template: ${request.template}',
-      ),
-    };
+    final files = buildMockPublisherBackendFiles(
+      miniProgramRootPath: miniProgramRootPath,
+    );
     for (final entry in files.entries) {
       await _writeManagedFile(
         filePath: p.join(backendRootPath, entry.key),
@@ -91,32 +45,15 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
         createdPaths: createdPaths,
       );
     }
-    final starterUi = request.withStarterUi
-        ? await _writeFirebaseStarterUi(
-            PublisherBackendFirebaseStarterUiRequest(
-              miniProgramRootPath: miniProgramRootPath,
-              force: true,
-            ),
-          )
-        : null;
     createdPaths.sort();
     return PublisherBackendScaffoldResult(
       miniProgramRootPath: miniProgramRootPath,
       backendRootPath: backendRootPath,
       template: request.template,
       createdPaths: createdPaths,
-      storageMode:
-          request.template == 'aws-lambda' ||
-              request.template == 'firebase-functions'
-          ? request.storageMode
-          : null,
-      starterUi: starterUi,
+      storageMode: request.storageMode,
     );
   }
-
-  Future<PublisherBackendFirebaseStarterUiResult> _firebaseStarterUiImpl(
-    PublisherBackendFirebaseStarterUiRequest request,
-  ) => _writeFirebaseStarterUi(request);
 
   Future<PublisherBackendRunResult> _runImpl({
     required String miniProgramRootPath,

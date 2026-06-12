@@ -5,7 +5,6 @@ import {
   buildBackendStartArgs,
   buildBackendStatusArgs,
   buildBackendStopArgs,
-  buildPublisherBackendFirebaseStarterUiArgs,
   buildPublisherBackendRunArgs,
   buildPublisherBackendScaffoldArgs,
   buildPublisherBackendStatusArgs,
@@ -14,14 +13,10 @@ import {
 
 import {
   chooseBackendRoot,
-  chooseFirebaseStarterUiForScaffold,
-  chooseFirebaseStarterUiMode,
   chooseForce,
-  ensurePublisherBackendFirebaseStarterUiCli049,
   requireMiniProgramRoot,
   requireWorkspacePath,
   runCliCommand,
-  runWorkspaceCliCommand,
   validatePort,
 } from '../extensionSupport';
 
@@ -158,64 +153,26 @@ export async function publisherBackendSetup(
       {
         label: 'Mock local',
         value: 'mock' as const,
-        storageMode: undefined,
         description: 'Local JSON API starter for development',
       },
-      {
-        label: 'AWS Lambda bundled JSON',
-        value: 'aws-lambda' as const,
-        storageMode: 'bundled' as const,
-        description: 'API Gateway + Lambda starter with bundled sample JSON',
-      },
-      {
-        label: 'AWS Lambda + DynamoDB',
-        value: 'aws-lambda' as const,
-        storageMode: 'dynamodb' as const,
-        description: 'Persistent DynamoDB storage for publisher backend data',
-      },
-      {
-        label: 'Firebase Functions + Firestore',
-        value: 'firebase-functions' as const,
-        storageMode: 'firestore' as const,
-        description: 'Cloud Functions v2 starter with Firestore storage',
-      },
     ],
-    { title: 'Publisher backend template', ignoreFocusOut: true },
+    { title: 'Publisher API mock template', ignoreFocusOut: true },
   );
   if (!templateChoice) {
     return;
   }
-  let withStarterUi = false;
-  if (templateChoice.value === 'firebase-functions') {
-    const starterUi = await chooseFirebaseStarterUiForScaffold();
-    if (starterUi === undefined) {
-      return;
-    }
-    withStarterUi = starterUi;
-    if (
-      withStarterUi &&
-      !(await ensurePublisherBackendFirebaseStarterUiCli049(workspacePath, output))
-    ) {
-      return;
-    }
-  }
   const force = await chooseForce(
-    'Overwrite scaffold-managed publisher backend files?',
+    'Overwrite scaffold-managed Publisher API mock files?',
   );
   if (force === undefined) {
     return;
   }
   const ok = await runCliCommand(
-    'Publisher Backend Setup',
+    'Mock Publisher API Setup',
     buildPublisherBackendScaffoldArgs({
       miniProgramRoot: workspacePath,
       template: templateChoice.value,
-      storageMode: templateChoice.value === 'aws-lambda' ||
-        templateChoice.value === 'firebase-functions'
-        ? templateChoice.storageMode
-        : undefined,
       force,
-      withStarterUi,
     }),
     workspacePath,
     output,
@@ -223,32 +180,6 @@ export async function publisherBackendSetup(
   if (ok) {
     await refreshStatus(false);
   }
-}
-
-export async function publisherBackendFirebaseStarterUi(
-  output: vscode.OutputChannel,
-  refreshStatus: (remote: boolean) => Promise<void>,
-): Promise<void> {
-  const workspacePath = await requireMiniProgramRoot();
-  if (!workspacePath) {
-    return;
-  }
-  if (!(await ensurePublisherBackendFirebaseStarterUiCli049(workspacePath, output))) {
-    return;
-  }
-  const mode = await chooseFirebaseStarterUiMode();
-  if (!mode) {
-    return;
-  }
-  await runWorkspaceCliCommand(
-    'Publisher Backend Firebase Starter UI',
-    buildPublisherBackendFirebaseStarterUiArgs({
-      miniProgramRoot: workspacePath,
-      force: mode.force,
-    }),
-    output,
-    refreshStatus,
-  );
 }
 
 export async function publisherBackendRun(
@@ -260,7 +191,7 @@ export async function publisherBackendRun(
     return;
   }
   const port = await vscode.window.showInputBox({
-    prompt: 'Publisher backend local port',
+    prompt: 'Mock Publisher API local port',
     value: '9090',
     ignoreFocusOut: true,
     validateInput: validatePort,
@@ -269,7 +200,7 @@ export async function publisherBackendRun(
     return;
   }
   const ok = await runCliCommand(
-    'Publisher Backend Run',
+    'Mock Publisher API Run',
     buildPublisherBackendRunArgs({
       miniProgramRoot: workspacePath,
       port: port.trim(),
@@ -291,7 +222,7 @@ export async function publisherBackendStop(
     return;
   }
   const ok = await runCliCommand(
-    'Publisher Backend Stop',
+    'Mock Publisher API Stop',
     buildPublisherBackendStopArgs({ miniProgramRoot: workspacePath }),
     workspacePath,
     output,
@@ -308,7 +239,7 @@ export async function publisherBackendStatus(output: vscode.OutputChannel): Prom
     return;
   }
   await runCliCommand(
-    'Publisher Backend Status',
+    'Mock Publisher API Status',
     buildPublisherBackendStatusArgs({
       miniProgramRoot: workspacePath,
       json: true,

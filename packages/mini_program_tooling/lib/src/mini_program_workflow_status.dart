@@ -7,7 +7,6 @@ import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
 import 'local_cli_state.dart';
 import 'mini_program_cloud_controller.dart';
-import 'publisher_backend_starter.dart';
 
 class MiniProgramWorkflowStatusRequest {
   const MiniProgramWorkflowStatusRequest({
@@ -37,19 +36,15 @@ class MiniProgramWorkflowStatusController {
     DeliveryRepositoryValidator validator = const DeliveryRepositoryValidator(),
     LocalBackendController backendController = const LocalBackendController(),
     MiniProgramCloudController? cloudController,
-    PublisherBackendStarter publisherBackendStarter =
-        const PublisherBackendStarter(),
   }) : _stateStore = stateStore,
        _validator = validator,
        _backendController = backendController,
-       _cloudController = cloudController,
-       _publisherBackendStarter = publisherBackendStarter;
+       _cloudController = cloudController;
 
   final LocalCliStateStore _stateStore;
   final DeliveryRepositoryValidator _validator;
   final LocalBackendController _backendController;
   final MiniProgramCloudController? _cloudController;
-  final PublisherBackendStarter _publisherBackendStarter;
 
   Future<MiniProgramWorkflowStatusResult> inspect(
     MiniProgramWorkflowStatusRequest request,
@@ -72,7 +67,6 @@ class MiniProgramWorkflowStatusController {
     );
     final remote = request.remote
         ? await _inspectRemote(
-            workspacePath: workspacePath,
             environment: environment,
             miniProgram: miniProgram,
           )
@@ -373,8 +367,6 @@ class MiniProgramWorkflowStatusController {
       'bucket': cloudEnvironment?.values['bucket']?.toString(),
       'region': cloudEnvironment?.values['region']?.toString(),
       'projectId': cloudEnvironment?.values['projectId']?.toString(),
-      'functionName': cloudEnvironment?.values['functionName']?.toString(),
-      'functionUrl': cloudEnvironment?.values['functionUrl']?.toString(),
       'artifactsPrefix': cloudEnvironment?.values['artifactsPrefix']
           ?.toString(),
       'metadataPrefix': cloudEnvironment?.values['metadataPrefix']?.toString(),
@@ -470,7 +462,6 @@ class MiniProgramWorkflowStatusController {
   }
 
   Future<Map<String, Object?>> _inspectRemote({
-    required String workspacePath,
     required Map<String, Object?> environment,
     required Map<String, Object?> miniProgram,
   }) async {
@@ -484,15 +475,6 @@ class MiniProgramWorkflowStatusController {
       'errors': errors,
     };
     final provider = environment['provider']?.toString();
-    if (provider == 'firebase') {
-      return _inspectFirebaseRemote(
-        workspacePath: workspacePath,
-        environment: environment,
-        miniProgram: miniProgram,
-        remote: remote,
-        errors: errors,
-      );
-    }
     final cloudController = _cloudController;
     if (cloudController == null) {
       errors.add('No cloud controller is available.');
@@ -590,128 +572,6 @@ class MiniProgramWorkflowStatusController {
       errors.add('Access-key list failed: $error');
     }
     return remote;
-  }
-
-  Future<Map<String, Object?>> _inspectFirebaseRemote({
-    required String workspacePath,
-    required Map<String, Object?> environment,
-    required Map<String, Object?> miniProgram,
-    required Map<String, Object?> remote,
-    required List<String> errors,
-  }) async {
-    final firebase = <String, Object?>{
-      'checked': true,
-      'status': null,
-      'dataStatus': null,
-    };
-    remote['firebase'] = firebase;
-    final starter = miniProgram['publisherBackendStarter'];
-    final detected =
-        starter is Map &&
-        (starter['firebase'] is Map) &&
-        ((starter['firebase'] as Map)['detected'] == true);
-    if (!detected) {
-      firebase['checked'] = false;
-      firebase['reason'] = 'Firebase publisher backend scaffold was not found.';
-      return remote;
-    }
-    final env = _firebaseEnvironmentFromWorkflowStatus(environment);
-    if (env == null) {
-      errors.add('No named Firebase environment is configured.');
-      return remote;
-    }
-    try {
-      final status = await _publisherBackendStarter.firebaseStatus(
-        PublisherBackendFirebaseStatusRequest(
-          miniProgramRootPath: workspacePath,
-          environment: env,
-        ),
-      );
-      firebase['status'] = _firebaseStatusJson(status);
-    } catch (error) {
-      errors.add('Firebase status failed: $error');
-    }
-    try {
-      final dataStatus = await _publisherBackendStarter.firebaseDataStatus(
-        PublisherBackendFirebaseDataStatusRequest(
-          miniProgramRootPath: workspacePath,
-          environment: env,
-        ),
-      );
-      firebase['dataStatus'] = _firebaseDataStatusJson(dataStatus);
-    } catch (error) {
-      errors.add('Firebase data status failed: $error');
-    }
-    return remote;
-  }
-
-  CloudEnvironmentConfiguration? _firebaseEnvironmentFromWorkflowStatus(
-    Map<String, Object?> environment,
-  ) {
-    final selectedEnvironment = environment['selectedEnvironment']?.toString();
-    final provider = environment['provider']?.toString();
-    final projectId = environment['projectId']?.toString();
-    if (selectedEnvironment == null ||
-        selectedEnvironment.isEmpty ||
-        provider != 'firebase' ||
-        projectId == null ||
-        projectId.isEmpty) {
-      return null;
-    }
-    return CloudEnvironmentConfiguration(
-      name: selectedEnvironment,
-      provider: 'firebase',
-      values: <String, dynamic>{
-        'projectId': projectId,
-        if (environment['region'] != null) 'region': environment['region'],
-        if (environment['functionName'] != null)
-          'functionName': environment['functionName'],
-        if (environment['functionUrl'] != null)
-          'functionUrl': environment['functionUrl'],
-      },
-      configuredAtUtc: environment['configuredAtUtc']?.toString() ?? '',
-      updatedAtUtc: environment['updatedAtUtc']?.toString() ?? '',
-    );
-  }
-
-  Map<String, Object?> _firebaseStatusJson(
-    PublisherBackendFirebaseStatusResult result,
-  ) {
-    return <String, Object?>{
-      'provider': result.provider,
-      'environmentName': result.environmentName,
-      'projectId': result.projectId,
-      'region': result.region,
-      'functionName': result.functionName,
-      'backendBaseUrl': result.backendBaseUrl,
-      'healthUrl': result.healthUrl,
-      'scaffoldExists': result.scaffoldExists,
-      'healthy': result.healthy,
-      'healthStatusCode': result.healthStatusCode,
-      'healthError': result.healthError,
-    };
-  }
-
-  Map<String, Object?> _firebaseDataStatusJson(
-    PublisherBackendFirebaseDataStatusResult result,
-  ) {
-    return <String, Object?>{
-      'provider': result.provider,
-      'environmentName': result.environmentName,
-      'projectId': result.projectId,
-      'region': result.region,
-      'functionName': result.functionName,
-      'miniProgramId': result.miniProgramId,
-      'backendBaseUrl': result.backendBaseUrl,
-      'storageMode': result.storageMode,
-      'available': result.available,
-      'homeRecordCount': result.homeRecordCount,
-      'authSessionCount': result.authSessionCount,
-      'couponCount': result.couponCount,
-      'redemptionCount': result.redemptionCount,
-      'appRecordCount': result.appRecordCount,
-      'error': result.error,
-    };
   }
 
   List<String> _buildNextActions({
@@ -1042,65 +902,11 @@ class MiniProgramWorkflowStatusController {
     final mockDetected =
         await File(serverPath).exists() &&
         await Directory(dataRootPath).exists();
-    final awsBackendRootPath = p.join(workspacePath, 'backend', 'aws_lambda');
-    final awsTemplatePath = p.join(awsBackendRootPath, 'template.yaml');
-    final awsHandlerPath = p.join(awsBackendRootPath, 'src', 'handler.mjs');
-    final awsDetected =
-        await File(awsTemplatePath).exists() &&
-        await File(awsHandlerPath).exists();
-    final firebaseBackendRootPath = p.join(
-      workspacePath,
-      'backend',
-      'firebase_functions',
-    );
-    final firebaseConfigPath = p.join(firebaseBackendRootPath, 'firebase.json');
-    final firebaseIndexPath = p.join(
-      firebaseBackendRootPath,
-      'functions',
-      'index.js',
-    );
-    final firebaseRouterPath = p.join(
-      firebaseBackendRootPath,
-      'functions',
-      'router.js',
-    );
-    final firebaseDataRootPath = p.join(
-      firebaseBackendRootPath,
-      'functions',
-      'data',
-    );
-    final existingFirebaseDataFiles = <String>[];
-    for (final dataFile in dataFiles) {
-      final file = File(p.join(firebaseDataRootPath, dataFile));
-      if (await file.exists()) {
-        existingFirebaseDataFiles.add(dataFile);
-      }
-    }
-    final firebaseDetected =
-        await File(firebaseConfigPath).exists() &&
-        await File(firebaseIndexPath).exists() &&
-        await File(firebaseRouterPath).exists();
-    final awsStatePath = p.join(
-      workspacePath,
-      '.mini_program',
-      'publisher_backend.aws.json',
-    );
-    final awsState = await _tryReadJsonObject(File(awsStatePath));
     return <String, Object?>{
-      'detected': mockDetected || awsDetected || firebaseDetected,
-      'template': firebaseDetected
-          ? 'firebase-functions'
-          : awsDetected
-          ? 'aws-lambda'
-          : mockDetected
-          ? 'mock'
-          : null,
-      'storageMode': firebaseDetected ? 'firestore' : null,
-      'backendRootPath': firebaseDetected
-          ? firebaseBackendRootPath
-          : awsDetected
-          ? awsBackendRootPath
-          : mockBackendRootPath,
+      'detected': mockDetected,
+      'template': mockDetected ? 'mock' : null,
+      'storageMode': mockDetected ? 'bundled' : null,
+      'backendRootPath': mockBackendRootPath,
       'serverPath': serverPath,
       'dataRootPath': dataRootPath,
       'dataFiles': existingDataFiles,
@@ -1110,46 +916,6 @@ class MiniProgramWorkflowStatusController {
         'serverPath': serverPath,
         'dataRootPath': dataRootPath,
         'dataFiles': existingDataFiles,
-      },
-      'aws': <String, Object?>{
-        'detected': awsDetected,
-        'backendRootPath': awsBackendRootPath,
-        'templatePath': awsTemplatePath,
-        'handlerPath': awsHandlerPath,
-        'statePath': awsStatePath,
-        'stateExists': awsState != null,
-        if (awsState != null) ...<String, Object?>{
-          'environmentName': awsState['environmentName'],
-          'stackName': awsState['stackName'],
-          'stageName': awsState['stageName'],
-          'region': awsState['region'],
-          'deployedAtUtc': awsState['deployedAtUtc'],
-          'backendBaseUrl': _stringOutput(
-            awsState,
-            'outputs',
-            'PublisherBackendBaseUrl',
-          ),
-          'healthUrl': _stringOutput(
-            awsState,
-            'outputs',
-            'PublisherBackendHealthUrl',
-          ),
-          'functionName': _stringOutput(
-            awsState,
-            'outputs',
-            'PublisherBackendFunctionName',
-          ),
-        },
-      },
-      'firebase': <String, Object?>{
-        'detected': firebaseDetected,
-        'backendRootPath': firebaseBackendRootPath,
-        'configPath': firebaseConfigPath,
-        'indexPath': firebaseIndexPath,
-        'routerPath': firebaseRouterPath,
-        'dataRootPath': firebaseDataRootPath,
-        'dataFiles': existingFirebaseDataFiles,
-        'storageMode': 'firestore',
       },
       'expectedRoutes': <String>[
         'GET /health',
@@ -1161,30 +927,6 @@ class MiniProgramWorkflowStatusController {
       ],
     };
   }
-
-  Future<Map<String, dynamic>?> _tryReadJsonObject(File file) async {
-    try {
-      if (!await file.exists()) {
-        return null;
-      }
-      return await _readJsonObject(file);
-    } catch (_) {
-      return null;
-    }
-  }
-}
-
-String? _stringOutput(
-  Map<String, dynamic> state,
-  String parentKey,
-  String outputKey,
-) {
-  final parent = state[parentKey];
-  if (parent is! Map) {
-    return null;
-  }
-  final value = parent[outputKey]?.toString().trim();
-  return value == null || value.isEmpty ? null : value;
 }
 
 Map<String, Object?> miniProgramWorkflowStatusBackendJson(

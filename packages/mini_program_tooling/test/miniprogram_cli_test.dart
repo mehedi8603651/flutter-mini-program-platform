@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_tooling/mini_program_tooling.dart';
 import 'package:path/path.dart' as p;
@@ -9,16 +8,7 @@ import 'package:test/test.dart';
 
 part 'miniprogram_cli_test/core_and_preview_tests.dart';
 part 'miniprogram_cli_test/env_publish_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_aws_smoke_tests.dart';
 part 'miniprogram_cli_test/publisher_backend_contract_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests/access_key_auth_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests/data_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests/help_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests/host_handoff_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests/setup_deploy_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_firebase_tests/smoke_tests.dart';
-part 'miniprogram_cli_test/publisher_backend_aws_data_tests.dart';
 part 'miniprogram_cli_test/cloud_host_partner_tests.dart';
 part 'miniprogram_cli_test/workflow_validation_embed_backend_tests.dart';
 part 'miniprogram_cli_test/helpers.dart';
@@ -76,10 +66,7 @@ void main() {
 
     _registerCoreAndPreviewTests();
     _registerEnvPublishTests();
-    _registerPublisherBackendAwsSmokeTests();
     _registerPublisherBackendContractTests();
-    _registerPublisherBackendFirebaseTests();
-    _registerPublisherBackendAwsDataTests();
     _registerCloudHostPartnerTests();
     _registerWorkflowValidationEmbedBackendTests();
   });

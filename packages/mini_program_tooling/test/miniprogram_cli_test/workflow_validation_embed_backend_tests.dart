@@ -227,18 +227,16 @@ Mp.lazy.chunk(
     expect(backendUsage['requestIds'], contains('coupons'));
   });
 
-  test('workflow status reports Firebase publisher backend scaffold', () async {
-    final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+  test('workflow status reports local Publisher API mock scaffold', () async {
+    final standaloneRoot = p.join(tempDir.path, 'mock_coupon');
     await _writeMiniProgramFixture(
       standaloneRoot,
-      miniProgramId: 'firebase_coupon',
+      miniProgramId: 'mock_coupon',
       version: '1.0.0',
     );
     await const PublisherBackendStarter().scaffold(
       PublisherBackendScaffoldRequest(
         miniProgramRootPath: standaloneRoot,
-        template: 'firebase-functions',
-        storageMode: 'firestore',
       ),
     );
     final stdoutBuffer = StringBuffer();
@@ -262,23 +260,22 @@ Mp.lazy.chunk(
     final starter =
         json['miniProgram']['publisherBackendStarter'] as Map<String, dynamic>;
     expect(starter['detected'], isTrue);
-    expect(starter['template'], 'firebase-functions');
-    expect(starter['storageMode'], 'firestore');
-    expect(starter['backendRootPath'], contains('firebase_functions'));
+    expect(starter['template'], 'mock');
+    expect(starter['storageMode'], 'bundled');
+    expect(starter['backendRootPath'], contains(p.join('backend', 'mock')));
     expect(starter['expectedRoutes'], contains('GET /coupons/page'));
-    final firebase = starter['firebase'] as Map<String, dynamic>;
-    expect(firebase['detected'], isTrue);
-    expect(firebase['storageMode'], 'firestore');
-    expect(firebase['dataFiles'], contains('home_bootstrap.json'));
+    final mock = starter['mock'] as Map<String, dynamic>;
+    expect(mock['detected'], isTrue);
+    expect(mock['dataFiles'], contains('home_bootstrap.json'));
   });
 
   test(
-    'workflow status remote checks Firebase without AWS cloud checks',
+    'workflow status remote checks generic cloud delivery only',
     () async {
-      final standaloneRoot = p.join(tempDir.path, 'firebase_coupon');
+      final standaloneRoot = p.join(tempDir.path, 'cloud_coupon');
       await _writeMiniProgramFixture(
         standaloneRoot,
-        miniProgramId: 'firebase_coupon',
+        miniProgramId: 'cloud_coupon',
         version: '1.0.0',
       );
       await Directory(
@@ -290,12 +287,12 @@ Mp.lazy.chunk(
           'mp',
           '.build',
           'screens',
-          'firebase_coupon_home.json',
+          'cloud_coupon_home.json',
         ),
       ).writeAsString(
         jsonEncode(<String, Object?>{
           'schemaVersion': 1,
-          'screenId': 'firebase_coupon_home',
+          'screenId': 'cloud_coupon_home',
           'root': <String, Object?>{
             'type': 'text',
             'props': <String, Object?>{'data': 'Hello'},
@@ -305,11 +302,9 @@ Mp.lazy.chunk(
       await const PublisherBackendStarter().scaffold(
         PublisherBackendScaffoldRequest(
           miniProgramRootPath: standaloneRoot,
-          template: 'firebase-functions',
-          storageMode: 'firestore',
         ),
       );
-      await _writeFirebaseEnvironmentState(stateStore, standaloneRoot);
+      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
       final cloudController = _FakeMiniProgramCloudController();
       final stdoutBuffer = StringBuffer();
 
@@ -319,20 +314,6 @@ Mp.lazy.chunk(
             stdoutSink: stdoutBuffer,
             stderrSink: StringBuffer(),
             cloudController: cloudController,
-            publisherBackendStarter: PublisherBackendStarter(
-              firebaseAccessTokenProvider: () async => 'firebase-token',
-              healthGetter: (uri) async => http.Response('{"ok":true}', 200),
-              httpRequester: (method, uri, {headers, body}) async {
-                if (uri.path.endsWith('/home') ||
-                    uri.path.endsWith('/sessions')) {
-                  return http.Response(_firestoreDocumentsJson(1), 200);
-                }
-                if (uri.path.endsWith('/coupons')) {
-                  return http.Response(_firestoreDocumentsJson(2), 200);
-                }
-                return http.Response(_firestoreDocumentsJson(0), 200);
-              },
-            ),
             workingDirectory: standaloneRoot,
           ).run(<String>[
             'workflow',
@@ -340,23 +321,23 @@ Mp.lazy.chunk(
             '--workspace',
             standaloneRoot,
             '--env',
-            'my-firebase-prod',
+            'my-aws-prod',
             '--remote',
             '--json',
           ]);
 
       expect(exitCode, 0);
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['environment']['provider'], 'firebase');
-      expect(json['environment']['projectId'], 'coupon-prod');
-      expect(json['environment']['functionName'], 'publisherBackend');
-      expect(json['remote']['provider'], 'firebase');
+      expect(json['environment']['provider'], 'aws');
+      expect(json['remote']['provider'], 'aws');
       expect(json['remote']['errors'], isEmpty);
-      expect(json['remote']['firebase']['status']['healthy'], isTrue);
-      expect(json['remote']['firebase']['dataStatus']['appRecordCount'], 4);
-      expect(cloudController.lastStatusRequest, isNull);
-      expect(cloudController.lastAppInfoRequest, isNull);
-      expect(cloudController.lastAccessKeyListRequest, isNull);
+      expect(json['remote']['firebase'], isNull);
+      expect(json['remote']['cloudStatus']['healthy'], isTrue);
+      expect(json['remote']['app']['miniProgramId'], 'cloud_coupon');
+      expect(json['remote']['accessKeys']['keyCount'], 1);
+      expect(cloudController.lastStatusRequest, isNotNull);
+      expect(cloudController.lastAppInfoRequest, isNotNull);
+      expect(cloudController.lastAccessKeyListRequest, isNotNull);
     },
   );
 

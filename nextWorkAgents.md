@@ -618,31 +618,35 @@ MiniProgramScope(
 
 ## Priority Roadmap
 
-### Immediate Firebase Auth Design Work
+### Immediate Publisher API Work
 
-AWS publisher backend work is mature. Firebase publisher backend work now has
-the core production path plus publisher-to-host handoff and Firebase Hosting
-static delivery:
+The active backend direction is provider-neutral. AWS and Firebase are delivery
+or implementation choices behind a publisher-owned HTTPS API, not separate
+mini-program backend architectures.
 
-- Firebase Functions + Firestore scaffold
-- deploy/status/outputs
-- read and write smoke tests
-- Firestore seed/data status/export/import/redemptions
-- guarded function destroy
-- `publish --target firebase-hosting`
-- `publisher-backend firebase host-command`
-- `publisher-backend firebase handoff`
-- VS Code Firebase Hosting publish UI
-- VS Code Firebase host wiring UI with `hostEndpointReady` diagnostics
-- VS Code Firebase handoff package UI
+Current active backend surface:
+
+- `publisher-backend scaffold --template mock`
+- `publisher-backend run/status/stop/urls`
+- `publisher-api contract init|validate|smoke|handoff`
+- host endpoint add/import with optional Publisher API base URL
+- `Mp.backend.*`, `Mp.backendBuilder`, `Mp.pagedBackendBuilder`, and
+  `Mp.lazy.chunk` calling relative endpoints through the SDK
+
+Removed active publisher backend surface:
+
+- AWS Lambda/DynamoDB scaffolds and command groups
+- Firebase Functions/Firestore scaffolds and command groups
+- provider-specific seed/data/auth/access-key/handoff commands
+- Firebase starter UI generation tied to Firestore/Functions
 
 The publisher/host split is now clear:
 
-- the mini-program publisher owns Firebase project, Firebase CLI login,
-  Cloud Functions, Firestore, data, and backend secrets
+- the mini-program publisher owns the middle server and any provider accounts,
+  databases, payments, files, logs, and secrets behind it
 - the host app developer owns Flutter host code and endpoint imports
-- the host app developer should not need Firebase credentials, Firebase env
-  state, Firebase SDKs, or publisher backend secrets
+- the host app developer should not need Firebase credentials, AWS
+  credentials, database SDKs, payment secrets, or publisher backend secrets
 
 #### Done: mini_program_tooling 0.3.40 Firebase Hosting Static Delivery
 
@@ -652,8 +656,8 @@ before creating a handoff package.
 Implemented behavior:
 
 - publish built manifest/screen/assets to Firebase Hosting
-- return the delivery API base URL needed by `firebase handoff`
-- keep Firestore/Functions business backend separate from static delivery
+- return the delivery API base URL needed by `publisher-api contract handoff`
+- keep business backend work on the Publisher API/middle server
 - support dry-run/preview output before deployment
 - preserve existing public/static publish behavior for GitHub/CDN workflows
 - keep `host run` usable for Firebase endpoint-map hosts without requiring an
@@ -665,15 +669,15 @@ VS Code now exposes Firebase Hosting delivery:
 
 - publish current mini-program static delivery to Firebase Hosting
 - show generated delivery URL
-- offer "Create Firebase Host Handoff Package" as the next step
+- offer the Publisher API handoff command as the next step
 - keep host import provider-neutral
 
-#### Next: Firebase Auth
+#### Next: Publisher API Contract Hardening
 
-Only start Firebase Auth once delivery/handoff is stable. The host should still
-own user auth unless a mini-program has an explicit publisher-owned auth use
-case. Any Firebase Auth feature must avoid putting publisher secrets in the
-host app.
+Focus on the provider-neutral middle-server contract before adding any optional
+provider templates. Auth, database, payment, file storage, and admin features
+should be expressed as HTTPS contract behavior, not as mini-program provider
+SDK dependencies.
 
 ### 1. Cloud publish and cloud env
 Preview is shipped. The first AWS cloud path is also shipped:
@@ -916,14 +920,16 @@ Smaller future UX improvements that fit the current system:
     Activity Bar/sidebar extension MVP that wraps CLI status plus core create,
     build, validate, preview, publish, host embed/init, host endpoint import/add,
     host run, and access-key create/list/revoke/rotate commands.
-17. Done through tooling `0.3.38`: Firebase Functions + Firestore publisher
-    backend scaffold/deploy/status/outputs/smoke/write-smoke/seed/data
-    export/import/redemptions/guarded destroy/host-command.
-18. Done through VS Code `0.1.30`: Firebase host wiring UI and Windows-safe
-    command execution for multi-word titles.
-19. Done through tooling `0.3.39`: Firebase publisher handoff package.
-20. Done through VS Code `0.1.31`: Firebase handoff package UI.
+17. Historical in tooling `0.3.38`: Firebase Functions + Firestore publisher
+    backend experiments existed, but active provider backend support has since
+    been removed in favor of Publisher API.
+18. Historical in VS Code `0.1.30`: Firebase host wiring UI existed, but active
+    provider backend commands have since been removed.
+19. Historical in tooling `0.3.39`: Firebase publisher handoff experiments
+    existed; active handoff is now `publisher-api contract handoff`.
+20. Historical in VS Code `0.1.31`: Firebase handoff package UI existed; active
+    handoff UI is Publisher API contract handoff.
 21. Done through tooling `0.3.40`: Firebase Hosting static delivery publish.
 22. Done through VS Code `0.1.32`: Firebase Hosting publish UI with handoff next step.
-23. Next: design Firebase Auth integration after delivery/handoff is stable.
+23. Next: harden Publisher API auth/session contract after delivery/handoff is stable.
 24. Add optional auto-generated `requestId` support in author helpers.

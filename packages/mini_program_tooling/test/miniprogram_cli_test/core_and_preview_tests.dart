@@ -68,21 +68,19 @@ void _registerCoreAndPreviewTests() {
     );
     expect(
       stdoutBuffer.toString(),
-      contains(
-        'publisher-backend scaffold --template mock|aws-lambda|firebase-functions',
-      ),
+      contains('publisher-backend scaffold --template mock'),
     );
     expect(
       stdoutBuffer.toString(),
-      contains(
-        'publisher-backend aws deploy|status|outputs|smoke|seed|data|logs',
-      ),
+      contains('publisher-api contract init|validate|smoke|handoff'),
     );
     expect(
       stdoutBuffer.toString(),
-      contains(
-        'publisher-backend firebase deploy|status|outputs|host-command|handoff|starter-ui|access-key|auth|smoke',
-      ),
+      isNot(contains('publisher-backend aws')),
+    );
+    expect(
+      stdoutBuffer.toString(),
+      isNot(contains('publisher-backend firebase')),
     );
   });
 
@@ -142,71 +140,23 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.4.2'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.5.0'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(
       stdoutBuffer.toString(),
-      contains('publisher_backend.aws.dynamodb.data.export'),
+      contains('publisher_api.mock.scaffold'),
     );
     expect(
       stdoutBuffer.toString(),
-      contains('publisher_backend.aws.paged_routes'),
+      contains('publisher_api.contract.handoff'),
     );
     expect(
       stdoutBuffer.toString(),
-      contains('publisher_backend.aws.destroy.data_loss_guard'),
+      isNot(contains('publisher_backend.aws')),
     );
     expect(
       stdoutBuffer.toString(),
-      contains('publisher_backend.firebase_functions.scaffold'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.host_command'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.handoff'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.starter_ui'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.paged_routes'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.access_keys'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.auth.email'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.auth.status'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.host.auth_diagnostics'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.smoke'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.smoke.write'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.smoke.auth'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_backend.firebase.firestore.data.export'),
+      isNot(contains('publisher_backend.firebase')),
     );
   });
 
@@ -227,102 +177,33 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.4.2');
+    expect(json['toolingVersion'], '0.5.0');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
+    expect(json['capabilityIds'], contains('publisher_api.mock.scaffold'));
+    expect(json['capabilityIds'], contains('publisher_api.contract.handoff'));
     expect(json['capabilityIds'], isNot(contains('host.legacy_stac_adapter')));
     expect(
       json['capabilityIds'],
-      contains('publisher_backend.aws.dynamodb.data.redemptions'),
+      isNot(contains(startsWith('publisher_backend.aws'))),
     );
     expect(
       json['capabilityIds'],
-      contains('publisher_backend.aws.paged_routes'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.aws.access_key_enforcement'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase_functions.scaffold'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.deploy'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.host_command'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.handoff'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.starter_ui'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.paged_routes'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.access_keys'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.auth.email'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.auth.status'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.host.auth_diagnostics'),
-    );
-    expect(json['capabilityIds'], contains('publisher_backend.firebase.smoke'));
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.smoke.write'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.smoke.auth'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.firestore.data.export'),
-    );
-    expect(
-      json['capabilityIds'],
-      contains('publisher_backend.firebase.destroy.data_loss_guard'),
+      isNot(contains(startsWith('publisher_backend.firebase'))),
     );
     final features = json['features'] as Map<String, dynamic>;
     expect(features.containsKey('hostLegacyStacAdapter'), isFalse);
     expect(features['firebaseHostingPublish'], isTrue);
-    expect(features['publisherBackendAwsWriteSmoke'], isTrue);
-    expect(features['publisherBackendAwsAccessKeyEnforcement'], isTrue);
-    expect(features['publisherBackendAwsPagedRoutes'], isTrue);
-    expect(features['publisherBackendAwsDynamoDbDataExport'], isTrue);
-    expect(features['publisherBackendAwsDestroyDataLossGuard'], isTrue);
-    expect(features['publisherBackendFirebaseFunctionsScaffold'], isTrue);
-    expect(features['publisherBackendFirebaseDeploy'], isTrue);
-    expect(features['publisherBackendFirebaseHostCommand'], isTrue);
-    expect(features['publisherBackendFirebaseHandoff'], isTrue);
-    expect(features['publisherBackendFirebaseStarterUi'], isTrue);
-    expect(features['publisherBackendFirebasePagedRoutes'], isTrue);
-    expect(features['publisherBackendFirebaseAccessKeys'], isTrue);
-    expect(features['publisherBackendFirebaseAuthEmail'], isTrue);
-    expect(features['publisherBackendFirebaseAuthStatus'], isTrue);
-    expect(features['publisherBackendFirebaseHostAuthDiagnostics'], isTrue);
-    expect(features['publisherBackendFirebaseSmoke'], isTrue);
-    expect(features['publisherBackendFirebaseWriteSmoke'], isTrue);
-    expect(features['publisherBackendFirebaseSmokeAuth'], isTrue);
-    expect(features['publisherBackendFirebaseFirestoreDataExport'], isTrue);
-    expect(features['publisherBackendFirebaseDestroyDataLossGuard'], isTrue);
+    expect(features['publisherApiMock'], isTrue);
+    expect(features['publisherBackendContractInit'], isTrue);
+    expect(features['publisherBackendContractValidate'], isTrue);
+    expect(features['publisherBackendContractSmoke'], isTrue);
+    expect(features['publisherBackendContractHandoff'], isTrue);
+    expect(features.keys.any((key) => key.startsWith('publisherBackendAws')), isFalse);
+    expect(
+      features.keys.any((key) => key.startsWith('publisherBackendFirebase')),
+      isFalse,
+    );
   });
 
   test(
@@ -338,6 +219,7 @@ void _registerCoreAndPreviewTests() {
         'embed',
         'backend',
         'publisher-backend',
+        'publisher-api',
       ]) {
         final stdoutBuffer = StringBuffer();
         final stderrBuffer = StringBuffer();

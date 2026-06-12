@@ -147,52 +147,6 @@ export function hostRegistryPath(projectRoot: string): string {
   return path.join(projectRoot, 'lib', 'mini_program', 'mini_program_registry.dart');
 }
 
-export function readPublisherBackendAwsStateValue(
-  workspacePath: string,
-  key: string,
-): string | undefined {
-  try {
-    const statePath = path.join(
-      workspacePath,
-      '.mini_program',
-      'publisher_backend.aws.json',
-    );
-    if (!fs.existsSync(statePath)) {
-      return undefined;
-    }
-    const decoded = JSON.parse(fs.readFileSync(statePath, 'utf8')) as Record<
-      string,
-      unknown
-    >;
-    return stringValue(decoded[key]);
-  } catch {
-    return undefined;
-  }
-}
-
-export function readPublisherBackendFirebaseStateValue(
-  workspacePath: string,
-  key: string,
-): string | undefined {
-  try {
-    const statePath = path.join(
-      workspacePath,
-      '.mini_program',
-      'publisher_backend.firebase.json',
-    );
-    if (!fs.existsSync(statePath)) {
-      return undefined;
-    }
-    const decoded = JSON.parse(fs.readFileSync(statePath, 'utf8')) as Record<
-      string,
-      unknown
-    >;
-    return stringValue(decoded[key]);
-  } catch {
-    return undefined;
-  }
-}
-
 export async function readMiniProgramManifestInfo(
   workspacePath: string,
 ): Promise<{ readonly id?: string; readonly title?: string } | undefined> {

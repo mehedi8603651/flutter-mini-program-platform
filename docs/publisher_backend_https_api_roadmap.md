@@ -56,8 +56,9 @@ scholarships/page
 ```
 
 This is the same runtime path for a custom server, Cloud Run, Docker, Lambda,
-Firebase Functions, VPS, or Kubernetes. Firebase and AWS helper commands are
-conveniences; they are not required by the Mp frontend model.
+Firebase Functions, VPS, or Kubernetes. Firebase/AWS provider-specific backend
+commands are no longer the active model; the Mp frontend uses the same
+Publisher API contract for every provider.
 
 ## Core Architecture
 
@@ -277,10 +278,10 @@ Future tooling should help developers scaffold and test generic HTTP APIs
 without requiring a specific backend stack:
 
 ```text
-miniprogram publisher-backend contract init
-miniprogram publisher-backend validate
-miniprogram publisher-backend smoke
-miniprogram publisher-backend handoff
+miniprogram publisher-api contract init
+miniprogram publisher-api contract validate
+miniprogram publisher-api contract smoke
+miniprogram publisher-api contract handoff
 ```
 
 The contract commands are the provider-neutral path for an existing standalone

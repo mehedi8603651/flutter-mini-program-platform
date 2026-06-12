@@ -58,31 +58,12 @@ test('renders mini-program and host status rows', () => {
       },
       publisherBackendStarter: {
         detected: true,
-        template: 'aws-lambda',
+        template: 'mock',
         expectedRoutes: [
           'GET /health',
           'GET /coupons/list',
           'GET /coupons/page',
         ],
-        aws: {
-          detected: true,
-          environmentName: 'my-aws-prod',
-          stackName: 'publisher-stack',
-          region: 'ap-south-1',
-          backendBaseUrl: 'https://api.example.com/prod/',
-          healthUrl: 'https://api.example.com/prod/health',
-          functionName: 'publisher-function',
-        },
-        firebase: {
-          detected: true,
-          environmentName: 'my-firebase-prod',
-          projectId: 'miniprogram-backend-test',
-          region: 'us-central1',
-          backendBaseUrl: 'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/',
-          healthUrl: 'https://us-central1-miniprogram-backend-test.cloudfunctions.net/publisherBackend/health',
-          functionName: 'publisherBackend',
-          storageMode: 'firestore',
-        },
       },
     },
     environment: {
@@ -95,16 +76,8 @@ test('renders mini-program and host status rows', () => {
     backend: { configured: true, statusChecked: true, healthy: true },
     remote: {
       checked: true,
-      provider: 'firebase',
+      provider: 'aws',
       errors: [],
-      firebase: {
-        status: { healthy: true },
-        dataStatus: {
-          available: true,
-          appRecordCount: 4,
-          redemptionCount: 2,
-        },
-      },
     },
     nextActions: [],
   };
@@ -120,31 +93,20 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Output root: D:\/coupon\/mp\/\.build/);
   assert.match(text, /Entry ready: yes/);
   assert.match(text, /Backend usage: query\/state/);
+  assert.match(text, /Backend starter: mock/);
   assert.match(text, /Publisher routes: GET \/health, GET \/coupons\/list, GET \/coupons\/page/);
   assert.match(text, /Paged route: yes/);
-  assert.match(text, /AWS env: my-aws-prod/);
-  assert.match(text, /AWS stack: publisher-stack/);
-  assert.match(text, /AWS region: ap-south-1/);
-  assert.match(text, /AWS health: https:\/\/api.example.com\/prod\/health/);
-  assert.match(text, /AWS function: publisher-function/);
-  assert.match(text, /Firebase env: my-firebase-prod/);
-  assert.match(text, /Firebase project: miniprogram-backend-test/);
-  assert.match(text, /Firebase region: us-central1/);
-  assert.match(text, /Firebase health: https:\/\/us-central1-miniprogram-backend-test\.cloudfunctions\.net\/publisherBackend\/health/);
-  assert.match(text, /Firebase function: publisherBackend/);
-  assert.match(text, /Firebase storage: firestore/);
+  assert.doesNotMatch(text, /AWS backend/);
+  assert.doesNotMatch(text, /Firebase backend/);
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);
-  assert.match(text, /Publisher backends: coupon_demo:remote, rewards:none/);
+  assert.match(text, /Publisher APIs: coupon_demo:remote, rewards:none/);
   assert.match(text, /Routing: endpoint map active/);
   assert.match(text, /Backend fallback/);
   assert.match(text, /Access keys required: yes/);
-  assert.match(text, /Provider: firebase/);
-  assert.match(text, /Firebase healthy: yes/);
-  assert.match(text, /Firestore available: yes/);
-  assert.match(text, /Firestore app records: 4/);
-  assert.match(text, /Firestore redemptions: 2/);
+  assert.match(text, /Provider: aws/);
+  assert.doesNotMatch(text, /Firestore/);
 });
 
 test('renders Firebase host endpoint readiness diagnostics', () => {
@@ -162,7 +124,7 @@ test('renders Firebase host endpoint readiness diagnostics', () => {
       validation: { status: 'ok' },
       partnerPackages: [],
       backendUsage: { usesPublisherBackend: true },
-      publisherBackendStarter: { detected: true, template: 'firebase-functions' },
+      publisherBackendStarter: { detected: true, template: 'mock' },
     },
     environment: { configured: true, provider: 'firebase' },
     backend: { configured: false },
@@ -212,69 +174,6 @@ test('renders Firebase host endpoint readiness diagnostics', () => {
   assert.match(text, /Issues: Delivery URL differs/);
 });
 
-test('renders Firebase auth status diagnostics', () => {
-  const report: WorkflowStatusReport = {
-    schemaVersion: 1,
-    command: 'workflow status',
-    workspace: { type: 'mini_program', path: 'D:/coupon' },
-    ready: true,
-    severity: 'ok',
-    miniProgram: {
-      detected: true,
-      appId: 'coupon_demo',
-      version: '1.0.0',
-      build: { exists: true, screenCount: 1 },
-      validation: { status: 'ok' },
-      partnerPackages: [],
-      backendUsage: { usesPublisherBackend: true },
-      publisherBackendStarter: { detected: true, template: 'firebase-functions' },
-    },
-    environment: { configured: true, provider: 'firebase' },
-    backend: { configured: false },
-    remote: { checked: false },
-    nextActions: [],
-  };
-
-  const text = flattenStatusSections(
-    buildStatusTreeSections(report, {
-      firebaseAuthStatus: {
-        ready: true,
-        deployEnvReady: true,
-        environmentName: 'my-firebase-prod',
-        projectId: 'miniprogram-backend-test',
-        region: 'us-central1',
-        functionName: 'publisherBackend',
-        miniProgramId: 'coupon_demo',
-        authWebApiKeyConfigured: true,
-        scaffoldExists: true,
-        authServiceFileExists: true,
-        routerAuthRoutesReady: true,
-        routerAllowsAuthorizationHeader: true,
-        packageJsonHasFirebaseAdmin: true,
-        envAuthKeyConfigured: true,
-        envUsesReservedAuthKey: false,
-        envFilePath: 'D:/coupon/backend/firebase_functions/functions/.env',
-        hostAuthChecked: true,
-        hostProjectRootPath: 'D:/host',
-        hostAuthControllerReady: true,
-        hostRuntimeSetupPath: 'D:/host/lib/mini_program/mini_program_runtime_setup.dart',
-        hostAuthControllerConfigured: true,
-        hostSecureAuthControllerConfigured: true,
-        hostDisposeAuthControllerConfigured: true,
-      },
-    }),
-  );
-
-  assert.match(text, /Firebase auth/);
-  assert.match(text, /Ready: yes/);
-  assert.match(text, /Deploy env ready: yes/);
-  assert.match(text, /Auth Web API key: yes/);
-  assert.match(text, /Auth routes: yes/);
-  assert.match(text, /Authorization CORS: yes/);
-  assert.match(text, /Host auth ready: yes/);
-  assert.match(text, /Host secure auth store: yes/);
-});
-
 test('does not render raw access-key secrets', () => {
   const secretA = 'mpk_live_secret_a_1234567890';
   const secretB = 'mpk_live_secret_b_1234567890';
@@ -321,53 +220,4 @@ test('does not render raw access-key secrets', () => {
   assert.doesNotMatch(text, new RegExp(secretB));
   assert.doesNotMatch(text, /sha256_should_not_render/);
   assert.match(text, /Active access keys: 1/);
-});
-
-test('renders Firebase access-key status without secrets', () => {
-  const report: WorkflowStatusReport = {
-    schemaVersion: 1,
-    command: 'workflow status',
-    workspace: { type: 'mini_program', path: 'D:/coupon' },
-    ready: true,
-    severity: 'ok',
-    miniProgram: {
-      detected: true,
-      appId: 'coupon_demo',
-      version: '1.0.0',
-      build: { exists: true, screenCount: 1 },
-      validation: { status: 'ok' },
-      partnerPackages: [],
-    },
-    environment: { configured: true, provider: 'firebase' },
-    backend: { configured: false },
-    remote: { checked: false },
-    nextActions: [],
-  };
-
-  const text = flattenStatusSections(
-    buildStatusTreeSections(report, {
-      firebaseAccessKeys: {
-        environmentName: 'my-firebase-prod',
-        projectId: 'miniprogram-backend-test',
-        region: 'us-central1',
-        functionName: 'publisherBackend',
-        miniProgramId: 'coupon_demo',
-        backendBaseUrl: 'https://firebase.example.com/publisherBackend/',
-        activeKeyCount: 1,
-        keyCount: 2,
-        activeKeyIds: ['host-a'],
-        inactiveKeyIds: ['old-host'],
-      },
-    }),
-  );
-
-  assert.match(text, /Firebase access keys/);
-  assert.match(text, /Environment: my-firebase-prod/);
-  assert.match(text, /Mini-program ID: coupon_demo/);
-  assert.match(text, /Active keys: 1/);
-  assert.match(text, /Total keys: 2/);
-  assert.match(text, /Active key IDs: host-a/);
-  assert.match(text, /Inactive key IDs: old-host/);
-  assert.doesNotMatch(text, /mpk_live_/);
-  assert.doesNotMatch(text, /sha256/);
 });

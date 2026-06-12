@@ -33,7 +33,7 @@ export async function publisherBackendContractInit(
   }
 
   const backendBaseUrl = await vscode.window.showInputBox({
-    prompt: 'Publisher backend base URL',
+    prompt: 'Publisher API base URL',
     placeHolder: 'https://api.publisher.example/',
     ignoreFocusOut: true,
     validateInput: validateAbsoluteUrl,
@@ -58,14 +58,14 @@ export async function publisherBackendContractInit(
   }
   const allowLocalHttp = await chooseAllowLocalHttpIfNeeded(
     backendBaseUrl.trim(),
-    'Publisher backend URL policy',
+    'Publisher API URL policy',
   );
   if (allowLocalHttp === undefined) {
     return;
   }
 
   const ok = await runCliCommand(
-    'Init Publisher Backend API Contract',
+    'Init Publisher API Contract',
     buildPublisherBackendContractInitArgs({
       miniProgramRoot: workspacePath,
       backendBaseUrl,
@@ -78,7 +78,7 @@ export async function publisherBackendContractInit(
   );
   if (ok) {
     await refreshStatus(false);
-    vscode.window.showInformationMessage('Publisher backend API contract created.');
+    vscode.window.showInformationMessage('Publisher API contract created.');
   }
 }
 
@@ -101,7 +101,7 @@ export async function publisherBackendContractValidate(
     return;
   }
   const ok = await runCliCommand(
-    'Validate Publisher Backend API Contract',
+    'Validate Publisher API Contract',
     buildPublisherBackendContractValidateArgs({
       miniProgramRoot: workspacePath,
       contractPath: contractPath || undefined,
@@ -111,7 +111,7 @@ export async function publisherBackendContractValidate(
     output,
   );
   if (ok) {
-    vscode.window.showInformationMessage('Publisher backend API contract is valid.');
+    vscode.window.showInformationMessage('Publisher API contract is valid.');
   }
 }
 
@@ -156,7 +156,7 @@ export async function publisherBackendContractSmoke(
     return;
   }
   const ok = await runCliCommand(
-    'Smoke Test Publisher Backend API Contract',
+    'Smoke Test Publisher API Contract',
     buildPublisherBackendContractSmokeArgs({
       miniProgramRoot: workspacePath,
       contractPath: contractPath || undefined,
@@ -169,7 +169,7 @@ export async function publisherBackendContractSmoke(
     output,
   );
   if (ok) {
-    vscode.window.showInformationMessage('Publisher backend API smoke passed.');
+    vscode.window.showInformationMessage('Publisher API smoke passed.');
   }
 }
 
@@ -238,7 +238,7 @@ export async function publisherBackendContractHandoff(
     return;
   }
   const ok = await runCliCommand(
-    'Create Publisher Backend API Handoff Package',
+    'Create Publisher API Handoff Package',
     buildPublisherBackendContractHandoffArgs({
       miniProgramRoot: workspacePath,
       contractPath: contractPath || undefined,
@@ -257,8 +257,8 @@ export async function publisherBackendContractHandoff(
   }
   await refreshStatus(false);
   const message = accessMode === 'public'
-    ? 'Publisher backend API handoff package created.'
-    : 'Protected publisher backend API handoff package created. Treat this file as secret.';
+    ? 'Publisher API handoff package created.'
+    : 'Protected Publisher API handoff package created. Treat this file as secret.';
   const openChoice = await vscode.window.showInformationMessage(
     message,
     'Open File',
@@ -297,12 +297,12 @@ async function chooseContractPath(workspacePath: string): Promise<string | undef
       })),
     {
       label: 'Choose another file...',
-      description: 'Select a publisher backend contract JSON file',
+      description: 'Select a Publisher API contract JSON file',
       value: '__choose__' as const,
     },
   ];
   const selected = await vscode.window.showQuickPick(choices, {
-    title: 'Publisher backend API contract',
+    title: 'Publisher API contract',
     ignoreFocusOut: true,
   });
   if (!selected) {
@@ -320,10 +320,10 @@ async function chooseContractPath(workspacePath: string): Promise<string | undef
     canSelectMany: false,
     defaultUri: vscode.Uri.file(defaultPath),
     filters: {
-      'Publisher backend contract JSON': ['json'],
+      'Publisher API contract JSON': ['json'],
     },
     openLabel: 'Use contract',
-    title: 'Choose publisher backend contract file',
+    title: 'Choose Publisher API contract file',
   });
   return selectedFiles?.[0]?.fsPath;
 }
@@ -394,7 +394,7 @@ async function chooseSmokeCredentials(): Promise<
         value: 'both' as const,
       },
     ],
-    { title: 'Publisher backend smoke credentials', ignoreFocusOut: true },
+    { title: 'Publisher API smoke credentials', ignoreFocusOut: true },
   );
   if (!choice) {
     return undefined;

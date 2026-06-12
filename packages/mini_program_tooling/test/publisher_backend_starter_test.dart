@@ -7,10 +7,6 @@ import 'package:mini_program_tooling/mini_program_tooling.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-part 'publisher_backend_starter_test/aws_cloud_tests.dart';
-part 'publisher_backend_starter_test/aws_data_tests.dart';
-part 'publisher_backend_starter_test/firebase_cloud_tests.dart';
-part 'publisher_backend_starter_test/generated_backend_route_tests.dart';
 part 'publisher_backend_starter_test/helpers.dart';
 part 'publisher_backend_starter_test/local_runtime_tests.dart';
 part 'publisher_backend_starter_test/scaffold_tests.dart';
@@ -52,10 +48,6 @@ void main() {
     });
 
     _registerScaffoldTests();
-    _registerGeneratedBackendRouteTests();
-    _registerAwsCloudTests();
-    _registerFirebaseCloudTests();
-    _registerAwsDataTests();
     _registerLocalRuntimeTests();
   });
 }

@@ -8,12 +8,9 @@ import {
 } from '../hostIntegration';
 
 import {
-  compactTimestamp,
-  safeFileSegment,
   validateAbsoluteUrl,
   validateAppId,
   validateOptionalAbsoluteUrl,
-  validateOptionalIsoDateTime,
   validatePort,
 } from './jsonValues';
 import {
@@ -21,9 +18,6 @@ import {
   inferWorkspaceMiniProgramAppId,
   readHostEndpointAppIds,
   readHostRegistryEntries,
-  readMiniProgramManifestId,
-  readPublisherBackendAwsStateValue,
-  readPublisherBackendFirebaseStateValue,
 } from './workspace';
 
 export async function chooseHostProjectRootForFirebase(): Promise<string | undefined> {
@@ -68,7 +62,7 @@ export async function chooseMiniProgramBackendStarter(): Promise<
     [
       {
         label: 'Normal mini-program',
-        description: 'No publisher backend starter',
+        description: 'No mock Publisher API starter',
         backendTemplate: undefined,
       },
       {
@@ -77,7 +71,7 @@ export async function chooseMiniProgramBackendStarter(): Promise<
         backendTemplate: 'mock' as const,
       },
     ],
-    { title: 'Publisher backend starter', ignoreFocusOut: true },
+    { title: 'Mock Publisher API starter', ignoreFocusOut: true },
   );
   return choice
     ? { backendTemplate: choice.backendTemplate }
@@ -95,52 +89,6 @@ export async function promptKeyId(
     validateInput: (value) => value.trim() ? undefined : 'Key id is required.',
   });
   return keyId?.trim() || undefined;
-}
-
-export async function promptOptionalFirebaseAccessKeyExpiry(): Promise<string | undefined> {
-  const value = await vscode.window.showInputBox({
-    prompt: 'Optional Firebase access key expiry UTC',
-    placeHolder: '2026-12-31T23:59:59Z (leave blank for no expiry)',
-    ignoreFocusOut: true,
-    validateInput: validateOptionalIsoDateTime,
-  });
-  if (value === undefined) {
-    return undefined;
-  }
-  return value.trim();
-}
-
-export async function promptOptionalFirebaseSmokeAccessKey(): Promise<string | undefined> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Run without access key',
-        description: 'Use for public Firebase publisher backends',
-        value: 'none' as const,
-      },
-      {
-        label: 'Enter Firebase access key',
-        description: 'Use for protected Firebase publisher backends',
-        value: 'protected' as const,
-      },
-    ],
-    { title: 'Firebase smoke access key', ignoreFocusOut: true },
-  );
-  if (!choice) {
-    return undefined;
-  }
-  if (choice.value === 'none') {
-    return '';
-  }
-  const value = await vscode.window.showInputBox({
-    prompt: 'Firebase MiniProgram access key for protected smoke',
-    password: true,
-    placeHolder: 'mpk_live_...',
-    ignoreFocusOut: true,
-    validateInput: (input) =>
-      input.trim() ? undefined : 'Access key is required.',
-  });
-  return value?.trim() || undefined;
 }
 
 export async function promptHostEndpointInputs(): Promise<
@@ -355,199 +303,6 @@ export async function promptRequiredEnvName(prompt: string): Promise<string | un
   return envName === undefined ? undefined : envName.trim();
 }
 
-export async function promptPublisherBackendAwsEnvName(
-  workspacePath: string,
-): Promise<string | undefined> {
-  const defaultEnv = readPublisherBackendAwsStateValue(
-    workspacePath,
-    'environmentName',
-  );
-  const envName = await vscode.window.showInputBox({
-    prompt: 'AWS environment name',
-    value: defaultEnv,
-    placeHolder: 'my-aws-prod',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
-  });
-  return envName === undefined ? undefined : envName.trim();
-}
-
-export async function promptPublisherBackendFirebaseEnvName(
-  workspacePath: string,
-): Promise<string | undefined> {
-  const defaultEnv = readPublisherBackendFirebaseStateValue(
-    workspacePath,
-    'environmentName',
-  );
-  const envName = await vscode.window.showInputBox({
-    prompt: 'Firebase environment name',
-    value: defaultEnv,
-    placeHolder: 'my-firebase-prod',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
-  });
-  return envName === undefined ? undefined : envName.trim();
-}
-
-export async function chooseAwsDataExportPath(
-  workspacePath: string,
-  envName: string,
-): Promise<string | undefined> {
-  const appId = await readMiniProgramManifestId(workspacePath);
-  const timestamp = compactTimestamp(new Date());
-  const fileName = `${safeFileSegment(appId ?? path.basename(workspacePath))}-${safeFileSegment(envName)}-data-export-${timestamp}.json`;
-  const uri = await vscode.window.showSaveDialog({
-    defaultUri: vscode.Uri.file(
-      path.join(workspacePath, 'backend', 'aws_lambda', 'exports', fileName),
-    ),
-    filters: {
-      'AWS DynamoDB data export JSON': ['json'],
-    },
-    saveLabel: 'Export DynamoDB data',
-    title: 'Choose AWS DynamoDB data export file',
-  });
-  return uri?.fsPath;
-}
-
-export async function chooseAwsDataImportFile(
-  workspacePath: string,
-): Promise<string | undefined> {
-  const exportFiles = await findAwsDataExportFiles(workspacePath);
-  if (exportFiles.length > 0) {
-    const selected = await vscode.window.showQuickPick(
-      [
-        ...exportFiles.map((filePath) => ({
-          label: path.basename(filePath),
-          description: path.dirname(filePath),
-          filePath,
-        })),
-        {
-          label: 'Choose another file...',
-          description: 'Select an AWS DynamoDB export JSON file',
-          filePath: '',
-        },
-      ],
-      { title: 'Choose AWS DynamoDB data export file', ignoreFocusOut: true },
-    );
-    if (!selected) {
-      return undefined;
-    }
-    if (selected.filePath) {
-      return selected.filePath;
-    }
-  }
-  const selectedFiles = await vscode.window.showOpenDialog({
-    canSelectFiles: true,
-    canSelectFolders: false,
-    canSelectMany: false,
-    filters: {
-      'AWS DynamoDB data export JSON': ['json'],
-    },
-    openLabel: 'Choose export file',
-    title: 'Choose AWS DynamoDB data export file',
-    defaultUri: vscode.Uri.file(
-      path.join(workspacePath, 'backend', 'aws_lambda', 'exports'),
-    ),
-  });
-  return selectedFiles?.[0]?.fsPath;
-}
-
-export async function findAwsDataExportFiles(workspacePath: string): Promise<string[]> {
-  const exportsRoot = path.join(workspacePath, 'backend', 'aws_lambda', 'exports');
-  try {
-    const entries = await fs.promises.readdir(exportsRoot, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-      .map((entry) => path.join(exportsRoot, entry.name))
-      .sort((left, right) => right.localeCompare(left))
-      .slice(0, 20);
-  } catch {
-    return [];
-  }
-}
-
-export async function chooseFirebaseDataExportPath(
-  workspacePath: string,
-  envName: string,
-): Promise<string | undefined> {
-  const appId = await readMiniProgramManifestId(workspacePath);
-  const timestamp = compactTimestamp(new Date());
-  const fileName = `${safeFileSegment(appId ?? path.basename(workspacePath))}-${safeFileSegment(envName)}-data-export-${timestamp}.json`;
-  const uri = await vscode.window.showSaveDialog({
-    defaultUri: vscode.Uri.file(
-      path.join(workspacePath, 'backend', 'firebase_functions', 'exports', fileName),
-    ),
-    filters: {
-      'Firebase Firestore data export JSON': ['json'],
-    },
-    saveLabel: 'Export Firestore data',
-    title: 'Choose Firebase Firestore data export file',
-  });
-  return uri?.fsPath;
-}
-
-export async function chooseFirebaseDataImportFile(
-  workspacePath: string,
-): Promise<string | undefined> {
-  const exportFiles = await findFirebaseDataExportFiles(workspacePath);
-  if (exportFiles.length > 0) {
-    const selected = await vscode.window.showQuickPick(
-      [
-        ...exportFiles.map((filePath) => ({
-          label: path.basename(filePath),
-          description: path.dirname(filePath),
-          filePath,
-        })),
-        {
-          label: 'Choose another file...',
-          description: 'Select a Firebase Firestore export JSON file',
-          filePath: '',
-        },
-      ],
-      { title: 'Choose Firebase Firestore data export file', ignoreFocusOut: true },
-    );
-    if (!selected) {
-      return undefined;
-    }
-    if (selected.filePath) {
-      return selected.filePath;
-    }
-  }
-  const selectedFiles = await vscode.window.showOpenDialog({
-    canSelectFiles: true,
-    canSelectFolders: false,
-    canSelectMany: false,
-    filters: {
-      'Firebase Firestore data export JSON': ['json'],
-    },
-    openLabel: 'Choose export file',
-    title: 'Choose Firebase Firestore data export file',
-    defaultUri: vscode.Uri.file(
-      path.join(workspacePath, 'backend', 'firebase_functions', 'exports'),
-    ),
-  });
-  return selectedFiles?.[0]?.fsPath;
-}
-
-export async function findFirebaseDataExportFiles(workspacePath: string): Promise<string[]> {
-  const exportsRoot = path.join(
-    workspacePath,
-    'backend',
-    'firebase_functions',
-    'exports',
-  );
-  try {
-    const entries = await fs.promises.readdir(exportsRoot, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-      .map((entry) => path.join(exportsRoot, entry.name))
-      .sort((left, right) => right.localeCompare(left))
-      .slice(0, 20);
-  } catch {
-    return [];
-  }
-}
-
 export async function choosePartnerPackageOutputPath(
   workspacePath: string,
   appId: string,
@@ -559,32 +314,6 @@ export async function choosePartnerPackageOutputPath(
     },
     saveLabel: 'Create partner package',
     title: 'Choose partner package output file',
-  });
-  return uri?.fsPath;
-}
-
-export async function chooseFirebaseHandoffOutputPath(
-  workspacePath: string,
-  appId: string,
-  envName: string,
-  accessKeyId?: string,
-): Promise<string | undefined> {
-  const fileNameParts = [
-    safeFileSegment(appId),
-    safeFileSegment(envName),
-  ];
-  if (accessKeyId?.trim()) {
-    fileNameParts.push(safeFileSegment(accessKeyId.trim()));
-  }
-  const uri = await vscode.window.showSaveDialog({
-    defaultUri: vscode.Uri.file(
-      path.join(workspacePath, `${fileNameParts.join('-')}.partner.json`),
-    ),
-    filters: {
-      'Partner package JSON': ['json'],
-    },
-    saveLabel: 'Create Firebase handoff package',
-    title: 'Choose Firebase host handoff package output file',
   });
   return uri?.fsPath;
 }
@@ -671,46 +400,6 @@ export async function chooseForce(prompt: string): Promise<boolean | undefined> 
     { title: 'MiniProgram command mode', ignoreFocusOut: true },
   );
   return choice?.force;
-}
-
-export async function chooseFirebaseStarterUiForScaffold(): Promise<boolean | undefined> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Add Firebase starter UI',
-        description: 'Generate auth, paged Firestore data, image, and protected-session starter UI',
-        withStarterUi: true,
-      },
-      {
-        label: 'Backend only',
-        description: 'Generate Firebase Functions + Firestore backend files only',
-        withStarterUi: false,
-      },
-    ],
-    { title: 'Firebase starter UI', ignoreFocusOut: true },
-  );
-  return choice?.withStarterUi;
-}
-
-export async function chooseFirebaseStarterUiMode(): Promise<
-  { readonly force: boolean } | undefined
-> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Add safely',
-        description: 'Append missing helpers and skip existing screen/seed files',
-        force: false,
-      },
-      {
-        label: 'Replace starter files',
-        description: 'Pass --force and overwrite generated starter screen/seed files',
-        force: true,
-      },
-    ],
-    { title: 'Firebase starter UI mode', ignoreFocusOut: true },
-  );
-  return choice ? { force: choice.force } : undefined;
 }
 
 export interface HostRendererChoice {
@@ -859,17 +548,17 @@ export async function choosePublisherBackendMode(): Promise<PublisherBackendMode
         value: 'none' as const,
       },
       {
-        label: 'Local mock backend',
+        label: 'Local mock Publisher API',
         description: 'Use miniprogram publisher-backend run, default port 9090',
         value: 'local_mock' as const,
       },
       {
-        label: 'Remote publisher backend',
+        label: 'Remote Publisher API',
         description: 'Use a real HTTPS publisher-owned API base URL',
         value: 'remote' as const,
       },
     ],
-    { title: 'Publisher backend mode', ignoreFocusOut: true },
+    { title: 'Publisher API mode', ignoreFocusOut: true },
   );
   if (!choice) {
     return undefined;

@@ -56,19 +56,8 @@ export interface BuildDiagnosticsOptions {
   readonly cliCapabilities?: {
     readonly checked: boolean;
     readonly supportsFirebaseHostingPublish?: boolean;
-    readonly supportsWriteSmoke: boolean;
-    readonly supportsAwsPagedRoutes?: boolean;
-    readonly supportsDataManagement?: boolean;
-    readonly supportsFirebaseOperations?: boolean;
-    readonly supportsFirebaseHostCommand?: boolean;
-    readonly supportsFirebaseHandoff?: boolean;
-    readonly supportsFirebaseStarterUi?: boolean;
-    readonly supportsFirebasePagedRoutes?: boolean;
-    readonly supportsFirebaseAuthStatus?: boolean;
-    readonly supportsFirebaseHostAuthDiagnostics?: boolean;
-    readonly supportsFirebaseWriteSmoke?: boolean;
-    readonly supportsFirebaseFirestoreData?: boolean;
-    readonly supportsFirebaseDataManagement?: boolean;
+    readonly supportsPublisherApiMock?: boolean;
+    readonly supportsPublisherBackendContract?: boolean;
     readonly supportsCapabilityDiscovery?: boolean;
     readonly toolingVersion?: string;
     readonly detail?: string;
@@ -217,8 +206,6 @@ async function buildMiniProgramChecks(
   const backendRequestIds = asStringList(backendUsage.requestIds);
   const hasPublisherBackendStarter = asBoolean(publisherBackendStarter.detected);
   const publisherBackendTemplate = asString(publisherBackendStarter.template, 'mock');
-  const awsPublisherBackend = asRecord(publisherBackendStarter.aws);
-  const awsBackendBaseUrl = asString(awsPublisherBackend.backendBaseUrl);
 
   return [
     check(
@@ -291,13 +278,13 @@ async function buildMiniProgramChecks(
     ),
     check(
       'mini_program.publisher_backend_usage',
-      'Publisher backend usage',
+      'Publisher API usage',
       usesPublisherBackend ? 'warning' : 'ok',
       usesPublisherBackend
         ? usesBackendState
           ? 'Mini-program source uses backend query/state helpers.'
-          : 'Mini-program source uses publisher backend actions.'
-        : 'No publisher backend action or builder usage was detected.',
+          : 'Mini-program source uses Publisher API actions.'
+        : 'No Publisher API action or builder usage was detected.',
       backendRequestIds.length > 0
         ? `Request IDs: ${backendRequestIds.join(', ')}`
         : undefined,
@@ -307,23 +294,20 @@ async function buildMiniProgramChecks(
     ),
     check(
       'mini_program.publisher_backend_starter',
-      'Publisher backend starter',
+      'Mock Publisher API starter',
       hasPublisherBackendStarter || !usesBackendState ? 'ok' : 'warning',
       hasPublisherBackendStarter
-        ? `Publisher backend starter found: ${publisherBackendTemplate}.`
+        ? `Mock Publisher API starter found: ${publisherBackendTemplate}.`
         : usesBackendState
-          ? 'Backend query/state helpers are used, but no local publisher backend starter was found.'
-          : 'No local publisher backend starter was detected.',
+          ? 'Backend query/state helpers are used, but no local mock Publisher API starter was found.'
+          : 'No local mock Publisher API starter was detected.',
       [
         asString(publisherBackendStarter.backendRootPath),
-        awsBackendBaseUrl ? `AWS backend base URL: ${awsBackendBaseUrl}` : '',
       ].filter(Boolean).join('\n') || undefined,
       hasPublisherBackendStarter
-        ? publisherBackendTemplate === 'aws-lambda'
-          ? 'Run MiniProgram: Deploy Publisher Backend to AWS, then copy the AWS backend host command.'
-          : 'Run MiniProgram: Run Publisher Backend, then add host endpoints with --backend-base-url.'
+        ? 'Run MiniProgram: Run Mock Publisher API for local testing, or point the host endpoint at your Publisher API.'
         : usesBackendState
-          ? 'Run MiniProgram: Setup Publisher Backend or connect a real publisher API with --backend-base-url.'
+          ? 'Run MiniProgram: Setup Mock Publisher API for a local mock, or connect a real Publisher API with --backend-base-url.'
           : undefined,
     ),
   ];
@@ -492,15 +476,15 @@ async function buildHostAppChecks(
     ),
     check(
       'host_app.publisher_backend_endpoints',
-      'Publisher backend endpoints',
+      'Publisher API endpoints',
       endpointBackendIssues.length === 0 ? 'ok' : 'error',
       endpointBackendSummaries.length > 0
-        ? `Publisher backend configuration: ${endpointBackendSummaries.join(', ')}.`
-        : 'No endpoint metadata was available for publisher backend checks.',
+        ? `Publisher API configuration: ${endpointBackendSummaries.join(', ')}.`
+        : 'No endpoint metadata was available for Publisher API checks.',
       undefined,
       endpointBackendIssues.length === 0
         ? undefined
-        : 'Re-add the endpoint with a valid absolute publisher backend URL.',
+        : 'Re-add the endpoint with a valid absolute Publisher API URL.',
     ),
     check(
       'host_app.local_mock_backend_sdk',
@@ -828,93 +812,47 @@ function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticChec
 }
 
 function buildCliCapabilityCheck(capability: {
-  readonly supportsWriteSmoke: boolean;
   readonly supportsFirebaseHostingPublish?: boolean;
-  readonly supportsDataManagement?: boolean;
-  readonly supportsAwsPagedRoutes?: boolean;
-  readonly supportsFirebaseOperations?: boolean;
-  readonly supportsFirebaseHostCommand?: boolean;
-  readonly supportsFirebaseHandoff?: boolean;
-  readonly supportsFirebaseStarterUi?: boolean;
-  readonly supportsFirebasePagedRoutes?: boolean;
-  readonly supportsFirebaseAuthStatus?: boolean;
-  readonly supportsFirebaseHostAuthDiagnostics?: boolean;
-  readonly supportsFirebaseWriteSmoke?: boolean;
-  readonly supportsFirebaseFirestoreData?: boolean;
-  readonly supportsFirebaseDataManagement?: boolean;
+  readonly supportsPublisherApiMock?: boolean;
+  readonly supportsPublisherBackendContract?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
   readonly toolingVersion?: string;
   readonly detail?: string;
 }): DiagnosticCheck {
-  const supportsDataManagement = capability.supportsDataManagement ?? false;
-  const supportsAwsPagedRoutes = capability.supportsAwsPagedRoutes ?? false;
   const supportsFirebaseHostingPublish =
     capability.supportsFirebaseHostingPublish ?? false;
   const supportsFirebaseHostingCors =
     supportsFirebaseHostingPublish &&
     toolingVersionAtLeast(capability.toolingVersion, '0.3.42');
-  const supportsFirebaseOperations = capability.supportsFirebaseOperations ?? false;
-  const supportsFirebaseWriteSmoke = capability.supportsFirebaseWriteSmoke ?? false;
-  const supportsFirebaseHostCommand = capability.supportsFirebaseHostCommand ?? false;
-  const supportsFirebaseHandoff = capability.supportsFirebaseHandoff ?? false;
-  const supportsFirebaseStarterUi = capability.supportsFirebaseStarterUi ?? false;
-  const supportsFirebasePagedRoutes = capability.supportsFirebasePagedRoutes ?? false;
-  const supportsFirebaseAuthStatus =
-    capability.supportsFirebaseAuthStatus ?? false;
-  const supportsFirebaseHostAuthDiagnostics =
-    capability.supportsFirebaseHostAuthDiagnostics ?? false;
-  const supportsFirebaseFirestoreData =
-    capability.supportsFirebaseFirestoreData ?? false;
-  const supportsFirebaseDataManagement =
-    capability.supportsFirebaseDataManagement ?? false;
+  const supportsPublisherApiMock = capability.supportsPublisherApiMock ?? false;
+  const supportsPublisherBackendContract =
+    capability.supportsPublisherBackendContract ?? false;
   const supportsCapabilityDiscovery = capability.supportsCapabilityDiscovery ?? false;
   const supportsExpectedCli =
-    capability.supportsWriteSmoke &&
-    supportsDataManagement &&
-    supportsAwsPagedRoutes &&
-    supportsFirebaseOperations &&
-    supportsFirebaseHostCommand &&
-    supportsFirebaseHandoff &&
-    supportsFirebaseStarterUi &&
-    supportsFirebasePagedRoutes &&
-    supportsFirebaseAuthStatus &&
-    supportsFirebaseHostAuthDiagnostics &&
-    supportsFirebaseWriteSmoke &&
-    supportsFirebaseFirestoreData &&
-    supportsFirebaseDataManagement &&
+    supportsPublisherApiMock &&
+    supportsPublisherBackendContract &&
     supportsFirebaseHostingCors &&
     supportsCapabilityDiscovery;
   const versionSuffix = capability.toolingVersion
     ? ` Version: ${capability.toolingVersion}.`
     : '';
   return check(
-    'cli.publisher_backend_aws_029',
-    'CLI publisher backend commands',
+    'cli.publisher_api',
+    'CLI Publisher API commands',
     supportsExpectedCli ? 'ok' : 'warning',
     supportsExpectedCli
-      ? `Configured CLI supports AWS DynamoDB, AWS/Firebase paged routes, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery.${versionSuffix}`
-      : capability.supportsWriteSmoke &&
-          supportsDataManagement &&
-          supportsAwsPagedRoutes &&
-          supportsFirebaseOperations &&
-          supportsFirebaseHostCommand &&
-          supportsFirebaseHandoff &&
-          supportsFirebaseStarterUi &&
-          supportsFirebasePagedRoutes &&
-          supportsFirebaseAuthStatus &&
-          supportsFirebaseHostAuthDiagnostics &&
-          supportsFirebaseWriteSmoke &&
-          supportsFirebaseFirestoreData &&
-          supportsFirebaseDataManagement &&
+      ? `Configured CLI supports Publisher API mock, provider-neutral contract handoff, Firebase Hosting static delivery, and quiet capability discovery.${versionSuffix}`
+      : supportsPublisherApiMock &&
+          supportsPublisherBackendContract &&
           supportsFirebaseHostingCors
-        ? 'Configured CLI supports publisher backend actions but lacks 0.3.29 quiet capability discovery.'
+        ? 'Configured CLI supports Publisher API commands but lacks quiet capability discovery.'
         : supportsFirebaseHostingPublish && !supportsFirebaseHostingCors
-          ? 'Configured CLI supports Firebase Hosting publish but lacks the 0.3.42 CORS/version metadata fix.'
-        : 'Configured CLI is missing mini_program_tooling 0.4.0 Mp-aware Firebase starter support.',
+          ? 'Configured CLI supports Firebase Hosting static delivery but lacks the 0.3.42 CORS/version metadata fix.'
+        : 'Configured CLI is missing provider-neutral Publisher API mock or contract commands.',
     capability.detail,
     supportsExpectedCli
       ? undefined
-      : 'Activate the local Mp engine mini_program_tooling package or update miniProgram.cliPath.',
+      : 'Activate the local mini_program_tooling package or update miniProgram.cliPath.',
   );
 }
 

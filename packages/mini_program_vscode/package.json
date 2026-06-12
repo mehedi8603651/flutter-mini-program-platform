@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -194,22 +194,22 @@
       },
       {
         "command": "miniProgramTools.publisherBackendSetup",
-        "title": "MiniProgram: Setup Publisher Backend",
+        "title": "MiniProgram: Setup Mock Publisher API",
         "icon": "$(server-process)"
       },
       {
         "command": "miniProgramTools.publisherBackendRun",
-        "title": "MiniProgram: Run Publisher Backend",
+        "title": "MiniProgram: Run Mock Publisher API",
         "icon": "$(debug-start)"
       },
       {
         "command": "miniProgramTools.publisherBackendStop",
-        "title": "MiniProgram: Stop Publisher Backend",
+        "title": "MiniProgram: Stop Mock Publisher API",
         "icon": "$(debug-stop)"
       },
       {
         "command": "miniProgramTools.publisherBackendStatus",
-        "title": "MiniProgram: Publisher Backend Status",
+        "title": "MiniProgram: Mock Publisher API Status",
         "icon": "$(pulse)"
       },
       {
@@ -233,168 +233,8 @@
         "icon": "$(file-code)"
       },
       {
-        "command": "miniProgramTools.publisherBackendAwsDeploy",
-        "title": "MiniProgram: Deploy Publisher Backend to AWS",
-        "icon": "$(cloud-upload)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsStatus",
-        "title": "MiniProgram: Publisher Backend AWS Status",
-        "icon": "$(pulse)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsOutputs",
-        "title": "MiniProgram: Publisher Backend AWS Outputs",
-        "icon": "$(symbol-property)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsSmoke",
-        "title": "MiniProgram: Smoke Test AWS Publisher Backend",
-        "icon": "$(beaker)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsSmokeWrite",
-        "title": "MiniProgram: Smoke Test AWS Publisher Backend With Write",
-        "icon": "$(edit)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsSeed",
-        "title": "MiniProgram: Seed AWS Publisher DynamoDB",
-        "icon": "$(database)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsDataStatus",
-        "title": "MiniProgram: AWS Publisher DynamoDB Data Status",
-        "icon": "$(graph)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsDataExport",
-        "title": "MiniProgram: Export AWS Publisher DynamoDB Data",
-        "icon": "$(export)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsDataImportDryRun",
-        "title": "MiniProgram: Dry Run AWS Publisher DynamoDB Import",
-        "icon": "$(debug-step-over)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsDataRedemptions",
-        "title": "MiniProgram: List AWS Publisher DynamoDB Redemptions",
-        "icon": "$(list-unordered)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsLogs",
-        "title": "MiniProgram: Publisher Backend AWS Logs",
-        "icon": "$(output)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendAwsDestroy",
-        "title": "MiniProgram: Destroy AWS Publisher Backend Stack",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseDeploy",
-        "title": "MiniProgram: Deploy Publisher Backend to Firebase",
-        "icon": "$(cloud-upload)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseStatus",
-        "title": "MiniProgram: Publisher Backend Firebase Status",
-        "icon": "$(pulse)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseOutputs",
-        "title": "MiniProgram: Publisher Backend Firebase Outputs",
-        "icon": "$(symbol-property)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseHostCommand",
-        "title": "MiniProgram: Wire Firebase Publisher Backend Into Host App",
-        "icon": "$(plug)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseHandoff",
-        "title": "MiniProgram: Create Firebase Host Handoff Package",
-        "icon": "$(file-code)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseStarterUi",
-        "title": "MiniProgram: Add Firebase Starter UI",
-        "icon": "$(layout)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseAccessKeyCreate",
-        "title": "MiniProgram: Create Firebase Publisher Access Key",
-        "icon": "$(key)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseAccessKeyList",
-        "title": "MiniProgram: List Firebase Publisher Access Keys",
-        "icon": "$(list-unordered)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseAccessKeyRevoke",
-        "title": "MiniProgram: Revoke Firebase Publisher Access Key",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseAccessKeyRotate",
-        "title": "MiniProgram: Rotate Firebase Publisher Access Key",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseAuthStatus",
-        "title": "MiniProgram: Firebase Publisher Auth Status",
-        "icon": "$(shield)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseSmoke",
-        "title": "MiniProgram: Smoke Test Firebase Publisher Backend",
-        "icon": "$(beaker)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseSmokeWrite",
-        "title": "MiniProgram: Smoke Test Firebase Publisher Backend With Write",
-        "icon": "$(beaker)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseSeed",
-        "title": "MiniProgram: Seed Firebase Publisher Firestore",
-        "icon": "$(database)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseDataStatus",
-        "title": "MiniProgram: Firebase Publisher Firestore Data Status",
-        "icon": "$(graph)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseDataExport",
-        "title": "MiniProgram: Export Firebase Publisher Firestore Data",
-        "icon": "$(export)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseDataImportDryRun",
-        "title": "MiniProgram: Dry Run Firebase Publisher Firestore Import",
-        "icon": "$(debug-step-over)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseDataRedemptions",
-        "title": "MiniProgram: List Firebase Publisher Firestore Redemptions",
-        "icon": "$(list-unordered)"
-      },
-      {
-        "command": "miniProgramTools.publisherBackendFirebaseDestroy",
-        "title": "MiniProgram: Destroy Firebase Publisher Backend Function",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "miniProgramTools.copyAwsBackendHostCommand",
-        "title": "MiniProgram: Copy AWS Backend Host Command",
-        "icon": "$(copy)"
-      },
-      {
         "command": "miniProgramTools.copyPublisherBackendUrls",
-        "title": "MiniProgram: Copy Publisher Backend URLs",
+        "title": "MiniProgram: Copy Mock Publisher API URLs",
         "icon": "$(copy)"
       },
       {
@@ -621,151 +461,6 @@
           "group": "navigation@12.24"
         },
         {
-          "command": "miniProgramTools.publisherBackendAwsDeploy",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.25"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.26"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsOutputs",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.27"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsSmoke",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.28"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsSmokeWrite",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.29"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsSeed",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.30"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsDataStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.31"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsDataExport",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.32"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsDataImportDryRun",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.33"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsDataRedemptions",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.34"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseDeploy",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.35"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.36"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseOutputs",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.37"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseHostCommand",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.375"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseHandoff",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.376"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseStarterUi",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.37605"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseAccessKeyCreate",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.3761"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseAccessKeyList",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.3762"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseAccessKeyRevoke",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.3763"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseAccessKeyRotate",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.3764"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseAuthStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.377"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseSmoke",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.38"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseSmokeWrite",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.385"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseSeed",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.39"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseDataStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.40"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseDataExport",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.41"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseDataImportDryRun",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.42"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseDataRedemptions",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.43"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendFirebaseDestroy",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.44"
-        },
-        {
           "command": "miniProgramTools.copyPublisherBackendUrls",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.3"
@@ -774,21 +469,6 @@
           "command": "miniProgramTools.copyMockBackendHostCommand",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.4"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsLogs",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.5"
-        },
-        {
-          "command": "miniProgramTools.copyAwsBackendHostCommand",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.6"
-        },
-        {
-          "command": "miniProgramTools.publisherBackendAwsDestroy",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.7"
         },
         {
           "command": "miniProgramTools.createAccessKey",

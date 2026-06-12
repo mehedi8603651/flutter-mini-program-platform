@@ -14,7 +14,6 @@ import {
 import {
   chooseRequireAccessKeys,
   promptOptionalEnvName,
-  readPublisherBackendFirebaseStateValue,
   requireWorkspacePath,
   runCliCommand,
   runWorkspaceCliCommand,
@@ -175,9 +174,9 @@ export async function configureFirebaseEnvironment(
     return;
   }
   const environmentName = await vscode.window.showInputBox({
-    prompt: 'Firebase environment name',
+    prompt: 'Firebase Hosting environment name',
     placeHolder: 'my-firebase-prod',
-    value: readPublisherBackendFirebaseStateValue(workspacePath, 'environmentName') ?? 'my-firebase-prod',
+    value: 'my-firebase-prod',
     ignoreFocusOut: true,
     validateInput: validateEnvironmentName,
   });
@@ -186,58 +185,11 @@ export async function configureFirebaseEnvironment(
   }
   const projectId = await vscode.window.showInputBox({
     prompt: 'Firebase project ID',
-    placeHolder: 'miniprogram-backend-test',
-    value: readPublisherBackendFirebaseStateValue(workspacePath, 'projectId'),
+    placeHolder: 'my-firebase-project',
     ignoreFocusOut: true,
     validateInput: (value) => value.trim() ? undefined : 'Firebase project ID is required.',
   });
   if (!projectId) {
-    return;
-  }
-  const region = await vscode.window.showInputBox({
-    prompt: 'Firebase Functions region',
-    placeHolder: 'us-central1',
-    value: readPublisherBackendFirebaseStateValue(workspacePath, 'region') ?? 'us-central1',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Region is required.',
-  });
-  if (!region) {
-    return;
-  }
-  const functionName = await vscode.window.showInputBox({
-    prompt: 'Firebase function name',
-    placeHolder: 'publisherBackend',
-    value: readPublisherBackendFirebaseStateValue(workspacePath, 'functionName') ?? 'publisherBackend',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Function name is required.',
-  });
-  if (!functionName) {
-    return;
-  }
-  const functionUrl = await vscode.window.showInputBox({
-    prompt: 'Optional Firebase function URL override',
-    placeHolder: 'Leave blank to use the standard Cloud Functions URL',
-    value: readPublisherBackendFirebaseStateValue(workspacePath, 'functionUrl'),
-    ignoreFocusOut: true,
-    validateInput: validateOptionalAbsoluteUrl,
-  });
-  if (functionUrl === undefined) {
-    return;
-  }
-  const authWebApiKey = await vscode.window.showInputBox({
-    prompt: 'Optional Firebase Web API key for publisher-owned email auth',
-    placeHolder: 'Paste apiKey from Firebase web app config, or leave blank to skip email auth',
-    ignoreFocusOut: true,
-    password: true,
-    validateInput: (value) => {
-      const trimmed = value.trim();
-      if (!trimmed) {
-        return undefined;
-      }
-      return trimmed.length >= 10 ? undefined : 'Firebase Web API key looks too short.';
-    },
-  });
-  if (authWebApiKey === undefined) {
     return;
   }
 
@@ -247,10 +199,6 @@ export async function configureFirebaseEnvironment(
       environmentName: environmentName.trim(),
       rootPath: workspacePath,
       projectId: projectId.trim(),
-      region: region.trim(),
-      functionName: functionName.trim(),
-      functionUrl: functionUrl.trim() || undefined,
-      authWebApiKey: authWebApiKey.trim() || undefined,
     }),
     workspacePath,
     output,

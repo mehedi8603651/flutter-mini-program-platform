@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 
 import {
-  FirebaseAccessKeyStatus,
-  FirebaseAuthStatus,
   FirebaseHostEndpointStatus,
   StatusTreeSection,
   StatusTreeRow,
@@ -32,8 +30,6 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
   private errorMessage: string | undefined;
   private report: WorkflowStatusReport | undefined;
   private firebaseHostEndpoint: FirebaseHostEndpointStatus | undefined;
-  private firebaseAuthStatus: FirebaseAuthStatus | undefined;
-  private firebaseAccessKeys: FirebaseAccessKeyStatus | undefined;
 
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
@@ -42,8 +38,6 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
     this.report = report;
     this.sections = buildStatusTreeSections(report, {
       firebaseHostEndpoint: this.firebaseHostEndpoint,
-      firebaseAuthStatus: this.firebaseAuthStatus,
-      firebaseAccessKeys: this.firebaseAccessKeys,
     });
     this.changeEmitter.fire(undefined);
   }
@@ -53,30 +47,6 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
     this.firebaseHostEndpoint = status;
     this.sections = buildStatusTreeSections(this.report, {
       firebaseHostEndpoint: this.firebaseHostEndpoint,
-      firebaseAuthStatus: this.firebaseAuthStatus,
-      firebaseAccessKeys: this.firebaseAccessKeys,
-    });
-    this.changeEmitter.fire(undefined);
-  }
-
-  setFirebaseAuthStatus(status: FirebaseAuthStatus): void {
-    this.errorMessage = undefined;
-    this.firebaseAuthStatus = status;
-    this.sections = buildStatusTreeSections(this.report, {
-      firebaseHostEndpoint: this.firebaseHostEndpoint,
-      firebaseAuthStatus: this.firebaseAuthStatus,
-      firebaseAccessKeys: this.firebaseAccessKeys,
-    });
-    this.changeEmitter.fire(undefined);
-  }
-
-  setFirebaseAccessKeyStatus(status: FirebaseAccessKeyStatus): void {
-    this.errorMessage = undefined;
-    this.firebaseAccessKeys = status;
-    this.sections = buildStatusTreeSections(this.report, {
-      firebaseHostEndpoint: this.firebaseHostEndpoint,
-      firebaseAuthStatus: this.firebaseAuthStatus,
-      firebaseAccessKeys: this.firebaseAccessKeys,
     });
     this.changeEmitter.fire(undefined);
   }

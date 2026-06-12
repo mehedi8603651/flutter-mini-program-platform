@@ -10,7 +10,6 @@ import {
   redactSecrets,
 } from '../diagnostics';
 import {
-  FirebaseAuthStatus,
   FirebaseHostEndpointStatus,
 } from '../statusTreeModel';
 
@@ -99,39 +98,6 @@ export function firebaseHostEndpointStatusFromHostCommand(
     hostAuthControllerConfigured: booleanValue(decoded.hostAuthControllerConfigured),
     hostSecureAuthControllerConfigured: booleanValue(decoded.hostSecureAuthControllerConfigured),
     hostDisposeAuthControllerConfigured: booleanValue(decoded.hostDisposeAuthControllerConfigured),
-    hostAuthIssues: stringArrayValue(decoded.hostAuthIssues),
-  };
-}
-
-export function firebaseAuthStatusFromCli(
-  decoded: Record<string, unknown>,
-): FirebaseAuthStatus {
-  return {
-    ready: booleanValue(decoded.ready),
-    deployEnvReady: booleanValue(decoded.deployEnvReady),
-    environmentName: stringValue(decoded.environmentName),
-    projectId: stringValue(decoded.projectId),
-    region: stringValue(decoded.region),
-    functionName: stringValue(decoded.functionName),
-    miniProgramId: stringValue(decoded.miniProgramId),
-    authWebApiKeyConfigured: booleanValue(decoded.authWebApiKeyConfigured),
-    scaffoldExists: booleanValue(decoded.scaffoldExists),
-    authServiceFileExists: booleanValue(decoded.authServiceFileExists),
-    routerAuthRoutesReady: booleanValue(decoded.routerAuthRoutesReady),
-    routerAllowsAuthorizationHeader: booleanValue(decoded.routerAllowsAuthorizationHeader),
-    packageJsonHasFirebaseAdmin: booleanValue(decoded.packageJsonHasFirebaseAdmin),
-    envAuthKeyConfigured: booleanValue(decoded.envAuthKeyConfigured),
-    envUsesReservedAuthKey: booleanValue(decoded.envUsesReservedAuthKey),
-    envFilePath: stringValue(decoded.envFilePath),
-    hostAuthChecked: booleanValue(decoded.hostAuthChecked),
-    hostProjectRootPath: stringValue(decoded.hostProjectRootPath),
-    hostAuthControllerReady: booleanValue(decoded.hostAuthControllerReady),
-    hostRuntimeSetupPath: stringValue(decoded.hostRuntimeSetupPath),
-    hostAuthControllerConfigured: booleanValue(decoded.hostAuthControllerConfigured),
-    hostSecureAuthControllerConfigured: booleanValue(decoded.hostSecureAuthControllerConfigured),
-    hostDisposeAuthControllerConfigured: booleanValue(decoded.hostDisposeAuthControllerConfigured),
-    issues: stringArrayValue(decoded.issues),
-    warnings: stringArrayValue(decoded.warnings),
     hostAuthIssues: stringArrayValue(decoded.hostAuthIssues),
   };
 }

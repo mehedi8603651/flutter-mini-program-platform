@@ -427,7 +427,7 @@ test('diagnostic output redacts access-key secrets', async () => {
   }
 });
 
-test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
+test('diagnostics warn when CLI lacks Publisher API support', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-cli-old-');
   try {
     const report = await buildDiagnosticsReport({
@@ -435,116 +435,49 @@ test('diagnostics warn when CLI lacks AWS write smoke support', async () => {
       scope: 'workspace',
       cliCapabilities: {
         checked: true,
-        supportsWriteSmoke: false,
-        supportsDataManagement: false,
-        detail: 'Configured CLI does not list --include-write.',
-      },
-    });
-
-    const text = formatDiagnosticsReport(report);
-    assert.match(text, /CLI publisher backend commands/);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0/);
-    assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
-  } finally {
-    await rm(workspacePath, { recursive: true, force: true });
-  }
-});
-
-test('diagnostics warn when CLI lacks AWS data management support', async () => {
-  const workspacePath = await tempWorkspace('mini-program-diag-cli-027-');
-  try {
-    const report = await buildDiagnosticsReport({
-      workspacePath,
-      scope: 'workspace',
-      cliCapabilities: {
-        checked: true,
-        supportsWriteSmoke: true,
-        supportsDataManagement: false,
-        detail: 'Configured CLI does not expose AWS DynamoDB data export.',
-      },
-    });
-
-    const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0/);
-    assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
-  } finally {
-    await rm(workspacePath, { recursive: true, force: true });
-  }
-});
-
-test('diagnostics warn when CLI lacks Firebase write smoke support', async () => {
-  const workspacePath = await tempWorkspace('mini-program-diag-cli-firebase-write-');
-  try {
-    const report = await buildDiagnosticsReport({
-      workspacePath,
-      scope: 'workspace',
-      cliCapabilities: {
-        checked: true,
-        supportsWriteSmoke: true,
-        supportsAwsPagedRoutes: true,
-        supportsDataManagement: true,
-        supportsFirebaseOperations: true,
-        supportsFirebaseHostCommand: true,
-        supportsFirebaseHandoff: true,
-        supportsFirebaseStarterUi: true,
-        supportsFirebasePagedRoutes: true,
-        supportsFirebaseAuthStatus: true,
-        supportsFirebaseHostAuthDiagnostics: true,
+        supportsPublisherApiMock: false,
+        supportsPublisherBackendContract: false,
         supportsFirebaseHostingPublish: true,
-        supportsFirebaseWriteSmoke: false,
-        supportsFirebaseFirestoreData: true,
-        supportsFirebaseDataManagement: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.3.34',
-        detail: 'Configured CLI capabilities do not include Firebase write smoke.',
+        toolingVersion: '0.4.1',
+        detail: 'Configured CLI does not expose Publisher API commands.',
       },
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks the 0.3.42 CORS\/version metadata fix|missing mini_program_tooling 0.4.0/);
-    assert.match(text, /Firebase write smoke/);
-    assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
+    assert.match(text, /CLI Publisher API commands/);
+    assert.match(text, /missing provider-neutral Publisher API mock or contract commands/);
+    assert.match(text, /Activate the local mini_program_tooling package or update miniProgram\.cliPath/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
 
 test('diagnostics warn when CLI lacks quiet capability discovery', async () => {
-  const workspacePath = await tempWorkspace('mini-program-diag-cli-028-');
+  const workspacePath = await tempWorkspace('mini-program-diag-cli-quiet-');
   try {
     const report = await buildDiagnosticsReport({
       workspacePath,
       scope: 'workspace',
       cliCapabilities: {
         checked: true,
-        supportsWriteSmoke: true,
-        supportsAwsPagedRoutes: true,
-        supportsDataManagement: true,
-        supportsFirebaseOperations: true,
-        supportsFirebaseHostCommand: true,
-        supportsFirebaseHandoff: true,
-        supportsFirebaseStarterUi: true,
-        supportsFirebasePagedRoutes: true,
-        supportsFirebaseAuthStatus: true,
-        supportsFirebaseHostAuthDiagnostics: true,
+        supportsPublisherApiMock: true,
+        supportsPublisherBackendContract: true,
         supportsFirebaseHostingPublish: true,
-        supportsFirebaseWriteSmoke: true,
-        supportsFirebaseFirestoreData: true,
-        supportsFirebaseDataManagement: true,
         supportsCapabilityDiscovery: false,
-        toolingVersion: '0.3.42',
+        toolingVersion: '0.5.0',
       },
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /lacks 0.3.29 quiet capability discovery/);
-    assert.match(text, /Activate the local Mp engine mini_program_tooling package/);
+    assert.match(text, /supports Publisher API commands but lacks quiet capability discovery/);
+    assert.match(text, /Activate the local mini_program_tooling package or update miniProgram\.cliPath/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('diagnostics accept CLI with AWS data management support', async () => {
+test('diagnostics accept CLI with Publisher API support', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-cli-new-');
   try {
     const report = await buildDiagnosticsReport({
@@ -552,37 +485,25 @@ test('diagnostics accept CLI with AWS data management support', async () => {
       scope: 'workspace',
       cliCapabilities: {
         checked: true,
-        supportsWriteSmoke: true,
-        supportsAwsPagedRoutes: true,
-        supportsDataManagement: true,
-        supportsFirebaseOperations: true,
-        supportsFirebaseHostCommand: true,
-        supportsFirebaseHandoff: true,
-        supportsFirebaseStarterUi: true,
-        supportsFirebasePagedRoutes: true,
-        supportsFirebaseAuthStatus: true,
-        supportsFirebaseHostAuthDiagnostics: true,
+        supportsPublisherApiMock: true,
+        supportsPublisherBackendContract: true,
         supportsFirebaseHostingPublish: true,
-        supportsFirebaseWriteSmoke: true,
-        supportsFirebaseFirestoreData: true,
-        supportsFirebaseDataManagement: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.4.1',
+        toolingVersion: '0.5.0',
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(
       text,
-      /Configured CLI supports AWS DynamoDB, AWS\/Firebase paged routes, Firebase Firestore, Firebase host integration, Firebase handoff, Firebase starter UI, Firebase auth diagnostics, Firebase write smoke, Firebase Hosting CORS publish, and quiet capability discovery/,
+      /Configured CLI supports Publisher API mock, provider-neutral contract handoff, Firebase Hosting static delivery, and quiet capability discovery/,
     );
-    assert.match(text, /Version: 0.4.1/);
-    assert.doesNotMatch(text, /mini_program_tooling 0.4.0/);
+    assert.match(text, /Version: 0.5.0/);
+    assert.doesNotMatch(text, /missing provider-neutral Publisher API/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
-
 async function tempWorkspace(prefix: string): Promise<string> {
   return mkdtemp(path.join(tmpdir(), prefix));
 }

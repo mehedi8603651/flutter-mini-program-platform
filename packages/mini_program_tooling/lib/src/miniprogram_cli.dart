@@ -37,8 +37,6 @@ part 'cli/env_commands.dart';
 part 'cli/backend_commands.dart';
 part 'cli/publisher_backend_commands.dart';
 part 'cli/publisher_backend_contract_commands.dart';
-part 'cli/publisher_backend_aws_commands.dart';
-part 'cli/publisher_backend_firebase_commands.dart';
 part 'cli/firebase_host_diagnostics.dart';
 part 'cli/shared_helpers.dart';
 part 'cli/usage_helpers.dart';
@@ -169,6 +167,11 @@ class MiniprogramCli {
           return await _runBackend(arguments.sublist(1));
         case 'publisher-backend':
           return await _runPublisherBackend(arguments.sublist(1));
+        case 'publisher-api':
+          return await _runPublisherBackend(
+            arguments.sublist(1),
+            commandName: 'publisher-api',
+          );
         default:
           _stderr.writeln('Unknown command: ${arguments.first}');
           _stderr.writeln(_rootUsage());

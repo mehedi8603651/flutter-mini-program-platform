@@ -6,7 +6,7 @@ Portable mini-program platform built around:
 - a shared Flutter runtime SDK
 - Mp JSON-authored portable UI
 - local and AWS cloud delivery
-- Firebase Functions publisher backend support
+- provider-neutral Publisher API / middle-server backend integration
 - controlled host-native bridges
 
 The project goal is simple:
@@ -48,15 +48,15 @@ Already shipped:
 - opt-in mock publisher backend starter with backend-bound starter UI for local
   business API testing
 - AWS cloud publishing through S3
-- AWS API Gateway + Lambda cloud backend deployment
-- Firebase Functions + Firestore publisher backend scaffold, deploy, smoke,
-  seed/data status, export/import/redemptions, guarded destroy, handoff
-  packages, paged backend list routes, and host wiring
+- AWS delivery API through API Gateway + Lambda for manifests, screen JSON,
+  static artifacts, and access-key protected delivery
+- provider-neutral Publisher API contract, smoke, and handoff flow for any
+  publisher-owned HTTPS backend
 - Firebase Hosting static delivery publish for Firebase-owned public
   mini-program artifacts
 - host-app cloud binding and `host run`
-- VS Code Firebase host wiring and handoff workflows with `hostEndpointReady`
-  diagnostics
+- VS Code host wiring, Publisher API contract, mock API, and handoff workflows
+  with endpoint diagnostics
 - target-aware local runtime defaults for:
   - Android emulator
   - Windows desktop
@@ -69,15 +69,14 @@ Already shipped:
   - Android Wi-Fi over LAN
 
 The current system is strongest for **local developer workflows**,
-**AWS-backed cloud delivery**, **Firebase publisher-owned business backends**,
-and **portable Flutter-hosted mini-programs**.
+**AWS-backed delivery**, **provider-neutral middle-server APIs**, and
+**portable Flutter-hosted mini-programs**.
 
-Provider-neutral standalone APIs are also supported through host handoff
-configuration. Mini-program screens use relative endpoints such as
-`scholarships/page`; the host endpoint map supplies `backendBaseUrl`, for
-example `https://api.publisher.example`, and the SDK calls that HTTPS API
-without adding Firebase, AWS, database, payment, or provider SDKs to the host
-app. See the
+Mini-program screens use relative endpoints such as `scholarships/page`; the
+host endpoint map supplies `backendBaseUrl`, for example
+`https://api.publisher.example`, and the SDK calls that HTTPS API without
+adding Firebase, AWS, database, payment, or provider SDKs to the mini-program
+or host app. See the
 [Publisher backend HTTPS API roadmap](docs/publisher_backend_https_api_roadmap.md)
 for the contract and command flow.
 
@@ -85,10 +84,6 @@ Future-only roadmap is tracked in:
 
 - [nextWorkAgents.md](nextWorkAgents.md)
 - [Mp JSON engine roadmap](docs/mp_json_engine_roadmap.md)
-
-New Firebase developers should start with:
-
-- [Firebase end-to-end guide](docs/firebase_end_to_end_guide.md)
 
 Mp engine migration developers should also read:
 
@@ -235,9 +230,9 @@ Mini-program publishers and host app developers can be different teams.
 The publisher owns:
 
 - mini-program source and static delivery artifacts
-- AWS Lambda or Firebase Functions publisher backend
-- DynamoDB or Firestore data
-- backend logs, deployment, cleanup, and secrets
+- a publisher-owned HTTPS API for auth, database, payments, files, business
+  rules, admin logic, and secrets
+- the cloud/provider implementation behind that API, if any
 - MiniProgram access keys when protected delivery is used
 
 The host app developer owns:
@@ -256,10 +251,10 @@ The handoff boundary should stay small:
 - optional publisher backend base URL for business data
 
 Host apps should not need Firebase login, Firebase project access, AWS
-credentials, Firebase Admin SDKs, or publisher backend secrets. Current tooling
-supports provider-neutral partner packages and host endpoint imports, including
-Firebase handoff packages that combine Firebase backend outputs with a delivery
-URL in the same host-importable format.
+credentials, Firebase Admin SDKs, database SDKs, payment secrets, or publisher
+backend secrets. Current tooling supports provider-neutral partner packages and
+host endpoint imports that combine delivery URLs with optional Publisher API
+base URLs in the same host-importable format.
 
 ## Preferred Developer Entry Point
 
@@ -286,7 +281,7 @@ miniprogram create <mini-program-id> [--with-backend mock]
 miniprogram doctor
 miniprogram env init
 miniprogram env configure <env-name> --provider aws --bucket <bucket> --region <region> [--aws-profile <profile>] [--require-access-keys]
-miniprogram env configure <env-name> --provider firebase --project-id <project-id> [--region us-central1] [--function-name publisherBackend] [--auth-web-api-key <firebase-web-api-key>]
+miniprogram env configure <env-name> --provider firebase --project-id <project-id>
 miniprogram env list
 miniprogram env use <local|env-name>
 miniprogram env status
@@ -299,9 +294,10 @@ miniprogram publisher-backend run --port 9090
 miniprogram publisher-backend status
 miniprogram publisher-backend stop
 miniprogram publisher-backend urls
-miniprogram publisher-backend scaffold --template aws-lambda|firebase-functions [--storage dynamodb|firestore] [--with-starter-ui]
-miniprogram publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-miniprogram publisher-backend firebase deploy|status|outputs|host-command|handoff|starter-ui|access-key|auth|smoke|seed|data|destroy --env <env-name>
+miniprogram publisher-api contract init --backend-base-url <publisher-api-url> [--public]
+miniprogram publisher-api contract validate
+miniprogram publisher-api contract smoke [--access-key <key>] [--auth-token <token>]
+miniprogram publisher-api contract handoff --delivery-url <delivery-url> (--public|--access-key <key>)
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
@@ -318,107 +314,83 @@ miniprogram backend reset-local --yes
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
 
-## Firebase Full System Quickstart
+## Publisher API / Middle-Server Quickstart
 
-This is the current end-to-end Firebase path for separate mini-program
-publisher and host-app developer teams.
+This is the preferred backend model.
 
-For the full new-developer walkthrough, including Firebase Console setup, VS
-Code commands, protected handoff, host import, and troubleshooting, see
-[Firebase end-to-end guide](docs/firebase_end_to_end_guide.md).
+The mini-program is frontend/authored UI. It may call a publisher-owned HTTPS
+API, but it should not contain database SDKs, payment secrets, admin logic,
+provider credentials, or provider-specific backend code. The publisher can build
+that API on AWS Lambda, Firebase Functions, Cloud Run, Docker, Kubernetes, a VPS,
+or any other provider. The mini-program and host only know the API base URL and
+relative endpoints.
 
 Publisher workspace:
 
-1. Create a normal mini-program:
+1. Create the mini-program:
 
    ```powershell
-   miniprogram create firebase_full_demo --output-root D:\firebase_full_demo --title "Firebase Full Demo"
+   miniprogram create rewards_center --output-root D:\rewards_center --title "Rewards Center"
    ```
 
-2. Scaffold Firebase Functions + Firestore. For a new production-shaped demo,
-   generate the backend and matching starter UI together:
+2. During local development, use the mock Publisher API if you need a backend
+   shape before your real middle server is ready:
 
    ```powershell
-   miniprogram publisher-backend scaffold `
-     --template firebase-functions `
-     --storage firestore `
-     --with-starter-ui `
-     --mini-program-root D:\firebase_full_demo
+   miniprogram publisher-backend scaffold --template mock --mini-program-root D:\rewards_center
+   miniprogram publisher-backend run --mini-program-root D:\rewards_center --port 9090
    ```
 
-   For an existing Firebase scaffold, use
-   `miniprogram publisher-backend firebase starter-ui --mini-program-root D:\firebase_full_demo`.
-   Add `--force` only when you want generated starter screen and seed JSON files
-   to replace local versions.
+3. Build your real middle server independently. Its public contract should be
+   HTTPS JSON endpoints. Keep all provider-specific auth, database, storage,
+   payment, business rules, admin logic, logs, and secrets on that server.
 
-3. Configure Firebase. Include the Firebase Web API key when publisher-owned
-   email/password auth is needed:
+4. Create and verify the provider-neutral contract:
 
    ```powershell
-   miniprogram env configure my-firebase-prod `
-     --provider firebase `
-     --project-id miniprogram-backend-test `
-     --region us-central1 `
-     --function-name publisherBackend `
-     --auth-web-api-key "<firebase-web-api-key>"
+   miniprogram publisher-api contract init `
+     --mini-program-root D:\rewards_center `
+     --backend-base-url https://api.publisher.example `
+     --public
+
+   miniprogram publisher-api contract validate --mini-program-root D:\rewards_center
+   miniprogram publisher-api contract smoke --mini-program-root D:\rewards_center
    ```
 
-4. Edit portable UI in `mp/screens/<appId>_home.dart`. Edit Firestore seed
-   source data in:
+5. Author UI with backend-relative endpoints. Use `Mp.lazy.chunk(...)` for
+   repeated large backend data such as products, posts, orders, messages,
+   reviews, histories, galleries, comments, and feeds. Use detail pages and
+   small local/static lists without `Mp.lazy.chunk`.
 
-   ```text
-   backend/firebase_functions/functions/data/home_bootstrap.json
-   backend/firebase_functions/functions/data/coupons_list.json
-   backend/firebase_functions/functions/data/session.json
-   ```
-
-   Use `Mp.backendBuilder(...)` for single publisher backend reads,
-   `Mp.lazy.chunk(...)` for repeated backend data with Load more,
-   `Mp.pagedBackendBuilder(...)` for direct paged backend lists, and
-   `Mp.authBuilder(...)` with `Mp.auth.*` actions for email sign-in/sign-up/
-   sign-out UI. Do not edit `mp/.build` directly.
-
-5. Deploy backend, seed Firestore, and verify:
+6. Publish delivery artifacts to local/static/AWS/Firebase Hosting as needed:
 
    ```powershell
-   miniprogram publisher-backend firebase deploy --env my-firebase-prod --mini-program-root D:\firebase_full_demo
-   miniprogram publisher-backend firebase seed --env my-firebase-prod --mini-program-root D:\firebase_full_demo
-   miniprogram publisher-backend firebase smoke --env my-firebase-prod --mini-program-root D:\firebase_full_demo
-   miniprogram publisher-backend firebase auth status --env my-firebase-prod --mini-program-root D:\firebase_full_demo
+   miniprogram build --mini-program-root D:\rewards_center
+   miniprogram validate --mini-program-root D:\rewards_center
+   miniprogram publish --target static --mini-program-root D:\rewards_center --clean
    ```
 
-6. Publish static delivery to Firebase Hosting:
+7. Create the handoff package for a host app:
 
    ```powershell
-   miniprogram publish --target firebase-hosting --env my-firebase-prod --mini-program-root D:\firebase_full_demo --clean
-   ```
-
-7. Create a protected publisher access key per host company, then create the
-   provider-neutral handoff package:
-
-   ```powershell
-   miniprogram publisher-backend firebase access-key create --env my-firebase-prod --mini-program-root D:\firebase_full_demo --key-id company-a
-
-   miniprogram publisher-backend firebase handoff `
-     --env my-firebase-prod `
-     --mini-program-root D:\firebase_full_demo `
-     --delivery-url https://miniprogram-backend-test.web.app/ `
-     --access-key "<access-key-shown-once>" `
-     --output D:\firebase_full_demo\firebase_full_demo-my-firebase-prod-company-a.partner.json
+   miniprogram publisher-api contract handoff `
+     --mini-program-root D:\rewards_center `
+     --delivery-url https://cdn.example.com/rewards_center/ `
+     --public `
+     --output D:\rewards_center\rewards_center.partner.json
    ```
 
 Give only the `.partner.json` file to the host app developer. It contains the
-delivery URL, backend URL, access mode, and MiniProgram access key. It does not
-contain Firebase credentials, Firebase Web API keys, service accounts, or
-publisher backend secrets.
+delivery URL, optional Publisher API URL, access mode, and optional MiniProgram
+access key. It does not contain cloud provider credentials or backend secrets.
 
 Host workspace:
 
-1. Create a Flutter host app and initialize the MiniProgram adapter:
+1. Initialize the Flutter host adapter:
 
    ```powershell
-   flutter create D:\firebase_full_host
-   cd D:\firebase_full_host
+   flutter create D:\rewards_host
+   cd D:\rewards_host
    miniprogram embed init
    flutter pub get
    ```
@@ -426,38 +398,11 @@ Host workspace:
 2. Import the handoff package:
 
    ```powershell
-   miniprogram host endpoint import D:\firebase_full_demo\firebase_full_demo-my-firebase-prod-company-a.partner.json --project-root D:\firebase_full_host
+   miniprogram host endpoint import D:\rewards_center\rewards_center.partner.json --project-root D:\rewards_host
    ```
 
-3. Wrap the app in `MiniProgramScope` and open by app id:
-
-   ```dart
-   MiniProgramScope(
-     config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-     child: const MyApp(),
-   )
-   ```
-
-   ```dart
-   openAppMiniProgram(
-     context,
-     appId: 'firebase_full_demo',
-     title: 'Firebase Full Demo',
-   );
-   ```
-
-4. Run and test:
-
-   ```powershell
-   flutter run -d chrome
-   ```
-
-The host app does not need Firebase login, Firebase project access, Firebase
-SDK configuration, or publisher backend secrets. New host apps generated by
-tooling use `mini_program_sdk: ^0.3.6`, which includes SDK email/password auth
-UI, secure cached login on Android/iOS, and lower-security web persistence for
-local/web testing.
-
+3. Run the host app and open the mini-program from the generated registry or
+   your own host navigation.
 ## Local Developer Workflow
 
 ### 1. Create a mini-program
@@ -750,34 +695,28 @@ Where those optional URLs come from:
 Current cloud support in this phase:
 
 - provider implementation shipped: `aws`
-- Firebase delivery support shipped: Functions + Firestore publisher backend,
-  publisher-owned email auth, handoff packages, and Firebase Hosting static
-  delivery publish
+- Firebase Hosting support is static delivery only
+- publisher-owned business backend integration is provider-neutral through
+  `publisher-api contract ...`
 - planned next providers: `gcp`
 - planned next providers: `custom-s3-compatible`
 
-Firebase support is publisher-owned: the mini-program publisher deploys Cloud
-Functions, manages Firestore data, publishes static delivery to Firebase
-Hosting, and hands the host app a provider-neutral `.partner.json` package:
+Firebase Hosting can publish public static mini-program artifacts. If the
+mini-program needs auth, database, payment, storage, or business rules, point the
+host endpoint at your own Publisher API:
 
 ```powershell
-miniprogram publisher-backend scaffold --template firebase-functions --storage firestore
-miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id> --region us-central1 --auth-web-api-key <firebase-web-api-key>
-miniprogram publisher-backend firebase deploy --env my-firebase-prod
-miniprogram publisher-backend firebase seed --env my-firebase-prod
-miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-write
-miniprogram publisher-backend firebase smoke --env my-firebase-prod --include-auth --auth-email <test-email> --auth-password <test-password> --auth-create-user
-miniprogram publisher-backend firebase data export --env my-firebase-prod --include-redemptions
+miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id>
 miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
-miniprogram publisher-backend firebase handoff --env my-firebase-prod --delivery-url https://<project-id>.web.app/ --public --output <app>.partner.json
+miniprogram publisher-api contract init --backend-base-url https://api.publisher.example --public
+miniprogram publisher-api contract smoke
+miniprogram publisher-api contract handoff --delivery-url https://<project-id>.web.app/ --public --output <app>.partner.json
 ```
 
 The Flutter host app receives only the delivery URL and optional publisher
-backend URL through the `.partner.json` package. It does not need Firebase
-credentials, the Firebase Web API key, or Firebase SDKs unless the host app
-itself chooses to use Firebase for unrelated host features. Email/password auth
-is handled by the publisher backend and consumed by the SDK through bearer
-tokens.
+API URL through the `.partner.json` package. It does not need Firebase
+credentials, Firebase Web API keys, provider SDKs, or backend secrets unless the
+host app itself chooses those providers for unrelated host features.
 
 One cloud environment can serve many mini-programs. The recommended layout is
 one bucket per environment, for example one production bucket and one staging

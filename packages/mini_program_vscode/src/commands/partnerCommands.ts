@@ -8,13 +8,10 @@ import {
   buildAccessKeyRotateArgs,
   buildHostEndpointAddArgs,
   buildPartnerPackageArgs,
-  buildPublisherBackendAwsOutputsArgs,
   buildPublisherBackendUrlsArgs,
   formatCommandLine,
 } from '../cli';
-import {
-  titleFromAppId as hostTitleFromAppId,
-} from '../hostIntegration';
+import { titleFromAppId as hostTitleFromAppId } from '../hostIntegration';
 
 import {
   chooseEndpointAccessMode,
@@ -22,102 +19,20 @@ import {
   choosePartnerPackageOutputPath,
   configuredCliPath,
   errorMessage,
-  parseJsonObject,
   promptAppId,
   promptKeyId,
   promptOptionalEnvName,
   promptOptionalPublisherBackendBaseUrl,
-  promptPublisherBackendAwsEnvName,
   requireMiniProgramRoot,
   requireWorkspacePath,
   runCliCapture,
   runCliCommand,
-  stringValue,
   titleFromAppId,
   validateAbsoluteUrl,
   validateAppId,
   validatePartnerPackageJson,
   validatePort,
 } from '../extensionSupport';
-
-export async function copyAwsBackendHostCommand(
-  output: vscode.OutputChannel,
-): Promise<void> {
-  const workspacePath = await requireMiniProgramRoot();
-  if (!workspacePath) {
-    return;
-  }
-  const envName = await promptPublisherBackendAwsEnvName(workspacePath);
-  if (!envName) {
-    return;
-  }
-  const appId = await promptAppId();
-  if (!appId) {
-    return;
-  }
-  const title = await vscode.window.showInputBox({
-    prompt: 'Mini-program display title',
-    value: hostTitleFromAppId(appId),
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
-  });
-  if (!title) {
-    return;
-  }
-  const apiBaseUrl = await vscode.window.showInputBox({
-    prompt: 'Mini-program delivery API base URL',
-    placeHolder: 'https://cdn.example.com/public_mini_program/',
-    ignoreFocusOut: true,
-    validateInput: validateAbsoluteUrl,
-  });
-  if (!apiBaseUrl) {
-    return;
-  }
-  const result = await runCliCapture(
-    'Publisher Backend AWS Outputs',
-    buildPublisherBackendAwsOutputsArgs({
-      envName,
-      miniProgramRoot: workspacePath,
-      json: true,
-    }),
-    workspacePath,
-    output,
-    { allowNonZeroExit: false },
-  );
-  if (!result) {
-    return;
-  }
-  const json = parseJsonObject(result.stdout);
-  const outputs = json.outputs && typeof json.outputs === 'object'
-    ? (json.outputs as Record<string, unknown>)
-    : {};
-  const backendBaseUrl =
-    stringValue(json.backendBaseUrl) ??
-    stringValue(outputs.PublisherBackendBaseUrl);
-  if (!backendBaseUrl) {
-    vscode.window.showErrorMessage(
-      'PublisherBackendBaseUrl was not found. Deploy the AWS publisher backend first.',
-    );
-    return;
-  }
-  const args = buildHostEndpointAddArgs({
-    appId,
-    title: title.trim(),
-    apiBaseUrl: apiBaseUrl.trim(),
-    public: true,
-    backendBaseUrl,
-    projectRoot: '.',
-  }).filter((arg, index, all) => {
-    return !(arg === '--project-root' || all[index - 1] === '--project-root');
-  });
-  const command = formatCommandLine(configuredCliPath(), args);
-  await vscode.env.clipboard.writeText(command);
-  output.show(true);
-  output.appendLine('');
-  output.appendLine('Copied AWS publisher backend host command:');
-  output.appendLine(command);
-  vscode.window.showInformationMessage('AWS backend host command copied.');
-}
 
 export async function copyPublisherBackendUrls(
   output: vscode.OutputChannel,
@@ -127,7 +42,7 @@ export async function copyPublisherBackendUrls(
     return;
   }
   const port = await vscode.window.showInputBox({
-    prompt: 'Publisher backend local port',
+    prompt: 'Mock Publisher API local port',
     value: '9090',
     ignoreFocusOut: true,
     validateInput: validatePort,
@@ -136,7 +51,7 @@ export async function copyPublisherBackendUrls(
     return;
   }
   const result = await runCliCapture(
-    'Publisher Backend URLs',
+    'Mock Publisher API URLs',
     buildPublisherBackendUrlsArgs({ port: port.trim() }),
     workspacePath,
     output,
@@ -150,7 +65,7 @@ export async function copyPublisherBackendUrls(
   output.show(true);
   output.appendLine('');
   output.appendLine(text);
-  vscode.window.showInformationMessage('Publisher backend URLs copied.');
+  vscode.window.showInformationMessage('Mock Publisher API URLs copied.');
 }
 
 export async function copyMockBackendHostCommand(): Promise<void> {
@@ -521,7 +436,7 @@ export async function validatePartnerPackageFile(
     output.appendLine(`App ID: ${decoded.appId}`);
     output.appendLine(`Title: ${decoded.title ?? ''}`);
     output.appendLine(`API base URL: ${decoded.apiBaseUrl}`);
-    output.appendLine(`Publisher backend URL: ${decoded.backendBaseUrl ?? 'not configured'}`);
+    output.appendLine(`Publisher API URL: ${decoded.backendBaseUrl ?? 'not configured'}`);
     output.appendLine(`Access mode: ${decoded.accessMode ?? 'protected'}`);
     output.appendLine(`Access key: ${decoded.accessKey ? '<redacted>' : 'not required'}`);
     vscode.window.showInformationMessage('Partner package looks valid.');

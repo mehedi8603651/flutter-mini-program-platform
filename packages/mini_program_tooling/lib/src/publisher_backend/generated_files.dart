@@ -1,84 +1,5 @@
 part of '../publisher_backend_starter.dart';
 
-Map<String, String> buildAwsLambdaPublisherBackendFiles({
-  required String miniProgramRootPath,
-  String? miniProgramId,
-  String? title,
-  String storageMode = 'bundled',
-}) {
-  if (!const <String>[
-    _publisherBackendStorageBundled,
-    _publisherBackendStorageDynamoDb,
-  ].contains(storageMode)) {
-    throw PublisherBackendException(
-      'Unsupported AWS Lambda publisher backend storage mode: $storageMode',
-    );
-  }
-  final appId = miniProgramId?.trim().isNotEmpty == true
-      ? miniProgramId!.trim()
-      : _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
-  final displayTitle = title?.trim().isNotEmpty == true
-      ? title!.trim()
-      : _titleFromAppId(appId);
-  final sampleFiles = buildMockPublisherBackendFiles(
-    miniProgramRootPath: miniProgramRootPath,
-    miniProgramId: appId,
-    title: displayTitle,
-  );
-  return <String, String>{
-    'template.yaml': _awsLambdaTemplateYaml(
-      displayTitle,
-      appId: appId,
-      storageMode: storageMode,
-    ),
-    'README.md': _awsLambdaReadme(appId, displayTitle, storageMode),
-    p.join('src', 'package.json'): _awsLambdaPackageJson(appId, storageMode),
-    p.join('src', 'handler.mjs'): _awsLambdaHandlerSource(),
-    p.join('src', 'data', 'home_bootstrap.json'):
-        sampleFiles[p.join('data', 'home_bootstrap.json')]!,
-    p.join('src', 'data', 'coupons_list.json'):
-        sampleFiles[p.join('data', 'coupons_list.json')]!,
-    p.join('src', 'data', 'session.json'):
-        sampleFiles[p.join('data', 'session.json')]!,
-  };
-}
-
-Map<String, String> buildFirebaseFunctionsPublisherBackendFiles({
-  required String miniProgramRootPath,
-  String? miniProgramId,
-  String? title,
-}) {
-  final appId = miniProgramId?.trim().isNotEmpty == true
-      ? miniProgramId!.trim()
-      : _readManifestIdSync(miniProgramRootPath) ?? 'mini_program';
-  final displayTitle = title?.trim().isNotEmpty == true
-      ? title!.trim()
-      : _titleFromAppId(appId);
-  final sampleFiles = buildMockPublisherBackendFiles(
-    miniProgramRootPath: miniProgramRootPath,
-    miniProgramId: appId,
-    title: displayTitle,
-  );
-  return <String, String>{
-    'firebase.json': _firebaseJson(),
-    '.firebaserc.example': _firebaseRcExample(),
-    'README.md': _firebaseFunctionsReadme(appId, displayTitle),
-    p.join('functions', 'package.json'): _firebaseFunctionsPackageJson(appId),
-    p.join('functions', 'index.js'): _firebaseFunctionsIndexSource(appId),
-    p.join('functions', 'router.js'): _firebaseFunctionsRouterSource(),
-    p.join('functions', 'auth_service.js'):
-        _firebaseFunctionsAuthServiceSource(),
-    p.join('functions', 'firestore_store.js'):
-        _firebaseFunctionsFirestoreStoreSource(),
-    p.join('functions', 'data', 'home_bootstrap.json'):
-        sampleFiles[p.join('data', 'home_bootstrap.json')]!,
-    p.join('functions', 'data', 'coupons_list.json'):
-        sampleFiles[p.join('data', 'coupons_list.json')]!,
-    p.join('functions', 'data', 'session.json'):
-        sampleFiles[p.join('data', 'session.json')]!,
-  };
-}
-
 Map<String, String> buildMockPublisherBackendFiles({
   required String miniProgramRootPath,
   String? miniProgramId,
@@ -132,3 +53,37 @@ Map<String, String> buildMockPublisherBackendFiles({
     }),
   };
 }
+
+String? _readManifestIdSync(String miniProgramRootPath) {
+  final manifestFile = File(p.join(miniProgramRootPath, 'manifest.json'));
+  if (!manifestFile.existsSync()) {
+    return null;
+  }
+  try {
+    final decoded = jsonDecode(manifestFile.readAsStringSync());
+    if (decoded is! Map) {
+      return null;
+    }
+    final appId = decoded['id']?.toString().trim();
+    return appId == null || appId.isEmpty ? null : appId;
+  } catch (_) {
+    return null;
+  }
+}
+
+String _titleFromAppId(String appId) {
+  final words = appId
+      .trim()
+      .split(RegExp(r'[._-]+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
+  if (words.isEmpty) {
+    return appId;
+  }
+  return words
+      .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
+      .join(' ');
+}
+
+String _prettyJson(Object? value) =>
+    const JsonEncoder.withIndent('  ').convert(value);

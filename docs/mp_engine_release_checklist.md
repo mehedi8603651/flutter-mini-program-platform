@@ -14,13 +14,13 @@ Recorded on 2026-06-05:
 | --- | --- | --- |
 | Base SDK excludes Stac and targeted transitives | Passed | `tools/verify_mp_engine_release.ps1` dependency check |
 | Mp-only Android arm64 size | Passed | `16,503,270` bytes, 26.3% below stable Stac baseline |
-| Firebase protected Mp host in Chrome | Passed | Live `miniprogram-backend-test` flow |
-| Firebase protected Mp host in Windows | Passed | Live `miniprogram-backend-test` flow |
-| AWS protected Mp host in Chrome | Passed | Protected delivery/backend and all Load more pages |
-| AWS protected Mp host in Windows | Passed | Protected delivery/backend and all Load more pages |
+| Firebase Hosting static delivery in Chrome | Needs current run | Static delivery only |
+| Firebase Hosting static delivery in Windows | Needs current run | Static delivery only |
+| AWS protected delivery in Chrome | Needs current run | Protected delivery and Publisher API contract |
+| AWS protected delivery in Windows | Needs current run | Protected delivery and Publisher API contract |
 | AWS protected Mp host on physical Android | Passed, user verified | Same imported protected handoff |
-| AWS publisher backend key enforcement | Passed | `200 / 401 / 403 / 200` security matrix |
-| Firebase protected Mp host on physical Android | Needs final recorded run | Emulator route was previously blocked by China/VPN HTTPS routing |
+| Publisher API contract smoke | Needs current run | Provider-neutral middle-server contract |
+| Firebase Hosting on physical Android | Needs final recorded run | Static delivery only |
 | iOS | Not claimed | Must be verified before claiming iOS support |
 
 ## 1. Clean Branch
@@ -70,17 +70,13 @@ powershell -ExecutionPolicy Bypass -File tools\verify_mp_engine_release.ps1
 - [ ] Unsupported formats and schema versions fail safely.
 - [ ] Mp-only host has no legacy adapter or Stac dependency.
 
-## 4. Firebase Live Gate
+## 4. Firebase Hosting Delivery Gate
 
 - [ ] Build and validate Mp mini-program.
-- [ ] Deploy Firebase publisher backend.
-- [ ] Seed Firestore without deleting existing data.
 - [ ] Publish static delivery to Firebase Hosting.
-- [ ] Create a dedicated partner access key.
-- [ ] Create and import protected handoff.
-- [ ] Protected smoke passes with the key.
-- [ ] Missing/invalid keys fail correctly.
-- [ ] Email auth and cached login work when the mini-program uses auth.
+- [ ] Create a Publisher API contract for the middle server if backend data is used.
+- [ ] Contract validate and smoke pass.
+- [ ] Create and import handoff.
 - [ ] Chrome host passes.
 - [ ] Windows host passes.
 - [ ] Physical Android host passes.
@@ -91,16 +87,16 @@ Use [Mp engine cloud end-to-end guide](mp_engine_cloud_e2e_guide.md).
 
 - [ ] Build and validate Mp mini-program.
 - [ ] Publish protected delivery to S3/API Gateway.
-- [ ] Deploy AWS publisher backend.
-- [ ] Seed DynamoDB without deleting existing data.
 - [ ] Create a dedicated partner access key.
+- [ ] Create a Publisher API contract for the middle server if backend data is used.
+- [ ] Contract validate and smoke pass.
 - [ ] Create and import protected handoff.
 - [ ] Protected smoke passes and does not expose the raw key.
 - [ ] Security matrix is `health 200`, missing key `401`, invalid key `403`,
       valid key `200`.
-- [ ] Chrome host loads protected backend data and every page.
-- [ ] Windows host loads protected backend data and every page.
-- [ ] Physical Android host loads protected backend data and every page.
+- [ ] Chrome host loads protected delivery and Publisher API data.
+- [ ] Windows host loads protected delivery and Publisher API data.
+- [ ] Physical Android host loads protected delivery and Publisher API data.
 
 Use [Mp engine cloud end-to-end guide](mp_engine_cloud_e2e_guide.md).
 
@@ -128,7 +124,7 @@ Record results in [Mp engine size baseline](mp_engine_size_baseline.md).
 
 - [ ] Root README describes Mp as the default engine.
 - [ ] Authoring docs cover `Mp.*`, auth, backend, paging, and navigation.
-- [ ] Firebase/AWS protected handoff docs match current CLI help.
+- [ ] Publisher API, AWS delivery, and Firebase Hosting docs match current CLI help.
 - [ ] Release checklist evidence is current.
 - [ ] Changelogs describe public behavior.
 - [ ] Package versions match the reviewed stable release versions.
@@ -140,7 +136,7 @@ reviewed for stable merge.
 
 ## 8. Final Merge Decision
 
-- [ ] Required Chrome, Windows, and Android provider gates pass.
+- [ ] Required Chrome, Windows, and Android delivery/API gates pass.
 - [ ] Known limitations are documented.
 - [ ] No live secret is present in Git history.
 - [ ] No destructive cloud command was used during verification.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Remove AWS/Firebase publisher business backend command palette and sidebar
+  actions.
+- Keep Firebase Hosting static delivery, AWS delivery, local mock Publisher API,
+  provider-neutral contract, host endpoint, access-key, and partner handoff
+  commands.
+- Rename visible backend guidance toward Publisher API / middle-server flows.
+
 ## 0.2.1
 
 - Make Mp-only create, host setup, and workflow status the default.

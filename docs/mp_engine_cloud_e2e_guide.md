@@ -1,302 +1,122 @@
-# Mp Engine Cloud End-To-End Guide
+# Mp Engine Cloud E2E Guide
 
-This guide verifies an Mp JSON mini-program through protected Firebase and AWS
-delivery, publisher backends, partner handoff, and a real Flutter host.
+This guide verifies the active cloud model:
 
-Use it from the release branch before publishing the Mp packages.
+- AWS cloud delivery for manifests, screens, assets, and access-key protected
+  delivery
+- Firebase Hosting as static delivery only
+- provider-neutral Publisher API contract, smoke, and handoff
+- Flutter host endpoint import and runtime smoke
 
-## Architecture
+It does not deploy AWS Lambda/DynamoDB or Firebase Functions/Firestore as
+publisher business backends. Those provider choices belong behind the
+publisher-owned HTTPS API.
 
-Each cloud-hosted mini-program has two URLs:
-
-- delivery API base URL: serves manifest, screen JSON, and assets
-- publisher backend base URL: serves business data, auth, paging, and writes
-
-A protected `.partner.json` handoff contains both URLs and one MiniProgram
-access key. The host imports the package and sends the key with delivery and
-publisher-backend requests. AWS can enforce the key on both services. Firebase
-Hosting remains public static delivery, while the Firebase Functions publisher
-backend enforces the key. Firebase credentials, AWS credentials, database
-credentials, and publisher secrets never go to the host app.
-
-## Local Branch Setup
-
-Activate the branch tooling:
+## 1. Create And Validate A Mini-Program
 
 ```powershell
-dart pub global activate --source path D:\flutter-mini-program-platform-mp-engine\packages\mini_program_tooling
-miniprogram capabilities --json
+miniprogram create mp_cloud_e2e --output-root D:\mp_cloud_e2e --screen-format mp
+miniprogram build --mini-program-root D:\mp_cloud_e2e
+miniprogram validate --mini-program-root D:\mp_cloud_e2e
 ```
 
-Confirm the CLI reports:
+Use `Mp.lazy.chunk(...)` for repeated large backend data. Use normal static
+widgets or detail builders for small/static/detail screens.
 
-```text
-mini_program_tooling 0.4.1
-publisher_backend.aws.access_key_enforcement
-```
-
-New hosts use plain `embed init`; the generated runtime is Mp-only.
-
-## Common Mp Publisher Checks
-
-Run these before either cloud flow:
+## 2. Run Local Mock Publisher API
 
 ```powershell
-miniprogram build --mini-program-root <mini-program-root>
-miniprogram validate --mini-program-root <mini-program-root>
-miniprogram workflow status --workspace <mini-program-root> --json
+miniprogram publisher-backend scaffold --template mock --mini-program-root D:\mp_cloud_e2e
+miniprogram publisher-backend run --mini-program-root D:\mp_cloud_e2e --port 9090
+miniprogram publisher-backend urls --port 9090
 ```
 
-Expected workflow status:
+The mock confirms local frontend/backend wiring. Production work should use a
+real middle server.
 
-```text
-screenFormat: mp
-screenSchemaVersion: 1
-entryScreenExists: true
-```
+## 3. Verify Publisher API Contract
 
-For a paged backend mini-program, also confirm backend/auth/paged usage is
-reported and the source uses `Mp.pagedBackendBuilder(...)` with
-`Mp.backend.loadMore(...)`.
-
-## Firebase Flow With Protected Publisher Backend
-
-For Firebase Console setup and Firebase-owned email auth, also read
-[Firebase end-to-end guide](firebase_end_to_end_guide.md).
-
-### 1. Scaffold And Configure
+For a local mock:
 
 ```powershell
-miniprogram publisher-backend scaffold `
-  --template firebase-functions `
-  --storage firestore `
-  --with-starter-ui `
-  --mini-program-root <mini-program-root>
+miniprogram publisher-api contract init `
+  --mini-program-root D:\mp_cloud_e2e `
+  --backend-base-url http://127.0.0.1:9090 `
+  --allow-local-http `
+  --public
 
-miniprogram env configure my-firebase-prod `
-  --provider firebase `
-  --project-id <firebase-project-id> `
-  --region us-central1 `
-  --function-name publisherBackend `
-  --auth-web-api-key "<firebase-web-api-key>"
+miniprogram publisher-api contract validate --mini-program-root D:\mp_cloud_e2e --allow-local-http
+miniprogram publisher-api contract smoke --mini-program-root D:\mp_cloud_e2e --allow-local-http
 ```
 
-### 2. Deploy, Seed, And Publish
+For a real API, use HTTPS:
 
 ```powershell
-miniprogram publisher-backend firebase deploy `
-  --env my-firebase-prod `
-  --mini-program-root <mini-program-root>
-
-miniprogram publisher-backend firebase seed `
-  --env my-firebase-prod `
-  --mini-program-root <mini-program-root>
-
-miniprogram publish `
-  --target firebase-hosting `
-  --env my-firebase-prod `
-  --mini-program-root <mini-program-root> `
-  --clean `
-  --json
+miniprogram publisher-api contract init `
+  --mini-program-root D:\mp_cloud_e2e `
+  --backend-base-url https://api.publisher.example `
+  --public
 ```
 
-Use the reported `.web.app` URL as the delivery URL.
-
-### 3. Create A Protected Handoff
-
-Create one key per host company or integration. Save the raw key securely when
-it is shown; it cannot be recovered later.
+## 4. Static Or Firebase Hosting Delivery
 
 ```powershell
-miniprogram publisher-backend firebase access-key create `
-  --env my-firebase-prod `
-  --mini-program-root <mini-program-root> `
-  --key-id company-a
-
-miniprogram publisher-backend firebase smoke `
-  --env my-firebase-prod `
-  --mini-program-root <mini-program-root> `
-  --access-key "<access-key-shown-once>"
-
-miniprogram publisher-backend firebase handoff `
-  --env my-firebase-prod `
-  --mini-program-root <mini-program-root> `
-  --delivery-url https://<firebase-project-id>.web.app/ `
-  --access-key "<access-key-shown-once>" `
-  --output <mini-program-root>\<app-id>.company-a.partner.json
+miniprogram publish --target static --mini-program-root D:\mp_cloud_e2e --output D:\mp_cloud_e2e\public_mini_program --clean
 ```
 
-Expected protected backend behavior:
-
-```text
-GET /health without key: 200
-Protected route without key: 401
-Protected route with invalid key: 403
-Protected route with valid key: 200
-```
-
-## Protected AWS Flow
-
-AWS uses:
-
-- S3 plus the delivery API Gateway/Lambda stack for mini-program delivery
-- a separate API Gateway/Lambda publisher backend for business data
-- one S3 access-key policy shared by protected delivery and publisher backend
-
-### 1. Configure Protected AWS Delivery
+Firebase Hosting:
 
 ```powershell
-miniprogram env configure my-aws-prod `
+miniprogram env configure firebase-prod --provider firebase --project-id <project-id>
+miniprogram publish --target firebase-hosting --env firebase-prod --mini-program-root D:\mp_cloud_e2e --clean
+```
+
+## 5. AWS Cloud Delivery
+
+```powershell
+miniprogram env configure aws-prod `
   --provider aws `
-  --bucket <globally-unique-s3-bucket> `
+  --bucket <unique-bucket> `
   --region <aws-region> `
-  --aws-profile <aws-profile> `
   --require-access-keys
 
-miniprogram env use my-aws-prod
-miniprogram cloud doctor --env my-aws-prod
+miniprogram cloud deploy --env aws-prod
+miniprogram publish --target cloud --env aws-prod --mini-program-root D:\mp_cloud_e2e
+miniprogram cloud outputs --env aws-prod
 ```
 
-### 2. Publish Delivery And Deploy Publisher Backend
+This AWS stack is delivery infrastructure. It is not the publisher business
+backend.
+
+## 6. Handoff And Host Smoke
 
 ```powershell
-miniprogram publish `
-  --target cloud `
-  --env my-aws-prod `
-  --mini-program-root <mini-program-root>
+miniprogram publisher-api contract handoff `
+  --mini-program-root D:\mp_cloud_e2e `
+  --delivery-url https://cdn.example.com/mp_cloud_e2e/ `
+  --public `
+  --output D:\mp_cloud_e2e\mp_cloud_e2e.partner.json
 
-miniprogram cloud deploy --env my-aws-prod
-miniprogram cloud outputs --env my-aws-prod
-
-miniprogram publisher-backend scaffold `
-  --template aws-lambda `
-  --storage dynamodb `
-  --mini-program-root <mini-program-root>
-
-miniprogram publisher-backend aws deploy `
-  --env my-aws-prod `
-  --mini-program-root <mini-program-root>
-
-miniprogram publisher-backend aws seed `
-  --env my-aws-prod `
-  --mini-program-root <mini-program-root>
-
-miniprogram publisher-backend aws outputs `
-  --env my-aws-prod `
-  --mini-program-root <mini-program-root> `
-  --json
+flutter create D:\mp_cloud_host
+miniprogram embed init --project-root D:\mp_cloud_host
+miniprogram host endpoint import D:\mp_cloud_e2e\mp_cloud_e2e.partner.json --project-root D:\mp_cloud_host
+miniprogram host run -d chrome --project-root D:\mp_cloud_host
 ```
 
-The generated AWS publisher backend reads the exact access-key policy object
-for the mini-program. `GET /health` remains public. Other publisher backend
-routes enforce the key when the policy exists.
+## Verification
 
-### 3. Create A Protected AWS Handoff
+Run:
 
 ```powershell
-miniprogram access-key create <app-id> `
-  --key-id company-a `
-  --env my-aws-prod
-
-miniprogram publisher-backend aws smoke `
-  --env my-aws-prod `
-  --mini-program-root <mini-program-root> `
-  --access-key "<access-key-shown-once>" `
-  --json
-
-miniprogram partner package <app-id> `
-  --title "<title>" `
-  --api-base-url "<delivery-api-base-url>" `
-  --backend-base-url "<publisher-backend-base-url>" `
-  --access-key "<access-key-shown-once>" `
-  --env my-aws-prod `
-  --output <mini-program-root>\<app-id>.company-a.partner.json
+miniprogram workflow status --workspace D:\mp_cloud_e2e --json
+miniprogram workflow status --workspace D:\mp_cloud_host --json
 ```
 
-The AWS smoke JSON reports only `accessKeyProvided: true`; it must never print
-the raw key.
+Expected result:
 
-Expected security matrix:
-
-```text
-GET /health without key: 200
-GET /home/bootstrap without key: 401
-GET /home/bootstrap with invalid key: 403
-GET /home/bootstrap with valid key: 200
-```
-
-## Provider-Neutral Host Flow
-
-The host developer receives only the `.partner.json` package:
-
-```powershell
-flutter create <host-root>
-
-miniprogram embed init --project-root <host-root>
-
-miniprogram host endpoint import `
-  <partner-package.json> `
-  --project-root <host-root>
-
-cd <host-root>
-flutter pub get
-flutter analyze
-flutter test
-```
-
-The host app must wrap its app with the generated endpoint configuration:
-
-```dart
-MiniProgramScope(
-  config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-  child: const MyApp(),
-)
-```
-
-Open the mini-program by app id:
-
-```dart
-openAppMiniProgram(
-  context,
-  appId: '<app-id>',
-  title: '<title>',
-);
-```
-
-Run the same imported handoff on each required platform:
-
-```powershell
-flutter run -d chrome
-flutter run -d windows
-flutter devices
-flutter run -d <physical-android-device-id>
-```
-
-Verify:
-
-- entry screen renders
-- protected publisher backend data loads
-- image assets load
-- auth UI works when used
-- every Load more page appends without replacing earlier items
-- no access key or auth token appears in logs
-
-## Secret Handling
-
-- Never commit `.partner.json` files containing protected access keys.
-- Never paste raw access keys into issues, logs, screenshots, or test output.
-- Use one key per partner.
-- Rotate or revoke a partner key without changing the app id.
-- Keep Firebase Web API keys, AWS credentials, and database credentials out of
-  mini-program JSON and host source.
-
-## Release Verification
-
-Run the repository verification script:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\verify_mp_engine_release.ps1
-```
-
-Then complete the live provider and platform gates in
-[Mp engine release checklist](mp_engine_release_checklist.md).
+- mini-program build and validation are ready
+- host endpoint import is ready
+- delivery URL points at the selected delivery target
+- optional Publisher API base URL points at the middle server
+- no provider credentials or backend secrets appear in mini-program JSON,
+  endpoint maps, partner packages, or logs

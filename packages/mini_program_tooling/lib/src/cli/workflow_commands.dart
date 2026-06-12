@@ -58,7 +58,6 @@ extension _MiniprogramCliWorkflowCommands on MiniprogramCli {
       validator: _validator,
       backendController: _backendController,
       cloudController: _cloudController,
-      publisherBackendStarter: _publisherBackendStarter,
     );
     final result = await controller.inspect(
       MiniProgramWorkflowStatusRequest(

@@ -25,15 +25,6 @@ import {
   useEnvironment,
 } from './commands/environmentCommands';
 import {
-  publisherBackendFirebaseAccessKeyCreate,
-  publisherBackendFirebaseAccessKeyList,
-  publisherBackendFirebaseAccessKeyRevoke,
-  publisherBackendFirebaseAccessKeyRotate,
-  publisherBackendFirebaseAuthStatus,
-  publisherBackendFirebaseHandoff,
-  publisherBackendFirebaseHostCommand,
-} from './commands/firebaseHostCommands';
-import {
   checkHostEndpointRemote,
   copyCleanupCommands,
   copyWorkflowCommands,
@@ -55,14 +46,12 @@ import {
   backendStart,
   backendStatus,
   backendStop,
-  publisherBackendFirebaseStarterUi,
   publisherBackendRun,
   publisherBackendSetup,
   publisherBackendStatus,
   publisherBackendStop,
 } from './commands/localBackendCommands';
 import {
-  copyAwsBackendHostCommand,
   copyMockBackendHostCommand,
   copyPublisherBackendUrls,
   createAccessKey,
@@ -74,38 +63,11 @@ import {
   validatePartnerPackage,
 } from './commands/partnerCommands';
 import {
-  publisherBackendAwsDataExport,
-  publisherBackendAwsDataImportDryRun,
-  publisherBackendAwsDataRedemptions,
-  publisherBackendAwsDataStatus,
-  publisherBackendAwsDeploy,
-  publisherBackendAwsDestroy,
-  publisherBackendAwsLogs,
-  publisherBackendAwsOutputs,
-  publisherBackendAwsSeed,
-  publisherBackendAwsSmoke,
-  publisherBackendAwsSmokeWrite,
-  publisherBackendAwsStatus,
-} from './commands/publisherBackendAwsCommands';
-import {
   publisherBackendContractHandoff,
   publisherBackendContractInit,
   publisherBackendContractSmoke,
   publisherBackendContractValidate,
 } from './commands/publisherBackendContractCommands';
-import {
-  publisherBackendFirebaseDataExport,
-  publisherBackendFirebaseDataImportDryRun,
-  publisherBackendFirebaseDataRedemptions,
-  publisherBackendFirebaseDataStatus,
-  publisherBackendFirebaseDeploy,
-  publisherBackendFirebaseDestroy,
-  publisherBackendFirebaseOutputs,
-  publisherBackendFirebaseSeed,
-  publisherBackendFirebaseSmoke,
-  publisherBackendFirebaseSmokeWrite,
-  publisherBackendFirebaseStatus,
-} from './commands/publisherBackendFirebaseCommands';
 import {
   autoRefreshEnabled,
   configuredCliPath,
@@ -281,102 +243,6 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('miniProgramTools.publisherBackendContractHandoff', () =>
       publisherBackendContractHandoff(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDeploy', () =>
-      publisherBackendAwsDeploy(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsStatus', () =>
-      publisherBackendAwsStatus(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsOutputs', () =>
-      publisherBackendAwsOutputs(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsSmoke', () =>
-      publisherBackendAwsSmoke(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsSmokeWrite', () =>
-      publisherBackendAwsSmokeWrite(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsSeed', () =>
-      publisherBackendAwsSeed(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataStatus', () =>
-      publisherBackendAwsDataStatus(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataExport', () =>
-      publisherBackendAwsDataExport(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataImportDryRun', () =>
-      publisherBackendAwsDataImportDryRun(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDataRedemptions', () =>
-      publisherBackendAwsDataRedemptions(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsLogs', () =>
-      publisherBackendAwsLogs(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendAwsDestroy', () =>
-      publisherBackendAwsDestroy(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDeploy', () =>
-      publisherBackendFirebaseDeploy(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseStatus', () =>
-      publisherBackendFirebaseStatus(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseOutputs', () =>
-      publisherBackendFirebaseOutputs(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHostCommand', () =>
-      publisherBackendFirebaseHostCommand(output, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseHandoff', () =>
-      publisherBackendFirebaseHandoff(output, () => refreshStatus(false), {}, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseStarterUi', () =>
-      publisherBackendFirebaseStarterUi(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyCreate', () =>
-      publisherBackendFirebaseAccessKeyCreate(output, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyList', () =>
-      publisherBackendFirebaseAccessKeyList(output, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyRevoke', () =>
-      publisherBackendFirebaseAccessKeyRevoke(output, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAccessKeyRotate', () =>
-      publisherBackendFirebaseAccessKeyRotate(output, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseAuthStatus', () =>
-      publisherBackendFirebaseAuthStatus(output, statusProvider),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmoke', () =>
-      publisherBackendFirebaseSmoke(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSmokeWrite', () =>
-      publisherBackendFirebaseSmokeWrite(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseSeed', () =>
-      publisherBackendFirebaseSeed(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataStatus', () =>
-      publisherBackendFirebaseDataStatus(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataExport', () =>
-      publisherBackendFirebaseDataExport(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataImportDryRun', () =>
-      publisherBackendFirebaseDataImportDryRun(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDataRedemptions', () =>
-      publisherBackendFirebaseDataRedemptions(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendFirebaseDestroy', () =>
-      publisherBackendFirebaseDestroy(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.copyAwsBackendHostCommand', () =>
-      copyAwsBackendHostCommand(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.copyPublisherBackendUrls', () =>
       copyPublisherBackendUrls(output),

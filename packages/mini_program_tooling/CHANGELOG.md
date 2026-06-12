@@ -1,4 +1,14 @@
 # Changelog
+## 0.5.0
+- remove active AWS/Firebase publisher business backend scaffolds and command
+  groups from the CLI
+- keep AWS cloud delivery and Firebase Hosting static delivery as delivery
+  infrastructure
+- add `publisher-api` wording for provider-neutral contract init, validate,
+  smoke, and handoff flows
+- keep the local mock Publisher API scaffold/run/status flow for frontend
+  development
+
 ## 0.4.2
 - bump generated host apps to `mini_program_sdk: ^0.4.2`
 - bump generated mini-program workspaces to `mini_program_ui: ^0.1.2`

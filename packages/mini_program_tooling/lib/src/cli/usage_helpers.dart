@@ -31,14 +31,13 @@ Commands:
   backend stop
   backend status [--json]
   backend reset-local --yes
-  publisher-backend scaffold --template mock|aws-lambda|firebase-functions [--storage bundled|dynamodb|firestore] [--with-starter-ui]
+  publisher-api contract init|validate|smoke|handoff [options]
+  publisher-backend scaffold --template mock
   publisher-backend contract init|validate|smoke|handoff [options]
   publisher-backend run --port 9090
   publisher-backend status [--json]
   publisher-backend stop
   publisher-backend urls
-  publisher-backend aws deploy|status|outputs|smoke|seed|data|logs|destroy --env <env-name>
-  publisher-backend firebase deploy|status|outputs|host-command|handoff|starter-ui|access-key|auth|smoke|seed|data|destroy --env <env-name>
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -51,11 +50,11 @@ Commands:
   status [--workspace <path>] [--env <env-name>] [--remote] [--json]
 ''';
 
-  String _publisherBackendUsage() => '''
-Usage: miniprogram publisher-backend <command> [arguments]
+  String _publisherBackendUsage({String commandName = 'publisher-backend'}) => '''
+Usage: miniprogram $commandName <command> [arguments]
 
 Commands:
-  scaffold [--template mock|aws-lambda|firebase-functions] [--storage bundled|dynamodb|firestore] [--mini-program-root <path>] [--force] [--with-starter-ui]
+  scaffold [--template mock] [--mini-program-root <path>] [--force]
   run [--mini-program-root <path>] [--port 9090]
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
@@ -64,35 +63,6 @@ Commands:
   contract validate [--mini-program-root <path>] [--contract <file>] [--json]
   contract smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--json]
   contract handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
-  aws deploy --env <env-name> [--mini-program-root <path>]
-  aws status --env <env-name> [--mini-program-root <path>] [--json]
-  aws outputs --env <env-name> [--mini-program-root <path>] [--json]
-  aws smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write]
-  aws seed --env <env-name> [--mini-program-root <path>] [--json]
-  aws data status --env <env-name> [--mini-program-root <path>] [--json]
-  aws data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
-  aws data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
-  aws data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
-  aws logs --env <env-name> [--mini-program-root <path>] [--since 1h]
-  aws destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
-  firebase deploy --env <env-name> [--mini-program-root <path>] [--json] [--no-public-invoker]
-  firebase status --env <env-name> [--mini-program-root <path>] [--json]
-  firebase outputs --env <env-name> [--mini-program-root <path>] [--json]
-  firebase host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
-  firebase handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
-  firebase starter-ui [--mini-program-root <path>] [--force] [--json]
-  firebase access-key create --env <env-name> --key-id <id> [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
-  firebase access-key list --env <env-name> [--mini-program-root <path>] [--json]
-  firebase access-key revoke --env <env-name> --key-id <id> [--mini-program-root <path>] [--json]
-  firebase access-key rotate --env <env-name> --key-id <id> [--new-key-id <id>] [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
-  firebase auth status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
-  firebase smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--include-auth] [--access-key <key>]
-  firebase seed --env <env-name> [--mini-program-root <path>] [--json]
-  firebase data status --env <env-name> [--mini-program-root <path>] [--json]
-  firebase data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
-  firebase data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
-  firebase data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
-  firebase destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
 ''';
 
   String _publisherBackendContractUsage() => '''
@@ -103,81 +73,6 @@ Commands:
   validate [--mini-program-root <path>] [--contract <file>] [--json]
   smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--json]
   handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
-''';
-
-  String _publisherBackendAwsUsage() => '''
-Usage: miniprogram publisher-backend aws <command> [arguments]
-
-Commands:
-  deploy --env <env-name> [--mini-program-root <path>] [--stack-name <name>] [--stage-name <stage>] [--sam-s3-bucket <bucket>]
-  status --env <env-name> [--mini-program-root <path>] [--json]
-  outputs --env <env-name> [--mini-program-root <path>] [--json]
-  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--access-key <key>]
-  seed --env <env-name> [--mini-program-root <path>] [--json]
-  data status --env <env-name> [--mini-program-root <path>] [--json]
-  data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
-  data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
-  data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
-  logs --env <env-name> [--mini-program-root <path>] [--since 1h]
-  destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
-''';
-
-  String _publisherBackendFirebaseUsage() => '''
-Usage: miniprogram publisher-backend firebase <command> [arguments]
-
-Commands:
-  deploy --env <env-name> [--mini-program-root <path>] [--json] [--no-public-invoker]
-  status --env <env-name> [--mini-program-root <path>] [--json]
-  outputs --env <env-name> [--mini-program-root <path>] [--json]
-  host-command --env <env-name> --api-base-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--host-project-root <path>] [--json]
-  handoff --env <env-name> --delivery-url <url> (--access-key <key>|--public) [--mini-program-root <path>] [--output <file>] [--json]
-  starter-ui [--mini-program-root <path>] [--force] [--json]
-  access-key create|list|revoke|rotate --env <env-name> [--mini-program-root <path>]
-  auth status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
-  smoke --env <env-name> [--mini-program-root <path>] [--json] [--include-write] [--include-auth] [--access-key <key>]
-  seed --env <env-name> [--mini-program-root <path>] [--json]
-  data status --env <env-name> [--mini-program-root <path>] [--json]
-  data export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
-  data import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
-  data redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
-  destroy --env <env-name> [--mini-program-root <path>] --yes [--confirm-data-loss]
-''';
-
-  String _publisherBackendFirebaseAccessKeyUsage() => '''
-Usage: miniprogram publisher-backend firebase access-key <command> [arguments]
-
-Commands:
-  create --env <env-name> --key-id <id> [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
-  list --env <env-name> [--mini-program-root <path>] [--json]
-  revoke --env <env-name> --key-id <id> [--mini-program-root <path>] [--json]
-  rotate --env <env-name> --key-id <id> [--new-key-id <id>] [--mini-program-root <path>] [--expires-at-utc <iso>] [--json]
-''';
-
-  String _publisherBackendFirebaseAuthUsage() => '''
-Usage: miniprogram publisher-backend firebase auth <command> [arguments]
-
-Commands:
-  status --env <env-name> [--mini-program-root <path>] [--host-project-root <path>] [--json]
-''';
-
-  String _publisherBackendFirebaseDataUsage() => '''
-Usage: miniprogram publisher-backend firebase data <command> [arguments]
-
-Commands:
-  status --env <env-name> [--mini-program-root <path>] [--json]
-  export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
-  import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
-  redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
-''';
-
-  String _publisherBackendAwsDataUsage() => '''
-Usage: miniprogram publisher-backend aws data <command> [arguments]
-
-Commands:
-  status --env <env-name> [--mini-program-root <path>] [--json]
-  export --env <env-name> [--mini-program-root <path>] [--output <file>] [--include-redemptions] [--json]
-  import --env <env-name> [--mini-program-root <path>] --input <file> [--include-redemptions] [--dry-run] [--json]
-  redemptions --env <env-name> [--mini-program-root <path>] [--coupon-id <id>] [--user-id <id>] [--limit 50] [--json]
 ''';
 
   String _partnerUsage() => '''

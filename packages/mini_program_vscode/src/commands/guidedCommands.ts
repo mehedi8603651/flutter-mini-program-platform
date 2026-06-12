@@ -49,7 +49,7 @@ import {
   choosePartnerPackageOutputPath,
   configuredCliPath,
   configuredDefaultPreviewDevice,
-  detectPublisherBackendAwsCli027,
+  detectPublisherApiCliCapabilities,
   diagnosticCommandTitle,
   errorMessage,
   extractAccessKey,
@@ -137,7 +137,7 @@ export async function diagnoseWorkspace(
     }
   }
 
-  const cliCapabilities = await detectPublisherBackendAwsCli027(
+  const cliCapabilities = await detectPublisherApiCliCapabilities(
     workspacePath,
     output,
   );
