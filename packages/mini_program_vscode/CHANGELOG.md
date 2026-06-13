@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- refresh extension wording around static artifact hosting and
+  provider-neutral Publisher API backend flows.
+
 ## 0.3.0
 
 - Remove AWS/Firebase publisher business backend command palette and sidebar

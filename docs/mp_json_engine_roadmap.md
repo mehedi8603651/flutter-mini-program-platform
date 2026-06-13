@@ -38,11 +38,11 @@ Use these reviewed release versions after the migration passes all release
 gates:
 
 ```text
-mini_program_contracts 0.2.1
-mini_program_ui 0.1.1
-mini_program_sdk 0.4.1
-mini_program_tooling 0.4.1
-mini_program_vscode 0.2.1
+mini_program_contracts 0.2.2
+mini_program_ui 0.1.3
+mini_program_sdk 0.4.3
+mini_program_tooling 0.5.1
+mini_program_vscode 0.3.1
 ```
 
 Before publishing, verify the release gates with path overrides in local host

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- refresh package wording around static artifact delivery and Publisher API
+  backends without changing wire values
+
 ## 0.2.1
 
 - default missing `screenFormat` to `mp` with schema version `1`

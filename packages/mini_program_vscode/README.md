@@ -14,7 +14,7 @@ Install or upgrade the CLI first:
 dart pub global activate mini_program_tooling
 ```
 
-This extension version targets `mini_program_tooling` 0.5.0 or newer.
+This extension version targets `mini_program_tooling` 0.5.1 or newer.
 
 Install from VS Code Marketplace:
 
@@ -126,7 +126,7 @@ cd packages/mini_program_vscode
 npm install
 npm run compile
 npm run package:vsix
-code --install-extension mini-program-tools-0.3.0.vsix
+code --install-extension mini-program-tools-0.3.1.vsix
 ```
 
 ## Security Boundary

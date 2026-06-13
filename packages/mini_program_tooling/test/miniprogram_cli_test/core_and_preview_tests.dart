@@ -137,7 +137,7 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('MiniProgram tooling capabilities.'),
     );
-    expect(stdoutBuffer.toString(), contains('Version: 0.5.0'));
+    expect(stdoutBuffer.toString(), contains('Version: 0.5.1'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
     expect(stdoutBuffer.toString(), contains('publisher_api.mock.scaffold'));
     expect(stdoutBuffer.toString(), contains('publisher_api.contract.handoff'));
@@ -165,7 +165,7 @@ void _registerCoreAndPreviewTests() {
     final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
     expect(json['schemaVersion'], 1);
     expect(json['command'], 'capabilities');
-    expect(json['toolingVersion'], '0.5.0');
+    expect(json['toolingVersion'], '0.5.1');
     expect(json['packageName'], 'mini_program_tooling');
     expect(json['capabilityIds'], contains('publish.firebase_hosting'));
     expect(json['capabilityIds'], contains('publisher_api.mock.scaffold'));

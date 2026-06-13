@@ -1,10 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.4.3
 
 - add `lazyChunk` Mp runtime rendering and `lazy.chunk.loadMore` actions for
   manual chunk/page loading with state mirroring, cache hydration, and in-flight
   guards
+- refresh SDK docs and user-facing messages around static artifact delivery and
+  Publisher API backends
 
 ## 0.4.2
 

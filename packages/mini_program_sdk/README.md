@@ -26,8 +26,8 @@ shared platform contracts.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.4.2
-  mini_program_contracts: ^0.2.1
+  mini_program_sdk: ^0.4.3
+  mini_program_contracts: ^0.2.2
 ```
 
 For monorepo contributor work, keep `pubspec_overrides.yaml` so the package

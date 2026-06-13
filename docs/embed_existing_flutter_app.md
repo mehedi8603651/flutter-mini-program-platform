@@ -67,8 +67,8 @@ old app already has a clear host-owned secure flow ready to integrate.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.3.0
-  mini_program_contracts: ^0.1.1
+  mini_program_sdk: ^0.4.3
+  mini_program_contracts: ^0.2.2
 ```
 
 `embed init` now patches `pubspec.yaml` to add or replace these dependencies for

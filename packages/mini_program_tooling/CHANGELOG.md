@@ -1,4 +1,10 @@
 # Changelog
+## 0.5.1
+- clean architecture wording around static frontend artifact delivery and
+  provider-neutral Publisher API backends
+- bump generated package constraints to the latest published mini-program
+  package versions
+
 ## 0.5.0
 - remove active AWS/Firebase publisher business backend scaffolds and command
   groups from the CLI
