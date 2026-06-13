@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.4
+
+- fix `Mp.scrollView` rendering so unbounded screen content is not clipped to
+  a fixed 420px viewport
+
 ## 0.4.3
 
 - add `lazyChunk` Mp runtime rendering and `lazy.chunk.loadMore` actions for

@@ -67,7 +67,7 @@ old app already has a clear host-owned secure flow ready to integrate.
 
 ```yaml
 dependencies:
-  mini_program_sdk: ^0.4.3
+  mini_program_sdk: ^0.4.4
   mini_program_contracts: ^0.2.2
 ```
 

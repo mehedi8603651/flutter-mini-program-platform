@@ -681,7 +681,7 @@ void _mpScreenRendererTests() {
       expect(find.text('Featured'), findsOneWidget);
       expect(find.text('Beta'), findsOneWidget);
       expect(find.byType(Icon), findsWidgets);
-      expect(find.byType(SingleChildScrollView), findsAtLeastNWidgets(2));
+      expect(find.byType(SingleChildScrollView), findsAtLeastNWidgets(1));
       expect(
         find.byWidgetPredicate(
           (widget) => widget is SizedBox && widget.height == 2,
@@ -698,6 +698,41 @@ void _mpScreenRendererTests() {
       expect(find.text('Profile: true Featured: true'), findsOneWidget);
 
       stateManager.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('does not clamp unbounded scrollView content height', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.scrollView(
+              child: Mp.column(
+                children: <MpNode>[
+                  Mp.sizedBox(height: 500),
+                  Mp.text('Below old clamp'),
+                ],
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+
+      expect(find.text('Below old clamp'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is ConstrainedBox && widget.constraints.maxHeight == 420,
+        ),
+        findsNothing,
+      );
+
       backendStore.dispose();
     });
 

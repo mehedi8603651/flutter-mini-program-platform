@@ -1,4 +1,8 @@
 # Changelog
+## 0.5.3
+- bump generated preview/embedded host SDK constraint to `mini_program_sdk:
+  ^0.4.4`
+
 ## 0.5.2
 - add `artifact-host` as the preferred local static artifact delivery command
   group while keeping `backend` as a legacy alias

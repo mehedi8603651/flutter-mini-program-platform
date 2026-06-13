@@ -90,15 +90,24 @@ class _MpScrollView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 420),
-        child: SingleChildScrollView(
+    final padding = _mpInsets(node.props['padding'] as Map<String, dynamic>?);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final child = _MpNodeView(
+          node: node.children.single,
+          bindings: bindings,
+        );
+        if (!constraints.hasBoundedHeight) {
+          return padding == EdgeInsets.zero
+              ? child
+              : Padding(padding: padding, child: child);
+        }
+        return SingleChildScrollView(
           primary: false,
-          padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
-          child: _MpNodeView(node: node.children.single, bindings: bindings),
-        ),
-      ),
+          padding: padding,
+          child: child,
+        );
+      },
     );
   }
 }
