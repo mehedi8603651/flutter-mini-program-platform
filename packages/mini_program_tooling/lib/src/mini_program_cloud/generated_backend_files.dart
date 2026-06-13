@@ -4,8 +4,8 @@ const String _bundledAwsTemplateYaml = r'''
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Serverless mini-program delivery API for AWS.
-  It exposes backend-style /api routes through API Gateway and Lambda while
+  Serverless mini-program artifact endpoint for AWS.
+  It exposes artifact /api routes through API Gateway and Lambda while
   reading published mini-program artifacts from S3.
 
 Parameters:
@@ -127,7 +127,7 @@ const String _bundledAwsPackageJson = '''
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AWS Lambda mini-program delivery API backed by S3-published artifacts.",
+  "description": "AWS Lambda mini-program artifact endpoint backed by S3-published artifacts.",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0"
   }
@@ -155,7 +155,7 @@ export const handler = async (event) => {
   const query = event?.queryStringParameters ?? {};
   const traceId = resolveTraceId(event);
 
-  logInfo('Received delivery API request.', { traceId, method, path, query });
+  logInfo('Received artifact endpoint request.', { traceId, method, path, query });
 
   try {
     if (method === 'OPTIONS') {
@@ -204,7 +204,7 @@ export const handler = async (event) => {
     }
 
     if (method === 'POST' && pathSegments.length >= 3 && pathSegments[0] === 'api' && pathSegments[1] === 'secure') {
-      return notImplemented('Secure API routes are not implemented in the AWS cloud backend yet.', traceId);
+      return notImplemented('Secure API routes are not implemented in the AWS artifact endpoint. Use a separate Publisher API for business logic.', traceId);
     }
 
     if (method !== 'GET') {

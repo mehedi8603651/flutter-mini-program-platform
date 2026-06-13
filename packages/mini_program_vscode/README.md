@@ -35,14 +35,14 @@ The extension follows the provider-neutral backend model:
 - the middle server can run on AWS, Firebase, GCP, Docker, Kubernetes, a VPS, or
   any other provider
 
-AWS cloud delivery and Firebase Hosting remain delivery/static hosting tools.
-They are not exposed as publisher business backend command groups.
+AWS cloud artifact hosting and Firebase Hosting remain static artifact hosting
+tools. They are not exposed as publisher business backend command groups.
 
 ## Features
 
 - Activity Bar view named `MiniProgram`.
 - Local workflow status from `miniprogram workflow status --json`.
-- Manual remote delivery status from `miniprogram workflow status --remote --json`.
+- Manual remote artifact status from `miniprogram workflow status --remote --json`.
 - Core mini-program workflow:
   - `MiniProgram: Create MiniProgram`
   - `MiniProgram: Build`
@@ -93,7 +93,7 @@ They are not exposed as publisher business backend command groups.
   - `MiniProgram: Diagnose Workspace`
   - `MiniProgram: Diagnose MiniProgram`
   - `MiniProgram: Diagnose Host App`
-  - `MiniProgram: Diagnose Cloud Delivery`
+  - `MiniProgram: Diagnose Cloud Artifact Hosting`
   - `MiniProgram: Setup New MiniProgram`
   - `MiniProgram: Publish MiniProgram to AWS`
   - `MiniProgram: Prepare Partner Handoff`

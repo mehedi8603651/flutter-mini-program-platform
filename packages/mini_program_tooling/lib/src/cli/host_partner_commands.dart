@@ -81,7 +81,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       ..addOption(
         'api-base-url',
         help:
-            'Mini-program delivery API base URL. If omitted, the active cloud environment output is used.',
+            'Mini-program static artifact base URL. If omitted, the active cloud environment output is used.',
       )
       ..addOption(
         'backend-base-url',
@@ -262,7 +262,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       ..addOption(
         'api-base-url',
         help:
-            'Mini-program delivery API base URL, for example https://api.example.com/prod/api/.',
+            'Mini-program static artifact base URL, for example https://cdn.example.com/app/.',
       )
       ..addOption(
         'backend-base-url',
@@ -272,14 +272,12 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       ..addFlag(
         'backend-local-mock',
         negatable: false,
-        help:
-            'Use the local mock publisher backend at http://127.0.0.1:<port>/.',
+        help: 'Use the local mock Publisher API at http://127.0.0.1:<port>/.',
       )
       ..addOption(
         'backend-local-mock-port',
         defaultsTo: '9090',
-        help:
-            'Local mock publisher backend port used with --backend-local-mock.',
+        help: 'Local mock Publisher API port used with --backend-local-mock.',
       )
       ..addOption(
         'title',

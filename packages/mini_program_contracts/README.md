@@ -3,7 +3,8 @@
 Shared contracts for the portable Flutter mini-program platform.
 
 This package holds the stable language shared by mini-program authoring,
-backend delivery, host apps, and runtime/tooling packages.
+static artifact delivery, Publisher API backends, host apps, and
+runtime/tooling packages.
 
 ## What it exports
 
@@ -21,7 +22,7 @@ backend delivery, host apps, and runtime/tooling packages.
 
 - runtime and tooling packages that need to read or validate mini-program
   manifests
-- backend packages that serve or validate contract data
+- artifact services and Publisher API tooling that serve or validate contract data
 - host apps that implement typed bridge payloads
 
 Most application code should depend on a higher-level package such as the SDK

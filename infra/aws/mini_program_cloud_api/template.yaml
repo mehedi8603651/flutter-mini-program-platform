@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Serverless mini-program delivery API for AWS.
-  It exposes backend-style /api routes through API Gateway and Lambda while
+  Serverless mini-program artifact endpoint for AWS.
+  It exposes artifact /api routes through API Gateway and Lambda while
   reading published mini-program artifacts from S3.
 
 Parameters:

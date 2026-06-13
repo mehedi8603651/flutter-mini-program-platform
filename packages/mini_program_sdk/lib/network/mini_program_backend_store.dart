@@ -609,7 +609,7 @@ class MiniProgramBackendStore extends ChangeNotifier {
           endpoint: query.endpoint,
           method: query.method,
           message:
-              'Publisher backend is not configured for mini-program "$miniProgramId".',
+              'Publisher API is not configured for mini-program "$miniProgramId".',
           errorCode: 'publisher_backend_not_configured',
         ),
         requestId: requestId,
@@ -665,7 +665,7 @@ class MiniProgramBackendStore extends ChangeNotifier {
           endpoint: query.endpoint,
           method: 'GET',
           message:
-              'Publisher backend is not configured for mini-program "$miniProgramId".',
+              'Publisher API is not configured for mini-program "$miniProgramId".',
           errorCode: 'publisher_backend_not_configured',
         ),
         requestId: requestId,

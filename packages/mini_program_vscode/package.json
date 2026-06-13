@@ -294,7 +294,7 @@
       },
       {
         "command": "miniProgramTools.diagnoseCloudDelivery",
-        "title": "MiniProgram: Diagnose Cloud Delivery",
+        "title": "MiniProgram: Diagnose Cloud Artifact Hosting",
         "icon": "$(cloud)"
       },
       {

@@ -19,7 +19,7 @@ shared platform contracts.
 - in-memory cache helpers for manifests, screens, and assets
 - publisher-owned email/password auth runtime with per-mini-program cached
   sessions
-- lazy chunk and paged publisher backend list rendering with manual Load more
+- lazy chunk and paged Publisher API list rendering with manual Load more
   support
 
 ## Install
@@ -54,7 +54,7 @@ Mp screens support:
 - basic layout, text, image, card, and button nodes
 - internal mini-program navigation
 - publisher-owned email auth builders and actions
-- publisher backend builders
+- Publisher API builders
 - lazy chunk and paged backend builders with manual Load more
 - safe bindings such as `{{auth.user.email}}`, `{{backend.home.data.title}}`,
   and `{{item.title}}`
@@ -76,7 +76,8 @@ code --install-extension MiniProgramTools.mini-program-tools
 
 The extension does not replace the SDK or CLI. It calls the installed
 `miniprogram` CLI and helps developers wire `MiniProgramScope`, endpoints,
-partner packages, public static delivery, and cloud delivery from VS Code.
+partner packages, public static artifact delivery, and cloud artifact hosting
+from VS Code.
 
 For protected Mp JSON Firebase/AWS handoff and cross-platform host verification,
 see the repo's
@@ -200,7 +201,7 @@ class NoopHostBridge implements HostBridge {
 ```
 
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
-mini-program delivery backends and compared with manifest `sdkVersionRange`
+mini-program artifact endpoints and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
 the package can be `0.3.7` while the runtime compatibility version remains
 `1.0.0`.
@@ -252,7 +253,7 @@ MiniProgramScope.of(context).openMiniProgram(
 ```
 
 Rule: UI knows `appId`; config knows API base URL and delivery access mode.
-For protected cloud delivery, the backend should validate the
+For protected artifact access, the artifact endpoint should validate the
 `X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
 revoking one partner key does not affect other partners using the same
 mini-program.
@@ -264,11 +265,12 @@ header and has no delivery access control, so do not use it for private or
 business-only mini-programs. Prefer GitHub Pages or a CDN over
 `raw.githubusercontent.com` for real usage.
 
-## Publisher-Owned Backend
+## Publisher API Backend
 
-Delivery and business APIs are separate. `MiniProgramEndpoint.apiBaseUri` loads
-manifest/screen JSON. A publisher-owned backend is optional and is used only
-when the mini-program sends a `miniProgramBackend` action.
+Static frontend artifact delivery and business APIs are separate.
+`MiniProgramEndpoint.apiBaseUri` loads manifest/screen JSON. A publisher-owned
+Publisher API backend is optional and is used only when the mini-program sends a
+`miniProgramBackend` action.
 
 ```dart
 final deliveryContext = MiniProgramDeliveryContext(
@@ -307,11 +309,11 @@ final config = MiniProgramConfig(
 ```
 
 Generated host adapters from `miniprogram embed init` wire this connector for
-you. Backend calls are lazy: no HTTP client or request is created until a
-mini-program action calls the publisher backend.
+you. Publisher API calls are lazy: no HTTP client or request is created until a
+mini-program action calls the Publisher API backend.
 
-Mini-programs can also load backend JSON into local mini-program state and bind
-simple UI text to that state. New scaffolds generate Mp authoring helpers for
+Mini-programs can also load Publisher API JSON into local mini-program state
+and bind simple UI text to that state. New scaffolds generate Mp authoring helpers for
 this:
 
 ```bash
@@ -320,8 +322,8 @@ cd coupon_app
 miniprogram publisher-backend run --port 9090
 ```
 
-The mock publisher backend is a local HTTP JSON server for development. It is
-not a production backend and it does not add Firebase, AWS, or other backend
+The mock Publisher API is a local HTTP JSON server for development. It is
+not a production backend and it does not add Firebase, AWS, or other provider
 SDK dependencies to this Flutter SDK.
 
 Mp screens use `Mp.backendBuilder(...)`, `Mp.lazy.chunk(...)`,
@@ -358,8 +360,8 @@ Loaded pages are appended in SDK state. Useful paged bindings include:
 {{backend.coupons.loadingMore}}
 ```
 
-`pagedBackendBuilder` is provider-neutral. Firebase, AWS, or custom publisher
-backends should expose matching paged routes such as
+`pagedBackendBuilder` is provider-neutral. Firebase, AWS, or custom Publisher
+API backends should expose matching paged routes such as
 `GET /coupons/list?limit=20&cursor=...`.
 
 Supported bindings include:
@@ -377,8 +379,8 @@ Supported bindings include:
 ### Publisher auth
 
 For publisher-owned email/password auth, configure an auth controller alongside
-the publisher backend connector. The host app does not need Firebase SDK config,
-Firebase project access, or publisher backend secrets.
+the Publisher API connector. The host app does not need Firebase SDK config,
+Firebase project access, or Publisher API secrets.
 
 ```dart
 final authController = MiniProgramAuthController.secure();
@@ -405,7 +407,7 @@ final config = MiniProgramConfig(
 Mp JSON can use `auth.*` actions and the `authBuilder` node. The SDK shows the
 native email/password auth sheet for `auth.showEmailAuth`, caches only
 backend-issued tokens, restores cached sessions on the next launch, and sends
-`Authorization: Bearer <idToken>` on publisher backend calls when the
+`Authorization: Bearer <idToken>` on Publisher API calls when the
 mini-program is signed in.
 
 ```text
@@ -430,19 +432,19 @@ Security rules:
 - action endpoints must be relative, such as `home/bootstrap`; absolute URLs
   are rejected
 - the MiniProgram delivery access key is not user auth and is not sent to the
-  publisher backend unless `sendAccessKeyToBackend: true` is set explicitly
+  Publisher API unless `sendAccessKeyToBackend: true` is set explicitly
 - publisher auth tokens are never exposed through bindings or action results;
   only safe user/session state is available to mini-program UI
 
 Performance rules:
 
-- keep backend actions lazy and action-driven
+- keep Publisher API actions lazy and action-driven
 - prefer batch endpoints like `/home/bootstrap`
 - use explicit cache TTL only for safe `GET` responses
 - keep timeouts short and paginate large results
 - serve images from a CDN
 
-Generated host apps usually pass the backend URL at build or run time:
+Generated host apps usually pass the artifact endpoint URL at build or run time:
 
 ```bash
 flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/

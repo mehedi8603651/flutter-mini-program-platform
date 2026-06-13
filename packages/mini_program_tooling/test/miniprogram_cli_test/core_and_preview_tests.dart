@@ -74,10 +74,7 @@ void _registerCoreAndPreviewTests() {
       stdoutBuffer.toString(),
       contains('publisher-api contract init|validate|smoke|handoff'),
     );
-    expect(
-      stdoutBuffer.toString(),
-      isNot(contains('publisher-backend aws')),
-    );
+    expect(stdoutBuffer.toString(), isNot(contains('publisher-backend aws')));
     expect(
       stdoutBuffer.toString(),
       isNot(contains('publisher-backend firebase')),
@@ -142,18 +139,9 @@ void _registerCoreAndPreviewTests() {
     );
     expect(stdoutBuffer.toString(), contains('Version: 0.5.0'));
     expect(stdoutBuffer.toString(), contains('publish.firebase_hosting'));
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_api.mock.scaffold'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('publisher_api.contract.handoff'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      isNot(contains('publisher_backend.aws')),
-    );
+    expect(stdoutBuffer.toString(), contains('publisher_api.mock.scaffold'));
+    expect(stdoutBuffer.toString(), contains('publisher_api.contract.handoff'));
+    expect(stdoutBuffer.toString(), isNot(contains('publisher_backend.aws')));
     expect(
       stdoutBuffer.toString(),
       isNot(contains('publisher_backend.firebase')),
@@ -199,7 +187,10 @@ void _registerCoreAndPreviewTests() {
     expect(features['publisherBackendContractValidate'], isTrue);
     expect(features['publisherBackendContractSmoke'], isTrue);
     expect(features['publisherBackendContractHandoff'], isTrue);
-    expect(features.keys.any((key) => key.startsWith('publisherBackendAws')), isFalse);
+    expect(
+      features.keys.any((key) => key.startsWith('publisherBackendAws')),
+      isFalse,
+    );
     expect(
       features.keys.any((key) => key.startsWith('publisherBackendFirebase')),
       isFalse,
@@ -338,7 +329,7 @@ void _registerCoreAndPreviewTests() {
     expect(stdoutBuffer.toString(), contains('Created mini-program scaffold'));
   });
 
-  test('create can scaffold the mock publisher backend starter', () async {
+  test('create can scaffold the mock Publisher API starter', () async {
     final stdoutBuffer = StringBuffer();
     final stderrBuffer = StringBuffer();
     final cli = MiniprogramCli(

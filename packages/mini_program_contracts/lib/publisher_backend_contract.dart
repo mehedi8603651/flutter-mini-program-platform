@@ -1,10 +1,10 @@
-/// Provider-neutral publisher backend API contract.
+/// Provider-neutral Publisher API contract.
 ///
 /// Mini-program screens use relative endpoints. Host endpoint configuration
-/// supplies the publisher backend base URL and optional MiniProgram access key.
+/// supplies the Publisher API base URL and optional MiniProgram access key.
 library;
 
-/// Standard request header names used by publisher backend APIs.
+/// Standard request header names used by Publisher APIs.
 abstract final class MiniProgramPublisherBackendHeaders {
   /// Mini-program app id.
   static const String appId = 'x-mini-program-app-id';
@@ -24,7 +24,7 @@ abstract final class MiniProgramPublisherBackendHeaders {
   /// Host locale, when available.
   static const String locale = 'x-mini-program-locale';
 
-  /// Partner access key for protected publisher backends.
+  /// Partner access key for protected Publisher APIs.
   static const String accessKey = 'x-mini-program-access-key';
 
   /// Publisher-owned signed-in user token.
@@ -33,20 +33,20 @@ abstract final class MiniProgramPublisherBackendHeaders {
   /// Smoke-test or runtime request identifier.
   static const String requestId = 'x-mini-program-request-id';
 
-  /// Provider-neutral backend contract version.
+  /// Provider-neutral Publisher API contract version.
   static const String contractVersion =
       'x-mini-program-backend-contract-version';
 }
 
-/// Stable provider-neutral publisher backend error codes.
+/// Stable provider-neutral Publisher API error codes.
 abstract final class MiniProgramPublisherBackendErrorCodes {
-  /// The backend could not be reached.
+  /// The Publisher API could not be reached.
   static const String unreachable = 'publisher_backend_unreachable';
 
-  /// The backend did not respond before the configured timeout.
+  /// The Publisher API did not respond before the configured timeout.
   static const String timeout = 'publisher_backend_timeout';
 
-  /// The backend contract file is malformed.
+  /// The Publisher API contract file is malformed.
   static const String invalidContract = 'publisher_backend_invalid_contract';
 
   /// A smoke route returned an unexpected status.
@@ -55,16 +55,16 @@ abstract final class MiniProgramPublisherBackendErrorCodes {
   /// A smoke route did not return the expected JSON object.
   static const String invalidJson = 'publisher_backend_invalid_json';
 
-  /// Protected backend access requires a MiniProgram access key.
+  /// Protected Publisher API access requires a MiniProgram access key.
   static const String accessKeyMissing = 'access_key_missing';
 
-  /// Protected backend access rejected the MiniProgram access key.
+  /// Protected Publisher API access rejected the MiniProgram access key.
   static const String accessKeyInvalid = 'access_key_invalid';
 }
 
-/// Provider-neutral publisher backend contract document.
+/// Provider-neutral Publisher API contract document.
 class MiniProgramPublisherBackendContract {
-  /// Creates a provider-neutral publisher backend contract.
+  /// Creates a provider-neutral Publisher API contract.
   MiniProgramPublisherBackendContract({
     this.schemaVersion = currentSchemaVersion,
     this.contractVersion = currentContractVersion,
@@ -89,37 +89,37 @@ class MiniProgramPublisherBackendContract {
        ) {
     if (schemaVersion != currentSchemaVersion) {
       throw FormatException(
-        'Unsupported publisher backend contract schemaVersion: '
+        'Unsupported Publisher API contract schemaVersion: '
         '$schemaVersion.',
       );
     }
     if (contractVersion.trim() != currentContractVersion) {
       throw FormatException(
-        'Unsupported publisher backend contractVersion: $contractVersion.',
+        'Unsupported Publisher API contractVersion: $contractVersion.',
       );
     }
   }
 
-  /// Decodes a provider-neutral publisher backend contract.
+  /// Decodes a provider-neutral Publisher API contract.
   factory MiniProgramPublisherBackendContract.fromJson(
     Object? json, {
     bool allowLocalHttp = false,
   }) {
     if (json is! Map) {
       throw const FormatException(
-        'Publisher backend contract must be a JSON object.',
+        'Publisher API contract must be a JSON object.',
       );
     }
     final type = _readString(json, 'type');
     if (type != documentType) {
       throw FormatException(
-        'Publisher backend contract type must be "$documentType".',
+        'Publisher API contract type must be "$documentType".',
       );
     }
     final backendBaseUri = Uri.tryParse(_readString(json, 'backendBaseUrl'));
     if (backendBaseUri == null) {
       throw const FormatException(
-        'Publisher backend contract backendBaseUrl is invalid.',
+        'Publisher API contract backendBaseUrl is invalid.',
       );
     }
     final healthEndpoint =
@@ -143,16 +143,16 @@ class MiniProgramPublisherBackendContract {
   /// Current contract document schema version.
   static const int currentSchemaVersion = 1;
 
-  /// Current provider-neutral backend contract version.
+  /// Current provider-neutral Publisher API contract version.
   static const String currentContractVersion = '1';
 
   /// Contract document type.
   static const String documentType = 'mini_program_publisher_backend_contract';
 
-  /// Protected backend mode.
+  /// Protected Publisher API mode.
   static const String accessModeProtected = 'protected';
 
-  /// Public backend mode.
+  /// Public Publisher API mode.
   static const String accessModePublic = 'public';
 
   /// Default health route.
@@ -167,7 +167,7 @@ class MiniProgramPublisherBackendContract {
   /// Mini-program app id.
   final String appId;
 
-  /// Publisher-owned backend base URL.
+  /// Publisher-owned Publisher API base URL.
   final Uri backendBaseUri;
 
   /// `protected` or `public`.
@@ -210,14 +210,14 @@ class MiniProgramPublisherBackendContract {
         ];
     if (tests.isEmpty) {
       throw const FormatException(
-        'Publisher backend contract smokeTests must not be empty.',
+        'Publisher API contract smokeTests must not be empty.',
       );
     }
     final ids = <String>{};
     for (final test in tests) {
       if (!ids.add(test.id)) {
         throw FormatException(
-          'Publisher backend contract has duplicate smoke test id: ${test.id}.',
+          'Publisher API contract has duplicate smoke test id: ${test.id}.',
         );
       }
     }
@@ -233,7 +233,7 @@ class MiniProgramPublisherBackendContract {
     }
     if (value is! List) {
       throw const FormatException(
-        'Publisher backend contract smokeTests must be a list.',
+        'Publisher API contract smokeTests must be a list.',
       );
     }
     return value.map(MiniProgramPublisherBackendSmokeCase.fromJson).toList();
@@ -261,7 +261,7 @@ class MiniProgramPublisherBackendSmokeCase {
   factory MiniProgramPublisherBackendSmokeCase.fromJson(Object? json) {
     if (json is! Map) {
       throw const FormatException(
-        'Publisher backend smoke test must be a JSON object.',
+        'Publisher API smoke test must be a JSON object.',
       );
     }
     return MiniProgramPublisherBackendSmokeCase(
@@ -286,7 +286,7 @@ class MiniProgramPublisherBackendSmokeCase {
   /// HTTP method.
   final String method;
 
-  /// Relative backend endpoint.
+  /// Relative Publisher API endpoint.
   final String endpoint;
 
   /// JSON body for non-GET methods.
@@ -337,7 +337,7 @@ String _normalizeSafeId(String value, String label) {
       trimmed == '.' ||
       trimmed == '..' ||
       !RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(trimmed)) {
-    throw FormatException('Publisher backend contract $label is invalid.');
+    throw FormatException('Publisher API contract $label is invalid.');
   }
   return trimmed;
 }
@@ -345,7 +345,7 @@ String _normalizeSafeId(String value, String label) {
 Uri _normalizeBackendBaseUri(Uri uri, {required bool allowLocalHttp}) {
   if (!uri.hasScheme || uri.host.isEmpty) {
     throw const FormatException(
-      'Publisher backend contract backendBaseUrl must be absolute.',
+      'Publisher API contract backendBaseUrl must be absolute.',
     );
   }
   final scheme = uri.scheme.toLowerCase();
@@ -353,7 +353,7 @@ Uri _normalizeBackendBaseUri(Uri uri, {required bool allowLocalHttp}) {
     if (scheme != 'http' ||
         !_isAllowedHttpHost(uri.host, allowLocalHttp: allowLocalHttp)) {
       throw const FormatException(
-        'Publisher backend contract backendBaseUrl must use HTTPS in '
+        'Publisher API contract backendBaseUrl must use HTTPS in '
         'production. HTTP is allowed only for loopback, or local LAN when '
         'explicitly enabled.',
       );
@@ -396,33 +396,29 @@ String _normalizeAccessMode(String value) {
     return normalized;
   }
   throw const FormatException(
-    'Publisher backend contract accessMode must be "protected" or "public".',
+    'Publisher API contract accessMode must be "protected" or "public".',
   );
 }
 
 String _normalizeRelativeEndpoint(String value, String label) {
   final endpoint = value.trim();
   if (endpoint.isEmpty) {
-    throw FormatException(
-      'Publisher backend contract $label must not be empty.',
-    );
+    throw FormatException('Publisher API contract $label must not be empty.');
   }
   final parsed = Uri.tryParse(endpoint);
   if (parsed == null || parsed.hasScheme || parsed.hasAuthority) {
     throw FormatException(
-      'Publisher backend contract $label must be a relative endpoint.',
+      'Publisher API contract $label must be a relative endpoint.',
     );
   }
   final normalized = endpoint.replaceFirst(RegExp(r'^/+'), '');
   if (normalized.isEmpty) {
-    throw FormatException(
-      'Publisher backend contract $label must not be empty.',
-    );
+    throw FormatException('Publisher API contract $label must not be empty.');
   }
   final segments = Uri.parse(normalized).pathSegments;
   if (segments.any((segment) => segment == '..')) {
     throw FormatException(
-      'Publisher backend contract $label must not contain ".." segments.',
+      'Publisher API contract $label must not contain ".." segments.',
     );
   }
   return normalized;
@@ -432,9 +428,7 @@ String _normalizeMethod(String value) {
   final method = value.trim().toUpperCase();
   const allowed = <String>{'GET', 'POST', 'PUT', 'PATCH', 'DELETE'};
   if (!allowed.contains(method)) {
-    throw FormatException(
-      'Publisher backend smoke method is unsupported: $value.',
-    );
+    throw FormatException('Publisher API smoke method is unsupported: $value.');
   }
   return method;
 }
@@ -443,7 +437,7 @@ Map<String, Object?> _normalizeBody(Map<String, Object?> value) {
   for (final entry in value.entries) {
     if (entry.key.trim().isEmpty) {
       throw const FormatException(
-        'Publisher backend smoke body contains a blank key.',
+        'Publisher API smoke body contains a blank key.',
       );
     }
   }
@@ -455,7 +449,7 @@ MiniProgramPublisherBackendSmokeExpectation _normalizeExpectation(
 ) {
   if (expectation.expectedStatus < 100 || expectation.expectedStatus > 599) {
     throw const FormatException(
-      'Publisher backend smoke expectedStatus must be between 100 and 599.',
+      'Publisher API smoke expectedStatus must be between 100 and 599.',
     );
   }
   return expectation;
@@ -464,7 +458,7 @@ MiniProgramPublisherBackendSmokeExpectation _normalizeExpectation(
 String _readString(Map<dynamic, dynamic> json, String key) {
   final value = json[key];
   if (value is! String || value.trim().isEmpty) {
-    throw FormatException('Publisher backend contract is missing "$key".');
+    throw FormatException('Publisher API contract is missing "$key".');
   }
   return value.trim();
 }
@@ -475,9 +469,7 @@ String? _readOptionalString(Map<dynamic, dynamic> json, String key) {
     return null;
   }
   if (value is! String) {
-    throw FormatException(
-      'Publisher backend contract "$key" must be a string.',
-    );
+    throw FormatException('Publisher API contract "$key" must be a string.');
   }
   final trimmed = value.trim();
   return trimmed.isEmpty ? null : trimmed;
@@ -486,9 +478,7 @@ String? _readOptionalString(Map<dynamic, dynamic> json, String key) {
 int _readInt(Map<dynamic, dynamic> json, String key) {
   final value = json[key];
   if (value is! int) {
-    throw FormatException(
-      'Publisher backend contract "$key" must be an integer.',
-    );
+    throw FormatException('Publisher API contract "$key" must be an integer.');
   }
   return value;
 }
@@ -499,9 +489,7 @@ int? _readOptionalInt(Map<dynamic, dynamic> json, String key) {
     return null;
   }
   if (value is! int) {
-    throw FormatException(
-      'Publisher backend contract "$key" must be an integer.',
-    );
+    throw FormatException('Publisher API contract "$key" must be an integer.');
   }
   return value;
 }
@@ -512,9 +500,7 @@ bool? _readOptionalBool(Map<dynamic, dynamic> json, String key) {
     return null;
   }
   if (value is! bool) {
-    throw FormatException(
-      'Publisher backend contract "$key" must be a boolean.',
-    );
+    throw FormatException('Publisher API contract "$key" must be a boolean.');
   }
   return value;
 }
@@ -526,7 +512,7 @@ Map<String, Object?>? _readOptionalMap(Map<dynamic, dynamic> json, String key) {
   }
   if (value is! Map) {
     throw FormatException(
-      'Publisher backend contract "$key" must be a JSON object.',
+      'Publisher API contract "$key" must be a JSON object.',
     );
   }
   return Map<String, Object?>.from(value);

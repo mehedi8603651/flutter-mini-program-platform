@@ -104,7 +104,7 @@ Mp.backendBuilder(
 ## Paged Lists
 
 Use `Mp.lazy.chunk` when repeated data is large, dynamic, comes from a
-publisher backend, and needs pagination or manual Load more:
+Publisher API, and needs pagination or manual Load more:
 
 ```dart
 Mp.lazy.chunk(

@@ -146,7 +146,7 @@ export async function addHostEndpoint(
     return;
   }
   const apiBaseUrl = await vscode.window.showInputBox({
-    prompt: 'Mini-program delivery API base URL',
+    prompt: 'Mini-program static artifact base URL',
     placeHolder: 'https://example.com/prod/api',
     ignoreFocusOut: true,
     validateInput: validateAbsoluteUrl,

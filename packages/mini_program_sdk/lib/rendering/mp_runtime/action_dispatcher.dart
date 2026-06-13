@@ -204,7 +204,7 @@ abstract final class _MpActionDispatcher {
         endpoint: _stringProp(props, 'endpoint'),
         method: _optionalStringProp(props, 'method') ?? 'GET',
         message:
-            'Publisher backend is not configured for mini-program "${scope.miniProgramId}".',
+            'Publisher API is not configured for mini-program "${scope.miniProgramId}".',
         errorCode: 'publisher_backend_not_configured',
       );
     }
@@ -323,8 +323,7 @@ abstract final class _MpActionDispatcher {
 
     final connector = scope.backendConnector;
     if (connector == null) {
-      const message =
-          'Publisher backend is not configured for search.loadMore.';
+      const message = 'Publisher API is not configured for search.loadMore.';
       _searchPageFailed(
         state: state,
         props: props,
@@ -473,7 +472,7 @@ abstract final class _MpActionDispatcher {
 
     final connector = scope.backendConnector;
     if (connector == null) {
-      const message = 'Publisher backend is not configured for search.refresh.';
+      const message = 'Publisher API is not configured for search.refresh.';
       _searchPageFailed(
         state: state,
         props: props,

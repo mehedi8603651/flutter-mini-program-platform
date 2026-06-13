@@ -124,7 +124,7 @@ export async function promptHostEndpointInputs(): Promise<
     return undefined;
   }
   const apiBaseUrl = await vscode.window.showInputBox({
-    prompt: 'Mini-program delivery API base URL',
+    prompt: 'Mini-program static artifact base URL',
     placeHolder: 'https://example.com/prod/api',
     ignoreFocusOut: true,
     validateInput: validateAbsoluteUrl,
@@ -496,7 +496,7 @@ export async function chooseRequireAccessKeys(): Promise<boolean | undefined> {
     [
       {
         label: 'Require access keys',
-        description: 'Recommended for shared cloud delivery',
+        description: 'Recommended for shared cloud artifact hosting',
         value: true,
       },
       {

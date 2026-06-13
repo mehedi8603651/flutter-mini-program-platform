@@ -89,7 +89,7 @@ export async function copyMockBackendHostCommand(): Promise<void> {
     return;
   }
   const apiBaseUrl = await vscode.window.showInputBox({
-    prompt: 'Mini-program delivery API base URL',
+    prompt: 'Mini-program static artifact base URL',
     placeHolder: 'https://cdn.example.com/public_mini_program/',
     ignoreFocusOut: true,
     validateInput: validateAbsoluteUrl,
@@ -349,7 +349,7 @@ export async function createPartnerPackage(
     envName = value;
   } else {
     const value = await vscode.window.showInputBox({
-      prompt: 'Mini-program delivery API base URL',
+      prompt: 'Mini-program static artifact base URL',
       placeHolder: 'https://example.com/prod/api',
       ignoreFocusOut: true,
       validateInput: validateAbsoluteUrl,

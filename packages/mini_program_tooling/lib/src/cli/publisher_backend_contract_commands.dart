@@ -52,7 +52,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       ..addFlag(
         'public',
         negatable: false,
-        help: 'Mark this publisher backend as public.',
+        help: 'Mark this Publisher API as public.',
       )
       ..addOption(
         'health-endpoint',
@@ -291,7 +291,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       )
       ..addOption(
         'delivery-url',
-        help: 'Mini-program static delivery API base URL.',
+        help: 'Mini-program static artifact base URL.',
       )
       ..addOption(
         'title',
@@ -363,7 +363,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     );
     if (manifestInfo.appId != contract.appId) {
       throw FormatException(
-        'Publisher backend contract appId "${contract.appId}" does not match manifest appId "${manifestInfo.appId}".',
+        'Publisher API contract appId "${contract.appId}" does not match manifest appId "${manifestInfo.appId}".',
       );
     }
     final accessKey = results.option('access-key')?.trim() ?? '';
@@ -513,7 +513,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     PublisherBackendContractInitResult result,
   ) {
     return <String>[
-      'Created provider-neutral publisher backend contract.',
+      'Created provider-neutral Publisher API contract.',
       'Contract file: ${result.contractPath}',
       'Mini-program: ${result.contract.appId}',
       'Backend base URL: ${result.contract.backendBaseUri}',
@@ -528,7 +528,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     PublisherBackendContractValidateResult result,
   ) {
     return <String>[
-      'Provider-neutral publisher backend contract is valid.',
+      'Provider-neutral Publisher API contract is valid.',
       'Contract file: ${result.contractPath}',
       'Mini-program: ${result.contract.appId}',
       'Backend base URL: ${result.contract.backendBaseUri}',
@@ -541,7 +541,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     PublisherBackendContractSmokeResult result,
   ) {
     final lines = <String>[
-      'Provider-neutral publisher backend smoke test.',
+      'Provider-neutral Publisher API smoke test.',
       'Contract file: ${result.contractPath}',
       'Mini-program: ${result.contract.appId}',
       'Backend base URL: ${result.contract.backendBaseUri}',
@@ -568,7 +568,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
   ) {
     final handoff = result.packageResult.handoff;
     return <String>[
-      'Provider-neutral publisher backend handoff package created.',
+      'Provider-neutral Publisher API handoff package created.',
       'Contract file: ${result.contractPath}',
       'Package file: ${result.packageResult.filePath}',
       'Mini-program: ${handoff.appId}',

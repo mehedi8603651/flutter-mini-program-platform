@@ -220,8 +220,7 @@ class EndpointRoutingMiniProgramBackendConnector
         requestId: request.requestId,
         endpoint: request.endpoint,
         method: request.method,
-        message:
-            'No publisher backend is configured for mini-program "$appId".',
+        message: 'No Publisher API is configured for mini-program "$appId".',
         errorCode: 'publisher_backend_not_configured',
       );
     }
@@ -268,7 +267,7 @@ class EndpointRoutingMiniProgramBackendConnector
         requestId: request.requestId,
         endpoint: normalizedEndpoint,
         method: method,
-        message: 'Timed out while calling the mini-program publisher backend.',
+        message: 'Timed out while calling the mini-program Publisher API.',
         errorCode: 'publisher_backend_timeout',
         data: <String, dynamic>{
           'requestTimeoutMs': backend.requestTimeout.inMilliseconds,
@@ -279,7 +278,7 @@ class EndpointRoutingMiniProgramBackendConnector
         requestId: request.requestId,
         endpoint: normalizedEndpoint,
         method: method,
-        message: 'Failed to reach the mini-program publisher backend.',
+        message: 'Failed to reach the mini-program Publisher API.',
         errorCode: 'publisher_backend_unreachable',
         data: <String, dynamic>{'transportError': error.toString()},
       );
@@ -455,7 +454,7 @@ class EndpointRoutingMiniProgramBackendConnector
       statusCode: response.statusCode,
       message:
           message ??
-          'Mini-program publisher backend returned HTTP ${response.statusCode}.',
+          'Mini-program Publisher API returned HTTP ${response.statusCode}.',
       errorCode: errorCode ?? 'publisher_backend_error',
       data: data,
     );

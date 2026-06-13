@@ -16,7 +16,7 @@ abstract final class Mp {
   /// Email authentication actions.
   static const auth = MpAuthActions();
 
-  /// Publisher backend actions.
+  /// Publisher API actions.
   static const backend = MpBackendActions();
 
   /// Backend search and typeahead helpers.
@@ -775,7 +775,7 @@ abstract final class Mp {
     },
   );
 
-  /// Creates a publisher backend data builder.
+  /// Creates a Publisher API data builder.
   static MpNode backendBuilder({
     required String requestId,
     required String endpoint,
@@ -809,7 +809,7 @@ abstract final class Mp {
     },
   );
 
-  /// Creates a paged publisher backend data builder.
+  /// Creates a paged Publisher API data builder.
   static MpNode pagedBackendBuilder({
     required String requestId,
     required String endpoint,
@@ -1078,12 +1078,12 @@ final class MpAuthActions {
   MpAction refresh() => MpAction('auth.refresh');
 }
 
-/// Publisher backend action builders.
+/// Publisher API action builders.
 final class MpBackendActions {
-  /// Creates publisher backend action helpers.
+  /// Creates Publisher API action helpers.
   const MpBackendActions();
 
-  /// Calls a publisher backend endpoint without storing state.
+  /// Calls a Publisher API endpoint without storing state.
   MpAction call({
     required String endpoint,
     String? requestId,
@@ -1103,7 +1103,7 @@ final class MpBackendActions {
     },
   );
 
-  /// Queries a publisher backend endpoint into SDK backend state.
+  /// Queries a Publisher API endpoint into SDK backend state.
   MpAction query({
     required String requestId,
     required String endpoint,
@@ -1124,7 +1124,7 @@ final class MpBackendActions {
     },
   );
 
-  /// Loads the next page for a paged publisher backend query.
+  /// Loads the next page for a paged Publisher API query.
   MpAction loadMore({
     required String requestId,
     String? endpoint,

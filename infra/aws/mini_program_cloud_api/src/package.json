@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AWS Lambda mini-program delivery API backed by S3-published artifacts.",
+  "description": "AWS Lambda mini-program artifact endpoint backed by S3-published artifacts.",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0"
   }

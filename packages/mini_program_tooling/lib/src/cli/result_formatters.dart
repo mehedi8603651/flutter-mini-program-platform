@@ -247,7 +247,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatCloudDeployResult(MiniProgramCloudDeployResult result) {
     final lines = <String>[
-      'Deployed cloud backend.',
+      'Deployed cloud artifact stack.',
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Stack: ${result.stackName}',
@@ -256,7 +256,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Bucket: ${result.bucketName}',
       'Backend project root: ${result.backendProjectRootPath}',
       if (result.apiBaseUrl != null)
-        'Backend API base URL: ${result.apiBaseUrl}',
+        'Artifact API base URL: ${result.apiBaseUrl}',
       if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
       if (result.healthy != null) 'Healthy: ${result.healthy}',
       if (result.healthStatusCode != null)
@@ -273,7 +273,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatCloudStatusResult(MiniProgramCloudStatusResult result) {
     final lines = <String>[
-      'Cloud backend status:',
+      'Cloud artifact stack status:',
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Stack: ${result.stackName}',
@@ -285,7 +285,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
           result.stackStatusReason!.trim().isNotEmpty)
         'Stack status detail: ${result.stackStatusReason}',
       if (result.apiBaseUrl != null)
-        'Backend API base URL: ${result.apiBaseUrl}',
+        'Artifact API base URL: ${result.apiBaseUrl}',
       if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
       if (result.healthy != null) 'Healthy: ${result.healthy}',
       if (result.healthStatusCode != null)
@@ -310,7 +310,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     }
 
     final lines = <String>[
-      'Cloud backend outputs:',
+      'Cloud artifact stack outputs:',
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Stack: ${result.stackName}',
@@ -324,7 +324,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatCloudLogsResult(MiniProgramCloudLogsResult result) {
     final lines = <String>[
-      'Cloud backend logs:',
+      'Cloud artifact stack logs:',
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Stack: ${result.stackName}',
@@ -345,7 +345,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatCloudDestroyResult(MiniProgramCloudDestroyResult result) {
     return <String>[
-      'Destroyed cloud backend stack.',
+      'Destroyed cloud artifact stack.',
       'Provider: ${result.provider}',
       'Environment: ${result.environmentName}',
       'Stack: ${result.stackName}',

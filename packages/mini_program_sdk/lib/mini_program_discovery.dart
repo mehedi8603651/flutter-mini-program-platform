@@ -11,7 +11,7 @@ enum MiniProgramDiscoverySourceKind {
   /// Mini-program content is bundled with the host app.
   bundled,
 
-  /// Mini-program content is fetched from a backend delivery service.
+  /// Mini-program content is fetched from a remote artifact service.
   remote,
 }
 
@@ -66,11 +66,11 @@ class MiniProgramDiscoveryState {
       message ??
       switch (status) {
         MiniProgramDiscoveryStatus.live =>
-          'Latest release is available from the backend.',
+          'Latest release is available from the artifact endpoint.',
         MiniProgramDiscoveryStatus.cached =>
-          'Bundled release is available without backend delivery.',
+          'Bundled release is available without remote artifact delivery.',
         MiniProgramDiscoveryStatus.staleButAllowed =>
-          'Cached release available while the backend is offline.',
+          'Cached release available while the artifact endpoint is offline.',
         MiniProgramDiscoveryStatus.unavailable =>
           'No valid offline copy is available.',
       };

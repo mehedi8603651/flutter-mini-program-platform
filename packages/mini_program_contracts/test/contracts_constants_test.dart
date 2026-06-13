@@ -81,7 +81,7 @@ void main() {
       );
     });
 
-    test('publisher backend header and error values stay stable', () {
+    test('Publisher API header and error values stay stable', () {
       expect(
         MiniProgramPublisherBackendHeaders.accessKey,
         'x-mini-program-access-key',

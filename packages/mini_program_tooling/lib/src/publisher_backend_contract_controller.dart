@@ -167,7 +167,7 @@ class PublisherBackendContractController {
     final file = File(normalizedPath);
     if (!await file.exists()) {
       throw FormatException(
-        'Publisher backend contract file does not exist: $normalizedPath',
+        'Publisher API contract file does not exist: $normalizedPath',
       );
     }
     final decoded = jsonDecode(await file.readAsString());
@@ -267,7 +267,7 @@ class PublisherBackendContractController {
         expectJsonObject: smokeCase.expectation.expectJsonObject,
         passed: false,
         errorCode: MiniProgramPublisherBackendErrorCodes.timeout,
-        message: 'Timed out while calling publisher backend route.',
+        message: 'Timed out while calling Publisher API route.',
       );
     } catch (error) {
       return PublisherBackendContractSmokeRouteResult(
@@ -279,7 +279,7 @@ class PublisherBackendContractController {
         expectJsonObject: smokeCase.expectation.expectJsonObject,
         passed: false,
         errorCode: MiniProgramPublisherBackendErrorCodes.unreachable,
-        message: 'Failed to reach publisher backend route: $error',
+        message: 'Failed to reach Publisher API route: $error',
       );
     }
   }

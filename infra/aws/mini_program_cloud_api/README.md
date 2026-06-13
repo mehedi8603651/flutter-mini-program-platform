@@ -1,6 +1,6 @@
 # mini_program_cloud_api
 
-AWS SAM app that exposes the mini-program delivery API through:
+AWS SAM app that exposes the mini-program artifact manifest/static endpoint through:
 
 - API Gateway HTTP API
 - Lambda
@@ -17,7 +17,7 @@ It does not replace cloud publish. It consumes the `artifacts/` and
 
 ## What It Serves
 
-The Lambda exposes the delivery routes the current Flutter hosts already
+The Lambda exposes the artifact routes the current Flutter hosts already
 expect:
 
 - `GET /health`
@@ -29,7 +29,7 @@ expect:
 - `POST /api/secure/...`
   - currently returns `501 not_implemented`
 
-The route contract is intentionally aligned with the local delivery backend so
+The route contract is intentionally aligned with the local artifact service so
 Flutter hosts can switch between local and AWS using only
 `MINI_PROGRAM_BACKEND_BASE_URL`.
 
@@ -42,7 +42,7 @@ Implemented in this phase:
 - versioned manifest and screen loading
 - debug decision inspection
 - optional per-mini-program access-key validation from S3 metadata
-- delivery API error bodies, trace ids, and response headers
+- artifact endpoint error bodies, trace ids, and response headers
 
 Not implemented yet in this stack:
 
@@ -416,7 +416,7 @@ flutter run -d windows --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://abc12
 4. Configure the named AWS env in `miniprogram`.
 5. Publish it with `miniprogram publish --target cloud`.
 6. Run `miniprogram cloud doctor`.
-7. Deploy or update the delivery API with `miniprogram cloud deploy`.
+7. Deploy or update the artifact endpoint with `miniprogram cloud deploy`.
 8. Inspect the deployed URL with `miniprogram cloud outputs`.
 9. Connect the Flutter host with `miniprogram embed cloud configure`.
 10. Launch the host with `miniprogram host run`.
@@ -426,7 +426,7 @@ flutter run -d windows --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://abc12
 - CloudFront is still the right long-term place for immutable public artifacts.
 - This API currently reads directly from S3 because the host runtime already
   speaks the delivery `/api/...` contract.
-- If you later introduce rollout rules, extend the delivery API contract
+- If you later introduce rollout rules, extend the artifact endpoint contract
   instead of changing the Flutter host wire format.
 - Do not put publisher business backend logic here. Auth, database, payments,
   file storage, admin logic, and secrets belong on the publisher-owned

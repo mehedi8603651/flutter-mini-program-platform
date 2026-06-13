@@ -5,7 +5,7 @@ Portable mini-program platform built around:
 - shared contracts
 - a shared Flutter runtime SDK
 - Mp JSON-authored portable UI
-- local and AWS cloud delivery
+- local/static/cloud artifact hosting
 - provider-neutral Publisher API / middle-server backend integration
 - controlled host-native bridges
 
@@ -24,12 +24,16 @@ It has five main layers:
 2. `mini_program_sdk`
 3. mini-program source
 4. host apps
-5. backend delivery
+5. static frontend artifact delivery
 
 The key design rule is:
 
 > keep portable UI declarative, keep sensitive and host-specific power behind
 > the host bridge
+
+The platform uses static frontend artifact delivery for mini-program UI
+bundles, and a separate provider-neutral Publisher API backend for business
+logic and dynamic data.
 
 ## Current Shipped System
 
@@ -42,17 +46,17 @@ Already shipped:
 - global `miniprogram` CLI
 - MiniProgram Tools VS Code extension:
   https://marketplace.visualstudio.com/items?itemName=MiniProgramTools.mini-program-tools
-- standalone local backend workspace
+- standalone local artifact service workspace
 - standalone local authoring flow
 - host-app embedding flow for Flutter apps
-- opt-in mock publisher backend starter with backend-bound starter UI for local
+- opt-in mock Publisher API starter with API-bound starter UI for local
   business API testing
-- AWS cloud publishing through S3
-- AWS delivery API through API Gateway + Lambda for manifests, screen JSON,
-  static artifacts, and access-key protected delivery
+- AWS static artifact publishing through S3
+- AWS artifact manifest endpoint through API Gateway + Lambda for manifests,
+  screen JSON, static artifacts, and access-key protected artifact access
 - provider-neutral Publisher API contract, smoke, and handoff flow for any
   publisher-owned HTTPS backend
-- Firebase Hosting static delivery publish for Firebase-owned public
+- Firebase Hosting static artifact publish for Firebase-owned public
   mini-program artifacts
 - host-app cloud binding and `host run`
 - VS Code host wiring, Publisher API contract, mock API, and handoff workflows
@@ -69,7 +73,7 @@ Already shipped:
   - Android Wi-Fi over LAN
 
 The current system is strongest for **local developer workflows**,
-**AWS-backed delivery**, **provider-neutral middle-server APIs**, and
+**AWS-backed static artifact hosting**, **provider-neutral middle-server APIs**, and
 **portable Flutter-hosted mini-programs**.
 
 Mini-program screens use relative endpoints such as `scholarships/page`; the
@@ -77,7 +81,7 @@ host endpoint map supplies `backendBaseUrl`, for example
 `https://api.publisher.example`, and the SDK calls that HTTPS API without
 adding Firebase, AWS, database, payment, or provider SDKs to the mini-program
 or host app. See the
-[Publisher backend HTTPS API roadmap](docs/publisher_backend_https_api_roadmap.md)
+[Publisher API HTTPS roadmap](docs/publisher_backend_https_api_roadmap.md)
 for the contract and command flow.
 
 Future-only roadmap is tracked in:
@@ -91,7 +95,7 @@ Mp engine migration developers should also read:
 - [Mp JSON engine roadmap](docs/mp_json_engine_roadmap.md)
 - [Mp engine cloud end-to-end guide](docs/mp_engine_cloud_e2e_guide.md)
 - [Mp engine release checklist](docs/mp_engine_release_checklist.md)
-- [Publisher backend HTTPS API roadmap](docs/publisher_backend_https_api_roadmap.md)
+- [Publisher API HTTPS roadmap](docs/publisher_backend_https_api_roadmap.md)
 
 ## What This Platform Is Good For
 
@@ -206,8 +210,9 @@ At a high level:
 1. developer writes Mp mini-program screens in pure Dart
 2. `miniprogram build` runs `tool/build_mp.dart`
 3. JSON screens and manifest artifacts are produced
-4. developers either preview them directly, publish them into the local backend
-   workspace, or publish immutable artifacts to cloud storage
+4. developers either preview them directly, publish them into the local
+   artifact-serving workspace, or publish immutable artifacts to static hosting
+   or cloud storage
 5. host app loads manifest and screen JSON through `mini_program_sdk`
 6. host bridge handles approved native operations
 
@@ -216,10 +221,10 @@ High-level flow:
 ```text
 author -> build -> preview
                     or
-author -> build -> validate -> publish -> backend delivery -> SDK load ->
+author -> build -> validate -> publish -> static artifact delivery -> SDK load ->
 render -> action dispatch -> host-native execution when needed
                     or
-author -> build -> validate -> publish --target cloud -> cloud backend ->
+author -> build -> validate -> publish --target cloud -> cloud artifact host ->
 SDK load -> render -> action dispatch -> host-native execution when needed
 ```
 
@@ -246,13 +251,13 @@ The handoff boundary should stay small:
 
 - `appId`
 - title
-- delivery API base URL for manifest/screen JSON
+- static artifact base URL for manifest/screen JSON
 - public/protected access mode and optional MiniProgram access key
-- optional publisher backend base URL for business data
+- optional Publisher API base URL for business data
 
 Host apps should not need Firebase login, Firebase project access, AWS
-credentials, Firebase Admin SDKs, database SDKs, payment secrets, or publisher
-backend secrets. Current tooling supports provider-neutral partner packages and
+credentials, Firebase Admin SDKs, database SDKs, payment secrets, or Publisher
+API secrets. Current tooling supports provider-neutral partner packages and
 host endpoint imports that combine delivery URLs with optional Publisher API
 base URLs in the same host-importable format.
 
@@ -316,7 +321,7 @@ Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 
 ## Publisher API / Middle-Server Quickstart
 
-This is the preferred backend model.
+This is the preferred business-backend model.
 
 The mini-program is frontend/authored UI. It may call a publisher-owned HTTPS
 API, but it should not contain database SDKs, payment secrets, admin logic,
@@ -358,11 +363,11 @@ Publisher workspace:
    ```
 
 5. Author UI with backend-relative endpoints. Use `Mp.lazy.chunk(...)` for
-   repeated large backend data such as products, posts, orders, messages,
+   repeated large Publisher API data such as products, posts, orders, messages,
    reviews, histories, galleries, comments, and feeds. Use detail pages and
    small local/static lists without `Mp.lazy.chunk`.
 
-6. Publish delivery artifacts to local/static/AWS/Firebase Hosting as needed:
+6. Publish static frontend artifacts to local/static/AWS/Firebase Hosting as needed:
 
    ```powershell
    miniprogram build --mini-program-root D:\rewards_center
@@ -381,8 +386,9 @@ Publisher workspace:
    ```
 
 Give only the `.partner.json` file to the host app developer. It contains the
-delivery URL, optional Publisher API URL, access mode, and optional MiniProgram
-access key. It does not contain cloud provider credentials or backend secrets.
+static artifact URL, optional Publisher API URL, access mode, and optional
+MiniProgram access key. It does not contain cloud provider credentials or
+backend secrets.
 
 Host workspace:
 
@@ -412,8 +418,8 @@ cd D:\
 miniprogram create my_coupon_app
 ```
 
-For backend-focused local development, scaffold the mini-program with a mock
-publisher backend:
+For Publisher API-focused local development, scaffold the mini-program with a
+mock Publisher API:
 
 ```powershell
 cd D:\
@@ -423,9 +429,9 @@ miniprogram publisher-backend run --port 9090
 miniprogram publisher-backend urls --port 9090
 ```
 
-That mock backend is only for local business API testing. Real Firebase, AWS,
+That mock API is only for local business API testing. Real Firebase, AWS,
 GCP, or custom SDKs should run on the publisher server; the Flutter host app
-only receives the publisher backend base URL.
+only receives the Publisher API base URL.
 
 The default scaffold uses only `analytics`, so it opens in a minimal generated
 host app without native-route wiring. Add `native_navigation` only when your
@@ -656,10 +662,10 @@ This means:
 
 For this platform type, that tradeoff is usually acceptable.
 
-## Cloud Direction
+## Static Artifact Hosting Direction
 
-The current first shipped cloud path is AWS-backed named environments through
-the CLI:
+The current first shipped cloud path is AWS-backed static artifact hosting
+through named environments in the CLI:
 
 ```powershell
 miniprogram env init
@@ -675,12 +681,12 @@ Replace the placeholder values before running that command. In particular:
 - `<aws-region>` should be a real AWS region such as `ap-south-1`
 - `--cloudfront-base-url` and `--api-base-url` are optional and should only be
   supplied when you already have those URLs
-- `--require-access-keys` makes the AWS delivery backend reject manifest and
+- `--require-access-keys` makes the AWS artifact endpoint reject manifest and
   screen requests unless the mini-program has valid access-key metadata
 
 Where those optional URLs come from:
 
-- `--api-base-url` is usually the `BackendApiBaseUrl` printed by
+- `--api-base-url` is usually the legacy-named `BackendApiBaseUrl` printed by
   `miniprogram cloud deploy` or `miniprogram cloud outputs`, for example
   `https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/`
 - if you use `miniprogram cloud deploy`, you normally do not need to pass
@@ -689,13 +695,13 @@ Where those optional URLs come from:
 - `--cloudfront-base-url` is the CloudFront distribution domain name, visible
   in the AWS CloudFront console as the distribution domain, for example
   `https://<distribution-id>.cloudfront.net`
-- CloudFront is optional in the current AWS CLI flow; API Gateway + Lambda is
-  enough for host-app testing
+- CloudFront is optional in the current AWS CLI flow; the API Gateway + Lambda
+  artifact endpoint is enough for host-app testing
 
 Current cloud support in this phase:
 
 - provider implementation shipped: `aws`
-- Firebase Hosting support is static delivery only
+- Firebase Hosting support is static artifact hosting only
 - publisher-owned business backend integration is provider-neutral through
   `publisher-api contract ...`
 - planned next providers: `gcp`
@@ -713,7 +719,7 @@ miniprogram publisher-api contract smoke
 miniprogram publisher-api contract handoff --delivery-url https://<project-id>.web.app/ --public --output <app>.partner.json
 ```
 
-The Flutter host app receives only the delivery URL and optional publisher
+The Flutter host app receives only the static artifact URL and optional Publisher
 API URL through the `.partner.json` package. It does not need Firebase
 credentials, Firebase Web API keys, provider SDKs, or backend secrets unless the
 host app itself chooses those providers for unrelated host features.
@@ -730,18 +736,18 @@ metadata/catalog/<mini-program-id>.json
 metadata/releases/<mini-program-id>/<version>.json
 ```
 
-The host app does not load directly from S3. It calls the deployed API Gateway
-base URL, and the Lambda backend resolves the requested mini-program ID and
-version from the bucket metadata.
+The host app does not load directly from S3 in the managed AWS flow. It calls
+the deployed API Gateway base URL, and the Lambda artifact handler resolves the
+requested mini-program ID and version from the bucket metadata.
 
-AWS cloud setup guide:
+AWS static artifact hosting setup guide:
 
 - assume Windows + PowerShell
 - assume region `ap-south-1`
 - assume the goal is the fastest working path first
 - normal developers using `mini_program_tooling` do not manually use the repo
   `infra/` folder; `miniprogram cloud deploy` already uses the bundled AWS
-  backend template
+  artifact endpoint template
 
 Important rule:
 
@@ -795,7 +801,8 @@ flutter --version
 dart --version
 ```
 
-`miniprogram cloud deploy` uses an AWS Lambda `nodejs24.x` backend template.
+`miniprogram cloud deploy` uses an AWS Lambda `nodejs24.x` artifact endpoint
+template.
 Keep AWS SAM CLI up to date enough to deploy `nodejs24.x` functions.
 
 ### 3. Connect your computer to AWS
@@ -898,7 +905,7 @@ Check cloud prerequisites:
 miniprogram cloud doctor
 ```
 
-Deploy the API Gateway + Lambda backend:
+Deploy the API Gateway + Lambda artifact endpoint:
 
 ```powershell
 miniprogram cloud deploy
@@ -913,7 +920,7 @@ miniprogram cloud outputs --format dart-define
 
 What the CLI does here:
 
-- uploads artifacts to S3
+- uploads static artifacts to S3
 - generates a managed SAM project locally
 - runs `sam build`
 - runs `sam deploy`
@@ -1121,10 +1128,10 @@ Generated host-app structure:
   app/access-key checks
 - `packages/mini_program_vscode` contains the local-first MiniProgram Tools VS
   Code extension MVP for status, create, build, validate, preview, and publish
-- protected cloud backends should validate `X-Mini-Program-Access-Key` against
+- protected artifact endpoints should validate `X-Mini-Program-Access-Key` against
   per-mini-program access-key metadata so one partner key can be revoked
   without changing the appId or breaking other partners
-- publisher-owned business backends are configured separately with
+- publisher-owned business APIs are configured separately with
   `MiniProgramEndpoint.backend` / `--backend-base-url`; they are lazy,
   action-driven, and should use relative `miniProgramBackendAction`,
   `miniProgramBackendQueryAction`, or `miniProgramBackendBuilder` endpoints
@@ -1132,7 +1139,7 @@ Generated host-app structure:
 - backend query/builder helpers can bind simple values like
   `{{backend.home.data.title}}` and repeated item templates like
   `{{item.title}}` without host app custom code
-- publisher backend secrets stay on the publisher server, not in mini-program
+- Publisher API secrets stay on the publisher server, not in mini-program
   JSON, host source, APK, IPA, or web JavaScript
 - `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the
   scope with a new key when switching environments.
@@ -1280,21 +1287,22 @@ Official AWS docs:
 - Enable S3 versioning: https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html
 - `put-bucket-versioning` CLI: https://docs.aws.amazon.com/cli/v1/reference/s3api/put-bucket-versioning.html
 
-The best long-term cloud model remains:
+The best long-term hosting model remains:
 
-- `S3 + CloudFront` for versioned artifacts
+- object storage + CDN for versioned static artifacts
   - manifests
   - screens
   - themes
   - assets
-- `API Gateway + Lambda` for dynamic and secure routes
+- optional lightweight artifact manifest endpoint for delivery decisions
   - discovery
   - rollout and host-aware selection
   - capability filtering
-  - secure operations
+- separate provider-neutral Publisher API backend for business routes
+  - auth, payments, database logic, secrets, and user actions
 
 Public GitHub JSON URLs are okay for a simple public prototype, but not the
-recommended real cloud delivery model.
+recommended real static artifact hosting model.
 
 ## What Is Not The Right Direction
 

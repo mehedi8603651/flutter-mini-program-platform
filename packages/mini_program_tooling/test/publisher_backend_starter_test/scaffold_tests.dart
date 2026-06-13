@@ -48,7 +48,7 @@ void _registerScaffoldTests() {
         force: true,
       ),
     );
-    expect(await readme.readAsString(), contains('mock publisher backend'));
+    expect(await readme.readAsString(), contains('mock Publisher API'));
   });
 
   test('rejects removed provider templates with migration message', () {

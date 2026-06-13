@@ -253,7 +253,7 @@ Most apps do not need to touch this immediately. Pass the generated config into
 `MiniProgramScope` near your app root.
 
 `MiniProgramConfig.sdkVersion` is the runtime compatibility version sent to
-mini-program delivery backends and compared with manifest `sdkVersionRange`
+mini-program artifact endpoints and compared with manifest `sdkVersionRange`
 values. It is not the pub package version of `mini_program_sdk`; for example,
 the package can be `0.3.0` while the runtime compatibility version remains
 `1.0.0`.
@@ -317,7 +317,7 @@ flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_HOST=192.168.1.25
 flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_PORT=8080
 ```
 
-For AWS cloud-backed delivery, the CLI can now keep the host-side wiring on the
+For AWS static artifact hosting, the CLI can keep the host-side wiring on the
 same command surface:
 
 ```powershell
@@ -330,7 +330,7 @@ miniprogram host run -d chrome --env my-aws-prod
 `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with the
 resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
 
-For a release APK, build with the deployed backend API URL:
+For a release APK, build with the deployed artifact API URL:
 
 ```powershell
 miniprogram cloud outputs --format dart-define
@@ -381,7 +381,7 @@ MiniProgramScope(
 ```
 
 Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
-For protected cloud delivery, the backend should validate the
+For protected artifact access, the artifact endpoint should validate the
 `X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
 revoking one partner key does not affect other partners using the same
 mini-program.

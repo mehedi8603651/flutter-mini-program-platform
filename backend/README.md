@@ -1,12 +1,12 @@
 # backend
 
-Local backend area for mini-program delivery.
+Local artifact service area for mini-program frontend delivery.
 
 ## What it is
 
 For the current MVP:
 
-- `backend/api/` holds published JSON artifacts
+- `backend/api/` holds published static JSON artifacts
 - `backend/local_backend_service/` serves those artifacts through a real Dart HTTP service
 
 The source of truth still lives in `mini_programs/<id>`.
@@ -56,8 +56,8 @@ powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1 -MiniProgramId feedback_form
 ```
 
-Validate authored manifests and backend delivery files before running the local
-service:
+Validate authored manifests and static artifact files before running the local
+artifact service:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\validate_delivery.ps1
@@ -76,7 +76,7 @@ The validator now also checks:
 - allowlisted source mini-program IDs
 - minimum secure payload requirements
 
-## Run the real local backend service
+## Run the real local artifact service
 
 ```powershell
 cd D:\flutter-mini-program-platform\backend\local_backend_service
@@ -84,7 +84,7 @@ dart pub get
 dart run bin\server.dart
 ```
 
-For Android emulator or real-device local backend testing, bind the backend to
+For Android emulator or real-device local artifact testing, bind the service to
 all interfaces instead of loopback only:
 
 ```powershell
@@ -97,7 +97,7 @@ If `8080` is already in use, run for example:
 dart run bin\server.dart --port=9135
 ```
 
-Then the local backend serves:
+Then the local artifact service serves:
 
 - `http://localhost:8080/api/discovery/mini-programs.json`
 - `http://localhost:8080/api/manifests/profile_center/latest.json`
@@ -114,7 +114,7 @@ Then the local backend serves:
 
 ## Discovery catalog route
 
-The local backend now also exposes a host-aware catalog route:
+The local artifact service now also exposes a host-aware catalog route:
 
 ```text
 GET /api/discovery/mini-programs.json
@@ -137,10 +137,10 @@ GET /api/discovery/mini-programs.json?hostApp=partner_app_host&sdkVersion=1.0.0&
 ```
 
 This is what the remote host list pages now use to render published
-mini-program cards without hardcoded backend catalog edits.
+mini-program cards without hardcoded artifact catalog edits.
 
 For `profile_center`, the `latest` manifest route is context-aware. In local
-backend mode the host sends:
+artifact-service mode the host sends:
 
 - `hostApp`
 - `sdkVersion`
@@ -207,7 +207,7 @@ The response headers also now include:
 
 ## Decision inspection route
 
-The local backend now also exposes a debug-only inspection route:
+The local artifact service now also exposes a debug-only inspection route:
 
 ```text
 GET /api/debug/manifests/:miniProgramId/decision
@@ -271,7 +271,7 @@ flutter run --dart-define=SUPER_APP_SOURCE_MODE=local_backend --dart-define=SUPE
 ```
 
 Use `127.0.0.1` only when the host app is running on the same machine as the
-backend service. For Android emulator or phone testing, keep the backend
+artifact service. For Android emulator or phone testing, keep the service
 bound to `0.0.0.0` and use:
 
 - Android emulator: `http://10.0.2.2:8080/api/`
@@ -279,7 +279,8 @@ bound to `0.0.0.0` and use:
 
 ## Secure API sample
 
-The local backend now also exposes a real secure feedback endpoint:
+The local artifact service also exposes a legacy secure feedback endpoint used
+by the repo sample:
 
 ```text
 POST /api/secure/feedback/submit
@@ -324,7 +325,7 @@ Secure endpoint responses also include:
 - nested `result` on success
 - nested `error` on failure
 
-This makes it easier to correlate host fallback diagnostics with local backend
+This makes it easier to correlate host fallback diagnostics with local service
 logs while you are still running the platform entirely on your machine.
 
 ## Package verification

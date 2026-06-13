@@ -39,9 +39,10 @@ The mini-program uses relative endpoints through `Mp.backend.*`,
 endpoint supplies the Publisher API base URL. The implementation behind that URL
 can run on AWS, Firebase, GCP, Docker, Kubernetes, a VPS, or any provider.
 
-AWS cloud delivery and Firebase Hosting are delivery systems only. They publish
-or serve manifests, screens, assets, static JSON, and optional MiniProgram access
-keys. They are not the publisher business backend model.
+AWS cloud artifact hosting and Firebase Hosting are static artifact hosting
+systems only. They publish or serve manifests, screens, assets, static JSON, and
+optional MiniProgram access keys. They are not the publisher business backend
+model.
 
 ## CLI Surface
 
@@ -145,7 +146,7 @@ miniprogram publisher-backend urls
 The mock is a development tool. Production storage, auth, payment, files, and
 business logic belong on the publisher-owned HTTPS API.
 
-## Delivery
+## Static Artifact Delivery
 
 Local/static delivery writes public files for local testing or any CDN/static
 host:
@@ -154,8 +155,8 @@ host:
 miniprogram publish --target static --output public_mini_program --clean
 ```
 
-AWS cloud delivery serves mini-program manifests, screen JSON, assets, and
-access-key protected delivery through the platform delivery stack:
+AWS static artifact hosting serves mini-program manifests, screen JSON, assets,
+and access-key protected artifact access through the platform artifact stack:
 
 ```bash
 miniprogram env configure prod --provider aws --bucket <bucket> --region <region>

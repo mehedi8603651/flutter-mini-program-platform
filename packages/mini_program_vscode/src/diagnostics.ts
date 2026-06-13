@@ -915,7 +915,7 @@ function titleForScope(scope: DiagnosticScope): string {
     case 'hostApp':
       return 'MiniProgram host app diagnostics';
     case 'cloudDelivery':
-      return 'MiniProgram cloud delivery diagnostics';
+      return 'MiniProgram cloud artifact hosting diagnostics';
     default:
       return 'MiniProgram workspace diagnostics';
   }

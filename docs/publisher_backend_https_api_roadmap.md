@@ -1,4 +1,4 @@
-# Publisher Backend HTTPS API Roadmap
+# Publisher API HTTPS Roadmap
 
 ## Goal
 
@@ -6,19 +6,19 @@ Keep mini-programs frontend-only while giving publishers full backend freedom:
 
 ```text
 Mini-program = frontend only
-Mp JSON -> mini_program_sdk HTTPS client -> publisher-owned backend -> any provider/service
+Mp JSON -> mini_program_sdk HTTPS client -> publisher-owned Publisher API -> any provider/service
 ```
 
 Static manifest, screen JSON, and assets can be public. Business data, writes,
 auth, payments, databases, provider SDKs, and secrets belong behind the
-publisher backend.
+Publisher API backend.
 
 Production backend calls should use HTTPS. Plain HTTP is only for local preview
 or loopback development.
 
 ## Current Usable Model
 
-The standalone API model is already usable through the existing backend
+The standalone API model is already usable through the existing Publisher API
 endpoint configuration. A mini-program screen does not store the real server
 URL. It stores only relative endpoints:
 
@@ -62,7 +62,7 @@ Publisher API contract for every provider.
 
 ## Core Architecture
 
-Mp screens call relative publisher backend endpoints:
+Mp screens call relative Publisher API endpoints:
 
 ```text
 orders/page
@@ -98,7 +98,7 @@ or AI provider SDKs for publishers.
 
 ## Protected API Model
 
-The SDK sends standard context headers to publisher backends:
+The SDK sends standard context headers to Publisher API backends:
 
 ```text
 X-Mini-Program-App-Id
@@ -110,7 +110,7 @@ X-Mini-Program-Access-Key
 Authorization: Bearer <publisher-auth-token>
 ```
 
-Publisher backends should verify:
+Publisher API backends should verify:
 
 - mini-program app id
 - MiniProgram access key
@@ -212,9 +212,9 @@ The backend response can use normal JSON. Recommended shapes:
 }
 ```
 
-## Backend Developer Model
+## Publisher API Developer Model
 
-The publisher backend can run anywhere:
+The Publisher API backend can run anywhere:
 
 - Firebase Functions
 - AWS Lambda

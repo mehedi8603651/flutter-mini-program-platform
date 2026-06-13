@@ -91,7 +91,7 @@ class _MiniProgramListPageState extends State<MiniProgramListPage> {
                   const SizedBox(height: 12),
                   Text(
                     'This host stays lean: it supports only the capabilities '
-                    'needed by the mini-program and relies on backend delivery '
+                    'needed by the mini-program and relies on artifact delivery '
                     'to receive compatible release lanes for more than one '
                     'portable flow.',
                     style: theme.textTheme.bodyLarge?.copyWith(

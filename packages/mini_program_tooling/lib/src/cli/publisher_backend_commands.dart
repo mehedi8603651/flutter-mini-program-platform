@@ -28,9 +28,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       case 'contract':
         return _runPublisherBackendContract(arguments.sublist(1));
       default:
-        _stderr.writeln(
-          'Unknown $commandName command: ${arguments.first}',
-        );
+        _stderr.writeln('Unknown $commandName command: ${arguments.first}');
         _stderr.writeln(_publisherBackendUsage(commandName: commandName));
         return 64;
     }
@@ -63,7 +61,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       ..addFlag(
         'force',
         negatable: false,
-        help: 'Overwrite scaffold-managed publisher backend files.',
+        help: 'Overwrite scaffold-managed mock Publisher API files.',
       )
       ..addFlag(
         'with-starter-ui',
@@ -116,7 +114,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       ..addOption(
         'port',
         defaultsTo: '9090',
-        help: 'Port to bind for the mock publisher backend.',
+        help: 'Port to bind for the mock Publisher API.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {

@@ -235,9 +235,7 @@ Mp.lazy.chunk(
       version: '1.0.0',
     );
     await const PublisherBackendStarter().scaffold(
-      PublisherBackendScaffoldRequest(
-        miniProgramRootPath: standaloneRoot,
-      ),
+      PublisherBackendScaffoldRequest(miniProgramRootPath: standaloneRoot),
     );
     final stdoutBuffer = StringBuffer();
 
@@ -270,7 +268,7 @@ Mp.lazy.chunk(
   });
 
   test(
-    'workflow status remote checks generic cloud delivery only',
+    'workflow status remote checks generic cloud artifact hosting only',
     () async {
       final standaloneRoot = p.join(tempDir.path, 'cloud_coupon');
       await _writeMiniProgramFixture(
@@ -300,9 +298,7 @@ Mp.lazy.chunk(
         }),
       );
       await const PublisherBackendStarter().scaffold(
-        PublisherBackendScaffoldRequest(
-          miniProgramRootPath: standaloneRoot,
-        ),
+        PublisherBackendScaffoldRequest(miniProgramRootPath: standaloneRoot),
       );
       await _writeAwsEnvironmentState(stateStore, standaloneRoot);
       final cloudController = _FakeMiniProgramCloudController();

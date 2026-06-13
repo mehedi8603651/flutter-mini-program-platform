@@ -28,7 +28,7 @@ class MiniProgramConfig {
     this.renderers = const <MiniProgramScreenRenderer>[],
   });
 
-  /// Runtime compatibility version sent to mini-program delivery backends.
+  /// Runtime compatibility version sent to mini-program artifact endpoints.
   ///
   /// This is not the pub package version of `mini_program_sdk`. It is compared
   /// with manifest `sdkVersionRange` values to decide whether a mini-program

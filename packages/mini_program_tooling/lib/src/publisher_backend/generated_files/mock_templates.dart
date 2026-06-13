@@ -3,7 +3,7 @@ part of '../../publisher_backend_starter.dart';
 String _mockBackendPubspec(String appId) =>
     '''
 name: ${appId}_mock_backend
-description: Local mock publisher backend for $appId.
+description: Local mock Publisher API for $appId.
 publish_to: none
 
 environment:
@@ -12,10 +12,10 @@ environment:
 
 String _mockBackendReadme(String appId, String title) =>
     '''
-# $title mock publisher backend
+# $title mock Publisher API
 
-This is a local-only mock backend for mini-program data calls. It is not the
-mini-program delivery backend and it does not contain production secrets.
+This is a local-only mock Publisher API for mini-program data calls. It is not
+the static artifact endpoint and it does not contain production secrets.
 
 Run it from the mini-program root:
 
@@ -47,7 +47,7 @@ miniprogram host endpoint add $appId `
 ```
 
 Production Firebase, AWS, GCP, or custom server SDKs should live on your
-publisher backend server, not in the Flutter host app or mini_program_sdk.
+Publisher API server, not in the Flutter host app or mini_program_sdk.
 ''';
 
 String _mockBackendServerSource() => r'''
@@ -62,7 +62,7 @@ Future<void> main(List<String> arguments) async {
         '${File.fromUri(Platform.script).parent.parent.path}${Platform.pathSeparator}data',
   );
   final server = await HttpServer.bind(host, port);
-  stdout.writeln('Mock publisher backend listening on http://$host:$port');
+  stdout.writeln('Mock Publisher API listening on http://$host:$port');
   stdout.writeln('Data root: ${dataRoot.path}');
   await for (final request in server) {
     await _handleRequest(request, dataRoot);

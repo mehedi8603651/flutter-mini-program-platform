@@ -125,7 +125,7 @@
   and screen fetches
 - make `MiniProgramPage` render a scaffolded loading state with the resolved
   mini-program title before the delivered screen is ready
-- refresh README examples around generated host app usage and cloud backend
+- refresh README examples around generated host app usage and cloud artifact
   build/run defines
 
 ## 0.1.2

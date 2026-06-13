@@ -22,7 +22,7 @@ export 'mini_program_navigation_actions.dart';
 // Manifest contract models for portable mini-program delivery.
 export 'manifest.dart';
 
-// Provider-neutral publisher backend API contract models.
+// Provider-neutral Publisher API contract models.
 export 'publisher_backend_contract.dart';
 
 // Screen document format contract values.

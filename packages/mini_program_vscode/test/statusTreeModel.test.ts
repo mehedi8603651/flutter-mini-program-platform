@@ -97,7 +97,7 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Publisher routes: GET \/health, GET \/coupons\/list, GET \/coupons\/page/);
   assert.match(text, /Paged route: yes/);
   assert.doesNotMatch(text, /AWS backend/);
-  assert.doesNotMatch(text, /Firebase backend/);
+  assert.doesNotMatch(text, /Firebase business backend/);
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);

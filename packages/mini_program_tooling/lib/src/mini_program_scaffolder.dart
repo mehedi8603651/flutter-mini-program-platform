@@ -588,7 +588,7 @@ ${withMockBackend ? _buildMpBackendUiSection() : ''}
   }
 
   String _buildMpBackendUiSection() => '''
-      Mp.heading('Publisher backend data'),
+      Mp.heading('Publisher API data'),
       Mp.backendBuilder(
         requestId: 'home',
         endpoint: 'home/bootstrap',
@@ -691,7 +691,7 @@ $description
 - `mp/screens/` contains author-written `Mp.*` Dart source.
 - `tool/build_mp.dart` writes deterministic JSON under `mp/.build/screens/`.
 - `assets/` contains local static assets for preview and publish.
-${withMockBackend ? '- `backend/mock/` contains a local publisher backend starter.' : ''}
+${withMockBackend ? '- `backend/mock/` contains a local mock Publisher API starter.' : ''}
 
 ## Build
 

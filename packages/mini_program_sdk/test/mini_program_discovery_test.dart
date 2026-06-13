@@ -49,7 +49,7 @@ void main() {
     );
 
     test(
-      'returns staleButAllowed when backend is offline and cached manifest plus screen exist',
+      'returns staleButAllowed when artifact endpoint is offline and cached manifest plus screen exist',
       () async {
         final manifestCache = InMemoryManifestCache();
         final screenCache = InMemoryScreenCache();
@@ -92,12 +92,12 @@ void main() {
         expect(result.status, MiniProgramDiscoveryStatus.staleButAllowed);
         expect(result.canOpen, isTrue);
         expect(result.manifest?.version, '1.1.0');
-        expect(result.displayMessage, contains('backend is offline'));
+        expect(result.displayMessage, contains('artifact endpoint is offline'));
       },
     );
 
     test(
-      'returns unavailable when backend is offline and no valid entry screen cache exists',
+      'returns unavailable when artifact endpoint is offline and no valid entry screen cache exists',
       () async {
         final manifestCache = InMemoryManifestCache();
         final screenCache = InMemoryScreenCache();

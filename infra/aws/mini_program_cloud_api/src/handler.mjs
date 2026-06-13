@@ -25,7 +25,7 @@ export const handler = async (event) => {
   const query = event?.queryStringParameters ?? {};
   const traceId = resolveTraceId(event);
 
-  logInfo('Received delivery API request.', {
+  logInfo('Received artifact endpoint request.', {
     traceId,
     method,
     path,
@@ -143,7 +143,7 @@ export const handler = async (event) => {
       pathSegments[1] === 'secure'
     ) {
       return notImplemented(
-        'Secure API routes are not implemented in the AWS cloud backend yet.',
+        'Secure API routes are not implemented in the AWS artifact endpoint. Use a separate Publisher API for business logic.',
         traceId,
       );
     }

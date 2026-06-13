@@ -22,10 +22,10 @@ components instead of Material, Cupertino, or host-specific widgets. Host apps
 continue to embed mini-programs through the existing SDK boundary.
 
 The Mp frontend stays declarative and frontend-only. Publisher business logic
-runs behind a protected HTTPS API owned by the publisher. The future backend
+runs behind a protected HTTPS API owned by the publisher. The Publisher API
 direction is tracked in
-[Publisher backend HTTPS API roadmap](publisher_backend_https_api_roadmap.md).
-For custom backends, Mp screens use only relative endpoints and the host
+[Publisher API HTTPS roadmap](publisher_backend_https_api_roadmap.md).
+For custom Publisher APIs, Mp screens use only relative endpoints and the host
 handoff supplies `backendBaseUrl`; Firebase and AWS are optional deployment
 helpers, not requirements of the Mp runtime.
 
@@ -305,9 +305,9 @@ Release blockers:
 ## Assumptions
 
 - The CLI remains the source of truth. VS Code remains a wrapper.
-- Delivery screen JSON, publisher backends, auth, access keys, and handoff
+- Static screen JSON, Publisher API backends, auth, access keys, and handoff
   remain provider-neutral.
-- Production publisher backend calls use HTTPS. HTTP is only for local preview
+- Production Publisher API calls use HTTPS. HTTP is only for local preview
   or loopback development.
 - The SDK owns one consistent Mp visual system.
 - iOS verification is required before claiming iOS support, but does not block

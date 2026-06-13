@@ -245,7 +245,7 @@ void _registerCloudHostPartnerTests() {
       );
       expect(
         stdoutBuffer.toString(),
-        contains('Backend API base URL: https://api.example.com/api/'),
+        contains('Artifact API base URL: https://api.example.com/api/'),
       );
 
       final updatedState = await stateStore.readEnvironmentState(

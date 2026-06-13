@@ -2,8 +2,8 @@
 ## 0.5.0
 - remove active AWS/Firebase publisher business backend scaffolds and command
   groups from the CLI
-- keep AWS cloud delivery and Firebase Hosting static delivery as delivery
-  infrastructure
+- keep AWS cloud artifact hosting and Firebase Hosting static artifact hosting
+  as delivery infrastructure
 - add `publisher-api` wording for provider-neutral contract init, validate,
   smoke, and handoff flows
 - keep the local mock Publisher API scaffold/run/status flow for frontend
@@ -132,7 +132,7 @@
 - run Firebase Hosting deploy through the shell on Windows so `firebase.cmd`
   is resolved like the existing Firebase Functions workflow
 - allow `host run` for Firebase endpoint-map host apps without requiring an
-  AWS cloud backend environment
+  AWS cloud artifact environment
 - expose the Firebase Hosting publish capability through
   `miniprogram capabilities --json`
 
@@ -354,7 +354,7 @@
   GitHub Pages/CDN/static-hosting mini-program delivery
 - add public endpoint support with `miniprogram host endpoint add --public`
   and schema v2 partner handoff packages using `accessMode`
-- keep protected AWS/backend delivery unchanged while reporting public vs
+- keep protected AWS artifact access unchanged while reporting public vs
   protected endpoint mode in workflow status
 
 ## 0.3.11
@@ -474,7 +474,7 @@
   release APKs can load cloud-delivered mini-programs through API Gateway
 - expand `miniprogram --help` and group-level `--help` output to show current
   cloud, host-run, embed-cloud, and publish target options
-- refresh root and tooling README guidance for AWS cloud delivery, multi
+- refresh root and tooling README guidance for AWS cloud artifact hosting, multi
   mini-program buckets, host app connection, and Android release networking
 
 ## 0.2.32

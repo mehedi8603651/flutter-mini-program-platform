@@ -1,10 +1,10 @@
 # Mp Engine Cloud E2E Guide
 
-This guide verifies the active cloud model:
+This guide verifies the active static artifact hosting + Publisher API model:
 
-- AWS cloud delivery for manifests, screens, assets, and access-key protected
-  delivery
-- Firebase Hosting as static delivery only
+- AWS static artifact hosting for manifests, screens, assets, and access-key
+  protected artifact access
+- Firebase Hosting as static artifact hosting only
 - provider-neutral Publisher API contract, smoke, and handoff
 - Flutter host endpoint import and runtime smoke
 
@@ -31,8 +31,8 @@ miniprogram publisher-backend run --mini-program-root D:\mp_cloud_e2e --port 909
 miniprogram publisher-backend urls --port 9090
 ```
 
-The mock confirms local frontend/backend wiring. Production work should use a
-real middle server.
+The mock confirms local frontend-to-Publisher-API wiring. Production work
+should use a real middle server.
 
 ## 3. Verify Publisher API Contract
 
@@ -58,7 +58,7 @@ miniprogram publisher-api contract init `
   --public
 ```
 
-## 4. Static Or Firebase Hosting Delivery
+## 4. Static Or Firebase Artifact Hosting
 
 ```powershell
 miniprogram publish --target static --mini-program-root D:\mp_cloud_e2e --output D:\mp_cloud_e2e\public_mini_program --clean
@@ -71,7 +71,7 @@ miniprogram env configure firebase-prod --provider firebase --project-id <projec
 miniprogram publish --target firebase-hosting --env firebase-prod --mini-program-root D:\mp_cloud_e2e --clean
 ```
 
-## 5. AWS Cloud Delivery
+## 5. AWS Static Artifact Hosting
 
 ```powershell
 miniprogram env configure aws-prod `
@@ -85,8 +85,8 @@ miniprogram publish --target cloud --env aws-prod --mini-program-root D:\mp_clou
 miniprogram cloud outputs --env aws-prod
 ```
 
-This AWS stack is delivery infrastructure. It is not the publisher business
-backend.
+This AWS stack is static artifact hosting infrastructure. It is not the
+publisher business backend.
 
 ## 6. Handoff And Host Smoke
 

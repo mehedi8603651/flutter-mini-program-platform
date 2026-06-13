@@ -12,7 +12,7 @@ First-party Flutter host app for the portable mini-program platform.
 - renders the mini-program with the shared SDK
 - executes allowlisted `secure_api` calls through host-side services and the host bridge
 - opens a host-owned native screen through `openNativeScreen`
-- can switch between bundled asset delivery and local backend HTTP delivery
+- can switch between bundled asset delivery and local HTTP artifact delivery
 - uses file-backed manifest and screen caches on real devices, with in-memory fallback in tests
 - shows an offline notice when stale cached content is rendered
 - persists standard network image assets to local files when entry-screen caching is allowed
@@ -29,7 +29,7 @@ First-party Flutter host app for the portable mini-program platform.
 The host list now resolves availability before open:
 
 - `Cached` for bundled releases
-- `Offline` when a valid cached release can still open while backend delivery is down
+- `Offline` when a valid cached release can still open while artifact delivery is down
 - `Unavailable` when no valid offline copy exists
 
 `callSecureApi` now goes through:
@@ -70,14 +70,14 @@ Refresh them after rebuilding the mini-program:
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\sync_assets.ps1
 ```
 
-## Local backend mode
+## Local artifact service mode
 
 This host defaults to bundled assets so it can run without a server.
 
-To test local backend delivery:
+To test local artifact delivery:
 
 1. Publish the current mini-program into `backend/api/`
-2. Start the real local backend service
+2. Start the real local artifact service
 3. Launch the host in `local_backend` mode
 
 ```powershell
@@ -88,17 +88,17 @@ dart run bin\server.dart
 flutter run --dart-define=SUPER_APP_SOURCE_MODE=local_backend --dart-define=SUPER_APP_BACKEND_BASE_URL=http://127.0.0.1:8080/api/
 ```
 
-For Android emulator or real-device testing, start the backend with:
+For Android emulator or real-device testing, start the artifact service with:
 
 ```powershell
 dart run bin\server.dart --host=0.0.0.0 --port=8080
 ```
 
-If you start the backend on another port, update
+If you start the artifact service on another port, update
 `SUPER_APP_BACKEND_BASE_URL` to match it.
 
-In local backend mode, this host automatically sends its delivery context to
-the backend discovery and `latest` manifest routes:
+In local artifact-service mode, this host automatically sends its delivery
+context to the discovery and `latest` manifest routes:
 
 - `hostApp=super_app_host`
 - `sdkVersion=1.0.0`
@@ -115,8 +115,9 @@ With the current rollout sample, that context resolves:
 - `mp_rewards_center` `latest` -> current bundled version
 
 In remote mode, the host list now discovers compatible published mini-programs
-through `/api/discovery/mini-programs.json`, so newly published backend
-entries can show up without editing the host catalog for backend delivery.
+through `/api/discovery/mini-programs.json`, so newly published artifact
+entries can show up without editing the host catalog for static artifact
+delivery.
 
 If you test on an Android emulator instead of Windows desktop, use
 `http://10.0.2.2:8080/api/` for `SUPER_APP_BACKEND_BASE_URL`.

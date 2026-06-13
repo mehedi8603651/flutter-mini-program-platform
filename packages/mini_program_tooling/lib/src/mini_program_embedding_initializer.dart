@@ -749,9 +749,9 @@ MiniProgramScope(
 );
 ```
 
-Rule: host UI knows `appId`; host config owns delivery URLs, backend URLs, and
-MiniProgram access keys. Provider credentials and backend secrets stay on the
-publisher backend, never in Mp JSON, APK, IPA, web JavaScript, logs, or handoff
+Rule: host UI knows `appId`; host config owns static artifact URLs, Publisher API
+URLs, and MiniProgram access keys. Provider credentials and backend secrets stay
+on the Publisher API server, never in Mp JSON, APK, IPA, web JavaScript, logs, or handoff
 docs.
 
 ## Generated defaults

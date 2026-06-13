@@ -6,7 +6,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
   ) async {
     if (request.template != 'mock') {
       throw PublisherBackendException(
-        'Publisher backend provider templates were removed. Use your own '
+        'Publisher API provider templates were removed. Use your own '
         'middle server and connect it with '
         '`miniprogram publisher-backend contract init --backend-base-url <url>`, '
         'or use `--template mock` for local API testing.',
@@ -28,11 +28,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
     final miniProgramRootPath = await _requireMiniProgramRoot(
       request.miniProgramRootPath,
     );
-    final backendRootPath = p.join(
-      miniProgramRootPath,
-      'backend',
-      'mock',
-    );
+    final backendRootPath = p.join(miniProgramRootPath, 'backend', 'mock');
     final createdPaths = <String>[];
     final files = buildMockPublisherBackendFiles(
       miniProgramRootPath: miniProgramRootPath,
@@ -78,7 +74,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       }
       if (previousStatus.processAlive) {
         throw PublisherBackendException(
-          'A recorded publisher backend process is alive but not healthy. '
+          'A recorded mock Publisher API process is alive but not healthy. '
           'Stop it or inspect logs before starting again.\n'
           '${previousStatus.healthError ?? previousState.healthCheckUrl}',
         );
@@ -90,7 +86,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
     final preExisting = await _probeHealth(healthCheckUri);
     if (preExisting.healthy) {
       throw PublisherBackendException(
-        'A publisher backend is already responding at $healthCheckUri, but no '
+        'A mock Publisher API is already responding at $healthCheckUri, but no '
         'tracked state was found. Stop that server or use another --port.',
       );
     }
@@ -136,7 +132,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       final stderrTail = await _readLogTail(stderrLogPath);
       throw PublisherBackendException(
         [
-          'Failed to confirm publisher backend health at $healthCheckUri.',
+          'Failed to confirm mock Publisher API health at $healthCheckUri.',
           if (startupHealth.statusCode != null)
             'Last health status code: ${startupHealth.statusCode}',
           if (startupHealth.error != null)
@@ -180,10 +176,10 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
     String? healthError = health.error;
     if (!processAlive && health.healthy) {
       healthError =
-          'Recorded publisher backend PID is stale, but a backend is still '
+          'Recorded mock Publisher API PID is stale, but an API is still '
           'responding at ${state.healthCheckUrl}.';
     } else if (!processAlive && !health.healthy && healthError == null) {
-      healthError = 'Recorded publisher backend PID is no longer running.';
+      healthError = 'Recorded mock Publisher API PID is no longer running.';
     }
     return PublisherBackendStatusResult(
       state: state,
@@ -223,8 +219,8 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       final stderrText = '${stopResult.stderr}'.trim();
       throw PublisherBackendException(
         stderrText.isEmpty
-            ? 'Failed to stop publisher backend PID ${state.pid}.'
-            : 'Failed to stop publisher backend PID ${state.pid}.\n$stderrText',
+            ? 'Failed to stop mock Publisher API PID ${state.pid}.'
+            : 'Failed to stop mock Publisher API PID ${state.pid}.\n$stderrText',
       );
     }
     await _waitForBackendUnavailable(

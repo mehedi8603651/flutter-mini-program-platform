@@ -141,7 +141,7 @@ Mp.backendBuilder(
 ```
 
 Use `Mp.lazy.chunk` for repeated, large, dynamic data that comes from a
-publisher backend or database and needs pagination or manual Load more:
+Publisher API or database and needs pagination or manual Load more:
 
 ```dart
 Mp.lazy.chunk(
@@ -257,13 +257,13 @@ miniprogram validate
 miniprogram publish --target static --output public_mini_program --clean
 ```
 
-Firebase static delivery:
+Firebase static artifact hosting:
 
 ```powershell
 miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
 ```
 
-AWS/S3 delivery:
+AWS/S3 static artifact hosting:
 
 ```powershell
 miniprogram publish --target cloud --env my-aws-prod
@@ -282,7 +282,7 @@ metadata/
 
 - Keep the default `analytics` capability until the flow needs more.
 - Add `auth` only when using `Mp.authBuilder` or auth actions.
-- Use publisher backend routes for business data, not static screen JSON.
+- Use Publisher API routes for business data, not static screen JSON.
 - Use paged backend lists for large collections.
 - Keep images on HTTPS URLs or bundled assets.
 - Use `workflow status --json` to confirm `screenFormat: mp`,
