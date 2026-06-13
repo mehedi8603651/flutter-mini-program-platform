@@ -52,7 +52,7 @@ Already shipped:
 - opt-in mock Publisher API starter with API-bound starter UI for local
   business API testing
 - AWS static artifact publishing through S3
-- AWS artifact manifest endpoint through API Gateway + Lambda for manifests,
+- AWS static artifact endpoint through API Gateway + Lambda for manifests,
   screen JSON, static artifacts, and access-key protected artifact access
 - provider-neutral Publisher API contract, smoke, and handoff flow for any
   publisher-owned HTTPS backend
@@ -293,6 +293,9 @@ miniprogram build [mini-program-id]
 miniprogram preview -d <device> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>]
+miniprogram workflow status [--json] [--remote]
+miniprogram access-key create|list|revoke|rotate <mini-program-id>
+miniprogram partner package <mini-program-id> (--public|--access-key <key>) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>]
 miniprogram publisher-api scaffold --template mock
 miniprogram publisher-api run --port 9090
 miniprogram publisher-api status
@@ -308,6 +311,8 @@ miniprogram cloud rollback <version> [mini-program-id]
 miniprogram embed init
 miniprogram embed cloud configure --env <env-name>
 miniprogram host run -d <device> --env <env-name>
+miniprogram host endpoint add <mini-program-id> --api-base-url <url> (--public|--access-key <key>) [--backend-base-url <url>|--backend-local-mock]
+miniprogram host endpoint import <partner-package.json>
 miniprogram artifact-host init
 miniprogram artifact-host start --port 8080
 miniprogram artifact-host stop
@@ -326,8 +331,8 @@ The mini-program is frontend/authored UI. It may call a publisher-owned HTTPS
 API, but it should not contain database SDKs, payment secrets, admin logic,
 provider credentials, or provider-specific backend code. The publisher can build
 that API on AWS Lambda, Firebase Functions, Cloud Run, Docker, Kubernetes, a VPS,
-or any other provider. The mini-program and host only know the API base URL and
-relative endpoints.
+or any other provider. The mini-program and host only know the Publisher API
+base URL and relative endpoints.
 
 Publisher workspace:
 
@@ -408,6 +413,7 @@ Host workspace:
 
 3. Run the host app and open the mini-program from the generated registry or
    your own host navigation.
+
 ## Local Developer Workflow
 
 ### 1. Create a mini-program
@@ -668,8 +674,9 @@ For this platform type, that tradeoff is usually acceptable.
 
 ## Static Artifact Hosting Direction
 
-The current first shipped cloud path is AWS-backed static artifact hosting
-through named environments in the CLI:
+The current shipped hosted artifact paths are AWS-backed static artifact hosting
+and Firebase Hosting. Both are frontend artifact delivery choices, not the
+Publisher API backend.
 
 ```powershell
 miniprogram env init
@@ -702,7 +709,7 @@ Where those optional URLs come from:
 - CloudFront is optional in the current AWS CLI flow; the API Gateway + Lambda
   artifact endpoint is enough for host-app testing
 
-Current cloud support in this phase:
+Current static artifact hosting support:
 
 - provider implementation shipped: `aws`
 - Firebase Hosting support is static artifact hosting only
@@ -712,8 +719,8 @@ Current cloud support in this phase:
 - planned next providers: `custom-s3-compatible`
 
 Firebase Hosting can publish public static mini-program artifacts. If the
-mini-program needs auth, database, payment, storage, or business rules, point the
-host endpoint at your own Publisher API:
+mini-program needs auth, database, payment, storage, or business rules, include
+your Publisher API base URL in the handoff/host endpoint:
 
 ```powershell
 miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id>
@@ -741,537 +748,32 @@ metadata/releases/<mini-program-id>/<version>.json
 ```
 
 The host app does not load directly from S3 in the managed AWS flow. It calls
-the deployed API Gateway base URL, and the Lambda artifact handler resolves the
-requested mini-program ID and version from the bucket metadata.
+the deployed artifact endpoint base URL, and the Lambda artifact handler
+resolves the requested mini-program ID and version from the bucket metadata.
 
-AWS static artifact hosting setup guide:
-
-- assume Windows + PowerShell
-- assume region `ap-south-1`
-- assume the goal is the fastest working path first
-- normal developers using `mini_program_tooling` do not manually use the repo
-  `infra/` folder; `miniprogram cloud deploy` already uses the bundled AWS
-  artifact endpoint template
-
-Important rule:
-
-- if you signed in with the AWS **root account**, you can create IAM users,
-  buckets, and everything else
-- if you signed in with an **IAM user/role** and cannot create those things,
-  you do not have enough permissions and need an admin to grant them
-
-### 1. One-time AWS account setup
-
-Best practice:
-
-- use the root account only for:
-  - enabling MFA
-  - creating an admin identity
-- do not use root for daily work
-
-Fastest practical setup for your own standalone AWS account:
-
-1. sign in as **root**
-2. enable **MFA** on root
-3. open **IAM**
-4. create a user like `mini-admin`
-5. give it `AdministratorAccess`
-6. create:
-   - console access
-   - access key for CLI use
-7. sign out of root
-8. sign in as `mini-admin`
-
-For first setup, `AdministratorAccess` is the easiest path. Later you can
-replace it with a narrower deploy policy.
-
-### 2. Install tools on your computer
-
-Install:
-
-- AWS CLI
-- AWS SAM CLI
-- Node.js 24 or newer
-- Flutter
-- Dart
-
-Then verify:
-
-```powershell
-aws --version
-sam --version
-node --version
-flutter --version
-dart --version
-```
-
-`miniprogram cloud deploy` uses an AWS Lambda `nodejs24.x` artifact endpoint
-template.
-Keep AWS SAM CLI up to date enough to deploy `nodejs24.x` functions.
-
-### 3. Connect your computer to AWS
-
-Option A: access key profile
+AWS static artifact hosting quick path:
 
 ```powershell
 aws configure --profile my-aws
 aws sts get-caller-identity --profile my-aws
-```
 
-Enter:
-
-- Access key ID
-- Secret access key
-- Region: `ap-south-1`
-- Output format: `json`
-
-If that works, your computer is connected to AWS.
-
-Option B: AWS SSO
-
-```powershell
-aws configure sso --profile my-sso
-aws sso login --profile my-sso
-aws sts get-caller-identity --profile my-sso
-```
-
-For a new standalone personal account, the access-key profile path is usually
-simpler.
-
-### 4. Create the S3 bucket
-
-Bucket names must be globally unique.
-
-Example:
-
-```powershell
-aws s3api create-bucket --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1 --profile my-aws
-```
-
-Enable versioning:
-
-```powershell
-aws s3api put-bucket-versioning --bucket my-mini-program-prod-ap-south-1-001 --versioning-configuration Status=Enabled --region ap-south-1 --profile my-aws
-aws s3api get-bucket-versioning --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --profile my-aws
-```
-
-Expected result:
-
-```json
-{
-  "Status": "Enabled"
-}
-```
-
-### 5. Create your mini-program
-
-```powershell
-cd D:\
-miniprogram create my_coupon_app
-cd my_coupon_app
-miniprogram preview -d chrome
-```
-
-Use preview first so you confirm the mini-program works before cloud deploy.
-
-### 6. Configure `miniprogram` for AWS
-
-Initialize env:
-
-```powershell
-miniprogram env init
-```
-
-Configure the AWS environment:
-
-```powershell
-miniprogram env configure my-aws-prod --provider aws --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --aws-profile my-aws
-```
-
-Select it:
-
-```powershell
-miniprogram env use my-aws-prod
-miniprogram env status
-```
-
-### 7. Publish and deploy to AWS
-
-Publish the mini-program artifacts to S3:
-
-```powershell
-miniprogram publish --target cloud
-```
-
-Check cloud prerequisites:
-
-```powershell
-miniprogram cloud doctor
-```
-
-Deploy the API Gateway + Lambda artifact endpoint:
-
-```powershell
-miniprogram cloud deploy
-```
-
-Inspect outputs:
-
-```powershell
-miniprogram cloud outputs
-miniprogram cloud outputs --format dart-define
-```
-
-What the CLI does here:
-
-- uploads static artifacts to S3
-- generates a managed SAM project locally
-- runs `sam build`
-- runs `sam deploy`
-- creates or updates:
-  - API Gateway
-  - Lambda
-  - Lambda IAM role
-
-You do not manually create API Gateway routes.
-
-### 8. Connect a Flutter host app
-
-If you do not have a host app yet:
-
-```powershell
-cd D:\
-flutter create my_mini_host
-cd my_mini_host
-miniprogram embed init
-flutter pub get
-```
-
-Bind that host app to your AWS env:
-
-```powershell
-miniprogram embed cloud configure --env my-aws-prod
-```
-
-Run it:
-
-```powershell
-miniprogram host run -d chrome --env my-aws-prod
-```
-
-Or Windows desktop:
-
-```powershell
-miniprogram host run -d windows --env my-aws-prod
-```
-
-That wraps `flutter run` and passes the deployed artifact endpoint URL
-automatically.
-
-For release APK builds, use the legacy-named artifact endpoint define from the
-cloud outputs:
-
-```powershell
-miniprogram cloud outputs --format dart-define
-cd D:\my_mini_host
-flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
-```
-
-Use the compatibility `BackendApiBaseUrl` shown by
-`miniprogram cloud outputs`; do not use the S3 bucket URL directly. The host
-app loads static mini-program artifacts through API Gateway + Lambda.
-
-Demo `lib/main.dart` after `miniprogram host endpoint import` or
-`miniprogram host endpoint add --title <title>` has created
-`mini_program_endpoints.dart` and `mini_program_registry.dart`:
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
-
-import 'mini_program/mini_program_endpoints.dart';
-import 'mini_program/mini_program_launcher.dart';
-import 'mini_program/mini_program_registry.dart';
-import 'mini_program/mini_program_runtime_setup.dart';
-
-void main() {
-  runApp(
-    MiniProgramScope(
-      config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-      child: const MyApp(),
-    ),
-  );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MiniProgram Host',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('MiniProgram Host')),
-      body: Center(
-        child: FilledButton(
-          onPressed: () {
-            openAppMiniProgram(
-              context,
-              appId: MiniPrograms.awsCouponDemo.appId,
-              title: MiniPrograms.awsCouponDemo.title,
-            );
-          },
-          child: const Text('Open Coupon MiniProgram'),
-        ),
-      ),
-    );
-  }
-}
-```
-
-If the host app uses state management, keep using it normally. `MiniProgramScope`
-is only a mini-program service scope, so it can sit inside or outside your
-state-management root.
-
-Riverpod:
-
-```dart
-void main() {
-  runApp(
-    ProviderScope(
-      child: MiniProgramScope(
-        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
-```
-
-Provider:
-
-```dart
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppState()),
-      ],
-      child: MiniProgramScope(
-        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
-```
-
-Bloc:
-
-```dart
-void main() {
-  runApp(
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => AuthBloc()),
-      ],
-      child: MiniProgramScope(
-        config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
-```
-
-`MiniProgramScope` does not require Riverpod, Provider, Bloc, GetX, or GoRouter;
-these examples are only composition patterns for host apps that already use
-those packages.
-
-Generated host-app structure:
-
-- `pubspec.yaml` is updated with `mini_program_sdk` and
-  `mini_program_contracts`
-- `lib/mini_program/mini_program.dart` is an optional generated barrel export
-  if you prefer one app-local import
-- `lib/mini_program/mini_program_launcher.dart` exposes
-  `openAppMiniProgram(...)` and `AppMiniProgramLauncher`
-- `lib/mini_program/mini_program_runtime_setup.dart` resolves
-  `MINI_PROGRAM_BACKEND_BASE_URL`, accepts optional
-  `Map<String, MiniProgramEndpoint>` endpoint routing, and builds
-  `MiniProgramConfig`
-- `lib/mini_program/app_host_bridge.dart` is where developers wire real
-  analytics, optional native screens, and secure API behavior
-- `lib/main.dart` stays app-owned; edit it to add buttons, tabs, or menu items
-  that call `openAppMiniProgram(...)`
-- This package does not own your Flutter app. It only provides mini-program
-  capability through `MiniProgramScope`. Your `MaterialApp`,
-  `GetMaterialApp`, `MaterialApp.router`, GoRouter, theme, localization, state
-  management, routes, and navigator setup remain fully yours.
-- `MiniProgramConfig.sdkVersion` is the runtime compatibility version checked
-  against manifest `sdkVersionRange`, not the `mini_program_sdk` pub package
-  version.
-- for multi-publisher apps, register
-  `appId -> API base URL + MiniProgram access key` in
-  `buildMiniProgramConfig(endpoints: ...)`; screens still call
-  `openAppMiniProgram(context, appId: ...)`
-- publishers can hand this to host teams with
-  `miniprogram partner package`, and host teams can import it with
-  `miniprogram host endpoint import`
-- `miniprogram workflow status --json` gives a redacted status snapshot for
-  VS Code sidebar integration; add `--remote` only when you want cloud
-  app/access-key checks
-- `packages/mini_program_vscode` contains the local-first MiniProgram Tools VS
-  Code extension MVP for status, create, build, validate, preview, and publish
-- protected artifact endpoints should validate `X-Mini-Program-Access-Key` against
-  per-mini-program access-key metadata so one partner key can be revoked
-  without changing the appId or breaking other partners
-- publisher-owned business APIs are configured separately with
-  `MiniProgramEndpoint.backend` / `--backend-base-url`; they are lazy,
-  action-driven, and should use relative `miniProgramBackendAction`,
-  `miniProgramBackendQueryAction`, or `miniProgramBackendBuilder` endpoints
-  such as `home/bootstrap`
-- backend query/builder helpers can bind simple values like
-  `{{backend.home.data.title}}` and repeated item templates like
-  `{{item.title}}` without host app custom code
-- Publisher API secrets stay on the publisher server, not in mini-program
-  JSON, host source, APK, IPA, or web JavaScript
-- `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the
-  scope with a new key when switching environments.
-- Android release builds need internet access to load cloud mini-programs.
-  `miniprogram embed init` writes
-  `android.permission.INTERNET` into `android/app/src/main/AndroidManifest.xml`
-  for generated host apps. Debug builds also get local cleartext config for
-  `http://10.0.2.2` and localhost backend testing.
-
-### 9. Minimum policies you need
-
-Easiest first setup:
-
-- use `AdministratorAccess` on your admin user
-
-That is the shortest path to get working.
-
-Narrower deploy user later needs at least:
-
-- S3 bucket access
-  - `s3:ListBucket`
-  - `s3:GetBucketLocation`
-  - `s3:GetBucketVersioning`
-  - `s3:GetObject`
-  - `s3:PutObject`
-  - `s3:DeleteObject`
-  - `s3:AbortMultipartUpload`
-- CloudFormation
-  - `cloudformation:CreateStack`
-  - `cloudformation:UpdateStack`
-  - `cloudformation:DeleteStack`
-  - `cloudformation:DescribeStacks`
-  - `cloudformation:DescribeStackEvents`
-  - `cloudformation:DescribeStackResources`
-  - `cloudformation:ListStackResources`
-  - `cloudformation:CreateChangeSet`
-  - `cloudformation:ExecuteChangeSet`
-  - `cloudformation:DeleteChangeSet`
-  - `cloudformation:DescribeChangeSet`
-  - `cloudformation:GetTemplate`
-  - `cloudformation:GetTemplateSummary`
-  - `cloudformation:ValidateTemplate`
-- Lambda
-  - `lambda:CreateFunction`
-  - `lambda:UpdateFunctionCode`
-  - `lambda:UpdateFunctionConfiguration`
-  - `lambda:DeleteFunction`
-  - `lambda:GetFunction`
-  - `lambda:GetFunctionConfiguration`
-  - `lambda:GetPolicy`
-  - `lambda:AddPermission`
-  - `lambda:RemovePermission`
-  - `lambda:TagResource`
-  - `lambda:UntagResource`
-  - `lambda:ListTags`
-- API Gateway
-  - `apigateway:GET`
-  - `apigateway:POST`
-  - `apigateway:PUT`
-  - `apigateway:PATCH`
-  - `apigateway:DELETE`
-  - `apigateway:TagResource`
-  - `apigateway:UntagResource`
-- IAM role management for the Lambda execution role
-  - `iam:CreateRole`
-  - `iam:DeleteRole`
-  - `iam:GetRole`
-  - `iam:PassRole`
-  - `iam:TagRole`
-  - `iam:UntagRole`
-  - `iam:AttachRolePolicy`
-  - `iam:DetachRolePolicy`
-  - `iam:PutRolePolicy`
-  - `iam:DeleteRolePolicy`
-  - `iam:GetRolePolicy`
-  - `iam:ListRolePolicies`
-  - `iam:ListAttachedRolePolicies`
-- If your bucket uses KMS encryption, also:
-  - `kms:Encrypt`
-  - `kms:Decrypt`
-  - `kms:GenerateDataKey`
-  - `kms:DescribeKey`
-
-### 10. If you still cannot create IAM users or buckets
-
-Then one of these is true:
-
-- you are not signed in as root or admin
-- your IAM user/role is restricted
-- your AWS account is inside an AWS Organization with SCP restrictions
-
-In that case, ask the account admin for either:
-
-- `AdministratorAccess` temporarily for setup
-- or a dedicated deploy user/role with the permissions above
-
-### Exact end-to-end command sequence
-
-```powershell
-# 1. configure aws cli
-aws configure --profile my-aws
-aws sts get-caller-identity --profile my-aws
-
-# 2. create bucket
 aws s3api create-bucket --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1 --profile my-aws
 aws s3api put-bucket-versioning --bucket my-mini-program-prod-ap-south-1-001 --versioning-configuration Status=Enabled --region ap-south-1 --profile my-aws
 
-# 3. create and test mini-program locally
 cd D:\
 miniprogram create my_coupon_app
 cd my_coupon_app
 miniprogram preview -d chrome
 
-# 4. configure miniprogram aws env
 miniprogram env init
 miniprogram env configure my-aws-prod --provider aws --bucket my-mini-program-prod-ap-south-1-001 --region ap-south-1 --aws-profile my-aws
 miniprogram env use my-aws-prod
 miniprogram cloud doctor
 
-# 5. publish and deploy
 miniprogram publish --target cloud
 miniprogram cloud deploy
 miniprogram cloud outputs
 
-# 6. host app
 cd D:\
 flutter create my_mini_host
 cd my_mini_host
@@ -1281,18 +783,9 @@ miniprogram embed cloud configure --env my-aws-prod
 miniprogram host run -d chrome --env my-aws-prod
 ```
 
-Official AWS docs:
-
-- Root user best practices: https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html
-- Create an administrative user: https://docs.aws.amazon.com/accounts/latest/reference/getting-started-step4.html
-- Create an IAM user: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
-- Install AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-- Configure AWS CLI SSO: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html
-- Install AWS SAM CLI: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
-- `sam deploy` capabilities: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-deploy.html
-- Create S3 bucket with CLI: https://docs.aws.amazon.com/cli/v1/reference/s3api/create-bucket.html
-- Enable S3 versioning: https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html
-- `put-bucket-versioning` CLI: https://docs.aws.amazon.com/cli/v1/reference/s3api/put-bucket-versioning.html
+For IAM permissions, AWS SSO, SAM details, manual deploy fallback, and
+troubleshooting, use the dedicated
+[AWS static artifact host guide](infra/aws/mini_program_cloud_api/README.md).
 
 The best long-term hosting model remains:
 
