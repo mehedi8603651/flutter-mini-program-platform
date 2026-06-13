@@ -81,7 +81,7 @@ void main() {
       expect(
         runtimeSetup,
         contains(
-          "debugPrint(\n    '[mini_program][runtime] Backend base URL: \$backendApiBaseUri '",
+          "debugPrint(\n    '[mini_program][runtime] Static artifact base URL: \$artifactBaseUri '",
         ),
       );
       expect(runtimeSetup, contains('Endpoint routing enabled for'));
@@ -145,7 +145,7 @@ void main() {
       );
       expect(readme, contains('MINI_PROGRAM_BACKEND_HOST'));
       expect(readme, contains('MiniProgramConfig` is immutable'));
-      expect(readme, contains('MiniProgram access key'));
+      expect(readme, contains('middleServerApiUrl'));
       expect(readme, contains('miniprogram host endpoint import'));
       expect(readme, contains('buildMiniProgramEndpoints()'));
       expect(readme, contains('State management still stays app-owned'));

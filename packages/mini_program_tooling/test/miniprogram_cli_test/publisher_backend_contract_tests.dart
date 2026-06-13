@@ -165,9 +165,22 @@ void _registerPublisherBackendContractTests() {
         request.response.headers.contentType = ContentType.json;
         if (request.uri.path == '/orders') {
           request.response.statusCode = 201;
-          request.response.write('{"data":{"orderId":"order-1"}}');
+          request.response.write(
+            '{"data":{"orderId":"order-1"},"traceId":"trace-order"}',
+          );
+        } else if (request.uri.path == '/products/page') {
+          request.response.write(
+            '{"items":[{"id":"product-1"}],"nextCursor":"cursor-2","hasMore":true,"traceId":"trace-page"}',
+          );
+        } else if (request.uri.path == '/session') {
+          request.response.statusCode = 401;
+          request.response.write(
+            '{"errorCode":"session_expired","message":"Session expired","traceId":"trace-session"}',
+          );
         } else {
-          request.response.write('{"data":{"ok":true}}');
+          request.response.write(
+            '{"data":{"ok":true},"traceId":"trace-success"}',
+          );
         }
         await request.response.close();
       });
@@ -209,6 +222,13 @@ void _registerPublisherBackendContractTests() {
               'expectedStatus': 201,
               'expectJsonObject': true,
             },
+            <String, Object?>{
+              'id': 'session_expired',
+              'method': 'GET',
+              'endpoint': 'session',
+              'expectedStatus': 401,
+              'expectJsonObject': true,
+            },
           ],
         }),
       );
@@ -240,8 +260,8 @@ void _registerPublisherBackendContractTests() {
       expect(json['passed'], isTrue);
       expect(json['accessKeyProvided'], isTrue);
       expect(json['authTokenProvided'], isTrue);
-      expect(json['routes'], hasLength(3));
-      expect(requests, hasLength(3));
+      expect(json['routes'], hasLength(4));
+      expect(requests, hasLength(4));
       expect(requests[0].headers.value('x-mini-program-app-id'), 'api_demo');
       expect(
         requests[0].headers.value('x-mini-program-host-app'),
@@ -257,6 +277,7 @@ void _registerPublisherBackendContractTests() {
       expect(requests[1].query, 'limit=1');
       expect(requests[2].method, 'POST');
       expect(requests[2].body, contains('product-1'));
+      expect(requests[3].path, '/session');
     });
 
     test('smoke reports unexpected status without leaking secrets', () async {

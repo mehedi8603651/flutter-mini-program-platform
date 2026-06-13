@@ -84,6 +84,69 @@ void main() {
       expect(decoded.smokeTests.single.endpoint, 'health');
     });
 
+    test('documents runtime API smoke response fixture envelopes', () {
+      final successEnvelope = <String, Object?>{
+        'data': <String, Object?>{'ok': true},
+        'traceId': 'trace-success',
+      };
+      final errorEnvelope = <String, Object?>{
+        'errorCode': 'validation_failed',
+        'message': 'Validation failed',
+        'traceId': 'trace-error',
+      };
+      final paginationEnvelope = <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'id': 'product-1'},
+        ],
+        'nextCursor': 'cursor-2',
+        'hasMore': true,
+        'traceId': 'trace-page',
+      };
+      final sessionExpiredEnvelope = <String, Object?>{
+        'errorCode': 'session_expired',
+        'message': 'Session expired',
+        'traceId': 'trace-session',
+      };
+      final contract = MiniProgramPublisherBackendContract(
+        appId: 'shop_demo',
+        backendBaseUri: Uri.parse('https://api.publisher.example/'),
+        smokeTests: <MiniProgramPublisherBackendSmokeCase>[
+          MiniProgramPublisherBackendSmokeCase(
+            id: 'success',
+            endpoint: 'products/featured',
+          ),
+          MiniProgramPublisherBackendSmokeCase(
+            id: 'pagination',
+            endpoint: 'products/page?limit=1',
+          ),
+          MiniProgramPublisherBackendSmokeCase(
+            id: 'session_expired',
+            endpoint: 'session',
+            expectation: const MiniProgramPublisherBackendSmokeExpectation(
+              expectedStatus: 401,
+            ),
+          ),
+        ],
+      );
+
+      final json = contract.toJson();
+
+      expect(successEnvelope['data'], isA<Map<String, Object?>>());
+      expect(successEnvelope['traceId'], 'trace-success');
+      expect(errorEnvelope['errorCode'], 'validation_failed');
+      expect(errorEnvelope['message'], 'Validation failed');
+      expect(paginationEnvelope['items'], isA<List<Object?>>());
+      expect(paginationEnvelope['nextCursor'], 'cursor-2');
+      expect(paginationEnvelope['hasMore'], isTrue);
+      expect(sessionExpiredEnvelope['errorCode'], 'session_expired');
+      expect(json['backendBaseUrl'], 'https://api.publisher.example');
+      expect(json.containsKey('artifactBaseUrl'), isFalse);
+      expect(json.containsKey('middleServerApiUrl'), isFalse);
+      final smokeTests = json['smokeTests'] as List<Object?>;
+      expect(smokeTests, hasLength(3));
+      expect(smokeTests.last, containsPair('expectedStatus', 401));
+    });
+
     test('accepts loopback HTTP and rejects non-local HTTP by default', () {
       final loopback = MiniProgramPublisherBackendContract(
         appId: 'local_demo',

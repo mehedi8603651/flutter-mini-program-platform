@@ -1403,6 +1403,156 @@ void _mpScreenRendererTests() {
       backendStore.dispose();
     });
 
+    testWidgets(
+      'backend.call uses optional runtime middle-server API and fails predictably without it',
+      (tester) async {
+        final connector = _RecordingBackendConnector(
+          responses: <MiniProgramBackendResult>[
+            _runtimeApiSuccess(
+              requestId: 'runtime_call',
+              endpoint: '/products',
+              data: const <String, dynamic>{'title': 'Runtime product'},
+            ),
+          ],
+        );
+
+        final success =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.backend.call(
+                      requestId: 'runtime_call',
+                      endpoint: '/products',
+                    ),
+                  ),
+                  backendConnector: connector,
+                )
+                as MiniProgramBackendResult;
+
+        expect(success.isSuccess, isTrue);
+        expect(success.data['title'], 'Runtime product');
+        expect(success.data['traceId'], 'trace_runtime_success');
+        expect(connector.calls.single.endpoint, '/products');
+
+        final failure =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.backend.call(
+                      requestId: 'runtime_call',
+                      endpoint: '/products',
+                    ),
+                  ),
+                )
+                as MiniProgramBackendResult;
+
+        expect(failure.isFailure, isTrue);
+        expect(failure.errorCode, 'publisher_backend_not_configured');
+        expect(
+          failure.message,
+          'Publisher API is not configured for mini-program "coupon".',
+        );
+      },
+    );
+
+    testWidgets(
+      'backend.query writes runtime API snapshots and no-API failure snapshots',
+      (tester) async {
+        final connector = _RecordingBackendConnector(
+          responses: <MiniProgramBackendResult>[
+            _runtimeApiSuccess(
+              requestId: 'products_query',
+              endpoint: '/products',
+              data: const <String, dynamic>{'title': 'Runtime products'},
+            ),
+          ],
+        );
+        final backendStore = MiniProgramBackendStore();
+
+        final success =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.backend.query(
+                      requestId: 'products_query',
+                      endpoint: '/products',
+                    ),
+                  ),
+                  backendConnector: connector,
+                  backendStore: backendStore,
+                )
+                as Map<String, dynamic>;
+
+        expect(success['status'], 'success');
+        expect(success['data'], containsPair('title', 'Runtime products'));
+        expect(
+          success['data'],
+          containsPair('traceId', 'trace_runtime_success'),
+        );
+        expect(backendStore.snapshot('products_query').isSuccess, isTrue);
+        expect(connector.calls.single.endpoint, '/products');
+        backendStore.dispose();
+
+        final missingBackendStore = MiniProgramBackendStore();
+        final failure =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.backend.query(
+                      requestId: 'products_query',
+                      endpoint: '/products',
+                    ),
+                  ),
+                  backendStore: missingBackendStore,
+                )
+                as Map<String, dynamic>;
+
+        expect(failure['status'], 'failed');
+        expect(failure['errorCode'], 'publisher_backend_not_configured');
+        expect(
+          failure['message'],
+          'Publisher API is not configured for mini-program "coupon".',
+        );
+        expect(
+          missingBackendStore.snapshot('products_query').isFailure,
+          isTrue,
+        );
+        missingBackendStore.dispose();
+      },
+    );
+
+    testWidgets('backendBuilder renders no-API failure state gracefully', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.backendBuilder(
+              requestId: 'home',
+              endpoint: 'home/bootstrap',
+              loading: Mp.text('Loading runtime API'),
+              error: Mp.text('Runtime API error: {{backend.home.message}}'),
+              child: Mp.text('{{backend.home.data.title}}'),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Runtime API error: Publisher API is not configured for mini-program "coupon".',
+        ),
+        findsOneWidget,
+      );
+      backendStore.dispose();
+    });
+
     testWidgets('pagedBackendBuilder appends items through load more', (
       tester,
     ) async {
@@ -1997,6 +2147,44 @@ void _mpScreenRendererTests() {
       backendStore.dispose();
     });
 
+    testWidgets('searchInput writes a graceful no-API error state', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final screenJson = _searchScreenJson(
+        debounce: Duration.zero,
+        includeError: true,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+
+      await tester.enterText(find.byType(EditableText), 'dh');
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Status: error'), findsOneWidget);
+      expect(
+        find.text(
+          'Error: Publisher API is not configured for mini-program "coupon".',
+        ),
+        findsOneWidget,
+      );
+      expect(stateManager.get<Map<String, dynamic>>('area.results'), {
+        'items': <Object?>[],
+      });
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
+
     testWidgets('search.loadMore appends GET results into target state', (
       tester,
     ) async {
@@ -2224,7 +2412,7 @@ void _mpScreenRendererTests() {
         });
         final connector = _RecordingBackendConnector(
           responses: <MiniProgramBackendResult>[
-            MiniProgramBackendResult.failed(
+            _runtimeApiError(
               endpoint: '/areas/search',
               method: 'GET',
               message: 'Backend down',
@@ -2258,6 +2446,49 @@ void _mpScreenRendererTests() {
         backendStore.dispose();
       },
     );
+
+    testWidgets('search.loadMore keeps items and writes no-API error', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      stateManager.set('area.query', 'dhaka');
+      stateManager.set('area.results', <String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'name': 'Dhaka'},
+        ],
+        'nextCursor': 'cursor-1',
+        'hasMore': true,
+      });
+      final screenJson = _searchLoadMoreScreenJson();
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Load more'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Dhaka'), findsOneWidget);
+      expect(find.text('Status: error'), findsOneWidget);
+      expect(
+        find.text(
+          'Error: Publisher API is not configured for search.loadMore.',
+        ),
+        findsOneWidget,
+      );
+      final results = stateManager.get<Map<String, dynamic>>('area.results')!;
+      expect(results['items'], hasLength(1));
+      expect(results['loadingMore'], false);
+
+      stateManager.dispose();
+      backendStore.dispose();
+    });
 
     testWidgets('search.clear clears query results status and error', (
       tester,
@@ -3337,50 +3568,51 @@ void _mpScreenRendererTests() {
       },
     );
 
-    testWidgets('lazy chunk initial load writes state and renders items', (
-      tester,
-    ) async {
-      final connector = _RecordingBackendConnector(
-        responses: <MiniProgramBackendResult>[
-          MiniProgramBackendResult.success(
-            endpoint: '/rewards',
-            data: const <String, dynamic>{
-              'items': <Object?>[
+    testWidgets(
+      'lazy chunk initial load accepts runtime API pagination envelope',
+      (tester) async {
+        final connector = _RecordingBackendConnector(
+          responses: <MiniProgramBackendResult>[
+            _runtimeApiPage(
+              requestId: 'rewards',
+              endpoint: '/rewards',
+              items: const <Object?>[
                 <String, dynamic>{'title': 'Reward A'},
               ],
-              'nextCursor': 'cursor-2',
-              'hasMore': true,
-            },
+              nextCursor: 'cursor-2',
+              hasMore: true,
+              traceId: 'trace_rewards_page_1',
+            ),
+          ],
+        );
+        final backendStore = MiniProgramBackendStore();
+        final stateManager = MpStateManager();
+
+        await tester.pumpWidget(
+          _scopedApp(
+            backendStore: backendStore,
+            backendConnector: connector,
+            stateManager: stateManager,
+            screenJson: _lazyChunkScreen(),
           ),
-        ],
-      );
-      final backendStore = MiniProgramBackendStore();
-      final stateManager = MpStateManager();
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        _scopedApp(
-          backendStore: backendStore,
-          backendConnector: connector,
-          stateManager: stateManager,
-          screenJson: _lazyChunkScreen(),
-        ),
-      );
-      await tester.pumpAndSettle();
+        expect(find.text('Reward A'), findsOneWidget);
+        expect(find.text('Load more rewards'), findsOneWidget);
+        expect(connector.calls.single.requestId, 'rewards');
+        expect(connector.calls.single.endpoint, '/rewards?limit=1');
+        expect(stateManager.get<Object?>('rewards.items'), <Object?>[
+          <String, dynamic>{'title': 'Reward A'},
+        ]);
+        expect(stateManager.get<String>('rewards.next_cursor'), 'cursor-2');
+        expect(stateManager.get<bool>('rewards.has_more'), isTrue);
+        expect(stateManager.get<String>('rewards.status'), 'success');
 
-      expect(find.text('Reward A'), findsOneWidget);
-      expect(find.text('Load more rewards'), findsOneWidget);
-      expect(connector.calls.single.requestId, 'rewards');
-      expect(connector.calls.single.endpoint, '/rewards?limit=1');
-      expect(stateManager.get<Object?>('rewards.items'), <Object?>[
-        <String, dynamic>{'title': 'Reward A'},
-      ]);
-      expect(stateManager.get<String>('rewards.next_cursor'), 'cursor-2');
-      expect(stateManager.get<bool>('rewards.has_more'), isTrue);
-      expect(stateManager.get<String>('rewards.status'), 'success');
-
-      stateManager.dispose();
-      backendStore.dispose();
-    });
+        stateManager.dispose();
+        backendStore.dispose();
+      },
+    );
 
     testWidgets('lazy chunk load more appends and guards duplicate taps', (
       tester,
@@ -3651,7 +3883,7 @@ void _mpScreenRendererTests() {
         find.byType(EditableText).at(1),
         'Scholarship essay',
       );
-      await tester.tap(find.text('Choose a program'));
+      await tester.tap(find.text('Choose a program').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('STEM'));
       await tester.pumpAndSettle();
@@ -3675,6 +3907,37 @@ void _mpScreenRendererTests() {
       expect(find.text('Submitted'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1));
       await tester.pump();
+
+      backendStore.dispose();
+    });
+
+    testWidgets('form submit shows no-API failure state', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: _formScreen),
+      );
+
+      await tester.enterText(find.byType(EditableText).at(0), 'Mehedi Hasan');
+      await tester.enterText(
+        find.byType(EditableText).at(1),
+        'Scholarship essay',
+      );
+      await tester.tap(find.text('Choose a program').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('STEM'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Undergraduate'));
+      await tester.tap(find.text('I confirm this application is accurate'));
+      await tester.pump();
+      await tester.tap(find.text('Submit application'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('Publisher API is not configured for mini-program "coupon".'),
+        findsOneWidget,
+      );
 
       backendStore.dispose();
     });

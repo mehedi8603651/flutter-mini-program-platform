@@ -325,7 +325,7 @@ class MiniProgramPreviewController {
         stdoutSink.writeln(message);
       }
       if (request.backendBaseUri case final backendBaseUri?) {
-        stdoutSink.writeln('Publisher API: $backendBaseUri');
+        stdoutSink.writeln('Runtime middle-server API: $backendBaseUri');
       }
 
       flutterRunProcess = await _processStarter(

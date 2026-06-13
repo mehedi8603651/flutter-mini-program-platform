@@ -573,14 +573,14 @@ MiniProgramConfig buildMiniProgramConfig({
 MiniProgramSource _buildDefaultHttpSource(
   MiniProgramDeliveryContext deliveryContext,
 ) {
-  final backendApiBaseUri = LocalMiniProgramBackendDefaults.resolveBaseUri(
+  final artifactBaseUri = LocalMiniProgramBackendDefaults.resolveBaseUri(
     configuredBaseUrl: _configuredBackendBaseUrl,
     configuredHost: _configuredBackendHost,
     configuredPort: _configuredBackendPort,
   );
-  _logResolvedBackendBaseUri(backendApiBaseUri);
+  _logResolvedArtifactBaseUri(artifactBaseUri);
   return HttpMiniProgramSource.fromDeliveryContext(
-    apiBaseUri: backendApiBaseUri,
+    apiBaseUri: artifactBaseUri,
     deliveryContext: deliveryContext,
   );
 }
@@ -596,10 +596,10 @@ MiniProgramSource _buildEndpointRoutingSource(
   );
 }
 
-void _logResolvedBackendBaseUri(Uri backendApiBaseUri) {
+void _logResolvedArtifactBaseUri(Uri artifactBaseUri) {
   debugPrint(
-    '[mini_program][runtime] Backend base URL: \$backendApiBaseUri '
-    '(source: \${_backendResolutionSource()})',
+    '[mini_program][runtime] Static artifact base URL: \$artifactBaseUri '
+    '(source: \${_artifactResolutionSource()})',
   );
 }
 
@@ -611,7 +611,7 @@ void _logEndpointRouting(Map<String, MiniProgramEndpoint> endpoints) {
   );
 }
 
-String _backendResolutionSource() {
+String _artifactResolutionSource() {
   if (_configuredBackendBaseUrl.isNotEmpty) {
     return 'MINI_PROGRAM_BACKEND_BASE_URL';
   }
@@ -733,8 +733,8 @@ const AppMiniProgramLauncher(
 ## 4. Optional endpoint registry
 
 For one or two buttons, inline strings are easiest to read. When one host app
-opens many mini-programs, keep each `appId`, title, delivery URL, backend URL,
-and access mode in generated endpoint files from partner handoff import:
+opens many mini-programs, keep each `appId`, title, and static artifact URL in
+generated endpoint files from partner handoff import:
 
 ```bash
 miniprogram host endpoint import ../my_program.partner.json
@@ -749,10 +749,11 @@ MiniProgramScope(
 );
 ```
 
-Rule: host UI knows `appId`; host config owns static artifact URLs, Publisher API
-URLs, and MiniProgram access keys. Provider credentials and backend secrets stay
-on the Publisher API server, never in Mp JSON, APK, IPA, web JavaScript, logs, or handoff
-docs.
+Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
+Optional runtime `middleServerApiUrl` belongs to mini-program runtime actions and
+config, not the host-opening handoff. Provider credentials and backend secrets
+stay on the Publisher API server, never in Mp JSON, APK, IPA, web JavaScript,
+logs, or handoff docs.
 
 ## Generated defaults
 
@@ -767,8 +768,8 @@ docs.
 - `mini_program.dart` is an optional generated barrel export.
 - `mini_program_launcher.dart` exposes `openAppMiniProgram(...)` and
   `AppMiniProgramLauncher`.
-- `mini_program_runtime_setup.dart` resolves `MINI_PROGRAM_BACKEND_BASE_URL`
-  and builds `MiniProgramConfig`.
+- `mini_program_runtime_setup.dart` resolves the static artifact host URL and
+  builds `MiniProgramConfig`.
 - `app_host_bridge.dart` is app-owned. Edit it for real analytics,
   host-native routes, and secure API behavior.
 - your app `lib/main.dart` stays app-owned.
@@ -792,7 +793,7 @@ docs.
 - Android local default: `http://10.0.2.2:8080/api/`
 - desktop, Chrome on the same machine, and iOS simulators:
   `http://127.0.0.1:8080/api/`
-- override the artifact host with a full URL when needed:
+- override the artifact host with the legacy-named full URL define when needed:
 
 ```text
 --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://host:8080/api/

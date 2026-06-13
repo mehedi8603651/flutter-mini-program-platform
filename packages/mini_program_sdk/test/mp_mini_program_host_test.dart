@@ -5,26 +5,27 @@ import 'package:mini_program_contracts/mini_program_contracts.dart'
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
-  testWidgets('base MiniProgramHost renders Mp screens without adapters', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: MiniProgramHost(
-          miniProgramId: 'mp_test',
-          sdkVersion: '1.0.0',
-          source: const _MpSource(),
-          hostBridge: const _HostBridge(),
-          capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+  testWidgets(
+    'MiniProgramHost opens static Mp artifacts without runtime middle-server API config',
+    (tester) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: MiniProgramHost(
+            miniProgramId: 'mp_test',
+            sdkVersion: '1.0.0',
+            source: const _MpSource(),
+            hostBridge: const _HostBridge(),
+            capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(find.text('Mp-only host screen'), findsOneWidget);
-  });
+      expect(find.text('Mp-only host screen'), findsOneWidget);
+    },
+  );
 
   testWidgets('Mp router passes params and returns pop results', (
     tester,

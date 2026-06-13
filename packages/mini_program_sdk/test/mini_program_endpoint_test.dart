@@ -77,6 +77,54 @@ void main() {
       expect(createdSources.single.endpoint.accessKey, isNull);
     });
 
+    test(
+      'does not build a backend connector for static artifact endpoints only',
+      () {
+        final connector = buildEndpointRoutingBackendConnector(
+          endpoints: <String, MiniProgramEndpoint>{
+            'public_coupon_demo': MiniProgramEndpoint.public(
+              apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+            ),
+          },
+          deliveryContext: _deliveryContext,
+          clientFactory: () => _PublicBackendRecordingClient(),
+        );
+
+        expect(connector, isNull);
+      },
+    );
+
+    test(
+      'builds an optional runtime middle-server connector when configured',
+      () async {
+        final connector = buildEndpointRoutingBackendConnector(
+          endpoints: <String, MiniProgramEndpoint>{
+            'public_coupon_demo': MiniProgramEndpoint.public(
+              apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+              backend: MiniProgramBackendEndpoint(
+                baseUri: Uri.parse('https://publisher.example.com/api/'),
+              ),
+            ),
+          },
+          deliveryContext: _deliveryContext,
+          clientFactory: () => _PublicBackendRecordingClient(),
+        );
+
+        expect(connector, isNotNull);
+
+        final result = await connector!.call(
+          const MiniProgramBackendRequest(
+            miniProgramId: 'public_coupon_demo',
+            endpoint: 'home/bootstrap',
+          ),
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data['ok'], isTrue);
+        (connector as DisposableMiniProgramBackendConnector).dispose();
+      },
+    );
+
     test('builds a backend connector from endpoint backend config', () async {
       final connector = buildEndpointRoutingBackendConnector(
         endpoints: <String, MiniProgramEndpoint>{
@@ -284,6 +332,37 @@ class _BackendRecordingClient extends http.BaseClient {
     expect(
       request.headers[MiniProgramHttpHeaders.accessKey],
       'mpk_live_coupon',
+    );
+    return http.StreamedResponse(
+      Stream<List<int>>.value(<int>[
+        123,
+        34,
+        111,
+        107,
+        34,
+        58,
+        116,
+        114,
+        117,
+        101,
+        125,
+      ]),
+      200,
+      request: request,
+    );
+  }
+}
+
+class _PublicBackendRecordingClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    expect(
+      request.url.toString(),
+      'https://publisher.example.com/api/home/bootstrap',
+    );
+    expect(
+      request.headers.containsKey(MiniProgramHttpHeaders.accessKey),
+      false,
     );
     return http.StreamedResponse(
       Stream<List<int>>.value(<int>[

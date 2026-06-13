@@ -24,6 +24,9 @@ endpoint configuration. Static opening still uses only `appId` and
 middle-server calls after the mini-program opens. A mini-program screen stores
 relative endpoints:
 
+Publisher API Contract V1 is a runtime API standard only; host opening still
+uses `appId` plus `artifactBaseUrl`.
+
 ```dart
 Mp.backendBuilder(
   requestId: 'scholarshipHome',

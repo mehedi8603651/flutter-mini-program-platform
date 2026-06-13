@@ -695,6 +695,67 @@ MiniProgramAuthSession _session() {
   );
 }
 
+MiniProgramBackendResult _runtimeApiSuccess({
+  String endpoint = '/runtime/success',
+  String method = 'GET',
+  Map<String, dynamic> data = const <String, dynamic>{},
+  String requestId = 'runtime_success',
+  String traceId = 'trace_runtime_success',
+}) {
+  return MiniProgramBackendResult.success(
+    requestId: requestId,
+    endpoint: endpoint,
+    method: method,
+    data: <String, dynamic>{'traceId': traceId, ...data},
+  );
+}
+
+MiniProgramBackendResult _runtimeApiError({
+  String endpoint = '/runtime/error',
+  String method = 'GET',
+  String requestId = 'runtime_error',
+  String message = 'Runtime API failed',
+  String errorCode = 'runtime_api_failed',
+  String traceId = 'trace_runtime_error',
+  int statusCode = 500,
+}) {
+  return MiniProgramBackendResult.failed(
+    requestId: requestId,
+    endpoint: endpoint,
+    method: method,
+    statusCode: statusCode,
+    message: message,
+    errorCode: errorCode,
+    data: <String, dynamic>{
+      'errorCode': errorCode,
+      'message': message,
+      'traceId': traceId,
+    },
+  );
+}
+
+MiniProgramBackendResult _runtimeApiPage({
+  String endpoint = '/runtime/page',
+  String method = 'GET',
+  String requestId = 'runtime_page',
+  required List<Object?> items,
+  Object? nextCursor,
+  bool hasMore = false,
+  String traceId = 'trace_runtime_page',
+}) {
+  return _runtimeApiSuccess(
+    requestId: requestId,
+    endpoint: endpoint,
+    method: method,
+    traceId: traceId,
+    data: <String, dynamic>{
+      'items': items,
+      'nextCursor': nextCursor,
+      'hasMore': hasMore,
+    },
+  );
+}
+
 Future<Object?> _runMpAction(
   WidgetTester tester,
   Map<String, dynamic> actionJson, {

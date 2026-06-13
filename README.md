@@ -88,6 +88,9 @@ payment, or provider SDKs to the mini-program or host opening handoff. See the
 [Publisher API HTTPS guide](docs/publisher_backend_https_api_roadmap.md)
 for the contract and command flow.
 
+Publisher API Contract V1 is a runtime API standard only; host opening still
+uses `appId` plus `artifactBaseUrl`.
+
 Current implementation notes and future work are tracked in:
 
 - [nextWorkAgents.md](nextWorkAgents.md)

@@ -504,7 +504,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
         !backendBaseUri.hasScheme ||
         backendBaseUri.host.isEmpty) {
       debugPrint(
-        '[preview][backend] Ignoring invalid Publisher API URL: $rawBackendBaseUrl',
+        '[preview][backend] Ignoring invalid runtime middle-server API URL: $rawBackendBaseUrl',
       );
       return null;
     }

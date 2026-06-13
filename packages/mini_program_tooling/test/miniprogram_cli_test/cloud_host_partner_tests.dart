@@ -504,6 +504,8 @@ void _registerCloudHostPartnerTests() {
     expect(endpointSource, contains('"backendMode":"none"'));
     expect(endpointSource, contains('MiniProgramEndpoint.public('));
     expect(endpointSource, contains('MiniPrograms.publicCouponDemo.appId'));
+    expect(endpointSource, isNot(contains('backend:')));
+    expect(endpointSource, isNot(contains('MiniProgramBackendEndpoint(')));
     expect(endpointSource, isNot(contains('accessKey:')));
     final registryFile = File(
       p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),
@@ -642,7 +644,10 @@ void _registerCloudHostPartnerTests() {
         p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
       ).readAsString();
       expect(endpointSource, contains('"accessMode":"public"'));
+      expect(endpointSource, contains('"backendMode":"none"'));
       expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(endpointSource, isNot(contains('backend:')));
+      expect(endpointSource, isNot(contains('MiniProgramBackendEndpoint(')));
       expect(endpointSource, isNot(contains('accessKey:')));
     },
   );
@@ -680,8 +685,15 @@ void _registerCloudHostPartnerTests() {
     expect(decoded['artifactBaseUrl'], 'https://cdn.example.com/coupon');
     expect(decoded.containsKey('apiBaseUrl'), isFalse);
     expect(decoded.containsKey('backendBaseUrl'), isFalse);
+    expect(decoded.containsKey('publisherApiBaseUrl'), isFalse);
+    expect(decoded.containsKey('middleServerApiUrl'), isFalse);
     expect(decoded.containsKey('accessMode'), isFalse);
     expect(decoded.containsKey('accessKey'), isFalse);
+    expect(decoded.containsKey('provider'), isFalse);
+    expect(decoded.containsKey('providerConfig'), isFalse);
+    expect(decoded.containsKey('aws'), isFalse);
+    expect(decoded.containsKey('firebase'), isFalse);
+    expect(decoded.containsKey('gcp'), isFalse);
     expect(
       stdoutBuffer.toString(),
       contains('miniprogram host endpoint import'),
@@ -886,6 +898,9 @@ void _registerCloudHostPartnerTests() {
     final endpointSource = await endpointFile.readAsString();
     expect(endpointSource, contains('"public_rewards"'));
     expect(endpointSource, contains('MiniProgramEndpoint.public('));
+    expect(endpointSource, contains('"backendMode":"none"'));
+    expect(endpointSource, isNot(contains('backend:')));
+    expect(endpointSource, isNot(contains('MiniProgramBackendEndpoint(')));
     expect(endpointSource, isNot(contains('accessKey:')));
     final registryFile = File(
       p.join(hostRoot, 'lib', 'mini_program', 'mini_program_registry.dart'),

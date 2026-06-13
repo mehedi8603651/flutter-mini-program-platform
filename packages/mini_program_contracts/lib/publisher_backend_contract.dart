@@ -1,7 +1,9 @@
 /// Provider-neutral Publisher API contract.
 ///
-/// Mini-program screens use relative endpoints. Host endpoint configuration
-/// supplies the Publisher API base URL and optional MiniProgram access key.
+/// Mini-program screens use relative endpoints. Optional runtime middle-server
+/// API configuration supplies the Publisher API base URL and optional
+/// MiniProgram access key. This contract is not a host-opening handoff; static
+/// mini-program opening uses `appId` and `artifactBaseUrl`.
 library;
 
 /// Standard request header names used by Publisher APIs.
