@@ -194,7 +194,9 @@ void main() {
 
       expect(find.text('Offline'), findsOneWidget);
       expect(
-        find.text('Cached release available while the backend is offline.'),
+        find.text(
+          'Cached release available while the artifact endpoint is offline.',
+        ),
         findsOneWidget,
       );
       final profileCard = find.ancestor(
