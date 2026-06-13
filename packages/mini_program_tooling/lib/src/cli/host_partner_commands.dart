@@ -79,14 +79,18 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
             'Human-readable mini-program title. Defaults to a title derived from the appId.',
       )
       ..addOption(
-        'api-base-url',
+        'artifact-base-url',
         help:
             'Mini-program static artifact base URL. If omitted, the active cloud environment output is used.',
       )
       ..addOption(
-        'backend-base-url',
+        'api-base-url',
         help:
-            'Optional publisher-owned business API base URL to include in the partner handoff.',
+            'Legacy alias for --artifact-base-url. Kept for existing scripts.',
+      )
+      ..addOption(
+        'backend-base-url',
+        help: 'Legacy advanced option for old protected/runtime API handoffs.',
       )
       ..addOption(
         'access-key',
@@ -117,7 +121,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram partner package <mini-program-id> (--access-key <key>|--public) [options]',
+        'Usage: miniprogram partner package <mini-program-id> --artifact-base-url <url> [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -131,33 +135,35 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     final appId = results.rest.single.trim();
     final accessKey = results.option('access-key')?.trim() ?? '';
     final isPublic = results.flag('public');
-    if (accessKey.isEmpty && !isPublic) {
-      throw const FormatException(
-        'partner package requires --access-key <key> or --public.',
-      );
-    }
     if (accessKey.isNotEmpty && isPublic) {
       throw const FormatException(
         'partner package cannot use both --access-key and --public.',
       );
     }
     final apiBaseUrl = await _resolvePartnerPackageApiBaseUrl(
-      explicitApiBaseUrl: results.option('api-base-url'),
+      explicitApiBaseUrl:
+          results.option('artifact-base-url') ?? results.option('api-base-url'),
       explicitEnvironmentName: results.option('env'),
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
     );
+    final backendBaseUri = _parseOptionalAbsoluteUri(
+      results.option('backend-base-url'),
+    );
+    final useLegacyAdvancedHandoff =
+        accessKey.isNotEmpty || backendBaseUri != null;
     final result = await _partnerHandoffController.createPackage(
       MiniProgramPartnerPackageRequest(
         appId: appId,
         title: results.option('title')?.trim().isNotEmpty == true
             ? results.option('title')!.trim()
             : _defaultTitleForAppId(appId),
-        apiBaseUri: Uri.parse(apiBaseUrl),
-        accessKey: isPublic ? null : accessKey,
-        backendBaseUri: _parseOptionalAbsoluteUri(
-          results.option('backend-base-url'),
-        ),
+        schemaVersion: useLegacyAdvancedHandoff
+            ? MiniProgramPartnerHandoff.legacySchemaVersion
+            : MiniProgramPartnerHandoff.currentSchemaVersion,
+        artifactBaseUri: Uri.parse(apiBaseUrl),
+        accessKey: isPublic || accessKey.isEmpty ? null : accessKey,
+        backendBaseUri: backendBaseUri,
         outputPath: results.option('output'),
       ),
     );
@@ -260,9 +266,14 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
             'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
       )
       ..addOption(
-        'api-base-url',
+        'artifact-base-url',
         help:
             'Mini-program static artifact base URL, for example https://cdn.example.com/app/.',
+      )
+      ..addOption(
+        'api-base-url',
+        help:
+            'Legacy alias for --artifact-base-url. Kept for existing scripts.',
       )
       ..addOption(
         'backend-base-url',
@@ -302,7 +313,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [options]',
+        'Usage: miniprogram host endpoint add <mini-program-id> --artifact-base-url <url> [--public] [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -312,10 +323,13 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         'host endpoint add expects exactly one <mini-program-id>.',
       );
     }
-    final rawApiBaseUrl = results.option('api-base-url')?.trim() ?? '';
+    final rawApiBaseUrl =
+        (results.option('artifact-base-url') ?? results.option('api-base-url'))
+            ?.trim() ??
+        '';
     if (rawApiBaseUrl.isEmpty) {
       throw const FormatException(
-        'host endpoint add requires --api-base-url <url>.',
+        'host endpoint add requires --artifact-base-url <url>.',
       );
     }
     final apiBaseUri = Uri.tryParse(rawApiBaseUrl);
@@ -323,7 +337,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         !apiBaseUri.hasScheme ||
         apiBaseUri.host.isEmpty) {
       throw FormatException(
-        'host endpoint add expected an absolute --api-base-url, got: '
+        'host endpoint add expected an absolute --artifact-base-url, got: '
         '$rawApiBaseUrl',
       );
     }
@@ -362,11 +376,6 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       );
     }
     final isPublic = results.flag('public');
-    if (accessKey.isEmpty && !isPublic) {
-      throw const FormatException(
-        'host endpoint add requires --access-key <key> or --public.',
-      );
-    }
     if (accessKey.isNotEmpty && isPublic) {
       throw const FormatException(
         'host endpoint add cannot use both --access-key and --public.',
@@ -382,7 +391,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         appId: results.rest.single,
         title: results.option('title'),
         apiBaseUri: apiBaseUri,
-        accessKey: isPublic ? null : accessKey,
+        accessKey: isPublic || accessKey.isEmpty ? null : accessKey,
         backendBaseUri: backendBaseUri,
         backendMode: useLocalMockBackend
             ? 'local_mock'
@@ -438,7 +447,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         projectRootPath: projectRootPath,
         appId: handoff.appId,
         title: handoff.title,
-        apiBaseUri: handoff.apiBaseUri,
+        apiBaseUri: handoff.artifactBaseUri,
         accessKey: handoff.accessKey,
         backendBaseUri: handoff.backendBaseUri,
         force: results.flag('force'),

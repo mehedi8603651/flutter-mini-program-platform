@@ -422,7 +422,8 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         title: results.option('title')?.trim().isNotEmpty == true
             ? results.option('title')!.trim()
             : manifestInfo.title ?? _defaultTitleForAppId(contract.appId),
-        apiBaseUri: deliveryUri,
+        schemaVersion: MiniProgramPartnerHandoff.legacySchemaVersion,
+        artifactBaseUri: deliveryUri,
         backendBaseUri: contract.backendBaseUri,
         accessKey: contract.isProtected ? accessKey : null,
         outputPath: outputPath,

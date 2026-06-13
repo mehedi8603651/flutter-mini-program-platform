@@ -20,9 +20,9 @@ Commands:
   cloud app list|info|disable|delete [options]
   cloud outputs [--format text|dart-define]
   workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-  partner package <mini-program-id> (--access-key <key>|--public) [--env <env-name>] [--backend-base-url <url>]
+  partner package <mini-program-id> --artifact-base-url <url> [--env <env-name>]
   host run -d <device> [--env <env-name>]
-  host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
+  host endpoint add <mini-program-id> --artifact-base-url <url> [--title <title>]
   host endpoint import <partner-package.json>
   embed init [--project-root <path>]
   embed cloud configure [--env <env-name>]
@@ -84,7 +84,7 @@ Commands:
 Usage: miniprogram partner <command> [arguments]
 
 Commands:
-  package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>]
+  package <mini-program-id> --artifact-base-url <url> [--env <env-name>]
 ''';
 
   String _accessKeyUsage() => '''
@@ -155,7 +155,7 @@ Usage: miniprogram host <command> [arguments]
 
 Commands:
   run -d <device> [--env <env-name>]
-  endpoint add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
+  endpoint add <mini-program-id> --artifact-base-url <url>
   endpoint import <partner-package.json>
 ''';
 
@@ -163,7 +163,7 @@ Commands:
 Usage: miniprogram host endpoint <command> [arguments]
 
 Commands:
-  add <mini-program-id> --api-base-url <url> (--access-key <key>|--public)
+  add <mini-program-id> --artifact-base-url <url>
   import <partner-package.json>
 ''';
 

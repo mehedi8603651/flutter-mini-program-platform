@@ -34,10 +34,13 @@ Use a Publisher API / external HTTPS API for business backend work:
 - secret keys
 - admin logic
 
-The mini-program uses relative endpoints through `Mp.backend.*`,
-`Mp.backendBuilder`, `Mp.pagedBackendBuilder`, and `Mp.lazy.chunk`. The host
-endpoint supplies the Publisher API base URL. The implementation behind that URL
-can run on AWS, Firebase, GCP, Docker, Kubernetes, a VPS, or any provider.
+The host opens a mini-program from static artifacts with `appId` and
+`artifactBaseUrl`. If the mini-program needs dynamic data, auth, payments, or
+business actions, runtime code can use relative endpoints through
+`Mp.backend.*`, `Mp.backendBuilder`, `Mp.pagedBackendBuilder`, and
+`Mp.lazy.chunk`; the optional runtime config supplies `middleServerApiUrl`. The
+implementation behind that URL can run on AWS, Firebase, GCP, Docker,
+Kubernetes, a VPS, or any provider.
 
 AWS cloud artifact hosting and Firebase Hosting are static artifact hosting
 systems only. They publish or serve manifests, screens, assets, static JSON, and
@@ -72,12 +75,6 @@ miniprogram publisher-api urls [--port 9090]
 miniprogram publisher-api contract init --backend-base-url <url> [--mini-program-root <path>] [--public] [--allow-local-http]
 miniprogram publisher-api contract validate [--mini-program-root <path>] [--contract <file>] [--allow-local-http] [--json]
 miniprogram publisher-api contract smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--allow-local-http] [--json]
-miniprogram publisher-api contract handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] (--access-key <key>|--public) [--output <file>] [--allow-local-http] [--json]
-
-miniprogram access-key create <mini-program-id> --key-id <id> [--env <env-name>]
-miniprogram access-key list <mini-program-id> [--env <env-name>] [--json]
-miniprogram access-key revoke <mini-program-id> --key-id <id> [--env <env-name>]
-miniprogram access-key rotate <mini-program-id> --key-id <id> [--new-key-id <id>] [--env <env-name>]
 
 miniprogram cloud deploy [--env <env-name>]
 miniprogram cloud status [--env <env-name>] [--json]
@@ -91,8 +88,8 @@ miniprogram cloud app info <mini-program-id> [--env <env-name>]
 miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
 miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
 
-miniprogram partner package <mini-program-id> (--access-key <key>|--public) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>] [--output <file>]
-miniprogram host endpoint add <mini-program-id> --title <title> --api-base-url <url> (--access-key <key>|--public) [--backend-base-url <url>|--backend-local-mock]
+miniprogram partner package <mini-program-id> --artifact-base-url <url> [--env <env-name>] [--output <file>]
+miniprogram host endpoint add <mini-program-id> --artifact-base-url <url> [--title <title>] [--backend-base-url <url>|--backend-local-mock]
 miniprogram host endpoint import <partner-package.json>
 miniprogram host run -d <device> [--env <env-name>]
 miniprogram embed init [--project-root <path>] [--force]
@@ -107,7 +104,13 @@ miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [
 ```
 
 `publisher-backend` remains a legacy alias. `publisher-api` is the preferred
-visible wording for mock, contract, smoke, and handoff flows.
+visible wording for mock, contract, and smoke flows.
+
+Advanced/legacy compatibility commands still exist for protected artifact
+delivery and older Publisher API handoff packages:
+`miniprogram access-key create|list|revoke|rotate <mini-program-id>` and
+`miniprogram publisher-api contract handoff --delivery-url <url>
+(--access-key <key>|--public)`.
 
 ## Removed Provider Backend Templates
 
@@ -123,13 +126,13 @@ miniprogram publisher-backend scaffold --storage dynamodb
 miniprogram publisher-backend scaffold --storage firestore
 ```
 
-Use your own middle server instead, then connect it:
+Use your own middle server instead, then define and smoke the optional runtime
+Publisher API contract:
 
 ```bash
 miniprogram publisher-api contract init --backend-base-url https://api.publisher.example --public
 miniprogram publisher-api contract validate
 miniprogram publisher-api contract smoke
-miniprogram publisher-api contract handoff --delivery-url https://cdn.example.com/app/ --public
 ```
 
 ## Local Mock Publisher API
@@ -173,17 +176,23 @@ miniprogram publish --target firebase-hosting --env firebase-prod --clean
 
 ## Handoff
 
-A host app should receive a small partner package, not backend secrets:
+A host app should receive a small static artifact partner package, not backend
+secrets:
 
 ```bash
-miniprogram publisher-api contract handoff \
-  --delivery-url https://cdn.example.com/app/ \
-  --public \
+miniprogram partner package rewards_center \
+  --artifact-base-url https://cdn.example.com/app/ \
   --output app.partner.json
 
 miniprogram host endpoint import app.partner.json --project-root <host-app>
 ```
 
-Protected delivery can still use MiniProgram access keys, but those keys are
-delivery/endpoint concerns. Provider credentials and backend secrets never go in
-mini-program JSON or partner packages.
+Current MVP handoff uses `appId` and `artifactBaseUrl`. The host fetches the
+current manifest and screen/static artifacts from `artifactBaseUrl`; version
+selection, if any, belongs to the artifact host/publisher process, not host
+backend config.
+
+Protected delivery, MiniProgram access keys, signed URLs, provider-specific
+delivery configuration, and `publisher-api contract handoff` are advanced or
+legacy compatibility flows. Provider credentials and backend secrets never go in
+mini-program JSON or MVP partner packages.

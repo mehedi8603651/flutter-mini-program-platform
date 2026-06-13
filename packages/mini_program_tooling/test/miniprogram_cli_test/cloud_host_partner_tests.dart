@@ -491,9 +491,8 @@ void _registerCloudHostPartnerTests() {
           'public_coupon_demo',
           '--title',
           'Public Coupon Demo',
-          '--api-base-url',
+          '--artifact-base-url',
           'https://user.github.io/repo/public_mini_program/',
-          '--public',
         ]);
 
     expect(exitCode, 0);
@@ -531,9 +530,8 @@ void _registerCloudHostPartnerTests() {
           'coupon_app',
           '--title',
           'Coupon App',
-          '--api-base-url',
+          '--artifact-base-url',
           'https://user.github.io/repo/public_mini_program/',
-          '--public',
           '--backend-local-mock',
         ]);
 
@@ -567,9 +565,8 @@ void _registerCloudHostPartnerTests() {
           'coupon_app',
           '--title',
           'Coupon App',
-          '--api-base-url',
+          '--artifact-base-url',
           'https://user.github.io/repo/public_mini_program/',
-          '--public',
           '--backend-local-mock',
           '--backend-local-mock-port',
           '9091',
@@ -604,9 +601,8 @@ void _registerCloudHostPartnerTests() {
             'endpoint',
             'add',
             'coupon_app',
-            '--api-base-url',
+            '--artifact-base-url',
             'https://user.github.io/repo/public_mini_program/',
-            '--public',
             '--backend-local-mock',
             '--backend-base-url',
             'https://publisher.example.com/api/',
@@ -620,35 +616,39 @@ void _registerCloudHostPartnerTests() {
     },
   );
 
-  test('host endpoint add requires access key or public mode', () async {
-    final hostRoot = p.join(tempDir.path, 'host_app');
-    await _writeEmbeddedHostFixture(hostRoot);
-    final stderrBuffer = StringBuffer();
+  test(
+    'host endpoint add defaults to public static artifact endpoint',
+    () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
 
-    final exitCode =
-        await MiniprogramCli(
-          stateStore: stateStore,
-          stdoutSink: StringBuffer(),
-          stderrSink: stderrBuffer,
-          workingDirectory: hostRoot,
-        ).run(<String>[
-          'host',
-          'endpoint',
-          'add',
-          'public_coupon_demo',
-          '--api-base-url',
-          'https://user.github.io/repo/public_mini_program/',
-        ]);
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: StringBuffer(),
+            workingDirectory: hostRoot,
+          ).run(<String>[
+            'host',
+            'endpoint',
+            'add',
+            'public_coupon_demo',
+            '--artifact-base-url',
+            'https://user.github.io/repo/public_mini_program/',
+          ]);
 
-    expect(exitCode, 64);
-    expect(
-      stderrBuffer.toString(),
-      contains('requires --access-key <key> or --public'),
-    );
-  });
+      expect(exitCode, 0);
+      final endpointSource = await File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
+      ).readAsString();
+      expect(endpointSource, contains('"accessMode":"public"'));
+      expect(endpointSource, contains('MiniProgramEndpoint.public('));
+      expect(endpointSource, isNot(contains('accessKey:')));
+    },
+  );
 
-  test('partner package writes a portable handoff file', () async {
-    final outputPath = p.join(tempDir.path, 'aws_coupon_demo.partner.json');
+  test('partner package writes a minimal MVP handoff file', () async {
+    final outputPath = p.join(tempDir.path, 'coupon_demo.partner.json');
     final stdoutBuffer = StringBuffer();
 
     final exitCode =
@@ -660,11 +660,92 @@ void _registerCloudHostPartnerTests() {
         ).run(<String>[
           'partner',
           'package',
-          'aws_coupon_demo',
+          'coupon_demo',
           '--title',
-          'AWS Coupon Demo',
-          '--api-base-url',
-          'https://api.example.com/prod/api/',
+          'Coupon Demo',
+          '--artifact-base-url',
+          'https://cdn.example.com/coupon/',
+          '--output',
+          outputPath,
+        ]);
+
+    expect(exitCode, 0);
+    final decoded =
+        jsonDecode(await File(outputPath).readAsString())
+            as Map<String, dynamic>;
+    expect(decoded['schemaVersion'], 3);
+    expect(decoded['type'], 'mini_program_partner_handoff');
+    expect(decoded['appId'], 'coupon_demo');
+    expect(decoded['title'], 'Coupon Demo');
+    expect(decoded['artifactBaseUrl'], 'https://cdn.example.com/coupon');
+    expect(decoded.containsKey('apiBaseUrl'), isFalse);
+    expect(decoded.containsKey('backendBaseUrl'), isFalse);
+    expect(decoded.containsKey('accessMode'), isFalse);
+    expect(decoded.containsKey('accessKey'), isFalse);
+    expect(
+      stdoutBuffer.toString(),
+      contains('miniprogram host endpoint import'),
+    );
+    expect(stdoutBuffer.toString(), contains('Artifact base URL'));
+  });
+
+  test(
+    'partner package keeps --public as a no-op compatibility flag',
+    () async {
+      final outputPath = p.join(
+        tempDir.path,
+        'public_coupon_demo.partner.json',
+      );
+
+      final exitCode =
+          await MiniprogramCli(
+            stateStore: stateStore,
+            stdoutSink: StringBuffer(),
+            stderrSink: StringBuffer(),
+            workingDirectory: tempDir.path,
+          ).run(<String>[
+            'partner',
+            'package',
+            'public_coupon_demo',
+            '--artifact-base-url',
+            'https://cdn.example.com/public_coupon/',
+            '--public',
+            '--output',
+            outputPath,
+          ]);
+
+      expect(exitCode, 0);
+      final decoded =
+          jsonDecode(await File(outputPath).readAsString())
+              as Map<String, dynamic>;
+      expect(decoded['schemaVersion'], 3);
+      expect(
+        decoded['artifactBaseUrl'],
+        'https://cdn.example.com/public_coupon',
+      );
+      expect(decoded.containsKey('apiBaseUrl'), isFalse);
+      expect(decoded.containsKey('accessMode'), isFalse);
+      expect(decoded.containsKey('accessKey'), isFalse);
+    },
+  );
+
+  test('partner package keeps legacy advanced handoff compatibility', () async {
+    final outputPath = p.join(tempDir.path, 'legacy_coupon_demo.partner.json');
+
+    final exitCode =
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          workingDirectory: tempDir.path,
+        ).run(<String>[
+          'partner',
+          'package',
+          'legacy_coupon_demo',
+          '--title',
+          'Legacy Coupon Demo',
+          '--artifact-base-url',
+          'https://user.github.io/repo/legacy_mini_program/',
           '--backend-base-url',
           'https://publisher.example.com/api/',
           '--access-key',
@@ -678,48 +759,13 @@ void _registerCloudHostPartnerTests() {
         jsonDecode(await File(outputPath).readAsString())
             as Map<String, dynamic>;
     expect(decoded['schemaVersion'], 2);
-    expect(decoded['type'], 'mini_program_partner_handoff');
-    expect(decoded['appId'], 'aws_coupon_demo');
-    expect(decoded['title'], 'AWS Coupon Demo');
-    expect(decoded['apiBaseUrl'], 'https://api.example.com/prod/api');
+    expect(
+      decoded['apiBaseUrl'],
+      'https://user.github.io/repo/legacy_mini_program',
+    );
     expect(decoded['backendBaseUrl'], 'https://publisher.example.com/api');
     expect(decoded['accessMode'], 'protected');
     expect(decoded['accessKey'], 'mpk_live_company_a_12345678901234567890');
-    expect(
-      stdoutBuffer.toString(),
-      contains('miniprogram host endpoint import'),
-    );
-  });
-
-  test('partner package supports public static handoff files', () async {
-    final outputPath = p.join(tempDir.path, 'public_coupon_demo.partner.json');
-
-    final exitCode =
-        await MiniprogramCli(
-          stateStore: stateStore,
-          stdoutSink: StringBuffer(),
-          stderrSink: StringBuffer(),
-          workingDirectory: tempDir.path,
-        ).run(<String>[
-          'partner',
-          'package',
-          'public_coupon_demo',
-          '--title',
-          'Public Coupon Demo',
-          '--api-base-url',
-          'https://user.github.io/repo/public_mini_program/',
-          '--public',
-          '--output',
-          outputPath,
-        ]);
-
-    expect(exitCode, 0);
-    final decoded =
-        jsonDecode(await File(outputPath).readAsString())
-            as Map<String, dynamic>;
-    expect(decoded['schemaVersion'], 2);
-    expect(decoded['accessMode'], 'public');
-    expect(decoded.containsKey('accessKey'), isFalse);
   });
 
   test(
@@ -767,9 +813,10 @@ void _registerCloudHostPartnerTests() {
     await _writeEmbeddedHostFixture(hostRoot);
     final packagePath = p.join(tempDir.path, 'gcp_rewards.partner.json');
     final handoff = MiniProgramPartnerHandoff(
+      schemaVersion: MiniProgramPartnerHandoff.legacySchemaVersion,
       appId: 'gcp_rewards',
       title: 'GCP Rewards',
-      apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
+      artifactBaseUri: Uri.parse('https://gcp.example.com/api/'),
       backendBaseUri: Uri.parse('https://publisher.example.com/api/'),
       accessKey: 'mpk_live_company_b_12345678901234567890',
       generatedAtUtc: DateTime.utc(2026, 5, 14).toIso8601String(),
@@ -820,8 +867,7 @@ void _registerCloudHostPartnerTests() {
     final handoff = MiniProgramPartnerHandoff(
       appId: 'public_rewards',
       title: 'Public Rewards',
-      apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
-      accessMode: MiniProgramPartnerHandoff.accessModePublic,
+      artifactBaseUri: Uri.parse('https://cdn.example.com/public/'),
       generatedAtUtc: DateTime.utc(2026, 5, 14).toIso8601String(),
     );
     await File(packagePath).writeAsString(jsonEncode(handoff.toJson()));

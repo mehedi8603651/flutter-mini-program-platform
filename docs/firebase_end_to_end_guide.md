@@ -33,7 +33,8 @@ miniprogram publish --target firebase-hosting --env firebase-prod --mini-program
 
 Build your middle server on any provider, including Firebase Functions if that
 is your preference. The mini-program does not know or depend on that provider;
-it only receives the HTTPS API base URL.
+it only receives optional runtime API config when the mini-program needs dynamic
+data. Static opening uses `appId` and `artifactBaseUrl`.
 
 ```powershell
 miniprogram publisher-api contract init `
@@ -48,10 +49,8 @@ miniprogram publisher-api contract smoke --mini-program-root D:\my_mp
 Create the host handoff package:
 
 ```powershell
-miniprogram publisher-api contract handoff `
-  --mini-program-root D:\my_mp `
-  --delivery-url https://<project-id>.web.app/ `
-  --public `
+miniprogram partner package my_mp `
+  --artifact-base-url https://<project-id>.web.app/ `
   --output D:\my_mp\my_mp.partner.json
 ```
 

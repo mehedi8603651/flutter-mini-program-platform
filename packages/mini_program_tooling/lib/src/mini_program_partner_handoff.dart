@@ -17,21 +17,26 @@ class MiniProgramPartnerHandoff {
     this.schemaVersion = currentSchemaVersion,
     required String appId,
     required String title,
-    required Uri apiBaseUri,
+    Uri? artifactBaseUri,
+    Uri? apiBaseUri,
     Uri? backendBaseUri,
     String? accessMode,
     String? accessKey,
     required String generatedAtUtc,
   }) : appId = appId.trim(),
        title = title.trim(),
-       apiBaseUri = _normalizeApiBaseUri(apiBaseUri),
+       artifactBaseUri = _normalizeArtifactBaseUri(
+         artifactBaseUri ?? apiBaseUri,
+       ),
        backendBaseUri = backendBaseUri == null
            ? null
-           : _normalizeApiBaseUri(backendBaseUri),
+           : _normalizeArtifactBaseUri(backendBaseUri),
        accessMode = _normalizeAccessMode(accessMode, accessKey),
        accessKey = _normalizeOptionalAccessKey(accessKey),
        generatedAtUtc = generatedAtUtc.trim() {
-    if (schemaVersion != 1 && schemaVersion != currentSchemaVersion) {
+    if (schemaVersion != 1 &&
+        schemaVersion != legacySchemaVersion &&
+        schemaVersion != currentSchemaVersion) {
       throw MiniProgramPartnerHandoffException(
         'Unsupported MiniProgram partner handoff schema version: '
         '$schemaVersion.',
@@ -39,7 +44,8 @@ class MiniProgramPartnerHandoff {
     }
     _validateSafeIdentifier(appId, 'appId');
     _validateTitle(title);
-    if (this.accessMode == accessModeProtected) {
+    if (schemaVersion <= legacySchemaVersion &&
+        this.accessMode == accessModeProtected) {
       final protectedAccessKey = this.accessKey;
       if (protectedAccessKey == null || protectedAccessKey.isEmpty) {
         throw const MiniProgramPartnerHandoffException(
@@ -47,10 +53,14 @@ class MiniProgramPartnerHandoff {
         );
       }
       _validateAccessKey(protectedAccessKey);
-    } else if (this.accessKey != null && this.accessKey!.isNotEmpty) {
+    } else if (schemaVersion <= legacySchemaVersion &&
+        this.accessKey != null &&
+        this.accessKey!.isNotEmpty) {
       throw const MiniProgramPartnerHandoffException(
         'Public MiniProgram partner handoff must not include accessKey.',
       );
+    } else if (this.accessKey != null && this.accessKey!.isNotEmpty) {
+      _validateAccessKey(this.accessKey!);
     }
     if (DateTime.tryParse(this.generatedAtUtc) == null) {
       throw const MiniProgramPartnerHandoffException(
@@ -71,31 +81,44 @@ class MiniProgramPartnerHandoff {
         'MiniProgram partner handoff type must be "$documentType".',
       );
     }
-    final apiBaseUri = Uri.tryParse(_readString(decoded, 'apiBaseUrl'));
-    if (apiBaseUri == null) {
+    final schemaVersion = _readInt(decoded, 'schemaVersion');
+    final rawArtifactBaseUrl =
+        _readOptionalString(decoded, 'artifactBaseUrl') ??
+        _readOptionalString(decoded, 'apiBaseUrl');
+    if (rawArtifactBaseUrl == null) {
       throw const MiniProgramPartnerHandoffException(
-        'MiniProgram partner handoff apiBaseUrl is invalid.',
+        'MiniProgram partner handoff is missing "artifactBaseUrl".',
       );
     }
-    final schemaVersion = _readInt(decoded, 'schemaVersion');
+    final artifactBaseUri = Uri.tryParse(rawArtifactBaseUrl);
+    if (artifactBaseUri == null) {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff artifactBaseUrl is invalid.',
+      );
+    }
     final accessMode = schemaVersion == 1
         ? accessModeProtected
-        : _readString(decoded, 'accessMode');
+        : schemaVersion == legacySchemaVersion
+        ? _readString(decoded, 'accessMode')
+        : _readOptionalString(decoded, 'accessMode') ?? accessModePublic;
     return MiniProgramPartnerHandoff(
       schemaVersion: schemaVersion,
       appId: _readString(decoded, 'appId'),
       title: _readString(decoded, 'title'),
-      apiBaseUri: apiBaseUri,
+      artifactBaseUri: artifactBaseUri,
       backendBaseUri: _readOptionalUri(decoded, 'backendBaseUrl'),
       accessMode: accessMode,
-      accessKey: accessMode == accessModePublic
+      accessKey:
+          schemaVersion == currentSchemaVersion ||
+              accessMode == accessModePublic
           ? _readOptionalString(decoded, 'accessKey')
           : _readString(decoded, 'accessKey'),
       generatedAtUtc: _readString(decoded, 'generatedAtUtc'),
     );
   }
 
-  static const int currentSchemaVersion = 2;
+  static const int legacySchemaVersion = 2;
+  static const int currentSchemaVersion = 3;
   static const String documentType = 'mini_program_partner_handoff';
   static const String accessModeProtected = 'protected';
   static const String accessModePublic = 'public';
@@ -103,24 +126,36 @@ class MiniProgramPartnerHandoff {
   final int schemaVersion;
   final String appId;
   final String title;
-  final Uri apiBaseUri;
+  final Uri artifactBaseUri;
   final Uri? backendBaseUri;
   final String accessMode;
   final String? accessKey;
   final String generatedAtUtc;
 
+  Uri get apiBaseUri => artifactBaseUri;
+
   bool get isPublic => accessMode == accessModePublic;
 
   Map<String, Object?> toJson() {
+    if (schemaVersion <= legacySchemaVersion) {
+      return <String, Object?>{
+        'schemaVersion': schemaVersion,
+        'type': documentType,
+        'appId': appId,
+        'title': title,
+        'apiBaseUrl': artifactBaseUri.toString(),
+        if (backendBaseUri != null) 'backendBaseUrl': backendBaseUri.toString(),
+        'accessMode': accessMode,
+        if (accessKey != null) 'accessKey': accessKey,
+        'generatedAtUtc': generatedAtUtc,
+      };
+    }
     return <String, Object?>{
       'schemaVersion': schemaVersion,
       'type': documentType,
       'appId': appId,
       'title': title,
-      'apiBaseUrl': apiBaseUri.toString(),
-      if (backendBaseUri != null) 'backendBaseUrl': backendBaseUri.toString(),
-      'accessMode': accessMode,
-      if (accessKey != null) 'accessKey': accessKey,
+      'artifactBaseUrl': artifactBaseUri.toString(),
       'generatedAtUtc': generatedAtUtc,
     };
   }
@@ -176,10 +211,15 @@ class MiniProgramPartnerHandoff {
     return value;
   }
 
-  static Uri _normalizeApiBaseUri(Uri uri) {
+  static Uri _normalizeArtifactBaseUri(Uri? uri) {
+    if (uri == null) {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requires artifactBaseUrl.',
+      );
+    }
     if (!uri.hasScheme || uri.host.isEmpty) {
       throw MiniProgramPartnerHandoffException(
-        'Mini-program endpoint API base URL must be absolute: $uri',
+        'Mini-program artifact base URL must be absolute: $uri',
       );
     }
     return Uri.parse(uri.toString().replaceFirst(RegExp(r'/+$'), ''));
@@ -245,7 +285,9 @@ class MiniProgramPartnerPackageRequest {
   const MiniProgramPartnerPackageRequest({
     required this.appId,
     required this.title,
-    required this.apiBaseUri,
+    this.schemaVersion = MiniProgramPartnerHandoff.currentSchemaVersion,
+    this.artifactBaseUri,
+    this.apiBaseUri,
     this.accessKey,
     this.backendBaseUri,
     this.outputPath,
@@ -254,7 +296,9 @@ class MiniProgramPartnerPackageRequest {
 
   final String appId;
   final String title;
-  final Uri apiBaseUri;
+  final int schemaVersion;
+  final Uri? artifactBaseUri;
+  final Uri? apiBaseUri;
   final String? accessKey;
   final Uri? backendBaseUri;
   final String? outputPath;
@@ -278,8 +322,10 @@ class MiniProgramPartnerHandoffController {
     MiniProgramPartnerPackageRequest request,
   ) async {
     final handoff = MiniProgramPartnerHandoff(
+      schemaVersion: request.schemaVersion,
       appId: request.appId.trim(),
       title: request.title.trim(),
+      artifactBaseUri: request.artifactBaseUri,
       apiBaseUri: request.apiBaseUri,
       backendBaseUri: request.backendBaseUri,
       accessKey: request.accessKey?.trim(),

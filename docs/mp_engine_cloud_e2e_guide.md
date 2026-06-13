@@ -91,10 +91,8 @@ publisher business backend.
 ## 6. Handoff And Host Smoke
 
 ```powershell
-miniprogram publisher-api contract handoff `
-  --mini-program-root D:\mp_cloud_e2e `
-  --delivery-url https://cdn.example.com/mp_cloud_e2e/ `
-  --public `
+miniprogram partner package mp_cloud_e2e `
+  --artifact-base-url https://cdn.example.com/mp_cloud_e2e/ `
   --output D:\mp_cloud_e2e\mp_cloud_e2e.partner.json
 
 flutter create D:\mp_cloud_host

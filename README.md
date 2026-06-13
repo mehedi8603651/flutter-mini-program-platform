@@ -53,7 +53,7 @@ Already shipped:
   business API testing
 - AWS static artifact publishing through S3
 - AWS static artifact endpoint through API Gateway + Lambda for manifests,
-  screen JSON, static artifacts, and access-key protected artifact access
+  screen JSON, and static artifacts
 - provider-neutral Publisher API contract, smoke, and handoff flow for any
   publisher-owned HTTPS backend
 - Firebase Hosting static artifact publish for Firebase-owned public
@@ -72,15 +72,19 @@ Already shipped:
   - Android USB with `adb reverse`
   - Android Wi-Fi over LAN
 
-The current system is strongest for **local developer workflows**,
-**AWS-backed static artifact hosting**, **provider-neutral middle-server APIs**, and
+The current MVP is strongest for **static artifact delivery**,
+**local developer workflows**, **provider-neutral middle-server APIs**, and
 **portable Flutter-hosted mini-programs**.
 
-Mini-program screens use relative endpoints such as `scholarships/page`; the
-host endpoint map supplies `backendBaseUrl`, for example
-`https://api.publisher.example`, and the SDK calls that HTTPS API without
-adding Firebase, AWS, database, payment, or provider SDKs to the mini-program
-or host app. See the
+Hosts open a mini-program from static artifacts using only `appId` and
+`artifactBaseUrl`. The host fetches the current manifest and screen/static
+artifacts from `artifactBaseUrl`; version selection, if any, belongs to the
+artifact host/publisher process, not host backend config.
+
+Mini-program screens may also use runtime API actions with relative endpoints
+such as `scholarships/page`. When optional `middleServerApiUrl` runtime config
+is present, the SDK calls that HTTPS API without adding Firebase, AWS, database,
+payment, or provider SDKs to the mini-program or host opening handoff. See the
 [Publisher API HTTPS guide](docs/publisher_backend_https_api_roadmap.md)
 for the contract and command flow.
 
@@ -237,7 +241,6 @@ The publisher owns:
 - a publisher-owned HTTPS API for auth, database, payments, files, business
   rules, admin logic, and secrets
 - the cloud/provider implementation behind that API, if any
-- MiniProgram access keys when protected delivery is used
 
 The host app developer owns:
 
@@ -249,16 +252,16 @@ The host app developer owns:
 The handoff boundary should stay small:
 
 - `appId`
-- title
-- static artifact base URL for manifest/screen JSON
-- public/protected access mode and optional MiniProgram access key
-- optional Publisher API base URL for business data
+- `artifactBaseUrl`
+
+`title` may appear as display metadata, but the operational opening boundary is
+`appId` plus `artifactBaseUrl`. Backend/API config is not required to open the
+mini-program shell.
 
 Host apps should not need Firebase login, Firebase project access, AWS
-credentials, Firebase Admin SDKs, database SDKs, payment secrets, or Publisher
-API secrets. Current tooling supports provider-neutral partner packages and
-host endpoint imports that combine delivery URLs with optional Publisher API
-base URLs in the same host-importable format.
+credentials, Firebase Admin SDKs, database SDKs, payment secrets, Publisher API
+secrets, or provider SDKs. Runtime API config is optional and belongs to
+mini-program runtime actions/config, not required host handoff.
 
 ## Preferred Developer Entry Point
 
@@ -294,8 +297,7 @@ miniprogram preview -d <device> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>]
 miniprogram workflow status [--json] [--remote]
-miniprogram access-key create|list|revoke|rotate <mini-program-id>
-miniprogram partner package <mini-program-id> (--public|--access-key <key>) [--api-base-url <url>|--env <env-name>] [--backend-base-url <url>]
+miniprogram partner package <mini-program-id> --artifact-base-url <url>
 miniprogram publisher-api scaffold --template mock
 miniprogram publisher-api run --port 9090
 miniprogram publisher-api status
@@ -304,14 +306,13 @@ miniprogram publisher-api urls
 miniprogram publisher-api contract init --backend-base-url <publisher-api-url> [--public]
 miniprogram publisher-api contract validate
 miniprogram publisher-api contract smoke [--access-key <key>] [--auth-token <token>]
-miniprogram publisher-api contract handoff --delivery-url <delivery-url> (--public|--access-key <key>)
 miniprogram cloud doctor|deploy|status|outputs|logs|destroy
 miniprogram cloud outputs --format dart-define
 miniprogram cloud rollback <version> [mini-program-id]
 miniprogram embed init
 miniprogram embed cloud configure --env <env-name>
 miniprogram host run -d <device> --env <env-name>
-miniprogram host endpoint add <mini-program-id> --api-base-url <url> (--public|--access-key <key>) [--backend-base-url <url>|--backend-local-mock]
+miniprogram host endpoint add <mini-program-id> --artifact-base-url <url>
 miniprogram host endpoint import <partner-package.json>
 miniprogram artifact-host init
 miniprogram artifact-host start --port 8080
@@ -323,6 +324,12 @@ miniprogram artifact-host reset-local --yes
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
 
+Advanced/legacy compatibility commands still exist for protected artifact
+delivery and older Publisher API handoff packages:
+`miniprogram access-key create|list|revoke|rotate <mini-program-id>` and
+`miniprogram publisher-api contract handoff --delivery-url <url>
+(--public|--access-key <key>)`.
+
 ## Publisher API / Middle-Server Quickstart
 
 This is the preferred business-backend model.
@@ -331,8 +338,9 @@ The mini-program is frontend/authored UI. It may call a publisher-owned HTTPS
 API, but it should not contain database SDKs, payment secrets, admin logic,
 provider credentials, or provider-specific backend code. The publisher can build
 that API on AWS Lambda, Firebase Functions, Cloud Run, Docker, Kubernetes, a VPS,
-or any other provider. The mini-program and host only know the Publisher API
-base URL and relative endpoints.
+or any other provider. Static opening does not require that API. Runtime API
+actions use relative endpoints and an optional `middleServerApiUrl` when the
+mini-program needs dynamic data or business actions.
 
 Publisher workspace:
 
@@ -379,20 +387,18 @@ Publisher workspace:
    miniprogram publish --target static --mini-program-root D:\rewards_center --clean
    ```
 
-7. Create the handoff package for a host app:
+7. Create the MVP handoff package for a host app:
 
    ```powershell
-   miniprogram publisher-api contract handoff `
-     --mini-program-root D:\rewards_center `
-     --delivery-url https://cdn.example.com/rewards_center/ `
-     --public `
+   miniprogram partner package rewards_center `
+     --artifact-base-url https://cdn.example.com/rewards_center/ `
      --output D:\rewards_center\rewards_center.partner.json
    ```
 
-Give only the `.partner.json` file to the host app developer. It contains the
-static artifact URL, optional Publisher API URL, access mode, and optional
-MiniProgram access key. It does not contain cloud provider credentials or
-backend secrets.
+Give only the `.partner.json` file to the host app developer. The current MVP
+handoff contains the mini-program id, display title, and static artifact URL. It
+does not contain middle-server API URLs, access keys, cloud provider
+credentials, backend secrets, auth config, database config, or payment config.
 
 Host workspace:
 
@@ -413,6 +419,15 @@ Host workspace:
 
 3. Run the host app and open the mini-program from the generated registry or
    your own host navigation.
+
+## Future Pro / Legacy Compatibility
+
+The current MVP opening path is `appId` plus `artifactBaseUrl`. Protected
+delivery, access-key protected artifacts, signed artifact URLs, QR opening,
+provider-specific delivery configuration, Publisher API handoff packages, and
+host-side backend URL handoff are advanced or legacy compatibility surfaces.
+They may remain in tooling where existing workflows still need them, but they
+are not required for a host app to open a mini-program.
 
 ## Local Developer Workflow
 
@@ -719,21 +734,22 @@ Current static artifact hosting support:
 - planned next providers: `custom-s3-compatible`
 
 Firebase Hosting can publish public static mini-program artifacts. If the
-mini-program needs auth, database, payment, storage, or business rules, include
-your Publisher API base URL in the handoff/host endpoint:
+mini-program needs auth, database, payment, storage, or business rules, define
+and smoke the optional Publisher API contract separately from static opening:
 
 ```powershell
 miniprogram env configure my-firebase-prod --provider firebase --project-id <project-id>
 miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
 miniprogram publisher-api contract init --backend-base-url https://api.publisher.example --public
 miniprogram publisher-api contract smoke
-miniprogram publisher-api contract handoff --delivery-url https://<project-id>.web.app/ --public --output <app>.partner.json
+miniprogram partner package <app> --artifact-base-url https://<project-id>.web.app/ --output <app>.partner.json
 ```
 
-The Flutter host app receives only the static artifact URL and optional Publisher
-API URL through the `.partner.json` package. It does not need Firebase
-credentials, Firebase Web API keys, provider SDKs, or backend secrets unless the
-host app itself chooses those providers for unrelated host features.
+The Flutter host app receives only the static artifact URL through the MVP
+`.partner.json` package. Optional runtime API configuration belongs to host
+runtime setup, not mini-program opening. The host does not need Firebase
+credentials, Firebase Web API keys, provider SDKs, or backend secrets unless it
+chooses those providers for unrelated host features.
 
 One cloud environment can serve many mini-programs. The recommended layout is
 one bucket per environment, for example one production bucket and one staging

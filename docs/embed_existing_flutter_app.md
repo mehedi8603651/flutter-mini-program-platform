@@ -366,13 +366,11 @@ appId-only:
 MiniProgramScope(
   config: buildMiniProgramConfig(
     endpoints: <String, MiniProgramEndpoint>{
-      'aws_coupon_demo': MiniProgramEndpoint(
-        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      'coupon_demo': MiniProgramEndpoint.public(
+        apiBaseUri: Uri.parse('https://cdn.example.com/coupon_demo/'),
       ),
-      'gcp_rewards': MiniProgramEndpoint(
-        apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
-        accessKey: 'mpk_live_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+      'rewards': MiniProgramEndpoint.public(
+        apiBaseUri: Uri.parse('https://static.example.com/rewards/'),
       ),
     },
   ),
@@ -380,11 +378,10 @@ MiniProgramScope(
 );
 ```
 
-Rule: UI knows `appId`; config knows API base URL and MiniProgram access key.
-For protected artifact access, the artifact endpoint should validate the
-`X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
-revoking one partner key does not affect other partners using the same
-mini-program.
+Rule: UI knows `appId`; endpoint config knows the static artifact base URL.
+Optional runtime API config is separate and is not required to open the
+mini-program. Protected delivery and MiniProgram access keys are advanced
+compatibility features, not part of the MVP opening boundary.
 
 Or use the generated launcher widget:
 

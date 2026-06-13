@@ -128,10 +128,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
         help: 'Cloud provider for this named environment.',
       )
       ..addOption('bucket', help: 'AWS S3 bucket name for cloud artifacts.')
-      ..addOption(
-        'region',
-        help: 'AWS region for S3/SAM delivery.',
-      )
+      ..addOption('region', help: 'AWS region for S3/SAM delivery.')
       ..addOption(
         'project-id',
         help: 'Firebase project id for static delivery hosting.',
@@ -612,8 +609,8 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
     );
     if (resolved == null) {
       throw const FormatException(
-        'partner package requires --api-base-url <url> or a configured cloud '
-        'environment. Run `miniprogram env init` and '
+        'partner package requires --artifact-base-url <url> or a configured '
+        'artifact host environment. Run `miniprogram env init` and '
         '`miniprogram env configure ...` first.',
       );
     }
@@ -625,9 +622,9 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
         requestedEnvironmentName == 'local' ||
         requestedEnvironmentName == 'cloud') {
       throw const FormatException(
-        'partner package needs a named cloud environment when '
-        '--api-base-url is omitted. Run `miniprogram env use <env-name>` or '
-        'pass `--env <env-name>`.',
+        'partner package needs a named artifact host environment when '
+        '--artifact-base-url is omitted. Run `miniprogram env use <env-name>` '
+        'or pass `--env <env-name>`.',
       );
     }
     final environment = resolved.state.cloudEnvironmentNamed(

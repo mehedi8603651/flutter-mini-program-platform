@@ -1,4 +1,10 @@
 # Changelog
+## 0.5.4
+- make partner handoff packages use `artifactBaseUrl` as the current MVP
+  static artifact field
+- keep legacy partner handoff parsing for protected/access-key/runtime API
+  compatibility while making new host endpoint imports backend-optional
+
 ## 0.5.3
 - bump generated preview/embedded host SDK constraint to `mini_program_sdk:
   ^0.4.4`

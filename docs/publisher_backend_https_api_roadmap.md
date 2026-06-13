@@ -19,8 +19,10 @@ or loopback development.
 ## Current Usable Model
 
 The standalone API model is already usable through the existing Publisher API
-endpoint configuration. A mini-program screen does not store the real server
-URL. It stores only relative endpoints:
+endpoint configuration. Static opening still uses only `appId` and
+`artifactBaseUrl`; Publisher API Contract V1 is for optional runtime
+middle-server calls after the mini-program opens. A mini-program screen stores
+relative endpoints:
 
 ```dart
 Mp.backendBuilder(
@@ -42,10 +44,12 @@ Mp.formSubmit(
 )
 ```
 
-The host import or partner handoff supplies the standalone HTTPS API base URL:
+Optional runtime API configuration supplies the standalone HTTPS API base URL.
+New docs should call this `middleServerApiUrl`; current compatibility files may
+still use `backendBaseUrl`:
 
 ```text
-backendBaseUrl = https://api.publisher.example
+middleServerApiUrl = https://api.publisher.example
 ```
 
 At runtime the SDK combines both parts:
@@ -62,7 +66,7 @@ Publisher API contract for every provider.
 
 ## Core Architecture
 
-Mp screens call relative Publisher API endpoints:
+Mp screens call relative middle-server API endpoints:
 
 ```text
 orders/page
@@ -71,18 +75,19 @@ wallet/balance
 files/upload-url
 ```
 
-They do not contain absolute provider URLs. The full backend URL comes from the
-partner handoff package:
+They do not contain absolute provider URLs. The current MVP host handoff is only
+the static artifact opening boundary:
 
 ```json
 {
   "appId": "my_shop",
-  "apiBaseUrl": "https://delivery.publisher.example/",
-  "backendBaseUrl": "https://api.publisher.example/",
-  "accessMode": "protected",
-  "accessKey": "<partner-access-key>"
+  "artifactBaseUrl": "https://delivery.publisher.example/"
 }
 ```
+
+Runtime API config is separate. In current compatibility tooling it may still be
+stored as `backendBaseUrl`; treat that as a runtime API connector field, not a
+required host handoff field.
 
 At runtime the SDK resolves:
 
@@ -92,11 +97,11 @@ https://api.publisher.example/ + orders/page
 = https://api.publisher.example/orders/page
 ```
 
-The host app remains lightweight. It stores endpoint configuration and access
-keys, but it does not install Firebase, AWS, database, payment, email, storage,
-or AI provider SDKs for publishers.
+The host app remains lightweight. It stores static artifact endpoint
+configuration, but it does not install Firebase, AWS, database, payment, email,
+storage, or AI provider SDKs for publishers.
 
-## Protected API Model
+## Contract V1 Runtime API Model
 
 The SDK sends standard context headers to Publisher API backends:
 
@@ -106,18 +111,20 @@ X-Mini-Program-Host-App
 X-Mini-Program-Host-Version
 X-Mini-Program-SDK-Version
 X-Mini-Program-Platform
-X-Mini-Program-Access-Key
 Authorization: Bearer <publisher-auth-token>
 ```
 
 Publisher API backends should verify:
 
 - mini-program app id
-- MiniProgram access key
 - host app id and host version when relevant
 - user auth token for signed-in data
 - route-level permissions
 - quotas and rate limits
+
+Access-key protected delivery and protected Publisher API partner handoffs are
+legacy/advanced compatibility features. They are not part of the current MVP
+opening boundary.
 - request size and response size
 
 Access keys identify and revoke partner integrations. They are not permanent
@@ -281,14 +288,17 @@ without requiring a specific backend stack:
 miniprogram publisher-api contract init
 miniprogram publisher-api contract validate
 miniprogram publisher-api contract smoke
-miniprogram publisher-api contract handoff
 ```
 
 The contract commands are the provider-neutral path for an existing standalone
 API. `init` writes `publisher_backend.json` with the backend base URL and smoke
-cases, `validate` checks the contract without network calls, `smoke` calls the
-configured API with MiniProgram headers, and `handoff` creates the host package
-that carries `backendBaseUrl`.
+cases, `validate` checks the contract without network calls, and `smoke` calls
+the configured API with MiniProgram headers.
+
+`publisher-api contract handoff` is legacy/advanced compatibility for older
+protected/API handoff packages. Current MVP host opening should use
+`miniprogram partner package <appId> --artifact-base-url <url>` so the package
+contains static artifact opening information only.
 
 Optional server examples or templates can come later for Dart, Node, Cloud Run,
 Docker, Firebase Functions, AWS Lambda, or other targets, but those are

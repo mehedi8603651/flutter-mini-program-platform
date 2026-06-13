@@ -79,8 +79,7 @@ The extension does not replace the SDK or CLI. It calls the installed
 partner packages, public static artifact delivery, and cloud artifact hosting
 from VS Code.
 
-For protected Mp JSON Firebase/AWS handoff and cross-platform host verification,
-see the repo's
+For static artifact delivery and cross-platform host verification, see the repo's
 [Mp engine cloud end-to-end guide](../../docs/mp_engine_cloud_e2e_guide.md).
 
 ## Minimal usage
@@ -225,10 +224,6 @@ final config = MiniProgramConfig(
       locale: 'en-US',
     ),
     endpoints: <String, MiniProgramEndpoint>{
-      'aws_coupon_demo': MiniProgramEndpoint(
-        apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-        accessKey: 'mpk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-      ),
       'public_coupon_demo': MiniProgramEndpoint.public(
         apiBaseUri: Uri.parse(
           'https://user.github.io/repo/public_mini_program/',
@@ -247,22 +242,18 @@ Screens still open mini-programs by app id:
 
 ```dart
 MiniProgramScope.of(context).openMiniProgram(
-  appId: 'aws_coupon_demo',
-  title: 'AWS Coupon Demo',
+  appId: 'public_coupon_demo',
+  title: 'Public Coupon Demo',
 );
 ```
 
-Rule: UI knows `appId`; config knows API base URL and delivery access mode.
-For protected artifact access, the artifact endpoint should validate the
-`X-Mini-Program-Access-Key` header against its per-mini-program key policy, so
-revoking one partner key does not affect other partners using the same
+Rule: UI knows `appId`; endpoint config knows the static artifact base URL.
+Optional runtime API config is separate and is not required to open the
 mini-program.
 
-For public/static demos, open-source samples, GitHub Pages, CDN, S3 public
-hosting, Cloudflare Pages, Netlify, or Vercel static hosting, use
-`MiniProgramEndpoint.public(...)`. Public mode sends no MiniProgram access-key
-header and has no delivery access control, so do not use it for private or
-business-only mini-programs. Prefer GitHub Pages or a CDN over
+For public demos, open-source samples, GitHub Pages, CDN, S3 public hosting,
+Cloudflare Pages, Netlify, or Vercel static hosting, use
+`MiniProgramEndpoint.public(...)`. Prefer GitHub Pages or a CDN over
 `raw.githubusercontent.com` for real usage.
 
 ## Publisher API Backend
@@ -281,9 +272,8 @@ final deliveryContext = MiniProgramDeliveryContext(
 );
 
 final endpoints = <String, MiniProgramEndpoint>{
-  'aws_coupon_demo': MiniProgramEndpoint(
+  'coupon_demo': MiniProgramEndpoint.public(
     apiBaseUri: Uri.parse('https://publisher.example.com/delivery/'),
-    accessKey: 'mpk_live_partner_delivery_key',
     backend: MiniProgramBackendEndpoint(
       baseUri: Uri.parse('https://publisher.example.com/api/'),
       requestTimeout: Duration(seconds: 8),

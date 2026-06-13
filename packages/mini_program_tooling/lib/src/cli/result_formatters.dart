@@ -411,7 +411,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Policy key: ${result.policyKey}',
       'Created at UTC: ${result.createdAtUtc}',
       'Host endpoint command:',
-      'miniprogram host endpoint add ${result.miniProgramId} --api-base-url <BackendApiBaseUrl> --access-key ${result.accessKey}',
+      'miniprogram host endpoint add ${result.miniProgramId} --artifact-base-url <artifact-base-url> --access-key ${result.accessKey}',
     ].join('\n');
   }
 
@@ -553,10 +553,12 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Package file: ${result.filePath}',
       'Mini-program: ${result.handoff.appId}',
       'Title: ${result.handoff.title}',
-      'Access mode: ${result.handoff.accessMode}',
-      'API base URL: ${result.handoff.apiBaseUri}',
+      'Artifact base URL: ${result.handoff.artifactBaseUri}',
+      if (result.handoff.schemaVersion <=
+          MiniProgramPartnerHandoff.legacySchemaVersion)
+        'Access mode: ${result.handoff.accessMode}',
       if (result.handoff.backendBaseUri != null)
-        'Backend base URL: ${result.handoff.backendBaseUri}',
+        'Middle-server API URL: ${result.handoff.backendBaseUri}',
       'Generated at UTC: ${result.handoff.generatedAtUtc}',
       'Host import command:',
       'miniprogram host endpoint import ${result.filePath}',
@@ -575,11 +577,11 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Registry file: ${result.registryFilePath}',
       'Mini-program: ${result.appId}',
       'Title: ${result.title}',
-      'Access mode: ${result.accessMode}',
-      'API base URL: ${result.apiBaseUri}',
-      'Backend mode: ${result.backendMode}',
+      'Artifact base URL: ${result.apiBaseUri}',
+      'Runtime API mode: ${result.backendMode}',
+      if (result.accessMode != 'public') 'Access mode: ${result.accessMode}',
       if (result.backendBaseUri != null)
-        'Backend base URL: ${result.backendBaseUri}',
+        'Middle-server API URL: ${result.backendBaseUri}',
       'Endpoint count: ${result.endpointCount}',
       'Registry count: ${result.registryCount}',
       'Use it from MiniProgramScope:',
@@ -604,10 +606,12 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Registry file: ${endpointResult.registryFilePath}',
       'Mini-program: ${handoff.appId}',
       'Title: ${handoff.title}',
-      'Access mode: ${handoff.accessMode}',
-      'API base URL: ${handoff.apiBaseUri}',
+      'Artifact base URL: ${handoff.artifactBaseUri}',
+      if (handoff.schemaVersion <=
+          MiniProgramPartnerHandoff.legacySchemaVersion)
+        'Access mode: ${handoff.accessMode}',
       if (handoff.backendBaseUri != null)
-        'Backend base URL: ${handoff.backendBaseUri}',
+        'Middle-server API URL: ${handoff.backendBaseUri}',
       'Endpoint count: ${endpointResult.endpointCount}',
       'Registry count: ${endpointResult.registryCount}',
       'Open from app UI by appId only:',
