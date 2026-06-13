@@ -274,7 +274,7 @@ MiniProgramScope(
 does not load a manifest, start a network request, initialize Stac, insert an
 overlay, or push a route until you call `openMiniProgram()`.
 
-When the local backend is already running on port `8080`, Android emulator
+When the local artifact host is already running on port `8080`, Android emulator
 development should normally work with:
 
 ```powershell
@@ -296,11 +296,11 @@ The generated runtime now uses target-aware defaults:
 
 Conditions:
 
-- the local backend should already be running on port `8080`
+- the local artifact host should already be running on port `8080`
 - Android USB or emulator loopback may still depend on an active `adb reverse`
   session when the device cannot route to `10.0.2.2`
-- if the Android device or emulator connects after backend start, rerun
-  backend start or reapply `adb reverse`
+- if the Android device or emulator connects after artifact-host start, rerun
+  `miniprogram artifact-host start` or reapply `adb reverse`
 - physical devices over Wi-Fi should override `MINI_PROGRAM_BACKEND_HOST` with
   the computer's LAN IP
 

@@ -27,15 +27,12 @@ void _registerPublisherBackendContractTests() {
 
         expect(capabilitiesExitCode, 0);
         final json = jsonDecode(capabilitiesOut.toString()) as Map;
-        expect(json['toolingVersion'], '0.5.1');
+        expect(json['toolingVersion'], '0.5.2');
         expect(
           json['capabilityIds'],
           contains('publisher_backend.contract.smoke'),
         );
-        expect(
-          json['commands'],
-          contains('publisher-backend contract handoff'),
-        );
+        expect(json['commands'], contains('publisher-api contract handoff'));
       },
     );
 
@@ -54,7 +51,7 @@ void _registerPublisherBackendContractTests() {
             stderrSink: StringBuffer(),
             workingDirectory: miniProgramRoot,
           ).run(<String>[
-            'publisher-backend',
+            'publisher-api',
             'contract',
             'init',
             '--backend-base-url',
@@ -64,7 +61,7 @@ void _registerPublisherBackendContractTests() {
 
       expect(initExitCode, 0);
       final initJson = jsonDecode(initOut.toString()) as Map;
-      expect(initJson['command'], 'publisher-backend contract init');
+      expect(initJson['command'], 'publisher-api contract init');
       expect(initJson['miniProgramId'], 'shop_demo');
       expect(initJson['backendBaseUrl'], 'https://api.publisher.example');
       expect(initJson['accessMode'], 'protected');
@@ -83,7 +80,7 @@ void _registerPublisherBackendContractTests() {
         stdoutSink: validateOut,
         stderrSink: StringBuffer(),
         workingDirectory: miniProgramRoot,
-      ).run(<String>['publisher-backend', 'contract', 'validate', '--json']);
+      ).run(<String>['publisher-api', 'contract', 'validate', '--json']);
 
       expect(validateExitCode, 0);
       final validateJson = jsonDecode(validateOut.toString()) as Map;
@@ -372,7 +369,7 @@ void _registerPublisherBackendContractTests() {
               stderrSink: StringBuffer(),
               workingDirectory: miniProgramRoot,
             ).run(<String>[
-              'publisher-backend',
+              'publisher-api',
               'contract',
               'handoff',
               '--delivery-url',
@@ -388,7 +385,7 @@ void _registerPublisherBackendContractTests() {
         final output = stdout.toString();
         expect(output, isNot(contains(accessKey)));
         final json = jsonDecode(output) as Map;
-        expect(json['command'], 'publisher-backend contract handoff');
+        expect(json['command'], 'publisher-api contract handoff');
         expect(json['accessKeyIncluded'], isTrue);
         expect(json['backendBaseUrl'], 'https://api.publisher.example');
         final packageJson =

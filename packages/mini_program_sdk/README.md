@@ -451,7 +451,7 @@ flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-i
 flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/
 ```
 
-For local backend development:
+For local artifact-host development:
 
 - Android local default: `http://10.0.2.2:8080/api/`
 - desktop, Chrome on the same machine, and iOS simulators:
@@ -463,11 +463,11 @@ For local backend development:
 
 Conditions:
 
-- the local backend must already be running, normally on port `8080`
+- the local artifact host must already be running, normally on port `8080`
 - Android USB or emulator loopback can still depend on an active `adb reverse`
   session when the device cannot route to `10.0.2.2`
-- if the Android device or emulator connects after the backend started, rerun
-  backend start or reapply `adb reverse`
+- if the Android device or emulator connects after the artifact host started,
+  rerun `miniprogram artifact-host start` or reapply `adb reverse`
 - Wi-Fi devices need the computer's LAN IP, not `127.0.0.1`
 
 Host apps can also resolve that default base URI directly:
@@ -555,7 +555,7 @@ typedef MiniProgramRouteBuilder<T> = Route<T> Function(
 
 ## Notes
 
-- This package is the runtime only. Authoring and local backend workflows live
+- This package is the runtime only. Authoring and local artifact-host workflows live
   in `mini_program_tooling`.
 - No manifest loading, network request, mini-program route, or overlay work
   starts until a mini-program is opened.

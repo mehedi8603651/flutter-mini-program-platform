@@ -432,7 +432,7 @@ class MiniProgramWorkflowStatusController {
     if (appId == null || appId.isEmpty || backendRootPath == null) {
       miniProgram['validation'] = <String, Object?>{
         'status': 'not_run',
-        'reason': 'No backend workspace was found for validation.',
+        'reason': 'No local artifact host workspace was found for validation.',
       };
       return;
     }

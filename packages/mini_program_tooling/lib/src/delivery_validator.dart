@@ -69,7 +69,8 @@ class DeliveryRepositoryValidator {
           severity: ValidationSeverity.error,
           code: 'missing_backend_api_root',
           path: _relative(normalizedRepoRoot, backendApiRoot.path),
-          message: 'backend/api/ was not found under the repo root.',
+          message:
+              'Static artifact path backend/api/ was not found under the repo root.',
         ),
       );
     }
@@ -149,7 +150,7 @@ class DeliveryRepositoryValidator {
           code: 'mini_program_not_found',
           path: 'mini_programs/$miniProgramId',
           message:
-              'No authored manifest or published backend artifacts were found for "$miniProgramId".',
+              'No authored manifest or published static artifacts were found for "$miniProgramId".',
         ),
       );
     }
@@ -1076,7 +1077,7 @@ class DeliveryRepositoryValidator {
               code: 'secure_api_policy_unknown_source',
               path: _relative(repoRootPath, file.path),
               message:
-                  'allowedSources contains "$source", but no authored manifest or published backend artifacts were found for it.',
+                  'allowedSources contains "$source", but no authored manifest or published static artifacts were found for it.',
             ),
           );
         }

@@ -32,7 +32,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         'with-backend',
         allowed: const <String>['mock'],
         help:
-            'Scaffold an opt-in publisher-owned backend starter. Currently supports: mock.',
+            'Scaffold an opt-in Publisher API mock starter. Currently supports: mock.',
       )
       ..addOption(
         'screen-format',
@@ -346,12 +346,13 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       )
       ..addOption(
         'repo-root',
-        help: 'Platform repo root containing backend/api/.',
+        help:
+            'Platform repo root containing static artifacts under backend/api/.',
       )
       ..addOption(
         'root',
         help:
-            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+            'Local artifact host workspace root. Defaults to a discovered artifact-host init workspace or platform repo root.',
       )
       ..addOption(
         'mini-program-root',
@@ -417,12 +418,13 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       )
       ..addOption(
         'repo-root',
-        help: 'Platform repo root containing backend/api/.',
+        help:
+            'Platform repo root containing static artifacts under backend/api/.',
       )
       ..addOption(
         'root',
         help:
-            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+            'Local artifact host workspace root. Defaults to a discovered artifact-host init workspace or platform repo root.',
       )
       ..addOption(
         'mini-program-root',

@@ -98,73 +98,79 @@ void main() {
       expect(latestManifest['screenSchemaVersion'], 1);
     });
 
-    test('publishes to a standalone backend workspace when provided', () async {
-      final miniProgramId = 'coupon_center';
-      final repoRoot = p.join(tempDir.path, 'repo_root');
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      final miniProgramRoot = p.join(tempDir.path, 'standalone_coupon_center');
-      await Directory(
-        p.join(repoRoot, 'mini_programs'),
-      ).create(recursive: true);
-      await Directory(
-        p.join(backendRoot, 'backend', 'api'),
-      ).create(recursive: true);
-      await _writeMiniProgramFixture(
-        miniProgramRoot,
-        miniProgramId: miniProgramId,
-        version: '1.2.0',
-      );
+    test(
+      'publishes to a standalone artifact workspace when provided',
+      () async {
+        final miniProgramId = 'coupon_center';
+        final repoRoot = p.join(tempDir.path, 'repo_root');
+        final backendRoot = p.join(tempDir.path, 'backend_workspace');
+        final miniProgramRoot = p.join(
+          tempDir.path,
+          'standalone_coupon_center',
+        );
+        await Directory(
+          p.join(repoRoot, 'mini_programs'),
+        ).create(recursive: true);
+        await Directory(
+          p.join(backendRoot, 'backend', 'api'),
+        ).create(recursive: true);
+        await _writeMiniProgramFixture(
+          miniProgramRoot,
+          miniProgramId: miniProgramId,
+          version: '1.2.0',
+        );
 
-      final result = await const MiniProgramPublisher().publish(
-        MiniProgramPublishRequest(
-          repoRootPath: repoRoot,
-          backendRootPath: backendRoot,
-          miniProgramRootPath: miniProgramRoot,
-          skipBuildPubGet: true,
-        ),
-      );
+        final result = await const MiniProgramPublisher().publish(
+          MiniProgramPublishRequest(
+            repoRootPath: repoRoot,
+            backendRootPath: backendRoot,
+            miniProgramRootPath: miniProgramRoot,
+            skipBuildPubGet: true,
+          ),
+        );
 
-      expect(result.backendRootPath, backendRoot);
-      expect(
-        result.latestManifestPath,
-        p.join(
-          backendRoot,
-          'backend',
-          'api',
-          'manifests',
-          miniProgramId,
-          'latest.json',
-        ),
-      );
-      expect(await File(result.latestManifestPath).exists(), isTrue);
-      expect(
-        await File(
+        expect(result.backendRootPath, backendRoot);
+        expect(
+          result.latestManifestPath,
           p.join(
             backendRoot,
-            'backend',
-            'api',
-            'screens',
-            miniProgramId,
-            '1.2.0',
-            '${miniProgramId}_home.json',
-          ),
-        ).exists(),
-        isTrue,
-      );
-      expect(
-        await File(
-          p.join(
-            repoRoot,
             'backend',
             'api',
             'manifests',
             miniProgramId,
             'latest.json',
           ),
-        ).exists(),
-        isFalse,
-      );
-    });
+        );
+        expect(await File(result.latestManifestPath).exists(), isTrue);
+        expect(
+          await File(
+            p.join(
+              backendRoot,
+              'backend',
+              'api',
+              'screens',
+              miniProgramId,
+              '1.2.0',
+              '${miniProgramId}_home.json',
+            ),
+          ).exists(),
+          isTrue,
+        );
+        expect(
+          await File(
+            p.join(
+              repoRoot,
+              'backend',
+              'api',
+              'manifests',
+              miniProgramId,
+              'latest.json',
+            ),
+          ).exists(),
+          isFalse,
+        );
+      },
+    );
 
     test(
       'stops before publish when pre-publish validation has errors',

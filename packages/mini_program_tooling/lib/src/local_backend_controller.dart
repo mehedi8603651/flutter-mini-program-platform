@@ -151,9 +151,9 @@ class LocalBackendController {
     final preExistingHealth = await _probeHealth(healthCheckUri);
     if (preExistingHealth.healthy) {
       throw LocalBackendControlException(
-        'A backend is already responding at ${healthCheckUri.toString()}, '
-        'but no tracked local backend state was found. Stop the existing '
-        'server or use a different --port.',
+        'A local artifact host is already responding at '
+        '${healthCheckUri.toString()}, but no tracked local artifact host '
+        'state was found. Stop the existing server or use a different --port.',
       );
     }
 
@@ -204,7 +204,8 @@ class LocalBackendController {
       await _terminateProcess(startedProcess.pid);
       final stderrTail = await _readLogTail(stderrLogPath);
       final details = <String>[
-        'Failed to confirm local backend health at ${state.healthCheckUrl} within 20 seconds.',
+        'Failed to confirm local artifact host health at '
+            '${state.healthCheckUrl} within 20 seconds.',
         if (startupHealth.statusCode != null)
           'Last health status code: ${startupHealth.statusCode}',
         if (startupHealth.error != null)
@@ -397,17 +398,17 @@ class LocalBackendController {
   }) async {
     if (!await Directory(serviceDirectoryPath).exists()) {
       throw LocalBackendControlException(
-        'Local backend service was not found: $serviceDirectoryPath',
+        'Local artifact service was not found: $serviceDirectoryPath',
       );
     }
     if (!await Directory(apiRootPath).exists()) {
       throw LocalBackendControlException(
-        'Local backend api root was not found: $apiRootPath',
+        'Local artifact API root was not found: $apiRootPath',
       );
     }
     if (!await File(serverScriptPath).exists()) {
       throw LocalBackendControlException(
-        'Local backend entrypoint was not found: $serverScriptPath',
+        'Local artifact host entrypoint was not found: $serverScriptPath',
       );
     }
   }

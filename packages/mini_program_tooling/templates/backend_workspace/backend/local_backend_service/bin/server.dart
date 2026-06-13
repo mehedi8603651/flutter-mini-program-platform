@@ -31,7 +31,7 @@ Future<void> main(List<String> arguments) async {
   stdout.writeln(
     'local_backend_service listening on http://${server.address.host}:${server.port}',
   );
-  stdout.writeln('Serving backend artifacts from ${apiRootDirectory.path}');
+  stdout.writeln('Serving static artifacts from ${apiRootDirectory.path}');
 }
 
 class _ServerConfiguration {

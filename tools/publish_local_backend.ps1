@@ -50,7 +50,7 @@ function Assert-ContainedPath {
 }
 
 Assert-ExistingPath -Path $miniProgramRoot -Label 'Mini-program root'
-Assert-ExistingPath -Path $backendRoot -Label 'Backend root'
+Assert-ExistingPath -Path $backendRoot -Label 'Static artifact workspace root'
 Assert-ExistingPath -Path $manifestSource -Label 'Manifest source'
 Assert-ExistingPath -Path $screensSource -Label 'Built screens source'
 

@@ -247,7 +247,7 @@ class MiniProgramScaffolder {
     }
     if (template != 'mock') {
       throw MiniProgramScaffoldException(
-        'Unsupported backend starter template: $rawTemplate',
+        'Unsupported Publisher API starter template: $rawTemplate',
       );
     }
     return template;

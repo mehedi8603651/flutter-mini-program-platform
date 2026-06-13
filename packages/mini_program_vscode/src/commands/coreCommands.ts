@@ -301,7 +301,7 @@ export async function publishFirebaseHostingMiniProgram(
       : 'Firebase Hosting static delivery published.',
   );
   if (deliveryUrl) {
-    output.appendLine(`Delivery API base URL: ${deliveryUrl}`);
+    output.appendLine(`Static artifact base URL: ${deliveryUrl}`);
     if (!dryRun) {
       const deliveryStatus = await withFirebaseHostingDeliveryDiagnostics({
         miniProgramId: stringValue(decoded.miniProgramId),

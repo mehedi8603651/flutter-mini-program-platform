@@ -586,24 +586,24 @@ test('builds environment and cloud command arguments', () => {
   );
 });
 
-test('builds backend command arguments', () => {
-  assert.deepEqual(buildBackendInitArgs(), ['backend', 'init']);
+test('builds artifact host command arguments', () => {
+  assert.deepEqual(buildBackendInitArgs(), ['artifact-host', 'init']);
   assert.deepEqual(
     buildBackendInitArgs({ backendRoot: 'D:/backend', force: true }),
-    ['backend', 'init', '--root', 'D:/backend', '--force'],
+    ['artifact-host', 'init', '--root', 'D:/backend', '--force'],
   );
   assert.deepEqual(
     buildBackendStartArgs({ backendRoot: 'D:/backend', port: 8081 }),
-    ['backend', 'start', '--root', 'D:/backend', '--port', '8081'],
+    ['artifact-host', 'start', '--root', 'D:/backend', '--port', '8081'],
   );
   assert.deepEqual(buildBackendStopArgs({ backendRoot: 'D:/backend' }), [
-    'backend',
+    'artifact-host',
     'stop',
     '--root',
     'D:/backend',
   ]);
   assert.deepEqual(buildBackendStatusArgs({ backendRoot: 'D:/backend' }), [
-    'backend',
+    'artifact-host',
     'status',
     '--json',
     '--root',
@@ -615,7 +615,7 @@ test('builds backend command arguments', () => {
       force: true,
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'scaffold',
       '--template',
       'mock',
@@ -630,7 +630,7 @@ test('builds backend command arguments', () => {
       port: 9091,
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'run',
       '--mini-program-root',
       'D:/work/coupon_demo',
@@ -643,7 +643,7 @@ test('builds backend command arguments', () => {
       miniProgramRoot: 'D:/work/coupon_demo',
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'status',
       '--json',
       '--mini-program-root',
@@ -655,14 +655,14 @@ test('builds backend command arguments', () => {
       miniProgramRoot: 'D:/work/coupon_demo',
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'stop',
       '--mini-program-root',
       'D:/work/coupon_demo',
     ],
   );
   assert.deepEqual(buildPublisherBackendUrlsArgs({ port: 9091 }), [
-    'publisher-backend',
+    'publisher-api',
     'urls',
     '--port',
     '9091',
@@ -677,7 +677,7 @@ test('builds backend command arguments', () => {
       json: true,
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'contract',
       'init',
       '--backend-base-url',
@@ -698,7 +698,7 @@ test('builds backend command arguments', () => {
       allowLocalHttp: true,
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'contract',
       'validate',
       '--contract',
@@ -717,7 +717,7 @@ test('builds backend command arguments', () => {
       json: true,
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'contract',
       'smoke',
       '--access-key',
@@ -741,7 +741,7 @@ test('builds backend command arguments', () => {
       json: true,
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'contract',
       'handoff',
       '--delivery-url',
@@ -763,7 +763,7 @@ test('builds backend command arguments', () => {
       template: 'mock',
     }),
     [
-      'publisher-backend',
+      'publisher-api',
       'scaffold',
       '--template',
       'mock',
@@ -941,7 +941,7 @@ test('redacts access keys in command output', () => {
   assert.doesNotMatch(partnerPackageCommandLine, /partner_should_not_print/);
 
   const smokeTokenCommandLine = formatRedactedCommandLine('miniprogram', [
-    'publisher-backend',
+    'publisher-api',
     'contract',
     'smoke',
     '--auth-token',

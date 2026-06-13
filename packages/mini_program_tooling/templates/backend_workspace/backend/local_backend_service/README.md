@@ -1,6 +1,7 @@
 # local_backend_service
 
-Pure Dart local backend service for mini-program delivery.
+Pure Dart local static artifact service for mini-program frontend delivery.
+The package name remains `local_backend_service` for compatibility.
 
 ## What it does
 
@@ -9,7 +10,8 @@ Pure Dart local backend service for mini-program delivery.
 - applies local rollout rules for `latest` manifest selection
 - enforces capability-aware manifest delivery when policy files exist
 - returns JSON `404` and `400` responses instead of raw file-server behavior
-- gives the repo a real backend process before a production server exists
+- gives the workspace a real local artifact host before production static
+  hosting is configured
 
 ## Run
 

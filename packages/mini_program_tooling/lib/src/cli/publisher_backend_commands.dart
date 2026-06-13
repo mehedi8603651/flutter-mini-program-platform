@@ -16,17 +16,35 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
 
     switch (arguments.first) {
       case 'scaffold':
-        return _runPublisherBackendScaffold(arguments.sublist(1));
+        return _runPublisherBackendScaffold(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'run':
-        return _runPublisherBackendRun(arguments.sublist(1));
+        return _runPublisherBackendRun(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'status':
-        return _runPublisherBackendStatus(arguments.sublist(1));
+        return _runPublisherBackendStatus(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'stop':
-        return _runPublisherBackendStop(arguments.sublist(1));
+        return _runPublisherBackendStop(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'urls':
-        return _runPublisherBackendUrls(arguments.sublist(1));
+        return _runPublisherBackendUrls(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'contract':
-        return _runPublisherBackendContract(arguments.sublist(1));
+        return _runPublisherBackendContract(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       default:
         _stderr.writeln('Unknown $commandName command: ${arguments.first}');
         _stderr.writeln(_publisherBackendUsage(commandName: commandName));
@@ -34,7 +52,11 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
     }
   }
 
-  Future<int> _runPublisherBackendScaffold(List<String> arguments) async {
+  Future<int> _runPublisherBackendScaffold(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName scaffold';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -72,15 +94,13 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln(
-        'Usage: miniprogram publisher-backend scaffold [options]',
-      );
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (results.rest.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend scaffold does not accept positional arguments.',
+      throw FormatException(
+        '$qualifiedCommand does not accept positional arguments.',
       );
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
@@ -99,7 +119,11 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runPublisherBackendRun(List<String> arguments) async {
+  Future<int> _runPublisherBackendRun(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName run';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -118,15 +142,13 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram publisher-backend run [options]');
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     final port = int.tryParse(results.option('port')!);
     if (port == null || port <= 0 || port > 65535) {
-      throw const FormatException(
-        'publisher-backend run --port must be 1-65535.',
-      );
+      throw FormatException('$qualifiedCommand --port must be 1-65535.');
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
@@ -139,7 +161,11 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runPublisherBackendStatus(List<String> arguments) async {
+  Future<int> _runPublisherBackendStatus(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName status';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -154,7 +180,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram publisher-backend status [options]');
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
@@ -172,7 +198,11 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
     return result.healthy ? 0 : 1;
   }
 
-  Future<int> _runPublisherBackendStop(List<String> arguments) async {
+  Future<int> _runPublisherBackendStop(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName stop';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -186,7 +216,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram publisher-backend stop [options]');
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
@@ -200,7 +230,11 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runPublisherBackendUrls(List<String> arguments) async {
+  Future<int> _runPublisherBackendUrls(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName urls';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -215,15 +249,13 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram publisher-backend urls [options]');
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     final port = int.tryParse(results.option('port')!);
     if (port == null || port <= 0 || port > 65535) {
-      throw const FormatException(
-        'publisher-backend urls --port must be 1-65535.',
-      );
+      throw FormatException('$qualifiedCommand --port must be 1-65535.');
     }
     _stdout.writeln(
       _formatPublisherBackendUrlsResult(

@@ -573,7 +573,7 @@ export function buildCloudAppInfoArgs(
 }
 
 export function buildBackendInitArgs(options: BackendInitArgsOptions = {}): string[] {
-  const args = ['backend', 'init'];
+  const args = ['artifact-host', 'init'];
   withRootPath(args, options.backendRoot);
   if (options.force) {
     args.push('--force');
@@ -582,7 +582,7 @@ export function buildBackendInitArgs(options: BackendInitArgsOptions = {}): stri
 }
 
 export function buildBackendStartArgs(options: BackendStartArgsOptions = {}): string[] {
-  const args = ['backend', 'start'];
+  const args = ['artifact-host', 'start'];
   withRootPath(args, options.backendRoot);
   if (options.port !== undefined && `${options.port}`.trim()) {
     args.push('--port', `${options.port}`.trim());
@@ -591,12 +591,12 @@ export function buildBackendStartArgs(options: BackendStartArgsOptions = {}): st
 }
 
 export function buildBackendStopArgs(options: BackendStopArgsOptions = {}): string[] {
-  const args = ['backend', 'stop'];
+  const args = ['artifact-host', 'stop'];
   return withRootPath(args, options.backendRoot);
 }
 
 export function buildBackendStatusArgs(options: BackendStatusArgsOptions = {}): string[] {
-  const args = ['backend', 'status'];
+  const args = ['artifact-host', 'status'];
   if (options.json ?? true) {
     args.push('--json');
   }
@@ -606,7 +606,7 @@ export function buildBackendStatusArgs(options: BackendStatusArgsOptions = {}): 
 export function buildPublisherBackendScaffoldArgs(
   options: PublisherBackendScaffoldArgsOptions = {},
 ): string[] {
-  const args = ['publisher-backend', 'scaffold'];
+  const args = ['publisher-api', 'scaffold'];
   args.push('--template', options.template ?? 'mock');
   withMiniProgramRoot(args, options.miniProgramRoot);
   if (options.force) {
@@ -618,7 +618,7 @@ export function buildPublisherBackendScaffoldArgs(
 export function buildPublisherBackendRunArgs(
   options: PublisherBackendRunArgsOptions = {},
 ): string[] {
-  const args = ['publisher-backend', 'run'];
+  const args = ['publisher-api', 'run'];
   withMiniProgramRoot(args, options.miniProgramRoot);
   if (options.port !== undefined && `${options.port}`.trim()) {
     args.push('--port', `${options.port}`.trim());
@@ -629,7 +629,7 @@ export function buildPublisherBackendRunArgs(
 export function buildPublisherBackendStatusArgs(
   options: PublisherBackendStatusArgsOptions = {},
 ): string[] {
-  const args = ['publisher-backend', 'status'];
+  const args = ['publisher-api', 'status'];
   if (options.json ?? true) {
     args.push('--json');
   }
@@ -639,16 +639,13 @@ export function buildPublisherBackendStatusArgs(
 export function buildPublisherBackendStopArgs(
   options: PublisherBackendStopArgsOptions = {},
 ): string[] {
-  return withMiniProgramRoot(
-    ['publisher-backend', 'stop'],
-    options.miniProgramRoot,
-  );
+  return withMiniProgramRoot(['publisher-api', 'stop'], options.miniProgramRoot);
 }
 
 export function buildPublisherBackendUrlsArgs(
   options: PublisherBackendUrlsArgsOptions = {},
 ): string[] {
-  const args = ['publisher-backend', 'urls'];
+  const args = ['publisher-api', 'urls'];
   if (options.port !== undefined && `${options.port}`.trim()) {
     args.push('--port', `${options.port}`.trim());
   }
@@ -659,7 +656,7 @@ export function buildPublisherBackendContractInitArgs(
   options: PublisherBackendContractInitArgsOptions,
 ): string[] {
   const args = [
-    'publisher-backend',
+    'publisher-api',
     'contract',
     'init',
     '--backend-base-url',
@@ -684,7 +681,7 @@ export function buildPublisherBackendContractValidateArgs(
   options: PublisherBackendContractValidateArgsOptions = {},
 ): string[] {
   return withPublisherBackendContractOptions(
-    ['publisher-backend', 'contract', 'validate'],
+    ['publisher-api', 'contract', 'validate'],
     options,
   );
 }
@@ -692,7 +689,7 @@ export function buildPublisherBackendContractValidateArgs(
 export function buildPublisherBackendContractSmokeArgs(
   options: PublisherBackendContractSmokeArgsOptions = {},
 ): string[] {
-  const args = ['publisher-backend', 'contract', 'smoke'];
+  const args = ['publisher-api', 'contract', 'smoke'];
   if (options.accessKey?.trim()) {
     args.push('--access-key', options.accessKey.trim());
   }
@@ -709,7 +706,7 @@ export function buildPublisherBackendContractHandoffArgs(
   options: PublisherBackendContractHandoffArgsOptions,
 ): string[] {
   const args = [
-    'publisher-backend',
+    'publisher-api',
     'contract',
     'handoff',
     '--delivery-url',

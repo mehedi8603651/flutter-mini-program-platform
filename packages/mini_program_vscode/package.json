@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -174,22 +174,22 @@
       },
       {
         "command": "miniProgramTools.backendInit",
-        "title": "MiniProgram: Backend Init",
+        "title": "MiniProgram: Artifact Host Init",
         "icon": "$(database)"
       },
       {
         "command": "miniProgramTools.backendStart",
-        "title": "MiniProgram: Backend Start",
+        "title": "MiniProgram: Artifact Host Start",
         "icon": "$(debug-start)"
       },
       {
         "command": "miniProgramTools.backendStop",
-        "title": "MiniProgram: Backend Stop",
+        "title": "MiniProgram: Artifact Host Stop",
         "icon": "$(debug-stop)"
       },
       {
         "command": "miniProgramTools.backendStatus",
-        "title": "MiniProgram: Backend Status",
+        "title": "MiniProgram: Artifact Host Status",
         "icon": "$(pulse)"
       },
       {
@@ -239,7 +239,7 @@
       },
       {
         "command": "miniProgramTools.copyMockBackendHostCommand",
-        "title": "MiniProgram: Copy Mock Backend Host Command",
+        "title": "MiniProgram: Copy Mock Publisher API Host Command",
         "icon": "$(copy)"
       },
       {

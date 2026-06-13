@@ -179,9 +179,9 @@ class MiniprogramDoctor {
     } on LocalCliStateException catch (error) {
       checks.add(
         MiniprogramDoctorCheck(
-          label: 'Backend workspace',
+          label: 'Artifact host workspace',
           status: MiniprogramDoctorCheckStatus.error,
-          summary: 'Failed to read backend workspace configuration.',
+          summary: 'Failed to read artifact host workspace configuration.',
           detail: error.message,
         ),
       );
@@ -192,19 +192,19 @@ class MiniprogramDoctor {
     if (backendRootPath == null) {
       checks.add(
         const MiniprogramDoctorCheck(
-          label: 'Backend workspace',
+          label: 'Artifact host workspace',
           status: MiniprogramDoctorCheckStatus.warning,
-          summary: 'No backend workspace was found.',
+          summary: 'No artifact host workspace was found.',
           detail:
-              'Run `miniprogram backend init` to scaffold a standalone local '
-              'backend workspace.',
+              'Run `miniprogram artifact-host init` to scaffold a standalone '
+              'local artifact host workspace.',
         ),
       );
       checks.add(
         const MiniprogramDoctorCheck(
-          label: 'Backend status',
+          label: 'Artifact host status',
           status: MiniprogramDoctorCheckStatus.skipped,
-          summary: 'Skipped because no backend workspace was resolved.',
+          summary: 'Skipped because no artifact host workspace was resolved.',
         ),
       );
       return MiniprogramDoctorResult(checks: checks);
@@ -221,7 +221,7 @@ class MiniprogramDoctor {
     if (serviceExists && apiExists) {
       checks.add(
         MiniprogramDoctorCheck(
-          label: 'Backend workspace',
+          label: 'Artifact host workspace',
           status: MiniprogramDoctorCheckStatus.ok,
           summary: 'Found backend/local_backend_service and backend/api.',
           detail:
@@ -231,9 +231,9 @@ class MiniprogramDoctor {
     } else {
       checks.add(
         MiniprogramDoctorCheck(
-          label: 'Backend workspace',
+          label: 'Artifact host workspace',
           status: MiniprogramDoctorCheckStatus.error,
-          summary: 'Platform repo is missing local backend directories.',
+          summary: 'Platform repo is missing local artifact host directories.',
           detail: 'Expected: $serviceDirectoryPath and $apiRootPath',
         ),
       );
@@ -246,18 +246,18 @@ class MiniprogramDoctor {
       if (!backendStatus.hasState) {
         checks.add(
           const MiniprogramDoctorCheck(
-            label: 'Backend status',
+            label: 'Artifact host status',
             status: MiniprogramDoctorCheckStatus.warning,
-            summary: 'Local backend is not running.',
+            summary: 'Local artifact host is not running.',
             detail:
-                'Run `miniprogram backend start --port 8080` when you need '
-                'local manifest delivery.',
+                'Run `miniprogram artifact-host start --port 8080` when you '
+                'need local manifest delivery.',
           ),
         );
       } else if (backendStatus.healthy) {
         checks.add(
           MiniprogramDoctorCheck(
-            label: 'Backend status',
+            label: 'Artifact host status',
             status: MiniprogramDoctorCheckStatus.ok,
             summary: 'Healthy at ${backendStatus.state!.healthCheckUrl}',
             detail:
@@ -268,9 +268,9 @@ class MiniprogramDoctor {
       } else {
         checks.add(
           MiniprogramDoctorCheck(
-            label: 'Backend status',
+            label: 'Artifact host status',
             status: MiniprogramDoctorCheckStatus.warning,
-            summary: 'Local backend state exists but is not healthy.',
+            summary: 'Local artifact host state exists but is not healthy.',
             detail:
                 backendStatus.healthError ??
                 'Health status: ${backendStatus.healthStatusCode ?? 'unknown'}',
@@ -280,9 +280,9 @@ class MiniprogramDoctor {
     } on LocalBackendControlException catch (error) {
       checks.add(
         MiniprogramDoctorCheck(
-          label: 'Backend status',
+          label: 'Artifact host status',
           status: MiniprogramDoctorCheckStatus.error,
-          summary: 'Backend status check failed.',
+          summary: 'Artifact host status check failed.',
           detail: error.message,
         ),
       );

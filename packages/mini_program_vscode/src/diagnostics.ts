@@ -712,7 +712,7 @@ function buildCloudDeliveryChecks(
     ),
     check(
       'cloud.api_base_url',
-      'Backend API base URL',
+      'Artifact API base URL',
       apiBaseUrl ? 'ok' : 'warning',
       apiBaseUrl ? `API base URL: ${apiBaseUrl}` : 'No API base URL is configured yet.',
       undefined,

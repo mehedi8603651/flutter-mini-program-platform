@@ -62,11 +62,11 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'commands': <String>[
         'embed init',
         'publish --target firebase-hosting',
-        'publisher-backend scaffold --template mock',
-        'publisher-backend contract init',
-        'publisher-backend contract validate',
-        'publisher-backend contract smoke',
-        'publisher-backend contract handoff',
+        'publisher-api scaffold --template mock',
+        'publisher-api contract init',
+        'publisher-api contract validate',
+        'publisher-api contract smoke',
+        'publisher-api contract handoff',
         'publisher-api contract init',
         'publisher-api contract validate',
         'publisher-api contract smoke',
@@ -124,7 +124,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
     final state = result.state;
     return <String, Object?>{
       'schemaVersion': 1,
-      'command': 'publisher-backend status',
+      'command': 'publisher-api status',
       'hasState': result.hasState,
       'processAlive': result.processAlive,
       'healthy': result.healthy,

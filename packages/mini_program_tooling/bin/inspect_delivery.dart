@@ -15,7 +15,7 @@ Future<void> main(List<String> arguments) async {
     ..addOption(
       'base-url',
       defaultsTo: 'http://127.0.0.1:8080/api/',
-      help: 'Backend API base URL.',
+      help: 'Static artifact API base URL.',
     )
     ..addOption(
       'mini-program',

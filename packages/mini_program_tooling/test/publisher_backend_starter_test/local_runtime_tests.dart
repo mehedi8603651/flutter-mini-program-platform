@@ -25,7 +25,7 @@ void _registerLocalRuntimeTests() {
       Uri.parse('http://127.0.0.1:$runningPort/home/bootstrap'),
     );
     expect(home.statusCode, 200);
-    expect(home.body, contains('Coupon App backend starter'));
+    expect(home.body, contains('Coupon App Publisher API mock'));
     final coupons = await http.get(
       Uri.parse('http://127.0.0.1:$runningPort/coupons/list'),
     );

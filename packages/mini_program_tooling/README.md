@@ -63,11 +63,11 @@ miniprogram preview -d <device> [mini-program-id] [--mp-build-script <path>]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean] [--site <firebase-hosting-site>] [--dry-run] [--json]
 
-miniprogram publisher-backend scaffold --template mock [--mini-program-root <path>] [--force]
-miniprogram publisher-backend run [--mini-program-root <path>] [--port 9090]
-miniprogram publisher-backend status [--mini-program-root <path>] [--json]
-miniprogram publisher-backend stop [--mini-program-root <path>]
-miniprogram publisher-backend urls [--port 9090]
+miniprogram publisher-api scaffold --template mock [--mini-program-root <path>] [--force]
+miniprogram publisher-api run [--mini-program-root <path>] [--port 9090]
+miniprogram publisher-api status [--mini-program-root <path>] [--json]
+miniprogram publisher-api stop [--mini-program-root <path>]
+miniprogram publisher-api urls [--port 9090]
 
 miniprogram publisher-api contract init --backend-base-url <url> [--mini-program-root <path>] [--public] [--allow-local-http]
 miniprogram publisher-api contract validate [--mini-program-root <path>] [--contract <file>] [--allow-local-http] [--json]
@@ -98,16 +98,16 @@ miniprogram host run -d <device> [--env <env-name>]
 miniprogram embed init [--project-root <path>] [--force]
 miniprogram embed cloud configure [--env <env-name>]
 
-miniprogram backend init
-miniprogram backend start --port 8080
-miniprogram backend stop
-miniprogram backend status [--json]
-miniprogram backend reset-local --yes
+miniprogram artifact-host init
+miniprogram artifact-host start --port 8080
+miniprogram artifact-host stop
+miniprogram artifact-host status [--json]
+miniprogram artifact-host reset-local --yes
 miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
 ```
 
-`publisher-backend` remains the local mock API group. `publisher-api` is the
-preferred visible wording for contract, smoke, and handoff.
+`publisher-backend` remains a legacy alias. `publisher-api` is the preferred
+visible wording for mock, contract, smoke, and handoff flows.
 
 ## Removed Provider Backend Templates
 
@@ -138,9 +138,9 @@ Use the mock API when frontend work needs repeated or dynamic backend-shaped
 data before the real middle server exists:
 
 ```bash
-miniprogram publisher-backend scaffold --template mock
-miniprogram publisher-backend run --port 9090
-miniprogram publisher-backend urls
+miniprogram publisher-api scaffold --template mock
+miniprogram publisher-api run --port 9090
+miniprogram publisher-api urls
 ```
 
 The mock is a development tool. Production storage, auth, payment, files, and

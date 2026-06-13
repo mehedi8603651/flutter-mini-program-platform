@@ -44,7 +44,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
         'Provider: ${environment['provider']}',
       if (environment['apiBaseUrl'] != null)
         'API base URL: ${environment['apiBaseUrl']}',
-      'Backend configured: ${backend['configured']}',
+      'Artifact host configured: ${backend['configured']}',
       'Remote checked: ${remote['checked']}',
     ]);
     if ((remote['errors'] as List?)?.isNotEmpty == true) {
@@ -134,7 +134,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     final lines = <String>[
       'Published mini-program: ${result.miniProgramId}',
       'Version: ${result.version}',
-      'Backend root: ${result.backendRootPath}',
+      'Artifact workspace root: ${result.backendRootPath}',
       'Screen format: ${result.buildResult.screenFormat}',
       if (result.buildResult.screenSchemaVersion != null)
         'Screen schema version: ${result.buildResult.screenSchemaVersion}',
@@ -229,7 +229,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Hosting root: ${result.hostingRootPath}',
       'Public folder: ${result.outputPath}',
       'Firebase config: ${result.firebaseJsonPath}',
-      'Delivery API base URL: ${result.deliveryApiBaseUrl}',
+      'Static artifact base URL: ${result.deliveryApiBaseUrl}',
       'Cleaned generated output first: ${result.staticResult.cleaned}',
       'Written files: ${result.staticResult.writtenFiles.length}',
       'Deployed: ${result.deployed}',
@@ -639,7 +639,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Config file: $configurationPath',
       'Environment: ${configuration.environmentName}',
       'Provider: ${configuration.provider}',
-      'Backend API base URL: ${configuration.backendApiBaseUrl}',
+      'Artifact API base URL: ${configuration.backendApiBaseUrl}',
       'Configured at UTC: ${configuration.configuredAtUtc}',
       'Updated at UTC: ${configuration.updatedAtUtc}',
     ].join('\n');
@@ -657,9 +657,9 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Device: $deviceId',
       if (environmentName != null) 'Environment: $environmentName',
       if (backendApiBaseUrl.trim().isEmpty)
-        'Backend API base URL: generated runtime default'
+        'Artifact API base URL: generated runtime default'
       else
-        'Backend API base URL: $backendApiBaseUrl',
+        'Artifact API base URL: $backendApiBaseUrl',
     ].join('\n');
   }
 
@@ -740,8 +740,8 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     final state = result.state;
     final lines = <String>[
       result.alreadyRunning
-          ? 'Local backend was already running.'
-          : 'Started local backend.',
+          ? 'Local artifact host was already running.'
+          : 'Started local artifact host.',
       'PID: ${state.pid}',
       'Port: ${state.port}',
       'Health URL: ${state.healthCheckUrl}',
@@ -760,8 +760,8 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatBackendInitResult(LocalBackendInitResult result) {
     final lines = <String>[
-      'Initialized local backend workspace.',
-      'Backend root: ${result.backendRootPath}',
+      'Initialized local artifact host workspace.',
+      'Artifact workspace root: ${result.backendRootPath}',
       'API root: ${result.apiRootPath}',
       'Service root: ${result.serviceDirectoryPath}',
       'State file: ${result.stateFilePath}',
@@ -774,12 +774,12 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatBackendStatusResult(LocalBackendStatusResult result) {
     if (!result.hasState) {
-      return 'Local backend is not running. No backend.local.json state was found.';
+      return 'Local artifact host is not running. No backend.local.json state was found.';
     }
 
     final state = result.state!;
     final lines = <String>[
-      'Local backend state found.',
+      'Local artifact host state found.',
       'PID: ${state.pid}',
       'Port: ${state.port}',
       'Process alive: ${result.processAlive}',
@@ -804,20 +804,20 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
 
   String _formatBackendStopResult(LocalBackendStopResult result) {
     if (!result.hadState) {
-      return 'No local backend state was found.';
+      return 'No local artifact host state was found.';
     }
     if (result.clearedStaleState) {
-      return 'Cleared stale local backend state. The recorded process was already gone.';
+      return 'Cleared stale local artifact host state. The recorded process was already gone.';
     }
     if (result.stopped) {
-      return 'Stopped the local backend and cleared backend.local.json.';
+      return 'Stopped the local artifact host and cleared backend.local.json.';
     }
-    return 'Local backend was not running.';
+    return 'Local artifact host was not running.';
   }
 
   String _formatBackendResetResult(LocalBackendResetResult result) {
     final lines = <String>[
-      'Removed ${result.removedPaths.length} tracked local backend artifact path(s).',
+      'Removed ${result.removedPaths.length} tracked local artifact path(s).',
     ];
     if (result.removedPaths.isNotEmpty) {
       lines.addAll(result.removedPaths.map((path) => '- $path'));

@@ -183,7 +183,7 @@ class MiniProgramPublisher {
     );
     if (!await backendRootDir.exists()) {
       throw MiniProgramPublishException(
-        'Backend root does not exist: ${backendRootDir.path}',
+        'Artifact workspace root does not exist: ${backendRootDir.path}',
       );
     }
 

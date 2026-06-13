@@ -787,12 +787,12 @@ docs.
 - `MiniProgramScope` does not load a manifest, start a network request, insert
   an overlay, or push a route until you open a mini-program.
 
-## Local backend defaults
+## Local artifact host defaults
 
 - Android local default: `http://10.0.2.2:8080/api/`
 - desktop, Chrome on the same machine, and iOS simulators:
   `http://127.0.0.1:8080/api/`
-- override the backend with a full URL when needed:
+- override the artifact host with a full URL when needed:
 
 ```text
 --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=http://host:8080/api/

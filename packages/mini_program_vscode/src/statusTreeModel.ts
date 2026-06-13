@@ -118,7 +118,7 @@ export function buildStatusTreeSections(
         row('Validation', asString(validation.status, 'not_run')),
         row('Partner packages', String(partnerPackages)),
         row(
-          'Backend usage',
+          'Publisher API usage',
           asBoolean(backendUsage.usesPublisherBackend)
             ? asBoolean(backendUsage.usesBackendState)
               ? 'query/state'
@@ -126,7 +126,7 @@ export function buildStatusTreeSections(
             : 'none',
         ),
         row(
-          'Backend starter',
+          'Publisher API mock',
           asBoolean(publisherBackendStarter.detected)
             ? asString(publisherBackendStarter.template, 'mock')
             : 'none',
@@ -201,8 +201,8 @@ export function buildStatusTreeSections(
   sections.push({
     label:
       asBoolean(hostApp.detected) && asNumber(hostApp.endpointCount) > 0
-        ? 'Backend fallback'
-        : 'Backend',
+        ? 'Artifact host fallback'
+        : 'Artifact host',
     icon: 'server',
     rows: compactRows([
       row('Configured', yesNo(asBoolean(backend.configured))),

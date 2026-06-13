@@ -183,7 +183,7 @@ This package exposes the global `miniprogram` command used for:
 - embed init
 - embed cloud configure
 - host run
-- backend init/start/stop/status/reset-local
+- artifact-host init/start/stop/status/reset-local
 
 ### Mini-Program Authoring
 Mini-programs are authored with `Mp.*` helpers and built into versioned Mp JSON.
@@ -294,11 +294,11 @@ miniprogram build [mini-program-id]
 miniprogram preview -d <device> [mini-program-id]
 miniprogram validate [mini-program-id]
 miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>]
-miniprogram publisher-backend scaffold --template mock
-miniprogram publisher-backend run --port 9090
-miniprogram publisher-backend status
-miniprogram publisher-backend stop
-miniprogram publisher-backend urls
+miniprogram publisher-api scaffold --template mock
+miniprogram publisher-api run --port 9090
+miniprogram publisher-api status
+miniprogram publisher-api stop
+miniprogram publisher-api urls
 miniprogram publisher-api contract init --backend-base-url <publisher-api-url> [--public]
 miniprogram publisher-api contract validate
 miniprogram publisher-api contract smoke [--access-key <key>] [--auth-token <token>]
@@ -309,11 +309,11 @@ miniprogram cloud rollback <version> [mini-program-id]
 miniprogram embed init
 miniprogram embed cloud configure --env <env-name>
 miniprogram host run -d <device> --env <env-name>
-miniprogram backend init
-miniprogram backend start --port 8080
-miniprogram backend stop
-miniprogram backend status
-miniprogram backend reset-local --yes
+miniprogram artifact-host init
+miniprogram artifact-host start --port 8080
+miniprogram artifact-host stop
+miniprogram artifact-host status
+miniprogram artifact-host reset-local --yes
 ```
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
@@ -342,8 +342,8 @@ Publisher workspace:
    shape before your real middle server is ready:
 
    ```powershell
-   miniprogram publisher-backend scaffold --template mock --mini-program-root D:\rewards_center
-   miniprogram publisher-backend run --mini-program-root D:\rewards_center --port 9090
+   miniprogram publisher-api scaffold --template mock --mini-program-root D:\rewards_center
+   miniprogram publisher-api run --mini-program-root D:\rewards_center --port 9090
    ```
 
 3. Build your real middle server independently. Its public contract should be
@@ -425,8 +425,8 @@ mock Publisher API:
 cd D:\
 miniprogram create my_coupon_app --title "My Coupon App" --with-backend mock
 cd my_coupon_app
-miniprogram publisher-backend run --port 9090
-miniprogram publisher-backend urls --port 9090
+miniprogram publisher-api run --port 9090
+miniprogram publisher-api urls --port 9090
 ```
 
 That mock API is only for local business API testing. Real Firebase, AWS,
@@ -468,9 +468,9 @@ Preview behavior:
 
 Preview mode rules:
 
-- not the real local backend
+- not the local artifact host
 - not `backend/api/`
-- no manual `backend start`
+- no manual `artifact-host start`
 - keeps the last successful UI visible if a rebuild fails
 - Android emulator preview prefers `adb reverse tcp:<port> tcp:<port>` and
   uses `http://127.0.0.1:<port>/preview/` when reverse is available
@@ -489,17 +489,21 @@ Preview capability limits in v1:
 - `native_navigation` opens a preview-only placeholder screen
 - `secure_api` returns an explicit preview-only failure
 
-### 3. Initialize local backend workspace for real delivery testing
+### 3. Initialize local artifact host workspace for real delivery testing
 
 ```powershell
-miniprogram backend init
+miniprogram artifact-host init
 ```
 
-On Windows the default backend workspace is:
+On Windows the default artifact host workspace is:
 
 ```text
 %LOCALAPPDATA%\mini_program\backend\
 ```
+
+The physical folder is still named `backend/` for compatibility with older
+tooling and generated files. It stores static mini-program artifact JSON and a
+local artifact-serving process; it is not the Publisher API backend.
 
 ### 4. Initialize local env inside the mini-program
 
@@ -526,15 +530,15 @@ miniprogram validate my_coupon_app
 miniprogram publish my_coupon_app
 ```
 
-### 6. Start backend
+### 6. Start local artifact host
 
 ```powershell
-miniprogram backend start --port 8080
-miniprogram backend status
+miniprogram artifact-host start --port 8080
+miniprogram artifact-host status
 ```
 
-Use the backend flow when you want to verify the real local delivery shape,
-not for the fastest authoring loop.
+Use the artifact host flow when you want to verify the real local static
+delivery shape, not for the fastest authoring loop.
 
 ## Embed Into A Flutter Host App
 
@@ -552,13 +556,14 @@ The generated embed layer adds:
 - `mini_program_sdk`
 - `mini_program_contracts`
 - app-owned bridge files under `lib/mini_program/`
-- local backend runtime defaults
+- local artifact host runtime defaults
 - Android release `INTERNET` permission for cloud/API delivery
-- Android debug cleartext config for local HTTP preview/backend development
+- Android debug cleartext config for local HTTP preview/artifact-host
+  development
 
 ## Local Run Targets
 
-With the local backend running on port `8080`, the generated runtime uses
+With the local artifact host running on port `8080`, the generated runtime uses
 target-aware defaults.
 
 ### Android emulator
@@ -567,7 +572,7 @@ target-aware defaults.
 flutter run -d emulator-5554
 ```
 
-Default local backend:
+Default local artifact host:
 
 ```text
 http://10.0.2.2:8080/api/
@@ -579,7 +584,7 @@ http://10.0.2.2:8080/api/
 flutter run -d windows
 ```
 
-Default local backend:
+Default local artifact host:
 
 ```text
 http://127.0.0.1:8080/api/
@@ -591,7 +596,7 @@ http://127.0.0.1:8080/api/
 flutter run -d chrome
 ```
 
-Default local backend:
+Default local artifact host:
 
 ```text
 http://127.0.0.1:8080/api/
@@ -599,10 +604,10 @@ http://127.0.0.1:8080/api/
 
 ### Android physical device over USB
 
-Start backend first so `adb reverse` can be applied:
+Start the local artifact host first so `adb reverse` can be applied:
 
 ```powershell
-miniprogram backend start --port 8080
+miniprogram artifact-host start --port 8080
 flutter run -d <android-device-id>
 ```
 

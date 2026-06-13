@@ -104,7 +104,7 @@ void main() {
     );
 
     test(
-      'defaults to the per-user global backend workspace when root is omitted',
+      'defaults to the per-user global artifact workspace when root is omitted',
       () async {
         final initializer = LocalBackendInitializer(
           stateStore: stateStore,

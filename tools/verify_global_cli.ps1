@@ -137,11 +137,11 @@ try {
         -Arguments @("env", "status")
 
     Invoke-Step `
-        -Name "Initialize a standalone backend workspace" `
+        -Name "Initialize a standalone artifact host workspace" `
         -Workdir $workspaceRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
-            "backend",
+            "artifact-host",
             "init",
             "--root",
             $backendWorkspaceRoot
@@ -166,7 +166,7 @@ try {
         -Arguments @("validate", "coupon_center")
 
     Invoke-Step `
-        -Name "Publish standalone mini-program to the local backend" `
+        -Name "Publish standalone mini-program to the local artifact host" `
         -Workdir $miniProgramRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @("publish", "coupon_center")
@@ -188,11 +188,11 @@ dependencies:
         -Arguments @("embed", "init")
 
     Invoke-Step `
-        -Name "Start local backend through the installed CLI" `
+        -Name "Start local artifact host through the installed CLI" `
         -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @(
-            "backend",
+            "artifact-host",
             "start",
             "--port",
             "$port"
@@ -200,22 +200,22 @@ dependencies:
     $backendStarted = $true
 
     Invoke-Step `
-        -Name "Check backend status through the installed CLI" `
+        -Name "Check artifact host status through the installed CLI" `
         -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @("backend", "status")
+        -Arguments @("artifact-host", "status")
 
     Invoke-Step `
-        -Name "Run doctor with a healthy backend" `
+        -Name "Run doctor with a healthy artifact host" `
         -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
         -Arguments @("doctor")
 
     Invoke-Step `
-        -Name "Stop local backend through the installed CLI" `
+        -Name "Stop local artifact host through the installed CLI" `
         -Workdir $hostRoot `
         -FilePath $miniprogramExecutable `
-        -Arguments @("backend", "stop")
+        -Arguments @("artifact-host", "stop")
     $backendStarted = $false
 
     Write-Host ""
@@ -226,7 +226,7 @@ finally {
         if (Test-Path (Join-Path $pubCache "bin\miniprogram.bat")) {
             if ($backendStarted) {
                 try {
-                    & (Join-Path $pubCache "bin\miniprogram.bat") backend stop --root $backendWorkspaceRoot | Out-Null
+                    & (Join-Path $pubCache "bin\miniprogram.bat") artifact-host stop --root $backendWorkspaceRoot | Out-Null
                 }
                 catch {
                     Write-Warning "Cleanup stop failed: $_"
@@ -234,7 +234,7 @@ finally {
             }
 
             try {
-                & (Join-Path $pubCache "bin\miniprogram.bat") backend reset-local --root $backendWorkspaceRoot --yes | Out-Null
+                & (Join-Path $pubCache "bin\miniprogram.bat") artifact-host reset-local --root $backendWorkspaceRoot --yes | Out-Null
             }
             catch {
                 Write-Warning "Cleanup reset-local failed: $_"

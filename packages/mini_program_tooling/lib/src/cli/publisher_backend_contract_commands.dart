@@ -1,35 +1,56 @@
 part of '../miniprogram_cli.dart';
 
 extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
-  Future<int> _runPublisherBackendContract(List<String> arguments) async {
+  Future<int> _runPublisherBackendContract(
+    List<String> arguments, {
+    String commandName = 'publisher-backend',
+  }) async {
     if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_publisherBackendContractUsage());
+      _stdout.writeln(_publisherBackendContractUsage(commandName: commandName));
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_publisherBackendContractUsage());
+      _stderr.writeln(_publisherBackendContractUsage(commandName: commandName));
       return 64;
     }
 
     switch (arguments.first) {
       case 'init':
-        return _runPublisherBackendContractInit(arguments.sublist(1));
+        return _runPublisherBackendContractInit(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'validate':
-        return _runPublisherBackendContractValidate(arguments.sublist(1));
+        return _runPublisherBackendContractValidate(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'smoke':
-        return _runPublisherBackendContractSmoke(arguments.sublist(1));
+        return _runPublisherBackendContractSmoke(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'handoff':
-        return _runPublisherBackendContractHandoff(arguments.sublist(1));
+        return _runPublisherBackendContractHandoff(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       default:
         _stderr.writeln(
-          'Unknown publisher-backend contract command: ${arguments.first}',
+          'Unknown $commandName contract command: ${arguments.first}',
         );
-        _stderr.writeln(_publisherBackendContractUsage());
+        _stderr.writeln(
+          _publisherBackendContractUsage(commandName: commandName),
+        );
         return 64;
     }
   }
 
-  Future<int> _runPublisherBackendContractInit(List<String> arguments) async {
+  Future<int> _runPublisherBackendContractInit(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName contract init';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -75,26 +96,26 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram publisher-backend contract init --backend-base-url <url> [options]',
+        'Usage: miniprogram $qualifiedCommand --backend-base-url <url> [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (results.rest.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend contract init does not accept positional arguments.',
+      throw FormatException(
+        '$qualifiedCommand does not accept positional arguments.',
       );
     }
     final rawBackendBaseUrl = results.option('backend-base-url')?.trim() ?? '';
     if (rawBackendBaseUrl.isEmpty) {
-      throw const FormatException(
-        'publisher-backend contract init requires --backend-base-url <url>.',
+      throw FormatException(
+        '$qualifiedCommand requires --backend-base-url <url>.',
       );
     }
     final backendBaseUri = Uri.tryParse(rawBackendBaseUrl);
     if (backendBaseUri == null) {
       throw FormatException(
-        'publisher-backend contract init expected a valid --backend-base-url, got: $rawBackendBaseUrl',
+        '$qualifiedCommand expected a valid --backend-base-url, got: $rawBackendBaseUrl',
       );
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
@@ -128,8 +149,10 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
   }
 
   Future<int> _runPublisherBackendContractValidate(
-    List<String> arguments,
-  ) async {
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName contract validate';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -155,15 +178,13 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln(
-        'Usage: miniprogram publisher-backend contract validate [options]',
-      );
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (results.rest.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend contract validate does not accept positional arguments.',
+      throw FormatException(
+        '$qualifiedCommand does not accept positional arguments.',
       );
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
@@ -184,7 +205,11 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runPublisherBackendContractSmoke(List<String> arguments) async {
+  Future<int> _runPublisherBackendContractSmoke(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName contract smoke';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -224,21 +249,19 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln(
-        'Usage: miniprogram publisher-backend contract smoke [options]',
-      );
+      _stdout.writeln('Usage: miniprogram $qualifiedCommand [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (results.rest.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend contract smoke does not accept positional arguments.',
+      throw FormatException(
+        '$qualifiedCommand does not accept positional arguments.',
       );
     }
     final timeoutSeconds = int.tryParse(results.option('timeout-seconds')!);
     if (timeoutSeconds == null || timeoutSeconds <= 0) {
-      throw const FormatException(
-        'publisher-backend contract smoke --timeout-seconds must be positive.',
+      throw FormatException(
+        '$qualifiedCommand --timeout-seconds must be positive.',
       );
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
@@ -271,8 +294,10 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
   }
 
   Future<int> _runPublisherBackendContractHandoff(
-    List<String> arguments,
-  ) async {
+    List<String> arguments, {
+    required String commandName,
+  }) async {
+    final qualifiedCommand = '$commandName contract handoff';
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -322,28 +347,26 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram publisher-backend contract handoff --delivery-url <url> [--access-key <key>|--public] [options]',
+        'Usage: miniprogram $qualifiedCommand --delivery-url <url> [--access-key <key>|--public] [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (results.rest.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend contract handoff does not accept positional arguments.',
+      throw FormatException(
+        '$qualifiedCommand does not accept positional arguments.',
       );
     }
     final rawDeliveryUrl = results.option('delivery-url')?.trim() ?? '';
     if (rawDeliveryUrl.isEmpty) {
-      throw const FormatException(
-        'publisher-backend contract handoff requires --delivery-url <url>.',
-      );
+      throw FormatException('$qualifiedCommand requires --delivery-url <url>.');
     }
     final deliveryUri = Uri.tryParse(rawDeliveryUrl);
     if (deliveryUri == null ||
         !deliveryUri.hasScheme ||
         deliveryUri.host.isEmpty) {
       throw FormatException(
-        'publisher-backend contract handoff expected an absolute --delivery-url, got: $rawDeliveryUrl',
+        '$qualifiedCommand expected an absolute --delivery-url, got: $rawDeliveryUrl',
       );
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
@@ -369,24 +392,24 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     final accessKey = results.option('access-key')?.trim() ?? '';
     final explicitPublic = results.flag('public');
     if (explicitPublic && accessKey.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend contract handoff cannot use both --public and --access-key.',
+      throw FormatException(
+        '$qualifiedCommand cannot use both --public and --access-key.',
       );
     }
     if (contract.isProtected) {
       if (explicitPublic) {
-        throw const FormatException(
-          'publisher-backend contract handoff cannot create a public package for a protected contract.',
+        throw FormatException(
+          '$qualifiedCommand cannot create a public package for a protected contract.',
         );
       }
       if (accessKey.isEmpty) {
-        throw const FormatException(
-          'publisher-backend contract handoff requires --access-key <key> for protected contracts.',
+        throw FormatException(
+          '$qualifiedCommand requires --access-key <key> for protected contracts.',
         );
       }
     } else if (accessKey.isNotEmpty) {
-      throw const FormatException(
-        'publisher-backend contract handoff received --access-key for a public contract.',
+      throw FormatException(
+        '$qualifiedCommand received --access-key for a public contract.',
       );
     }
 
@@ -426,7 +449,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
   ) {
     return <String, Object?>{
       'schemaVersion': 1,
-      'command': 'publisher-backend contract init',
+      'command': 'publisher-api contract init',
       'contractPath': result.contractPath,
       ..._publisherBackendContractJson(result.contract),
     };
@@ -437,7 +460,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
   ) {
     return <String, Object?>{
       'schemaVersion': 1,
-      'command': 'publisher-backend contract validate',
+      'command': 'publisher-api contract validate',
       'contractPath': result.contractPath,
       'valid': true,
       ..._publisherBackendContractJson(result.contract),
@@ -449,7 +472,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
   ) {
     return <String, Object?>{
       'schemaVersion': 1,
-      'command': 'publisher-backend contract smoke',
+      'command': 'publisher-api contract smoke',
       'contractPath': result.contractPath,
       ..._publisherBackendContractJson(result.contract),
       'accessKeyProvided': result.accessKeyProvided,
@@ -465,7 +488,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     final handoff = result.packageResult.handoff;
     return <String, Object?>{
       'schemaVersion': 1,
-      'command': 'publisher-backend contract handoff',
+      'command': 'publisher-api contract handoff',
       'contractPath': result.contractPath,
       'miniProgramId': handoff.appId,
       'title': handoff.title,
@@ -520,7 +543,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'Access mode: ${result.contract.accessMode}',
       'Smoke tests: ${result.contract.smokeTests.length}',
       'Next validation step:',
-      'miniprogram publisher-backend contract validate --contract ${result.contractPath}',
+      'miniprogram publisher-api contract validate --contract ${result.contractPath}',
     ].join('\n');
   }
 
@@ -573,7 +596,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'Package file: ${result.packageResult.filePath}',
       'Mini-program: ${handoff.appId}',
       'Title: ${handoff.title}',
-      'Delivery API base URL: ${handoff.apiBaseUri}',
+      'Static artifact base URL: ${handoff.apiBaseUri}',
       if (handoff.backendBaseUri != null)
         'Backend base URL: ${handoff.backendBaseUri}',
       'Access mode: ${handoff.accessMode}',

@@ -1,4 +1,10 @@
 # Changelog
+## 0.5.2
+- add `artifact-host` as the preferred local static artifact delivery command
+  group while keeping `backend` as a legacy alias
+- prefer `publisher-api` for mock Publisher API commands while keeping
+  `publisher-backend` as a legacy alias
+
 ## 0.5.1
 - clean architecture wording around static frontend artifact delivery and
   provider-neutral Publisher API backends

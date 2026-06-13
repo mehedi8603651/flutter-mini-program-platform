@@ -549,7 +549,7 @@ export async function choosePublisherBackendMode(): Promise<PublisherBackendMode
       },
       {
         label: 'Local mock Publisher API',
-        description: 'Use miniprogram publisher-backend run, default port 9090',
+        description: 'Use miniprogram publisher-api run, default port 9090',
         value: 'local_mock' as const,
       },
       {
@@ -598,8 +598,8 @@ export async function chooseBackendRoot(
   }> = [];
   if (options.includeDefault) {
     choices.push({
-      label: 'Discovered/default backend workspace',
-      description: 'Do not pass --root',
+      label: 'Discovered/default artifact host workspace',
+      description: 'Default local artifact host workspace; do not pass --root',
       value: 'default',
     });
   }
@@ -617,7 +617,7 @@ export async function chooseBackendRoot(
   });
 
   const choice = await vscode.window.showQuickPick(choices, {
-    title: 'Backend workspace root',
+    title: 'Artifact host workspace root',
     ignoreFocusOut: true,
   });
   if (!choice) {
@@ -633,8 +633,8 @@ export async function chooseBackendRoot(
     canSelectFiles: false,
     canSelectFolders: true,
     canSelectMany: false,
-    openLabel: 'Use backend root',
-    title: 'Choose backend workspace root',
+    openLabel: 'Use artifact host root',
+    title: 'Choose artifact host workspace root',
   });
   return folders?.[0]?.fsPath;
 }

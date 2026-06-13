@@ -92,8 +92,8 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Source root: D:\/coupon\/mp/);
   assert.match(text, /Output root: D:\/coupon\/mp\/\.build/);
   assert.match(text, /Entry ready: yes/);
-  assert.match(text, /Backend usage: query\/state/);
-  assert.match(text, /Backend starter: mock/);
+  assert.match(text, /Publisher API usage: query\/state/);
+  assert.match(text, /Publisher API mock: mock/);
   assert.match(text, /Publisher routes: GET \/health, GET \/coupons\/list, GET \/coupons\/page/);
   assert.match(text, /Paged route: yes/);
   assert.doesNotMatch(text, /AWS backend/);
@@ -103,7 +103,7 @@ test('renders mini-program and host status rows', () => {
   assert.match(text, /Endpoint modes: coupon_demo:protected, rewards:public/);
   assert.match(text, /Publisher APIs: coupon_demo:remote, rewards:none/);
   assert.match(text, /Routing: endpoint map active/);
-  assert.match(text, /Backend fallback/);
+  assert.match(text, /Artifact host fallback/);
   assert.match(text, /Access keys required: yes/);
   assert.match(text, /Provider: aws/);
   assert.doesNotMatch(text, /Firestore/);

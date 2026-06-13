@@ -9,14 +9,14 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       'Template: ${result.template}',
       if (result.storageMode != null) 'Storage: ${result.storageMode}',
       'Mini-program root: ${result.miniProgramRootPath}',
-      'Backend root: ${result.backendRootPath}',
+      'Mock API root: ${result.backendRootPath}',
       'Created files: ${result.createdPaths.length}',
     ];
     lines.addAll(result.createdPaths.map((filePath) => '- $filePath'));
     lines.addAll(<String>[
       '',
       'Run locally:',
-      'miniprogram publisher-backend run --mini-program-root "${result.miniProgramRootPath}" --port 9090',
+      'miniprogram publisher-api run --mini-program-root "${result.miniProgramRootPath}" --port 9090',
       '',
       'External API flow:',
       'miniprogram publisher-api contract init --mini-program-root "${result.miniProgramRootPath}" --backend-base-url <https-api-url>',
@@ -33,7 +33,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
           ? 'Publisher API mock was already running.'
           : 'Started Publisher API mock.',
       'Mini-program root: ${state.miniProgramRootPath}',
-      'Backend root: ${state.backendRootPath}',
+      'Mock API root: ${state.backendRootPath}',
       'PID: ${state.pid}',
       'Health: ${state.healthCheckUrl}',
       ..._formatPublisherBackendTargetUrls(state.port),
@@ -52,7 +52,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
     return <String>[
       'Publisher API mock state found.',
       'Mini-program root: ${state.miniProgramRootPath}',
-      'Backend root: ${state.backendRootPath}',
+      'Mock API root: ${state.backendRootPath}',
       'PID: ${state.pid}',
       'Process alive: ${result.processAlive}',
       'Healthy: ${result.healthy}',

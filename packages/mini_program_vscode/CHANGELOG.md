@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+
+- use `artifact-host` and `publisher-api` in generated CLI commands while
+  keeping existing command IDs stable.
+
 ## 0.3.1
 
 - refresh extension wording around static artifact hosting and

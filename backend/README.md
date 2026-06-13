@@ -1,4 +1,4 @@
-# backend
+# Static Artifact Host Workspace
 
 Local artifact service area for mini-program frontend delivery.
 
@@ -7,9 +7,14 @@ Local artifact service area for mini-program frontend delivery.
 For the current MVP:
 
 - `backend/api/` holds published static JSON artifacts
-- `backend/local_backend_service/` serves those artifacts through a real Dart HTTP service
+- `backend/local_backend_service/` serves those artifacts through a real Dart
+  HTTP static artifact service
 
 The source of truth still lives in `mini_programs/<id>`.
+
+This workspace is not the Publisher API backend. Business logic, auth,
+database, payment, files, secrets, and dynamic data should live behind a
+separate provider-neutral Publisher API / middle-server.
 
 ## Current sample
 
@@ -39,17 +44,17 @@ The current rollout sample uses two lanes:
 - `super_app_host` receives `profile_center` `1.1.0`
 - `partner_app_host` remains on `profile_center` `1.0.0`
 - both hosts receive `feedback_form` `1.1.0`
-- `latest.json` is still published, but the local backend service can override it through rollout rules when the request includes host context
+- `latest.json` is still published, but the local artifact service can override it through rollout rules when the request includes host context
 - rollout rules are now ordered and can match on `hostApp`, `hostVersionRange`, `platform`, `locale`, and optional `tenantId`
 - `latest` can also honor an optional `pinnedVersion` query parameter for debug and release-control testing
 - `feedback_form` now proves capability-aware delivery for `secure_api`
 - latest-manifest responses now include request trace and decision metadata for local operability debugging
-- the local backend service now logs request completion and decision context to stdout with a per-request trace ID
+- the local artifact service now logs request completion and decision context to stdout with a per-request trace ID
 - secure API and backend error responses now use stable local response envelopes with `responseType`, `statusCode`, `message`, `traceId`, and nested `error` or `result` payloads where applicable
 
 ## Refresh sample files
 
-After rebuilding a mini-program, republish the local backend sample:
+After rebuilding a mini-program, republish the local artifact sample:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\flutter-mini-program-platform\tools\publish_local_backend.ps1
@@ -76,7 +81,7 @@ The validator now also checks:
 - allowlisted source mini-program IDs
 - minimum secure payload requirements
 
-## Run the real local artifact service
+## Run the local artifact service
 
 ```powershell
 cd D:\flutter-mini-program-platform\backend\local_backend_service

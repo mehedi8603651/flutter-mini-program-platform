@@ -16,8 +16,8 @@ Map<String, String> buildMockPublisherBackendFiles({
     'README.md': _mockBackendReadme(appId, displayTitle),
     p.join('bin', 'server.dart'): _mockBackendServerSource(),
     p.join('data', 'home_bootstrap.json'): _prettyJson(<String, Object?>{
-      'title': '$displayTitle backend starter',
-      'subtitle': 'Loaded from the publisher-owned mock backend.',
+      'title': '$displayTitle Publisher API mock',
+      'subtitle': 'Loaded from the publisher-owned mock API.',
       'user': <String, Object?>{
         'id': 'preview-user',
         'name': 'Preview User',
@@ -36,8 +36,7 @@ Map<String, String> buildMockPublisherBackendFiles({
         <String, Object?>{
           'id': 'coupon-20',
           'title': '20% weekend reward',
-          'description':
-              'Replace this JSON with Firebase, AWS, or custom API data.',
+          'description': 'Replace this JSON with your own Publisher API data.',
           'imageUrl': 'https://picsum.photos/seed/${appId}_coupon_20/320/200',
         },
       ],

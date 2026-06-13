@@ -35,13 +35,15 @@ export async function backendInit(
   if (backendRoot === undefined) {
     return;
   }
-  const force = await chooseForce('Overwrite scaffold-managed backend files?');
+  const force = await chooseForce(
+    'Overwrite scaffold-managed artifact host files?',
+  );
   if (force === undefined) {
     return;
   }
 
   const ok = await runCliCommand(
-    'Backend Init',
+    'Artifact Host Init',
     buildBackendInitArgs({ backendRoot: backendRoot || undefined, force }),
     workspacePath,
     output,
@@ -60,7 +62,7 @@ export async function backendStart(
     return;
   }
   const port = await vscode.window.showInputBox({
-    prompt: 'Local backend port',
+    prompt: 'Local artifact host port',
     value: '8080',
     ignoreFocusOut: true,
     validateInput: validatePort,
@@ -76,7 +78,7 @@ export async function backendStart(
     return;
   }
   const ok = await runCliCommand(
-    'Backend Start',
+    'Artifact Host Start',
     buildBackendStartArgs({
       backendRoot: backendRoot || undefined,
       port: port.trim(),
@@ -105,7 +107,7 @@ export async function backendStop(
     return;
   }
   const ok = await runCliCommand(
-    'Backend Stop',
+    'Artifact Host Stop',
     buildBackendStopArgs({ backendRoot: backendRoot || undefined }),
     workspacePath,
     output,
@@ -129,7 +131,7 @@ export async function backendStatus(output: vscode.OutputChannel): Promise<void>
     return;
   }
   await runCliCommand(
-    'Backend Status',
+    'Artifact Host Status',
     buildBackendStatusArgs({
       backendRoot: backendRoot || undefined,
       json: true,

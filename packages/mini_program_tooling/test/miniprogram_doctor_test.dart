@@ -99,7 +99,7 @@ void main() {
       expect(
         result.checks.any(
           (check) =>
-              check.label == 'Backend status' &&
+              check.label == 'Artifact host status' &&
               check.status == MiniprogramDoctorCheckStatus.ok,
         ),
         isTrue,
@@ -139,7 +139,7 @@ void main() {
       expect(
         result.checks.any(
           (check) =>
-              check.label == 'Backend status' &&
+              check.label == 'Artifact host status' &&
               check.status == MiniprogramDoctorCheckStatus.skipped,
         ),
         isTrue,
@@ -147,7 +147,7 @@ void main() {
     });
 
     test(
-      'uses a saved backend workspace even when no repo root is resolved',
+      'uses a saved artifact host workspace even when no repo root is resolved',
       () async {
         final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
         await workspaceRoot.create(recursive: true);
@@ -194,7 +194,7 @@ void main() {
         expect(
           result.checks.any(
             (check) =>
-                check.label == 'Backend workspace' &&
+                check.label == 'Artifact host workspace' &&
                 check.status == MiniprogramDoctorCheckStatus.ok,
           ),
           isTrue,
@@ -202,7 +202,7 @@ void main() {
         expect(
           result.checks.any(
             (check) =>
-                check.label == 'Backend status' &&
+                check.label == 'Artifact host status' &&
                 check.status == MiniprogramDoctorCheckStatus.ok,
           ),
           isTrue,
@@ -211,7 +211,7 @@ void main() {
     );
 
     test(
-      'ignores a stale parent backend workspace state when a valid global workspace exists',
+      'ignores a stale parent artifact host state when a valid global workspace exists',
       () async {
         final workspaceRoot = Directory(
           p.join(tempDir.path, 'mini_program_demo', 'coupon_center'),
@@ -275,7 +275,7 @@ void main() {
         expect(
           result.checks.any(
             (check) =>
-                check.label == 'Backend workspace' &&
+                check.label == 'Artifact host workspace' &&
                 check.status == MiniprogramDoctorCheckStatus.ok &&
                 check.detail != null &&
                 check.detail!.contains(backendRoot),

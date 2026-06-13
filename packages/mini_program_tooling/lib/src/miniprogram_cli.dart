@@ -163,8 +163,16 @@ class MiniprogramCli {
           return await _runHost(arguments.sublist(1));
         case 'embed':
           return await _runEmbed(arguments.sublist(1));
+        case 'artifact-host':
+          return await _runBackend(
+            arguments.sublist(1),
+            commandName: 'artifact-host',
+          );
         case 'backend':
-          return await _runBackend(arguments.sublist(1));
+          return await _runBackend(
+            arguments.sublist(1),
+            commandName: 'backend',
+          );
         case 'publisher-backend':
           return await _runPublisherBackend(arguments.sublist(1));
         case 'publisher-api':

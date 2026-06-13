@@ -15,7 +15,8 @@ Future<void> main(List<String> arguments) async {
     ..addOption(
       'repo-root',
       defaultsTo: Directory.current.path,
-      help: 'Repository root containing mini_programs/ and backend/api/.',
+      help:
+          'Repository root containing mini_programs/ and static artifacts under backend/api/.',
     )
     ..addOption(
       'mini-program',

@@ -26,18 +26,19 @@ Commands:
   host endpoint import <partner-package.json>
   embed init [--project-root <path>]
   embed cloud configure [--env <env-name>]
-  backend init [--root <path>]
-  backend start --port 8080
-  backend stop
-  backend status [--json]
-  backend reset-local --yes
+  artifact-host init [--root <path>]
+  artifact-host start --port 8080
+  artifact-host stop
+  artifact-host status [--json]
+  artifact-host reset-local --yes
+  backend <command> (legacy alias for artifact-host)
+  publisher-api scaffold --template mock
   publisher-api contract init|validate|smoke|handoff [options]
-  publisher-backend scaffold --template mock
-  publisher-backend contract init|validate|smoke|handoff [options]
-  publisher-backend run --port 9090
-  publisher-backend status [--json]
-  publisher-backend stop
-  publisher-backend urls
+  publisher-api run --port 9090
+  publisher-api status [--json]
+  publisher-api stop
+  publisher-api urls
+  publisher-backend <command> (legacy alias for publisher-api)
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
@@ -50,7 +51,8 @@ Commands:
   status [--workspace <path>] [--env <env-name>] [--remote] [--json]
 ''';
 
-  String _publisherBackendUsage({String commandName = 'publisher-backend'}) => '''
+  String _publisherBackendUsage({String commandName = 'publisher-backend'}) =>
+      '''
 Usage: miniprogram $commandName <command> [arguments]
 
 Commands:
@@ -65,8 +67,11 @@ Commands:
   contract handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
 ''';
 
-  String _publisherBackendContractUsage() => '''
-Usage: miniprogram publisher-backend contract <command> [arguments]
+  String _publisherBackendContractUsage({
+    String commandName = 'publisher-backend',
+  }) =>
+      '''
+Usage: miniprogram $commandName contract <command> [arguments]
 
 Commands:
   init --backend-base-url <url> [--mini-program-root <path>] [--public]
@@ -162,8 +167,12 @@ Commands:
   import <partner-package.json>
 ''';
 
-  String _backendUsage() => '''
-Usage: miniprogram backend <command> [arguments]
+  String _backendUsage({String commandName = 'artifact-host'}) =>
+      '''
+Usage: miniprogram $commandName <command> [arguments]
+
+Static artifact host for local mini-program frontend delivery.
+${commandName == 'backend' ? '\nLegacy alias: use `miniprogram artifact-host ...` in new scripts.\n' : ''}
 
 Commands:
   init [--root <path>]

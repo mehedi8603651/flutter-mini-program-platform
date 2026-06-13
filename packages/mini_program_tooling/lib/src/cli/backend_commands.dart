@@ -1,35 +1,47 @@
 part of '../miniprogram_cli.dart';
 
 extension _MiniprogramCliBackendCommands on MiniprogramCli {
-  Future<int> _runBackend(List<String> arguments) async {
+  Future<int> _runBackend(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
     if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_backendUsage());
+      _stdout.writeln(_backendUsage(commandName: commandName));
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_backendUsage());
+      _stderr.writeln(_backendUsage(commandName: commandName));
       return 64;
     }
 
     switch (arguments.first) {
       case 'init':
-        return _runBackendInit(arguments.sublist(1));
+        return _runBackendInit(arguments.sublist(1), commandName: commandName);
       case 'start':
-        return _runBackendStart(arguments.sublist(1));
+        return _runBackendStart(arguments.sublist(1), commandName: commandName);
       case 'stop':
-        return _runBackendStop(arguments.sublist(1));
+        return _runBackendStop(arguments.sublist(1), commandName: commandName);
       case 'status':
-        return _runBackendStatus(arguments.sublist(1));
+        return _runBackendStatus(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       case 'reset-local':
-        return _runBackendResetLocal(arguments.sublist(1));
+        return _runBackendResetLocal(
+          arguments.sublist(1),
+          commandName: commandName,
+        );
       default:
-        _stderr.writeln('Unknown backend command: ${arguments.first}');
-        _stderr.writeln(_backendUsage());
+        _stderr.writeln('Unknown $commandName command: ${arguments.first}');
+        _stderr.writeln(_backendUsage(commandName: commandName));
         return 64;
     }
   }
 
-  Future<int> _runBackendInit(List<String> arguments) async {
+  Future<int> _runBackendInit(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -40,22 +52,23 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       ..addOption(
         'root',
         help:
-            'Directory that should own backend/ and .mini_program/backend_workspace.json. Defaults to the per-user global backend workspace.',
+            'Directory that should own backend/api, the local artifact service, and .mini_program/backend_workspace.json. Defaults to the per-user global artifact workspace.',
       )
       ..addFlag(
         'force',
         negatable: false,
-        help: 'Overwrite scaffold-managed backend files if they already exist.',
+        help:
+            'Overwrite scaffold-managed local artifact host files if they already exist.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram backend init [options]');
+      _stdout.writeln('Usage: miniprogram $commandName init [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (results.rest.isNotEmpty) {
-      throw const FormatException(
-        'backend init does not accept positional arguments.',
+      throw FormatException(
+        '$commandName init does not accept positional arguments.',
       );
     }
 
@@ -69,7 +82,10 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runBackendStart(List<String> arguments) async {
+  Future<int> _runBackendStart(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -80,23 +96,23 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       ..addOption(
         'root',
         help:
-            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+            'Local artifact host workspace root. Defaults to a discovered artifact-host init workspace or platform repo root.',
       )
       ..addOption('repo-root', help: 'Legacy platform repo root override.')
       ..addOption(
         'port',
         defaultsTo: '8080',
-        help: 'Port to bind for the local backend.',
+        help: 'Port to bind for the local artifact host.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram backend start [options]');
+      _stdout.writeln('Usage: miniprogram $commandName start [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
     final port = int.tryParse(results.option('port')!);
     if (port == null || port <= 0 || port > 65535) {
-      throw const FormatException('backend start --port must be 1-65535.');
+      throw FormatException('$commandName start --port must be 1-65535.');
     }
 
     final backendRootPath = await _resolveBackendRootPath(
@@ -112,7 +128,10 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runBackendStop(List<String> arguments) async {
+  Future<int> _runBackendStop(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -123,12 +142,12 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       ..addOption(
         'root',
         help:
-            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+            'Local artifact host workspace root. Defaults to a discovered artifact-host init workspace or platform repo root.',
       )
       ..addOption('repo-root', help: 'Legacy platform repo root override.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram backend stop [options]');
+      _stdout.writeln('Usage: miniprogram $commandName stop [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
@@ -145,7 +164,10 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
     return 0;
   }
 
-  Future<int> _runBackendStatus(List<String> arguments) async {
+  Future<int> _runBackendStatus(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -157,12 +179,12 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       ..addOption(
         'root',
         help:
-            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+            'Local artifact host workspace root. Defaults to a discovered artifact-host init workspace or platform repo root.',
       )
       ..addOption('repo-root', help: 'Legacy platform repo root override.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram backend status [options]');
+      _stdout.writeln('Usage: miniprogram $commandName status [options]');
       _stdout.writeln(parser.usage);
       return 0;
     }
@@ -185,7 +207,10 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
     return result.healthy ? 0 : 1;
   }
 
-  Future<int> _runBackendResetLocal(List<String> arguments) async {
+  Future<int> _runBackendResetLocal(
+    List<String> arguments, {
+    required String commandName,
+  }) async {
     final parser = ArgParser()
       ..addFlag(
         'help',
@@ -196,7 +221,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       ..addOption(
         'root',
         help:
-            'Backend workspace root. Defaults to a discovered backend init workspace or platform repo root.',
+            'Local artifact host workspace root. Defaults to a discovered artifact-host init workspace or platform repo root.',
       )
       ..addOption('repo-root', help: 'Legacy platform repo root override.')
       ..addFlag(
@@ -206,13 +231,15 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram backend reset-local --yes [options]');
+      _stdout.writeln(
+        'Usage: miniprogram $commandName reset-local --yes [options]',
+      );
       _stdout.writeln(parser.usage);
       return 0;
     }
     if (!results.flag('yes')) {
-      throw const FormatException(
-        'backend reset-local is destructive and requires --yes.',
+      throw FormatException(
+        '$commandName reset-local is destructive and requires --yes.',
       );
     }
 

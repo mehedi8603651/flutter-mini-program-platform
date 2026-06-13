@@ -683,7 +683,7 @@ Mp.lazy.chunk(
   });
 
   test(
-    'validate works against a standalone mini-program with a backend workspace and no repo root',
+    'validate works against a standalone mini-program with an artifact workspace and no repo root',
     () async {
       final standaloneRoot = p.join(tempDir.path, 'coupon_center');
       final backendRoot = p.join(tempDir.path, 'backend_workspace');
@@ -756,7 +756,7 @@ Mp.lazy.chunk(
   );
 
   test(
-    'validate falls back to the global backend workspace when a parent local state is stale',
+    'validate falls back to the global artifact workspace when a parent local state is stale',
     () async {
       final standaloneRoot = p.join(
         tempDir.path,
@@ -944,7 +944,7 @@ Mp.lazy.chunk(
   );
 
   test(
-    'publish uses a saved backend workspace when one is configured',
+    'publish uses a saved artifact workspace when one is configured',
     () async {
       final standaloneRoot = p.join(tempDir.path, 'coupon_center');
       final backendRoot = p.join(tempDir.path, 'backend_workspace');
@@ -1008,7 +1008,10 @@ Mp.lazy.chunk(
       ]);
 
       expect(exitCode, 0);
-      expect(publishBuffer.toString(), contains('Backend root: $backendRoot'));
+      expect(
+        publishBuffer.toString(),
+        contains('Artifact workspace root: $backendRoot'),
+      );
       expect(
         await File(
           p.join(
@@ -1082,7 +1085,10 @@ Mp.lazy.chunk(
       ]);
 
       expect(exitCode, 0);
-      expect(publishBuffer.toString(), contains('Backend root: $backendRoot'));
+      expect(
+        publishBuffer.toString(),
+        contains('Artifact workspace root: $backendRoot'),
+      );
       expect(
         await File(
           p.join(
@@ -1230,35 +1236,38 @@ Mp.lazy.chunk(
     },
   );
 
-  test('backend init scaffolds a standalone backend workspace', () async {
-    final initializer = _FakeLocalBackendInitializer();
-    final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      backendInitializer: initializer,
-      workingDirectory: tempDir.path,
-    );
+  test(
+    'artifact-host init scaffolds a standalone artifact workspace',
+    () async {
+      final initializer = _FakeLocalBackendInitializer();
+      final stdoutBuffer = StringBuffer();
+      final cli = MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: stdoutBuffer,
+        stderrSink: StringBuffer(),
+        backendInitializer: initializer,
+        workingDirectory: tempDir.path,
+      );
 
-    final backendRoot = p.join(tempDir.path, 'backend_workspace');
-    final exitCode = await cli.run(<String>[
-      'backend',
-      'init',
-      '--root',
-      backendRoot,
-    ]);
+      final backendRoot = p.join(tempDir.path, 'backend_workspace');
+      final exitCode = await cli.run(<String>[
+        'artifact-host',
+        'init',
+        '--root',
+        backendRoot,
+      ]);
 
-    expect(exitCode, 0);
-    expect(initializer.initializedRootPath, backendRoot);
-    expect(
-      stdoutBuffer.toString(),
-      contains('Initialized local backend workspace.'),
-    );
-  });
+      expect(exitCode, 0);
+      expect(initializer.initializedRootPath, backendRoot);
+      expect(
+        stdoutBuffer.toString(),
+        contains('Initialized local artifact host workspace.'),
+      );
+    },
+  );
 
   test(
-    'backend init defaults to the global backend workspace when root is omitted',
+    'artifact-host init defaults to the global artifact workspace when root is omitted',
     () async {
       final defaultBackendRoot = p.join(tempDir.path, 'global_backend');
       final initializer = _FakeLocalBackendInitializer(
@@ -1273,18 +1282,18 @@ Mp.lazy.chunk(
         workingDirectory: tempDir.path,
       );
 
-      final exitCode = await cli.run(<String>['backend', 'init']);
+      final exitCode = await cli.run(<String>['artifact-host', 'init']);
 
       expect(exitCode, 0);
       expect(initializer.initializedRootPath, isNull);
       expect(
         stdoutBuffer.toString(),
-        contains('Backend root: $defaultBackendRoot'),
+        contains('Artifact workspace root: $defaultBackendRoot'),
       );
     },
   );
 
-  test('backend subcommands dispatch to the controller', () async {
+  test('artifact-host subcommands dispatch to the controller', () async {
     final controller = _FakeLocalBackendController();
     final stdoutBuffer = StringBuffer();
     final cli = MiniprogramCli(
@@ -1295,19 +1304,22 @@ Mp.lazy.chunk(
       workingDirectory: repoRoot.path,
     );
 
-    expect(await cli.run(<String>['backend', 'start', '--port', '9090']), 0);
+    expect(
+      await cli.run(<String>['artifact-host', 'start', '--port', '9090']),
+      0,
+    );
     expect(controller.startedPort, 9090);
 
-    expect(await cli.run(<String>['backend', 'status']), 0);
-    expect(await cli.run(<String>['backend', 'stop']), 0);
-    expect(await cli.run(<String>['backend', 'reset-local', '--yes']), 0);
+    expect(await cli.run(<String>['artifact-host', 'status']), 0);
+    expect(await cli.run(<String>['artifact-host', 'stop']), 0);
+    expect(await cli.run(<String>['artifact-host', 'reset-local', '--yes']), 0);
     expect(controller.calls, <String>[
       'start',
       'status',
       'stop',
       'reset-local',
     ]);
-    expect(stdoutBuffer.toString(), contains('Started local backend.'));
+    expect(stdoutBuffer.toString(), contains('Started local artifact host.'));
     expect(
       stdoutBuffer.toString(),
       contains('Android emulator URL: http://10.0.2.2:9090/api/'),
@@ -1318,8 +1330,26 @@ Mp.lazy.chunk(
     );
   });
 
+  test('backend command remains a legacy artifact-host alias', () async {
+    final controller = _FakeLocalBackendController();
+    final stdoutBuffer = StringBuffer();
+    final cli = MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      backendController: controller,
+      workingDirectory: repoRoot.path,
+    );
+
+    expect(await cli.run(<String>['backend', 'start', '--port', '9091']), 0);
+
+    expect(controller.startedPort, 9091);
+    expect(controller.calls, <String>['start']);
+    expect(stdoutBuffer.toString(), contains('Started local artifact host.'));
+  });
+
   test(
-    'backend commands use saved env repo root when run from a standalone workspace',
+    'artifact-host commands use saved env repo root when run from a standalone workspace',
     () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await workspaceRoot.create(recursive: true);
@@ -1344,15 +1374,15 @@ Mp.lazy.chunk(
         workingDirectory: workspaceRoot.path,
       );
 
-      expect(await backendCli.run(<String>['backend', 'start']), 0);
-      expect(await backendCli.run(<String>['backend', 'status']), 0);
-      expect(await backendCli.run(<String>['backend', 'stop']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'start']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'status']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'stop']), 0);
       expect(controller.repoRootPaths, everyElement(repoRoot.path));
     },
   );
 
   test(
-    'backend commands use saved global repo root from an unrelated working directory',
+    'artifact-host commands use saved global repo root from an unrelated working directory',
     () async {
       final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
       await workspaceRoot.create(recursive: true);
@@ -1379,15 +1409,15 @@ Mp.lazy.chunk(
         workingDirectory: otherRoot.path,
       );
 
-      expect(await backendCli.run(<String>['backend', 'start']), 0);
-      expect(await backendCli.run(<String>['backend', 'status']), 0);
-      expect(await backendCli.run(<String>['backend', 'stop']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'start']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'status']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'stop']), 0);
       expect(controller.repoRootPaths, everyElement(repoRoot.path));
     },
   );
 
   test(
-    'backend commands use a saved backend workspace when no repo root is present',
+    'artifact-host commands use a saved artifact workspace when no repo root is present',
     () async {
       final backendRoot = p.join(tempDir.path, 'backend_workspace');
       await Directory(
@@ -1430,9 +1460,9 @@ Mp.lazy.chunk(
         workingDirectory: otherRoot.path,
       );
 
-      expect(await backendCli.run(<String>['backend', 'start']), 0);
-      expect(await backendCli.run(<String>['backend', 'status']), 0);
-      expect(await backendCli.run(<String>['backend', 'stop']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'start']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'status']), 0);
+      expect(await backendCli.run(<String>['artifact-host', 'stop']), 0);
       expect(controller.repoRootPaths, everyElement(backendRoot));
     },
   );

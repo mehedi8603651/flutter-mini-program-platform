@@ -364,8 +364,8 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
         return normalizedRootPath;
       }
       throw MiniProgramPathResolutionException(
-        'Backend root does not contain backend/local_backend_service and '
-        'backend/api: $normalizedRootPath',
+        'Artifact host root does not contain backend/local_backend_service '
+        'and backend/api: $normalizedRootPath',
       );
     }
 
@@ -388,8 +388,8 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
 
     if (required) {
       throw const MiniProgramPathResolutionException(
-        'Could not find a backend workspace. Run `miniprogram backend init` '
-        'or provide --root / --repo-root.',
+        'Could not find a local artifact host workspace. Run '
+        '`miniprogram artifact-host init` or provide --root / --repo-root.',
       );
     }
     return null;
