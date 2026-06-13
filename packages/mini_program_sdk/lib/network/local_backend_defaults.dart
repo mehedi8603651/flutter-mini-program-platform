@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-/// Shared local-backend defaults for generated host apps.
+/// Shared local artifact endpoint defaults for generated host apps.
 ///
 /// The host app can always override the resolved base URL with an explicit
-/// `MINI_PROGRAM_BACKEND_BASE_URL` value. When only a host and/or port needs to
-/// change for local development, prefer `MINI_PROGRAM_BACKEND_HOST` and
-/// `MINI_PROGRAM_BACKEND_PORT`.
+/// legacy-named `MINI_PROGRAM_BACKEND_BASE_URL` value. When only a host and/or
+/// port needs to change for local development, prefer
+/// `MINI_PROGRAM_BACKEND_HOST` and `MINI_PROGRAM_BACKEND_PORT`.
 abstract final class LocalMiniProgramBackendDefaults {
   static const int defaultPort = 8080;
   static const String defaultPath = '/api/';

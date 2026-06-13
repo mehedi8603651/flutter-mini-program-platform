@@ -1,10 +1,14 @@
-# mini_program_cloud_api
+# AWS Static Artifact Host
 
-AWS SAM app that exposes the mini-program artifact manifest/static endpoint through:
+AWS SAM app that exposes mini-program artifact manifest/static routes through:
 
 - API Gateway HTTP API
 - Lambda
 - S3-backed published artifacts and metadata
+
+This is static frontend artifact hosting infrastructure. It is not the
+Publisher API backend and must not contain publisher business logic, auth,
+database logic, payments, file storage rules, or secrets.
 
 This stack is designed to sit on top of the S3 layout produced by:
 
@@ -30,8 +34,8 @@ expect:
   - currently returns `501 not_implemented`
 
 The route contract is intentionally aligned with the local artifact service so
-Flutter hosts can switch between local and AWS using only
-`MINI_PROGRAM_BACKEND_BASE_URL`.
+Flutter hosts can switch between local and AWS using only the legacy-named
+`MINI_PROGRAM_BACKEND_BASE_URL` artifact endpoint value.
 
 ## Current Scope
 
@@ -64,12 +68,12 @@ Not implemented yet in this stack:
 
 The SAM template uses the AWS Lambda `nodejs24.x` runtime. Keep AWS SAM CLI
 current enough to deploy `nodejs24.x` functions, and use Node.js 24 locally
-when maintaining or testing this backend template.
+when maintaining or testing this artifact-host template.
 
 If the developer machine cannot reach AWS at all, `miniprogram cloud deploy`
 cannot work from that machine. In that case, keep using local preview/local
-backend locally and run cloud deploy from another machine or CI runner that has
-AWS network access and credentials.
+artifact hosting locally and run cloud deploy from another machine or CI runner
+that has AWS network access and credentials.
 
 ## What The CLI Automates
 
@@ -85,9 +89,12 @@ miniprogram cloud outputs
 The CLI:
 
 - publishes mini-program artifacts and metadata to S3
-- generates a managed SAM project under `.mini_program/cloud/aws_backend`
+- generates a managed SAM project under the legacy path
+  `.mini_program/cloud/aws_backend`
 - deploys or updates the API Gateway + Lambda stack
-- persists the deployed `BackendApiBaseUrl` back into the configured named env
+- persists the deployed static artifact endpoint URL back into the configured
+  named env; the CloudFormation output is still named `BackendApiBaseUrl` for
+  compatibility
 
 Developers do not normally need to open this `infra/` folder and run `sam`
 manually. This folder is the source template that the CLI copies into the
@@ -356,10 +363,11 @@ metadata; plaintext keys are accepted to keep local/manual setup simple.
 The stack returns these useful outputs:
 
 - `HttpApiStageUrl`
-- `BackendApiBaseUrl`
+- `BackendApiBaseUrl` legacy output name for the artifact API base URL
 - `HealthUrl`
 
-`BackendApiBaseUrl` is the one your Flutter hosts should use, for example:
+`BackendApiBaseUrl` is the compatibility output your Flutter hosts should use
+as the static artifact endpoint, for example:
 
 ```text
 https://abc123.execute-api.ap-south-1.amazonaws.com/prod/api/
@@ -408,6 +416,9 @@ Equivalent manual run still works:
 flutter run -d windows --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://abc123.execute-api.ap-south-1.amazonaws.com/prod/api/
 ```
 
+`MINI_PROGRAM_BACKEND_BASE_URL` is a legacy env var name for the mini-program
+artifact endpoint. It is not the Publisher API backend URL.
+
 ## Recommended End-To-End Flow
 
 1. Connect the developer machine to AWS through SSO, profile, or env vars.
@@ -424,8 +435,8 @@ flutter run -d windows --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://abc12
 ## Notes
 
 - CloudFront is still the right long-term place for immutable public artifacts.
-- This API currently reads directly from S3 because the host runtime already
-  speaks the delivery `/api/...` contract.
+- This artifact endpoint currently reads directly from S3 because the host
+  runtime already speaks the artifact `/api/...` contract.
 - If you later introduce rollout rules, extend the artifact endpoint contract
   instead of changing the Flutter host wire format.
 - Do not put publisher business backend logic here. Auth, database, payments,

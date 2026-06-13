@@ -81,21 +81,20 @@ host endpoint map supplies `backendBaseUrl`, for example
 `https://api.publisher.example`, and the SDK calls that HTTPS API without
 adding Firebase, AWS, database, payment, or provider SDKs to the mini-program
 or host app. See the
-[Publisher API HTTPS roadmap](docs/publisher_backend_https_api_roadmap.md)
+[Publisher API HTTPS guide](docs/publisher_backend_https_api_roadmap.md)
 for the contract and command flow.
 
-Future-only roadmap is tracked in:
+Current implementation notes and future work are tracked in:
 
 - [nextWorkAgents.md](nextWorkAgents.md)
-- [Mp JSON engine roadmap](docs/mp_json_engine_roadmap.md)
 
-Mp engine migration developers should also read:
+Core docs:
 
 - [Mini-program authoring guide](docs/mini_program_authoring.md)
-- [Mp JSON engine roadmap](docs/mp_json_engine_roadmap.md)
-- [Mp engine cloud end-to-end guide](docs/mp_engine_cloud_e2e_guide.md)
-- [Mp engine release checklist](docs/mp_engine_release_checklist.md)
-- [Publisher API HTTPS roadmap](docs/publisher_backend_https_api_roadmap.md)
+- [Embed in an existing Flutter app](docs/embed_existing_flutter_app.md)
+- [Static artifact + Publisher API E2E guide](docs/mp_engine_cloud_e2e_guide.md)
+- [Firebase static artifact delivery guide](docs/firebase_end_to_end_guide.md)
+- [Publisher API HTTPS guide](docs/publisher_backend_https_api_roadmap.md)
 
 ## What This Platform Is Good For
 
@@ -966,9 +965,11 @@ Or Windows desktop:
 miniprogram host run -d windows --env my-aws-prod
 ```
 
-That wraps `flutter run` and passes the deployed backend URL automatically.
+That wraps `flutter run` and passes the deployed artifact endpoint URL
+automatically.
 
-For release APK builds, use the backend define from the cloud outputs:
+For release APK builds, use the legacy-named artifact endpoint define from the
+cloud outputs:
 
 ```powershell
 miniprogram cloud outputs --format dart-define
@@ -976,8 +977,9 @@ cd D:\my_mini_host
 flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
 ```
 
-Use the `BackendApiBaseUrl` shown by `miniprogram cloud outputs`; do not use
-the S3 bucket URL directly. The host app loads through API Gateway + Lambda.
+Use the compatibility `BackendApiBaseUrl` shown by
+`miniprogram cloud outputs`; do not use the S3 bucket URL directly. The host
+app loads static mini-program artifacts through API Gateway + Lambda.
 
 Demo `lib/main.dart` after `miniprogram host endpoint import` or
 `miniprogram host endpoint add --title <title>` has created
@@ -1342,6 +1344,9 @@ miniprogram doctor
 
 - [mini_program_authoring.md](docs/mini_program_authoring.md)
 - [embed_existing_flutter_app.md](docs/embed_existing_flutter_app.md)
+- [mp_engine_cloud_e2e_guide.md](docs/mp_engine_cloud_e2e_guide.md)
+- [firebase_end_to_end_guide.md](docs/firebase_end_to_end_guide.md)
+- [publisher_backend_https_api_roadmap.md](docs/publisher_backend_https_api_roadmap.md)
 - [packages/mini_program_tooling/README.md](packages/mini_program_tooling/README.md)
 - [packages/mini_program_sdk/README.md](packages/mini_program_sdk/README.md)
 - [nextWorkAgents.md](nextWorkAgents.md)

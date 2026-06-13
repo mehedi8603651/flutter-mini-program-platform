@@ -444,7 +444,8 @@ Performance rules:
 - keep timeouts short and paginate large results
 - serve images from a CDN
 
-Generated host apps usually pass the artifact endpoint URL at build or run time:
+Generated host apps usually pass the artifact endpoint URL at build or run
+time. The env var keeps its original name for compatibility:
 
 ```bash
 flutter run -d chrome --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<region>.amazonaws.com/prod/api/

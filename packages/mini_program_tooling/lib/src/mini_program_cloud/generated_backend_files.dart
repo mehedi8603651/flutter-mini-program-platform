@@ -4,7 +4,7 @@ const String _bundledAwsTemplateYaml = r'''
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Serverless mini-program artifact endpoint for AWS.
+  AWS static artifact endpoint for mini-program bundles.
   It exposes artifact /api routes through API Gateway and Lambda while
   reading published mini-program artifacts from S3.
 
@@ -47,7 +47,7 @@ Parameters:
       - INFO
       - WARN
       - ERROR
-    Description: Log verbosity for the delivery Lambda.
+    Description: Log verbosity for the artifact Lambda.
   RequireMiniProgramAccessKeys:
     Type: String
     Default: 'false'
@@ -109,15 +109,15 @@ Outputs:
     Value: !Sub https://${MiniProgramDeliveryHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/
 
   BackendApiBaseUrl:
-    Description: Base URL to use as MINI_PROGRAM_BACKEND_BASE_URL in Flutter hosts.
+    Description: Legacy output name for the static artifact endpoint base URL used by Flutter hosts.
     Value: !Sub https://${MiniProgramDeliveryHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/api/
 
   HealthUrl:
-    Description: Health endpoint for the deployed API.
+    Description: Health endpoint for the deployed artifact host.
     Value: !Sub https://${MiniProgramDeliveryHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/health
 
   ArtifactBucketName:
-    Description: S3 bucket used by the API.
+    Description: S3 bucket used by the artifact host.
     Value: !Ref ArtifactBucketName
 ''';
 
@@ -127,7 +127,7 @@ const String _bundledAwsPackageJson = '''
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AWS Lambda mini-program artifact endpoint backed by S3-published artifacts.",
+  "description": "AWS Lambda static artifact endpoint for S3-published mini-program bundles.",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0"
   }

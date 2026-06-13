@@ -443,7 +443,7 @@
 
 - update generated host adapters to accept an optional
   `Map<String, MiniProgramEndpoint>` for multi-publisher endpoint routing
-- update the AWS delivery backend template to validate per-mini-program
+- update the AWS static artifact endpoint template to validate per-mini-program
   MiniProgram access keys from `metadata/access_keys/<appId>.json`
 - add `miniprogram env configure --require-access-keys` for strict AWS
   delivery deployments
@@ -498,7 +498,7 @@
 
 ## 0.2.31
 
-- update the bundled AWS SAM backend template from Lambda `nodejs20.x` to
+- update the bundled AWS SAM artifact endpoint template from Lambda `nodejs20.x` to
   `nodejs24.x` so new `miniprogram cloud deploy` stacks avoid the Node.js 20
   runtime deprecation window
 - update generated host and preview app dependencies to

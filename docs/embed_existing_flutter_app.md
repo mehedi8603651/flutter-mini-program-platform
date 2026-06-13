@@ -328,7 +328,7 @@ miniprogram host run -d chrome --env my-aws-prod
 
 `embed cloud configure` stores the selected cloud environment under
 `.mini_program/host_cloud.json`, and `host run` wraps `flutter run` with the
-resolved `MINI_PROGRAM_BACKEND_BASE_URL`.
+resolved legacy-named `MINI_PROGRAM_BACKEND_BASE_URL` artifact endpoint value.
 
 For a release APK, build with the deployed artifact API URL:
 
@@ -337,8 +337,8 @@ miniprogram cloud outputs --format dart-define
 flutter build apk --release --dart-define=MINI_PROGRAM_BACKEND_BASE_URL=https://<api-id>.execute-api.<aws-region>.amazonaws.com/prod/api/
 ```
 
-Use `BackendApiBaseUrl` from `miniprogram cloud outputs`; do not point the host
-app at the S3 bucket URL directly.
+Use the compatibility `BackendApiBaseUrl` from `miniprogram cloud outputs`; do
+not point the host app at the S3 bucket URL directly.
 
 ## 5. Open mini-programs from ordinary app buttons
 
