@@ -14,10 +14,10 @@ Keep this file for unfinished work only. Completed cleanup and MVP boundary docu
 
 ## Next Work
 
-1. Add more runtime middle-server API smoke fixtures for real app patterns: catalog search, checkout draft, profile update, file metadata, notification list, and form submit.
-2. Add stronger host preview tests for opening a mini-program without any runtime API URL.
-3. Improve static artifact diagnostics: validate manifest URL, entry screen URL, and common static server path mistakes.
-4. Improve `Mp.lazy.chunk` examples for product lists, news feeds, chat history, order history, and search results.
-5. Add docs for recommended Publisher API request/response envelopes, auth/session expiry, pagination, trace IDs, and retry behavior.
+1. Add real runtime middle-server API examples for catalog search, profile update, file metadata, notification list, checkout draft, and form submit.
+2. Add SDK/runtime tests for common middle-server error states: validation failure, 401 session expired, 403 forbidden, 429 rate limit, 500 server error, and 503 retryable outage.
+3. Add a full sample mini-program that uses `Mp.backend.query`, `Mp.backend.call`, `Mp.lazy.chunk`, search/load-more, and form submit against one mock middle-server.
+4. Improve static artifact diagnostics: validate manifest URL, entry screen URL, and common static server path mistakes.
+5. Improve `Mp.lazy.chunk` examples for product lists, news feeds, chat history, order history, and search results.
 6. Add a neutral static artifact host checklist: headers, cache control, immutable screen paths, latest manifest path, and local static server testing.
 7. Add release automation that verifies current MVP docs present only static artifact opening plus optional runtime middle-server APIs.

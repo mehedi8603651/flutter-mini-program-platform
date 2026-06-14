@@ -37,7 +37,21 @@ miniprogram host endpoint add coupon_demo `
   --project-root D:\my_host_app
 ```
 
-The runtime API is a publisher-owned middle-server. It handles auth, database access, payments, files, secrets, external APIs, admin logic, and business rules.
+`--backend-base-url` is the current compatibility flag name for the optional runtime middle-server URL. In architecture docs, this is `middleServerApiUrl`.
+
+The runtime API is a publisher-owned middle-server. It handles auth, database access, payments, files, secrets, external APIs, admin logic, and business rules. It should return JSON success, pagination, and error envelopes:
+
+```json
+{ "data": { "ok": true }, "traceId": "trace-success" }
+```
+
+```json
+{ "items": [], "nextCursor": null, "hasMore": false, "traceId": "trace-page" }
+```
+
+```json
+{ "errorCode": "validation_failed", "message": "Validation failed", "traceId": "trace-error" }
+```
 
 ## 4. Launch From UI
 

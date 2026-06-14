@@ -19,6 +19,24 @@ Runtime business behavior is optional. When a mini-program needs dynamic data or
 - `mini_program_tooling`: CLI for create/build/validate/preview/static publish, partner packages, host endpoint import, local mock Publisher API, and workflow status.
 - `mini_program_vscode`: VS Code helper extension for the same workflows.
 
+## Install
+
+Install the published CLI:
+
+```powershell
+dart pub global activate mini_program_tooling
+miniprogram doctor
+miniprogram --help
+```
+
+On Windows, make sure the Dart pub global bin folder is available on `PATH`:
+
+```powershell
+$env:Path += ";$env:LOCALAPPDATA\Pub\Cache\bin"
+```
+
+The VS Code Marketplace extension uses the same CLI. Configure `miniProgram.cliPath` only when `miniprogram` is not available on `PATH`.
+
 ## Current Flow
 
 ```powershell
@@ -62,6 +80,31 @@ miniprogram publisher-api contract smoke --mini-program-root .\coupon_demo --all
 ```
 
 Use a real publisher middle-server in production. It can be written in any language or framework, as long as it exposes the agreed HTTPS API.
+
+Attach an optional runtime API URL to a host endpoint only when the mini-program uses runtime data actions:
+
+```powershell
+miniprogram host endpoint add coupon_demo `
+  --artifact-base-url https://static.example.com/coupon_demo/ `
+  --backend-base-url https://publisher.example.com/api/coupon_demo/ `
+  --project-root .\coupon_host
+```
+
+`--backend-base-url` is the current compatibility flag name for the runtime middle-server URL. The architecture name is `middleServerApiUrl`.
+
+Recommended runtime response shapes:
+
+```json
+{ "data": { "ok": true }, "traceId": "trace-success" }
+```
+
+```json
+{ "items": [], "nextCursor": null, "hasMore": false, "traceId": "trace-page" }
+```
+
+```json
+{ "errorCode": "validation_failed", "message": "Validation failed", "traceId": "trace-error" }
+```
 
 ## Architecture Rules
 

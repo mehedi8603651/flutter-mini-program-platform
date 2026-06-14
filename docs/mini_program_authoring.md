@@ -218,13 +218,23 @@ Mp.pagedBackendBuilder(
 );
 ```
 
-Provider backends should return:
+Middle-server paginated routes should return:
 
 ```json
 {
   "items": [],
   "nextCursor": null,
   "hasMore": false
+}
+```
+
+Runtime errors should return a JSON envelope that the UI can bind into error state:
+
+```json
+{
+  "errorCode": "validation_failed",
+  "message": "Validation failed",
+  "traceId": "trace-error"
 }
 ```
 
