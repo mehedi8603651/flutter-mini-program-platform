@@ -1,3 +1,7 @@
+## 0.5.2
+
+- Give `MiniProgramPage` loaded content a normal scaffold and light surface instead of inheriting a dark/transparent host route background.
+
 ## 0.5.1
 
 - Fix Android release builds by using const Material `IconData` values for Mp runtime icons.

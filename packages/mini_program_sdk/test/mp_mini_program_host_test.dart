@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -26,6 +26,35 @@ void main() {
       expect(find.text('Mp-only host screen'), findsOneWidget);
     },
   );
+
+  testWidgets('MiniProgramPage wraps loaded Mp content in a light scaffold', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MiniProgramRuntimeScope(
+          runtime: MiniProgramRuntime(
+            sdkVersion: '1.0.0',
+            source: const _MpSource(),
+            hostBridge: const _HostBridge(),
+            capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+            cacheBundle: MiniProgramCacheBundle.inMemory(),
+          ),
+          child: const MiniProgramPage(
+            miniProgramId: 'mp_test',
+            title: 'Area Search',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Area Search'), findsOneWidget);
+    expect(find.text('Mp-only host screen'), findsOneWidget);
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, const Color(0xFFF8FAFC));
+  });
 
   testWidgets('Mp router passes params and returns pop results', (
     tester,

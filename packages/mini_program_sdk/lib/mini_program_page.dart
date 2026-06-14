@@ -21,38 +21,36 @@ class MiniProgramPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedRuntime = runtime ?? MiniProgramRuntimeScope.of(context);
+    final resolvedTitle = title ?? _defaultTitle(miniProgramId);
 
-    return MiniProgramHost(
-      miniProgramId: miniProgramId,
-      sdkVersion: resolvedRuntime.sdkVersion,
-      source: resolvedRuntime.source,
-      hostBridge: resolvedRuntime.hostBridge,
-      capabilityRegistry: resolvedRuntime.capabilityRegistry,
-      backendConnector: resolvedRuntime.backendConnector,
-      authController: resolvedRuntime.authController,
-      featureFlagEvaluator: resolvedRuntime.featureFlagEvaluator,
-      assetCache: resolvedRuntime.cacheBundle.assetCache,
-      manifestCache: resolvedRuntime.cacheBundle.manifestCache,
-      screenCache: resolvedRuntime.cacheBundle.screenCache,
-      cacheManager: resolvedRuntime.cacheBundle.runtimeCache,
-      logger: resolvedRuntime.logger,
-      renderers: resolvedRuntime.renderers,
-      loadingBuilder: (context) {
-        final resolvedTitle = title ?? _defaultTitle(miniProgramId);
-        return Scaffold(
-          appBar: AppBar(title: Text(resolvedTitle)),
-          body: SdkLoadingView(
+    return Scaffold(
+      appBar: AppBar(title: Text(resolvedTitle)),
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: MiniProgramHost(
+        miniProgramId: miniProgramId,
+        sdkVersion: resolvedRuntime.sdkVersion,
+        source: resolvedRuntime.source,
+        hostBridge: resolvedRuntime.hostBridge,
+        capabilityRegistry: resolvedRuntime.capabilityRegistry,
+        backendConnector: resolvedRuntime.backendConnector,
+        authController: resolvedRuntime.authController,
+        featureFlagEvaluator: resolvedRuntime.featureFlagEvaluator,
+        assetCache: resolvedRuntime.cacheBundle.assetCache,
+        manifestCache: resolvedRuntime.cacheBundle.manifestCache,
+        screenCache: resolvedRuntime.cacheBundle.screenCache,
+        cacheManager: resolvedRuntime.cacheBundle.runtimeCache,
+        logger: resolvedRuntime.logger,
+        renderers: resolvedRuntime.renderers,
+        loadingBuilder: (context) {
+          return SdkLoadingView(
             title: 'Loading $resolvedTitle',
             message: 'Fetching the latest mini-program release.',
-          ),
-        );
-      },
-      errorBuilder: (context, failure) {
-        return Scaffold(
-          appBar: AppBar(title: Text(title ?? _defaultTitle(miniProgramId))),
-          body: SdkErrorView(failure: failure),
-        );
-      },
+          );
+        },
+        errorBuilder: (context, failure) {
+          return SdkErrorView(failure: failure);
+        },
+      ),
     );
   }
 
