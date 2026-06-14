@@ -1,3 +1,7 @@
+## 0.5.1
+
+- Fix Android release builds by using const Material `IconData` values for Mp runtime icons.
+
 ## 0.5.0
 
 - Remove artifact credential fields and headers from endpoint/source models.

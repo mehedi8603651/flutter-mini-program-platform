@@ -1625,18 +1625,14 @@ _MpToneColors _mpToneStyle(String tone, [_MpThemeData? theme]) {
 }
 
 IconData _mpIconData(String name) {
-  final codePoint = _mpIconCodePoints[name];
-  if (codePoint == null) {
+  final icon = _mpIcons[name];
+  if (icon == null) {
     throw MiniProgramRenderException(
       message: 'Unsupported Mp icon "$name".',
       details: <String, dynamic>{'iconName': name},
     );
   }
-  return IconData(
-    codePoint,
-    fontFamily: 'MaterialIcons',
-    matchTextDirection: name == 'chevronRight',
-  );
+  return icon;
 }
 
 String? _optionalResolvedString(
@@ -1660,17 +1656,21 @@ double _mapDouble(Map<String, dynamic>? map, String key) {
   return (map?[key] as num?)?.toDouble() ?? 0;
 }
 
-const Map<String, int> _mpIconCodePoints = <String, int>{
-  'person': 0xe491,
-  'settings': 0xe57f,
-  'chevronRight': 0xe15f,
-  'star': 0xe5f9,
-  'gift': 0xe13e,
-  'check': 0xe156,
-  'warning': 0xe6cb,
-  'info': 0xe33d,
-  'lock': 0xe3b1,
-  'mail': 0xe3c4,
-  'home': 0xf107,
-  'search': 0xe567,
+const Map<String, IconData> _mpIcons = <String, IconData>{
+  'person': IconData(0xe491, fontFamily: 'MaterialIcons'),
+  'settings': IconData(0xe57f, fontFamily: 'MaterialIcons'),
+  'chevronRight': IconData(
+    0xe15f,
+    fontFamily: 'MaterialIcons',
+    matchTextDirection: true,
+  ),
+  'star': IconData(0xe5f9, fontFamily: 'MaterialIcons'),
+  'gift': IconData(0xe13e, fontFamily: 'MaterialIcons'),
+  'check': IconData(0xe156, fontFamily: 'MaterialIcons'),
+  'warning': IconData(0xe6cb, fontFamily: 'MaterialIcons'),
+  'info': IconData(0xe33d, fontFamily: 'MaterialIcons'),
+  'lock': IconData(0xe3b1, fontFamily: 'MaterialIcons'),
+  'mail': IconData(0xe3c4, fontFamily: 'MaterialIcons'),
+  'home': IconData(0xf107, fontFamily: 'MaterialIcons'),
+  'search': IconData(0xe567, fontFamily: 'MaterialIcons'),
 };

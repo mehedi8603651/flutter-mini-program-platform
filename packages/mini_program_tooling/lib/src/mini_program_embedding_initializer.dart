@@ -62,7 +62,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.5.0';
+  static const String _miniProgramSdkConstraint = '^0.5.1';
   static const String _miniProgramContractsConstraint = '^0.3.0';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
@@ -871,11 +871,13 @@ Riverpod, Provider, Bloc, GetX, GoRouter, custom architecture, or plain Flutter.
 
   String _buildAndroidDebugManifest() {
     return '''
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:usesCleartextTraffic="true"
-        android:networkSecurityConfig="@xml/mini_program_network_security_config" />
+        android:networkSecurityConfig="@xml/mini_program_network_security_config"
+        tools:replace="android:usesCleartextTraffic" />
 </manifest>
 ''';
   }

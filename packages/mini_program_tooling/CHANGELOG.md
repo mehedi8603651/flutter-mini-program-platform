@@ -1,3 +1,8 @@
+## 0.6.1
+
+- Generate Android debug manifests that can override host `usesCleartextTraffic` settings safely.
+- Generate host/preview projects with `mini_program_sdk: ^0.5.1` so Android release builds use const runtime icons.
+
 ## 0.6.0
 
 - Remove external artifact delivery adapters and credential handoff flows from the active CLI.

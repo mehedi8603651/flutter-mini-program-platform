@@ -52,4 +52,14 @@ void main() {
       expect(dependenciesBlock, isNot(contains('\n  $packageName:')));
     }
   });
+
+  test('Mp runtime icons use const IconData values for release builds', () {
+    final source = File(
+      'lib/rendering/mp_runtime/widgets_primitives.dart',
+    ).readAsStringSync();
+
+    expect(source, contains('const Map<String, IconData> _mpIcons'));
+    expect(source, isNot(contains('return IconData(')));
+    expect(source, isNot(contains('Map<String, int> _mpIconCodePoints')));
+  });
 }

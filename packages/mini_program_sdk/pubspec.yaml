@@ -1,6 +1,6 @@
 name: mini_program_sdk
 description: Portable runtime SDK for the Flutter mini-program platform.
-version: 0.5.0
+version: 0.5.1
 repository: https://github.com/mehedi8603651/flutter-mini-program-platform
 
 environment:
