@@ -1,3 +1,7 @@
+## 0.6.2
+
+- Generate host and preview projects with `mini_program_sdk: ^0.5.2` so new embedded hosts pick up the light mini-program page surface fix.
+
 ## 0.6.1
 
 - Generate Android debug manifests that can override host `usesCleartextTraffic` settings safely.
