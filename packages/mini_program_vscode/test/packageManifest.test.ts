@@ -24,8 +24,11 @@ test('package manifest exposes provider-neutral Publisher API commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.3.2');
+  assert.equal(manifest.version, '0.4.0');
   const contributedCommands = [
+    'miniProgramTools.publishPublicStaticMiniProgram',
+    'miniProgramTools.importHostEndpoint',
+    'miniProgramTools.addHostEndpoint',
     'miniProgramTools.publisherBackendSetup',
     'miniProgramTools.publisherBackendRun',
     'miniProgramTools.publisherBackendStatus',
@@ -35,8 +38,6 @@ test('package manifest exposes provider-neutral Publisher API commands', () => {
     'miniProgramTools.publisherBackendContractInit',
     'miniProgramTools.publisherBackendContractValidate',
     'miniProgramTools.publisherBackendContractSmoke',
-    'miniProgramTools.publisherBackendContractHandoff',
-    'miniProgramTools.publishFirebaseHostingMiniProgram',
   ];
   for (const commandId of contributedCommands) {
     assert.equal(commandIds.has(commandId), true, `${commandId} is contributed`);
@@ -50,22 +51,24 @@ test('package manifest exposes provider-neutral Publisher API commands', () => {
     'miniProgramTools.publisherBackendContractInit',
     'miniProgramTools.publisherBackendContractValidate',
     'miniProgramTools.publisherBackendContractSmoke',
-    'miniProgramTools.publisherBackendContractHandoff',
-    'miniProgramTools.publishFirebaseHostingMiniProgram',
   ]) {
     assert.equal(titleMenuIds.has(commandId), true, `${commandId} is in sidebar`);
   }
 
-  for (const commandId of [
-    'miniProgramTools.publisherBackendAwsDeploy',
-    'miniProgramTools.publisherBackendAwsOutputs',
-    'miniProgramTools.publisherBackendFirebaseDeploy',
-    'miniProgramTools.publisherBackendFirebaseHostCommand',
-    'miniProgramTools.publisherBackendFirebaseHandoff',
-    'miniProgramTools.publisherBackendFirebaseStarterUi',
-    'miniProgramTools.publisherBackendFirebaseAuthStatus',
-  ]) {
-    assert.equal(commandIds.has(commandId), false, `${commandId} is removed`);
-    assert.equal(titleMenuIds.has(commandId), false, `${commandId} is not in sidebar`);
+  const removedCommandFragments = [
+    'Hosting',
+    ['Access', 'Key'].join(''),
+    'Deploy',
+    'Outputs',
+  ];
+  for (const commandId of commandIds) {
+    for (const fragment of removedCommandFragments) {
+      assert.equal((commandId ?? '').includes(fragment), false);
+    }
+  }
+  for (const commandId of titleMenuIds) {
+    for (const fragment of removedCommandFragments) {
+      assert.equal((commandId ?? '').includes(fragment), false);
+    }
   }
 });

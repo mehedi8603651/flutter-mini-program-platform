@@ -1,198 +1,50 @@
 # mini_program_tooling
 
-Developer tooling for the portable Flutter mini-program platform.
+CLI tooling for the current mini-program MVP:
 
-The `miniprogram` CLI creates, builds, validates, previews, publishes, and
-hands off mini-programs. Backend integration is provider-neutral: a
-mini-program may call a publisher-owned HTTPS API, but AWS/Firebase database,
-auth, payment, file storage, admin logic, and secrets stay behind that middle
-server.
+- create, build, validate, and preview Mp JSON mini-programs
+- publish public static artifact folders
+- create/import `appId + artifactBaseUrl` partner packages
+- initialize Flutter host integration
+- run a local mock Publisher API for optional runtime API testing
+- validate and smoke Publisher API Contract V1 runtime endpoints
 
-## Install
+Mini-program opening uses public static artifacts only. Runtime business data is optional and belongs behind a publisher-owned middle-server API.
 
-Released package:
+## Common Commands
 
-```bash
-dart pub global activate mini_program_tooling
+```powershell
+miniprogram create coupon_demo --screen-format mp
+miniprogram build --mini-program-root .\coupon_demo
+miniprogram validate --mini-program-root .\coupon_demo
+miniprogram preview -d chrome --mini-program-root .\coupon_demo
+miniprogram publish --target static --mini-program-root .\coupon_demo --output .\coupon_demo\public_mini_program --clean
 ```
 
-Repo-local contributor install:
+Create a static artifact handoff package:
 
-```bash
-dart pub global activate --source path <repo-root>/packages/mini_program_tooling
+```powershell
+miniprogram partner package coupon_demo `
+  --artifact-base-url https://static.example.com/coupon_demo/ `
+  --output .\coupon_demo\coupon_demo.partner.json
 ```
 
-## Backend Model
+Import into a host:
 
-Use a Publisher API / external HTTPS API for business backend work:
-
-- auth
-- database
-- payment
-- file storage
-- business rules
-- secret keys
-- admin logic
-
-The host opens a mini-program from static artifacts with `appId` and
-`artifactBaseUrl`. If the mini-program needs dynamic data, auth, payments, or
-business actions, runtime code can use relative endpoints through
-`Mp.backend.*`, `Mp.backendBuilder`, `Mp.pagedBackendBuilder`, and
-`Mp.lazy.chunk`; the optional runtime config supplies `middleServerApiUrl`. The
-implementation behind that URL can run on AWS, Firebase, GCP, Docker,
-Kubernetes, a VPS, or any provider.
-
-AWS cloud artifact hosting and Firebase Hosting are static artifact hosting
-systems only. They publish or serve manifests, screens, assets, static JSON, and
-optional MiniProgram access keys. They are not the publisher business backend
-model.
-
-## CLI Surface
-
-```text
-miniprogram create <mini-program-id> [--screen-format mp] [--with-backend mock]
-miniprogram capabilities [--json]
-miniprogram doctor [--json]
-
-miniprogram env init
-miniprogram env configure <env-name> --provider aws --bucket <bucket> --region <region> [--aws-profile <profile>] [--require-access-keys]
-miniprogram env configure <env-name> --provider firebase --project-id <firebase-project-id>
-miniprogram env list
-miniprogram env use <local|env-name>
-miniprogram env status [--json]
-
-miniprogram build [mini-program-id] [--mp-build-script <path>]
-miniprogram preview -d <device> [mini-program-id] [--mp-build-script <path>]
-miniprogram validate [mini-program-id]
-miniprogram publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean] [--site <firebase-hosting-site>] [--dry-run] [--json]
-
-miniprogram publisher-api scaffold --template mock [--mini-program-root <path>] [--force]
-miniprogram publisher-api run [--mini-program-root <path>] [--port 9090]
-miniprogram publisher-api status [--mini-program-root <path>] [--json]
-miniprogram publisher-api stop [--mini-program-root <path>]
-miniprogram publisher-api urls [--port 9090]
-
-miniprogram publisher-api contract init --backend-base-url <url> [--mini-program-root <path>] [--public] [--allow-local-http]
-miniprogram publisher-api contract validate [--mini-program-root <path>] [--contract <file>] [--allow-local-http] [--json]
-miniprogram publisher-api contract smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--allow-local-http] [--json]
-
-miniprogram cloud deploy [--env <env-name>]
-miniprogram cloud status [--env <env-name>] [--json]
-miniprogram cloud outputs [--env <env-name>] [--format text|dart-define]
-miniprogram cloud logs [--env <env-name>]
-miniprogram cloud destroy [--env <env-name>]
-miniprogram cloud doctor [--env <env-name>]
-miniprogram cloud rollback <version> [mini-program-id] [--env <env-name>]
-miniprogram cloud app list [--env <env-name>]
-miniprogram cloud app info <mini-program-id> [--env <env-name>]
-miniprogram cloud app disable <mini-program-id> [--yes] [--env <env-name>]
-miniprogram cloud app delete <mini-program-id> [--yes] [--env <env-name>]
-
-miniprogram partner package <mini-program-id> --artifact-base-url <url> [--env <env-name>] [--output <file>]
-miniprogram host endpoint add <mini-program-id> --artifact-base-url <url> [--title <title>] [--backend-base-url <url>|--backend-local-mock]
-miniprogram host endpoint import <partner-package.json>
-miniprogram host run -d <device> [--env <env-name>]
-miniprogram embed init [--project-root <path>] [--force]
-miniprogram embed cloud configure [--env <env-name>]
-
-miniprogram artifact-host init
-miniprogram artifact-host start --port 8080
-miniprogram artifact-host stop
-miniprogram artifact-host status [--json]
-miniprogram artifact-host reset-local --yes
-miniprogram workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
+```powershell
+miniprogram embed init --project-root .\coupon_host
+miniprogram host endpoint import .\coupon_demo\coupon_demo.partner.json --project-root .\coupon_host
+miniprogram host run -d chrome --project-root .\coupon_host
 ```
 
-`publisher-backend` remains a legacy alias. `publisher-api` is the preferred
-visible wording for mock, contract, and smoke flows.
+Optional local runtime API:
 
-Advanced/legacy compatibility commands still exist for protected artifact
-delivery and older Publisher API handoff packages:
-`miniprogram access-key create|list|revoke|rotate <mini-program-id>` and
-`miniprogram publisher-api contract handoff --delivery-url <url>
-(--access-key <key>|--public)`.
-
-## Removed Provider Backend Templates
-
-The CLI no longer scaffolds or manages AWS Lambda/DynamoDB or Firebase
-Functions/Firestore publisher business backends.
-
-These commands intentionally fail with a migration message:
-
-```bash
-miniprogram publisher-backend scaffold --template aws-lambda
-miniprogram publisher-backend scaffold --template firebase-functions
-miniprogram publisher-backend scaffold --storage dynamodb
-miniprogram publisher-backend scaffold --storage firestore
+```powershell
+miniprogram publisher-api scaffold --template mock --mini-program-root .\coupon_demo
+miniprogram publisher-api run --mini-program-root .\coupon_demo --port 9090
+miniprogram publisher-api contract init --mini-program-root .\coupon_demo --backend-base-url http://127.0.0.1:9090 --allow-local-http
+miniprogram publisher-api contract validate --mini-program-root .\coupon_demo --allow-local-http
+miniprogram publisher-api contract smoke --mini-program-root .\coupon_demo --allow-local-http
 ```
 
-Use your own middle server instead, then define and smoke the optional runtime
-Publisher API contract:
-
-```bash
-miniprogram publisher-api contract init --backend-base-url https://api.publisher.example --public
-miniprogram publisher-api contract validate
-miniprogram publisher-api contract smoke
-```
-
-## Local Mock Publisher API
-
-Use the mock API when frontend work needs repeated or dynamic backend-shaped
-data before the real middle server exists:
-
-```bash
-miniprogram publisher-api scaffold --template mock
-miniprogram publisher-api run --port 9090
-miniprogram publisher-api urls
-```
-
-The mock is a development tool. Production storage, auth, payment, files, and
-business logic belong on the publisher-owned HTTPS API.
-
-## Static Artifact Delivery
-
-Local/static delivery writes public files for local testing or any CDN/static
-host:
-
-```bash
-miniprogram publish --target static --output public_mini_program --clean
-```
-
-AWS static artifact hosting serves mini-program manifests, screen JSON, assets,
-and access-key protected artifact access through the platform artifact stack:
-
-```bash
-miniprogram env configure prod --provider aws --bucket <bucket> --region <region>
-miniprogram cloud deploy --env prod
-miniprogram publish --target cloud --env prod
-```
-
-Firebase Hosting is static delivery only:
-
-```bash
-miniprogram env configure firebase-prod --provider firebase --project-id <project-id>
-miniprogram publish --target firebase-hosting --env firebase-prod --clean
-```
-
-## Handoff
-
-A host app should receive a small static artifact partner package, not backend
-secrets:
-
-```bash
-miniprogram partner package rewards_center \
-  --artifact-base-url https://cdn.example.com/app/ \
-  --output app.partner.json
-
-miniprogram host endpoint import app.partner.json --project-root <host-app>
-```
-
-Current MVP handoff uses `appId` and `artifactBaseUrl`. The host fetches the
-current manifest and screen/static artifacts from `artifactBaseUrl`; version
-selection, if any, belongs to the artifact host/publisher process, not host
-backend config.
-
-Protected delivery, MiniProgram access keys, signed URLs, provider-specific
-delivery configuration, and `publisher-api contract handoff` are advanced or
-legacy compatibility flows. Provider credentials and backend secrets never go in
-mini-program JSON or MVP partner packages.
+Publisher API Contract V1 is a runtime API standard only. It is not required for opening a mini-program from static artifacts.

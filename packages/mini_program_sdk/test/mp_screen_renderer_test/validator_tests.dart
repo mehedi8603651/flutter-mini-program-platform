@@ -1973,7 +1973,7 @@ void _mpScreenValidatorTests() {
           <String, dynamic>{
             'key': 'products',
             'value': true,
-            'priority': 'protected',
+            'priority': 'hostPinned',
           },
         ),
         'invalid cache ttl': _cacheActionScreen('cache.set', <String, dynamic>{

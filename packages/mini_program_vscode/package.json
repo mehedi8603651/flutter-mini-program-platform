@@ -2,7 +2,7 @@
   "name": "mini-program-tools",
   "displayName": "MiniProgram Tools",
   "description": "Native VS Code sidebar for MiniProgram CLI workflows.",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "publisher": "MiniProgramTools",
   "icon": "media/marketplace-icon-128.png",
   "license": "MIT",
@@ -68,11 +68,6 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "miniProgramTools.refreshRemoteStatus",
-        "title": "MiniProgram: Refresh Remote Status",
-        "icon": "$(cloud)"
-      },
-      {
         "command": "miniProgramTools.createMiniProgram",
         "title": "MiniProgram: Create MiniProgram",
         "icon": "$(new-folder)"
@@ -95,7 +90,7 @@
       {
         "command": "miniProgramTools.publish",
         "title": "MiniProgram: Publish",
-        "icon": "$(cloud-upload)"
+        "icon": "$(package)"
       },
       {
         "command": "miniProgramTools.publishPublicStaticMiniProgram",
@@ -103,24 +98,14 @@
         "icon": "$(globe)"
       },
       {
-        "command": "miniProgramTools.publishFirebaseHostingMiniProgram",
-        "title": "MiniProgram: Publish MiniProgram to Firebase Hosting",
-        "icon": "$(cloud-upload)"
-      },
-      {
         "command": "miniProgramTools.embedInit",
         "title": "MiniProgram: Embed Init",
         "icon": "$(package)"
       },
       {
-        "command": "miniProgramTools.configureHostCloud",
-        "title": "MiniProgram: Configure Host Cloud",
-        "icon": "$(cloud)"
-      },
-      {
         "command": "miniProgramTools.importHostEndpoint",
         "title": "MiniProgram: Import Host Endpoint",
-        "icon": "$(cloud-download)"
+        "icon": "$(file-code)"
       },
       {
         "command": "miniProgramTools.addHostEndpoint",
@@ -138,16 +123,6 @@
         "icon": "$(settings-gear)"
       },
       {
-        "command": "miniProgramTools.configureAwsEnvironment",
-        "title": "MiniProgram: Configure AWS Environment",
-        "icon": "$(cloud)"
-      },
-      {
-        "command": "miniProgramTools.configureFirebaseEnvironment",
-        "title": "MiniProgram: Configure Firebase Environment",
-        "icon": "$(cloud)"
-      },
-      {
         "command": "miniProgramTools.useEnvironment",
         "title": "MiniProgram: Use Environment",
         "icon": "$(checklist)"
@@ -156,21 +131,6 @@
         "command": "miniProgramTools.environmentStatus",
         "title": "MiniProgram: Environment Status",
         "icon": "$(info)"
-      },
-      {
-        "command": "miniProgramTools.cloudDeploy",
-        "title": "MiniProgram: Cloud Deploy",
-        "icon": "$(rocket)"
-      },
-      {
-        "command": "miniProgramTools.cloudStatus",
-        "title": "MiniProgram: Cloud Status",
-        "icon": "$(cloud)"
-      },
-      {
-        "command": "miniProgramTools.cloudOutputs",
-        "title": "MiniProgram: Cloud Outputs",
-        "icon": "$(symbol-property)"
       },
       {
         "command": "miniProgramTools.backendInit",
@@ -228,11 +188,6 @@
         "icon": "$(beaker)"
       },
       {
-        "command": "miniProgramTools.publisherBackendContractHandoff",
-        "title": "MiniProgram: Create Publisher API Handoff Package",
-        "icon": "$(file-code)"
-      },
-      {
         "command": "miniProgramTools.copyPublisherBackendUrls",
         "title": "MiniProgram: Copy Mock Publisher API URLs",
         "icon": "$(copy)"
@@ -241,26 +196,6 @@
         "command": "miniProgramTools.copyMockBackendHostCommand",
         "title": "MiniProgram: Copy Mock Publisher API Host Command",
         "icon": "$(copy)"
-      },
-      {
-        "command": "miniProgramTools.createAccessKey",
-        "title": "MiniProgram: Create Access Key",
-        "icon": "$(key)"
-      },
-      {
-        "command": "miniProgramTools.listAccessKeys",
-        "title": "MiniProgram: List Access Keys",
-        "icon": "$(list-unordered)"
-      },
-      {
-        "command": "miniProgramTools.revokeAccessKey",
-        "title": "MiniProgram: Revoke Access Key",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "miniProgramTools.rotateAccessKey",
-        "title": "MiniProgram: Rotate Access Key",
-        "icon": "$(sync)"
       },
       {
         "command": "miniProgramTools.createPartnerPackage",
@@ -293,19 +228,9 @@
         "icon": "$(device-mobile)"
       },
       {
-        "command": "miniProgramTools.diagnoseCloudDelivery",
-        "title": "MiniProgram: Diagnose Cloud Artifact Hosting",
-        "icon": "$(cloud)"
-      },
-      {
         "command": "miniProgramTools.setupNewMiniProgram",
         "title": "MiniProgram: Setup New MiniProgram",
         "icon": "$(new-folder)"
-      },
-      {
-        "command": "miniProgramTools.publishMiniProgramToAws",
-        "title": "MiniProgram: Publish MiniProgram to AWS",
-        "icon": "$(cloud-upload)"
       },
       {
         "command": "miniProgramTools.preparePartnerHandoff",
@@ -354,8 +279,8 @@
       },
       {
         "command": "miniProgramTools.checkHostEndpointRemote",
-        "title": "MiniProgram: Check Host Endpoint Remote",
-        "icon": "$(cloud)"
+        "title": "MiniProgram: Check Host Endpoint",
+        "icon": "$(link)"
       },
       {
         "command": "miniProgramTools.copyCleanupCommands",
@@ -374,11 +299,6 @@
           "command": "miniProgramTools.refreshStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@1"
-        },
-        {
-          "command": "miniProgramTools.refreshRemoteStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@2"
         },
         {
           "command": "miniProgramTools.setupNewMiniProgram",
@@ -421,11 +341,6 @@
           "group": "navigation@10"
         },
         {
-          "command": "miniProgramTools.cloudStatus",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@11"
-        },
-        {
           "command": "miniProgramTools.backendStatus",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12"
@@ -456,11 +371,6 @@
           "group": "navigation@12.23"
         },
         {
-          "command": "miniProgramTools.publisherBackendContractHandoff",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@12.24"
-        },
-        {
           "command": "miniProgramTools.copyPublisherBackendUrls",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@12.3"
@@ -471,16 +381,6 @@
           "group": "navigation@12.4"
         },
         {
-          "command": "miniProgramTools.createAccessKey",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@13"
-        },
-        {
-          "command": "miniProgramTools.listAccessKeys",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@14"
-        },
-        {
           "command": "miniProgramTools.preparePartnerHandoff",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@15"
@@ -489,11 +389,6 @@
           "command": "miniProgramTools.publishPublicStaticMiniProgram",
           "when": "view == miniProgramTools.statusView",
           "group": "navigation@16"
-        },
-        {
-          "command": "miniProgramTools.publishFirebaseHostingMiniProgram",
-          "when": "view == miniProgramTools.statusView",
-          "group": "navigation@16.1"
         }
       ]
     }

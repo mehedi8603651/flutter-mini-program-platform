@@ -41,13 +41,13 @@ Connect a host endpoint with:
 
 ```powershell
 miniprogram host endpoint add $appId `
-  --api-base-url <delivery-url> `
-  --public `
+  --artifact-base-url <public-static-artifact-url> `
   --backend-base-url http://127.0.0.1:9090/
 ```
 
-Production Firebase, AWS, GCP, or custom server SDKs should live on your
-Publisher API server, not in the Flutter host app or mini_program_sdk.
+Production provider SDKs, database clients, payment clients, credentials, and
+business rules should live on your Publisher API server, not in the Flutter
+host app or mini_program_sdk.
 ''';
 
 String _mockBackendServerSource() => r'''

@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import 'http_mini_program_source.dart';
 import 'mini_program_delivery_context.dart';
 
 typedef MiniProgramBackendHttpClientFactory = http.Client Function();
@@ -24,14 +23,12 @@ class MiniProgramBackendEndpoint {
     required this.baseUri,
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 8),
-    this.sendAccessKeyToBackend = false,
     this.enableLocalLoopbackFallback = true,
   });
 
   final Uri baseUri;
   final Map<String, String> headers;
   final Duration requestTimeout;
-  final bool sendAccessKeyToBackend;
   final bool enableLocalLoopbackFallback;
 }
 
@@ -182,16 +179,13 @@ class EndpointRoutingMiniProgramBackendConnector
   EndpointRoutingMiniProgramBackendConnector({
     required Map<String, MiniProgramBackendEndpoint> backends,
     required MiniProgramDeliveryContext deliveryContext,
-    Map<String, String> accessKeys = const <String, String>{},
     MiniProgramBackendHttpClientFactory? clientFactory,
   }) : _backends = Map.unmodifiable(_normalizeBackends(backends)),
        _deliveryContext = deliveryContext,
-       _accessKeys = Map.unmodifiable(_normalizeAccessKeys(accessKeys)),
        _clientFactory = clientFactory ?? http.Client.new;
 
   final Map<String, MiniProgramBackendEndpoint> _backends;
   final MiniProgramDeliveryContext _deliveryContext;
-  final Map<String, String> _accessKeys;
   final MiniProgramBackendHttpClientFactory _clientFactory;
   final Map<String, _CachedBackendResult> _cache =
       <String, _CachedBackendResult>{};
@@ -416,12 +410,6 @@ class EndpointRoutingMiniProgramBackendConnector
       ...backend.headers,
       ...requestHeaders,
     };
-    final accessKey = _accessKeys[appId];
-    if (backend.sendAccessKeyToBackend &&
-        accessKey != null &&
-        accessKey.isNotEmpty) {
-      headers[MiniProgramHttpHeaders.accessKey] = accessKey;
-    }
     return headers;
   }
 
@@ -563,13 +551,6 @@ class EndpointRoutingMiniProgramBackendConnector
       normalized[appId] = entry.value;
     }
     return normalized;
-  }
-
-  static Map<String, String> _normalizeAccessKeys(
-    Map<String, String> accessKeys,
-  ) {
-    return accessKeys.map((key, value) => MapEntry(key.trim(), value.trim()))
-      ..removeWhere((key, value) => key.isEmpty || value.isEmpty);
   }
 }
 

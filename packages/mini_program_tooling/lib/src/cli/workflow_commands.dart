@@ -33,14 +33,15 @@ extension _MiniprogramCliWorkflowCommands on MiniprogramCli {
       ..addFlag(
         'remote',
         negatable: false,
-        help: 'Check remote cloud/app/access-key status when configured.',
+        help:
+            'Compatibility flag. Provider remote checks were removed from the MVP flow.',
       )
       ..addOption(
         'workspace',
         help:
             'Mini-program or Flutter host app workspace. Defaults to the current directory.',
       )
-      ..addOption('env', help: 'Named cloud environment override.');
+      ..addOption('env', help: 'Ignored legacy provider environment override.');
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln('Usage: miniprogram workflow status [options]');
@@ -57,7 +58,6 @@ extension _MiniprogramCliWorkflowCommands on MiniprogramCli {
       stateStore: _stateStore,
       validator: _validator,
       backendController: _backendController,
-      cloudController: _cloudController,
     );
     final result = await controller.inspect(
       MiniProgramWorkflowStatusRequest(

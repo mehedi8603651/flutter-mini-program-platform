@@ -100,15 +100,15 @@ void main() {
       expect(screenJson['type'], 'scaffold');
     });
 
-    test('sends MiniProgram access key header on backend requests', () async {
+    test('does not send artifact credential headers', () async {
       final requestedHeaders = <String?>[];
       final source = HttpMiniProgramSource(
-        apiBaseUri: Uri.parse('https://backend.example.com/api/'),
-        accessKey: 'mpk_live_partner_a',
+        apiBaseUri: Uri.parse('https://cdn.example.com/artifacts/'),
         headers: const <String, String>{'x-host-channel': 'stable'},
         client: MockClient((request) async {
           requestedHeaders.add(
-            request.headers[MiniProgramHttpHeaders.accessKey],
+            request.headers['x-mini-program-'
+                'access-key'],
           );
           expect(request.headers['x-host-channel'], 'stable');
           if (request.url.path.contains('/manifests/')) {
@@ -125,31 +125,8 @@ void main() {
         screenId: 'profile_center_home',
       );
 
-      expect(requestedHeaders, <String>[
-        'mpk_live_partner_a',
-        'mpk_live_partner_a',
-      ]);
+      expect(requestedHeaders, <String?>[null, null]);
     });
-
-    test(
-      'does not send MiniProgram access key header when key is null',
-      () async {
-        final requestedHeaders = <String?>[];
-        final source = HttpMiniProgramSource(
-          apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
-          client: MockClient((request) async {
-            requestedHeaders.add(
-              request.headers[MiniProgramHttpHeaders.accessKey],
-            );
-            return http.Response(_manifestJson, 200);
-          }),
-        );
-
-        await source.loadManifest('profile_center');
-
-        expect(requestedHeaders, <String?>[null]);
-      },
-    );
 
     test(
       'throws a structured source exception when the backend rejects delivery',

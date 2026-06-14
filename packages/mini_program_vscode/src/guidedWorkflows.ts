@@ -1,6 +1,6 @@
 export type GuidedWorkflowId =
   | 'setupNewMiniProgram'
-  | 'publishMiniProgramToAws'
+  | 'publishMiniProgramStatic'
   | 'preparePartnerHandoff'
   | 'setupHostApp'
   | 'addMiniProgramToHost'
@@ -21,20 +21,19 @@ export const guidedWorkflows: readonly GuidedWorkflow[] = [
     steps: ['create', 'build', 'validate'],
   },
   {
-    id: 'publishMiniProgramToAws',
-    title: 'Publish MiniProgram to AWS',
-    description: 'Build, validate, publish to cloud, then run cloud diagnostics.',
-    steps: ['build', 'validate', 'publish-cloud', 'diagnose-cloud'],
+    id: 'publishMiniProgramStatic',
+    title: 'Publish MiniProgram Static Artifacts',
+    description: 'Build, validate, and publish public static mini-program artifacts.',
+    steps: ['build', 'validate', 'publish-static'],
   },
   {
     id: 'preparePartnerHandoff',
     title: 'Prepare Partner Handoff',
-    description: 'Build, validate, publish, create an access key, and write a partner package.',
+    description: 'Build, validate, publish static artifacts, and write a partner package.',
     steps: [
       'build',
       'validate',
-      'publish-cloud',
-      'create-access-key',
+      'publish-static',
       'create-partner-package',
       'validate-partner-package',
     ],
@@ -42,8 +41,8 @@ export const guidedWorkflows: readonly GuidedWorkflow[] = [
   {
     id: 'setupHostApp',
     title: 'Setup Host App',
-    description: 'Run embed init, optionally configure host cloud, then diagnose the host.',
-    steps: ['embed-init', 'configure-host-cloud', 'diagnose-host'],
+    description: 'Run embed init, then diagnose the host.',
+    steps: ['embed-init', 'diagnose-host'],
   },
   {
     id: 'addMiniProgramToHost',

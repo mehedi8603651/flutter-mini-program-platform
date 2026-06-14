@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 
 import {
-  FirebaseHostEndpointStatus,
   StatusTreeSection,
   StatusTreeRow,
   buildStatusTreeSections,
@@ -28,32 +27,17 @@ export class MiniProgramStatusTreeProvider implements vscode.TreeDataProvider<St
   private readonly changeEmitter = new vscode.EventEmitter<StatusTreeNode | undefined>();
   private sections: StatusTreeSection[] = buildStatusTreeSections(undefined);
   private errorMessage: string | undefined;
-  private report: WorkflowStatusReport | undefined;
-  private firebaseHostEndpoint: FirebaseHostEndpointStatus | undefined;
 
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
   setReport(report: WorkflowStatusReport): void {
     this.errorMessage = undefined;
-    this.report = report;
-    this.sections = buildStatusTreeSections(report, {
-      firebaseHostEndpoint: this.firebaseHostEndpoint,
-    });
-    this.changeEmitter.fire(undefined);
-  }
-
-  setFirebaseHostEndpointStatus(status: FirebaseHostEndpointStatus): void {
-    this.errorMessage = undefined;
-    this.firebaseHostEndpoint = status;
-    this.sections = buildStatusTreeSections(this.report, {
-      firebaseHostEndpoint: this.firebaseHostEndpoint,
-    });
+    this.sections = buildStatusTreeSections(report);
     this.changeEmitter.fire(undefined);
   }
 
   setError(message: string): void {
     this.errorMessage = message;
-    this.report = undefined;
     this.sections = [
       {
         label: 'Workspace',

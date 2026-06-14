@@ -70,11 +70,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         'backend-base-url',
         help: 'Publisher-owned backend API base URL. Use HTTPS for production.',
       )
-      ..addFlag(
-        'public',
-        negatable: false,
-        help: 'Mark this Publisher API as public.',
-      )
       ..addOption(
         'health-endpoint',
         defaultsTo: MiniProgramPublisherBackendContract.defaultHealthEndpoint,
@@ -132,9 +127,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         miniProgramRootPath: miniProgramRootPath,
         appId: appId,
         backendBaseUri: backendBaseUri,
-        accessMode: results.flag('public')
-            ? MiniProgramPublisherBackendContract.accessModePublic
-            : MiniProgramPublisherBackendContract.accessModeProtected,
         healthEndpoint: results.option('health-endpoint')!,
         outputPath: results.option('output'),
         allowLocalHttp: results.flag('allow-local-http'),
@@ -227,10 +219,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
             'Contract path. Defaults to <mini-program-root>/publisher_backend.json.',
       )
       ..addOption(
-        'access-key',
-        help: 'MiniProgram access key to send during smoke checks.',
-      )
-      ..addOption(
         'auth-token',
         help:
             'Publisher auth token to send as Authorization: Bearer <token> during smoke checks.',
@@ -280,7 +268,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       PublisherBackendContractSmokeRequest(
         contractPath: contractPath,
         contract: contract,
-        accessKey: results.option('access-key'),
         authToken: results.option('auth-token'),
         timeout: Duration(seconds: timeoutSeconds),
       ),
@@ -298,151 +285,22 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     required String commandName,
   }) async {
     final qualifiedCommand = '$commandName contract handoff';
-    final parser = ArgParser()
-      ..addFlag(
-        'help',
-        abbr: 'h',
-        negatable: false,
-        help: 'Show usage information.',
-      )
-      ..addOption(
-        'mini-program-root',
-        help: 'Exact mini-program root. Defaults to the current directory.',
-      )
-      ..addOption(
-        'contract',
-        help:
-            'Contract path. Defaults to <mini-program-root>/publisher_backend.json.',
-      )
-      ..addOption(
-        'delivery-url',
-        help: 'Mini-program static artifact base URL.',
-      )
-      ..addOption(
-        'title',
-        help: 'Human-readable title. Defaults to manifest title or app id.',
-      )
-      ..addOption(
-        'access-key',
-        help: 'MiniProgram access key for protected handoff packages.',
-      )
-      ..addFlag(
-        'public',
-        negatable: false,
-        help: 'Create a public handoff package.',
-      )
-      ..addOption(
-        'output',
-        abbr: 'o',
-        help:
-            'Output partner package path. Defaults to <mini-program-root>/<appId>.partner.json.',
-      )
-      ..addFlag(
-        'allow-local-http',
-        negatable: false,
-        help:
-            'Allow local LAN HTTP backend URLs for device testing. Loopback HTTP is always allowed.',
-      )
-      ..addFlag('json', negatable: false, help: 'Print machine-readable JSON.');
-    final results = parser.parse(arguments);
-    if (results.flag('help')) {
+    if (arguments.contains('--help') ||
+        arguments.contains('-h') ||
+        arguments.contains('help')) {
       _stdout.writeln(
-        'Usage: miniprogram $qualifiedCommand --delivery-url <url> [--access-key <key>|--public] [options]',
+        'Usage: miniprogram $qualifiedCommand\n\n'
+        'Removed: Publisher API contract handoff packages are no longer part '
+        'of the MVP flow. Create a static partner package with '
+        '`miniprogram partner package <appId> --artifact-base-url <url>`.',
       );
-      _stdout.writeln(parser.usage);
       return 0;
     }
-    if (results.rest.isNotEmpty) {
-      throw FormatException(
-        '$qualifiedCommand does not accept positional arguments.',
-      );
-    }
-    final rawDeliveryUrl = results.option('delivery-url')?.trim() ?? '';
-    if (rawDeliveryUrl.isEmpty) {
-      throw FormatException('$qualifiedCommand requires --delivery-url <url>.');
-    }
-    final deliveryUri = Uri.tryParse(rawDeliveryUrl);
-    if (deliveryUri == null ||
-        !deliveryUri.hasScheme ||
-        deliveryUri.host.isEmpty) {
-      throw FormatException(
-        '$qualifiedCommand expected an absolute --delivery-url, got: $rawDeliveryUrl',
-      );
-    }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
-      explicitMiniProgramRootPath: results.option('mini-program-root'),
+    throw FormatException(
+      '$qualifiedCommand was removed. Host opening uses appId + '
+      'artifactBaseUrl only. Use `miniprogram partner package <appId> '
+      '--artifact-base-url <url>` for static artifact handoff.',
     );
-    final contractPath = _publisherBackendContractController
-        .defaultContractPath(
-          miniProgramRootPath,
-          explicitPath: results.option('contract'),
-        );
-    final contract = await _publisherBackendContractController.readContract(
-      contractPath: contractPath,
-      allowLocalHttp: results.flag('allow-local-http'),
-    );
-    final manifestInfo = await _readMiniProgramManifestInfo(
-      miniProgramRootPath,
-    );
-    if (manifestInfo.appId != contract.appId) {
-      throw FormatException(
-        'Publisher API contract appId "${contract.appId}" does not match manifest appId "${manifestInfo.appId}".',
-      );
-    }
-    final accessKey = results.option('access-key')?.trim() ?? '';
-    final explicitPublic = results.flag('public');
-    if (explicitPublic && accessKey.isNotEmpty) {
-      throw FormatException(
-        '$qualifiedCommand cannot use both --public and --access-key.',
-      );
-    }
-    if (contract.isProtected) {
-      if (explicitPublic) {
-        throw FormatException(
-          '$qualifiedCommand cannot create a public package for a protected contract.',
-        );
-      }
-      if (accessKey.isEmpty) {
-        throw FormatException(
-          '$qualifiedCommand requires --access-key <key> for protected contracts.',
-        );
-      }
-    } else if (accessKey.isNotEmpty) {
-      throw FormatException(
-        '$qualifiedCommand received --access-key for a public contract.',
-      );
-    }
-
-    final outputPath = results.option('output')?.trim().isNotEmpty == true
-        ? results.option('output')!.trim()
-        : p.join(miniProgramRootPath, '${contract.appId}.partner.json');
-    final packageResult = await _partnerHandoffController.createPackage(
-      MiniProgramPartnerPackageRequest(
-        appId: contract.appId,
-        title: results.option('title')?.trim().isNotEmpty == true
-            ? results.option('title')!.trim()
-            : manifestInfo.title ?? _defaultTitleForAppId(contract.appId),
-        schemaVersion: MiniProgramPartnerHandoff.legacySchemaVersion,
-        artifactBaseUri: deliveryUri,
-        backendBaseUri: contract.backendBaseUri,
-        accessKey: contract.isProtected ? accessKey : null,
-        outputPath: outputPath,
-      ),
-    );
-    final result = _PublisherBackendContractHandoffResult(
-      contractPath: contractPath,
-      packageResult: packageResult,
-      hostImportCommandText:
-          'miniprogram host endpoint import ${packageResult.filePath}',
-    );
-    if (results.flag('json')) {
-      _stdout.writeln(
-        _prettyJson(_publisherBackendContractHandoffJson(result)),
-      );
-    } else {
-      _stdout.writeln(_formatPublisherBackendContractHandoffResult(result));
-    }
-    return 0;
   }
 
   Map<String, Object?> _publisherBackendContractInitJson(
@@ -476,30 +334,9 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'command': 'publisher-api contract smoke',
       'contractPath': result.contractPath,
       ..._publisherBackendContractJson(result.contract),
-      'accessKeyProvided': result.accessKeyProvided,
       'authTokenProvided': result.authTokenProvided,
       'passed': result.passed,
       'routes': result.routes.map(_publisherBackendContractRouteJson).toList(),
-    };
-  }
-
-  Map<String, Object?> _publisherBackendContractHandoffJson(
-    _PublisherBackendContractHandoffResult result,
-  ) {
-    final handoff = result.packageResult.handoff;
-    return <String, Object?>{
-      'schemaVersion': 1,
-      'command': 'publisher-api contract handoff',
-      'contractPath': result.contractPath,
-      'miniProgramId': handoff.appId,
-      'title': handoff.title,
-      'deliveryApiBaseUrl': handoff.apiBaseUri.toString(),
-      'backendBaseUrl': handoff.backendBaseUri?.toString(),
-      'accessMode': handoff.accessMode,
-      'accessKeyIncluded': handoff.accessKey != null,
-      'packagePath': result.packageResult.filePath,
-      'generatedAtUtc': handoff.generatedAtUtc,
-      'hostImportCommandText': result.hostImportCommandText,
     };
   }
 
@@ -510,7 +347,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'contractVersion': contract.contractVersion,
       'miniProgramId': contract.appId,
       'backendBaseUrl': contract.backendBaseUri.toString(),
-      'accessMode': contract.accessMode,
       'healthEndpoint': contract.healthEndpoint,
       'smokeTestCount': contract.smokeTests.length,
     };
@@ -541,7 +377,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'Contract file: ${result.contractPath}',
       'Mini-program: ${result.contract.appId}',
       'Backend base URL: ${result.contract.backendBaseUri}',
-      'Access mode: ${result.contract.accessMode}',
       'Smoke tests: ${result.contract.smokeTests.length}',
       'Next validation step:',
       'miniprogram publisher-api contract validate --contract ${result.contractPath}',
@@ -556,7 +391,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'Contract file: ${result.contractPath}',
       'Mini-program: ${result.contract.appId}',
       'Backend base URL: ${result.contract.backendBaseUri}',
-      'Access mode: ${result.contract.accessMode}',
       'Smoke tests: ${result.contract.smokeTests.length}',
     ].join('\n');
   }
@@ -569,8 +403,6 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       'Contract file: ${result.contractPath}',
       'Mini-program: ${result.contract.appId}',
       'Backend base URL: ${result.contract.backendBaseUri}',
-      'Access mode: ${result.contract.accessMode}',
-      'Access key provided: ${result.accessKeyProvided}',
       'Auth token provided: ${result.authTokenProvided}',
       'Passed: ${result.passed}',
       '',
@@ -586,36 +418,4 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     }
     return lines.join('\n');
   }
-
-  String _formatPublisherBackendContractHandoffResult(
-    _PublisherBackendContractHandoffResult result,
-  ) {
-    final handoff = result.packageResult.handoff;
-    return <String>[
-      'Provider-neutral Publisher API handoff package created.',
-      'Contract file: ${result.contractPath}',
-      'Package file: ${result.packageResult.filePath}',
-      'Mini-program: ${handoff.appId}',
-      'Title: ${handoff.title}',
-      'Static artifact base URL: ${handoff.apiBaseUri}',
-      if (handoff.backendBaseUri != null)
-        'Backend base URL: ${handoff.backendBaseUri}',
-      'Access mode: ${handoff.accessMode}',
-      'Access key included: ${handoff.accessKey != null}',
-      'Host developer next step:',
-      result.hostImportCommandText,
-    ].join('\n');
-  }
-}
-
-class _PublisherBackendContractHandoffResult {
-  const _PublisherBackendContractHandoffResult({
-    required this.contractPath,
-    required this.packageResult,
-    required this.hostImportCommandText,
-  });
-
-  final String contractPath;
-  final MiniProgramPartnerPackageResult packageResult;
-  final String hostImportCommandText;
 }

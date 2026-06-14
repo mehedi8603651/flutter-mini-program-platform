@@ -442,8 +442,8 @@ class MiniProgramStaticPublisher {
 This folder contains public/static delivery artifacts for `$miniProgramId`
 version `$version`.
 
-Upload the contents of this folder to GitHub Pages, a CDN, S3 public hosting,
-Cloudflare Pages, Netlify, Vercel static hosting, or another public static host.
+Upload the contents of this folder to any public static host, CDN, object
+storage website, or simple HTTPS file server.
 
 GitHub Pages users should keep the generated `.nojekyll` file so generated
 paths are served as normal static files. If this folder is committed inside a
@@ -457,9 +457,9 @@ MiniProgramEndpoint.public(
 )
 ```
 
-Public static delivery is unauthenticated. Do not publish private data or
-business-only mini-programs with this mode. Use protected AWS/GCP/backend
-delivery with a MiniProgram access key for production partner access control.
+Public static artifact delivery is unauthenticated. Do not publish secrets,
+private user data, auth state, payment data, or business rules into the
+mini-program artifacts. Put those behind your optional middle-server API.
 ''');
     writtenFiles.add(
       StaticPublishedFileRecord(

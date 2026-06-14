@@ -28,7 +28,7 @@ class SdkOfflineNotice extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    Icons.cloud_off_rounded,
+                    Icons.wifi_off_rounded,
                     color: theme.colorScheme.primary,
                   ),
                   const SizedBox(width: 12),

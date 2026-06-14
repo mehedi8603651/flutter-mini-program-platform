@@ -52,25 +52,21 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'toolingVersion': _miniProgramToolingVersion,
       'capabilityIds': _capabilityIds,
       'features': <String, bool>{
-        'firebaseHostingPublish': true,
         'publisherApiMock': true,
         'publisherBackendContractInit': true,
         'publisherBackendContractValidate': true,
         'publisherBackendContractSmoke': true,
-        'publisherBackendContractHandoff': true,
       },
       'commands': <String>[
         'embed init',
-        'publish --target firebase-hosting',
+        'publish --target static',
         'publisher-api scaffold --template mock',
         'publisher-api contract init',
         'publisher-api contract validate',
         'publisher-api contract smoke',
-        'publisher-api contract handoff',
         'publisher-api contract init',
         'publisher-api contract validate',
         'publisher-api contract smoke',
-        'publisher-api contract handoff',
       ],
     };
   }
@@ -85,9 +81,6 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
         'configured': false,
       };
     }
-    final activeCloudEnvironment = resolved.state.cloudEnvironmentNamed(
-      resolved.state.activeEnvironment,
-    );
     return <String, Object?>{
       'schemaVersion': 1,
       'command': 'env status',
@@ -97,24 +90,8 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
       'filePath': resolved.filePath,
       'repoRootPath': resolved.state.repoRootPath,
       'activeEnvironment': resolved.state.activeEnvironment,
-      'cloudEnvironmentCount': resolved.state.cloudEnvironments.length,
-      'activeCloudEnvironment': activeCloudEnvironment == null
-          ? null
-          : _cloudEnvironmentJson(activeCloudEnvironment),
       'initializedAtUtc': resolved.state.initializedAtUtc,
       'updatedAtUtc': resolved.state.updatedAtUtc,
-    };
-  }
-
-  Map<String, Object?> _cloudEnvironmentJson(
-    CloudEnvironmentConfiguration environment,
-  ) {
-    return <String, Object?>{
-      'name': environment.name,
-      'provider': environment.provider,
-      'values': Map<String, Object?>.from(environment.values),
-      'configuredAtUtc': environment.configuredAtUtc,
-      'updatedAtUtc': environment.updatedAtUtc,
     };
   }
 

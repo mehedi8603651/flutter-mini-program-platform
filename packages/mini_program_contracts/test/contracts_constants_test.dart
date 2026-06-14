@@ -70,22 +70,12 @@ void main() {
         'endpoint_not_configured',
       );
       expect(
-        MiniProgramErrorCodes.accessKeyNotConfigured,
-        'access_key_not_configured',
-      );
-      expect(MiniProgramErrorCodes.accessKeyMissing, 'access_key_missing');
-      expect(MiniProgramErrorCodes.accessKeyInvalid, 'access_key_invalid');
-      expect(
         MiniProgramErrorCodes.secureApiNotAllowlisted,
         'secure_api_not_allowlisted',
       );
     });
 
     test('Publisher API header and error values stay stable', () {
-      expect(
-        MiniProgramPublisherBackendHeaders.accessKey,
-        'x-mini-program-access-key',
-      );
       expect(MiniProgramPublisherBackendHeaders.appId, 'x-mini-program-app-id');
       expect(
         MiniProgramPublisherBackendHeaders.hostApp,

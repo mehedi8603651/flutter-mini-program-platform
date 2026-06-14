@@ -257,19 +257,7 @@ miniprogram validate
 miniprogram publish --target static --output public_mini_program --clean
 ```
 
-Firebase static artifact hosting:
-
-```powershell
-miniprogram publish --target firebase-hosting --env my-firebase-prod --clean
-```
-
-AWS/S3 static artifact hosting:
-
-```powershell
-miniprogram publish --target cloud --env my-aws-prod
-```
-
-All publish targets copy the same engine-neutral layout:
+Static publish writes the public artifact layout:
 
 ```text
 manifests/<appId>/manifest.json

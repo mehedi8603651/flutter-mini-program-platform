@@ -80,7 +80,10 @@ void main() {
           requested[0].headers[MiniProgramBackendHttpHeaders.sdkVersion],
           '1.0.0',
         );
-        expect(requested[0].headers[MiniProgramHttpHeaders.accessKey], isNull);
+        expect(
+          requested[0].headers.containsKey('x-mini-program-access-key'),
+          isFalse,
+        );
       },
     );
 
@@ -325,7 +328,7 @@ void main() {
       expect(requests, 2);
     });
 
-    test('sends access key to backend only when explicitly enabled', () async {
+    test('never sends artifact credential headers to backend', () async {
       final requestedHeaders = <String?>[];
       final connector = EndpointRoutingMiniProgramBackendConnector(
         backends: <String, MiniProgramBackendEndpoint>{
@@ -334,17 +337,13 @@ void main() {
           ),
           'trusted_coupon': MiniProgramBackendEndpoint(
             baseUri: Uri.parse('https://publisher.example.com/api/'),
-            sendAccessKeyToBackend: true,
           ),
-        },
-        accessKeys: const <String, String>{
-          'coupon': 'mpk_live_coupon',
-          'trusted_coupon': 'mpk_live_trusted',
         },
         deliveryContext: _deliveryContext,
         clientFactory: () => _RecordingClient((request) async {
           requestedHeaders.add(
-            request.headers[MiniProgramHttpHeaders.accessKey],
+            request.headers['x-mini-program-'
+                'access-key'],
           );
           return http.Response('{"ok":true}', 200);
         }),
@@ -363,11 +362,11 @@ void main() {
         ),
       );
 
-      expect(requestedHeaders, <String?>[null, 'mpk_live_trusted']);
+      expect(requestedHeaders, <String?>[null, null]);
     });
 
     test(
-      'sends request authorization headers without access key leakage',
+      'sends request authorization headers without artifact credential leakage',
       () async {
         final requestedHeaders = <Map<String, String>>[];
         final connector = EndpointRoutingMiniProgramBackendConnector(
@@ -376,7 +375,6 @@ void main() {
               baseUri: Uri.parse('https://publisher.example.com/api/'),
             ),
           },
-          accessKeys: const <String, String>{'coupon': 'mpk_live_coupon'},
           deliveryContext: _deliveryContext,
           clientFactory: () => _RecordingClient((request) async {
             requestedHeaders.add(request.headers);
@@ -395,8 +393,8 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(requestedHeaders.single['authorization'], 'Bearer id-token');
         expect(
-          requestedHeaders.single[MiniProgramHttpHeaders.accessKey],
-          isNull,
+          requestedHeaders.single.containsKey('x-mini-program-access-key'),
+          isFalse,
         );
       },
     );

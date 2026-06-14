@@ -1,9 +1,9 @@
 /// Provider-neutral Publisher API contract.
 ///
 /// Mini-program screens use relative endpoints. Optional runtime middle-server
-/// API configuration supplies the Publisher API base URL and optional
-/// MiniProgram access key. This contract is not a host-opening handoff; static
-/// mini-program opening uses `appId` and `artifactBaseUrl`.
+/// API configuration supplies the Publisher API base URL. This contract is not
+/// a host-opening handoff; static mini-program opening uses `appId` and
+/// `artifactBaseUrl`.
 library;
 
 /// Standard request header names used by Publisher APIs.
@@ -25,9 +25,6 @@ abstract final class MiniProgramPublisherBackendHeaders {
 
   /// Host locale, when available.
   static const String locale = 'x-mini-program-locale';
-
-  /// Partner access key for protected Publisher APIs.
-  static const String accessKey = 'x-mini-program-access-key';
 
   /// Publisher-owned signed-in user token.
   static const String authorization = 'authorization';
@@ -56,12 +53,6 @@ abstract final class MiniProgramPublisherBackendErrorCodes {
 
   /// A smoke route did not return the expected JSON object.
   static const String invalidJson = 'publisher_backend_invalid_json';
-
-  /// Protected Publisher API access requires a MiniProgram access key.
-  static const String accessKeyMissing = 'access_key_missing';
-
-  /// Protected Publisher API access rejected the MiniProgram access key.
-  static const String accessKeyInvalid = 'access_key_invalid';
 }
 
 /// Provider-neutral Publisher API contract document.
@@ -72,7 +63,6 @@ class MiniProgramPublisherBackendContract {
     this.contractVersion = currentContractVersion,
     required String appId,
     required Uri backendBaseUri,
-    String accessMode = accessModeProtected,
     String healthEndpoint = defaultHealthEndpoint,
     List<MiniProgramPublisherBackendSmokeCase>? smokeTests,
     bool allowLocalHttp = false,
@@ -81,7 +71,6 @@ class MiniProgramPublisherBackendContract {
          backendBaseUri,
          allowLocalHttp: allowLocalHttp,
        ),
-       accessMode = _normalizeAccessMode(accessMode),
        healthEndpoint = _normalizeRelativeEndpoint(
          healthEndpoint,
          'healthEndpoint',
@@ -131,8 +120,6 @@ class MiniProgramPublisherBackendContract {
       contractVersion: _readString(json, 'contractVersion'),
       appId: _readString(json, 'appId'),
       backendBaseUri: backendBaseUri,
-      accessMode:
-          _readOptionalString(json, 'accessMode') ?? accessModeProtected,
       healthEndpoint: healthEndpoint,
       smokeTests: _readSmokeTests(
         json['smokeTests'],
@@ -151,12 +138,6 @@ class MiniProgramPublisherBackendContract {
   /// Contract document type.
   static const String documentType = 'mini_program_publisher_backend_contract';
 
-  /// Protected Publisher API mode.
-  static const String accessModeProtected = 'protected';
-
-  /// Public Publisher API mode.
-  static const String accessModePublic = 'public';
-
   /// Default health route.
   static const String defaultHealthEndpoint = 'health';
 
@@ -172,17 +153,11 @@ class MiniProgramPublisherBackendContract {
   /// Publisher-owned Publisher API base URL.
   final Uri backendBaseUri;
 
-  /// `protected` or `public`.
-  final String accessMode;
-
   /// Relative health endpoint.
   final String healthEndpoint;
 
   /// Smoke cases used by provider-neutral tooling.
   final List<MiniProgramPublisherBackendSmokeCase> smokeTests;
-
-  /// Whether the contract is protected.
-  bool get isProtected => accessMode == accessModeProtected;
 
   /// Serializes the contract to stable JSON.
   Map<String, Object?> toJson() {
@@ -192,7 +167,6 @@ class MiniProgramPublisherBackendContract {
       'contractVersion': contractVersion,
       'appId': appId,
       'backendBaseUrl': backendBaseUri.toString(),
-      'accessMode': accessMode,
       'healthEndpoint': healthEndpoint,
       'smokeTests': smokeTests.map((test) => test.toJson()).toList(),
     };
@@ -389,17 +363,6 @@ bool _isAllowedHttpHost(String host, {required bool allowLocalHttp}) {
   return first == 10 ||
       (first == 172 && second >= 16 && second <= 31) ||
       (first == 192 && second == 168);
-}
-
-String _normalizeAccessMode(String value) {
-  final normalized = value.trim().toLowerCase();
-  if (normalized == MiniProgramPublisherBackendContract.accessModeProtected ||
-      normalized == MiniProgramPublisherBackendContract.accessModePublic) {
-    return normalized;
-  }
-  throw const FormatException(
-    'Publisher API contract accessMode must be "protected" or "public".',
-  );
 }
 
 String _normalizeRelativeEndpoint(String value, String label) {

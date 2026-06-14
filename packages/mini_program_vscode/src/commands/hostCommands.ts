@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
-  buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
   buildHostEndpointAddArgs,
   buildHostEndpointImportArgs,
@@ -19,7 +18,6 @@ import {
 
 import {
   chooseAppIdForRegistry,
-  chooseEndpointAccessMode,
   chooseForce,
   chooseHostMiniProgramEntry,
   choosePublisherBackendMode,
@@ -50,34 +48,6 @@ export async function embedInit(
   await runWorkspaceCliCommand(
     'Embed Init',
     buildEmbedInitArgs({ projectRoot, force }),
-    output,
-    refreshStatus,
-  );
-}
-
-export async function configureHostCloud(
-  output: vscode.OutputChannel,
-  refreshStatus: (remote: boolean) => Promise<void>,
-): Promise<void> {
-  const projectRoot = await requireHostProjectRoot();
-  if (!projectRoot) {
-    return;
-  }
-  const envName = await vscode.window.showInputBox({
-    prompt: 'Optional cloud environment name',
-    placeHolder: 'Leave blank to use active environment',
-    ignoreFocusOut: true,
-  });
-  if (envName === undefined) {
-    return;
-  }
-
-  await runWorkspaceCliCommand(
-    'Configure Host Cloud',
-    buildEmbedCloudConfigureArgs({
-      projectRoot,
-      envName: envName.trim() || undefined,
-    }),
     output,
     refreshStatus,
   );
@@ -154,25 +124,6 @@ export async function addHostEndpoint(
   if (!apiBaseUrl) {
     return;
   }
-  const accessMode = await chooseEndpointAccessMode();
-  if (!accessMode) {
-    return;
-  }
-  let accessKey: string | undefined;
-  if (accessMode === 'protected') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'MiniProgram access key',
-      password: true,
-      placeHolder: 'mpk_live_...',
-      ignoreFocusOut: true,
-      validateInput: (input) =>
-        input.trim() ? undefined : 'Access key is required.',
-    });
-    if (!value) {
-      return;
-    }
-    accessKey = value.trim();
-  }
   const backend = await choosePublisherBackendMode();
   if (!backend) {
     return;
@@ -191,8 +142,6 @@ export async function addHostEndpoint(
       backendBaseUrl: backend.kind === 'remote' ? backend.backendBaseUrl : undefined,
       backendLocalMock: backend.kind === 'local_mock',
       backendLocalMockPort: backend.kind === 'local_mock' ? backend.port : undefined,
-      accessKey,
-      public: accessMode === 'public',
       projectRoot,
       force,
     }),
@@ -216,20 +165,10 @@ export async function runHostApp(): Promise<void> {
   if (!deviceId) {
     return;
   }
-  const envName = await vscode.window.showInputBox({
-    prompt: 'Optional cloud environment name',
-    placeHolder: 'Leave blank to use active/host environment',
-    ignoreFocusOut: true,
-  });
-  if (envName === undefined) {
-    return;
-  }
-
   const cliPath = configuredCliPath();
   const args = buildHostRunArgs({
     deviceId: deviceId.trim(),
     projectRoot,
-    envName: envName.trim() || undefined,
   });
   const terminal = vscode.window.createTerminal({
     name: 'MiniProgram Host',

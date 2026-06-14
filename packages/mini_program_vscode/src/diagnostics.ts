@@ -21,8 +21,7 @@ export type DiagnosticSeverity = 'ok' | 'warning' | 'error';
 export type DiagnosticScope =
   | 'workspace'
   | 'miniProgram'
-  | 'hostApp'
-  | 'cloudDelivery';
+  | 'hostApp';
 
 export interface DiagnosticCheck {
   readonly id: string;
@@ -55,7 +54,7 @@ export interface BuildDiagnosticsOptions {
   readonly doctorReport?: Record<string, unknown>;
   readonly cliCapabilities?: {
     readonly checked: boolean;
-    readonly supportsFirebaseHostingPublish?: boolean;
+    readonly supportsStaticPublish?: boolean;
     readonly supportsPublisherApiMock?: boolean;
     readonly supportsPublisherBackendContract?: boolean;
     readonly supportsCapabilityDiscovery?: boolean;
@@ -110,15 +109,6 @@ export async function buildDiagnosticsReport(
         workflowReport,
         options.scope === 'hostApp',
       )),
-    );
-  }
-  if (options.scope === 'workspace' || options.scope === 'cloudDelivery') {
-    checks.push(
-      ...buildCloudDeliveryChecks(
-        workflowReport,
-        options.remoteWorkflowReport,
-        options.scope === 'cloudDelivery',
-      ),
     );
   }
   if (options.doctorReport) {
@@ -274,7 +264,7 @@ async function buildMiniProgramChecks(
       partnerPackages > 0 ? 'ok' : 'warning',
       `${partnerPackages} partner package file(s) found.`,
       undefined,
-      partnerPackages > 0 ? undefined : 'Run MiniProgram: Create Partner Package after creating an access key.',
+      partnerPackages > 0 ? undefined : 'Run MiniProgram: Create Partner Package after publishing static artifacts.',
     ),
     check(
       'mini_program.publisher_backend_usage',
@@ -289,7 +279,7 @@ async function buildMiniProgramChecks(
         ? `Request IDs: ${backendRequestIds.join(', ')}`
         : undefined,
       usesPublisherBackend
-        ? 'When adding this mini-program to a host, include --backend-base-url in the partner package or host endpoint.'
+        ? 'Configure an optional runtime middleServerApiUrl/Publisher API URL when importing or adding the host endpoint.'
         : undefined,
     ),
     check(
@@ -307,7 +297,7 @@ async function buildMiniProgramChecks(
       hasPublisherBackendStarter
         ? 'Run MiniProgram: Run Mock Publisher API for local testing, or point the host endpoint at your Publisher API.'
         : usesBackendState
-          ? 'Run MiniProgram: Setup Mock Publisher API for a local mock, or connect a real Publisher API with --backend-base-url.'
+          ? 'Run MiniProgram: Setup Mock Publisher API for a local mock, or connect a real Publisher API as the optional runtime API.'
           : undefined,
     ),
   ];
@@ -347,27 +337,14 @@ async function buildHostAppChecks(
   const endpointCount = asNumber(hostApp.endpointCount, endpoints.length);
   const endpointIssues = endpoints
     .map((entry) => asRecord(entry))
-    .filter((entry) => {
-      const accessMode = asString(
-        entry.accessMode,
-        asBoolean(entry.hasAccessKey) ? 'protected' : 'public',
-      );
-      return (
-        !asString(entry.apiBaseUri) ||
-        (accessMode === 'protected' && !asBoolean(entry.hasAccessKey)) ||
-        (accessMode !== 'protected' && accessMode !== 'public')
-      );
-    })
+    .filter((entry) => !asString(entry.apiBaseUri))
     .map((entry) => asString(entry.appId, 'unknown'));
-  const endpointModeSummary = endpoints
+  const endpointArtifactSummaries = endpoints
     .map((entry) => {
       const endpoint = asRecord(entry);
       const appId = asString(endpoint.appId);
-      const accessMode = asString(
-        endpoint.accessMode,
-        asBoolean(endpoint.hasAccessKey) ? 'protected' : 'public',
-      );
-      return appId ? `${appId}:${accessMode}` : '';
+      const artifactBaseUrl = asString(endpoint.apiBaseUri);
+      return appId ? `${appId}:${artifactBaseUrl ? 'static' : 'missing'}` : '';
     })
     .filter(Boolean)
     .join(', ');
@@ -469,9 +446,9 @@ async function buildHostAppChecks(
       'Endpoint entries',
       endpointIssues.length === 0 ? 'ok' : 'error',
       endpointIssues.length === 0
-        ? 'Endpoint entries include API URL and valid public/protected access metadata.'
+        ? 'Endpoint entries include static artifact base URLs.'
         : `Incomplete endpoint entries: ${endpointIssues.join(', ')}.`,
-      endpointModeSummary || undefined,
+      endpointArtifactSummaries || undefined,
       endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
     ),
     check(
@@ -537,10 +514,10 @@ async function buildHostAppChecks(
         : 'Re-add the endpoint with MiniProgram: Add Host Endpoint or re-import the partner package.',
     ),
     check(
-      'host_app.access_key_security_model',
-      'Access-key security model',
+      'host_app.runtime_api_security_model',
+      'Runtime API security model',
       'ok',
-      'MiniProgram access keys protect delivery access only; use JWT/OAuth/session tokens through callSecureApi for protected user APIs.',
+      'Auth, payments, database access, provider SDKs, and secrets belong behind the optional middle-server API.',
     ),
     check(
       'host_app.scope',
@@ -572,27 +549,17 @@ async function buildPublicEndpointChecks(
     const endpoint = asRecord(rawEndpoint);
     const appId = asString(endpoint.appId);
     const apiBaseUri = asString(endpoint.apiBaseUri);
-    const accessMode = asString(
-      endpoint.accessMode,
-      asBoolean(endpoint.hasAccessKey) ? 'protected' : 'public',
-    );
-    if (!appId || !apiBaseUri || accessMode !== 'public') {
+    if (!appId || !apiBaseUri) {
       continue;
     }
 
-    const hasAccessKey = asBoolean(endpoint.hasAccessKey);
     checks.push(
       check(
-        `host_app.public_endpoint_access.${appId}`,
-        `Public endpoint access: ${appId}`,
-        hasAccessKey ? 'error' : 'ok',
-        hasAccessKey
-          ? 'Public endpoint metadata should not include a MiniProgram access key.'
-          : 'Public endpoint does not require a MiniProgram access key.',
+        `host_app.static_artifact_endpoint.${appId}`,
+        `Static artifact endpoint: ${appId}`,
+        'ok',
+        'Static artifact endpoint uses public static files.',
         apiBaseUri,
-        hasAccessKey
-          ? 'Re-add the endpoint with MiniProgram: Add Host Endpoint and choose public mode.'
-          : undefined,
       ),
     );
 
@@ -612,31 +579,9 @@ async function buildPublicEndpointChecks(
         manifestResponse.ok ? manifestUrl : `${manifestUrl} (${manifestResponse.error})`,
         manifestResponse.ok
           ? undefined
-          : 'Confirm GitHub Pages/CDN is deployed and the host endpoint base URL ends with the static output folder.',
+          : 'Confirm the static artifact host is deployed and the host endpoint base URL points at the static output folder.',
       ),
     );
-    if (isFirebaseHostingUrl(apiBaseUri)) {
-      const allowOrigin = headerValue(
-        manifestResponse.headers,
-        'access-control-allow-origin',
-      );
-      checks.push(
-        check(
-          `host_app.firebase_hosting_cors.${appId}`,
-          `Firebase Hosting CORS: ${appId}`,
-          manifestResponse.ok && allowOrigin ? 'ok' : 'warning',
-          manifestResponse.ok && allowOrigin
-            ? 'Firebase Hosting manifest includes browser CORS headers.'
-            : 'Firebase Hosting manifest is missing browser CORS headers.',
-          manifestResponse.ok
-            ? `${manifestUrl}\nAccess-Control-Allow-Origin: ${allowOrigin || 'missing'}`
-            : `${manifestUrl} (${manifestResponse.error})`,
-          manifestResponse.ok && allowOrigin
-            ? undefined
-            : 'Republish with mini_program_tooling 0.3.42 or newer.',
-        ),
-      );
-    }
 
     const version = asString(manifestResponse.json?.version);
     const entry = asString(manifestResponse.json?.entry);
@@ -677,124 +622,6 @@ async function buildPublicEndpointChecks(
   return checks;
 }
 
-function buildCloudDeliveryChecks(
-  workflowReport: WorkflowStatusReport | undefined,
-  remoteWorkflowReport: WorkflowStatusReport | undefined,
-  strictScope: boolean,
-): DiagnosticCheck[] {
-  const localEnvironment = asRecord(workflowReport?.environment);
-  const remoteReport = remoteWorkflowReport ?? workflowReport;
-  const remote = asRecord(remoteReport?.remote);
-  const cloudStatus = asRecord(remote.cloudStatus);
-  const app = asRecord(remote.app);
-  const accessKeys = asRecord(remote.accessKeys);
-  const errors = asStringList(remote.errors);
-  const configured = asBoolean(localEnvironment.configured);
-  const remoteChecked = asBoolean(remote.checked);
-  const apiBaseUrl = asString(localEnvironment.apiBaseUrl);
-  const provider = asString(localEnvironment.provider);
-  const selectedEnvironment = asString(localEnvironment.selectedEnvironment);
-  const activeAccessKeys = asNumber(accessKeys.activeCount, -1);
-
-  const uncheckedSeverity: DiagnosticSeverity = strictScope ? 'warning' : 'ok';
-  const uncheckedSummary = strictScope
-    ? 'Remote status was not checked.'
-    : 'Remote status is skipped for local workspace diagnostics.';
-
-  return [
-    check(
-      'cloud.env_configured',
-      'Environment configuration',
-      configured ? 'ok' : 'warning',
-      configured ? `Environment: ${selectedEnvironment || 'configured'}.` : 'No environment configuration was found.',
-      provider ? `Provider: ${provider}` : undefined,
-      configured ? undefined : 'Run MiniProgram: Env Init and MiniProgram: Configure AWS Environment.',
-    ),
-    check(
-      'cloud.api_base_url',
-      'Artifact API base URL',
-      apiBaseUrl ? 'ok' : 'warning',
-      apiBaseUrl ? `API base URL: ${apiBaseUrl}` : 'No API base URL is configured yet.',
-      undefined,
-      apiBaseUrl ? undefined : 'Run MiniProgram: Cloud Deploy, then MiniProgram: Cloud Outputs or Configure Host Cloud.',
-    ),
-    check(
-      'cloud.access_key_policy',
-      'Access-key policy',
-      asBoolean(localEnvironment.requireAccessKeys) ? 'ok' : 'warning',
-      asBoolean(localEnvironment.requireAccessKeys)
-        ? 'Access keys are required by the selected environment.'
-        : 'Access-key enforcement is not enabled or not reported.',
-      undefined,
-      asBoolean(localEnvironment.requireAccessKeys) ? undefined : 'For protected delivery, configure AWS environment with require access keys enabled.',
-    ),
-    check(
-      'cloud.remote_checked',
-      'Remote diagnostics',
-      remoteChecked ? 'ok' : uncheckedSeverity,
-      remoteChecked ? 'Remote status was checked.' : uncheckedSummary,
-      undefined,
-      remoteChecked ? undefined : 'Run MiniProgram: Diagnose Cloud Delivery.',
-    ),
-    check(
-      'cloud.stack_health',
-      'Cloud stack health',
-      !remoteChecked
-        ? uncheckedSeverity
-        : asBoolean(cloudStatus.healthy)
-          ? 'ok'
-          : 'error',
-      !remoteChecked
-        ? uncheckedSummary
-        : asBoolean(cloudStatus.healthy)
-          ? 'Cloud stack is healthy.'
-          : 'Cloud stack is not healthy.',
-      asString(cloudStatus.stackStatus),
-      !remoteChecked || asBoolean(cloudStatus.healthy) ? undefined : 'Run MiniProgram: Cloud Deploy or inspect MiniProgram: Cloud Status.',
-    ),
-    check(
-      'cloud.latest_version',
-      'Latest published version',
-      !remoteChecked
-        ? uncheckedSeverity
-        : asString(app.latestVersion)
-          ? 'ok'
-          : 'warning',
-      !remoteChecked
-        ? uncheckedSummary
-        : asString(app.latestVersion)
-          ? `Latest version: ${asString(app.latestVersion)}.`
-          : 'No latest published version was reported.',
-      undefined,
-      !remoteChecked || asString(app.latestVersion) ? undefined : 'Run MiniProgram: Publish.',
-    ),
-    check(
-      'cloud.access_keys',
-      'Active access keys',
-      !remoteChecked
-        ? uncheckedSeverity
-        : activeAccessKeys > 0
-          ? 'ok'
-          : 'warning',
-      !remoteChecked
-        ? uncheckedSummary
-        : activeAccessKeys >= 0
-          ? `${activeAccessKeys} active access key(s).`
-          : 'Access-key status was not reported.',
-      undefined,
-      !remoteChecked || activeAccessKeys > 0 ? undefined : 'Run MiniProgram: Create Access Key.',
-    ),
-    check(
-      'cloud.remote_errors',
-      'Remote errors',
-      errors.length === 0 ? 'ok' : 'error',
-      errors.length === 0 ? 'No remote errors reported.' : `${errors.length} remote error(s) reported.`,
-      errors.join('; '),
-      errors.length === 0 ? undefined : 'Run MiniProgram: Cloud Status and check the MiniProgram output channel.',
-    ),
-  ];
-}
-
 function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticCheck {
   const summary = asRecord(doctorReport.summary);
   const errors = asNumber(summary.error);
@@ -812,26 +639,22 @@ function buildDoctorCheck(doctorReport: Record<string, unknown>): DiagnosticChec
 }
 
 function buildCliCapabilityCheck(capability: {
-  readonly supportsFirebaseHostingPublish?: boolean;
+  readonly supportsStaticPublish?: boolean;
   readonly supportsPublisherApiMock?: boolean;
   readonly supportsPublisherBackendContract?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
   readonly toolingVersion?: string;
   readonly detail?: string;
 }): DiagnosticCheck {
-  const supportsFirebaseHostingPublish =
-    capability.supportsFirebaseHostingPublish ?? false;
-  const supportsFirebaseHostingCors =
-    supportsFirebaseHostingPublish &&
-    toolingVersionAtLeast(capability.toolingVersion, '0.3.42');
   const supportsPublisherApiMock = capability.supportsPublisherApiMock ?? false;
+  const supportsStaticPublish = capability.supportsStaticPublish ?? false;
   const supportsPublisherBackendContract =
     capability.supportsPublisherBackendContract ?? false;
   const supportsCapabilityDiscovery = capability.supportsCapabilityDiscovery ?? false;
   const supportsExpectedCli =
     supportsPublisherApiMock &&
+    supportsStaticPublish &&
     supportsPublisherBackendContract &&
-    supportsFirebaseHostingCors &&
     supportsCapabilityDiscovery;
   const versionSuffix = capability.toolingVersion
     ? ` Version: ${capability.toolingVersion}.`
@@ -841,52 +664,17 @@ function buildCliCapabilityCheck(capability: {
     'CLI Publisher API commands',
     supportsExpectedCli ? 'ok' : 'warning',
     supportsExpectedCli
-      ? `Configured CLI supports Publisher API mock, provider-neutral contract handoff, Firebase Hosting static delivery, and quiet capability discovery.${versionSuffix}`
-      : supportsPublisherApiMock &&
-          supportsPublisherBackendContract &&
-          supportsFirebaseHostingCors
+      ? `Configured CLI supports static artifact publishing, Publisher API mock, runtime contract checks, and quiet capability discovery.${versionSuffix}`
+      : supportsStaticPublish &&
+          supportsPublisherApiMock &&
+          supportsPublisherBackendContract
         ? 'Configured CLI supports Publisher API commands but lacks quiet capability discovery.'
-        : supportsFirebaseHostingPublish && !supportsFirebaseHostingCors
-          ? 'Configured CLI supports Firebase Hosting static delivery but lacks the 0.3.42 CORS/version metadata fix.'
-        : 'Configured CLI is missing provider-neutral Publisher API mock or contract commands.',
+        : 'Configured CLI is missing static artifact publish or provider-neutral Publisher API commands.',
     capability.detail,
     supportsExpectedCli
       ? undefined
       : 'Activate the local mini_program_tooling package or update miniProgram.cliPath.',
   );
-}
-
-function toolingVersionAtLeast(
-  version: string | undefined,
-  minimum: string,
-): boolean {
-  if (!version) {
-    return false;
-  }
-  const currentParts = version
-    .split(/[^0-9]+/)
-    .filter(Boolean)
-    .slice(0, 3)
-    .map((part) => Number.parseInt(part, 10));
-  const minimumParts = minimum
-    .split('.')
-    .slice(0, 3)
-    .map((part) => Number.parseInt(part, 10));
-  for (let index = 0; index < 3; index += 1) {
-    const current = Number.isFinite(currentParts[index])
-      ? currentParts[index]
-      : 0;
-    const required = Number.isFinite(minimumParts[index])
-      ? minimumParts[index]
-      : 0;
-    if (current > required) {
-      return true;
-    }
-    if (current < required) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function check(
@@ -914,8 +702,6 @@ function titleForScope(scope: DiagnosticScope): string {
       return 'MiniProgram mini-program diagnostics';
     case 'hostApp':
       return 'MiniProgram host app diagnostics';
-    case 'cloudDelivery':
-      return 'MiniProgram cloud artifact hosting diagnostics';
     default:
       return 'MiniProgram workspace diagnostics';
   }
@@ -1125,22 +911,3 @@ async function getText(
   });
 }
 
-function isFirebaseHostingUrl(value: string): boolean {
-  try {
-    const host = new URL(value).hostname.toLowerCase();
-    return host.endsWith('.web.app') || host.endsWith('.firebaseapp.com');
-  } catch {
-    return false;
-  }
-}
-
-function headerValue(
-  headers: http.IncomingHttpHeaders | undefined,
-  headerName: string,
-): string | undefined {
-  const value = headers?.[headerName.toLowerCase()];
-  if (Array.isArray(value)) {
-    return value.join(', ');
-  }
-  return value;
-}

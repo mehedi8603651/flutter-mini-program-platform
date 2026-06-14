@@ -326,16 +326,16 @@ void main() {
     );
 
     test(
-      'clearAllThirdParty preserves protected entries after restart',
+      'clearAllThirdParty preserves host-pinned entries after restart',
       () async {
         await _withTempDirectory((directory) async {
           final manager = _manager(directory);
 
           await manager.set(
             appId: 'coupon',
-            key: 'protected',
+            key: 'hostPinned',
             value: 'keep',
-            priority: MiniProgramCachePriority.protected,
+            priority: MiniProgramCachePriority.hostPinned,
           );
           await manager.set(appId: 'coupon', key: 'normal', value: 'drop');
 
@@ -344,7 +344,7 @@ void main() {
           expect(
             await _manager(
               directory,
-            ).get<String>(appId: 'coupon', key: 'protected'),
+            ).get<String>(appId: 'coupon', key: 'hostPinned'),
             'keep',
           );
           expect(

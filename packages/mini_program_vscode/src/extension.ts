@@ -10,16 +10,10 @@ import {
 import {
   createMiniProgram,
   previewMiniProgram,
-  publishFirebaseHostingMiniProgram,
   publishMiniProgram,
   publishPublicStaticMiniProgram,
 } from './commands/coreCommands';
 import {
-  cloudDeploy,
-  cloudOutputs,
-  cloudStatus,
-  configureAwsEnvironment,
-  configureFirebaseEnvironment,
   envInit,
   environmentStatus,
   useEnvironment,
@@ -34,7 +28,6 @@ import {
 import {
   addHostEndpoint,
   addMiniProgramToRegistry,
-  configureHostCloud,
   copyDemoHostButton,
   embedInit,
   generateMiniProgramRegistry,
@@ -54,16 +47,11 @@ import {
 import {
   copyMockBackendHostCommand,
   copyPublisherBackendUrls,
-  createAccessKey,
   createPartnerPackage,
-  listAccessKeys,
   openPartnerPackage,
-  revokeAccessKey,
-  rotateAccessKey,
   validatePartnerPackage,
 } from './commands/partnerCommands';
 import {
-  publisherBackendContractHandoff,
   publisherBackendContractInit,
   publisherBackendContractSmoke,
   publisherBackendContractValidate,
@@ -135,9 +123,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.refreshStatus', () =>
       refreshStatus(false),
     ),
-    vscode.commands.registerCommand('miniProgramTools.refreshRemoteStatus', () =>
-      refreshStatus(true),
-    ),
     vscode.commands.registerCommand('miniProgramTools.createMiniProgram', () =>
       createMiniProgram(output),
     ),
@@ -166,14 +151,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publishPublicStaticMiniProgram', () =>
       publishPublicStaticMiniProgram(output, refreshStatus),
     ),
-    vscode.commands.registerCommand('miniProgramTools.publishFirebaseHostingMiniProgram', () =>
-      publishFirebaseHostingMiniProgram(output, () => refreshStatus(false)),
-    ),
     vscode.commands.registerCommand('miniProgramTools.embedInit', () =>
       embedInit(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.configureHostCloud', () =>
-      configureHostCloud(output, refreshStatus),
     ),
     vscode.commands.registerCommand('miniProgramTools.importHostEndpoint', () =>
       importHostEndpoint(output, refreshStatus),
@@ -187,26 +166,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.envInit', () =>
       envInit(output, refreshStatus),
     ),
-    vscode.commands.registerCommand('miniProgramTools.configureAwsEnvironment', () =>
-      configureAwsEnvironment(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.configureFirebaseEnvironment', () =>
-      configureFirebaseEnvironment(output, refreshStatus),
-    ),
     vscode.commands.registerCommand('miniProgramTools.useEnvironment', () =>
       useEnvironment(output, refreshStatus),
     ),
     vscode.commands.registerCommand('miniProgramTools.environmentStatus', () =>
       environmentStatus(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.cloudDeploy', () =>
-      cloudDeploy(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.cloudStatus', () =>
-      cloudStatus(output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.cloudOutputs', () =>
-      cloudOutputs(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.backendInit', () =>
       backendInit(output, refreshStatus),
@@ -241,26 +205,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.publisherBackendContractSmoke', () =>
       publisherBackendContractSmoke(output),
     ),
-    vscode.commands.registerCommand('miniProgramTools.publisherBackendContractHandoff', () =>
-      publisherBackendContractHandoff(output, refreshStatus),
-    ),
     vscode.commands.registerCommand('miniProgramTools.copyPublisherBackendUrls', () =>
       copyPublisherBackendUrls(output),
     ),
     vscode.commands.registerCommand('miniProgramTools.copyMockBackendHostCommand', () =>
       copyMockBackendHostCommand(),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.createAccessKey', () =>
-      createAccessKey(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.listAccessKeys', () =>
-      listAccessKeys(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.revokeAccessKey', () =>
-      revokeAccessKey(output, refreshStatus),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.rotateAccessKey', () =>
-      rotateAccessKey(output, refreshStatus),
     ),
     vscode.commands.registerCommand('miniProgramTools.createPartnerPackage', () =>
       createPartnerPackage(output, refreshStatus),
@@ -280,14 +229,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('miniProgramTools.diagnoseHostApp', () =>
       diagnoseWorkspace('hostApp', output),
     ),
-    vscode.commands.registerCommand('miniProgramTools.diagnoseCloudDelivery', () =>
-      diagnoseWorkspace('cloudDelivery', output),
-    ),
     vscode.commands.registerCommand('miniProgramTools.setupNewMiniProgram', () =>
       runGuidedWorkflow('setupNewMiniProgram', output),
-    ),
-    vscode.commands.registerCommand('miniProgramTools.publishMiniProgramToAws', () =>
-      runGuidedWorkflow('publishMiniProgramToAws', output),
     ),
     vscode.commands.registerCommand('miniProgramTools.preparePartnerHandoff', () =>
       runGuidedWorkflow('preparePartnerHandoff', output),

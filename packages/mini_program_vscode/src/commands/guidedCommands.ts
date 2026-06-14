@@ -3,19 +3,15 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
-  buildAccessKeyCreateArgs,
-  buildAccessKeyListArgs,
   buildBuildArgs,
-  buildCloudAppInfoArgs,
-  buildCloudStatusArgs,
   buildCreateArgs,
   buildDoctorArgs,
-  buildEmbedCloudConfigureArgs,
   buildEmbedInitArgs,
   buildHostEndpointAddArgs,
   buildHostEndpointImportArgs,
   buildHostRunArgs,
   buildPartnerPackageArgs,
+  buildPublishArgs,
   buildValidateArgs,
   buildWorkflowStatusArgs,
   formatCommandLine,
@@ -47,26 +43,24 @@ import {
   chooseMiniProgramBackendStarter,
   choosePartnerPackageFile,
   choosePartnerPackageOutputPath,
+  chooseStaticClean,
+  chooseStaticOutputFolder,
   configuredCliPath,
   configuredDefaultPreviewDevice,
   detectPublisherApiCliCapabilities,
   diagnosticCommandTitle,
   errorMessage,
-  extractAccessKey,
   parseJsonObject,
   promptAppId,
   promptHostEndpointInputs,
-  promptKeyId,
-  promptOptionalEnvName,
   readWorkspaceManifest,
   requireHostProjectRoot,
   requireMiniProgramRoot,
   requireWorkspacePath,
   resolveCreateOutputRoot,
   runGuidedCliStep,
-  runGuidedCliStepCapture,
-  runGuidedMiniProgramBuildValidatePublish,
   titleFromAppId,
+  validateAbsoluteUrl,
   validateAppId,
 } from '../extensionSupport';
 import {
@@ -119,24 +113,6 @@ export async function diagnoseWorkspace(
     output.appendLine(`Doctor failed: ${errorMessage(error)}`);
   }
 
-  let remoteWorkflowReport;
-  if (scope === 'cloudDelivery') {
-    const remoteArgs = buildWorkflowStatusArgs({ workspacePath, remote: true });
-    output.appendLine(`> ${formatRedactedCommandLine(cliPath, remoteArgs)}`);
-    try {
-      const result = await runCli(cliPath, remoteArgs, {
-        cwd: workspacePath,
-        timeoutMs: 120000,
-      });
-      if (result.stderr.trim()) {
-        output.append(redactSecrets(result.stderr));
-      }
-      remoteWorkflowReport = parseWorkflowStatusJson(result.stdout);
-    } catch (error) {
-      output.appendLine(`Remote workflow status failed: ${errorMessage(error)}`);
-    }
-  }
-
   const cliCapabilities = await detectPublisherApiCliCapabilities(
     workspacePath,
     output,
@@ -146,7 +122,6 @@ export async function diagnoseWorkspace(
     workspacePath,
     scope,
     workflowReport,
-    remoteWorkflowReport,
     doctorReport,
     cliCapabilities,
   });
@@ -178,8 +153,8 @@ export async function runGuidedWorkflow(
       case 'setupNewMiniProgram':
         completed = await guidedSetupNewMiniProgram(output);
         break;
-      case 'publishMiniProgramToAws':
-        completed = await guidedPublishMiniProgramToAws(output);
+      case 'publishMiniProgramStatic':
+        completed = await guidedPublishMiniProgramStatic(output);
         break;
       case 'preparePartnerHandoff':
         completed = await guidedPreparePartnerHandoff(output);
@@ -286,22 +261,48 @@ export async function guidedSetupNewMiniProgram(
   return true;
 }
 
-export async function guidedPublishMiniProgramToAws(
+export async function guidedPublishMiniProgramStatic(
   output: vscode.OutputChannel,
 ): Promise<boolean> {
   const workspacePath = await requireMiniProgramRoot();
   if (!workspacePath) {
     return false;
   }
-  const envName = await promptOptionalEnvName();
-  if (envName === undefined) {
+  const outputPath = await chooseStaticOutputFolder();
+  if (!outputPath) {
     return false;
   }
-  if (!(await runGuidedMiniProgramBuildValidatePublish(workspacePath, envName, output))) {
+  const clean = await chooseStaticClean();
+  if (clean === undefined) {
     return false;
   }
-  await diagnoseWorkspace('cloudDelivery', output);
-  return true;
+  if (!(await runGuidedCliStep(
+    'Build',
+    buildBuildArgs({ miniProgramRoot: workspacePath }),
+    workspacePath,
+    output,
+  ))) {
+    return false;
+  }
+  if (!(await runGuidedCliStep(
+    'Validate',
+    buildValidateArgs({ miniProgramRoot: workspacePath }),
+    workspacePath,
+    output,
+  ))) {
+    return false;
+  }
+  return runGuidedCliStep(
+    'Publish Static Artifacts',
+    buildPublishArgs({
+      target: 'static',
+      outputPath,
+      clean,
+      miniProgramRoot: workspacePath,
+    }),
+    workspacePath,
+    output,
+  );
 }
 
 export async function guidedPreparePartnerHandoff(
@@ -323,36 +324,20 @@ export async function guidedPreparePartnerHandoff(
   if (title === undefined) {
     return false;
   }
-  const envName = await promptOptionalEnvName();
-  if (envName === undefined) {
-    return false;
-  }
-  const keyId = await promptKeyId('Access key id for this host/partner', 'host-a');
-  if (!keyId) {
+  const artifactBaseUrl = await vscode.window.showInputBox({
+    prompt: 'Public static artifact base URL',
+    placeHolder: 'https://cdn.example.com/coupon_demo/',
+    ignoreFocusOut: true,
+    validateInput: validateAbsoluteUrl,
+  });
+  if (!artifactBaseUrl) {
     return false;
   }
   const outputPath = await choosePartnerPackageOutputPath(workspacePath, appId);
   if (!outputPath) {
     return false;
   }
-
-  if (!(await runGuidedMiniProgramBuildValidatePublish(workspacePath, envName, output))) {
-    return false;
-  }
-  const accessKeyResult = await runGuidedCliStepCapture(
-    'Create Access Key',
-    buildAccessKeyCreateArgs({ appId, keyId, envName }),
-    workspacePath,
-    output,
-  );
-  if (!accessKeyResult) {
-    return false;
-  }
-  const accessKey = extractAccessKey(accessKeyResult.stdout);
-  if (!accessKey) {
-    vscode.window.showErrorMessage(
-      'Access key was created, but the generated key could not be read from CLI output.',
-    );
+  if (!(await guidedPublishMiniProgramStatic(output))) {
     return false;
   }
   if (!(await runGuidedCliStep(
@@ -360,8 +345,7 @@ export async function guidedPreparePartnerHandoff(
     buildPartnerPackageArgs({
       appId,
       title: title.trim() || undefined,
-      accessKey,
-      envName,
+      apiBaseUrl: artifactBaseUrl.trim(),
       outputPath,
       rootPath: workspacePath,
     }),
@@ -390,43 +374,6 @@ export async function guidedSetupHostApp(output: vscode.OutputChannel): Promise<
   ))) {
     return false;
   }
-
-  const configureCloud = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Configure host cloud',
-        description: 'Resolve backend API URL from active or selected env',
-        value: true,
-      },
-      {
-        label: 'Skip cloud configuration',
-        description: 'Use endpoint maps only for now',
-        value: false,
-      },
-    ],
-    { title: 'Host cloud configuration', ignoreFocusOut: true },
-  );
-  if (!configureCloud) {
-    return false;
-  }
-  if (configureCloud.value) {
-    const envName = await promptOptionalEnvName();
-    if (envName === undefined) {
-      return false;
-    }
-    if (!(await runGuidedCliStep(
-      'Configure Host Cloud',
-      buildEmbedCloudConfigureArgs({
-        projectRoot,
-        envName: envName.trim() || undefined,
-      }),
-      projectRoot,
-      output,
-    ))) {
-      return false;
-    }
-  }
-
   await diagnoseWorkspace('hostApp', output);
   return true;
 }
@@ -447,7 +394,7 @@ export async function guidedAddMiniProgramToHost(
       },
       {
         label: 'Add endpoint manually',
-        description: 'Enter appId, API base URL, and access key',
+        description: 'Enter appId, static artifact URL, and optional runtime API',
         value: 'manual',
       },
     ],
@@ -507,15 +454,10 @@ export async function guidedRunHostSmokeTest(output: vscode.OutputChannel): Prom
   if (!deviceId) {
     return false;
   }
-  const envName = await promptOptionalEnvName();
-  if (envName === undefined) {
-    return false;
-  }
   const cliPath = configuredCliPath();
   const args = buildHostRunArgs({
     deviceId: deviceId.trim(),
     projectRoot,
-    envName: envName.trim() || undefined,
   });
   const terminal = vscode.window.createTerminal({
     name: 'MiniProgram Host Smoke Test',
@@ -555,7 +497,6 @@ export async function copyWorkflowCommands(output: vscode.OutputChannel): Promis
     commands = buildPublisherCommandTemplate({
       appId: manifest?.id,
       title: manifest?.title || (manifest?.id ? hostTitleFromAppId(manifest.id) : undefined),
-      envName: 'my-aws-prod',
     });
   } else {
     commands = buildHostCommandTemplate({
@@ -581,105 +522,19 @@ export async function checkHostEndpointRemote(output: vscode.OutputChannel): Pro
   if (!appId) {
     return;
   }
-  const envName = await promptOptionalEnvName();
-  if (envName === undefined) {
-    return;
-  }
-
-  const cliPath = configuredCliPath();
   output.show(true);
   output.appendLine('');
-  output.appendLine(`== MiniProgram: Check Host Endpoint Remote ==`);
+  output.appendLine(`== MiniProgram: Check Host Endpoint ==`);
   output.appendLine(`Endpoint appId: ${appId}`);
-
-  const steps = [
-    {
-      label: 'Cloud Status',
-      args: buildCloudStatusArgs({
-        envName,
-        rootPath: projectRoot,
-        json: true,
-      }),
-      allowNonZeroExit: true,
-    },
-    {
-      label: 'Cloud App Info',
-      args: buildCloudAppInfoArgs({
-        appId,
-        envName,
-        rootPath: projectRoot,
-      }),
-      allowNonZeroExit: true,
-    },
-    {
-      label: 'Access Key List',
-      args: buildAccessKeyListArgs({
-        appId,
-        envName,
-        json: true,
-      }),
-      allowNonZeroExit: true,
-    },
-  ];
-
-  let failed = false;
-  for (const step of steps) {
-    output.appendLine('');
-    output.appendLine(`-- ${step.label}`);
-    output.appendLine(`> ${formatRedactedCommandLine(cliPath, step.args)}`);
-    try {
-      const result = await runCli(cliPath, step.args, {
-        cwd: projectRoot,
-        timeoutMs: 120000,
-      });
-      if (result.stdout.trim()) {
-        output.appendLine(redactSecrets(result.stdout.trim()));
-      }
-      if (result.stderr.trim()) {
-        output.appendLine(redactSecrets(result.stderr.trim()));
-      }
-      if (result.exitCode !== 0) {
-        failed = true;
-        output.appendLine(`${step.label} exited with code ${result.exitCode}.`);
-      }
-    } catch (error) {
-      failed = true;
-      output.appendLine(`${step.label} failed: ${errorMessage(error)}`);
-    }
-  }
-
-  if (failed) {
-    vscode.window.showWarningMessage(
-      `Remote endpoint check completed with warnings for ${appId}.`,
-    );
-  } else {
-    vscode.window.showInformationMessage(
-      `Remote endpoint check completed for ${appId}.`,
-    );
-  }
+  output.appendLine(
+    'Provider remote delivery checks were removed. Use host diagnostics to verify the public static artifact URL and optional runtime Publisher API.',
+  );
+  await diagnoseWorkspace('hostApp', output);
 }
 
 export async function copyCleanupCommands(output: vscode.OutputChannel): Promise<void> {
   const workspacePath = await requireWorkspacePath();
   if (!workspacePath) {
-    return;
-  }
-  const appId = fs.existsSync(path.join(workspacePath, 'pubspec.yaml'))
-    ? await chooseHostEndpointAppId(workspacePath)
-    : await promptAppId();
-  if (!appId) {
-    return;
-  }
-  const envName = await promptOptionalEnvName();
-  if (envName === undefined) {
-    return;
-  }
-  const keyId = await vscode.window.showInputBox({
-    prompt: 'Optional access key id to revoke',
-    placeHolder: 'Leave blank to keep <KEY_ID> placeholder',
-    ignoreFocusOut: true,
-  });
-  if (keyId === undefined) {
     return;
   }
   const includeWorkspaceDelete = await vscode.window.showQuickPick(
@@ -691,7 +546,7 @@ export async function copyCleanupCommands(output: vscode.OutputChannel): Promise
       },
       {
         label: 'Do not include local workspace delete',
-        description: 'Only copy cloud/access-key cleanup commands',
+        description: 'No provider cleanup is needed for public static artifacts',
         value: false,
       },
     ],
@@ -702,9 +557,6 @@ export async function copyCleanupCommands(output: vscode.OutputChannel): Promise
   }
 
   const commands = buildCleanupCommandTemplate({
-    appId,
-    envName,
-    keyId: keyId.trim() || undefined,
     workspacePath: includeWorkspaceDelete.value ? workspacePath : undefined,
   });
   await vscode.env.clipboard.writeText(commands);

@@ -151,17 +151,16 @@ export function endpointLaunchUsageMissing(
 export function buildPublisherCommandTemplate(options: {
   readonly appId?: string;
   readonly title?: string;
-  readonly envName?: string;
+  readonly artifactBaseUrl?: string;
 }): string {
   const appId = options.appId || '<appId>';
   const title = options.title || titleFromAppId(appId);
-  const envName = options.envName || 'my-aws-prod';
+  const artifactBaseUrl = options.artifactBaseUrl || '<artifactBaseUrl>';
   return [
     'miniprogram build',
     'miniprogram validate',
-    `miniprogram publish --target cloud --env ${envName}`,
-    `miniprogram access-key create ${appId} --key-id host-a --env ${envName}`,
-    `miniprogram partner package ${appId} --title "${title}" --access-key <ACCESS_KEY> --env ${envName} --output ${appId}.partner.json`,
+    'miniprogram publish --target static --output public_mini_program --clean',
+    `miniprogram partner package ${appId} --title "${title}" --artifact-base-url "${artifactBaseUrl}" --output ${appId}.partner.json`,
   ].join('\n');
 }
 
@@ -180,22 +179,15 @@ export function buildHostCommandTemplate(options: {
 }
 
 export function buildCleanupCommandTemplate(options: {
-  readonly appId: string;
-  readonly envName?: string;
-  readonly keyId?: string;
   readonly workspacePath?: string;
 }): string {
-  const envName = options.envName || 'my-aws-prod';
-  const keyId = options.keyId?.trim() || '<KEY_ID>';
-  const commands = [
-    `miniprogram cloud app delete ${options.appId} --env ${envName}`,
-    `miniprogram access-key revoke ${options.appId} --key-id ${keyId} --env ${envName}`,
-    `miniprogram cloud app delete ${options.appId} --env ${envName} --yes`,
-  ];
+  const commands: string[] = [];
   if (options.workspacePath?.trim()) {
     commands.push(`Remove-Item -Recurse -Force "${options.workspacePath.trim()}"`);
   }
-  return commands.join('\n');
+  return commands.length > 0
+    ? commands.join('\n')
+    : 'No provider cleanup commands are needed for public static artifacts.';
 }
 
 function parseEndpointAppIdsFromGeneratedJson(source: string): string[] {

@@ -10,13 +10,11 @@ void main() {
       final createdSources = <_RecordingSource>[];
       final source = EndpointRoutingMiniProgramSource(
         endpoints: <String, MiniProgramEndpoint>{
-          'aws_coupon_demo': MiniProgramEndpoint(
-            apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-            accessKey: 'mpk_live_aws',
+          'coupon_demo': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://cdn.example.com/coupon/'),
           ),
-          'gcp_rewards': MiniProgramEndpoint(
-            apiBaseUri: Uri.parse('https://gcp.example.com/api/'),
-            accessKey: 'mpk_live_gcp',
+          'rewards': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://cdn.example.com/rewards/'),
           ),
         },
         deliveryContext: _deliveryContext,
@@ -31,51 +29,63 @@ void main() {
             },
       );
 
-      final awsManifest = await source.loadManifest('aws_coupon_demo');
-      final gcpManifest = await source.loadManifest('gcp_rewards');
+      final couponManifest = await source.loadManifest('coupon_demo');
+      final rewardsManifest = await source.loadManifest('rewards');
       await source.loadScreen(
-        miniProgramId: 'aws_coupon_demo',
+        miniProgramId: 'coupon_demo',
         version: '1.0.0',
         screenId: 'home',
       );
 
-      expect(awsManifest.id, 'aws_coupon_demo');
-      expect(gcpManifest.id, 'gcp_rewards');
+      expect(couponManifest.id, 'coupon_demo');
+      expect(rewardsManifest.id, 'rewards');
       expect(createdSources, hasLength(2));
-      expect(createdSources[0].endpoint.accessKey, 'mpk_live_aws');
-      expect(createdSources[1].endpoint.accessKey, 'mpk_live_gcp');
-      expect(createdSources[0].loadManifestCalls, <String>['aws_coupon_demo']);
+      expect(
+        createdSources[0].endpoint.apiBaseUri.toString(),
+        contains('coupon'),
+      );
+      expect(
+        createdSources[1].endpoint.apiBaseUri.toString(),
+        contains('rewards'),
+      );
+      expect(createdSources[0].loadManifestCalls, <String>['coupon_demo']);
       expect(
         createdSources[0].loadScreenCalls.single.miniProgramId,
-        'aws_coupon_demo',
+        'coupon_demo',
       );
     });
 
-    test('supports public endpoints without an access key', () async {
-      final createdSources = <_RecordingSource>[];
-      final source = EndpointRoutingMiniProgramSource(
-        endpoints: <String, MiniProgramEndpoint>{
-          'public_coupon_demo': MiniProgramEndpoint.public(
-            apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
-          ),
-        },
-        deliveryContext: _deliveryContext,
-        sourceFactory:
-            ({required appId, required endpoint, required deliveryContext}) {
-              final createdSource = _RecordingSource(
-                appId: appId,
-                endpoint: endpoint,
-              );
-              createdSources.add(createdSource);
-              return createdSource;
-            },
-      );
+    test(
+      'supports static artifact endpoints without credential headers',
+      () async {
+        final createdSources = <_RecordingSource>[];
+        final source = EndpointRoutingMiniProgramSource(
+          endpoints: <String, MiniProgramEndpoint>{
+            'public_coupon_demo': MiniProgramEndpoint.public(
+              apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
+            ),
+          },
+          deliveryContext: _deliveryContext,
+          sourceFactory:
+              ({required appId, required endpoint, required deliveryContext}) {
+                final createdSource = _RecordingSource(
+                  appId: appId,
+                  endpoint: endpoint,
+                );
+                createdSources.add(createdSource);
+                return createdSource;
+              },
+        );
 
-      final manifest = await source.loadManifest('public_coupon_demo');
+        final manifest = await source.loadManifest('public_coupon_demo');
 
-      expect(manifest.id, 'public_coupon_demo');
-      expect(createdSources.single.endpoint.accessKey, isNull);
-    });
+        expect(manifest.id, 'public_coupon_demo');
+        expect(
+          createdSources.single.endpoint.apiBaseUri.toString(),
+          contains('public'),
+        );
+      },
+    );
 
     test(
       'does not build a backend connector for static artifact endpoints only',
@@ -130,10 +140,8 @@ void main() {
         endpoints: <String, MiniProgramEndpoint>{
           'coupon': MiniProgramEndpoint(
             apiBaseUri: Uri.parse('https://delivery.example.com/api/'),
-            accessKey: 'mpk_live_coupon',
             backend: MiniProgramBackendEndpoint(
               baseUri: Uri.parse('https://publisher.example.com/api/'),
-              sendAccessKeyToBackend: true,
             ),
           ),
           'public_demo': MiniProgramEndpoint.public(
@@ -162,7 +170,6 @@ void main() {
         endpoints: <String, MiniProgramEndpoint>{
           'temporary': MiniProgramEndpoint(
             apiBaseUri: Uri.parse('https://tmp.example.com/api/'),
-            accessKey: 'mpk_tmp',
             cachePolicy: const MiniProgramCachePolicy(
               dataTtl: Duration(hours: 12),
               maxBytes: 5 * 1024 * 1024,
@@ -170,7 +177,6 @@ void main() {
           ),
           'normal': MiniProgramEndpoint(
             apiBaseUri: Uri.parse('https://normal.example.com/api/'),
-            accessKey: 'mpk_normal',
           ),
         },
         deliveryContext: _deliveryContext,
@@ -184,34 +190,18 @@ void main() {
       expect(source.cachePolicyFor('normal').dataTtl, const Duration(days: 30));
     });
 
-    test('rejects a blank protected access key', () {
-      expect(
-        () => EndpointRoutingMiniProgramSource(
-          endpoints: <String, MiniProgramEndpoint>{
-            'aws_coupon_demo': MiniProgramEndpoint(
-              apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-              accessKey: '   ',
-            ),
-          },
-          deliveryContext: _deliveryContext,
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
-    });
-
     test('throws a structured error for an unregistered appId', () async {
       final source = EndpointRoutingMiniProgramSource(
         endpoints: <String, MiniProgramEndpoint>{
-          'aws_coupon_demo': MiniProgramEndpoint(
-            apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-            accessKey: 'mpk_live_aws',
+          'coupon_demo': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://cdn.example.com/coupon/'),
           ),
         },
         deliveryContext: _deliveryContext,
       );
 
       expect(
-        () => source.loadManifest('gcp_rewards'),
+        () => source.loadManifest('rewards'),
         throwsA(
           isA<MiniProgramSourceException>()
               .having(
@@ -232,9 +222,8 @@ void main() {
       final createdSources = <_RecordingSource>[];
       final source = EndpointRoutingMiniProgramSource(
         endpoints: <String, MiniProgramEndpoint>{
-          'aws_coupon_demo': MiniProgramEndpoint(
-            apiBaseUri: Uri.parse('https://aws.example.com/prod/api/'),
-            accessKey: 'mpk_live_aws',
+          'coupon_demo': MiniProgramEndpoint(
+            apiBaseUri: Uri.parse('https://cdn.example.com/coupon/'),
           ),
         },
         deliveryContext: _deliveryContext,
@@ -249,7 +238,7 @@ void main() {
             },
       );
 
-      await source.loadManifest('aws_coupon_demo');
+      await source.loadManifest('coupon_demo');
       source.dispose();
 
       expect(createdSources.single.disposeCount, 1);
@@ -330,8 +319,11 @@ class _BackendRecordingClient extends http.BaseClient {
       'https://publisher.example.com/api/home/bootstrap',
     );
     expect(
-      request.headers[MiniProgramHttpHeaders.accessKey],
-      'mpk_live_coupon',
+      request.headers.containsKey(
+        'x-mini-program-'
+        'access-key',
+      ),
+      isFalse,
     );
     return http.StreamedResponse(
       Stream<List<int>>.value(<int>[
@@ -361,7 +353,10 @@ class _PublicBackendRecordingClient extends http.BaseClient {
       'https://publisher.example.com/api/home/bootstrap',
     );
     expect(
-      request.headers.containsKey(MiniProgramHttpHeaders.accessKey),
+      request.headers.containsKey(
+        'x-mini-program-'
+        'access-key',
+      ),
       false,
     );
     return http.StreamedResponse(

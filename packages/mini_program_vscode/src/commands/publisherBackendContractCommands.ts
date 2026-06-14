@@ -3,20 +3,15 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
-  buildPublisherBackendContractHandoffArgs,
   buildPublisherBackendContractInitArgs,
   buildPublisherBackendContractSmokeArgs,
   buildPublisherBackendContractValidateArgs,
 } from '../cli';
 
 import {
-  chooseEndpointAccessMode,
-  choosePartnerPackageOutputPath,
   ensurePublisherBackendContractCli0405,
-  readMiniProgramManifestInfo,
   requireMiniProgramRoot,
   runCliCommand,
-  safeFileSegment,
   validateAbsoluteUrl,
 } from '../extensionSupport';
 
@@ -39,10 +34,6 @@ export async function publisherBackendContractInit(
     validateInput: validateAbsoluteUrl,
   });
   if (!backendBaseUrl) {
-    return;
-  }
-  const accessMode = await chooseEndpointAccessMode();
-  if (!accessMode) {
     return;
   }
   const healthEndpoint = await vscode.window.showInputBox({
@@ -69,7 +60,6 @@ export async function publisherBackendContractInit(
     buildPublisherBackendContractInitArgs({
       miniProgramRoot: workspacePath,
       backendBaseUrl,
-      public: accessMode === 'public',
       healthEndpoint,
       allowLocalHttp,
     }),
@@ -160,7 +150,6 @@ export async function publisherBackendContractSmoke(
     buildPublisherBackendContractSmokeArgs({
       miniProgramRoot: workspacePath,
       contractPath: contractPath || undefined,
-      accessKey: credentials.accessKey,
       authToken: credentials.authToken,
       timeoutSeconds: timeoutSeconds.trim() || undefined,
       allowLocalHttp,
@@ -170,108 +159,6 @@ export async function publisherBackendContractSmoke(
   );
   if (ok) {
     vscode.window.showInformationMessage('Publisher API smoke passed.');
-  }
-}
-
-export async function publisherBackendContractHandoff(
-  output: vscode.OutputChannel,
-  refreshStatus: (remote: boolean) => Promise<void>,
-): Promise<void> {
-  const workspacePath = await requireMiniProgramRoot();
-  if (!workspacePath) {
-    return;
-  }
-  if (!await ensurePublisherBackendContractCli0405(workspacePath, output)) {
-    return;
-  }
-  const contractPath = await chooseContractPath(workspacePath);
-  if (contractPath === undefined) {
-    return;
-  }
-  const manifest = await readMiniProgramManifestInfo(workspacePath);
-  const appId =
-    await readContractAppId(contractPath || path.join(workspacePath, 'publisher_backend.json')) ??
-    manifest?.id ??
-    safeFileSegment(path.basename(workspacePath));
-  const title = await vscode.window.showInputBox({
-    prompt: 'Mini-program title for host developers',
-    value: manifest?.title ?? titleFromAppId(appId),
-    ignoreFocusOut: true,
-  });
-  if (title === undefined) {
-    return;
-  }
-  const deliveryUrl = await vscode.window.showInputBox({
-    prompt: 'Mini-program static delivery URL',
-    placeHolder: 'https://cdn.example.com/public_mini_program/',
-    ignoreFocusOut: true,
-    validateInput: validateAbsoluteUrl,
-  });
-  if (!deliveryUrl) {
-    return;
-  }
-  const accessMode = await chooseEndpointAccessMode();
-  if (!accessMode) {
-    return;
-  }
-  let accessKey: string | undefined;
-  if (accessMode === 'protected') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'MiniProgram access key for this host/partner',
-      password: true,
-      placeHolder: 'mpk_live_...',
-      ignoreFocusOut: true,
-      validateInput: (input) =>
-        input.trim() ? undefined : 'Access key is required.',
-    });
-    if (!value) {
-      return;
-    }
-    accessKey = value.trim();
-  }
-  const outputPath = await choosePartnerPackageOutputPath(workspacePath, appId);
-  if (!outputPath) {
-    return;
-  }
-  const allowLocalHttp = await chooseAllowLocalHttp('Backend and delivery URL policy');
-  if (allowLocalHttp === undefined) {
-    return;
-  }
-  const ok = await runCliCommand(
-    'Create Publisher API Handoff Package',
-    buildPublisherBackendContractHandoffArgs({
-      miniProgramRoot: workspacePath,
-      contractPath: contractPath || undefined,
-      deliveryUrl,
-      title: title.trim() || undefined,
-      accessKey,
-      public: accessMode === 'public',
-      outputPath,
-      allowLocalHttp,
-    }),
-    workspacePath,
-    output,
-  );
-  if (!ok) {
-    return;
-  }
-  await refreshStatus(false);
-  const message = accessMode === 'public'
-    ? 'Publisher API handoff package created.'
-    : 'Protected Publisher API handoff package created. Treat this file as secret.';
-  const openChoice = await vscode.window.showInformationMessage(
-    message,
-    'Open File',
-    'Reveal Folder',
-  );
-  if (openChoice === 'Open File') {
-    const document = await vscode.workspace.openTextDocument(outputPath);
-    await vscode.window.showTextDocument(document);
-  } else if (openChoice === 'Reveal Folder') {
-    await vscode.commands.executeCommand(
-      'revealFileInOS',
-      vscode.Uri.file(outputPath),
-    );
   }
 }
 
@@ -369,7 +256,7 @@ async function findContractFiles(workspacePath: string): Promise<string[]> {
 }
 
 async function chooseSmokeCredentials(): Promise<
-  { readonly accessKey?: string; readonly authToken?: string } | undefined
+  { readonly authToken?: string } | undefined
 > {
   const choice = await vscode.window.showQuickPick(
     [
@@ -379,19 +266,9 @@ async function chooseSmokeCredentials(): Promise<
         value: 'none' as const,
       },
       {
-        label: 'Access key',
-        description: 'Use for protected partner/backend access',
-        value: 'access_key' as const,
-      },
-      {
         label: 'Bearer token',
         description: 'Use for signed-in user smoke cases',
         value: 'auth_token' as const,
-      },
-      {
-        label: 'Access key + bearer token',
-        description: 'Use for protected signed-in user smoke cases',
-        value: 'both' as const,
       },
     ],
     { title: 'Publisher API smoke credentials', ignoreFocusOut: true },
@@ -399,23 +276,8 @@ async function chooseSmokeCredentials(): Promise<
   if (!choice) {
     return undefined;
   }
-  let accessKey: string | undefined;
   let authToken: string | undefined;
-  if (choice.value === 'access_key' || choice.value === 'both') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'MiniProgram access key for smoke',
-      password: true,
-      placeHolder: 'mpk_live_...',
-      ignoreFocusOut: true,
-      validateInput: (input) =>
-        input.trim() ? undefined : 'Access key is required.',
-    });
-    if (!value) {
-      return undefined;
-    }
-    accessKey = value.trim();
-  }
-  if (choice.value === 'auth_token' || choice.value === 'both') {
+  if (choice.value === 'auth_token') {
     const value = await vscode.window.showInputBox({
       prompt: 'Authorization bearer token for smoke',
       password: true,
@@ -428,7 +290,7 @@ async function chooseSmokeCredentials(): Promise<
     }
     authToken = value.trim();
   }
-  return { accessKey, authToken };
+  return { authToken };
 }
 
 async function chooseAllowLocalHttpIfNeeded(
@@ -457,23 +319,3 @@ async function chooseAllowLocalHttp(title: string): Promise<boolean | undefined>
   return choice?.value;
 }
 
-async function readContractAppId(filePath: string): Promise<string | undefined> {
-  try {
-    const decoded = JSON.parse(await fs.promises.readFile(filePath, 'utf8')) as {
-      readonly appId?: unknown;
-    };
-    return typeof decoded.appId === 'string' && decoded.appId.trim()
-      ? decoded.appId.trim()
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function titleFromAppId(appId: string): string {
-  return appId
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(' ') || appId;
-}

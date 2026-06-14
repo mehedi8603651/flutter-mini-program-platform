@@ -12,7 +12,7 @@ test('defines one-click guided workflows in expected order', () => {
     guidedWorkflows.map((workflow) => workflow.id),
     [
       'setupNewMiniProgram',
-      'publishMiniProgramToAws',
+      'publishMiniProgramStatic',
       'preparePartnerHandoff',
       'setupHostApp',
       'addMiniProgramToHost',
@@ -25,8 +25,7 @@ test('partner handoff workflow includes the complete publisher sequence', () => 
   assert.deepEqual(guidedWorkflowById('preparePartnerHandoff').steps, [
     'build',
     'validate',
-    'publish-cloud',
-    'create-access-key',
+    'publish-static',
     'create-partner-package',
     'validate-partner-package',
   ]);

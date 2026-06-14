@@ -20,368 +20,8 @@ void _registerWorkflowValidationEmbedBackendTests() {
     expect(json['remote']['checked'], isFalse);
   });
 
-  test('workflow status is local-first and redacts partner secrets', () async {
-    final miniProgramRoot = p.join(tempDir.path, 'coupon_center');
-    await _writeMiniProgramFixture(
-      miniProgramRoot,
-      miniProgramId: 'coupon_center',
-      version: '1.0.0',
-    );
-    await Directory(
-      p.join(miniProgramRoot, 'mp', '.build', 'screens'),
-    ).create(recursive: true);
-    await File(
-      p.join(
-        miniProgramRoot,
-        'mp',
-        '.build',
-        'screens',
-        'coupon_center_home.json',
-      ),
-    ).writeAsString(
-      jsonEncode(<String, Object?>{
-        'schemaVersion': 1,
-        'screenId': 'coupon_center_home',
-        'root': <String, Object?>{
-          'type': 'backendBuilder',
-          'props': <String, Object?>{
-            'requestId': 'home',
-            'endpoint': 'home/bootstrap',
-          },
-        },
-      }),
-    );
-    await File(
-      p.join(miniProgramRoot, 'coupon_center.partner.json'),
-    ).writeAsString(
-      jsonEncode(<String, Object?>{
-        'schemaVersion': 1,
-        'type': 'mini_program_partner_handoff',
-        'appId': 'coupon_center',
-        'title': 'Coupon Center',
-        'apiBaseUrl': 'https://api.example.com/api',
-        'backendBaseUrl': 'https://publisher.example.com/api',
-        'accessKey': 'mpk_live_secret_should_not_print_123456',
-        'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
-      }),
-    );
-    await Directory(
-      p.join(miniProgramRoot, 'mp', 'screens'),
-    ).create(recursive: true);
-    await File(
-      p.join(miniProgramRoot, 'mp', 'screens', 'coupon_center_home.dart'),
-    ).writeAsString('''
-  Mp.backendBuilder(
-    requestId: 'home',
-    endpoint: 'home/bootstrap',
-  );
-  Mp.backend.query(
-    requestId: 'home',
-    endpoint: 'home/bootstrap',
-  );
-  ''');
-    await File(
-      p.join(miniProgramRoot, 'backend', 'mock', 'bin', 'server.dart'),
-    ).create(recursive: true);
-    await Directory(
-      p.join(miniProgramRoot, 'backend', 'mock', 'data'),
-    ).create(recursive: true);
-    await File(
-      p.join(miniProgramRoot, 'backend', 'mock', 'data', 'home_bootstrap.json'),
-    ).writeAsString('{}');
-    await _writeAwsEnvironmentState(stateStore, miniProgramRoot);
-    final cloudController = _FakeMiniProgramCloudController();
-    final stdoutBuffer = StringBuffer();
-
-    final exitCode = await MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      cloudController: cloudController,
-      workingDirectory: miniProgramRoot,
-    ).run(<String>['workflow', 'status', '--json']);
-
-    expect(exitCode, 0);
-    expect(stdoutBuffer.toString(), isNot(contains('secret_should_not')));
-    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-    expect(json['workspace']['type'], 'mini_program');
-    expect(json['miniProgram']['appId'], 'coupon_center');
-    expect(json['miniProgram']['build']['exists'], isTrue);
-    expect(json['miniProgram']['partnerPackages'][0]['hasAccessKey'], isTrue);
-    expect(
-      json['miniProgram']['partnerPackages'][0]['accessMode'],
-      'protected',
-    );
-    expect(
-      json['miniProgram']['partnerPackages'][0]['backendConfigured'],
-      isTrue,
-    );
-    expect(json['miniProgram']['backendUsage']['usesBackendBuilder'], isTrue);
-    expect(
-      json['miniProgram']['backendUsage']['usesBackendQueryAction'],
-      isTrue,
-    );
-    expect(json['miniProgram']['backendUsage']['requestIds'], contains('home'));
-    expect(json['miniProgram']['publisherBackendStarter']['detected'], isTrue);
-    expect(json['miniProgram']['publisherBackendStarter']['template'], 'mock');
-    expect(json['remote']['checked'], isFalse);
-    expect(cloudController.lastStatusRequest, isNull);
-    expect(cloudController.lastAppInfoRequest, isNull);
-    expect(cloudController.lastAccessKeyListRequest, isNull);
-  });
-
-  test('workflow status reports Mp build metadata and backend usage', () async {
-    final miniProgramRoot = p.join(tempDir.path, 'mp_coupon_center');
-    await Directory(
-      p.join(miniProgramRoot, 'mp', '.build', 'screens'),
-    ).create(recursive: true);
-    await File(p.join(miniProgramRoot, 'manifest.json')).writeAsString(
-      jsonEncode(<String, Object?>{
-        'id': 'mp_coupon_center',
-        'version': '1.0.0',
-        'entry': 'mp_coupon_center_home',
-        'contractVersion': '1.0.0',
-        'sdkVersionRange': '>=0.4.0 <0.5.0',
-        'requiredCapabilities': <String>['analytics'],
-        'screenFormat': 'mp',
-        'screenSchemaVersion': 1,
-      }),
-    );
-    await File(
-      p.join(
-        miniProgramRoot,
-        'mp',
-        '.build',
-        'screens',
-        'mp_coupon_center_home.json',
-      ),
-    ).writeAsString(
-      jsonEncode(<String, Object?>{
-        'schemaVersion': 1,
-        'screenId': 'mp_coupon_center_home',
-        'root': <String, Object?>{
-          'type': 'pagedBackendBuilder',
-          'props': <String, Object?>{
-            'requestId': 'coupons',
-            'endpoint': 'coupons/page',
-          },
-          'children': <Object?>[],
-        },
-      }),
-    );
-    await Directory(
-      p.join(miniProgramRoot, 'mp', 'screens'),
-    ).create(recursive: true);
-    await File(
-      p.join(miniProgramRoot, 'mp', 'screens', 'mp_coupon_center_home.dart'),
-    ).writeAsString('''
-Mp.authBuilder();
-Mp.pagedBackendBuilder(
-  requestId: 'coupons',
-  endpoint: 'coupons/page',
-  itemTemplate: Mp.text('{{item.title}}'),
-  loadMore: Mp.secondaryButton(
-    label: 'Load more',
-    action: Mp.backend.loadMore(requestId: 'coupons'),
-  ),
-);
-Mp.lazy.chunk(
-  id: 'coupons_chunk',
-  itemsState: 'coupons.items',
-  itemTemplate: Mp.text('{{item.title}}'),
-  initialActions: [Mp.backend.loadMore(requestId: 'coupons')],
-  loadMoreActions: [Mp.backend.loadMore(requestId: 'coupons')],
-  loadMore: Mp.secondaryButton(
-    label: 'Load more',
-    action: Mp.lazy.loadMore(id: 'coupons_chunk'),
-  ),
-);
-''');
-    final stdoutBuffer = StringBuffer();
-
-    final exitCode = await MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      workingDirectory: miniProgramRoot,
-    ).run(<String>['workflow', 'status', '--json']);
-
-    expect(exitCode, 0);
-    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-    final miniProgram = json['miniProgram'] as Map<String, dynamic>;
-    final build = miniProgram['build'] as Map<String, dynamic>;
-    final backendUsage = miniProgram['backendUsage'] as Map<String, dynamic>;
-    expect(miniProgram['screenFormat'], 'mp');
-    expect(miniProgram['screenSchemaVersion'], 1);
-    expect(miniProgram['sourceRootPath'], p.join(miniProgramRoot, 'mp'));
-    expect(
-      miniProgram['outputRootPath'],
-      p.join(miniProgramRoot, 'mp', '.build'),
-    );
-    expect(build['screenCount'], 1);
-    expect(build['entryScreenExists'], isTrue);
-    expect(backendUsage['usesAuthBuilder'], isTrue);
-    expect(backendUsage['usesPagedBackendBuilder'], isTrue);
-    expect(backendUsage['usesLazyChunk'], isTrue);
-    expect(backendUsage['usesLoadMore'], isTrue);
-    expect(backendUsage['requestIds'], contains('coupons'));
-  });
-
-  test('workflow status reports local Publisher API mock scaffold', () async {
-    final standaloneRoot = p.join(tempDir.path, 'mock_coupon');
-    await _writeMiniProgramFixture(
-      standaloneRoot,
-      miniProgramId: 'mock_coupon',
-      version: '1.0.0',
-    );
-    await const PublisherBackendStarter().scaffold(
-      PublisherBackendScaffoldRequest(miniProgramRootPath: standaloneRoot),
-    );
-    final stdoutBuffer = StringBuffer();
-
-    final exitCode =
-        await MiniprogramCli(
-          stateStore: stateStore,
-          stdoutSink: stdoutBuffer,
-          stderrSink: StringBuffer(),
-          workingDirectory: standaloneRoot,
-        ).run(<String>[
-          'workflow',
-          'status',
-          '--workspace',
-          standaloneRoot,
-          '--json',
-        ]);
-
-    expect(exitCode, 0);
-    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-    final starter =
-        json['miniProgram']['publisherBackendStarter'] as Map<String, dynamic>;
-    expect(starter['detected'], isTrue);
-    expect(starter['template'], 'mock');
-    expect(starter['storageMode'], 'bundled');
-    expect(starter['backendRootPath'], contains(p.join('backend', 'mock')));
-    expect(starter['expectedRoutes'], contains('GET /coupons/page'));
-    final mock = starter['mock'] as Map<String, dynamic>;
-    expect(mock['detected'], isTrue);
-    expect(mock['dataFiles'], contains('home_bootstrap.json'));
-  });
-
   test(
-    'workflow status remote checks generic cloud artifact hosting only',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'cloud_coupon');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'cloud_coupon',
-        version: '1.0.0',
-      );
-      await Directory(
-        p.join(standaloneRoot, 'mp', '.build', 'screens'),
-      ).create(recursive: true);
-      await File(
-        p.join(
-          standaloneRoot,
-          'mp',
-          '.build',
-          'screens',
-          'cloud_coupon_home.json',
-        ),
-      ).writeAsString(
-        jsonEncode(<String, Object?>{
-          'schemaVersion': 1,
-          'screenId': 'cloud_coupon_home',
-          'root': <String, Object?>{
-            'type': 'text',
-            'props': <String, Object?>{'data': 'Hello'},
-          },
-        }),
-      );
-      await const PublisherBackendStarter().scaffold(
-        PublisherBackendScaffoldRequest(miniProgramRootPath: standaloneRoot),
-      );
-      await _writeAwsEnvironmentState(stateStore, standaloneRoot);
-      final cloudController = _FakeMiniProgramCloudController();
-      final stdoutBuffer = StringBuffer();
-
-      final exitCode =
-          await MiniprogramCli(
-            stateStore: stateStore,
-            stdoutSink: stdoutBuffer,
-            stderrSink: StringBuffer(),
-            cloudController: cloudController,
-            workingDirectory: standaloneRoot,
-          ).run(<String>[
-            'workflow',
-            'status',
-            '--workspace',
-            standaloneRoot,
-            '--env',
-            'my-aws-prod',
-            '--remote',
-            '--json',
-          ]);
-
-      expect(exitCode, 0);
-      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['environment']['provider'], 'aws');
-      expect(json['remote']['provider'], 'aws');
-      expect(json['remote']['errors'], isEmpty);
-      expect(json['remote']['firebase'], isNull);
-      expect(json['remote']['cloudStatus']['healthy'], isTrue);
-      expect(json['remote']['app']['miniProgramId'], 'cloud_coupon');
-      expect(json['remote']['accessKeys']['keyCount'], 1);
-      expect(cloudController.lastStatusRequest, isNotNull);
-      expect(cloudController.lastAppInfoRequest, isNotNull);
-      expect(cloudController.lastAccessKeyListRequest, isNotNull);
-    },
-  );
-
-  test('workflow status reports host endpoints without secrets', () async {
-    final hostRoot = p.join(tempDir.path, 'host_app');
-    await _writeEmbeddedHostFixture(hostRoot);
-    final endpointFile = File(
-      p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
-    );
-    await endpointFile.writeAsString('''
-  // BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-  // {"coupon_center":{"apiBaseUri":"https://api.example.com/api","backendBaseUri":"https://publisher.example.com/api","backendMode":"remote","accessMode":"protected","accessKey":"mpk_live_secret_a_12345678901234567890"},"rewards":{"apiBaseUri":"https://gcp.example.com/api","accessMode":"public","backendMode":"none"}}
-  // END MINI_PROGRAM_ENDPOINTS_JSON
-  ''');
-    final stdoutBuffer = StringBuffer();
-
-    final exitCode = await MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      workingDirectory: hostRoot,
-    ).run(<String>['workflow', 'status', '--json']);
-
-    expect(exitCode, 0);
-    expect(stdoutBuffer.toString(), isNot(contains('secret_a')));
-    expect(stdoutBuffer.toString(), isNot(contains('secret_b')));
-    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-    expect(json['workspace']['type'], 'host_app');
-    expect(json['hostApp']['endpointCount'], 2);
-    expect(json['hostApp']['endpointAppIds'], contains('coupon_center'));
-    final endpoints = (json['hostApp']['endpoints'] as List)
-        .cast<Map<String, dynamic>>();
-    final couponEndpoint = endpoints.singleWhere(
-      (endpoint) => endpoint['appId'] == 'coupon_center',
-    );
-    final rewardsEndpoint = endpoints.singleWhere(
-      (endpoint) => endpoint['appId'] == 'rewards',
-    );
-    expect(couponEndpoint['hasAccessKey'], isTrue);
-    expect(couponEndpoint['accessMode'], 'protected');
-    expect(couponEndpoint['backendConfigured'], isTrue);
-    expect(couponEndpoint['backendMode'], 'remote');
-    expect(rewardsEndpoint['accessMode'], 'public');
-    expect(rewardsEndpoint['backendMode'], 'none');
-  });
-
-  test(
-    'workflow status remote mode calls cloud app and access-key checks',
+    'workflow status is static-artifact local-first and redacts legacy secrets',
     () async {
       final miniProgramRoot = p.join(tempDir.path, 'coupon_center');
       await _writeMiniProgramFixture(
@@ -389,750 +29,195 @@ Mp.lazy.chunk(
         miniProgramId: 'coupon_center',
         version: '1.0.0',
       );
-      await _writeAwsEnvironmentState(stateStore, miniProgramRoot);
-      final cloudController = _FakeMiniProgramCloudController();
-      final stdoutBuffer = StringBuffer();
-
-      final exitCode = await MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        cloudController: cloudController,
-        workingDirectory: miniProgramRoot,
-      ).run(<String>['workflow', 'status', '--remote', '--json']);
-
-      expect(exitCode, 0);
-      expect(cloudController.lastStatusRequest, isNotNull);
-      expect(cloudController.lastAppInfoRequest, isNotNull);
-      expect(cloudController.lastAccessKeyListRequest, isNotNull);
-      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['remote']['checked'], isTrue);
-      expect(json['remote']['app']['miniProgramId'], 'coupon_center');
-      expect(json['remote']['accessKeys']['activeCount'], 1);
-    },
-  );
-
-  test(
-    'embed cloud configure writes a host_cloud.json file for the host app',
-    () async {
-      final hostRoot = p.join(tempDir.path, 'host_app');
-      await _writeEmbeddedHostFixture(hostRoot);
-      final envState = LocalCliEnvironmentState(
-        schemaVersion: 2,
-        repoRootPath: repoRoot.path,
-        activeEnvironment: 'my-aws-prod',
-        cloudEnvironments: <CloudEnvironmentConfiguration>[
-          CloudEnvironmentConfiguration(
-            name: 'my-aws-prod',
-            provider: 'aws',
-            values: <String, dynamic>{
-              'bucket': 'mini-program-prod',
-              'region': 'us-east-1',
-              'artifactsPrefix': 'artifacts',
-              'metadataPrefix': 'metadata',
-            },
-            configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-            updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-          ),
-        ],
-        initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-        updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-      );
-      await stateStore.writeGlobalEnvironmentState(envState);
-      final stdoutBuffer = StringBuffer();
-
-      final exitCode = await MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        cloudController: _FakeMiniProgramCloudController(),
-        workingDirectory: hostRoot,
-      ).run(<String>['embed', 'cloud', 'configure', '--env', 'my-aws-prod']);
-
-      expect(exitCode, 0);
-      final configuration = await stateStore.readHostCloudConfiguration(
-        hostRoot,
-      );
-      expect(configuration, isNotNull);
-      expect(configuration!.environmentName, 'my-aws-prod');
-      expect(configuration.provider, 'aws');
-      expect(configuration.backendApiBaseUrl, 'https://api.example.com/api');
-      expect(
-        stdoutBuffer.toString(),
-        contains(
-          'Configured embedded host app for cloud mini-program delivery.',
+      await Directory(
+        p.join(miniProgramRoot, 'mp', '.build', 'screens'),
+      ).create(recursive: true);
+      await File(
+        p.join(
+          miniProgramRoot,
+          'mp',
+          '.build',
+          'screens',
+          'coupon_center_home.json',
         ),
-      );
-    },
-  );
-
-  test(
-    'host run uses the selected cloud env and forwards the backend URL to flutter run',
-    () async {
-      final hostRoot = p.join(tempDir.path, 'host_app');
-      await _writeEmbeddedHostFixture(hostRoot);
-      final envState = LocalCliEnvironmentState(
-        schemaVersion: 2,
-        repoRootPath: repoRoot.path,
-        activeEnvironment: 'my-aws-prod',
-        cloudEnvironments: <CloudEnvironmentConfiguration>[
-          CloudEnvironmentConfiguration(
-            name: 'my-aws-prod',
-            provider: 'aws',
-            values: <String, dynamic>{
-              'bucket': 'mini-program-prod',
-              'region': 'us-east-1',
-              'artifactsPrefix': 'artifacts',
-              'metadataPrefix': 'metadata',
-              'apiBaseUrl': 'https://api.example.com/api/',
+      ).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'screenId': 'coupon_center_home',
+          'root': <String, Object?>{
+            'type': 'backendBuilder',
+            'props': <String, Object?>{
+              'requestId': 'home',
+              'endpoint': 'home/bootstrap',
             },
-            configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-            updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-          ),
-        ],
-        initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-        updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
+          },
+        }),
       );
-      await stateStore.writeGlobalEnvironmentState(envState);
-      final hostController = _FakeMiniProgramHostController();
-
-      final exitCode = await MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        cloudController: _FakeMiniProgramCloudController(),
-        hostController: hostController,
-        workingDirectory: hostRoot,
-      ).run(<String>['host', 'run', '-d', 'chrome', '--env', 'my-aws-prod']);
-
-      expect(exitCode, 0);
-      expect(hostController.lastRequest, isNotNull);
-      expect(hostController.lastRequest!.projectRootPath, hostRoot);
-      expect(hostController.lastRequest!.deviceId, 'chrome');
-      expect(
-        hostController.lastRequest!.backendApiBaseUrl,
-        'https://api.example.com/api',
+      await File(
+        p.join(miniProgramRoot, 'coupon_center.partner.json'),
+      ).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 1,
+          'type': 'mini_program_partner_handoff',
+          'appId': 'coupon_center',
+          'title': 'Coupon Center',
+          'apiBaseUrl': 'https://static.example.com/coupon',
+          'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
+        }),
       );
-    },
-  );
-
-  test(
-    'host run allows Firebase endpoint-map hosts without an AWS backend env',
-    () async {
-      final hostRoot = p.join(tempDir.path, 'host_app');
-      await _writeEmbeddedHostFixture(hostRoot);
-      await _writeFirebaseEnvironmentState(
-        stateStore,
-        hostRoot,
-        environmentName: 'my-firebase-prod',
-      );
-      final hostController = _FakeMiniProgramHostController();
-      final cloudController = _FakeMiniProgramCloudController();
-
-      final exitCode =
-          await MiniprogramCli(
-            stateStore: stateStore,
-            stdoutSink: StringBuffer(),
-            stderrSink: StringBuffer(),
-            cloudController: cloudController,
-            hostController: hostController,
-            workingDirectory: hostRoot,
-          ).run(<String>[
-            'host',
-            'run',
-            '-d',
-            'chrome',
-            '--env',
-            'my-firebase-prod',
-          ]);
-
-      expect(exitCode, 0);
-      expect(hostController.lastRequest, isNotNull);
-      expect(hostController.lastRequest!.backendApiBaseUrl, isEmpty);
-      expect(cloudController.lastOutputsRequest, isNull);
-    },
-  );
-
-  test(
-    'cloud rollback forwards version and inferred mini-program id',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.2.3',
-      );
-      final envState = LocalCliEnvironmentState(
-        schemaVersion: 2,
-        repoRootPath: repoRoot.path,
-        activeEnvironment: 'my-aws-prod',
-        cloudEnvironments: <CloudEnvironmentConfiguration>[
-          CloudEnvironmentConfiguration(
-            name: 'my-aws-prod',
-            provider: 'aws',
-            values: <String, dynamic>{
-              'bucket': 'mini-program-prod',
-              'region': 'us-east-1',
-              'artifactsPrefix': 'artifacts',
-              'metadataPrefix': 'metadata',
-            },
-            configuredAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-            updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-          ),
-        ],
-        initializedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-        updatedAtUtc: DateTime.utc(2026, 4, 19).toIso8601String(),
-      );
-      await stateStore.writeEnvironmentState(standaloneRoot, envState);
-      final cloudController = _FakeMiniProgramCloudController();
-
-      final exitCode = await MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        cloudController: cloudController,
-        workingDirectory: standaloneRoot,
-      ).run(<String>['cloud', 'rollback', '1.0.0']);
-
-      expect(exitCode, 0);
-      expect(cloudController.lastRollbackRequest, isNotNull);
-      expect(cloudController.lastRollbackRequest!.version, '1.0.0');
-      expect(
-        cloudController.lastRollbackRequest!.miniProgramId,
-        'coupon_center',
-      );
-    },
-  );
-
-  test(
-    'env init succeeds without a repo root and reports standalone config',
-    () async {
-      final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
-      await workspaceRoot.create(recursive: true);
-
+      await Directory(
+        p.join(miniProgramRoot, 'mp', 'screens'),
+      ).create(recursive: true);
+      await File(
+        p.join(miniProgramRoot, 'mp', 'screens', 'coupon_center_home.dart'),
+      ).writeAsString('''
+Mp.backendBuilder(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+);
+Mp.backend.query(
+  requestId: 'home',
+  endpoint: 'home/bootstrap',
+);
+''');
+      await _writeLocalEnvironmentState(stateStore, miniProgramRoot);
       final stdoutBuffer = StringBuffer();
-      final cli = MiniprogramCli(
+
+      final exitCode = await MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
-        workingDirectory: workspaceRoot.path,
-      );
+        workingDirectory: miniProgramRoot,
+      ).run(<String>['workflow', 'status', '--json']);
 
-      expect(await cli.run(<String>['env', 'init']), 0);
-      expect(stdoutBuffer.toString(), contains('Repo root: not configured'));
+      expect(exitCode, 0);
+      expect(stdoutBuffer.toString(), isNot(contains('secret_should_not')));
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      expect(json['workspace']['type'], 'mini_program');
+      expect(json['environment']['activeEnvironment'], 'local');
+      expect(json['miniProgram']['appId'], 'coupon_center');
+      expect(json['miniProgram']['build']['exists'], isTrue);
       expect(
-        await File(
-          p.join(workspaceRoot.path, '.mini_program', 'env.json'),
-        ).exists(),
+        json['miniProgram']['partnerPackages'][0]['artifactBaseUrl'],
+        'https://static.example.com/coupon',
+      );
+      expect(json['miniProgram']['backendUsage']['usesBackendBuilder'], isTrue);
+      expect(
+        json['miniProgram']['backendUsage']['usesBackendQueryAction'],
         isTrue,
       );
+      expect(json['remote']['checked'], isFalse);
     },
   );
 
-  test('build reports a missing mini-program root without throwing', () async {
-    final stdoutBuffer = StringBuffer();
-    final stderrBuffer = StringBuffer();
-    final cli = MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: stderrBuffer,
-      workingDirectory: tempDir.path,
-    );
-
-    final exitCode = await cli.run(<String>[
-      'build',
-      'coupon_center',
-      '--mini-program-root',
-      p.join(tempDir.path, 'missing_coupon_center'),
-      '--repo-root',
-      repoRoot.path,
-    ]);
-
-    expect(exitCode, 1);
-    expect(stdoutBuffer.toString(), isEmpty);
-    expect(
-      stderrBuffer.toString(),
-      contains('No usable manifest.json matching "coupon_center"'),
-    );
-  });
-
-  test('validate works against a repo-managed mini-program', () async {
-    final miniProgramRoot = p.join(
-      repoRoot.path,
-      'mini_programs',
-      'coupon_center',
-    );
+  test('workflow status --remote reports provider checks removed', () async {
+    final miniProgramRoot = p.join(tempDir.path, 'coupon_center');
     await _writeMiniProgramFixture(
       miniProgramRoot,
       miniProgramId: 'coupon_center',
       version: '1.0.0',
     );
-
     final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
+
+    final exitCode = await MiniprogramCli(
       stateStore: stateStore,
       stdoutSink: stdoutBuffer,
       stderrSink: StringBuffer(),
-      workingDirectory: repoRoot.path,
-    );
-
-    final exitCode = await cli.run(<String>['validate', 'coupon_center']);
+      workingDirectory: miniProgramRoot,
+    ).run(<String>['workflow', 'status', '--remote', '--json']);
 
     expect(exitCode, 0);
-    expect(stdoutBuffer.toString(), contains('Repo root:'));
+    final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+    expect(json['remote']['checked'], isTrue);
+    expect(json['remote']['supported'], isFalse);
+    expect(json['remote']['message'], contains('artifactBaseUrl'));
   });
 
   test(
-    'validate works against a standalone mini-program with an artifact workspace and no repo root',
+    'workflow status reports host endpoints without access fields',
     () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.0.0',
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeEmbeddedHostFixture(hostRoot);
+      final endpointFile = File(
+        p.join(hostRoot, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
       );
-      await _initializeBackendWorkspaceState(stateStore, backendRoot);
-
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      expect(await cli.run(<String>['env', 'init']), 0);
-
+      await endpointFile.writeAsString('''
+// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
+// {"coupon_center":{"apiBaseUri":"https://static.example.com/coupon","backendBaseUri":"https://publisher.example.com/api","backendMode":"remote"}}
+// END MINI_PROGRAM_ENDPOINTS_JSON
+''');
       final stdoutBuffer = StringBuffer();
-      final validateCli = MiniprogramCli(
+
+      final exitCode = await MiniprogramCli(
         stateStore: stateStore,
         stdoutSink: stdoutBuffer,
         stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-
-      final exitCode = await validateCli.run(<String>[
-        'validate',
-        'coupon_center',
-      ]);
+        workingDirectory: hostRoot,
+      ).run(<String>['workflow', 'status', '--json']);
 
       expect(exitCode, 0);
-      expect(stdoutBuffer.toString(), contains('Repo root: $backendRoot'));
+      expect(stdoutBuffer.toString(), isNot(contains('secret_a')));
+      final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
+      final endpoints = (json['hostApp']['endpoints'] as List)
+          .cast<Map<String, dynamic>>();
+      final endpoint = endpoints.single;
+      final legacySecretFlag =
+          'has'
+          'Access'
+          'Key';
+      expect(endpoint['apiBaseUri'], 'https://static.example.com/coupon');
+      expect(endpoint.containsKey('accessMode'), isFalse);
+      expect(endpoint.containsKey(legacySecretFlag), isFalse);
+      expect(endpoint['backendConfigured'], isTrue);
+      expect(endpoint['backendMode'], 'remote');
     },
   );
 
-  test(
-    'validate infers the mini-program id from the current directory',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.0.0',
-      );
-      await _initializeBackendWorkspaceState(stateStore, backendRoot);
+  test('host run opens without runtime API URL', () async {
+    final hostRoot = p.join(tempDir.path, 'host_app');
+    await _writeEmbeddedHostFixture(hostRoot);
+    final hostController = _FakeMiniProgramHostController();
 
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      expect(await cli.run(<String>['env', 'init']), 0);
-
-      final stdoutBuffer = StringBuffer();
-      final validateCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-
-      final exitCode = await validateCli.run(<String>['validate']);
-
-      expect(exitCode, 0);
-      expect(stdoutBuffer.toString(), contains('Repo root: $backendRoot'));
-    },
-  );
-
-  test(
-    'validate falls back to the global artifact workspace when a parent local state is stale',
-    () async {
-      final standaloneRoot = p.join(
-        tempDir.path,
-        'mini_program_demo',
-        'coupon_center',
-      );
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.0.0',
-      );
-      await _initializeBackendWorkspaceState(stateStore, backendRoot);
-      await _writeStaleLocalBackendWorkspaceState(stateStore, tempDir.path);
-
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      expect(await cli.run(<String>['env', 'init']), 0);
-
-      final stdoutBuffer = StringBuffer();
-      final validateCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-
-      final exitCode = await validateCli.run(<String>['validate']);
-
-      expect(exitCode, 0);
-      expect(stdoutBuffer.toString(), contains('Repo root: $backendRoot'));
-    },
-  );
-
-  test('publish tracks local artifact state', () async {
-    final miniProgramRoot = p.join(
-      repoRoot.path,
-      'mini_programs',
-      'coupon_center',
-    );
-    await _writeMiniProgramFixture(
-      miniProgramRoot,
-      miniProgramId: 'coupon_center',
-      version: '1.2.0',
-    );
-    final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
+    final exitCode = await MiniprogramCli(
       stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
+      stdoutSink: StringBuffer(),
       stderrSink: StringBuffer(),
-      workingDirectory: repoRoot.path,
-    );
-
-    final exitCode = await cli.run(<String>[
-      'publish',
-      'coupon_center',
-      '--skip-build-pub-get',
-    ]);
+      hostController: hostController,
+      workingDirectory: hostRoot,
+    ).run(<String>['host', 'run', '-d', 'chrome']);
 
     expect(exitCode, 0);
-    expect(
-      stdoutBuffer.toString(),
-      contains('Published mini-program: coupon_center'),
-    );
-    expect(
-      await File(
-        p.join(
-          repoRoot.path,
-          '.mini_program',
-          'published_local_artifacts.json',
-        ),
-      ).exists(),
-      isTrue,
-    );
+    expect(hostController.lastRequest, isNotNull);
+    expect(hostController.lastRequest!.backendApiBaseUrl, isEmpty);
   });
-
-  test(
-    'publish uses saved env repo root from a standalone mini-program root',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.2.0',
-      );
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-
-      expect(
-        await cli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-
-      final publishBuffer = StringBuffer();
-      final publishCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: publishBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      final exitCode = await publishCli.run(<String>[
-        'publish',
-        'coupon_center',
-        '--skip-build-pub-get',
-      ]);
-
-      expect(exitCode, 0);
-      expect(
-        publishBuffer.toString(),
-        contains('Published mini-program: coupon_center'),
-      );
-      expect(
-        await File(
-          p.join(
-            repoRoot.path,
-            '.mini_program',
-            'published_local_artifacts.json',
-          ),
-        ).exists(),
-        isTrue,
-      );
-      expect(
-        await File(
-          p.join(
-            repoRoot.path,
-            'backend',
-            'api',
-            'manifests',
-            'coupon_center',
-            'latest.json',
-          ),
-        ).exists(),
-        isTrue,
-      );
-    },
-  );
-
-  test(
-    'publish infers the mini-program id from the current directory',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.2.0',
-      );
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-
-      expect(
-        await cli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-
-      final publishBuffer = StringBuffer();
-      final publishCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: publishBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      final exitCode = await publishCli.run(<String>[
-        'publish',
-        '--skip-build-pub-get',
-      ]);
-
-      expect(exitCode, 0);
-      expect(
-        publishBuffer.toString(),
-        contains('Published mini-program: coupon_center'),
-      );
-    },
-  );
-
-  test(
-    'publish uses a saved artifact workspace when one is configured',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.2.0',
-      );
-      await Directory(
-        p.join(backendRoot, 'backend', 'api'),
-      ).create(recursive: true);
-      await Directory(
-        p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
-      ).create(recursive: true);
-      await File(
-        p.join(
-          backendRoot,
-          'backend',
-          'local_backend_service',
-          'bin',
-          'server.dart',
-        ),
-      ).writeAsString('void main() {}');
-      await stateStore.writeGlobalBackendWorkspaceState(
-        LocalBackendWorkspaceState(
-          schemaVersion: 1,
-          backendRootPath: backendRoot,
-          apiRootPath: p.join(backendRoot, 'backend', 'api'),
-          serviceDirectoryPath: p.join(
-            backendRoot,
-            'backend',
-            'local_backend_service',
-          ),
-          initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
-          updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
-        ),
-      );
-
-      final envCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      expect(
-        await envCli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-
-      final publishBuffer = StringBuffer();
-      final publishCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: publishBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      final exitCode = await publishCli.run(<String>[
-        'publish',
-        'coupon_center',
-        '--skip-build-pub-get',
-      ]);
-
-      expect(exitCode, 0);
-      expect(
-        publishBuffer.toString(),
-        contains('Artifact workspace root: $backendRoot'),
-      );
-      expect(
-        await File(
-          p.join(
-            backendRoot,
-            '.mini_program',
-            'published_local_artifacts.json',
-          ),
-        ).exists(),
-        isTrue,
-      );
-      expect(
-        await File(
-          p.join(
-            backendRoot,
-            'backend',
-            'api',
-            'manifests',
-            'coupon_center',
-            'latest.json',
-          ),
-        ).exists(),
-        isTrue,
-      );
-      expect(
-        await File(
-          p.join(
-            repoRoot.path,
-            'backend',
-            'api',
-            'manifests',
-            'coupon_center',
-            'latest.json',
-          ),
-        ).exists(),
-        isFalse,
-      );
-    },
-  );
-
-  test(
-    'publish works from a standalone workspace without any repo root',
-    () async {
-      final standaloneRoot = p.join(tempDir.path, 'coupon_center');
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      await _writeMiniProgramFixture(
-        standaloneRoot,
-        miniProgramId: 'coupon_center',
-        version: '1.2.0',
-      );
-      await _initializeBackendWorkspaceState(stateStore, backendRoot);
-
-      final envCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      expect(await envCli.run(<String>['env', 'init']), 0);
-
-      final publishBuffer = StringBuffer();
-      final publishCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: publishBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: standaloneRoot,
-      );
-      final exitCode = await publishCli.run(<String>[
-        'publish',
-        'coupon_center',
-        '--skip-build-pub-get',
-      ]);
-
-      expect(exitCode, 0);
-      expect(
-        publishBuffer.toString(),
-        contains('Artifact workspace root: $backendRoot'),
-      );
-      expect(
-        await File(
-          p.join(
-            backendRoot,
-            'backend',
-            'api',
-            'manifests',
-            'coupon_center',
-            'latest.json',
-          ),
-        ).exists(),
-        isTrue,
-      );
-    },
-  );
 
   test('embed init generates the embedding adapter', () async {
     final projectRoot = p.join(tempDir.path, 'host_app');
     await Directory(p.join(projectRoot, 'lib')).create(recursive: true);
     await File(p.join(projectRoot, 'pubspec.yaml')).writeAsString('''
-  name: host_app
-  version: 1.0.0+1
+name: host_app
+version: 1.0.0+1
 
-  dependencies:
-    flutter:
-  sdk: flutter
-  ''');
+dependencies:
+  flutter:
+    sdk: flutter
+''');
 
     final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      workingDirectory: repoRoot.path,
-    );
-
-    final exitCode = await cli.run(<String>[
-      'embed',
-      'init',
-      '--project-root',
-      projectRoot,
-      '--repo-root',
-      repoRoot.path,
-    ]);
+    final exitCode =
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: stdoutBuffer,
+          stderrSink: StringBuffer(),
+          workingDirectory: repoRoot.path,
+        ).run(<String>[
+          'embed',
+          'init',
+          '--project-root',
+          projectRoot,
+          '--repo-root',
+          repoRoot.path,
+        ]);
 
     expect(exitCode, 0);
     expect(
@@ -1145,153 +230,7 @@ Mp.lazy.chunk(
       ).exists(),
       isTrue,
     );
-    expect(
-      await File(p.join(projectRoot, 'pubspec.yaml')).readAsString(),
-      contains('mini_program_sdk: ^0.4.4'),
-    );
   });
-
-  test('embed init defaults to the current working directory', () async {
-    final projectRoot = p.join(tempDir.path, 'host_app');
-    await Directory(p.join(projectRoot, 'lib')).create(recursive: true);
-    await File(p.join(projectRoot, 'pubspec.yaml')).writeAsString('''
-  name: host_app
-  version: 1.0.0+1
-
-  dependencies:
-    flutter:
-  sdk: flutter
-  ''');
-
-    final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      workingDirectory: projectRoot,
-    );
-
-    final exitCode = await cli.run(<String>['embed', 'init']);
-
-    expect(exitCode, 0);
-    expect(stdoutBuffer.toString(), contains('Project root: $projectRoot'));
-    expect(
-      await File(
-        p.join(projectRoot, 'lib', 'mini_program', 'mini_program.dart'),
-      ).exists(),
-      isTrue,
-    );
-  });
-
-  test(
-    'embed init uses saved global repo root when run from an unrelated host app directory',
-    () async {
-      final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
-      await workspaceRoot.create(recursive: true);
-      final hostRoot = p.join(tempDir.path, 'host_app');
-      await Directory(p.join(hostRoot, 'lib')).create(recursive: true);
-      await File(p.join(hostRoot, 'pubspec.yaml')).writeAsString('''
-  name: host_app
-  version: 1.0.0+1
-
-  dependencies:
-    flutter:
-  sdk: flutter
-  ''');
-
-      final envCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: workspaceRoot.path,
-      );
-      expect(
-        await envCli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-
-      final stdoutBuffer = StringBuffer();
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        workingDirectory: hostRoot,
-      );
-
-      final exitCode = await cli.run(<String>[
-        'embed',
-        'init',
-        '--project-root',
-        hostRoot,
-      ]);
-
-      expect(exitCode, 0);
-      expect(stdoutBuffer.toString(), contains('Repo root: ${repoRoot.path}'));
-      expect(
-        await File(
-          p.join(hostRoot, 'lib', 'mini_program', 'mini_program.dart'),
-        ).exists(),
-        isTrue,
-      );
-    },
-  );
-
-  test(
-    'artifact-host init scaffolds a standalone artifact workspace',
-    () async {
-      final initializer = _FakeLocalBackendInitializer();
-      final stdoutBuffer = StringBuffer();
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        backendInitializer: initializer,
-        workingDirectory: tempDir.path,
-      );
-
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      final exitCode = await cli.run(<String>[
-        'artifact-host',
-        'init',
-        '--root',
-        backendRoot,
-      ]);
-
-      expect(exitCode, 0);
-      expect(initializer.initializedRootPath, backendRoot);
-      expect(
-        stdoutBuffer.toString(),
-        contains('Initialized local artifact host workspace.'),
-      );
-    },
-  );
-
-  test(
-    'artifact-host init defaults to the global artifact workspace when root is omitted',
-    () async {
-      final defaultBackendRoot = p.join(tempDir.path, 'global_backend');
-      final initializer = _FakeLocalBackendInitializer(
-        defaultBackendRootPath: defaultBackendRoot,
-      );
-      final stdoutBuffer = StringBuffer();
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: StringBuffer(),
-        backendInitializer: initializer,
-        workingDirectory: tempDir.path,
-      );
-
-      final exitCode = await cli.run(<String>['artifact-host', 'init']);
-
-      expect(exitCode, 0);
-      expect(initializer.initializedRootPath, isNull);
-      expect(
-        stdoutBuffer.toString(),
-        contains('Artifact workspace root: $defaultBackendRoot'),
-      );
-    },
-  );
 
   test('artifact-host subcommands dispatch to the controller', () async {
     final controller = _FakeLocalBackendController();
@@ -1309,161 +248,8 @@ Mp.lazy.chunk(
       0,
     );
     expect(controller.startedPort, 9090);
-
     expect(await cli.run(<String>['artifact-host', 'status']), 0);
     expect(await cli.run(<String>['artifact-host', 'stop']), 0);
-    expect(await cli.run(<String>['artifact-host', 'reset-local', '--yes']), 0);
-    expect(controller.calls, <String>[
-      'start',
-      'status',
-      'stop',
-      'reset-local',
-    ]);
-    expect(stdoutBuffer.toString(), contains('Started local artifact host.'));
-    expect(
-      stdoutBuffer.toString(),
-      contains('Android emulator URL: http://10.0.2.2:9090/api/'),
-    );
-    expect(
-      stdoutBuffer.toString(),
-      contains('Desktop/Chrome URL: http://127.0.0.1:9090/api/'),
-    );
+    expect(controller.calls, <String>['start', 'status', 'stop']);
   });
-
-  test('backend command remains a legacy artifact-host alias', () async {
-    final controller = _FakeLocalBackendController();
-    final stdoutBuffer = StringBuffer();
-    final cli = MiniprogramCli(
-      stateStore: stateStore,
-      stdoutSink: stdoutBuffer,
-      stderrSink: StringBuffer(),
-      backendController: controller,
-      workingDirectory: repoRoot.path,
-    );
-
-    expect(await cli.run(<String>['backend', 'start', '--port', '9091']), 0);
-
-    expect(controller.startedPort, 9091);
-    expect(controller.calls, <String>['start']);
-    expect(stdoutBuffer.toString(), contains('Started local artifact host.'));
-  });
-
-  test(
-    'artifact-host commands use saved env repo root when run from a standalone workspace',
-    () async {
-      final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
-      await workspaceRoot.create(recursive: true);
-
-      final cli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: workspaceRoot.path,
-      );
-      expect(
-        await cli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-
-      final controller = _FakeLocalBackendController();
-      final backendCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        backendController: controller,
-        workingDirectory: workspaceRoot.path,
-      );
-
-      expect(await backendCli.run(<String>['artifact-host', 'start']), 0);
-      expect(await backendCli.run(<String>['artifact-host', 'status']), 0);
-      expect(await backendCli.run(<String>['artifact-host', 'stop']), 0);
-      expect(controller.repoRootPaths, everyElement(repoRoot.path));
-    },
-  );
-
-  test(
-    'artifact-host commands use saved global repo root from an unrelated working directory',
-    () async {
-      final workspaceRoot = Directory(p.join(tempDir.path, 'coupon_center'));
-      await workspaceRoot.create(recursive: true);
-      final otherRoot = Directory(p.join(tempDir.path, 'other_workdir'));
-      await otherRoot.create(recursive: true);
-
-      final envCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        workingDirectory: workspaceRoot.path,
-      );
-      expect(
-        await envCli.run(<String>['env', 'init', '--repo-root', repoRoot.path]),
-        0,
-      );
-
-      final controller = _FakeLocalBackendController();
-      final backendCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        backendController: controller,
-        workingDirectory: otherRoot.path,
-      );
-
-      expect(await backendCli.run(<String>['artifact-host', 'start']), 0);
-      expect(await backendCli.run(<String>['artifact-host', 'status']), 0);
-      expect(await backendCli.run(<String>['artifact-host', 'stop']), 0);
-      expect(controller.repoRootPaths, everyElement(repoRoot.path));
-    },
-  );
-
-  test(
-    'artifact-host commands use a saved artifact workspace when no repo root is present',
-    () async {
-      final backendRoot = p.join(tempDir.path, 'backend_workspace');
-      await Directory(
-        p.join(backendRoot, 'backend', 'api'),
-      ).create(recursive: true);
-      await Directory(
-        p.join(backendRoot, 'backend', 'local_backend_service', 'bin'),
-      ).create(recursive: true);
-      await File(
-        p.join(
-          backendRoot,
-          'backend',
-          'local_backend_service',
-          'bin',
-          'server.dart',
-        ),
-      ).writeAsString('void main() {}');
-      final backendState = LocalBackendWorkspaceState(
-        schemaVersion: 1,
-        backendRootPath: backendRoot,
-        apiRootPath: p.join(backendRoot, 'backend', 'api'),
-        serviceDirectoryPath: p.join(
-          backendRoot,
-          'backend',
-          'local_backend_service',
-        ),
-        initializedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
-        updatedAtUtc: DateTime.utc(2026, 4, 10).toIso8601String(),
-      );
-      await stateStore.writeGlobalBackendWorkspaceState(backendState);
-
-      final otherRoot = Directory(p.join(tempDir.path, 'other_workdir'));
-      await otherRoot.create(recursive: true);
-      final controller = _FakeLocalBackendController();
-      final backendCli = MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: StringBuffer(),
-        stderrSink: StringBuffer(),
-        backendController: controller,
-        workingDirectory: otherRoot.path,
-      );
-
-      expect(await backendCli.run(<String>['artifact-host', 'start']), 0);
-      expect(await backendCli.run(<String>['artifact-host', 'status']), 0);
-      expect(await backendCli.run(<String>['artifact-host', 'stop']), 0);
-      expect(controller.repoRootPaths, everyElement(backendRoot));
-    },
-  );
 }

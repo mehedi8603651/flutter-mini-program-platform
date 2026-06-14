@@ -14,50 +14,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     if (explicitTarget case final target? when target.trim().isNotEmpty) {
       return target;
     }
-    final activeEnvironment = resolvedEnvironmentState?.state.activeEnvironment;
-    if (activeEnvironment == null || activeEnvironment == 'local') {
-      return 'local';
-    }
-    return 'cloud';
-  }
-
-  CloudEnvironmentConfiguration _resolveConfiguredCloudEnvironment({
-    required LocalCliEnvironmentState? state,
-    required String? explicitEnvironmentName,
-  }) {
-    if (state == null) {
-      throw const MiniProgramPublishException(
-        'No miniprogram env configuration was found. Run '
-        '`miniprogram env init` and `miniprogram env configure ...` first.',
-      );
-    }
-
-    final requestedEnvironmentName =
-        explicitEnvironmentName?.trim().isNotEmpty == true
-        ? explicitEnvironmentName!.trim()
-        : state.activeEnvironment;
-    if (requestedEnvironmentName == 'local') {
-      throw const MiniProgramPublishException(
-        'Cloud publish requires an active or explicit named cloud '
-        'environment. Run `miniprogram env use <env-name>` or pass '
-        '`--env <env-name>`.',
-      );
-    }
-    if (requestedEnvironmentName == 'cloud') {
-      throw const MiniProgramPublishException(
-        'Legacy `cloud` env selection is not enough for cloud publish. '
-        'Configure and select a named environment first.',
-      );
-    }
-
-    final environment = state.cloudEnvironmentNamed(requestedEnvironmentName);
-    if (environment == null) {
-      throw MiniProgramPublishException(
-        'No configured cloud environment named "$requestedEnvironmentName" '
-        'was found.',
-      );
-    }
-    return environment;
+    return 'local';
   }
 
   String _normalizeAbsoluteUrl(String rawValue) {
@@ -67,14 +24,6 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
       throw FormatException('Expected an absolute URL, but got: $rawValue');
     }
     return trimmedValue.replaceFirst(RegExp(r'/+$'), '');
-  }
-
-  Uri? _parseOptionalAbsoluteUri(String? rawValue) {
-    final trimmed = rawValue?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return null;
-    }
-    return Uri.parse(_normalizeAbsoluteUrl(trimmed));
   }
 
   String _defaultTitleForAppId(String appId) {
@@ -116,15 +65,6 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     );
   }
 
-  String _normalizeEnvironmentPathPrefix(String rawValue) {
-    final normalized = rawValue.trim().replaceAll('\\', '/');
-    final trimmed = normalized.replaceAll(RegExp(r'^/+|/+$'), '');
-    if (trimmed.isEmpty) {
-      throw const FormatException('Cloud object prefixes must not be blank.');
-    }
-    return trimmed;
-  }
-
   String _currentWorkingDirectory() =>
       p.normalize(p.absolute(_workingDirectory ?? Directory.current.path));
 
@@ -158,99 +98,16 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
         arguments.single == 'help';
   }
 
-  CloudEnvironmentConfiguration? _resolveCloudEnvironmentForHostRun({
-    required ResolvedLocalCliEnvironmentState? resolvedEnvironmentState,
-    required String? explicitEnvironmentName,
-    required EmbeddedHostCloudConfiguration? hostConfiguration,
-  }) {
-    final requestedEnvironmentName =
-        explicitEnvironmentName?.trim().isNotEmpty == true
-        ? explicitEnvironmentName!.trim()
-        : hostConfiguration?.environmentName ??
-              resolvedEnvironmentState?.state.activeEnvironment;
-    if (requestedEnvironmentName == null || requestedEnvironmentName.isEmpty) {
-      return null;
+  Future<void> _requireEmbeddedHostProject(String projectRootPath) async {
+    final normalizedRootPath = p.normalize(p.absolute(projectRootPath));
+    final pubspec = File(p.join(normalizedRootPath, 'pubspec.yaml'));
+    final libDirectory = Directory(p.join(normalizedRootPath, 'lib'));
+    if (!await pubspec.exists() || !await libDirectory.exists()) {
+      throw MiniProgramHostException(
+        'Host project root must contain pubspec.yaml and lib/: '
+        '$normalizedRootPath',
+      );
     }
-    if (requestedEnvironmentName == 'local' ||
-        requestedEnvironmentName == 'cloud') {
-      return null;
-    }
-
-    final resolvedEnvironment = resolvedEnvironmentState?.state
-        .cloudEnvironmentNamed(requestedEnvironmentName);
-    if (resolvedEnvironment != null) {
-      return resolvedEnvironment;
-    }
-    if (hostConfiguration != null &&
-        hostConfiguration.environmentName == requestedEnvironmentName) {
-      return null;
-    }
-
-    throw MiniProgramHostException(
-      'No configured cloud environment named "$requestedEnvironmentName" was '
-      'found. Run `miniprogram env configure $requestedEnvironmentName '
-      '--provider aws ...` first.',
-    );
-  }
-
-  Future<String> _resolveHostBackendApiBaseUrl({
-    required String projectRootPath,
-    required ResolvedLocalCliEnvironmentState? resolvedEnvironmentState,
-    required CloudEnvironmentConfiguration? environment,
-    required EmbeddedHostCloudConfiguration? hostConfiguration,
-  }) async {
-    if (environment != null) {
-      final configuredBackendApiBaseUrl = environment.values['apiBaseUrl']
-          ?.toString()
-          .trim();
-      if (configuredBackendApiBaseUrl != null &&
-          configuredBackendApiBaseUrl.isNotEmpty) {
-        return _normalizeAbsoluteUrl(configuredBackendApiBaseUrl);
-      }
-
-      if (environment.provider != 'aws') {
-        if (hostConfiguration != null &&
-            hostConfiguration.backendApiBaseUrl.trim().isNotEmpty) {
-          return _normalizeAbsoluteUrl(hostConfiguration.backendApiBaseUrl);
-        }
-        return '';
-      }
-
-      if (resolvedEnvironmentState != null) {
-        final outputs = await _cloudController.outputs(
-          MiniProgramCloudOutputsRequest(
-            resolvedEnvironmentState: resolvedEnvironmentState,
-            environment: environment,
-          ),
-        );
-        final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(outputs);
-        await _persistCloudEnvironmentValueUpdates(
-          resolved: resolvedEnvironmentState,
-          environmentName: environment.name,
-          updatedValues: <String, dynamic>{'apiBaseUrl': backendApiBaseUrl},
-        );
-
-        final now = DateTime.now().toUtc().toIso8601String();
-        await _stateStore.writeHostCloudConfiguration(
-          projectRootPath,
-          EmbeddedHostCloudConfiguration(
-            environmentName: environment.name,
-            provider: environment.provider,
-            backendApiBaseUrl: backendApiBaseUrl,
-            configuredAtUtc: hostConfiguration?.configuredAtUtc ?? now,
-            updatedAtUtc: now,
-          ),
-        );
-        return backendApiBaseUrl;
-      }
-    }
-
-    if (hostConfiguration != null &&
-        hostConfiguration.backendApiBaseUrl.trim().isNotEmpty) {
-      return _normalizeAbsoluteUrl(hostConfiguration.backendApiBaseUrl);
-    }
-
-    return '';
   }
 
   Future<ResolvedLocalCliEnvironmentState?> _discoverEnvironmentState({

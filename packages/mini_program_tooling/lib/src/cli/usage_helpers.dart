@@ -9,23 +9,17 @@ Commands:
   capabilities [--json]
   doctor [--json]
   env init|list|status
-  env configure <env-name> --provider aws|firebase [provider options]
-  env use <local|env-name>
+  env use local
   build [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
-  publish [mini-program-id] [--target local|cloud|static|firebase-hosting] [--env <env-name>] [--output <folder>] [--clean]
-  access-key create|list|revoke|rotate <mini-program-id> [--env <env-name>]
-  cloud deploy|status|outputs|logs|destroy|doctor|rollback [options]
-  cloud app list|info|disable|delete [options]
-  cloud outputs [--format text|dart-define]
+  publish [mini-program-id] [--target local|static] [--output <folder>] [--clean]
   workflow status [--workspace <path>] [--env <env-name>] [--remote] [--json]
-  partner package <mini-program-id> --artifact-base-url <url> [--env <env-name>]
-  host run -d <device> [--env <env-name>]
+  partner package <mini-program-id> --artifact-base-url <url>
+  host run -d <device>
   host endpoint add <mini-program-id> --artifact-base-url <url> [--title <title>]
   host endpoint import <partner-package.json>
   embed init [--project-root <path>]
-  embed cloud configure [--env <env-name>]
   artifact-host init [--root <path>]
   artifact-host start --port 8080
   artifact-host stop
@@ -61,10 +55,9 @@ Commands:
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
   urls [--port 9090]
-  contract init --backend-base-url <url> [--mini-program-root <path>] [--public]
+  contract init --backend-base-url <url> [--mini-program-root <path>]
   contract validate [--mini-program-root <path>] [--contract <file>] [--json]
-  contract smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--json]
-  contract handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
+  contract smoke [--mini-program-root <path>] [--contract <file>] [--auth-token <token>] [--json]
 ''';
 
   String _publisherBackendContractUsage({
@@ -74,27 +67,16 @@ Commands:
 Usage: miniprogram $commandName contract <command> [arguments]
 
 Commands:
-  init --backend-base-url <url> [--mini-program-root <path>] [--public]
+  init --backend-base-url <url> [--mini-program-root <path>]
   validate [--mini-program-root <path>] [--contract <file>] [--json]
-  smoke [--mini-program-root <path>] [--contract <file>] [--access-key <key>] [--auth-token <token>] [--json]
-  handoff --delivery-url <url> [--mini-program-root <path>] [--contract <file>] [--access-key <key>|--public] [--json]
+  smoke [--mini-program-root <path>] [--contract <file>] [--auth-token <token>] [--json]
 ''';
 
   String _partnerUsage() => '''
 Usage: miniprogram partner <command> [arguments]
 
 Commands:
-  package <mini-program-id> --artifact-base-url <url> [--env <env-name>]
-''';
-
-  String _accessKeyUsage() => '''
-Usage: miniprogram access-key <command> [arguments]
-
-Commands:
-  create <mini-program-id> --key-id <id> [--env <env-name>]
-  list <mini-program-id> [--env <env-name>] [--json]
-  revoke <mini-program-id> --key-id <id> [--env <env-name>]
-  rotate <mini-program-id> --key-id <id> [--new-key-id <id>] [--env <env-name>]
+  package <mini-program-id> --artifact-base-url <url>
 ''';
 
   String _embedUsage() => '''
@@ -102,14 +84,6 @@ Usage: miniprogram embed <command> [arguments]
 
 Commands:
   init [--project-root <path>] [--force]
-  cloud configure [--env <env-name>]
-''';
-
-  String _embedCloudUsage() => '''
-Usage: miniprogram embed cloud <command> [arguments]
-
-Commands:
-  configure [--env <env-name>]
 ''';
 
   String _envUsage() => '''
@@ -117,44 +91,16 @@ Usage: miniprogram env <command> [arguments]
 
 Commands:
   init
-  configure <env-name> --provider aws --bucket <bucket> --region <region>
   list
-  use <local|env-name>
+  use local
   status [--json]
-''';
-
-  String _cloudUsage() => '''
-Usage: miniprogram cloud <command> [arguments]
-
-Commands:
-  deploy [--env <env-name>]
-  status [--env <env-name>] [--json]
-  outputs [--env <env-name>] [--format text|dart-define]
-  logs [--env <env-name>]
-  destroy [--env <env-name>]
-  doctor [--env <env-name>]
-  rollback <version> [mini-program-id] [--env <env-name>]
-  app list [--env <env-name>]
-  app info <mini-program-id> [--env <env-name>]
-  app disable <mini-program-id> [--yes] [--env <env-name>]
-  app delete <mini-program-id> [--yes] [--env <env-name>]
-''';
-
-  String _cloudAppUsage() => '''
-Usage: miniprogram cloud app <command> [arguments]
-
-Commands:
-  list [--env <env-name>]
-  info <mini-program-id> [--env <env-name>]
-  disable <mini-program-id> [--yes] [--env <env-name>]
-  delete <mini-program-id> [--yes] [--env <env-name>]
 ''';
 
   String _hostUsage() => '''
 Usage: miniprogram host <command> [arguments]
 
 Commands:
-  run -d <device> [--env <env-name>]
+  run -d <device>
   endpoint add <mini-program-id> --artifact-base-url <url>
   endpoint import <partner-package.json>
 ''';

@@ -14,16 +14,15 @@ import {
   upsertRegistryEntry,
 } from '../src/hostIntegration';
 
-test('parses generated endpoint appIds without leaking access keys', () => {
+test('parses generated endpoint appIds from static artifact endpoint source', () => {
   const source = `// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"coupon_demo":{"apiBaseUri":"https://api.example.com/api","accessKey":"mpk_live_secret"}}
+// {"coupon_demo":{"apiBaseUri":"https://cdn.example.com/coupon_demo"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 
 Map<String, MiniProgramEndpoint> buildMiniProgramEndpoints() {
   return <String, MiniProgramEndpoint>{
-    "coupon_demo": MiniProgramEndpoint(
-      apiBaseUri: Uri.parse("https://api.example.com/api"),
-      accessKey: "mpk_live_secret",
+    "coupon_demo": MiniProgramEndpoint.public(
+      apiBaseUri: Uri.parse("https://cdn.example.com/coupon_demo"),
     ),
   };
 }
@@ -102,30 +101,33 @@ test('builds copyable workflow command templates', () => {
   const publisher = buildPublisherCommandTemplate({
     appId: 'coupon_demo',
     title: 'Coupon Demo',
-    envName: 'my-aws-prod',
+    artifactBaseUrl: 'https://cdn.example.com/coupon_demo',
   });
   assert.match(publisher, /miniprogram build/);
+  assert.match(publisher, /publish --target static/);
   assert.match(publisher, /partner package coupon_demo/);
-  assert.match(publisher, /<ACCESS_KEY>/);
+  assert.match(publisher, /--artifact-base-url "https:\/\/cdn\.example\.com\/coupon_demo"/);
+  assert.doesNotMatch(publisher, /credential header/);
 
   const host = buildHostCommandTemplate({
     projectRoot: 'D:\\host_app',
-    deviceId: 'emulator-5554',
+    deviceId: 'chrome',
   });
   assert.match(host, /embed init --project-root "D:\\host_app"/);
-  assert.doesNotMatch(host, /--with-demo/);
+  assert.match(host, /host endpoint import/);
+  assert.match(host, /host run -d chrome/);
   assert.match(host, /flutter build apk --release/);
 });
 
-test('builds cleanup command templates', () => {
+test('builds local-only cleanup command templates', () => {
   const commands = buildCleanupCommandTemplate({
-    appId: 'coupon_demo',
-    envName: 'my-aws-prod',
-    keyId: 'host-a',
     workspacePath: 'D:\\work\\coupon_demo',
   });
-  assert.match(commands, /cloud app delete coupon_demo --env my-aws-prod/);
-  assert.match(commands, /access-key revoke coupon_demo --key-id host-a/);
-  assert.match(commands, /--yes/);
   assert.match(commands, /Remove-Item -Recurse -Force "D:\\work\\coupon_demo"/);
+  assert.doesNotMatch(commands, /credential header|mpk_live/);
+
+  assert.equal(
+    buildCleanupCommandTemplate({}),
+    'No provider cleanup commands are needed for public static artifacts.',
+  );
 });

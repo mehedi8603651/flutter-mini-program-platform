@@ -1,6 +1,6 @@
 name: mini_program_contracts
 description: Shared contracts for the portable Flutter mini-program platform.
-version: 0.2.2
+version: 0.3.0
 repository: https://github.com/mehedi8603651/flutter-mini-program-platform
 
 environment:

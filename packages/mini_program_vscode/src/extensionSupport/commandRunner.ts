@@ -65,7 +65,7 @@ export async function runMiniProgramWorkspaceCliCommand(
 
 export async function runGuidedMiniProgramBuildValidatePublish(
   workspacePath: string,
-  envName: string | undefined,
+  outputPath: string | undefined,
   output: vscode.OutputChannel,
 ): Promise<boolean> {
   if (!(await runGuidedCliStep(
@@ -87,8 +87,8 @@ export async function runGuidedMiniProgramBuildValidatePublish(
   return runGuidedCliStep(
     'Publish',
     buildPublishArgs({
-      target: 'cloud',
-      envName: envName?.trim() || undefined,
+      target: 'static',
+      outputPath: outputPath?.trim() || undefined,
       miniProgramRoot: workspacePath,
     }),
     workspacePath,

@@ -23,3 +23,6 @@
 - add the pure-Dart Mp JSON authoring foundation
 - add explicit `MpProgram` screen registry and deterministic screen JSON output
 - add layout, text, image, card, button, and email-auth action helpers
+## 0.1.4
+
+- Update the contracts dependency for the current static artifact plus runtime API boundary.

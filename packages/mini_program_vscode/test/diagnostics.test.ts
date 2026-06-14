@@ -24,7 +24,6 @@ test('unknown workspace reports actionable warning', async () => {
         workspace: { type: 'unknown', path: workspacePath },
         environment: { configured: false },
         backend: { configured: false },
-        remote: { checked: false },
       },
     });
 
@@ -37,7 +36,7 @@ test('unknown workspace reports actionable warning', async () => {
   }
 });
 
-test('mini-program missing build suggests build', async () => {
+test('mini-program missing build suggests static artifact build flow', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-mini-');
   try {
     await writeFile(
@@ -63,13 +62,13 @@ test('mini-program missing build suggests build', async () => {
     assert.match(text, /Build output is missing/);
     assert.match(text, /Run MiniProgram: Build/);
     assert.match(text, /Run MiniProgram: Validate/);
-    assert.match(text, /Run MiniProgram: Create Partner Package/);
+    assert.match(text, /after publishing static artifacts/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('mini-program backend query usage suggests backend base URL', async () => {
+test('mini-program runtime API usage suggests optional middle-server URL', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-backend-query-');
   try {
     await writeFile(
@@ -97,60 +96,19 @@ test('mini-program backend query usage suggests backend base URL', async () => {
     const text = formatDiagnosticsReport(report);
     assert.match(text, /Mini-program source uses backend query\/state helpers/);
     assert.match(text, /Request IDs: home/);
-    assert.match(text, /--backend-base-url/);
+    assert.match(text, /middleServerApiUrl\/Publisher API URL/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('host app missing endpoint, scope, and internet permission suggests fixes', async () => {
-  const workspacePath = await tempWorkspace('mini-program-diag-host-');
-  try {
-    await mkdir(path.join(workspacePath, 'lib'), { recursive: true });
-    await writeFile(
-      path.join(workspacePath, 'pubspec.yaml'),
-      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.2.0\n',
-    );
-    await writeFile(path.join(workspacePath, 'lib', 'main.dart'), 'void main() {}\n');
-
-    const report = await buildDiagnosticsReport({
-      workspacePath,
-      scope: 'hostApp',
-      workflowReport: {
-        schemaVersion: 1,
-        command: 'workflow status',
-        workspace: { type: 'host_app', path: workspacePath },
-        hostApp: {
-          detected: true,
-          runtimeSetupExists: false,
-          launcherExists: false,
-          endpointMapExists: false,
-          endpointCount: 0,
-          endpoints: [],
-        },
-        environment: { configured: false },
-        backend: { configured: false },
-        remote: { checked: false },
-      },
-    });
-
-    const text = formatDiagnosticsReport(report);
-    assert.match(text, /Endpoint map is missing/);
-    assert.match(text, /MiniProgram: Import Host Endpoint/);
-    assert.match(text, /MiniProgramScope was not found/);
-    assert.match(text, /android.permission.INTERNET/);
-  } finally {
-    await rm(workspacePath, { recursive: true, force: true });
-  }
-});
-
-test('host app warns when endpoint has no likely launcher usage', async () => {
+test('host app reports static artifact endpoints and optional runtime API modes', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-host-launcher-');
   try {
     await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
     await writeFile(
       path.join(workspacePath, 'pubspec.yaml'),
-      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.1\n',
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.5.0\n',
     );
     await writeFile(
       path.join(workspacePath, 'lib', 'main.dart'),
@@ -159,7 +117,7 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
     await writeFile(
       path.join(workspacePath, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
       `// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"profile":{"apiBaseUri":"https://api.example.com/api","accessKey":"mpk_live_secret"}}
+// {"profile":{"apiBaseUri":"https://cdn.example.com/profile","backendBaseUri":"https://publisher.example.com/api"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 `,
     );
@@ -167,42 +125,26 @@ test('host app warns when endpoint has no likely launcher usage', async () => {
     const report = await buildDiagnosticsReport({
       workspacePath,
       scope: 'hostApp',
-      workflowReport: {
-        schemaVersion: 1,
-        command: 'workflow status',
-        workspace: { type: 'host_app', path: workspacePath },
-        hostApp: {
-          detected: true,
-          runtimeSetupExists: true,
-          launcherExists: true,
-          endpointMapExists: true,
-          endpointCount: 1,
-          endpoints: [
-            {
-              appId: 'profile',
-              apiBaseUri: 'https://api.example.com/api',
-              backendBaseUri: 'https://publisher.example.com/api',
-              backendConfigured: true,
-              backendMode: 'remote',
-              accessMode: 'protected',
-              hasAccessKey: true,
-            },
-          ],
-        },
-        environment: { configured: false },
-        backend: { configured: false },
-        remote: { checked: false },
-      },
+      workflowReport: hostReport(workspacePath, {
+        endpointCount: 1,
+        endpoints: [
+          {
+            appId: 'profile',
+            apiBaseUri: 'https://cdn.example.com/profile',
+            backendBaseUri: 'https://publisher.example.com/api',
+            backendConfigured: true,
+            backendMode: 'remote',
+          },
+        ],
+      }),
     });
 
     const text = formatDiagnosticsReport(report);
+    assert.match(text, /Endpoint entries include static artifact base URLs/);
     assert.match(text, /not opened from host UI: profile/);
-    assert.match(text, /MiniProgram: Copy Demo Host Button/);
-    assert.match(text, /Endpoint routing is active/);
     assert.match(text, /profile:remote/);
-    assert.match(text, /default backend URL is only a fallback/);
-    assert.match(text, /delivery access only/);
-    assert.doesNotMatch(text, /mpk_live_secret/);
+    assert.match(text, /Auth, payments, database access/);
+    assert.doesNotMatch(text, /credential header/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
@@ -224,32 +166,18 @@ test('host app warns when local mock backend uses old SDK constraint', async () 
     const report = await buildDiagnosticsReport({
       workspacePath,
       scope: 'hostApp',
-      workflowReport: {
-        schemaVersion: 1,
-        command: 'workflow status',
-        workspace: { type: 'host_app', path: workspacePath },
-        hostApp: {
-          detected: true,
-          runtimeSetupExists: true,
-          launcherExists: true,
-          endpointMapExists: true,
-          endpointCount: 1,
-          endpoints: [
-            {
-              appId: 'coupon_app',
-              apiBaseUri: 'https://cdn.example.com/public_mini_program/',
-              accessMode: 'public',
-              hasAccessKey: false,
-              backendBaseUri: 'http://127.0.0.1:9090',
-              backendConfigured: true,
-              backendMode: 'local_mock',
-            },
-          ],
-        },
-        environment: { configured: false },
-        backend: { configured: false },
-        remote: { checked: false },
-      },
+      workflowReport: hostReport(workspacePath, {
+        endpointCount: 1,
+        endpoints: [
+          {
+            appId: 'coupon_app',
+            apiBaseUri: 'https://cdn.example.com/public_mini_program/',
+            backendBaseUri: 'http://127.0.0.1:9090',
+            backendConfigured: true,
+            backendMode: 'local_mock',
+          },
+        ],
+      }),
     });
 
     const text = formatDiagnosticsReport(report);
@@ -260,7 +188,7 @@ test('host app warns when local mock backend uses old SDK constraint', async () 
   }
 });
 
-test('host app accepts public endpoint metadata without access key', async () => {
+test('host app checks reachable static artifact manifest and entry screen', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-host-public-');
   const server = createServer((request, response) => {
     if (request.url === '/public_mini_program/manifests/public_coupon/latest.json') {
@@ -287,7 +215,7 @@ test('host app accepts public endpoint metadata without access key', async () =>
     await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
     await writeFile(
       path.join(workspacePath, 'pubspec.yaml'),
-      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.3.1\n',
+      'name: host_app\ndependencies:\n  mini_program_sdk: ^0.5.0\n',
     );
     await writeFile(
       path.join(workspacePath, 'lib', 'main.dart'),
@@ -297,36 +225,16 @@ test('host app accepts public endpoint metadata without access key', async () =>
     const report = await buildDiagnosticsReport({
       workspacePath,
       scope: 'hostApp',
-      workflowReport: {
-        schemaVersion: 1,
-        command: 'workflow status',
-        workspace: { type: 'host_app', path: workspacePath },
-        hostApp: {
-          detected: true,
-          runtimeSetupExists: true,
-          launcherExists: true,
-          endpointMapExists: true,
-          endpointCount: 1,
-          endpoints: [
-            {
-              appId: 'public_coupon',
-              apiBaseUri,
-              accessMode: 'public',
-              hasAccessKey: false,
-            },
-          ],
-        },
-        environment: { configured: false },
-        backend: { configured: false },
-        remote: { checked: false },
-      },
+      workflowReport: hostReport(workspacePath, {
+        endpointCount: 1,
+        endpoints: [{ appId: 'public_coupon', apiBaseUri }],
+      }),
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /public_coupon:public/);
+    assert.match(text, /Static artifact endpoint uses public static files/);
     assert.match(text, /Public latest manifest is reachable/);
     assert.match(text, /Public entry screen JSON is reachable/);
-    assert.match(text, /does not require a MiniProgram access key/);
     assert.doesNotMatch(text, /Incomplete endpoint entries/);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -334,78 +242,22 @@ test('host app accepts public endpoint metadata without access key', async () =>
   }
 });
 
-test('remote diagnostics surfaces cloud and access-key errors', async () => {
-  const workspacePath = await tempWorkspace('mini-program-diag-cloud-');
-  try {
-    const localReport: WorkflowStatusReport = {
-      schemaVersion: 1,
-      command: 'workflow status',
-      workspace: { type: 'mini_program', path: workspacePath },
-      environment: {
-        configured: true,
-        selectedEnvironment: 'my-aws-prod',
-        provider: 'aws',
-        apiBaseUrl: 'https://api.example.com/prod/api',
-        requireAccessKeys: true,
-      },
-      backend: { configured: true },
-      remote: { checked: false },
-    };
-    const remoteReport: WorkflowStatusReport = {
-      ...localReport,
-      remote: {
-        checked: true,
-        cloudStatus: { healthy: false, stackStatus: 'ROLLBACK_COMPLETE' },
-        app: {},
-        accessKeys: { activeCount: 0 },
-        errors: ['Cloud app info failed.'],
-      },
-    };
-
-    const report = await buildDiagnosticsReport({
-      workspacePath,
-      scope: 'cloudDelivery',
-      workflowReport: localReport,
-      remoteWorkflowReport: remoteReport,
-    });
-
-    const text = formatDiagnosticsReport(report);
-    assert.match(text, /Cloud stack is not healthy/);
-    assert.match(text, /0 active access key/);
-    assert.match(text, /Cloud app info failed/);
-    assert.match(text, /Run MiniProgram: Create Access Key/);
-  } finally {
-    await rm(workspacePath, { recursive: true, force: true });
-  }
-});
-
-test('diagnostic output redacts access-key secrets', async () => {
+test('diagnostic output redacts legacy access-key shaped secrets', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-secret-');
   try {
     const secret = 'mpk_live_super_secret_value_1234567890';
     const generated = await buildDiagnosticsReport({
       workspacePath,
       scope: 'hostApp',
-      workflowReport: {
-        schemaVersion: 1,
-        command: 'workflow status',
-        workspace: { type: 'host_app', path: workspacePath },
-        hostApp: {
-          detected: true,
-          endpointCount: 1,
-          endpoints: [
-            {
-              appId: 'coupon_demo',
-              apiBaseUri: 'https://api.example.com/api',
-              hasAccessKey: true,
-              accessKey: secret,
-            },
-          ],
-        },
-        environment: { configured: false },
-        backend: { configured: false },
-        remote: { checked: false },
-      },
+      workflowReport: hostReport(workspacePath, {
+        endpointCount: 1,
+        endpoints: [
+          {
+            appId: 'coupon_demo',
+            apiBaseUri: 'https://cdn.example.com/coupon_demo',
+          },
+        ],
+      }),
     });
     const text = formatDiagnosticsReport({
       ...generated,
@@ -427,7 +279,7 @@ test('diagnostic output redacts access-key secrets', async () => {
   }
 });
 
-test('diagnostics warn when CLI lacks Publisher API support', async () => {
+test('diagnostics warn when CLI lacks current MVP support', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-cli-old-');
   try {
     const report = await buildDiagnosticsReport({
@@ -435,49 +287,25 @@ test('diagnostics warn when CLI lacks Publisher API support', async () => {
       scope: 'workspace',
       cliCapabilities: {
         checked: true,
+        supportsStaticPublish: false,
         supportsPublisherApiMock: false,
         supportsPublisherBackendContract: false,
-        supportsFirebaseHostingPublish: true,
         supportsCapabilityDiscovery: true,
         toolingVersion: '0.4.1',
-        detail: 'Configured CLI does not expose Publisher API commands.',
+        detail: 'Configured CLI does not expose current MVP commands.',
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(text, /CLI Publisher API commands/);
-    assert.match(text, /missing provider-neutral Publisher API mock or contract commands/);
+    assert.match(text, /missing static artifact publish or provider-neutral Publisher API commands/);
     assert.match(text, /Activate the local mini_program_tooling package or update miniProgram\.cliPath/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
 
-test('diagnostics warn when CLI lacks quiet capability discovery', async () => {
-  const workspacePath = await tempWorkspace('mini-program-diag-cli-quiet-');
-  try {
-    const report = await buildDiagnosticsReport({
-      workspacePath,
-      scope: 'workspace',
-      cliCapabilities: {
-        checked: true,
-        supportsPublisherApiMock: true,
-        supportsPublisherBackendContract: true,
-        supportsFirebaseHostingPublish: true,
-        supportsCapabilityDiscovery: false,
-        toolingVersion: '0.5.0',
-      },
-    });
-
-    const text = formatDiagnosticsReport(report);
-    assert.match(text, /supports Publisher API commands but lacks quiet capability discovery/);
-    assert.match(text, /Activate the local mini_program_tooling package or update miniProgram\.cliPath/);
-  } finally {
-    await rm(workspacePath, { recursive: true, force: true });
-  }
-});
-
-test('diagnostics accept CLI with Publisher API support', async () => {
+test('diagnostics accept CLI with static artifact and Publisher API support', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-cli-new-');
   try {
     const report = await buildDiagnosticsReport({
@@ -485,25 +313,26 @@ test('diagnostics accept CLI with Publisher API support', async () => {
       scope: 'workspace',
       cliCapabilities: {
         checked: true,
+        supportsStaticPublish: true,
         supportsPublisherApiMock: true,
         supportsPublisherBackendContract: true,
-        supportsFirebaseHostingPublish: true,
         supportsCapabilityDiscovery: true,
-        toolingVersion: '0.5.0',
+        toolingVersion: '0.6.0',
       },
     });
 
     const text = formatDiagnosticsReport(report);
     assert.match(
       text,
-      /Configured CLI supports Publisher API mock, provider-neutral contract handoff, Firebase Hosting static delivery, and quiet capability discovery/,
+      /Configured CLI supports static artifact publishing, Publisher API mock, runtime contract checks, and quiet capability discovery/,
     );
-    assert.match(text, /Version: 0.5.0/);
-    assert.doesNotMatch(text, /missing provider-neutral Publisher API/);
+    assert.match(text, /Version: 0.6.0/);
+    assert.doesNotMatch(text, /missing static artifact publish/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }
 });
+
 async function tempWorkspace(prefix: string): Promise<string> {
   return mkdtemp(path.join(tmpdir(), prefix));
 }
@@ -525,6 +354,27 @@ function miniProgramReport(
     },
     environment: { configured: false },
     backend: { configured: false },
-    remote: { checked: false },
+  };
+}
+
+function hostReport(
+  workspacePath: string,
+  hostApp: Record<string, unknown>,
+): WorkflowStatusReport {
+  return {
+    schemaVersion: 1,
+    command: 'workflow status',
+    workspace: { type: 'host_app', path: workspacePath },
+    hostApp: {
+      detected: true,
+      runtimeSetupExists: true,
+      launcherExists: true,
+      endpointMapExists: true,
+      endpointAppIds: [],
+      endpoints: [],
+      ...hostApp,
+    },
+    environment: { configured: false },
+    backend: { configured: false },
   };
 }

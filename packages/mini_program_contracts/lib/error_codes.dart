@@ -12,9 +12,6 @@ abstract final class MiniProgramErrorCodes {
   static const String backendUnreachable = 'backend_unreachable';
   static const String backendTimeout = 'backend_timeout';
   static const String endpointNotConfigured = 'endpoint_not_configured';
-  static const String accessKeyNotConfigured = 'access_key_not_configured';
-  static const String accessKeyMissing = 'access_key_missing';
-  static const String accessKeyInvalid = 'access_key_invalid';
   static const String secureApiNotAllowlisted = 'secure_api_not_allowlisted';
   static const String secureApiSessionMissing = 'secure_api_session_missing';
   static const String secureApiSessionExpired = 'secure_api_session_expired';

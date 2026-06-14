@@ -19,42 +19,10 @@ export interface StatusTreeSection {
   readonly rows: StatusTreeRow[];
 }
 
-export interface FirebaseHostEndpointStatus {
-  readonly ready?: boolean;
-  readonly miniProgramId?: string;
-  readonly hostProjectRootPath?: string;
-  readonly hostEndpointMapPath?: string;
-  readonly deliveryApiBaseUrl?: string;
-  readonly backendBaseUrl?: string;
-  readonly accessMode?: string;
-  readonly hostEndpointBackendMode?: string;
-  readonly hostEndpointIssues?: readonly string[];
-  readonly hostingManifestReachable?: boolean;
-  readonly hostingCorsReady?: boolean;
-  readonly hostingManifestUrl?: string;
-  readonly hostingCorsAllowOrigin?: string;
-  readonly hostingDeliveryIssue?: string;
-  readonly hostAuthControllerReady?: boolean;
-  readonly hostRuntimeSetupPath?: string;
-  readonly hostAuthControllerConfigured?: boolean;
-  readonly hostSecureAuthControllerConfigured?: boolean;
-  readonly hostDisposeAuthControllerConfigured?: boolean;
-  readonly hostAuthIssues?: readonly string[];
-}
-
 export function buildStatusTreeSections(
   report: WorkflowStatusReport | undefined,
-  options: {
-    readonly firebaseHostEndpoint?: FirebaseHostEndpointStatus;
-  } = {},
 ): StatusTreeSection[] {
-  const firebaseHostEndpoint = options.firebaseHostEndpoint;
   if (!report) {
-    if (firebaseHostEndpoint) {
-      return compactSections([
-        firebaseHostEndpoint ? firebaseHostEndpointSection(firebaseHostEndpoint) : undefined,
-      ]);
-    }
     return [
       {
         label: 'Workspace',
@@ -69,7 +37,6 @@ export function buildStatusTreeSections(
   const hostApp = asRecord(report.hostApp);
   const environment = asRecord(report.environment);
   const backend = asRecord(report.backend);
-  const remote = asRecord(report.remote);
   const nextActions = asStringList(report.nextActions);
   const sections: StatusTreeSection[] = [
     {
@@ -132,12 +99,6 @@ export function buildStatusTreeSections(
             : 'none',
         ),
         row('Publisher routes', expectedPublisherRoutes.join(', ')),
-        row(
-          'Paged route',
-          expectedPublisherRoutes.some((route) => route.includes('/coupons/page'))
-            ? 'yes'
-            : '',
-        ),
       ]),
     });
   }
@@ -145,16 +106,16 @@ export function buildStatusTreeSections(
   if (asBoolean(hostApp.detected)) {
     const endpointCount = asNumber(hostApp.endpointCount);
     const endpoints = Array.isArray(hostApp.endpoints) ? hostApp.endpoints : [];
-    const endpointModes = endpoints
+    const artifactEndpoints = endpoints
       .map((entry) => {
         const endpoint = asRecord(entry);
         const appId = asString(endpoint.appId);
-        const mode = asString(endpoint.accessMode, asBoolean(endpoint.hasAccessKey) ? 'protected' : 'public');
-        return appId ? `${appId}:${mode}` : '';
+        const apiBaseUri = asString(endpoint.apiBaseUri);
+        return appId ? `${appId}:${apiBaseUri ? 'static' : 'missing'}` : '';
       })
       .filter(Boolean)
       .join(', ');
-    const endpointBackends = endpoints
+    const runtimeApis = endpoints
       .map((entry) => {
         const endpoint = asRecord(entry);
         const appId = asString(endpoint.appId);
@@ -174,27 +135,25 @@ export function buildStatusTreeSections(
         row('Endpoint map', yesNo(asBoolean(hostApp.endpointMapExists))),
         row('Endpoint count', String(endpointCount)),
         row('Endpoint app IDs', asStringList(hostApp.endpointAppIds).join(', ')),
-        row('Endpoint modes', endpointModes),
-        row('Publisher APIs', endpointBackends),
+        row('Static artifacts', artifactEndpoints),
+        row('Runtime Publisher APIs', runtimeApis),
         row(
           'Routing',
           endpointCount > 0
             ? 'endpoint map active'
-            : 'default backend fallback',
+            : 'default static artifact fallback',
         ),
       ]),
     });
   }
 
   sections.push({
-    label: 'Environment',
+    label: 'Local environment',
     icon: 'server',
     rows: compactRows([
       row('Configured', yesNo(asBoolean(environment.configured))),
       row('Environment', asString(environment.selectedEnvironment)),
-      row('Provider', asString(environment.provider)),
-      row('API base URL', asString(environment.apiBaseUrl)),
-      row('Access keys required', yesNo(asBoolean(environment.requireAccessKeys))),
+      row('Artifact base URL', asString(environment.apiBaseUrl)),
     ]),
   });
 
@@ -211,27 +170,6 @@ export function buildStatusTreeSections(
       row('Healthy', yesNo(asBoolean(backend.healthy))),
     ]),
   });
-
-  const cloudStatus = asRecord(remote.cloudStatus);
-  const app = asRecord(remote.app);
-  const accessKeys = asRecord(remote.accessKeys);
-  sections.push({
-    label: 'Remote',
-    icon: 'cloud',
-    rows: compactRows([
-      row('Checked', yesNo(asBoolean(remote.checked))),
-      row('Provider', asString(remote.provider)),
-      row('Cloud healthy', optionalYesNo(cloudStatus.healthy)),
-      row('Stack status', asString(cloudStatus.stackStatus)),
-      row('Latest version', asString(app.latestVersion)),
-      row('Active access keys', optionalNumber(accessKeys.activeCount)),
-      row('Errors', asStringList(remote.errors).join('; ')),
-    ]),
-  });
-
-  if (firebaseHostEndpoint) {
-    sections.push(firebaseHostEndpointSection(firebaseHostEndpoint));
-  }
 
   sections.push({
     label: 'Next actions',
@@ -273,47 +211,6 @@ function yesNo(value: boolean): string {
 
 function optionalYesNo(value: unknown): string {
   return typeof value === 'boolean' ? yesNo(value) : '';
-}
-
-function optionalNumber(value: unknown): string {
-  return typeof value === 'number' ? String(value) : '';
-}
-
-function firebaseHostEndpointSection(
-  status: FirebaseHostEndpointStatus,
-): StatusTreeSection {
-  return {
-    label: 'Firebase host endpoint',
-    icon: status.ready ? 'pass' : 'warning',
-    rows: compactRows([
-      row('Ready', optionalYesNo(status.ready)),
-      row('App ID', status.miniProgramId ?? ''),
-      row('Host app', status.hostProjectRootPath ?? ''),
-      row('Endpoint map', status.hostEndpointMapPath ?? ''),
-      row('Delivery URL', status.deliveryApiBaseUrl ?? ''),
-      row('Backend URL', status.backendBaseUrl ?? ''),
-      row('Access mode', status.accessMode ?? ''),
-      row('Backend mode', status.hostEndpointBackendMode ?? ''),
-      row('Hosting manifest', optionalYesNo(status.hostingManifestReachable)),
-      row('Hosting CORS', optionalYesNo(status.hostingCorsReady)),
-      row('Hosting manifest URL', status.hostingManifestUrl ?? ''),
-      row('CORS allow origin', status.hostingCorsAllowOrigin ?? ''),
-      row('Hosting issue', status.hostingDeliveryIssue ?? ''),
-      row('Host auth ready', optionalYesNo(status.hostAuthControllerReady)),
-      row('Host runtime setup', status.hostRuntimeSetupPath ?? ''),
-      row('Host auth configured', optionalYesNo(status.hostAuthControllerConfigured)),
-      row('Host secure auth store', optionalYesNo(status.hostSecureAuthControllerConfigured)),
-      row('Host disposes auth', optionalYesNo(status.hostDisposeAuthControllerConfigured)),
-      row('Host auth issues', (status.hostAuthIssues ?? []).join('; ')),
-      row('Issues', (status.hostEndpointIssues ?? []).join('; ')),
-    ]),
-  };
-}
-
-function compactSections(
-  sections: readonly (StatusTreeSection | undefined)[],
-): StatusTreeSection[] {
-  return sections.filter((section): section is StatusTreeSection => Boolean(section));
 }
 
 function iconForSeverity(severity: string): string {

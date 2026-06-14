@@ -71,7 +71,6 @@ class MiniProgramHostEndpointAddRequest {
     required this.appId,
     required this.apiBaseUri,
     this.title,
-    this.accessKey,
     this.backendBaseUri,
     this.backendMode,
     this.force = false,
@@ -81,7 +80,6 @@ class MiniProgramHostEndpointAddRequest {
   final String appId;
   final Uri apiBaseUri;
   final String? title;
-  final String? accessKey;
   final Uri? backendBaseUri;
   final String? backendMode;
   final bool force;
@@ -97,7 +95,6 @@ class MiniProgramHostEndpointAddResult {
     required this.apiBaseUri,
     this.backendBaseUri,
     required this.backendMode,
-    required this.accessMode,
     required this.endpointCount,
     required this.registryCount,
     required this.created,
@@ -112,7 +109,6 @@ class MiniProgramHostEndpointAddResult {
   final Uri apiBaseUri;
   final Uri? backendBaseUri;
   final String backendMode;
-  final String accessMode;
   final int endpointCount;
   final int registryCount;
   final bool created;
@@ -201,16 +197,6 @@ class MiniProgramHostController {
       );
     }
     _validateSafeIdentifier(request.appId, 'appId');
-    final normalizedAccessKey = request.accessKey?.trim();
-    if (normalizedAccessKey != null && normalizedAccessKey.isEmpty) {
-      throw const MiniProgramHostException(
-        'MiniProgram access key must not be blank. Use --public for public '
-        'static endpoints.',
-      );
-    }
-    if (normalizedAccessKey != null) {
-      _validateAccessKey(normalizedAccessKey);
-    }
     if (!request.apiBaseUri.hasScheme || request.apiBaseUri.host.isEmpty) {
       throw MiniProgramHostException(
         'Mini-program endpoint API base URL must be absolute: '
@@ -255,7 +241,6 @@ class MiniProgramHostController {
         : existingEndpoints;
     endpoints[request.appId] = _EndpointRecord(
       apiBaseUri: _normalizeUri(request.apiBaseUri),
-      accessKey: normalizedAccessKey,
       backendBaseUri: backendBaseUri == null
           ? null
           : _normalizeUri(backendBaseUri),
@@ -315,7 +300,6 @@ class MiniProgramHostController {
       apiBaseUri: request.apiBaseUri,
       backendBaseUri: backendBaseUri,
       backendMode: backendMode,
-      accessMode: normalizedAccessKey == null ? 'public' : 'protected',
       endpointCount: endpoints.length,
       registryCount: registry.length,
       created: created,
@@ -347,21 +331,12 @@ class MiniProgramHostController {
         );
       }
       final apiBaseUri = value['apiBaseUri']?.toString().trim() ?? '';
-      final accessMode =
-          value['accessMode']?.toString().trim().toLowerCase() ??
-          (value['accessKey']?.toString().trim().isNotEmpty == true
-              ? 'protected'
-              : 'public');
-      final accessKey = value['accessKey']?.toString().trim();
       final backendBaseUri = value['backendBaseUri']?.toString().trim();
       final backendMode = _normalizeBackendMode(
         value['backendMode']?.toString(),
         hasBackendBaseUri: backendBaseUri != null && backendBaseUri.isNotEmpty,
       );
-      if (apiBaseUri.isEmpty ||
-          (accessMode == 'protected' &&
-              (accessKey == null || accessKey.isEmpty)) ||
-          (accessMode != 'protected' && accessMode != 'public')) {
+      if (apiBaseUri.isEmpty) {
         throw MiniProgramHostException(
           'Generated endpoint entry "$key" is incomplete in $filePath.',
         );
@@ -370,7 +345,6 @@ class MiniProgramHostController {
         key.toString(),
         _EndpointRecord(
           apiBaseUri: apiBaseUri,
-          accessKey: accessMode == 'public' ? null : accessKey,
           backendBaseUri: backendBaseUri == null || backendBaseUri.isEmpty
               ? null
               : backendBaseUri,
@@ -422,8 +396,6 @@ class MiniProgramHostController {
       for (final entry in sortedEntries)
         entry.key: <String, Object?>{
           'apiBaseUri': entry.value.apiBaseUri,
-          'accessMode': entry.value.accessMode,
-          if (entry.value.accessKey != null) 'accessKey': entry.value.accessKey,
           if (entry.value.backendBaseUri != null)
             'backendBaseUri': entry.value.backendBaseUri,
           'backendMode': entry.value.backendMode,
@@ -449,43 +421,22 @@ class MiniProgramHostController {
       final mapKey = registryEntry == null
           ? _dartString(entry.key)
           : 'MiniPrograms.${registryEntry.constantName}.appId';
-      if (entry.value.isPublic) {
+      buffer
+        ..writeln('    $mapKey: MiniProgramEndpoint.public(')
+        ..writeln(
+          '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
+        )
+        ..writeln('      requestTimeout: const Duration(seconds: 20),');
+      if (entry.value.backendBaseUri != null) {
         buffer
-          ..writeln('    $mapKey: MiniProgramEndpoint.public(')
+          ..writeln('      backend: MiniProgramBackendEndpoint(')
           ..writeln(
-            '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
+            '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
           )
-          ..writeln('      requestTimeout: const Duration(seconds: 20),');
-        if (entry.value.backendBaseUri != null) {
-          buffer
-            ..writeln('      backend: MiniProgramBackendEndpoint(')
-            ..writeln(
-              '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
-            )
-            ..writeln('        requestTimeout: const Duration(seconds: 30),')
-            ..writeln('      ),');
-        }
-        buffer.writeln('    ),');
-      } else {
-        buffer
-          ..writeln('    $mapKey: MiniProgramEndpoint(')
-          ..writeln(
-            '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
-          )
-          ..writeln('      accessKey: ${_dartString(entry.value.accessKey!)},')
-          ..writeln('      requestTimeout: const Duration(seconds: 20),');
-        if (entry.value.backendBaseUri != null) {
-          buffer
-            ..writeln('      backend: MiniProgramBackendEndpoint(')
-            ..writeln(
-              '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
-            )
-            ..writeln('        requestTimeout: const Duration(seconds: 30),')
-            ..writeln('        sendAccessKeyToBackend: true,')
-            ..writeln('      ),');
-        }
-        buffer.writeln('    ),');
+          ..writeln('        requestTimeout: const Duration(seconds: 30),')
+          ..writeln('      ),');
       }
+      buffer.writeln('    ),');
     }
     buffer
       ..writeln('  };')
@@ -660,21 +611,6 @@ class MiniProgramHostController {
       throw MiniProgramHostException('$label is invalid: $value');
     }
   }
-
-  void _validateAccessKey(String value) {
-    final trimmed = value.trim();
-    if (trimmed.length < 24 || trimmed.length > 128) {
-      throw const MiniProgramHostException(
-        'MiniProgram access keys must be between 24 and 128 characters.',
-      );
-    }
-    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(trimmed)) {
-      throw const MiniProgramHostException(
-        'MiniProgram access keys may only contain letters, numbers, dot, '
-        'underscore, and dash.',
-      );
-    }
-  }
 }
 
 const Set<String> _dartKeywords = <String>{
@@ -748,19 +684,13 @@ const Set<String> _dartKeywords = <String>{
 class _EndpointRecord {
   const _EndpointRecord({
     required this.apiBaseUri,
-    this.accessKey,
     this.backendBaseUri,
     required this.backendMode,
   });
 
   final String apiBaseUri;
-  final String? accessKey;
   final String? backendBaseUri;
   final String backendMode;
-
-  bool get isPublic => accessKey == null;
-
-  String get accessMode => isPublic ? 'public' : 'protected';
 }
 
 class _RegistryRecord {

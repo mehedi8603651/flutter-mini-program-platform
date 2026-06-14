@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('MiniProgramPublisherBackendContract', () {
-    test('round-trips protected contract JSON', () {
+    test('round-trips runtime API contract JSON', () {
       final contract = MiniProgramPublisherBackendContract(
         appId: 'shop_demo',
         backendBaseUri: Uri.parse('https://api.publisher.example/'),
@@ -32,7 +32,6 @@ void main() {
         'contractVersion': '1',
         'appId': 'shop_demo',
         'backendBaseUrl': 'https://api.publisher.example',
-        'accessMode': 'protected',
         'healthEndpoint': 'health',
         'smokeTests': <Object?>[
           <String, Object?>{
@@ -60,26 +59,21 @@ void main() {
         decoded.backendBaseUri.toString(),
         'https://api.publisher.example',
       );
-      expect(decoded.accessMode, 'protected');
-      expect(decoded.isProtected, isTrue);
       expect(decoded.smokeTests, hasLength(2));
       expect(decoded.smokeTests[1].method, 'POST');
       expect(decoded.smokeTests[1].expectation.expectedStatus, 201);
     });
 
-    test('round-trips public contract JSON', () {
+    test('ignores removed legacy fields when reading old contract JSON', () {
       final contract = MiniProgramPublisherBackendContract(
         appId: 'public_demo',
         backendBaseUri: Uri.parse('https://api.publisher.example'),
-        accessMode: MiniProgramPublisherBackendContract.accessModePublic,
-      );
+      ).toJson();
+      contract['legacyField'] = 'ignored';
 
-      final decoded = MiniProgramPublisherBackendContract.fromJson(
-        contract.toJson(),
-      );
+      final decoded = MiniProgramPublisherBackendContract.fromJson(contract);
 
-      expect(decoded.accessMode, 'public');
-      expect(decoded.isProtected, isFalse);
+      expect(decoded.toJson().containsKey('legacyField'), isFalse);
       expect(decoded.smokeTests.single.id, 'health');
       expect(decoded.smokeTests.single.endpoint, 'health');
     });
@@ -142,6 +136,7 @@ void main() {
       expect(json['backendBaseUrl'], 'https://api.publisher.example');
       expect(json.containsKey('artifactBaseUrl'), isFalse);
       expect(json.containsKey('middleServerApiUrl'), isFalse);
+      expect(json.containsKey('legacyField'), isFalse);
       final smokeTests = json['smokeTests'] as List<Object?>;
       expect(smokeTests, hasLength(3));
       expect(smokeTests.last, containsPair('expectedStatus', 401));

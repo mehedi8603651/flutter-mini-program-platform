@@ -524,8 +524,8 @@ MpNode $homeFunctionName() {
       Mp.heading('$title profile starter'),
       Mp.text(
         'Start from a lightweight Mp JSON flow. Replace this copy and data '
-        'shape with your business case, then publish the same JSON to Firebase, '
-        'AWS, GitHub, or any static delivery host.',
+        'shape with your business case, then publish the same JSON to any '
+        'public static artifact host.',
       ),
       Mp.sizedBox(height: 12),
       Mp.card(
@@ -542,7 +542,7 @@ ${withMockBackend ? _buildMpBackendUiSection() : ''}
         signedOut: Mp.card(
           child: Mp.column(
             children: <MpNode>[
-              Mp.text('Sign in to unlock protected publisher data.'),
+              Mp.text('Sign in to load publisher data from the runtime API.'),
               Mp.primaryButton(
                 label: 'Sign in with email',
                 action: Mp.auth.showEmailAuth(),
@@ -718,8 +718,8 @@ miniprogram validate --mini-program-root .
 ```
 
 Mp screens use provider-neutral backend, auth, paging, and navigation helpers.
-Keep backend endpoints relative, never place backend secrets in Mp JSON, and use
-publisher-owned Firebase/AWS/custom servers for protected data.
+Keep backend endpoints relative, never place backend secrets in Mp JSON, and put
+business data behind a publisher-owned middle-server API.
 ''';
 
   String _buildGitignore() => '''

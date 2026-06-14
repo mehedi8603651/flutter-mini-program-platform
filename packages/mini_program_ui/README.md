@@ -200,6 +200,6 @@ Mp.secondaryButton(
 ## Security Model
 
 `mini_program_ui` only serializes declarative JSON. It does not execute host
-code and it does not contain renderer logic. Runtime validation, access keys,
-auth sessions, backend headers, and bridge dispatch are owned by
+code and it does not contain renderer logic. Runtime validation,
+auth sessions, runtime API headers, and bridge dispatch are owned by
 `mini_program_sdk`.

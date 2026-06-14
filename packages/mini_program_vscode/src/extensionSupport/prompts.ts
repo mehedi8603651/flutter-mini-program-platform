@@ -20,29 +20,6 @@ import {
   readHostRegistryEntries,
 } from './workspace';
 
-export async function chooseHostProjectRootForFirebase(): Promise<string | undefined> {
-  const workspacePath = getWorkspacePath();
-  const folders = await vscode.window.showOpenDialog({
-    canSelectFiles: false,
-    canSelectFolders: true,
-    canSelectMany: false,
-    defaultUri: workspacePath ? vscode.Uri.file(path.dirname(workspacePath)) : undefined,
-    openLabel: 'Use host app root',
-    title: 'Choose Flutter host app root',
-  });
-  const projectRoot = folders?.[0]?.fsPath;
-  if (!projectRoot) {
-    return undefined;
-  }
-  if (!fs.existsSync(path.join(projectRoot, 'pubspec.yaml'))) {
-    vscode.window.showWarningMessage(
-      'Choose the Flutter host app root folder that contains pubspec.yaml.',
-    );
-    return undefined;
-  }
-  return projectRoot;
-}
-
 export async function promptAppId(): Promise<string | undefined> {
   const inferredAppId = await inferWorkspaceMiniProgramAppId();
   const appId = await vscode.window.showInputBox({
@@ -78,19 +55,6 @@ export async function chooseMiniProgramBackendStarter(): Promise<
     : undefined;
 }
 
-export async function promptKeyId(
-  prompt: string,
-  placeHolder: string,
-): Promise<string | undefined> {
-  const keyId = await vscode.window.showInputBox({
-    prompt,
-    placeHolder,
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Key id is required.',
-  });
-  return keyId?.trim() || undefined;
-}
-
 export async function promptHostEndpointInputs(): Promise<
   | {
       readonly appId: string;
@@ -99,8 +63,6 @@ export async function promptHostEndpointInputs(): Promise<
       readonly backendBaseUrl?: string;
       readonly backendLocalMock?: boolean;
       readonly backendLocalMockPort?: string;
-      readonly accessKey?: string;
-      readonly public?: boolean;
     }
   | undefined
 > {
@@ -132,25 +94,6 @@ export async function promptHostEndpointInputs(): Promise<
   if (!apiBaseUrl) {
     return undefined;
   }
-  const accessMode = await chooseEndpointAccessMode();
-  if (!accessMode) {
-    return undefined;
-  }
-  let accessKey: string | undefined;
-  if (accessMode === 'protected') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'MiniProgram access key',
-      password: true,
-      placeHolder: 'mpk_live_...',
-      ignoreFocusOut: true,
-      validateInput: (input) =>
-        input.trim() ? undefined : 'Access key is required.',
-    });
-    if (!value) {
-      return undefined;
-    }
-    accessKey = value.trim();
-  }
   const backend = await choosePublisherBackendMode();
   if (!backend) {
     return undefined;
@@ -162,8 +105,6 @@ export async function promptHostEndpointInputs(): Promise<
     backendBaseUrl: backend.kind === 'remote' ? backend.backendBaseUrl : undefined,
     backendLocalMock: backend.kind === 'local_mock',
     backendLocalMockPort: backend.kind === 'local_mock' ? backend.port : undefined,
-    accessKey,
-    public: accessMode === 'public',
   };
 }
 
@@ -282,25 +223,6 @@ export async function chooseHostMiniProgramEntry(
     return undefined;
   }
   return { appId: appId.trim(), title: title.trim() || hostTitleFromAppId(appId) };
-}
-
-export async function promptOptionalEnvName(): Promise<string | undefined> {
-  const envName = await vscode.window.showInputBox({
-    prompt: 'Optional cloud environment name',
-    placeHolder: 'Leave blank to use active environment',
-    ignoreFocusOut: true,
-  });
-  return envName === undefined ? undefined : envName.trim() || '';
-}
-
-export async function promptRequiredEnvName(prompt: string): Promise<string | undefined> {
-  const envName = await vscode.window.showInputBox({
-    prompt,
-    placeHolder: 'my-aws-prod',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
-  });
-  return envName === undefined ? undefined : envName.trim();
 }
 
 export async function choosePartnerPackageOutputPath(
@@ -436,23 +358,6 @@ export async function chooseStaticOutputFolder(): Promise<string | undefined> {
   return folders?.[0]?.fsPath;
 }
 
-export async function chooseFirebaseHostingOutputFolder(
-  workspacePath: string,
-): Promise<string | undefined> {
-  const defaultUri = vscode.Uri.file(
-    path.join(workspacePath, 'backend', 'firebase_hosting', 'public'),
-  );
-  const folders = await vscode.window.showOpenDialog({
-    canSelectFiles: false,
-    canSelectFolders: true,
-    canSelectMany: false,
-    defaultUri,
-    openLabel: 'Use Firebase Hosting public folder',
-    title: 'Choose Firebase Hosting public folder',
-  });
-  return folders?.[0]?.fsPath;
-}
-
 export async function chooseStaticClean(): Promise<boolean | undefined> {
   const choice = await vscode.window.showQuickPick(
     [
@@ -472,66 +377,9 @@ export async function chooseStaticClean(): Promise<boolean | undefined> {
   return choice?.value;
 }
 
-export async function chooseFirebaseHostingDryRun(): Promise<boolean | undefined> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Deploy to Firebase Hosting',
-        description: 'Build static delivery and run firebase deploy',
-        value: false,
-      },
-      {
-        label: 'Dry run only',
-        description: 'Build static delivery and firebase.json without deploying',
-        value: true,
-      },
-    ],
-    { title: 'Firebase Hosting publish mode', ignoreFocusOut: true },
-  );
-  return choice?.value;
-}
-
-export async function chooseRequireAccessKeys(): Promise<boolean | undefined> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Require access keys',
-        description: 'Recommended for shared cloud artifact hosting',
-        value: true,
-      },
-      {
-        label: 'Do not require access keys',
-        description: 'Only use for private/testing environments',
-        value: false,
-      },
-    ],
-    { title: 'Cloud delivery access-key policy', ignoreFocusOut: true },
-  );
-  return choice?.value;
-}
-
-export async function chooseEndpointAccessMode(): Promise<'protected' | 'public' | undefined> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'Protected endpoint',
-        description: 'Requires a MiniProgram access key',
-        value: 'protected' as const,
-      },
-      {
-        label: 'Public/static endpoint',
-        description: 'No access key; use only for public CDN/GitHub Pages content',
-        value: 'public' as const,
-      },
-    ],
-    { title: 'MiniProgram endpoint access mode', ignoreFocusOut: true },
-  );
-  return choice?.value;
-}
-
 export async function promptOptionalPublisherBackendBaseUrl(): Promise<string | undefined> {
   const value = await vscode.window.showInputBox({
-    prompt: 'Optional publisher-owned backend base URL',
+    prompt: 'Optional runtime middle-server API URL',
     placeHolder: 'https://publisher.example.com/api/ (leave blank for none)',
     ignoreFocusOut: true,
     validateInput: validateOptionalAbsoluteUrl,

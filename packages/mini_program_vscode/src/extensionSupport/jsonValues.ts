@@ -10,8 +10,6 @@ export function diagnosticCommandTitle(scope: DiagnosticScope): string {
       return 'MiniProgram: Diagnose MiniProgram';
     case 'hostApp':
       return 'MiniProgram: Diagnose Host App';
-    case 'cloudDelivery':
-      return 'MiniProgram: Diagnose Cloud Delivery';
     default:
       return 'MiniProgram: Diagnose Workspace';
   }
@@ -83,8 +81,8 @@ export function validateEnvironmentName(value: string): string | undefined {
   if (!/^[a-z][a-z0-9_-]*$/.test(trimmed)) {
     return 'Use lowercase letters, numbers, underscores, or hyphens, starting with a letter.';
   }
-  if (trimmed === 'local' || trimmed === 'cloud') {
-    return 'Use a named cloud environment, for example my-aws-prod.';
+  if (trimmed === 'local') {
+    return 'Use a named local environment.';
   }
   return undefined;
 }
@@ -106,7 +104,7 @@ export function validateOptionalSafeSegment(value: string): string | undefined {
     return undefined;
   }
   if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(trimmed)) {
-    return 'Use a Firebase Hosting site id, such as lowercase letters, numbers, and hyphens.';
+    return 'Use lowercase letters, numbers, and hyphens.';
   }
   return undefined;
 }
@@ -157,18 +155,14 @@ export function validateOptionalIsoDateTime(value: string): string | undefined {
     : 'Use an ISO-8601 date/time, for example 2026-12-31T23:59:59Z.';
 }
 
-export function extractAccessKey(output: string): string | undefined {
-  return /Access key(?: \(shown once\))?:\s*([A-Za-z0-9._-]{24,128})/.exec(output)?.[1];
-}
-
 export function validatePartnerPackageJson(decoded: unknown): string[] {
   const errors: string[] = [];
   if (!decoded || typeof decoded !== 'object' || Array.isArray(decoded)) {
     return ['Package must be a JSON object.'];
   }
   const object = decoded as Record<string, unknown>;
-  if (object.schemaVersion !== 1 && object.schemaVersion !== 2) {
-    errors.push('schemaVersion must be 1 or 2.');
+  if (object.schemaVersion !== 2) {
+    errors.push('schemaVersion must be 2.');
   }
   if (object.type !== 'mini_program_partner_handoff') {
     errors.push('type must be mini_program_partner_handoff.');
@@ -179,8 +173,11 @@ export function validatePartnerPackageJson(decoded: unknown): string[] {
   if (typeof object.title !== 'string' || !object.title.trim()) {
     errors.push('title is required.');
   }
-  if (typeof object.apiBaseUrl !== 'string' || validateAbsoluteUrl(object.apiBaseUrl)) {
-    errors.push('apiBaseUrl must be an absolute URL.');
+  const artifactBaseUrl = typeof object.artifactBaseUrl === 'string'
+    ? object.artifactBaseUrl
+    : object.apiBaseUrl;
+  if (typeof artifactBaseUrl !== 'string' || validateAbsoluteUrl(artifactBaseUrl)) {
+    errors.push('artifactBaseUrl must be an absolute URL.');
   }
   if (
     object.backendBaseUrl !== undefined &&
@@ -188,20 +185,6 @@ export function validatePartnerPackageJson(decoded: unknown): string[] {
       validateAbsoluteUrl(object.backendBaseUrl))
   ) {
     errors.push('backendBaseUrl must be an absolute URL when present.');
-  }
-  const accessMode = object.schemaVersion === 1
-    ? 'protected'
-    : typeof object.accessMode === 'string'
-      ? object.accessMode.trim()
-      : '';
-  if (object.schemaVersion === 2 && accessMode !== 'protected' && accessMode !== 'public') {
-    errors.push('accessMode must be protected or public.');
-  }
-  if (accessMode === 'protected' && (typeof object.accessKey !== 'string' || !object.accessKey.trim())) {
-    errors.push('accessKey is required for protected packages.');
-  }
-  if (accessMode === 'public' && typeof object.accessKey === 'string' && object.accessKey.trim()) {
-    errors.push('accessKey must be omitted for public packages.');
   }
   return errors;
 }

@@ -21,13 +21,11 @@ typedef MiniProgramEndpointSourceFactory =
 /// A remote mini-program delivery endpoint registered by a host app.
 ///
 /// Host UI should open mini-programs by `appId`; endpoint configuration owns
-/// where that app is delivered from and which MiniProgram access key authorizes
-/// this host to load it.
+/// where that app's static artifacts are delivered from.
 @immutable
 class MiniProgramEndpoint {
   const MiniProgramEndpoint({
     required this.apiBaseUri,
-    required this.accessKey,
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
@@ -37,9 +35,8 @@ class MiniProgramEndpoint {
 
   /// Creates a public/static mini-program endpoint.
   ///
-  /// Public endpoints do not send the MiniProgram access-key header and should
-  /// only be used for public demos, open-source samples, or CDN-hosted content
-  /// that does not need delivery access control.
+  /// Static mini-program artifacts are public UI bundles. Runtime business
+  /// data belongs behind an optional Publisher API/middle-server connector.
   const MiniProgramEndpoint.public({
     required this.apiBaseUri,
     this.headers = const <String, String>{},
@@ -47,10 +44,9 @@ class MiniProgramEndpoint {
     this.enableLocalLoopbackFallback = true,
     this.backend,
     this.cachePolicy = const MiniProgramCachePolicy(),
-  }) : accessKey = null;
+  });
 
   final Uri apiBaseUri;
-  final String? accessKey;
   final Map<String, String> headers;
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
@@ -64,7 +60,6 @@ MiniProgramBackendConnector? buildEndpointRoutingBackendConnector({
   MiniProgramBackendHttpClientFactory? clientFactory,
 }) {
   final backends = <String, MiniProgramBackendEndpoint>{};
-  final accessKeys = <String, String>{};
   for (final entry in EndpointRoutingMiniProgramSource._normalizeEndpoints(
     endpoints,
   ).entries) {
@@ -73,17 +68,12 @@ MiniProgramBackendConnector? buildEndpointRoutingBackendConnector({
       continue;
     }
     backends[entry.key] = backend;
-    final accessKey = entry.value.accessKey;
-    if (accessKey != null) {
-      accessKeys[entry.key] = accessKey.trim();
-    }
   }
   if (backends.isEmpty) {
     return null;
   }
   return EndpointRoutingMiniProgramBackendConnector(
     backends: backends,
-    accessKeys: accessKeys,
     deliveryContext: deliveryContext,
     clientFactory: clientFactory,
   );
@@ -186,7 +176,6 @@ class EndpointRoutingMiniProgramSource
     return HttpMiniProgramSource.fromDeliveryContext(
       apiBaseUri: endpoint.apiBaseUri,
       deliveryContext: deliveryContext,
-      accessKey: _normalizeAccessKey(endpoint.accessKey, appId),
       headers: endpoint.headers,
       requestTimeout: endpoint.requestTimeout,
       enableLocalLoopbackFallback: endpoint.enableLocalLoopbackFallback,
@@ -206,7 +195,6 @@ class EndpointRoutingMiniProgramSource
           'Duplicate mini-program endpoint for appId "$appId".',
         );
       }
-      _normalizeAccessKey(entry.value.accessKey, appId);
       normalized[appId] = entry.value;
     }
     return normalized;
@@ -218,20 +206,5 @@ class EndpointRoutingMiniProgramSource
       throw ArgumentError.value(rawAppId, 'appId', 'appId must not be blank.');
     }
     return appId;
-  }
-
-  static String? _normalizeAccessKey(String? rawAccessKey, String appId) {
-    if (rawAccessKey == null) {
-      return null;
-    }
-    final accessKey = rawAccessKey.trim();
-    if (accessKey.isEmpty) {
-      throw ArgumentError.value(
-        rawAccessKey,
-        'accessKey',
-        'MiniProgram access key for appId "$appId" must not be blank.',
-      );
-    }
-    return accessKey;
   }
 }

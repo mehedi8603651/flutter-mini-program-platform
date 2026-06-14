@@ -149,39 +149,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatCloudPublishResult(MiniProgramCloudPublishResult result) {
-    final versionedObjectCount = result.uploadedObjects
-        .where((record) => record.versionId != null)
-        .length;
-    final lines = <String>[
-      'Published mini-program to cloud: ${result.miniProgramId}',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Version: ${result.version}',
-      'Screen format: ${result.buildResult.screenFormat}',
-      if (result.buildResult.screenSchemaVersion != null)
-        'Screen schema version: ${result.buildResult.screenSchemaVersion}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Build CLI source: ${result.buildResult.cliSource}',
-      'Built entry screen: ${result.buildResult.entryScreenJsonPath}',
-      'Artifact root key: ${result.artifactRootKey}',
-      'Manifest key: ${result.manifestKey}',
-      'Screens prefix: ${result.screensPrefixKey}',
-      if (result.assetsPrefixKey != null)
-        'Assets prefix: ${result.assetsPrefixKey}',
-      'Release metadata key: ${result.metadataReleaseKey}',
-      'Catalog metadata key: ${result.metadataCatalogKey}',
-      if (result.cloudFrontBaseUrl != null)
-        'CloudFront base URL: ${result.cloudFrontBaseUrl}',
-      if (result.apiBaseUrl != null) 'API base URL: ${result.apiBaseUrl}',
-      'Uploaded objects: ${result.uploadedObjects.length}',
-      'Versioned objects: $versionedObjectCount',
-      'Published at UTC: ${result.publishedAtUtc}',
-    ];
-    return lines.join('\n');
-  }
-
   String _formatStaticPublishResult(MiniProgramStaticPublishResult result) {
     final lines = <String>[
       'Published mini-program to static folder: ${result.miniProgramId}',
@@ -210,343 +177,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatFirebaseHostingPublishResult(
-    MiniProgramFirebaseHostingPublishResult result,
-  ) {
-    final lines = <String>[
-      result.dryRun
-          ? 'Prepared Firebase Hosting static delivery.'
-          : 'Published mini-program to Firebase Hosting.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Project: ${result.projectId}',
-      'Site: ${result.siteId}',
-      'Mini-program ID: ${result.staticResult.miniProgramId}',
-      'Version: ${result.staticResult.version}',
-      'Screen format: ${result.staticResult.buildResult.screenFormat}',
-      if (result.staticResult.buildResult.screenSchemaVersion != null)
-        'Screen schema version: ${result.staticResult.buildResult.screenSchemaVersion}',
-      'Hosting root: ${result.hostingRootPath}',
-      'Public folder: ${result.outputPath}',
-      'Firebase config: ${result.firebaseJsonPath}',
-      'Static artifact base URL: ${result.deliveryApiBaseUrl}',
-      'Cleaned generated output first: ${result.staticResult.cleaned}',
-      'Written files: ${result.staticResult.writtenFiles.length}',
-      'Deployed: ${result.deployed}',
-      'Dry run: ${result.dryRun}',
-      if (result.deployExitCode != null)
-        'Firebase CLI exit code: ${result.deployExitCode}',
-      'Published at UTC: ${result.staticResult.publishedAtUtc}',
-      'Next Publisher API steps:',
-      'miniprogram publisher-api contract init --backend-base-url <publisher-api-url> --public',
-      'miniprogram publisher-api contract smoke',
-      'miniprogram publisher-api contract handoff --delivery-url ${result.deliveryApiBaseUrl} --public',
-    ];
-    return lines.join('\n');
-  }
-
-  String _formatCloudDeployResult(MiniProgramCloudDeployResult result) {
-    final lines = <String>[
-      'Deployed cloud artifact stack.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Stack: ${result.stackName}',
-      'Stage: ${result.stageName}',
-      'Region: ${result.region}',
-      'Bucket: ${result.bucketName}',
-      'Backend project root: ${result.backendProjectRootPath}',
-      if (result.apiBaseUrl != null)
-        'Artifact API base URL: ${result.apiBaseUrl}',
-      if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
-      if (result.healthy != null) 'Healthy: ${result.healthy}',
-      if (result.healthStatusCode != null)
-        'Health status code: ${result.healthStatusCode}',
-      if (result.healthError != null) 'Health detail: ${result.healthError}',
-      'Outputs:',
-      ...result.outputs.entries.map(
-        (entry) => '- ${entry.key}: ${entry.value}',
-      ),
-      'Deployed at UTC: ${result.deployedAtUtc}',
-    ];
-    return lines.join('\n');
-  }
-
-  String _formatCloudStatusResult(MiniProgramCloudStatusResult result) {
-    final lines = <String>[
-      'Cloud artifact stack status:',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Stack: ${result.stackName}',
-      'Stage: ${result.stageName}',
-      'Region: ${result.region}',
-      'Stack exists: ${result.stackExists}',
-      if (result.stackStatus != null) 'Stack status: ${result.stackStatus}',
-      if (result.stackStatusReason != null &&
-          result.stackStatusReason!.trim().isNotEmpty)
-        'Stack status detail: ${result.stackStatusReason}',
-      if (result.apiBaseUrl != null)
-        'Artifact API base URL: ${result.apiBaseUrl}',
-      if (result.healthUrl != null) 'Health URL: ${result.healthUrl}',
-      if (result.healthy != null) 'Healthy: ${result.healthy}',
-      if (result.healthStatusCode != null)
-        'Health status code: ${result.healthStatusCode}',
-      if (result.healthError != null) 'Health detail: ${result.healthError}',
-      if (result.outputs.isNotEmpty) 'Outputs:',
-      if (result.outputs.isNotEmpty)
-        ...result.outputs.entries.map(
-          (entry) => '- ${entry.key}: ${entry.value}',
-        ),
-    ];
-    return lines.join('\n');
-  }
-
-  String _formatCloudOutputsResult(
-    MiniProgramCloudOutputsResult result, {
-    required String format,
-  }) {
-    if (format == 'dart-define') {
-      final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(result);
-      return '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=$backendApiBaseUrl';
-    }
-
-    final lines = <String>[
-      'Cloud artifact stack outputs:',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Stack: ${result.stackName}',
-      'Region: ${result.region}',
-      ...result.outputs.entries.map(
-        (entry) => '- ${entry.key}: ${entry.value}',
-      ),
-    ];
-    return lines.join('\n');
-  }
-
-  String _formatCloudLogsResult(MiniProgramCloudLogsResult result) {
-    final lines = <String>[
-      'Cloud artifact stack logs:',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Stack: ${result.stackName}',
-      'Region: ${result.region}',
-      'Lambda function: ${result.lambdaFunctionName}',
-      'Since: ${result.since}',
-    ];
-    if (result.stdoutText.isNotEmpty) {
-      lines.add(result.stdoutText);
-    } else {
-      lines.add('(no log lines returned)');
-    }
-    if (result.stderrText.isNotEmpty) {
-      lines.add('stderr: ${result.stderrText}');
-    }
-    return lines.join('\n');
-  }
-
-  String _formatCloudDestroyResult(MiniProgramCloudDestroyResult result) {
-    return <String>[
-      'Destroyed cloud artifact stack.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Stack: ${result.stackName}',
-      'Region: ${result.region}',
-      'Deleted at UTC: ${result.deletedAtUtc}',
-    ].join('\n');
-  }
-
-  String _formatCloudDoctorResult(MiniProgramCloudDoctorResult result) {
-    final lines = <String>['Miniprogram cloud doctor report:'];
-    var okCount = 0;
-    var warningCount = 0;
-    var errorCount = 0;
-    var skippedCount = 0;
-    for (final check in result.checks) {
-      switch (check.status) {
-        case MiniprogramDoctorCheckStatus.ok:
-          okCount++;
-        case MiniprogramDoctorCheckStatus.warning:
-          warningCount++;
-        case MiniprogramDoctorCheckStatus.error:
-          errorCount++;
-        case MiniprogramDoctorCheckStatus.skipped:
-          skippedCount++;
-      }
-      lines.add('[${check.status.name}] ${check.label}: ${check.summary}');
-      if (check.detail case final detail? when detail.trim().isNotEmpty) {
-        lines.add('  $detail');
-      }
-    }
-    lines.add(
-      'Summary: $okCount ok, $warningCount warning, '
-      '$errorCount error, $skippedCount skipped',
-    );
-    return lines.join('\n');
-  }
-
-  String _formatCloudRollbackResult(MiniProgramCloudRollbackResult result) {
-    return <String>[
-      'Rolled back cloud release.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Version: ${result.version}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Catalog key: ${result.catalogKey}',
-      'Release key: ${result.releaseKey}',
-      'Rolled back at UTC: ${result.rolledBackAtUtc}',
-    ].join('\n');
-  }
-
-  String _formatAccessKeyCreateResult(MiniProgramAccessKeyCreateResult result) {
-    return <String>[
-      'Created MiniProgram access key.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Key id: ${result.keyId}',
-      'Access key: ${result.accessKey}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Policy key: ${result.policyKey}',
-      'Created at UTC: ${result.createdAtUtc}',
-      'Host endpoint command:',
-      'miniprogram host endpoint add ${result.miniProgramId} --artifact-base-url <artifact-base-url> --access-key ${result.accessKey}',
-    ].join('\n');
-  }
-
-  String _formatAccessKeyListResult(MiniProgramAccessKeyListResult result) {
-    final lines = <String>[
-      'MiniProgram access keys:',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Policy key: ${result.policyKey}',
-      'Policy exists: ${result.policyExists}',
-    ];
-    if (result.keys.isEmpty) {
-      lines.add('(no keys)');
-    } else {
-      for (final key in result.keys) {
-        lines.add(
-          '- ${key.id}: ${key.active ? 'active' : 'revoked'} '
-          '(created ${key.createdAtUtc}, updated ${key.updatedAtUtc})',
-        );
-      }
-    }
-    return lines.join('\n');
-  }
-
-  String _formatAccessKeyRevokeResult(MiniProgramAccessKeyRevokeResult result) {
-    return <String>[
-      'Revoked MiniProgram access key.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Key id: ${result.keyId}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Policy key: ${result.policyKey}',
-      'Revoked at UTC: ${result.revokedAtUtc}',
-    ].join('\n');
-  }
-
-  String _formatAccessKeyRotateResult(MiniProgramAccessKeyRotateResult result) {
-    return <String>[
-      'Rotated MiniProgram access key.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Revoked key id: ${result.revokedKeyId}',
-      'New key id: ${result.newKeyId}',
-      'Access key: ${result.accessKey}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Policy key: ${result.policyKey}',
-      'Rotated at UTC: ${result.rotatedAtUtc}',
-    ].join('\n');
-  }
-
-  String _formatCloudAppListResult(MiniProgramCloudAppListResult result) {
-    final lines = <String>[
-      'Cloud mini-program apps:',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-    ];
-    if (result.apps.isEmpty) {
-      lines.add('(no active apps)');
-    } else {
-      for (final app in result.apps) {
-        lines.add(
-          '- ${app.miniProgramId}: '
-          '${app.latestVersion ?? 'unknown version'} '
-          '(${app.catalogKey})',
-        );
-      }
-    }
-    return lines.join('\n');
-  }
-
-  String _formatCloudAppInfoResult(MiniProgramCloudAppInfoResult result) {
-    return <String>[
-      'Cloud mini-program app:',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Catalog key: ${result.catalogKey}',
-      if (result.catalog['latestVersion'] != null)
-        'Latest version: ${result.catalog['latestVersion']}',
-      if (result.releaseKey != null) 'Release key: ${result.releaseKey}',
-      if (result.release?['artifacts'] case final artifacts?)
-        'Artifacts: $artifacts',
-      'Access policy key: ${result.accessPolicyKey ?? 'not found'}',
-      'Access keys: ${result.activeAccessKeyCount} active / ${result.accessKeyCount} total',
-    ].join('\n');
-  }
-
-  String _formatCloudAppDisableResult(MiniProgramCloudAppDisableResult result) {
-    return <String>[
-      result.dryRun
-          ? 'Dry run: cloud mini-program app would be disabled.'
-          : 'Disabled cloud mini-program app.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Catalog key: ${result.catalogKey}',
-      'Disabled catalog key: ${result.disabledCatalogKey}',
-      'Disabled at UTC: ${result.disabledAtUtc}',
-      if (result.dryRun)
-        'Re-run with --yes to remove the active catalog pointer.',
-    ].join('\n');
-  }
-
-  String _formatCloudAppDeleteResult(MiniProgramCloudAppDeleteResult result) {
-    final lines = <String>[
-      result.dryRun
-          ? 'Dry run: cloud mini-program app objects would be deleted.'
-          : 'Deleted cloud mini-program app objects.',
-      'Provider: ${result.provider}',
-      'Environment: ${result.environmentName}',
-      'Mini-program: ${result.miniProgramId}',
-      'Bucket: ${result.bucketName}',
-      'Region: ${result.region}',
-      'Object count: ${result.deletedKeys.length}',
-      if (result.dryRun) 'Re-run with --yes to delete these objects.',
-      'Objects:',
-      ...result.deletedKeys.map((key) => '- $key'),
-      'Completed at UTC: ${result.deletedAtUtc}',
-    ];
-    return lines.join('\n');
-  }
-
   String _formatPartnerPackageResult(MiniProgramPartnerPackageResult result) {
     return <String>[
       'Created MiniProgram partner handoff package.',
@@ -554,11 +184,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Mini-program: ${result.handoff.appId}',
       'Title: ${result.handoff.title}',
       'Artifact base URL: ${result.handoff.artifactBaseUri}',
-      if (result.handoff.schemaVersion <=
-          MiniProgramPartnerHandoff.legacySchemaVersion)
-        'Access mode: ${result.handoff.accessMode}',
-      if (result.handoff.backendBaseUri != null)
-        'Middle-server API URL: ${result.handoff.backendBaseUri}',
       'Generated at UTC: ${result.handoff.generatedAtUtc}',
       'Host import command:',
       'miniprogram host endpoint import ${result.filePath}',
@@ -579,7 +204,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Title: ${result.title}',
       'Artifact base URL: ${result.apiBaseUri}',
       'Runtime API mode: ${result.backendMode}',
-      if (result.accessMode != 'public') 'Access mode: ${result.accessMode}',
       if (result.backendBaseUri != null)
         'Middle-server API URL: ${result.backendBaseUri}',
       'Endpoint count: ${result.endpointCount}',
@@ -607,11 +231,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Mini-program: ${handoff.appId}',
       'Title: ${handoff.title}',
       'Artifact base URL: ${handoff.artifactBaseUri}',
-      if (handoff.schemaVersion <=
-          MiniProgramPartnerHandoff.legacySchemaVersion)
-        'Access mode: ${handoff.accessMode}',
-      if (handoff.backendBaseUri != null)
-        'Middle-server API URL: ${handoff.backendBaseUri}',
       'Endpoint count: ${endpointResult.endpointCount}',
       'Registry count: ${endpointResult.registryCount}',
       'Open from app UI by appId only:',
@@ -630,23 +249,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       ...result.createdPaths.map((path) => '- $path'),
     ];
     return lines.join('\n');
-  }
-
-  String _formatEmbeddedHostCloudConfigurationResult({
-    required String projectRootPath,
-    required String configurationPath,
-    required EmbeddedHostCloudConfiguration configuration,
-  }) {
-    return <String>[
-      'Configured embedded host app for cloud mini-program delivery.',
-      'Project root: $projectRootPath',
-      'Config file: $configurationPath',
-      'Environment: ${configuration.environmentName}',
-      'Provider: ${configuration.provider}',
-      'Artifact API base URL: ${configuration.backendApiBaseUrl}',
-      'Configured at UTC: ${configuration.configuredAtUtc}',
-      'Updated at UTC: ${configuration.updatedAtUtc}',
-    ].join('\n');
   }
 
   String _formatHostRunStart({
@@ -678,9 +280,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
           'root first.';
     }
 
-    final activeCloudEnvironment = resolved.state.cloudEnvironmentNamed(
-      resolved.state.activeEnvironment,
-    );
     final lines = <String>[
       if (initialized)
         'Initialized miniprogram env.'
@@ -693,32 +292,8 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Config file: ${resolved.filePath}',
       'Repo root: ${resolved.state.repoRootPath ?? 'not configured'}',
       'Active environment: ${resolved.state.activeEnvironment}',
-      'Configured cloud environments: ${resolved.state.cloudEnvironments.length}',
-      if (activeCloudEnvironment != null)
-        'Active provider: ${activeCloudEnvironment.provider}',
-      if (activeCloudEnvironment != null)
-        ..._formatCloudEnvironmentValues(activeCloudEnvironment),
-      if (resolved.state.activeEnvironment == 'cloud')
-        'Active provider: legacy cloud alias (reconfigure to a named cloud environment)',
       'Initialized at UTC: ${resolved.state.initializedAtUtc}',
       'Updated at UTC: ${resolved.state.updatedAtUtc}',
-    ];
-    return lines.join('\n');
-  }
-
-  String _formatEnvConfigureResult(
-    CloudEnvironmentConfiguration environment,
-    ResolvedLocalCliEnvironmentState resolved,
-  ) {
-    final lines = <String>[
-      'Configured cloud environment: ${environment.name}',
-      'Provider: ${environment.provider}',
-      'Config scope: ${resolved.scope}',
-      'Config root: ${resolved.rootPath}',
-      'Config file: ${resolved.filePath}',
-      ..._formatCloudEnvironmentValues(environment),
-      'Configured at UTC: ${environment.configuredAtUtc}',
-      'Updated at UTC: ${environment.updatedAtUtc}',
     ];
     return lines.join('\n');
   }
@@ -728,15 +303,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Configured environments:',
       '${resolved.state.activeEnvironment == 'local' ? '*' : '-'} local',
     ];
-    for (final environment in resolved.state.cloudEnvironments) {
-      lines.add(
-        '${resolved.state.activeEnvironment == environment.name ? '*' : '-'} '
-        '${environment.name} (${environment.provider})',
-      );
-    }
-    if (resolved.state.activeEnvironment == 'cloud') {
-      lines.add('- cloud (legacy alias)');
-    }
     return lines.join('\n');
   }
 

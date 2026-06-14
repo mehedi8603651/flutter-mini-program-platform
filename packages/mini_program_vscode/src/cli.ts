@@ -22,7 +22,6 @@ export interface CliRunOptions {
 
 export interface WorkflowStatusArgsOptions {
   readonly workspacePath: string;
-  readonly envName?: string;
   readonly remote?: boolean;
 }
 
@@ -44,13 +43,10 @@ export interface CreateArgsOptions {
 }
 
 export interface PublishArgsOptions {
-  readonly target: 'local' | 'cloud' | 'static' | 'firebase-hosting';
-  readonly envName?: string;
+  readonly target: 'local' | 'static';
   readonly miniProgramRoot?: string;
   readonly outputPath?: string;
-  readonly siteId?: string;
   readonly clean?: boolean;
-  readonly dryRun?: boolean;
   readonly json?: boolean;
   readonly mpBuildScript?: string;
 }
@@ -74,11 +70,6 @@ export interface EmbedInitArgsOptions {
   readonly force?: boolean;
 }
 
-export interface EmbedCloudConfigureArgsOptions {
-  readonly projectRoot: string;
-  readonly envName?: string;
-}
-
 export interface HostEndpointImportArgsOptions {
   readonly partnerPackagePath: string;
   readonly projectRoot: string;
@@ -92,8 +83,6 @@ export interface HostEndpointAddArgsOptions {
   readonly backendBaseUrl?: string;
   readonly backendLocalMock?: boolean;
   readonly backendLocalMockPort?: string;
-  readonly accessKey?: string;
-  readonly public?: boolean;
   readonly projectRoot: string;
   readonly force?: boolean;
 }
@@ -101,30 +90,11 @@ export interface HostEndpointAddArgsOptions {
 export interface HostRunArgsOptions {
   readonly deviceId: string;
   readonly projectRoot: string;
-  readonly envName?: string;
 }
 
 export interface EnvInitArgsOptions {
   readonly rootPath?: string;
   readonly useEnvironment?: string;
-}
-
-export interface EnvConfigureAwsArgsOptions {
-  readonly environmentName: string;
-  readonly rootPath?: string;
-  readonly bucket: string;
-  readonly region: string;
-  readonly awsProfile?: string;
-  readonly apiBaseUrl?: string;
-  readonly stackName?: string;
-  readonly stageName?: string;
-  readonly requireAccessKeys?: boolean;
-}
-
-export interface EnvConfigureFirebaseArgsOptions {
-  readonly environmentName: string;
-  readonly rootPath?: string;
-  readonly projectId: string;
 }
 
 export interface EnvUseArgsOptions {
@@ -135,29 +105,6 @@ export interface EnvUseArgsOptions {
 export interface EnvStatusArgsOptions {
   readonly rootPath?: string;
   readonly json?: boolean;
-}
-
-export interface CloudDeployArgsOptions {
-  readonly envName?: string;
-  readonly rootPath?: string;
-}
-
-export interface CloudStatusArgsOptions {
-  readonly envName?: string;
-  readonly rootPath?: string;
-  readonly json?: boolean;
-}
-
-export interface CloudOutputsArgsOptions {
-  readonly envName?: string;
-  readonly rootPath?: string;
-  readonly format?: 'text' | 'dart-define';
-}
-
-export interface CloudAppInfoArgsOptions {
-  readonly appId: string;
-  readonly envName?: string;
-  readonly rootPath?: string;
 }
 
 export interface BackendInitArgsOptions {
@@ -214,7 +161,6 @@ export interface PublisherBackendContractInitArgsOptions
   extends PublisherBackendContractBaseArgsOptions {
   readonly backendBaseUrl: string;
   readonly appId?: string;
-  readonly public?: boolean;
   readonly healthEndpoint?: string;
   readonly outputPath?: string;
 }
@@ -224,53 +170,14 @@ export interface PublisherBackendContractValidateArgsOptions
 
 export interface PublisherBackendContractSmokeArgsOptions
   extends PublisherBackendContractBaseArgsOptions {
-  readonly accessKey?: string;
   readonly authToken?: string;
   readonly timeoutSeconds?: number | string;
-}
-
-export interface PublisherBackendContractHandoffArgsOptions
-  extends PublisherBackendContractBaseArgsOptions {
-  readonly deliveryUrl: string;
-  readonly title?: string;
-  readonly accessKey?: string;
-  readonly public?: boolean;
-  readonly outputPath?: string;
-}
-
-export interface AccessKeyCreateArgsOptions {
-  readonly appId: string;
-  readonly keyId: string;
-  readonly envName?: string;
-}
-
-export interface AccessKeyListArgsOptions {
-  readonly appId: string;
-  readonly envName?: string;
-  readonly json?: boolean;
-}
-
-export interface AccessKeyRevokeArgsOptions {
-  readonly appId: string;
-  readonly keyId: string;
-  readonly envName?: string;
-}
-
-export interface AccessKeyRotateArgsOptions {
-  readonly appId: string;
-  readonly keyId: string;
-  readonly newKeyId?: string;
-  readonly envName?: string;
 }
 
 export interface PartnerPackageArgsOptions {
   readonly appId: string;
   readonly title?: string;
-  readonly accessKey?: string;
-  readonly public?: boolean;
-  readonly envName?: string;
   readonly apiBaseUrl?: string;
-  readonly backendBaseUrl?: string;
   readonly outputPath?: string;
   readonly rootPath?: string;
 }
@@ -290,9 +197,6 @@ export function buildWorkflowStatusArgs(
     options.workspacePath,
     '--json',
   ];
-  if (options.envName?.trim()) {
-    args.push('--env', options.envName.trim());
-  }
   if (options.remote) {
     args.push('--remote');
   }
@@ -361,20 +265,11 @@ export function buildPreviewArgs(options: PreviewArgsOptions): string[] {
 
 export function buildPublishArgs(options: PublishArgsOptions): string[] {
   const args = ['publish', '--target', options.target];
-  if (options.envName?.trim()) {
-    args.push('--env', options.envName.trim());
-  }
   if (options.outputPath?.trim()) {
     args.push('--output', options.outputPath.trim());
   }
-  if (options.siteId?.trim()) {
-    args.push('--site', options.siteId.trim());
-  }
   if (options.clean) {
     args.push('--clean');
-  }
-  if (options.dryRun) {
-    args.push('--dry-run');
   }
   if (options.json) {
     args.push('--json');
@@ -389,22 +284,6 @@ export function buildEmbedInitArgs(options: EmbedInitArgsOptions): string[] {
   const args = ['embed', 'init', '--project-root', options.projectRoot];
   if (options.force) {
     args.push('--force');
-  }
-  return args;
-}
-
-export function buildEmbedCloudConfigureArgs(
-  options: EmbedCloudConfigureArgsOptions,
-): string[] {
-  const args = [
-    'embed',
-    'cloud',
-    'configure',
-    '--project-root',
-    options.projectRoot,
-  ];
-  if (options.envName?.trim()) {
-    args.push('--env', options.envName.trim());
   }
   return args;
 }
@@ -434,7 +313,7 @@ export function buildHostEndpointAddArgs(
     'endpoint',
     'add',
     options.appId,
-    '--api-base-url',
+    '--artifact-base-url',
     options.apiBaseUrl,
   ];
   if (options.title?.trim()) {
@@ -449,11 +328,6 @@ export function buildHostEndpointAddArgs(
       args.push('--backend-local-mock-port', options.backendLocalMockPort.trim());
     }
   }
-  if (options.public) {
-    args.push('--public');
-  } else if (options.accessKey?.trim()) {
-    args.push('--access-key', options.accessKey.trim());
-  }
   args.push('--project-root', options.projectRoot);
   if (options.force) {
     args.push('--force');
@@ -463,9 +337,6 @@ export function buildHostEndpointAddArgs(
 
 export function buildHostRunArgs(options: HostRunArgsOptions): string[] {
   const args = ['host', 'run', '-d', options.deviceId, '--project-root', options.projectRoot];
-  if (options.envName?.trim()) {
-    args.push('--env', options.envName.trim());
-  }
   return args;
 }
 
@@ -475,55 +346,6 @@ export function buildEnvInitArgs(options: EnvInitArgsOptions = {}): string[] {
   if (options.useEnvironment?.trim()) {
     args.push('--use', options.useEnvironment.trim());
   }
-  return args;
-}
-
-export function buildEnvConfigureAwsArgs(
-  options: EnvConfigureAwsArgsOptions,
-): string[] {
-  const args = [
-    'env',
-    'configure',
-    options.environmentName,
-    '--provider',
-    'aws',
-    '--bucket',
-    options.bucket,
-    '--region',
-    options.region,
-  ];
-  withRootPath(args, options.rootPath);
-  if (options.awsProfile?.trim()) {
-    args.push('--aws-profile', options.awsProfile.trim());
-  }
-  if (options.apiBaseUrl?.trim()) {
-    args.push('--api-base-url', options.apiBaseUrl.trim());
-  }
-  if (options.stackName?.trim()) {
-    args.push('--stack-name', options.stackName.trim());
-  }
-  if (options.stageName?.trim()) {
-    args.push('--stage-name', options.stageName.trim());
-  }
-  if (options.requireAccessKeys) {
-    args.push('--require-access-keys');
-  }
-  return args;
-}
-
-export function buildEnvConfigureFirebaseArgs(
-  options: EnvConfigureFirebaseArgsOptions,
-): string[] {
-  const args = [
-    'env',
-    'configure',
-    options.environmentName,
-    '--provider',
-    'firebase',
-    '--project-id',
-    options.projectId,
-  ];
-  withRootPath(args, options.rootPath);
   return args;
 }
 
@@ -537,38 +359,6 @@ export function buildEnvStatusArgs(options: EnvStatusArgsOptions = {}): string[]
   if (options.json ?? true) {
     args.push('--json');
   }
-  return withRootPath(args, options.rootPath);
-}
-
-export function buildCloudDeployArgs(options: CloudDeployArgsOptions = {}): string[] {
-  const args = ['cloud', 'deploy'];
-  withOptionalEnv(args, options.envName);
-  return withRootPath(args, options.rootPath);
-}
-
-export function buildCloudStatusArgs(options: CloudStatusArgsOptions = {}): string[] {
-  const args = ['cloud', 'status'];
-  if (options.json ?? true) {
-    args.push('--json');
-  }
-  withOptionalEnv(args, options.envName);
-  return withRootPath(args, options.rootPath);
-}
-
-export function buildCloudOutputsArgs(options: CloudOutputsArgsOptions = {}): string[] {
-  const args = ['cloud', 'outputs'];
-  if (options.format?.trim()) {
-    args.push('--format', options.format);
-  }
-  withOptionalEnv(args, options.envName);
-  return withRootPath(args, options.rootPath);
-}
-
-export function buildCloudAppInfoArgs(
-  options: CloudAppInfoArgsOptions,
-): string[] {
-  const args = ['cloud', 'app', 'info', options.appId];
-  withOptionalEnv(args, options.envName);
   return withRootPath(args, options.rootPath);
 }
 
@@ -665,9 +455,6 @@ export function buildPublisherBackendContractInitArgs(
   if (options.appId?.trim()) {
     args.push('--app-id', options.appId.trim());
   }
-  if (options.public) {
-    args.push('--public');
-  }
   if (options.healthEndpoint?.trim()) {
     args.push('--health-endpoint', options.healthEndpoint.trim());
   }
@@ -690,9 +477,6 @@ export function buildPublisherBackendContractSmokeArgs(
   options: PublisherBackendContractSmokeArgsOptions = {},
 ): string[] {
   const args = ['publisher-api', 'contract', 'smoke'];
-  if (options.accessKey?.trim()) {
-    args.push('--access-key', options.accessKey.trim());
-  }
   if (options.authToken?.trim()) {
     args.push('--auth-token', options.authToken.trim());
   }
@@ -700,82 +484,6 @@ export function buildPublisherBackendContractSmokeArgs(
     args.push('--timeout-seconds', `${options.timeoutSeconds}`.trim());
   }
   return withPublisherBackendContractOptions(args, options);
-}
-
-export function buildPublisherBackendContractHandoffArgs(
-  options: PublisherBackendContractHandoffArgsOptions,
-): string[] {
-  const args = [
-    'publisher-api',
-    'contract',
-    'handoff',
-    '--delivery-url',
-    options.deliveryUrl.trim(),
-  ];
-  if (options.title?.trim()) {
-    args.push('--title', options.title.trim());
-  }
-  if (options.public) {
-    args.push('--public');
-  } else if (options.accessKey?.trim()) {
-    args.push('--access-key', options.accessKey.trim());
-  }
-  if (options.outputPath?.trim()) {
-    args.push('--output', options.outputPath.trim());
-  }
-  return withPublisherBackendContractOptions(args, options);
-}
-
-export function buildAccessKeyCreateArgs(
-  options: AccessKeyCreateArgsOptions,
-): string[] {
-  const args = [
-    'access-key',
-    'create',
-    options.appId,
-    '--key-id',
-    options.keyId,
-  ];
-  return withEnvName(args, options.envName);
-}
-
-export function buildAccessKeyListArgs(
-  options: AccessKeyListArgsOptions,
-): string[] {
-  const args = ['access-key', 'list', options.appId];
-  if (options.json ?? true) {
-    args.push('--json');
-  }
-  return withEnvName(args, options.envName);
-}
-
-export function buildAccessKeyRevokeArgs(
-  options: AccessKeyRevokeArgsOptions,
-): string[] {
-  const args = [
-    'access-key',
-    'revoke',
-    options.appId,
-    '--key-id',
-    options.keyId,
-  ];
-  return withEnvName(args, options.envName);
-}
-
-export function buildAccessKeyRotateArgs(
-  options: AccessKeyRotateArgsOptions,
-): string[] {
-  const args = [
-    'access-key',
-    'rotate',
-    options.appId,
-    '--key-id',
-    options.keyId,
-  ];
-  if (options.newKeyId?.trim()) {
-    args.push('--new-key-id', options.newKeyId.trim());
-  }
-  return withEnvName(args, options.envName);
 }
 
 export function buildPartnerPackageArgs(
@@ -786,22 +494,11 @@ export function buildPartnerPackageArgs(
     'package',
     options.appId,
   ];
-  if (options.public) {
-    args.push('--public');
-  } else if (options.accessKey?.trim()) {
-    args.push('--access-key', options.accessKey.trim());
-  }
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
   }
-  if (options.envName?.trim()) {
-    args.push('--env', options.envName.trim());
-  }
   if (options.apiBaseUrl?.trim()) {
-    args.push('--api-base-url', options.apiBaseUrl.trim());
-  }
-  if (options.backendBaseUrl?.trim()) {
-    args.push('--backend-base-url', options.backendBaseUrl.trim());
+    args.push('--artifact-base-url', options.apiBaseUrl.trim());
   }
   if (options.outputPath?.trim()) {
     args.push('--output', options.outputPath.trim());
@@ -958,17 +655,6 @@ function withMiniProgramRoot(args: string[], miniProgramRoot?: string): string[]
   return args;
 }
 
-function withEnvName(args: string[], envName?: string): string[] {
-  if (envName?.trim()) {
-    args.push('--env', envName.trim());
-  }
-  return args;
-}
-
-function withOptionalEnv(args: string[], envName?: string): string[] {
-  return withEnvName(args, envName);
-}
-
 function withRootPath(args: string[], rootPath?: string): string[] {
   if (rootPath?.trim()) {
     args.push('--root', rootPath.trim());
@@ -993,15 +679,11 @@ function withPublisherBackendContractOptions(
 }
 
 function redactSecretArgs(args: readonly string[]): string[] {
-  const secretOptions = new Set(['--access-key', '--key', '--auth-token']);
+  const secretOptions = new Set(['--auth-token']);
   const redacted = [...args];
   for (let index = 0; index < redacted.length; index += 1) {
     if (secretOptions.has(redacted[index]) && index + 1 < redacted.length) {
       redacted[index + 1] = '<redacted>';
-    } else if (redacted[index].startsWith('--access-key=')) {
-      redacted[index] = '--access-key=<redacted>';
-    } else if (redacted[index].startsWith('--key=')) {
-      redacted[index] = '--key=<redacted>';
     } else if (redacted[index].startsWith('--auth-token=')) {
       redacted[index] = '--auth-token=<redacted>';
     }

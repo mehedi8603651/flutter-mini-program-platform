@@ -1,15 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_tooling/mini_program_tooling.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 part 'miniprogram_cli_test/core_and_preview_tests.dart';
-part 'miniprogram_cli_test/env_publish_tests.dart';
 part 'miniprogram_cli_test/publisher_backend_contract_tests.dart';
-part 'miniprogram_cli_test/cloud_host_partner_tests.dart';
 part 'miniprogram_cli_test/workflow_validation_embed_backend_tests.dart';
 part 'miniprogram_cli_test/helpers.dart';
 
@@ -65,9 +63,7 @@ void main() {
     });
 
     _registerCoreAndPreviewTests();
-    _registerEnvPublishTests();
     _registerPublisherBackendContractTests();
-    _registerCloudHostPartnerTests();
     _registerWorkflowValidationEmbedBackendTests();
   });
 }

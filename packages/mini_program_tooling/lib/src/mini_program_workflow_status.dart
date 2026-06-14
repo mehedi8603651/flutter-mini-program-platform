@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
 import 'local_cli_state.dart';
-import 'mini_program_cloud_controller.dart';
 
 class MiniProgramWorkflowStatusRequest {
   const MiniProgramWorkflowStatusRequest({
@@ -35,16 +34,13 @@ class MiniProgramWorkflowStatusController {
     LocalCliStateStore stateStore = const LocalCliStateStore(),
     DeliveryRepositoryValidator validator = const DeliveryRepositoryValidator(),
     LocalBackendController backendController = const LocalBackendController(),
-    MiniProgramCloudController? cloudController,
   }) : _stateStore = stateStore,
        _validator = validator,
-       _backendController = backendController,
-       _cloudController = cloudController;
+       _backendController = backendController;
 
   final LocalCliStateStore _stateStore;
   final DeliveryRepositoryValidator _validator;
   final LocalBackendController _backendController;
-  final MiniProgramCloudController? _cloudController;
 
   Future<MiniProgramWorkflowStatusResult> inspect(
     MiniProgramWorkflowStatusRequest request,
@@ -65,12 +61,7 @@ class MiniProgramWorkflowStatusController {
       miniProgram: miniProgram,
       backend: backend,
     );
-    final remote = request.remote
-        ? await _inspectRemote(
-            environment: environment,
-            miniProgram: miniProgram,
-          )
-        : <String, Object?>{'checked': false};
+    final remote = _inspectRemote(request.remote);
     final nextActions = _buildNextActions(
       workspace: workspace,
       miniProgram: miniProgram,
@@ -281,9 +272,6 @@ class MiniProgramWorkflowStatusController {
     final pubspecPath = p.join(workspacePath, 'pubspec.yaml');
     final endpoints = await _readEndpointMetadata(File(endpointPath));
     final registryEntries = await _readRegistryMetadata(File(registryPath));
-    final hostCloud = await _stateStore.readHostCloudConfiguration(
-      workspacePath,
-    );
     return <String, Object?>{
       'detected': true,
       'pubspecPath': pubspecPath,
@@ -312,24 +300,12 @@ class MiniProgramWorkflowStatusController {
             (entry) => <String, Object?>{
               'appId': entry.key,
               'apiBaseUri': entry.value['apiBaseUri'],
-              'accessMode': entry.value['accessMode'],
-              'hasAccessKey': entry.value['hasAccessKey'],
               'backendBaseUri': entry.value['backendBaseUri'],
               'backendConfigured': entry.value['backendConfigured'],
               'backendMode': entry.value['backendMode'],
             },
           )
           .toList(),
-      'hostCloud': hostCloud == null
-          ? <String, Object?>{'configured': false}
-          : <String, Object?>{
-              'configured': true,
-              'environmentName': hostCloud.environmentName,
-              'provider': hostCloud.provider,
-              'backendApiBaseUrl': hostCloud.backendApiBaseUrl,
-              'configuredAtUtc': hostCloud.configuredAtUtc,
-              'updatedAtUtc': hostCloud.updatedAtUtc,
-            },
     };
   }
 
@@ -349,11 +325,6 @@ class MiniProgramWorkflowStatusController {
         explicitEnvironmentName?.trim().isNotEmpty == true
         ? explicitEnvironmentName!.trim()
         : activeEnvironment;
-    final cloudEnvironment =
-        requestedEnvironmentName == 'local' ||
-            requestedEnvironmentName == 'cloud'
-        ? null
-        : resolved.state.cloudEnvironmentNamed(requestedEnvironmentName);
     return <String, Object?>{
       'configured': true,
       'scope': resolved.scope,
@@ -361,24 +332,6 @@ class MiniProgramWorkflowStatusController {
       'filePath': resolved.filePath,
       'activeEnvironment': activeEnvironment,
       'selectedEnvironment': requestedEnvironmentName,
-      'cloudEnvironmentCount': resolved.state.cloudEnvironments.length,
-      'provider': cloudEnvironment?.provider,
-      'apiBaseUrl': cloudEnvironment?.values['apiBaseUrl']?.toString(),
-      'bucket': cloudEnvironment?.values['bucket']?.toString(),
-      'region': cloudEnvironment?.values['region']?.toString(),
-      'projectId': cloudEnvironment?.values['projectId']?.toString(),
-      'artifactsPrefix': cloudEnvironment?.values['artifactsPrefix']
-          ?.toString(),
-      'metadataPrefix': cloudEnvironment?.values['metadataPrefix']?.toString(),
-      'awsProfile': cloudEnvironment?.values['awsProfile']?.toString(),
-      'stackName': cloudEnvironment?.values['stackName']?.toString(),
-      'stageName': cloudEnvironment?.values['stageName']?.toString(),
-      'samS3Bucket': cloudEnvironment?.values['samS3Bucket']?.toString(),
-      'requireAccessKeys':
-          cloudEnvironment?.values['requireAccessKeys'] == true,
-      'cloudConfigured': cloudEnvironment != null,
-      'configuredAtUtc': cloudEnvironment?.configuredAtUtc,
-      'updatedAtUtc': cloudEnvironment?.updatedAtUtc,
     };
   }
 
@@ -461,117 +414,17 @@ class MiniProgramWorkflowStatusController {
     }
   }
 
-  Future<Map<String, Object?>> _inspectRemote({
-    required Map<String, Object?> environment,
-    required Map<String, Object?> miniProgram,
-  }) async {
-    final errors = <String>[];
-    final remote = <String, Object?>{
+  Map<String, Object?> _inspectRemote(bool requested) {
+    if (!requested) {
+      return <String, Object?>{'checked': false};
+    }
+    return <String, Object?>{
       'checked': true,
-      'provider': environment['provider']?.toString(),
-      'cloudStatus': null,
-      'app': null,
-      'accessKeys': null,
-      'errors': errors,
+      'supported': false,
+      'message':
+          'Provider remote artifact checks were removed. Host static artifacts from artifactBaseUrl and use optional middle-server runtime APIs.',
+      'errors': <String>[],
     };
-    final provider = environment['provider']?.toString();
-    final cloudController = _cloudController;
-    if (cloudController == null) {
-      errors.add('No cloud controller is available.');
-      return remote;
-    }
-    final selectedEnvironment = environment['selectedEnvironment']?.toString();
-    final rootPath = environment['rootPath']?.toString();
-    final filePath = environment['filePath']?.toString();
-    if (selectedEnvironment == null ||
-        selectedEnvironment.isEmpty ||
-        provider == null ||
-        rootPath == null ||
-        filePath == null) {
-      errors.add('No named cloud environment is configured.');
-      return remote;
-    }
-    final env = CloudEnvironmentConfiguration(
-      name: selectedEnvironment,
-      provider: provider,
-      values: <String, dynamic>{
-        if (environment['bucket'] != null) 'bucket': environment['bucket'],
-        if (environment['region'] != null) 'region': environment['region'],
-        if (environment['artifactsPrefix'] != null)
-          'artifactsPrefix': environment['artifactsPrefix'],
-        if (environment['metadataPrefix'] != null)
-          'metadataPrefix': environment['metadataPrefix'],
-        if (environment['apiBaseUrl'] != null)
-          'apiBaseUrl': environment['apiBaseUrl'],
-        if (environment['awsProfile'] != null)
-          'awsProfile': environment['awsProfile'],
-        if (environment['stackName'] != null)
-          'stackName': environment['stackName'],
-        if (environment['stageName'] != null)
-          'stageName': environment['stageName'],
-        if (environment['samS3Bucket'] != null)
-          'samS3Bucket': environment['samS3Bucket'],
-        if (environment['requireAccessKeys'] != null)
-          'requireAccessKeys': environment['requireAccessKeys'],
-      },
-      configuredAtUtc: environment['configuredAtUtc']?.toString() ?? '',
-      updatedAtUtc: environment['updatedAtUtc']?.toString() ?? '',
-    );
-    final resolved = ResolvedLocalCliEnvironmentState(
-      rootPath: rootPath,
-      filePath: filePath,
-      state: LocalCliEnvironmentState(
-        schemaVersion: 2,
-        repoRootPath: null,
-        activeEnvironment: selectedEnvironment,
-        cloudEnvironments: <CloudEnvironmentConfiguration>[env],
-        initializedAtUtc: environment['configuredAtUtc']?.toString() ?? '',
-        updatedAtUtc: environment['updatedAtUtc']?.toString() ?? '',
-      ),
-      scope: environment['scope']?.toString() ?? 'local',
-    );
-
-    try {
-      final status = await cloudController.status(
-        MiniProgramCloudStatusRequest(
-          resolvedEnvironmentState: resolved,
-          environment: env,
-        ),
-      );
-      remote['cloudStatus'] = _cloudStatusJson(status);
-    } catch (error) {
-      errors.add('Cloud status failed: $error');
-    }
-
-    final appId = miniProgram['appId']?.toString();
-    if (appId == null || appId.isEmpty) {
-      return remote;
-    }
-    try {
-      final appInfo = await cloudController.appInfo(
-        MiniProgramCloudAppInfoRequest(
-          resolvedEnvironmentState: resolved,
-          environment: env,
-          miniProgramId: appId,
-        ),
-      );
-      remote['app'] = _cloudAppInfoJson(appInfo);
-    } catch (error) {
-      errors.add('Cloud app info failed: $error');
-    }
-    try {
-      final keys = await cloudController.listAccessKeys(
-        MiniProgramAccessKeyListRequest(
-          resolvedEnvironmentState: resolved,
-          environment: env,
-          miniProgramId: appId,
-        ),
-      );
-      remote['accessKeys'] = _accessKeyListJson(keys);
-    } catch (error) {
-      errors.add('Access-key list failed: $error');
-    }
-    return remote;
   }
 
   List<String> _buildNextActions({
@@ -591,13 +444,9 @@ class MiniProgramWorkflowStatusController {
         if (validation['status'] != 'ok' && validation['status'] != 'warning') {
           actions.add('Run `miniprogram validate`.');
         }
-        if (environment['configured'] != true) {
-          actions.add('Run `miniprogram env init` and configure a cloud env.');
-        } else if (environment['cloudConfigured'] != true) {
-          actions.add('Run `miniprogram env use <env-name>`.');
-        } else if (remote['checked'] != true) {
-          actions.add('Run `miniprogram workflow status --remote`.');
-        }
+        actions.add(
+          'Publish static artifacts with `miniprogram publish --target static --output <folder>`.',
+        );
       case 'host_app':
         if (hostApp['runtimeSetupExists'] != true) {
           actions.add('Run `miniprogram embed init`.');
@@ -626,9 +475,6 @@ class MiniProgramWorkflowStatusController {
         final validation = miniProgram['validation'] as Map<String, Object?>;
         if (validation['status'] == 'error') {
           return 'error';
-        }
-        if (environment['cloudConfigured'] != true) {
-          return 'warning';
         }
         if ((remote['errors'] as List?)?.isNotEmpty == true) {
           return 'warning';
@@ -684,16 +530,9 @@ class MiniProgramWorkflowStatusController {
           'filePath': file.path,
           'appId': json?['appId']?.toString(),
           'title': json?['title']?.toString(),
-          'apiBaseUrl': json?['apiBaseUrl']?.toString(),
-          'backendBaseUrl': json?['backendBaseUrl']?.toString(),
-          'backendConfigured':
-              json?['backendBaseUrl']?.toString().trim().isNotEmpty ?? false,
-          'accessMode':
-              json?['accessMode']?.toString() ??
-              ((json?['accessKey']?.toString().isNotEmpty ?? false)
-                  ? 'protected'
-                  : 'public'),
-          'hasAccessKey': (json?['accessKey']?.toString().isNotEmpty ?? false),
+          'artifactBaseUrl':
+              json?['artifactBaseUrl']?.toString() ??
+              json?['apiBaseUrl']?.toString(),
         });
       } catch (error) {
         packages.add(<String, Object?>{
@@ -724,14 +563,8 @@ class MiniProgramWorkflowStatusController {
     }
     return decoded.map((key, value) {
       final record = value is Map ? value : <String, Object?>{};
-      final hasAccessKey = record['accessKey']?.toString().isNotEmpty ?? false;
-      final accessMode =
-          record['accessMode']?.toString() ??
-          (hasAccessKey ? 'protected' : 'public');
       return MapEntry(key.toString(), <String, Object?>{
         'apiBaseUri': record['apiBaseUri']?.toString(),
-        'accessMode': accessMode,
-        'hasAccessKey': hasAccessKey,
         'backendBaseUri': record['backendBaseUri']?.toString(),
         'backendConfigured':
             record['backendBaseUri']?.toString().trim().isNotEmpty ?? false,
@@ -933,14 +766,6 @@ Map<String, Object?> miniProgramWorkflowStatusBackendJson(
   LocalBackendStatusResult result,
 ) => _backendStatusJson(result);
 
-Map<String, Object?> miniProgramWorkflowStatusCloudJson(
-  MiniProgramCloudStatusResult result,
-) => _cloudStatusJson(result);
-
-Map<String, Object?> miniProgramWorkflowStatusAccessKeyListJson(
-  MiniProgramAccessKeyListResult result,
-) => _accessKeyListJson(result);
-
 Map<String, Object?> _backendStatusJson(LocalBackendStatusResult result) {
   return <String, Object?>{
     'hasState': result.hasState,
@@ -959,66 +784,5 @@ Map<String, Object?> _backendStatusJson(LocalBackendStatusResult result) {
             'stderrLogPath': result.state!.stderrLogPath,
             'startedAtUtc': result.state!.startedAtUtc,
           },
-  };
-}
-
-Map<String, Object?> _cloudStatusJson(MiniProgramCloudStatusResult result) {
-  return <String, Object?>{
-    'provider': result.provider,
-    'environmentName': result.environmentName,
-    'stackName': result.stackName,
-    'stageName': result.stageName,
-    'region': result.region,
-    'stackExists': result.stackExists,
-    'stackStatus': result.stackStatus,
-    'stackStatusReason': result.stackStatusReason,
-    'apiBaseUrl': result.apiBaseUrl,
-    'healthUrl': result.healthUrl,
-    'healthy': result.healthy,
-    'healthStatusCode': result.healthStatusCode,
-    'healthError': result.healthError,
-    'outputs': result.outputs,
-  };
-}
-
-Map<String, Object?> _cloudAppInfoJson(MiniProgramCloudAppInfoResult result) {
-  return <String, Object?>{
-    'provider': result.provider,
-    'environmentName': result.environmentName,
-    'miniProgramId': result.miniProgramId,
-    'bucketName': result.bucketName,
-    'region': result.region,
-    'catalogKey': result.catalogKey,
-    'latestVersion': result.catalog['latestVersion']?.toString(),
-    'releaseKey': result.releaseKey,
-    'accessPolicyKey': result.accessPolicyKey,
-    'accessKeyCount': result.accessKeyCount,
-    'activeAccessKeyCount': result.activeAccessKeyCount,
-  };
-}
-
-Map<String, Object?> _accessKeyListJson(MiniProgramAccessKeyListResult result) {
-  return <String, Object?>{
-    'provider': result.provider,
-    'environmentName': result.environmentName,
-    'miniProgramId': result.miniProgramId,
-    'bucketName': result.bucketName,
-    'region': result.region,
-    'policyKey': result.policyKey,
-    'policyExists': result.policyExists,
-    'activeCount': result.keys.where((key) => key.active).length,
-    'keyCount': result.keys.length,
-    'keys': result.keys
-        .map(
-          (key) => <String, Object?>{
-            'id': key.id,
-            'enabled': key.enabled,
-            'active': key.active,
-            'createdAtUtc': key.createdAtUtc,
-            'updatedAtUtc': key.updatedAtUtc,
-            'revokedAtUtc': key.revokedAtUtc,
-          },
-        )
-        .toList(),
   };
 }

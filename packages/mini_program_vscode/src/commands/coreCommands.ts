@@ -9,27 +9,18 @@ import {
 } from '../cli';
 
 import {
-  appendFirebaseHostingDeliveryDiagnostics,
-  chooseFirebaseHostingDryRun,
-  chooseFirebaseHostingOutputFolder,
   chooseMiniProgramBackendStarter,
   chooseStaticClean,
   chooseStaticOutputFolder,
   configuredCliPath,
   configuredDefaultPreviewDevice,
-  ensureFirebaseHostingPublishCli042,
   ensureMpCreateCli040,
   getWorkspacePath,
-  parseJsonObject,
   requireMiniProgramRoot,
   resolveCreateOutputRoot,
-  runCliCapture,
   runCliCommand,
   runMiniProgramWorkspaceCliCommand,
-  stringValue,
   titleFromAppId,
-  validateOptionalSafeSegment,
-  withFirebaseHostingDeliveryDiagnostics,
 } from '../extensionSupport';
 
 export async function createMiniProgram(output: vscode.OutputChannel): Promise<void> {
@@ -148,10 +139,6 @@ export async function publishMiniProgram(
   const targetChoice = await vscode.window.showQuickPick(
     [
       {
-        label: 'cloud',
-        description: 'Publish to the active or selected cloud environment',
-      },
-      {
         label: 'static',
         description: 'Export public/CDN-ready files for GitHub Pages or static hosting',
       },
@@ -161,19 +148,6 @@ export async function publishMiniProgram(
   );
   if (!targetChoice) {
     return;
-  }
-
-  let envName: string | undefined;
-  if (targetChoice.label === 'cloud') {
-    const value = await vscode.window.showInputBox({
-      prompt: 'Optional cloud environment name',
-      placeHolder: 'Leave blank to use active environment',
-      ignoreFocusOut: true,
-    });
-    if (value === undefined) {
-      return;
-    }
-    envName = value.trim() || undefined;
   }
 
   let outputPath: string | undefined;
@@ -194,8 +168,7 @@ export async function publishMiniProgram(
     'Publish',
     (workspacePath) =>
       buildPublishArgs({
-        target: targetChoice.label as 'local' | 'cloud' | 'static',
-        envName,
+        target: targetChoice.label as 'local' | 'static',
         outputPath,
         clean,
         miniProgramRoot: workspacePath,
@@ -230,115 +203,6 @@ export async function publishPublicStaticMiniProgram(
     output,
     refreshStatus,
   );
-}
-
-export async function publishFirebaseHostingMiniProgram(
-  output: vscode.OutputChannel,
-  refreshStatus: () => Promise<void>,
-): Promise<void> {
-  const workspacePath = await requireMiniProgramRoot();
-  if (!workspacePath) {
-    return;
-  }
-  if (!(await ensureFirebaseHostingPublishCli042(workspacePath, output))) {
-    return;
-  }
-  const envName = await vscode.window.showInputBox({
-    prompt: 'Firebase Hosting environment name',
-    placeHolder: 'my-firebase-prod',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Environment is required.',
-  });
-  if (!envName) {
-    return;
-  }
-  const outputPath = await chooseFirebaseHostingOutputFolder(workspacePath);
-  if (!outputPath) {
-    return;
-  }
-  const clean = await chooseStaticClean();
-  if (clean === undefined) {
-    return;
-  }
-  const siteIdInput = await vscode.window.showInputBox({
-    prompt: 'Optional Firebase Hosting site ID',
-    placeHolder: 'Leave blank to use the default project Hosting site',
-    ignoreFocusOut: true,
-    validateInput: validateOptionalSafeSegment,
-  });
-  if (siteIdInput === undefined) {
-    return;
-  }
-  const dryRun = await chooseFirebaseHostingDryRun();
-  if (dryRun === undefined) {
-    return;
-  }
-
-  const result = await runCliCapture(
-    'Publish MiniProgram to Firebase Hosting',
-    buildPublishArgs({
-      target: 'firebase-hosting',
-      envName,
-      outputPath,
-      siteId: siteIdInput.trim() || undefined,
-      clean,
-      dryRun,
-      json: true,
-      miniProgramRoot: workspacePath,
-    }),
-    workspacePath,
-    output,
-  );
-  if (!result) {
-    return;
-  }
-  const decoded = parseJsonObject(result.stdout);
-  const deliveryUrl = stringValue(decoded.deliveryApiBaseUrl);
-  output.appendLine('');
-  output.appendLine(
-    dryRun
-      ? 'Firebase Hosting static delivery prepared.'
-      : 'Firebase Hosting static delivery published.',
-  );
-  if (deliveryUrl) {
-    output.appendLine(`Static artifact base URL: ${deliveryUrl}`);
-    if (!dryRun) {
-      const deliveryStatus = await withFirebaseHostingDeliveryDiagnostics({
-        miniProgramId: stringValue(decoded.miniProgramId),
-        deliveryApiBaseUrl: deliveryUrl,
-      });
-      appendFirebaseHostingDeliveryDiagnostics(output, deliveryStatus);
-      if (deliveryStatus.hostingCorsReady === false) {
-        vscode.window.showWarningMessage(
-          'Firebase Hosting published, but browser CORS headers were not detected. Republish with mini_program_tooling 0.3.42 or newer.',
-        );
-      }
-    }
-    output.appendLine('Next handoff step:');
-    output.appendLine(publisherApiHandoffCommand(deliveryUrl));
-  }
-  await refreshStatus();
-
-  const action = await vscode.window.showInformationMessage(
-    dryRun
-      ? 'Firebase Hosting dry-run completed.'
-      : 'Firebase Hosting publish completed.',
-    ...(deliveryUrl
-      ? ['Copy Publisher API handoff command', 'Copy delivery URL']
-      : ['Close']),
-  );
-  if (action === 'Copy delivery URL' && deliveryUrl) {
-    await vscode.env.clipboard.writeText(deliveryUrl);
-    vscode.window.showInformationMessage('Firebase Hosting delivery URL copied.');
-  }
-  if (action === 'Copy Publisher API handoff command' && deliveryUrl) {
-    await vscode.env.clipboard.writeText(publisherApiHandoffCommand(deliveryUrl));
-    vscode.window.showInformationMessage('Publisher API handoff command copied.');
-  }
-}
-
-function publisherApiHandoffCommand(deliveryUrl: string): string {
-  return `miniprogram publisher-api contract handoff --delivery-url ${deliveryUrl} --public`;
 }
 
 export async function previewMiniProgram(): Promise<void> {

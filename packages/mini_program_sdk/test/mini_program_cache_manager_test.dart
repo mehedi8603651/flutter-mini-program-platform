@@ -246,17 +246,17 @@ void main() {
     });
 
     test(
-      'quota cleanup removes low priority and preserves protected entries',
+      'quota cleanup removes low priority and preserves host-pinned entries',
       () async {
         final manager = MiniProgramCacheManager.inMemory();
         const policy = MiniProgramCachePolicy(maxBytes: 20);
 
         await manager.set(
           appId: 'coupon',
-          key: 'protected',
+          key: 'hostPinned',
           value: 'keep',
           sizeBytes: 8,
-          priority: MiniProgramCachePriority.protected,
+          priority: MiniProgramCachePriority.hostPinned,
           policy: policy,
         );
         await manager.set(
@@ -285,7 +285,7 @@ void main() {
           isTrue,
         );
         expect(
-          await manager.has(appId: 'coupon', key: 'protected', policy: policy),
+          await manager.has(appId: 'coupon', key: 'hostPinned', policy: policy),
           isTrue,
         );
 
@@ -296,7 +296,7 @@ void main() {
           isFalse,
         );
         expect(
-          await manager.has(appId: 'coupon', key: 'protected', policy: policy),
+          await manager.has(appId: 'coupon', key: 'hostPinned', policy: policy),
           isTrue,
         );
       },
@@ -346,26 +346,29 @@ void main() {
       },
     );
 
-    test('app-scoped cache cannot write session or protected cache', () async {
-      final cache = MiniProgramCacheManager.inMemory().forApp('coupon');
+    test(
+      'app-scoped cache cannot write session or host-pinned cache',
+      () async {
+        final cache = MiniProgramCacheManager.inMemory().forApp('coupon');
 
-      expect(
-        () => cache.set(
-          'login_state',
-          true,
-          bucket: MiniProgramCacheBucket.session,
-        ),
-        throwsArgumentError,
-      );
-      expect(
-        () => cache.set(
-          'products',
-          true,
-          priority: MiniProgramCachePriority.protected,
-        ),
-        throwsArgumentError,
-      );
-    });
+        expect(
+          () => cache.set(
+            'login_state',
+            true,
+            bucket: MiniProgramCacheBucket.session,
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => cache.set(
+            'products',
+            true,
+            priority: MiniProgramCachePriority.hostPinned,
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
 
     test(
       '100 mini-program appIds can store the same key without conflict',

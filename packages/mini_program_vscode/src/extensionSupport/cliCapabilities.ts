@@ -17,7 +17,7 @@ import { configuredCliPath } from './workspace';
 
 export interface PublisherApiCliCapability {
   readonly checked: boolean;
-  readonly supportsFirebaseHostingPublish?: boolean;
+  readonly supportsStaticPublish?: boolean;
   readonly supportsPublisherApiMock?: boolean;
   readonly supportsPublisherBackendContract?: boolean;
   readonly supportsCapabilityDiscovery?: boolean;
@@ -87,29 +87,26 @@ export function capabilityFromCliCapabilitiesJson(
   const capabilityIds = stringArrayValue(decoded.capabilityIds);
   const hasCapability = (id: string): boolean => capabilityIds.includes(id);
   const hasFeature = (key: string): boolean => features[key] === true;
-  const supportsFirebaseHostingPublish =
-    hasFeature('firebaseHostingPublish') ||
-    hasCapability('publish.firebase_hosting');
+  const supportsStaticPublish =
+    hasFeature('staticPublish') ||
+    hasCapability('publish.static');
   const supportsPublisherApiMock =
     hasFeature('publisherApiMock') ||
     hasCapability('publisher_api.mock.scaffold');
   const supportsPublisherBackendContract =
     (hasFeature('publisherBackendContractInit') &&
       hasFeature('publisherBackendContractValidate') &&
-      hasFeature('publisherBackendContractSmoke') &&
-      hasFeature('publisherBackendContractHandoff')) ||
+      hasFeature('publisherBackendContractSmoke')) ||
     (hasCapability('publisher_backend.contract.init') &&
       hasCapability('publisher_backend.contract.validate') &&
-      hasCapability('publisher_backend.contract.smoke') &&
-      hasCapability('publisher_backend.contract.handoff')) ||
+      hasCapability('publisher_backend.contract.smoke')) ||
     (hasCapability('publisher_api.contract.init') &&
       hasCapability('publisher_api.contract.validate') &&
-      hasCapability('publisher_api.contract.smoke') &&
-      hasCapability('publisher_api.contract.handoff'));
+      hasCapability('publisher_api.contract.smoke'));
   const details = [
-    supportsFirebaseHostingPublish
+    supportsStaticPublish
       ? undefined
-      : 'Configured CLI capabilities do not include Firebase Hosting publish.',
+      : 'Configured CLI capabilities do not include static artifact publish.',
     supportsPublisherApiMock
       ? undefined
       : 'Configured CLI capabilities do not include Publisher API mock scaffold.',
@@ -119,7 +116,7 @@ export function capabilityFromCliCapabilitiesJson(
   ].filter((value): value is string => Boolean(value));
   return {
     checked: true,
-    supportsFirebaseHostingPublish,
+    supportsStaticPublish,
     supportsPublisherApiMock,
     supportsPublisherBackendContract,
     supportsCapabilityDiscovery: true,
@@ -181,44 +178,6 @@ export async function ensureMpCreateCli040(
   }
   vscode.window.showWarningMessage(message);
   return false;
-}
-
-export async function ensureFirebaseHostingPublishCli042(
-  workspacePath: string,
-  output: vscode.OutputChannel,
-): Promise<boolean> {
-  output.show(true);
-  const capability = await detectPublisherApiCliCapabilities(
-    workspacePath,
-    output,
-  );
-  if (firebaseHostingPublishCliAccepted(capability)) {
-    return true;
-  }
-  const versionDetail = capability.toolingVersion
-    ? `Configured CLI reports mini_program_tooling ${capability.toolingVersion}. `
-    : '';
-  const message =
-    'MiniProgram CLI 0.3.42 or newer is required for Firebase Hosting static delivery publish. ' +
-    'Run `dart pub global activate mini_program_tooling 0.3.42` or use the local tooling package.';
-  output.appendLine(message);
-  if (versionDetail) {
-    output.appendLine(versionDetail.trim());
-  }
-  if (capability.detail) {
-    output.appendLine(capability.detail);
-  }
-  vscode.window.showWarningMessage(message);
-  return false;
-}
-
-export function firebaseHostingPublishCliAccepted(
-  capability: PublisherApiCliCapability,
-): boolean {
-  if (!capability.supportsFirebaseHostingPublish) {
-    return false;
-  }
-  return toolingVersionAtLeast(capability.toolingVersion, '0.3.42');
 }
 
 export function toolingVersionAtLeast(

@@ -447,35 +447,12 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ..addOption(
         'output',
         abbr: 'o',
-        help:
-            'Output folder for --target static or firebase-hosting. Firebase Hosting defaults to backend/firebase_hosting/public.',
+        help: 'Output folder for --target static.',
       )
       ..addFlag(
         'clean',
         negatable: false,
-        help:
-            'For static or firebase-hosting, remove generated delivery output before writing the new version.',
-      )
-      ..addOption(
-        'env',
-        help:
-            'Named cloud environment override used by cloud or firebase-hosting targets.',
-      )
-      ..addOption(
-        'site',
-        help:
-            'Optional Firebase Hosting site id when --target firebase-hosting is selected.',
-      )
-      ..addFlag(
-        'dry-run',
-        negatable: false,
-        help:
-            'For --target firebase-hosting, build static output and firebase.json without deploying.',
-      )
-      ..addFlag(
-        'json',
-        negatable: false,
-        help: 'Print machine-readable JSON for --target firebase-hosting.',
+        help: 'For static, remove generated delivery output first.',
       );
 
     final results = parser.parse(arguments);
@@ -517,27 +494,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       currentWorkingDirectory: _currentWorkingDirectory(),
       requireRepoRoot: false,
     );
-    if (target == 'cloud') {
-      final cloudEnvironment = _resolveConfiguredCloudEnvironment(
-        state: activeEnvironment?.state,
-        explicitEnvironmentName: results.option('env'),
-      );
-      final result = await _cloudPublisher.publish(
-        MiniProgramCloudPublishRequest(
-          repoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
-          environment: cloudEnvironment,
-          miniProgramId: miniProgramId,
-          miniProgramRootPath: resolved.isRepoManaged
-              ? null
-              : resolved.miniProgramRootPath,
-          mpBuildScriptPath: results.option('mp-build-script'),
-          skipBuildPubGet: results.flag('skip-build-pub-get'),
-        ),
-      );
-      _stdout.writeln(_formatCloudPublishResult(result));
-      return 0;
-    }
-
     if (target == 'static') {
       final outputPath = results.option('output')?.trim() ?? '';
       if (outputPath.isEmpty) {
@@ -559,33 +515,6 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         ),
       );
       _stdout.writeln(_formatStaticPublishResult(result));
-      return 0;
-    }
-
-    if (target == 'firebase-hosting') {
-      final environment = _resolveConfiguredCloudEnvironment(
-        state: activeEnvironment?.state,
-        explicitEnvironmentName: results.option('env'),
-      );
-      final result = await _firebaseHostingPublisher.publish(
-        MiniProgramFirebaseHostingPublishRequest(
-          repoRootPath: resolved.repoRootPath ?? resolved.miniProgramRootPath,
-          environment: environment,
-          miniProgramId: miniProgramId,
-          miniProgramRootPath: resolved.miniProgramRootPath,
-          outputPath: results.option('output'),
-          siteId: results.option('site'),
-          mpBuildScriptPath: results.option('mp-build-script'),
-          skipBuildPubGet: results.flag('skip-build-pub-get'),
-          clean: results.flag('clean'),
-          dryRun: results.flag('dry-run'),
-        ),
-      );
-      if (results.flag('json')) {
-        _stdout.writeln(_prettyJson(result.toJson()));
-      } else {
-        _stdout.writeln(_formatFirebaseHostingPublishResult(result));
-      }
       return 0;
     }
 
@@ -642,117 +571,11 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
     switch (arguments.first) {
       case 'init':
         return _runEmbedInit(arguments.sublist(1));
-      case 'cloud':
-        return _runEmbedCloud(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown embed command: ${arguments.first}');
         _stderr.writeln(_embedUsage());
         return 64;
     }
-  }
-
-  Future<int> _runEmbedCloud(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_embedCloudUsage());
-      return 0;
-    }
-    if (arguments.isEmpty) {
-      _stderr.writeln(_embedCloudUsage());
-      return 64;
-    }
-
-    switch (arguments.first) {
-      case 'configure':
-        return _runEmbedCloudConfigure(arguments.sublist(1));
-      default:
-        _stderr.writeln('Unknown embed cloud command: ${arguments.first}');
-        _stderr.writeln(_embedCloudUsage());
-        return 64;
-    }
-  }
-
-  Future<int> _runEmbedCloudConfigure(List<String> arguments) async {
-    final parser = ArgParser()
-      ..addFlag(
-        'help',
-        abbr: 'h',
-        negatable: false,
-        help: 'Show usage information.',
-      )
-      ..addOption(
-        'project-root',
-        help:
-            'Existing Flutter app root containing pubspec.yaml and lib/. Defaults to the current directory.',
-      )
-      ..addOption('env', help: 'Named cloud environment override.')
-      ..addOption(
-        'root',
-        help:
-            'Directory that owns .mini_program/env.json. Defaults to discovery with global fallback.',
-      )
-      ..addOption(
-        'repo-root',
-        help: 'Optional repo root used to locate an existing env.json.',
-      );
-    final results = parser.parse(arguments);
-    if (results.flag('help')) {
-      _stdout.writeln('Usage: miniprogram embed cloud configure [options]');
-      _stdout.writeln(parser.usage);
-      return 0;
-    }
-
-    final projectRootPath =
-        results.option('project-root') ?? _currentWorkingDirectory();
-    await _requireEmbeddedHostProject(projectRootPath);
-
-    final resolvedEnvironmentState = await _requireEnvironmentState(
-      explicitRootPath: results.option('root'),
-      explicitRepoRootPath: results.option('repo-root'),
-      additionalSearchRoots: <String>[projectRootPath],
-    );
-    final environment = _resolveConfiguredCloudEnvironment(
-      state: resolvedEnvironmentState.state,
-      explicitEnvironmentName: results.option('env'),
-    );
-    final outputs = await _cloudController.outputs(
-      MiniProgramCloudOutputsRequest(
-        resolvedEnvironmentState: resolvedEnvironmentState,
-        environment: environment,
-      ),
-    );
-    final backendApiBaseUrl = _requireBackendApiBaseUrlFromOutputs(outputs);
-    await _persistCloudEnvironmentValueUpdates(
-      resolved: resolvedEnvironmentState,
-      environmentName: environment.name,
-      updatedValues: <String, dynamic>{'apiBaseUrl': backendApiBaseUrl},
-    );
-
-    final now = DateTime.now().toUtc().toIso8601String();
-    final existingConfiguration = await _stateStore.readHostCloudConfiguration(
-      projectRootPath,
-    );
-    final configuration = EmbeddedHostCloudConfiguration(
-      environmentName: environment.name,
-      provider: environment.provider,
-      backendApiBaseUrl: backendApiBaseUrl,
-      configuredAtUtc: existingConfiguration?.configuredAtUtc ?? now,
-      updatedAtUtc: now,
-    );
-    await _stateStore.writeHostCloudConfiguration(
-      projectRootPath,
-      configuration,
-    );
-
-    _stdout.writeln(
-      _formatEmbeddedHostCloudConfigurationResult(
-        projectRootPath: p.normalize(p.absolute(projectRootPath)),
-        configurationPath: _stateStore.hostCloudConfigurationPath(
-          projectRootPath,
-        ),
-        configuration: configuration,
-      ),
-    );
-    return 0;
   }
 
   Future<int> _runEmbedInit(List<String> arguments) async {

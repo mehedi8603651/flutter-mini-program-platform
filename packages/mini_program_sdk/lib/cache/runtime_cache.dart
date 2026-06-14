@@ -14,7 +14,7 @@ enum MiniProgramCacheStorage {
   temporary,
 }
 
-enum MiniProgramCachePriority { low, normal, high, protected }
+enum MiniProgramCachePriority { low, normal, high, hostPinned }
 
 abstract interface class MiniProgramCachePolicyProvider {
   MiniProgramCachePolicy cachePolicyFor(String miniProgramId);
@@ -516,7 +516,7 @@ class MiniProgramCacheManager {
     for (final appId in await _trackedAppIds()) {
       final entries = await store.entries(appId);
       for (final entry in entries) {
-        if (entry.priority != MiniProgramCachePriority.protected) {
+        if (entry.priority != MiniProgramCachePriority.hostPinned) {
           await store.remove(entry.namespacedKey);
         }
       }
@@ -609,11 +609,11 @@ class MiniProgramCacheManager {
         'The session cache bucket is host-controlled.',
       );
     }
-    if (!hostOwned && priority == MiniProgramCachePriority.protected) {
+    if (!hostOwned && priority == MiniProgramCachePriority.hostPinned) {
       throw ArgumentError.value(
         priority,
         'priority',
-        'Protected cache priority is host-controlled.',
+        'Host-pinned cache priority is host-controlled.',
       );
     }
     final normalizedValue = _normalizeCacheValue(value);
@@ -698,7 +698,7 @@ class MiniProgramCacheManager {
         .where(
           (entry) =>
               entry.bucket == bucket &&
-              entry.priority != MiniProgramCachePriority.protected,
+              entry.priority != MiniProgramCachePriority.hostPinned,
         )
         .toList();
     entries.sort(_cleanupCompare);
@@ -714,7 +714,7 @@ class MiniProgramCacheManager {
 
   Future<void> _enforceTotalLimit(String appId, int limit) async {
     var entries = (await store.entries(appId))
-        .where((entry) => entry.priority != MiniProgramCachePriority.protected)
+        .where((entry) => entry.priority != MiniProgramCachePriority.hostPinned)
         .toList();
     entries.sort(_cleanupCompare);
     var total = (await store.entries(
@@ -750,7 +750,7 @@ class MiniProgramCacheManager {
       MiniProgramCachePriority.low => 0,
       MiniProgramCachePriority.normal => 1,
       MiniProgramCachePriority.high => 2,
-      MiniProgramCachePriority.protected => 3,
+      MiniProgramCachePriority.hostPinned => 3,
     };
   }
 

@@ -13,7 +13,6 @@ class PublisherBackendContractInitRequest {
     required this.miniProgramRootPath,
     required this.appId,
     required this.backendBaseUri,
-    required this.accessMode,
     this.healthEndpoint =
         MiniProgramPublisherBackendContract.defaultHealthEndpoint,
     this.outputPath,
@@ -23,7 +22,6 @@ class PublisherBackendContractInitRequest {
   final String miniProgramRootPath;
   final String appId;
   final Uri backendBaseUri;
-  final String accessMode;
   final String healthEndpoint;
   final String? outputPath;
   final bool allowLocalHttp;
@@ -53,14 +51,12 @@ class PublisherBackendContractSmokeRequest {
   const PublisherBackendContractSmokeRequest({
     required this.contractPath,
     required this.contract,
-    this.accessKey,
     this.authToken,
     this.timeout = const Duration(seconds: 8),
   });
 
   final String contractPath;
   final MiniProgramPublisherBackendContract contract;
-  final String? accessKey;
   final String? authToken;
   final Duration timeout;
 }
@@ -69,7 +65,6 @@ class PublisherBackendContractSmokeResult {
   const PublisherBackendContractSmokeResult({
     required this.contractPath,
     required this.contract,
-    required this.accessKeyProvided,
     required this.authTokenProvided,
     required this.passed,
     required this.routes,
@@ -77,7 +72,6 @@ class PublisherBackendContractSmokeResult {
 
   final String contractPath;
   final MiniProgramPublisherBackendContract contract;
-  final bool accessKeyProvided;
   final bool authTokenProvided;
   final bool passed;
   final List<PublisherBackendContractSmokeRouteResult> routes;
@@ -122,7 +116,6 @@ class PublisherBackendContractController {
     final contract = MiniProgramPublisherBackendContract(
       appId: request.appId,
       backendBaseUri: request.backendBaseUri,
-      accessMode: request.accessMode,
       healthEndpoint: request.healthEndpoint,
       allowLocalHttp: request.allowLocalHttp,
     );
@@ -198,7 +191,6 @@ class PublisherBackendContractController {
     return PublisherBackendContractSmokeResult(
       contractPath: request.contractPath,
       contract: request.contract,
-      accessKeyProvided: request.accessKey?.trim().isNotEmpty == true,
       authTokenProvided: request.authToken?.trim().isNotEmpty == true,
       passed: routes.every((route) => route.passed),
       routes: List.unmodifiable(routes),
@@ -320,10 +312,6 @@ class PublisherBackendContractController {
       MiniProgramPublisherBackendHeaders.contractVersion:
           request.contract.contractVersion,
     };
-    final accessKey = request.accessKey?.trim();
-    if (accessKey != null && accessKey.isNotEmpty) {
-      headers[MiniProgramPublisherBackendHeaders.accessKey] = accessKey;
-    }
     final authToken = request.authToken?.trim();
     if (authToken != null && authToken.isNotEmpty) {
       headers[MiniProgramPublisherBackendHeaders.authorization] =

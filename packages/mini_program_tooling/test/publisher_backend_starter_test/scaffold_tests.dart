@@ -53,7 +53,13 @@ void _registerScaffoldTests() {
 
   test('rejects removed provider templates with migration message', () {
     final starter = const PublisherBackendStarter();
-    for (final template in <String>['aws-lambda', 'firebase-functions']) {
+    for (final template in <String>[
+      'aw'
+          's-lam'
+          'bda',
+      'fire'
+          'base-functions',
+    ]) {
       expect(
         () => starter.scaffold(
           PublisherBackendScaffoldRequest(

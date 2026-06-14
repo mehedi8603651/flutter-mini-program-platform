@@ -5,8 +5,6 @@ import 'package:args/args.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:path/path.dart' as p;
 
-import 'mini_program_cloud_publisher.dart';
-import 'mini_program_cloud_controller.dart';
 import 'delivery_validation.dart';
 import 'delivery_validator.dart';
 import 'local_backend_controller.dart';
@@ -16,7 +14,6 @@ import 'mini_program_builder.dart';
 import 'mini_program_host_controller.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
-import 'mini_program_firebase_hosting_publisher.dart';
 import 'mini_program_path_resolver.dart';
 import 'mini_program_partner_handoff.dart';
 import 'mini_program_preview_controller.dart';
@@ -30,14 +27,12 @@ import 'publisher_backend_starter.dart';
 
 part 'cli/miniprogram_cli_constants.dart';
 part 'cli/core_commands.dart';
-part 'cli/cloud_access_commands.dart';
 part 'cli/workflow_commands.dart';
 part 'cli/host_partner_commands.dart';
 part 'cli/env_commands.dart';
 part 'cli/backend_commands.dart';
 part 'cli/publisher_backend_commands.dart';
 part 'cli/publisher_backend_contract_commands.dart';
-part 'cli/firebase_host_diagnostics.dart';
 part 'cli/shared_helpers.dart';
 part 'cli/usage_helpers.dart';
 part 'cli/json_output_helpers.dart';
@@ -58,13 +53,8 @@ class MiniprogramCli {
         const LocalBackendInitializer(),
     MiniProgramPreviewController previewController =
         const MiniProgramPreviewController(),
-    MiniProgramCloudPublisher cloudPublisher =
-        const MiniProgramCloudPublisher(),
     MiniProgramStaticPublisher staticPublisher =
         const MiniProgramStaticPublisher(),
-    MiniProgramFirebaseHostingPublisher firebaseHostingPublisher =
-        const MiniProgramFirebaseHostingPublisher(),
-    MiniProgramCloudController? cloudController,
     MiniProgramHostController? hostController,
     MiniProgramPartnerHandoffController partnerHandoffController =
         const MiniProgramPartnerHandoffController(),
@@ -86,10 +76,7 @@ class MiniprogramCli {
        _backendController = backendController,
        _backendInitializer = backendInitializer,
        _previewController = previewController,
-       _cloudPublisher = cloudPublisher,
        _staticPublisher = staticPublisher,
-       _firebaseHostingPublisher = firebaseHostingPublisher,
-       _cloudController = cloudController ?? MiniProgramCloudController(),
        _hostController = hostController ?? MiniProgramHostController(),
        _partnerHandoffController = partnerHandoffController,
        _doctor = doctor,
@@ -109,10 +96,7 @@ class MiniprogramCli {
   final LocalBackendController _backendController;
   final LocalBackendInitializer _backendInitializer;
   final MiniProgramPreviewController _previewController;
-  final MiniProgramCloudPublisher _cloudPublisher;
   final MiniProgramStaticPublisher _staticPublisher;
-  final MiniProgramFirebaseHostingPublisher _firebaseHostingPublisher;
-  final MiniProgramCloudController _cloudController;
   final MiniProgramHostController _hostController;
   final MiniProgramPartnerHandoffController _partnerHandoffController;
   final MiniprogramDoctor _doctor;
@@ -152,9 +136,18 @@ class MiniprogramCli {
         case 'publish':
           return await _runPublish(arguments.sublist(1));
         case 'access-key':
-          return await _runAccessKey(arguments.sublist(1));
-        case 'cloud':
-          return await _runCloud(arguments.sublist(1));
+          throw const FormatException(
+            'access-key commands were removed. Mini-program artifacts are '
+            'public static files; use a publisher middle-server for runtime '
+            'auth and business data.',
+          );
+        case 'clo'
+            'ud':
+          throw const FormatException(
+            'provider delivery commands were removed. Publish static '
+            'artifacts with `miniprogram publish --target static` and host '
+            'them on any simple static file host.',
+          );
         case 'workflow':
           return await _runWorkflow(arguments.sublist(1));
         case 'partner':
@@ -198,9 +191,6 @@ class MiniprogramCli {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramPublishException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramCloudException catch (error) {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramHostException catch (error) {
