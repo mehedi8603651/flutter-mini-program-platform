@@ -270,7 +270,8 @@ miniprogram publish --target static --output public_mini_program --clean
 Static publish writes the public artifact layout:
 
 ```text
-manifests/<appId>/manifest.json
+manifests/<appId>/latest.json
+manifests/<appId>/versions/<version>.json
 screens/<appId>/<version>/<screenId>.json
 assets/<appId>/<version>/
 metadata/

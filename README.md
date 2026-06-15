@@ -39,6 +39,9 @@ The VS Code Marketplace extension uses the same CLI. Configure `miniProgram.cliP
 
 ## Current Flow
 
+For the beginner static-only path, start with
+[Quickstart: static mini-program to host app](docs/quickstart_static_miniprogram_to_host.md).
+
 ```powershell
 miniprogram create coupon_demo --screen-format mp
 miniprogram build --mini-program-root .\coupon_demo
@@ -117,8 +120,9 @@ Recommended runtime response shapes:
 
 ## Docs
 
+- [Quickstart: static mini-program to host app](docs/quickstart_static_miniprogram_to_host.md)
+- [Track 2: middle-server API with Lambda, DynamoDB, and JWT](docs/middle_server_api_lambda_dynamodb.md)
 - [Mini-program authoring](docs/mini_program_authoring.md)
 - [Static artifact and runtime API E2E guide](docs/static_artifact_runtime_api_e2e_guide.md)
 - [Publisher API runtime contract roadmap](docs/publisher_backend_https_api_roadmap.md)
 - [Embedding an existing Flutter app](docs/embed_existing_flutter_app.md)
-- [Release checklist](docs/mp_engine_release_checklist.md)
