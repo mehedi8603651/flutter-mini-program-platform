@@ -5,6 +5,7 @@ export 'capability_registry.dart';
 export 'cache/manifest_cache.dart';
 export 'cache/mini_program_cache_bundle.dart';
 export 'cache/runtime_file_cache.dart';
+export 'cache/runtime_shared_preferences_cache.dart';
 export 'cache/runtime_cache.dart';
 export 'cache/screen_cache.dart';
 export 'feature_flag_evaluator.dart';

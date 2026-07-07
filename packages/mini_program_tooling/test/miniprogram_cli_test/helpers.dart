@@ -92,6 +92,7 @@ class _FakeMiniProgramHostController extends MiniProgramHostController {
   _FakeMiniProgramHostController();
 
   MiniProgramHostRunRequest? lastRequest;
+  MiniProgramHostEndpointAddRequest? lastEndpointAddRequest;
 
   @override
   Future<MiniProgramHostRunResult> run(
@@ -109,6 +110,49 @@ class _FakeMiniProgramHostController extends MiniProgramHostController {
         '--dart-define=MINI_PROGRAM_BACKEND_BASE_URL=${request.backendApiBaseUrl}',
       ],
       exitCode: 0,
+    );
+  }
+
+  @override
+  Future<MiniProgramHostEndpointAddResult> addEndpoint(
+    MiniProgramHostEndpointAddRequest request,
+  ) async {
+    lastEndpointAddRequest = request;
+    return MiniProgramHostEndpointAddResult(
+      projectRootPath: request.projectRootPath,
+      filePath: p.join(
+        request.projectRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_endpoints.dart',
+      ),
+      registryFilePath: p.join(
+        request.projectRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_registry.dart',
+      ),
+      policyFilePath: p.join(
+        request.projectRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_policies.json',
+      ),
+      policyResolverFilePath: p.join(
+        request.projectRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_policy_resolver.dart',
+      ),
+      appId: request.appId,
+      title: request.title ?? request.appId,
+      apiBaseUri: request.apiBaseUri,
+      backendBaseUri: request.backendBaseUri,
+      backendMode: request.backendMode ?? 'none',
+      endpointCount: 1,
+      registryCount: 1,
+      created: true,
+      updated: false,
     );
   }
 }
@@ -211,4 +255,3 @@ Future<void> _writeLocalEnvironmentState(
     ),
   );
 }
-

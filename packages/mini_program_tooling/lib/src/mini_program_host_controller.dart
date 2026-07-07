@@ -73,6 +73,9 @@ class MiniProgramHostEndpointAddRequest {
     this.title,
     this.backendBaseUri,
     this.backendMode,
+    this.policySourcePath,
+    this.requestedCache = const <String, Object?>{},
+    this.acceptRequestedPolicy = false,
     this.force = false,
   });
 
@@ -82,6 +85,9 @@ class MiniProgramHostEndpointAddRequest {
   final String? title;
   final Uri? backendBaseUri;
   final String? backendMode;
+  final String? policySourcePath;
+  final Map<String, Object?> requestedCache;
+  final bool acceptRequestedPolicy;
   final bool force;
 }
 
@@ -90,6 +96,8 @@ class MiniProgramHostEndpointAddResult {
     required this.projectRootPath,
     required this.filePath,
     required this.registryFilePath,
+    required this.policyFilePath,
+    required this.policyResolverFilePath,
     required this.appId,
     required this.title,
     required this.apiBaseUri,
@@ -104,6 +112,8 @@ class MiniProgramHostEndpointAddResult {
   final String projectRootPath;
   final String filePath;
   final String registryFilePath;
+  final String policyFilePath;
+  final String policyResolverFilePath;
   final String appId;
   final String title;
   final Uri apiBaseUri;
@@ -225,6 +235,12 @@ class MiniProgramHostController {
     final registryFile = File(
       p.join(miniProgramDirectory.path, 'mini_program_registry.dart'),
     );
+    final policyFile = File(
+      p.join(miniProgramDirectory.path, 'mini_program_policies.json'),
+    );
+    final policyResolverFile = File(
+      p.join(miniProgramDirectory.path, 'mini_program_policy_resolver.dart'),
+    );
     final created = !await file.exists();
     final existingEndpoints = created
         ? <String, _EndpointRecord>{}
@@ -288,6 +304,15 @@ class MiniProgramHostController {
           ),
     );
 
+    final policies = await _upsertPolicyFile(
+      policyFile: policyFile,
+      appId: request.appId,
+      sourcePath: request.policySourcePath,
+      requestedCache: request.requestedCache,
+      acceptRequestedPolicy: request.acceptRequestedPolicy,
+      forceAcceptedPolicy: request.force,
+    );
+    await policyResolverFile.writeAsString(_buildPolicyResolverFile(policies));
     await registryFile.writeAsString(_buildRegistryFile(registry));
     await file.writeAsString(_buildEndpointFile(endpoints, registry));
 
@@ -295,6 +320,8 @@ class MiniProgramHostController {
       projectRootPath: projectRootPath,
       filePath: file.path,
       registryFilePath: registryFile.path,
+      policyFilePath: policyFile.path,
+      policyResolverFilePath: policyResolverFile.path,
       appId: request.appId,
       title: title,
       apiBaseUri: request.apiBaseUri,
@@ -386,6 +413,307 @@ class MiniProgramHostController {
     return records;
   }
 
+  Future<Map<String, Object?>> _upsertPolicyFile({
+    required File policyFile,
+    required String appId,
+    required String? sourcePath,
+    required Map<String, Object?> requestedCache,
+    required bool acceptRequestedPolicy,
+    required bool forceAcceptedPolicy,
+  }) async {
+    final existing = await policyFile.exists()
+        ? _readPolicyDocument(await policyFile.readAsString(), policyFile.path)
+        : <String, Object?>{'schemaVersion': 1, 'apps': <String, Object?>{}};
+    final apps = _jsonObjectOrEmpty(existing['apps']);
+    final existingApp = _jsonObjectOrEmpty(apps[appId]);
+    final existingAccepted = existingApp['accepted'] is Map
+        ? _jsonObjectOrEmpty(existingApp['accepted'])
+        : null;
+
+    apps[appId] = <String, Object?>{
+      'requested': <String, Object?>{
+        'source': _policySourceName(sourcePath),
+        'cache': _deepJsonObjectCopy(requestedCache),
+        'permissions': <String, Object?>{},
+      },
+      'accepted': _acceptedPolicyFor(
+        requestedCache: requestedCache,
+        existingAccepted: existingAccepted,
+        acceptRequestedPolicy: acceptRequestedPolicy,
+        forceAcceptedPolicy: forceAcceptedPolicy,
+      ),
+    };
+
+    final document = <String, Object?>{
+      'schemaVersion': 1,
+      'apps': _sortedObject(apps),
+    };
+    await policyFile.writeAsString(
+      '${const JsonEncoder.withIndent('  ').convert(document)}\n',
+    );
+    return document;
+  }
+
+  Map<String, Object?> _readPolicyDocument(String source, String filePath) {
+    final decoded = jsonDecode(source);
+    if (decoded is! Map) {
+      throw MiniProgramHostException(
+        'Mini-program policy file is invalid in $filePath.',
+      );
+    }
+    final schemaVersion = decoded['schemaVersion'];
+    if (schemaVersion != null && schemaVersion != 1) {
+      throw MiniProgramHostException(
+        'Unsupported mini-program policy schema version in $filePath: '
+        '$schemaVersion.',
+      );
+    }
+    return _deepJsonObjectCopy(decoded);
+  }
+
+  String _policySourceName(String? sourcePath) {
+    final trimmed = sourcePath?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return 'manual';
+    }
+    return p.basename(trimmed);
+  }
+
+  Map<String, Object?> _acceptedPolicyFor({
+    required Map<String, Object?> requestedCache,
+    required Map<String, Object?>? existingAccepted,
+    required bool acceptRequestedPolicy,
+    required bool forceAcceptedPolicy,
+  }) {
+    if (forceAcceptedPolicy || existingAccepted == null) {
+      return <String, Object?>{
+        'cache': _acceptedCacheFromRequested(requestedCache),
+        'permissions': <String, Object?>{},
+      };
+    }
+
+    final accepted = _deepJsonObjectCopy(existingAccepted);
+    final acceptedCache = _jsonObjectOrEmpty(accepted['cache']);
+    for (final entry in requestedCache.entries) {
+      if (acceptRequestedPolicy || !acceptedCache.containsKey(entry.key)) {
+        acceptedCache[entry.key] = _acceptedCacheBucketFromRequest(
+          entry.key,
+          entry.value,
+        );
+      }
+    }
+    return <String, Object?>{
+      'cache': _sortedObject(acceptedCache),
+      'permissions': accepted['permissions'] is Map
+          ? _jsonObjectOrEmpty(accepted['permissions'])
+          : <String, Object?>{},
+    };
+  }
+
+  Map<String, Object?> _acceptedCacheFromRequested(
+    Map<String, Object?> requestedCache,
+  ) {
+    final acceptedCache = <String, Object?>{};
+    for (final entry in requestedCache.entries) {
+      acceptedCache[entry.key] = _acceptedCacheBucketFromRequest(
+        entry.key,
+        entry.value,
+      );
+    }
+    return _sortedObject(acceptedCache);
+  }
+
+  Map<String, Object?> _acceptedCacheBucketFromRequest(
+    String bucket,
+    Object? requested,
+  ) {
+    final requestedPolicy = requested is Map
+        ? _jsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return <String, Object?>{
+      'enabled': requestedPolicy['enabled'] is bool
+          ? requestedPolicy['enabled'] as bool
+          : true,
+      'maxBytes':
+          _positiveInt(requestedPolicy['recommendedMaxBytes']) ??
+          _defaultPolicyMaxBytes(bucket),
+      'ttlDays':
+          _positiveInt(requestedPolicy['recommendedTtlDays']) ??
+          _defaultPolicyTtlDays(bucket),
+    };
+  }
+
+  int _defaultPolicyMaxBytes(String bucket) {
+    return switch (bucket) {
+      'memory' => 1024 * 1024,
+      'data' => 10 * 1024 * 1024,
+      'image' => 20 * 1024 * 1024,
+      'state' => 1024 * 1024,
+      'video' => 50 * 1024 * 1024,
+      _ => 1024 * 1024,
+    };
+  }
+
+  int _defaultPolicyTtlDays(String bucket) {
+    return switch (bucket) {
+      'memory' => 1,
+      'data' => 30,
+      'image' => 14,
+      'state' => 30,
+      'video' => 1,
+      _ => 30,
+    };
+  }
+
+  String _buildPolicyResolverFile(Map<String, Object?> policies) {
+    final apps = _jsonObjectOrEmpty(policies['apps']);
+    final sortedEntries = apps.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    final buffer = StringBuffer()
+      ..writeln('// Generated by miniprogram tooling.')
+      ..writeln('// Runtime uses accepted host policy only.')
+      ..writeln()
+      ..writeln("import 'package:mini_program_sdk/mini_program_sdk.dart';")
+      ..writeln()
+      ..writeln('MiniProgramCachePolicy cachePolicyForMiniProgram(')
+      ..writeln('  String appId,')
+      ..writeln(') {')
+      ..writeln('  switch (appId) {');
+    for (final entry in sortedEntries) {
+      final appPolicy = _jsonObjectOrEmpty(entry.value);
+      final accepted = _jsonObjectOrEmpty(appPolicy['accepted']);
+      final cache = _jsonObjectOrEmpty(accepted['cache']);
+      buffer
+        ..writeln('    case ${_dartString(entry.key)}:')
+        ..writeln('      return ${_cachePolicyExpression(cache)};');
+    }
+    buffer
+      ..writeln('    default:')
+      ..writeln('      return const MiniProgramCachePolicy();')
+      ..writeln('  }')
+      ..writeln('}')
+      ..writeln();
+    return buffer.toString();
+  }
+
+  String _cachePolicyExpression(Map<String, Object?> acceptedCache) {
+    if (acceptedCache.isEmpty) {
+      return 'const MiniProgramCachePolicy()';
+    }
+    final args = <String>[];
+    final allowedBuckets = <String>[];
+    var totalBytes = 0;
+
+    for (final bucket in _policyCacheBucketOrder) {
+      final rawBucketPolicy = acceptedCache[bucket];
+      if (rawBucketPolicy is! Map) {
+        continue;
+      }
+      final bucketPolicy = _jsonObjectOrEmpty(rawBucketPolicy);
+      final enabled = bucketPolicy['enabled'] is bool
+          ? bucketPolicy['enabled'] as bool
+          : true;
+      if (!enabled) {
+        continue;
+      }
+      final maxBytes = _positiveInt(bucketPolicy['maxBytes']);
+      if (maxBytes != null) {
+        totalBytes += maxBytes;
+        final maxField = _cacheMaxField(bucket);
+        if (maxField != null) {
+          args.add('$maxField: $maxBytes');
+        }
+      }
+      final ttlDays = _positiveInt(bucketPolicy['ttlDays']);
+      final ttlField = _cacheTtlField(bucket);
+      if (ttlDays != null && ttlField != null) {
+        args.add('$ttlField: Duration(days: $ttlDays)');
+      }
+      if (_miniProgramRuntimeCacheBuckets.contains(bucket)) {
+        allowedBuckets.add(bucket);
+      }
+    }
+
+    if (totalBytes > 0) {
+      args.insert(0, 'maxBytes: $totalBytes');
+    }
+    final allowedExpressions = allowedBuckets
+        .map((bucket) => 'MiniProgramCacheBucket.$bucket')
+        .join(', ');
+    args.add(
+      'allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{'
+      '$allowedExpressions}',
+    );
+    return 'const MiniProgramCachePolicy(${args.join(', ')})';
+  }
+
+  String? _cacheMaxField(String bucket) {
+    return switch (bucket) {
+      'data' => 'maxDataBytes',
+      'image' => 'maxImageBytes',
+      'state' => 'maxStateBytes',
+      'video' => 'maxVideoBytes',
+      _ => null,
+    };
+  }
+
+  String? _cacheTtlField(String bucket) {
+    return switch (bucket) {
+      'memory' => 'memoryTtl',
+      'data' => 'dataTtl',
+      'image' => 'imageTtl',
+      'state' => 'stateInactiveTtl',
+      'video' => 'videoTtl',
+      _ => null,
+    };
+  }
+
+  int? _positiveInt(Object? value) {
+    if (value is int && value > 0) {
+      return value;
+    }
+    if (value is num && value > 0 && value == value.roundToDouble()) {
+      return value.toInt();
+    }
+    return null;
+  }
+
+  Map<String, Object?> _jsonObjectOrEmpty(Object? value) {
+    if (value is! Map) {
+      return <String, Object?>{};
+    }
+    return _deepJsonObjectCopy(value);
+  }
+
+  Map<String, Object?> _deepJsonObjectCopy(Map<dynamic, dynamic> value) {
+    final result = <String, Object?>{};
+    for (final entry in value.entries) {
+      result[entry.key.toString()] = _deepJsonValueCopy(entry.value);
+    }
+    return result;
+  }
+
+  Object? _deepJsonValueCopy(Object? value) {
+    if (value == null || value is String || value is num || value is bool) {
+      return value;
+    }
+    if (value is Map) {
+      return _deepJsonObjectCopy(value);
+    }
+    if (value is List) {
+      return value.map(_deepJsonValueCopy).toList(growable: false);
+    }
+    return value.toString();
+  }
+
+  Map<String, Object?> _sortedObject(Map<String, Object?> value) {
+    final entries = value.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return <String, Object?>{
+      for (final entry in entries) entry.key: entry.value,
+    };
+  }
+
   String _buildEndpointFile(
     Map<String, _EndpointRecord> endpoints,
     Map<String, _RegistryRecord> registry,
@@ -410,6 +738,7 @@ class MiniProgramHostController {
       ..writeln()
       ..writeln("import 'package:mini_program_sdk/mini_program_sdk.dart';")
       ..writeln()
+      ..writeln("import 'mini_program_policy_resolver.dart';")
       ..writeln("import 'mini_program_registry.dart';")
       ..writeln()
       ..writeln(
@@ -426,6 +755,7 @@ class MiniProgramHostController {
         ..writeln(
           '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
         )
+        ..writeln('      cachePolicy: cachePolicyForMiniProgram($mapKey),')
         ..writeln('      requestTimeout: const Duration(seconds: 20),');
       if (entry.value.backendBaseUri != null) {
         buffer
@@ -612,6 +942,21 @@ class MiniProgramHostController {
     }
   }
 }
+
+const List<String> _policyCacheBucketOrder = <String>[
+  'memory',
+  'data',
+  'image',
+  'state',
+  'video',
+];
+
+const Set<String> _miniProgramRuntimeCacheBuckets = <String>{
+  'memory',
+  'data',
+  'image',
+  'state',
+};
 
 const Set<String> _dartKeywords = <String>{
   'abstract',

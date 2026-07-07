@@ -677,10 +677,20 @@ abstract final class _MpActionDispatcher {
       scope.miniProgramId,
       policy: scope.cachePolicy,
     );
+    final bucket = _cacheBucketProp(props);
+    final disabledBucket = _disabledCacheBucket(
+      scope,
+      actionName,
+      bucket,
+      requestId: requestId,
+    );
+    if (disabledBucket != null) {
+      return disabledBucket;
+    }
     await cache.set(
       _stringProp(props, 'key'),
       props['value'],
-      bucket: _cacheBucketProp(props),
+      bucket: bucket,
       ttl: _optionalDurationMs(props, 'ttlMs'),
       priority: _cachePriorityProp(props),
     );
@@ -703,6 +713,15 @@ abstract final class _MpActionDispatcher {
     );
     final key = _stringProp(props, 'key');
     final bucket = _cacheBucketProp(props);
+    final disabledBucket = _disabledCacheBucket(
+      scope,
+      actionName,
+      bucket,
+      requestId: requestId,
+    );
+    if (disabledBucket != null) {
+      return disabledBucket;
+    }
     final found = await cache.has(key, bucket: bucket);
     final value = found ? await cache.get<Object?>(key, bucket: bucket) : null;
     final targetState = _optionalStringProp(props, 'targetState');
@@ -731,10 +750,17 @@ abstract final class _MpActionDispatcher {
       scope.miniProgramId,
       policy: scope.cachePolicy,
     );
-    final found = await cache.has(
-      _stringProp(props, 'key'),
-      bucket: _cacheBucketProp(props),
+    final bucket = _cacheBucketProp(props);
+    final disabledBucket = _disabledCacheBucket(
+      scope,
+      actionName,
+      bucket,
+      requestId: requestId,
     );
+    if (disabledBucket != null) {
+      return disabledBucket;
+    }
+    final found = await cache.has(_stringProp(props, 'key'), bucket: bucket);
     final targetState = _optionalStringProp(props, 'targetState');
     if (targetState != null) {
       final state = scope.stateManager;
@@ -762,6 +788,15 @@ abstract final class _MpActionDispatcher {
     );
     final key = _stringProp(props, 'key');
     final bucket = _cacheBucketProp(props);
+    final disabledBucket = _disabledCacheBucket(
+      scope,
+      actionName,
+      bucket,
+      requestId: requestId,
+    );
+    if (disabledBucket != null) {
+      return disabledBucket;
+    }
     final existed = await cache.has(key, bucket: bucket);
     await cache.remove(key, bucket: bucket);
     return HostActionResult.success(
@@ -784,6 +819,15 @@ abstract final class _MpActionDispatcher {
     final bucketName = _optionalStringProp(props, 'bucket');
     if (bucketName != null) {
       final bucket = _cacheBucketFromName(bucketName);
+      final disabledBucket = _disabledCacheBucket(
+        scope,
+        actionName,
+        bucket,
+        requestId: requestId,
+      );
+      if (disabledBucket != null) {
+        return disabledBucket;
+      }
       await cache.clear(bucket: bucket);
       return HostActionResult.success(
         requestId: requestId,
@@ -796,6 +840,9 @@ abstract final class _MpActionDispatcher {
     }
     final clearedBuckets = <String>[];
     for (final bucket in _miniProgramCacheActionBuckets) {
+      if (!scope.cachePolicy.allowsMiniProgramBucket(bucket)) {
+        continue;
+      }
       await cache.clear(bucket: bucket);
       clearedBuckets.add(bucket.name);
     }
@@ -948,6 +995,24 @@ abstract final class _MpActionDispatcher {
       actionName: actionName,
       message: 'Mp router is unavailable.',
       errorCode: 'router_unavailable',
+    );
+  }
+
+  static HostActionResult? _disabledCacheBucket(
+    MiniProgramSdkScope scope,
+    String actionName,
+    MiniProgramCacheBucket bucket, {
+    String? requestId,
+  }) {
+    if (scope.cachePolicy.allowsMiniProgramBucket(bucket)) {
+      return null;
+    }
+    return HostActionResult.failed(
+      requestId: requestId,
+      actionName: actionName,
+      message:
+          'Cache bucket "${bucket.name}" is disabled by host policy for this mini-program.',
+      errorCode: 'cache_bucket_disabled',
     );
   }
 
@@ -1216,6 +1281,7 @@ abstract final class _MpActionDispatcher {
       'data' => MiniProgramCacheBucket.data,
       'image' => MiniProgramCacheBucket.image,
       'state' => MiniProgramCacheBucket.state,
+      'video' => MiniProgramCacheBucket.video,
       _ => throw const FormatException('Unsupported Mp cache bucket.'),
     };
   }
@@ -1257,4 +1323,5 @@ const List<MiniProgramCacheBucket> _miniProgramCacheActionBuckets =
       MiniProgramCacheBucket.data,
       MiniProgramCacheBucket.image,
       MiniProgramCacheBucket.state,
+      MiniProgramCacheBucket.video,
     ];

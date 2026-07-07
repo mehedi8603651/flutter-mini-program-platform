@@ -62,7 +62,7 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.5.2';
+  static const String _miniProgramSdkConstraint = '^0.5.3';
   static const String _miniProgramContractsConstraint = '^0.3.0';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
@@ -533,6 +533,7 @@ MiniProgramConfig buildMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
+  MiniProgramCacheBundle? cacheBundle,
 }) {
   final locale = WidgetsFlutterBinding.ensureInitialized()
       .platformDispatcher
@@ -563,10 +564,10 @@ MiniProgramConfig buildMiniProgramConfig({
         : buildEndpointRoutingBackendConnector(
             endpoints: endpoints,
             deliveryContext: deliveryContext,
-          ),
+    ),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,
-    cacheBundle: MiniProgramCacheBundle.inMemory(),
+    cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),
   );
 }
 
@@ -782,6 +783,9 @@ logs, or handoff docs.
   `MiniProgramHost`.
 - `MiniProgramConfig` is immutable for a `MiniProgramScope` state. Recreate the
   scope with a new key when switching environments.
+- Pass `cacheBundle: MiniProgramCacheBundle.fileBacked(...)` on native hosts
+  or `cacheBundle: MiniProgramCacheBundle.webPersistent()` on browser hosts
+  when the host app accepts persistent cache.
 - `MiniProgramConfig.sdkVersion` is the runtime compatibility version checked
   against manifest `sdkVersionRange`, not the `mini_program_sdk` pub package
   version.

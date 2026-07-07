@@ -55,6 +55,95 @@ void main() {
       expect(handoff.apiBaseUri, handoff.artifactBaseUri);
     });
 
+    test('writes and reads optional requested cache policy', () async {
+      const controller = MiniProgramPartnerHandoffController();
+      final outputPath = p.join(tempDir.path, 'calculator.partner.json');
+
+      final result = await controller.createPackage(
+        MiniProgramPartnerPackageRequest(
+          appId: 'calculator',
+          title: 'Calculator',
+          artifactBaseUri: Uri.parse('https://cdn.example.com/calculator/'),
+          outputPath: outputPath,
+          generatedAtUtc: DateTime.utc(2026, 7, 7, 10),
+          requestedCache: const <String, Object?>{
+            'state': <String, Object?>{
+              'enabled': true,
+              'reason': 'calculator history',
+              'recommendedMaxBytes': 1048576,
+              'recommendedTtlDays': 30,
+            },
+          },
+        ),
+      );
+
+      expect(result.handoff.requestedCache['state'], isA<Map>());
+      final decoded =
+          jsonDecode(await File(outputPath).readAsString())
+              as Map<String, dynamic>;
+      expect(decoded['requestedCache'], <String, dynamic>{
+        'state': <String, dynamic>{
+          'enabled': true,
+          'reason': 'calculator history',
+          'recommendedMaxBytes': 1048576,
+          'recommendedTtlDays': 30,
+        },
+      });
+
+      final handoff = await controller.readPackage(outputPath);
+      expect(handoff.requestedCache, <String, Object?>{
+        'state': <String, Object?>{
+          'enabled': true,
+          'reason': 'calculator history',
+          'recommendedMaxBytes': 1048576,
+          'recommendedTtlDays': 30,
+        },
+      });
+    });
+
+    test('rejects sensitive requested cache buckets and keys', () async {
+      final sessionPath = p.join(tempDir.path, 'session.partner.json');
+      await File(sessionPath).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 3,
+          'type': MiniProgramPartnerHandoff.documentType,
+          'appId': 'coupon_demo',
+          'title': 'Coupon Demo',
+          'artifactBaseUrl': 'https://static.example.com/coupon/',
+          'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
+          'requestedCache': <String, Object?>{
+            'session': <String, Object?>{'enabled': true},
+          },
+        }),
+      );
+      expect(
+        () => const MiniProgramPartnerHandoffController().readPackage(
+          sessionPath,
+        ),
+        throwsA(isA<MiniProgramPartnerHandoffException>()),
+      );
+
+      final tokenPath = p.join(tempDir.path, 'token.partner.json');
+      await File(tokenPath).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 3,
+          'type': MiniProgramPartnerHandoff.documentType,
+          'appId': 'coupon_demo',
+          'title': 'Coupon Demo',
+          'artifactBaseUrl': 'https://static.example.com/coupon/',
+          'generatedAtUtc': DateTime.utc(2026, 5, 14).toIso8601String(),
+          'requestedCache': <String, Object?>{
+            'state': <String, Object?>{'token': 'unsafe'},
+          },
+        }),
+      );
+      expect(
+        () =>
+            const MiniProgramPartnerHandoffController().readPackage(tokenPath),
+        throwsA(isA<MiniProgramPartnerHandoffException>()),
+      );
+    });
+
     test(
       'reads legacy schema v2 handoff packages as static artifacts',
       () async {

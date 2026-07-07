@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('FileMiniProgramCacheStore', () {
@@ -376,6 +377,134 @@ void main() {
     });
   });
 
+  group('SharedPreferencesMiniProgramCacheStore', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    test('persists policy-managed buckets across store recreation', () async {
+      const policy = MiniProgramCachePolicy(
+        allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{
+          MiniProgramCacheBucket.memory,
+          MiniProgramCacheBucket.data,
+          MiniProgramCacheBucket.image,
+          MiniProgramCacheBucket.state,
+          MiniProgramCacheBucket.video,
+        },
+      );
+      final firstManager = MiniProgramCacheManager(
+        store: SharedPreferencesMiniProgramCacheStore(keyPrefix: 'mp_test'),
+      );
+      await firstManager
+          .forApp('coupon', policy: policy)
+          .set('products', 'persisted_data');
+      await firstManager
+          .forApp('coupon', policy: policy)
+          .set('home_tab', 'saved_state', bucket: MiniProgramCacheBucket.state);
+      await firstManager
+          .forApp('coupon', policy: policy)
+          .set(
+            'hero_image',
+            'saved_image',
+            bucket: MiniProgramCacheBucket.image,
+          );
+      await firstManager
+          .forApp('coupon', policy: policy)
+          .set(
+            'intro_video',
+            'saved_video',
+            bucket: MiniProgramCacheBucket.video,
+          );
+      await firstManager
+          .forApp('coupon', policy: policy)
+          .set('scratch', 'memory_only', bucket: MiniProgramCacheBucket.memory);
+
+      final coldManager = MiniProgramCacheManager(
+        store: SharedPreferencesMiniProgramCacheStore(keyPrefix: 'mp_test'),
+      );
+
+      expect(
+        await coldManager
+            .forApp('coupon', policy: policy)
+            .get<String>('products'),
+        'persisted_data',
+      );
+      expect(
+        await coldManager
+            .forApp('coupon', policy: policy)
+            .get<String>('home_tab', bucket: MiniProgramCacheBucket.state),
+        'saved_state',
+      );
+      expect(
+        await coldManager
+            .forApp('coupon', policy: policy)
+            .get<String>('hero_image', bucket: MiniProgramCacheBucket.image),
+        'saved_image',
+      );
+      expect(
+        await coldManager
+            .forApp('coupon', policy: policy)
+            .get<String>('intro_video', bucket: MiniProgramCacheBucket.video),
+        'saved_video',
+      );
+      expect(
+        await coldManager
+            .forApp('coupon', policy: policy)
+            .get<String>('scratch', bucket: MiniProgramCacheBucket.memory),
+        isNull,
+      );
+    });
+
+    test('removes entries by app and bucket', () async {
+      final manager = MiniProgramCacheManager(
+        store: SharedPreferencesMiniProgramCacheStore(keyPrefix: 'mp_test'),
+      );
+      await manager.forApp('coupon').set('products', 'coupon');
+      await manager
+          .forApp('coupon')
+          .set('home_tab', 'state', bucket: MiniProgramCacheBucket.state);
+      await manager.forApp('shop').set('products', 'shop');
+
+      await manager.clearBucket(
+        appId: 'coupon',
+        bucket: MiniProgramCacheBucket.data,
+      );
+
+      final coldAfterBucketClear = MiniProgramCacheManager(
+        store: SharedPreferencesMiniProgramCacheStore(keyPrefix: 'mp_test'),
+      );
+      expect(
+        await coldAfterBucketClear.forApp('coupon').get<String>('products'),
+        isNull,
+      );
+      expect(
+        await coldAfterBucketClear
+            .forApp('coupon')
+            .get<String>('home_tab', bucket: MiniProgramCacheBucket.state),
+        'state',
+      );
+      expect(
+        await coldAfterBucketClear.forApp('shop').get<String>('products'),
+        'shop',
+      );
+
+      await coldAfterBucketClear.clearApp('coupon');
+      final coldAfterAppClear = MiniProgramCacheManager(
+        store: SharedPreferencesMiniProgramCacheStore(keyPrefix: 'mp_test'),
+      );
+      expect(
+        await coldAfterAppClear
+            .forApp('coupon')
+            .get<String>('home_tab', bucket: MiniProgramCacheBucket.state),
+        isNull,
+      );
+      expect(
+        await coldAfterAppClear.forApp('shop').get<String>('products'),
+        'shop',
+      );
+    });
+  });
+
   group('MiniProgramCacheBundle', () {
     test(
       'fileBacked persists runtime data cache across bundle recreation',
@@ -401,6 +530,32 @@ void main() {
             <String, Object?>{'count': 2},
           );
         });
+      },
+    );
+
+    test(
+      'webPersistent persists runtime data cache across bundle recreation',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        final firstBundle = MiniProgramCacheBundle.webPersistent(
+          runtimeCacheKeyPrefix: 'bundle_test',
+        );
+        await firstBundle.runtimeCache.set(
+          appId: 'coupon',
+          key: 'products',
+          value: const <String, Object?>{'count': 2},
+        );
+
+        final coldBundle = MiniProgramCacheBundle.webPersistent(
+          runtimeCacheKeyPrefix: 'bundle_test',
+        );
+        expect(
+          await coldBundle.runtimeCache.get<Map<String, Object?>>(
+            appId: 'coupon',
+            key: 'products',
+          ),
+          <String, Object?>{'count': 2},
+        );
       },
     );
   });

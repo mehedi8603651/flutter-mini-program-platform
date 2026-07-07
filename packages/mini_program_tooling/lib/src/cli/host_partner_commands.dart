@@ -344,6 +344,11 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         'force',
         negatable: false,
         help: 'Replace an unrecognized generated endpoint file.',
+      )
+      ..addFlag(
+        'accept-requested-policy',
+        negatable: false,
+        help: 'Update accepted host policy values from the latest handoff.',
       );
     final results = parser.parse(arguments);
     if (results.flag('help')) {
@@ -370,6 +375,9 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         appId: handoff.appId,
         title: handoff.title,
         apiBaseUri: handoff.artifactBaseUri,
+        policySourcePath: packagePath,
+        requestedCache: handoff.requestedCache,
+        acceptRequestedPolicy: results.flag('accept-requested-policy'),
         force: results.flag('force'),
       ),
     );

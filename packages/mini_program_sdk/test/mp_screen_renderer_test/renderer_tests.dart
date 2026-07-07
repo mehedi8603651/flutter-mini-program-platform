@@ -3053,6 +3053,58 @@ void _mpScreenRendererTests() {
       stateManager.dispose();
     });
 
+    testWidgets('cache actions fail when host disables a bucket', (
+      tester,
+    ) async {
+      const policy = MiniProgramCachePolicy(
+        allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{
+          MiniProgramCacheBucket.data,
+        },
+      );
+
+      final setResult =
+          await _runMpAction(tester, <String, dynamic>{
+                'type': 'cache.set',
+                'props': <String, dynamic>{
+                  'requestId': 'set-state',
+                  'bucket': 'state',
+                  'key': 'history',
+                  'value': '1 + 1 = 2',
+                },
+              }, cachePolicy: policy)
+              as HostActionResult;
+      expect(setResult.isSuccess, isFalse);
+      expect(setResult.requestId, 'set-state');
+      expect(setResult.errorCode, 'cache_bucket_disabled');
+
+      final getResult =
+          await _runMpAction(tester, <String, dynamic>{
+                'type': 'cache.get',
+                'props': <String, dynamic>{
+                  'requestId': 'get-state',
+                  'bucket': 'state',
+                  'key': 'history',
+                },
+              }, cachePolicy: policy)
+              as HostActionResult;
+      expect(getResult.isSuccess, isFalse);
+      expect(getResult.requestId, 'get-state');
+      expect(getResult.errorCode, 'cache_bucket_disabled');
+
+      final clearResult =
+          await _runMpAction(tester, <String, dynamic>{
+                'type': 'cache.clear',
+                'props': <String, dynamic>{
+                  'requestId': 'clear-state',
+                  'bucket': 'state',
+                },
+              }, cachePolicy: policy)
+              as HostActionResult;
+      expect(clearResult.isSuccess, isFalse);
+      expect(clearResult.requestId, 'clear-state');
+      expect(clearResult.errorCode, 'cache_bucket_disabled');
+    });
+
     testWidgets('cache actions are scoped by mini-program id', (tester) async {
       final cacheManager = MiniProgramCacheManager.inMemory();
 

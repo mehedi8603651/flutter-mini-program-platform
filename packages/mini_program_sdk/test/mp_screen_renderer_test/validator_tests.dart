@@ -858,19 +858,6 @@ void _mpScreenValidatorTests() {
             ],
           };
         }),
-        'lazy rejects video bucket': _screenWith((json) {
-          json['root'] = <String, dynamic>{
-            'type': 'lazy',
-            'props': <String, dynamic>{'id': 'products', 'bucket': 'video'},
-            'children': <Object?>[
-              <String, dynamic>{
-                'type': 'text',
-                'props': <String, dynamic>{'data': 'Products'},
-                'children': <Object?>[],
-              },
-            ],
-          };
-        }),
         'lazy cache key requires targetState': _screenWith((json) {
           json['root'] = <String, dynamic>{
             'type': 'lazy',
@@ -974,20 +961,6 @@ void _mpScreenValidatorTests() {
               'id': 'products',
               'itemsState': 'products.items',
               'cacheKeyPrefix': '../products',
-              'itemTemplate': _textNode('{{item.title}}'),
-              'initialActions': <Object?>[_backendLoadMoreActionJson()],
-              'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
-            },
-            'children': <Object?>[],
-          };
-        }),
-        'lazyChunk rejects video bucket': _screenWith((json) {
-          json['root'] = <String, dynamic>{
-            'type': 'lazyChunk',
-            'props': <String, dynamic>{
-              'id': 'products',
-              'itemsState': 'products.items',
-              'bucket': 'video',
               'itemTemplate': _textNode('{{item.title}}'),
               'initialActions': <Object?>[_backendLoadMoreActionJson()],
               'loadMoreActions': <Object?>[_backendLoadMoreActionJson()],
@@ -1963,10 +1936,6 @@ void _mpScreenValidatorTests() {
         'invalid cache bucket': _cacheActionScreen(
           'cache.get',
           <String, dynamic>{'key': 'products', 'bucket': 'session'},
-        ),
-        'invalid cache video bucket': _cacheActionScreen(
-          'cache.get',
-          <String, dynamic>{'key': 'products', 'bucket': 'video'},
         ),
         'invalid cache priority': _cacheActionScreen(
           'cache.set',

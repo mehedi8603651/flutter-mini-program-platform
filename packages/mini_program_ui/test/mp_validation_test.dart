@@ -883,6 +883,26 @@ void main() {
       expect(() => Mp.router.push(''), throwsArgumentError);
     });
 
+    test('cache helpers reject invalid configuration', () {
+      expect(() => Mp.cache.state.set('../history', true), throwsArgumentError);
+      expect(
+        () => Mp.cache.set('history', true, bucket: 'session'),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.cache.state.set('history', true, priority: 'hostPinned'),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.cache.state.set('history', true, ttl: Duration.zero),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.cache.state.get('history', targetState: 'auth.token'),
+        throwsArgumentError,
+      );
+    });
+
     test('form helpers reject invalid configuration', () {
       const options = <MpOption>[
         MpOption(value: 'stem', label: 'STEM'),

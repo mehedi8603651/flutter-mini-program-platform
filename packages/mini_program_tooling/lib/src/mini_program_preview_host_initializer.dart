@@ -60,7 +60,7 @@ class MiniProgramPreviewHostInitializer {
     'web',
     'windows',
   };
-  static const String _sdkConstraint = '^0.5.2';
+  static const String _sdkConstraint = '^0.5.3';
   static const String _contractsConstraint = '^0.3.0';
   static const String _httpConstraint = '^1.5.0';
   static const String _projectName = 'mini_program_preview_host';
@@ -373,7 +373,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       platform: defaultTargetPlatform.name,
     );
     _backendConnector = _buildPreviewBackendConnector(_deliveryContext);
-    _cacheBundle = MiniProgramCacheBundle.inMemory();
+    _cacheBundle = _buildPreviewCacheBundle();
     _refreshStatus();
     _pollTimer = Timer.periodic(
       const Duration(seconds: 1),
@@ -452,7 +452,7 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
 
     setState(() {
       if (nextStatus.buildVersion != _status.buildVersion) {
-        _cacheBundle = MiniProgramCacheBundle.inMemory();
+        _cacheBundle = _buildPreviewCacheBundle();
       }
       _status = nextStatus;
     });
@@ -590,6 +590,15 @@ abstract final class MiniProgramPreviewStates {
   static const String ready = 'ready';
   static const String building = 'building';
   static const String buildFailed = 'build_failed';
+}
+
+MiniProgramCacheBundle _buildPreviewCacheBundle() {
+  if (kIsWeb) {
+    return MiniProgramCacheBundle.webPersistent(
+      runtimeCacheKeyPrefix: 'mini_program_preview_runtime_cache',
+    );
+  }
+  return MiniProgramCacheBundle.inMemory();
 }
 
 class PreviewMiniProgramSource implements MiniProgramSource {

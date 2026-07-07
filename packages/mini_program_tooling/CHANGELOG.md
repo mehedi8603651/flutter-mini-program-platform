@@ -1,3 +1,10 @@
+## 0.6.4
+
+- Generate preview hosts that use `MiniProgramCacheBundle.webPersistent()` on
+  web so accepted runtime cache can be tested in Chrome.
+- Document `webPersistent()` as the browser-host counterpart to native
+  `fileBacked(...)` cache bundles.
+
 ## 0.6.3
 
 - docs update 

@@ -7,6 +7,7 @@ import 'asset_cache.dart';
 import 'manifest_cache.dart';
 import 'runtime_file_cache.dart';
 import 'runtime_cache.dart';
+import 'runtime_shared_preferences_cache.dart';
 import 'screen_cache.dart';
 
 /// Cache bundle used by hosts to pass both manifest and screen cache stores.
@@ -44,6 +45,21 @@ class MiniProgramCacheBundle {
       runtimeCache: MiniProgramCacheManager(
         store: FileMiniProgramCacheStore(
           directory: Directory(p.join(rootDirectory.path, 'runtime')),
+        ),
+      ),
+    );
+  }
+
+  factory MiniProgramCacheBundle.webPersistent({
+    String runtimeCacheKeyPrefix = 'mini_program_runtime_cache',
+  }) {
+    return MiniProgramCacheBundle(
+      manifestCache: InMemoryManifestCache(),
+      screenCache: InMemoryScreenCache(),
+      assetCache: NoOpAssetCache.shared,
+      runtimeCache: MiniProgramCacheManager(
+        store: SharedPreferencesMiniProgramCacheStore(
+          keyPrefix: runtimeCacheKeyPrefix,
         ),
       ),
     );

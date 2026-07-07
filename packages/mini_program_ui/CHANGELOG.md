@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5
+
+- Add `Mp.cache.*` authoring helpers for `memory`, `data`, `image`, `state`,
+  and `video` cache actions.
+- Keep `session` and host-pinned cache priority out of mini-program authoring
+  helpers.
+
 ## 0.1.3
 
 - add `Mp.lazy.chunk` and `Mp.lazy.loadMore` authoring helpers for manual

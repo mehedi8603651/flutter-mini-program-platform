@@ -191,6 +191,57 @@ Mp.backend.query(
     expect(hostController.lastRequest!.backendApiBaseUrl, isEmpty);
   });
 
+  test('host endpoint import forwards requested policy acceptance', () async {
+    final hostRoot = p.join(tempDir.path, 'host_app');
+    await _writeEmbeddedHostFixture(hostRoot);
+    final handoffPath = p.join(tempDir.path, 'calculator.partner.json');
+    await File(handoffPath).writeAsString(
+      jsonEncode(<String, Object?>{
+        'schemaVersion': 3,
+        'type': MiniProgramPartnerHandoff.documentType,
+        'appId': 'calculator',
+        'title': 'Calculator',
+        'artifactBaseUrl': 'https://cdn.example.com/calculator/',
+        'generatedAtUtc': DateTime.utc(2026, 7, 7, 10).toIso8601String(),
+        'requestedCache': <String, Object?>{
+          'state': <String, Object?>{
+            'enabled': true,
+            'reason': 'calculator history',
+            'recommendedMaxBytes': 1048576,
+            'recommendedTtlDays': 30,
+          },
+        },
+      }),
+    );
+    final hostController = _FakeMiniProgramHostController();
+
+    final exitCode =
+        await MiniprogramCli(
+          stateStore: stateStore,
+          stdoutSink: StringBuffer(),
+          stderrSink: StringBuffer(),
+          hostController: hostController,
+          workingDirectory: hostRoot,
+        ).run(<String>[
+          'host',
+          'endpoint',
+          'import',
+          handoffPath,
+          '--accept-requested-policy',
+        ]);
+
+    expect(exitCode, 0);
+    final request = hostController.lastEndpointAddRequest;
+    expect(request, isNotNull);
+    expect(request!.appId, 'calculator');
+    expect(request.acceptRequestedPolicy, isTrue);
+    expect(request.policySourcePath, handoffPath);
+    expect(
+      request.requestedCache['state'],
+      containsPair('recommendedMaxBytes', 1048576),
+    );
+  });
+
   test('embed init generates the embedding adapter', () async {
     final projectRoot = p.join(tempDir.path, 'host_app');
     await Directory(p.join(projectRoot, 'lib')).create(recursive: true);

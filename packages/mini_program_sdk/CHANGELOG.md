@@ -1,3 +1,9 @@
+## 0.5.3
+
+- Add `MiniProgramCacheBundle.webPersistent()` backed by shared preferences for browser runtime cache persistence.
+- Add a shared-preferences runtime cache store that uses the existing host policy, TTL, and byte-limit enforcement.
+- Allow host-accepted `video` buckets in Mp cache actions while keeping `session` host-controlled.
+
 ## 0.5.2
 
 - Give `MiniProgramPage` loaded content a normal scaffold and light surface instead of inheriting a dark/transparent host route background.

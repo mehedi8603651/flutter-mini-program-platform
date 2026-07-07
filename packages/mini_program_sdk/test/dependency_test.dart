@@ -45,7 +45,6 @@ void main() {
       'dio',
       'cached_network_image',
       'flutter_svg',
-      'shared_preferences',
       'sqflite',
       'mini_program_legacy_stac',
     ]) {

@@ -20,6 +20,14 @@ abstract interface class MiniProgramCachePolicyProvider {
   MiniProgramCachePolicy cachePolicyFor(String miniProgramId);
 }
 
+const Set<MiniProgramCacheBucket> _defaultMiniProgramCacheBuckets =
+    <MiniProgramCacheBucket>{
+      MiniProgramCacheBucket.memory,
+      MiniProgramCacheBucket.data,
+      MiniProgramCacheBucket.image,
+      MiniProgramCacheBucket.state,
+    };
+
 @immutable
 class MiniProgramCachePolicy {
   const MiniProgramCachePolicy({
@@ -35,6 +43,8 @@ class MiniProgramCachePolicy {
     this.maxImageBytes = 20 * 1024 * 1024,
     this.maxVideoBytes = 50 * 1024 * 1024,
     this.maxSessionBytes = 512 * 1024,
+    this.maxStateBytes = 5 * 1024 * 1024,
+    this.allowedMiniProgramCacheBuckets = _defaultMiniProgramCacheBuckets,
     this.clearMemoryOnExit = true,
     this.clearExpiredOnStartup = true,
     this.clearSessionOnLogout = true,
@@ -54,6 +64,8 @@ class MiniProgramCachePolicy {
   final int maxImageBytes;
   final int maxVideoBytes;
   final int maxSessionBytes;
+  final int maxStateBytes;
+  final Set<MiniProgramCacheBucket> allowedMiniProgramCacheBuckets;
   final bool clearMemoryOnExit;
   final bool clearExpiredOnStartup;
   final bool clearSessionOnLogout;
@@ -77,8 +89,13 @@ class MiniProgramCachePolicy {
       MiniProgramCacheBucket.image => maxImageBytes,
       MiniProgramCacheBucket.video => maxVideoBytes,
       MiniProgramCacheBucket.session => maxSessionBytes,
+      MiniProgramCacheBucket.state => maxStateBytes,
       _ => null,
     };
+  }
+
+  bool allowsMiniProgramBucket(MiniProgramCacheBucket bucket) {
+    return allowedMiniProgramCacheBuckets.contains(bucket);
   }
 }
 
@@ -871,6 +888,7 @@ class MiniProgramAppCache {
     Duration? ttl,
     MiniProgramCachePriority priority = MiniProgramCachePriority.normal,
   }) {
+    _checkBucketAllowed(bucket);
     return _manager._set(
       appId: _appId,
       key: key,
@@ -888,6 +906,7 @@ class MiniProgramAppCache {
     String key, {
     MiniProgramCacheBucket bucket = MiniProgramCacheBucket.data,
   }) {
+    _checkBucketAllowed(bucket);
     return _manager.get<T>(
       appId: _appId,
       key: key,
@@ -900,6 +919,7 @@ class MiniProgramAppCache {
     String key, {
     MiniProgramCacheBucket bucket = MiniProgramCacheBucket.data,
   }) {
+    _checkBucketAllowed(bucket);
     return _manager.has(
       appId: _appId,
       key: key,
@@ -912,6 +932,7 @@ class MiniProgramAppCache {
     String key, {
     MiniProgramCacheBucket bucket = MiniProgramCacheBucket.data,
   }) {
+    _checkBucketAllowed(bucket);
     return _manager.remove(
       appId: _appId,
       key: key,
@@ -921,7 +942,33 @@ class MiniProgramAppCache {
   }
 
   Future<void> clear({MiniProgramCacheBucket? bucket}) {
-    return _manager.clear(appId: _appId, bucket: bucket, policy: _policy);
+    if (bucket != null) {
+      _checkBucketAllowed(bucket);
+      return _manager.clear(appId: _appId, bucket: bucket, policy: _policy);
+    }
+    return _clearAllowedBuckets();
+  }
+
+  Future<void> _clearAllowedBuckets() async {
+    final policy = _manager._policyFor(_appId, _policy);
+    for (final bucket in _defaultMiniProgramCacheBuckets) {
+      if (!policy.allowsMiniProgramBucket(bucket)) {
+        continue;
+      }
+      await _manager.clear(appId: _appId, bucket: bucket, policy: policy);
+    }
+  }
+
+  void _checkBucketAllowed(MiniProgramCacheBucket bucket) {
+    final policy = _manager._policyFor(_appId, _policy);
+    if (policy.allowsMiniProgramBucket(bucket)) {
+      return;
+    }
+    throw ArgumentError.value(
+      bucket,
+      'bucket',
+      'The cache bucket is disabled by host policy for this mini-program.',
+    );
   }
 }
 

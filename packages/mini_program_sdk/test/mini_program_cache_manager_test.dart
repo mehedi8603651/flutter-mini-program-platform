@@ -12,6 +12,20 @@ void main() {
       expect(policy.videoTtl, const Duration(hours: 6));
       expect(policy.sessionInactiveTtl, const Duration(days: 60));
       expect(policy.maxBytes, 20 * 1024 * 1024);
+      expect(policy.maxStateBytes, 5 * 1024 * 1024);
+      expect(
+        policy.allowedMiniProgramCacheBuckets,
+        containsAll(<MiniProgramCacheBucket>[
+          MiniProgramCacheBucket.memory,
+          MiniProgramCacheBucket.data,
+          MiniProgramCacheBucket.image,
+          MiniProgramCacheBucket.state,
+        ]),
+      );
+      expect(
+        policy.allowedMiniProgramCacheBuckets,
+        isNot(contains(MiniProgramCacheBucket.session)),
+      );
       expect(
         MiniProgramCacheManager.namespacedKey(
           appId: 'coupon',
@@ -245,6 +259,49 @@ void main() {
       );
     });
 
+    test('state bucket removes oldest entries over its bucket limit', () async {
+      final clock = _TestClock(DateTime.utc(2026, 6, 1));
+      final manager = MiniProgramCacheManager.inMemory(clock: clock.now);
+      const policy = MiniProgramCachePolicy(maxStateBytes: 50);
+
+      await manager.set(
+        appId: 'calculator',
+        key: 'history_1',
+        value: 'older',
+        bucket: MiniProgramCacheBucket.state,
+        sizeBytes: 30,
+        policy: policy,
+      );
+      clock.advance(const Duration(minutes: 1));
+      await manager.set(
+        appId: 'calculator',
+        key: 'history_2',
+        value: 'newer',
+        bucket: MiniProgramCacheBucket.state,
+        sizeBytes: 30,
+        policy: policy,
+      );
+
+      expect(
+        await manager.has(
+          appId: 'calculator',
+          key: 'history_1',
+          bucket: MiniProgramCacheBucket.state,
+          policy: policy,
+        ),
+        isFalse,
+      );
+      expect(
+        await manager.has(
+          appId: 'calculator',
+          key: 'history_2',
+          bucket: MiniProgramCacheBucket.state,
+          policy: policy,
+        ),
+        isTrue,
+      );
+    });
+
     test(
       'quota cleanup removes low priority and preserves host-pinned entries',
       () async {
@@ -369,6 +426,31 @@ void main() {
         );
       },
     );
+
+    test('app-scoped cache rejects host-disabled buckets', () async {
+      final cache = MiniProgramCacheManager.inMemory().forApp(
+        'calculator',
+        policy: const MiniProgramCachePolicy(
+          allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{
+            MiniProgramCacheBucket.data,
+          },
+        ),
+      );
+
+      expect(
+        () => cache.set(
+          'history',
+          '1 + 1 = 2',
+          bucket: MiniProgramCacheBucket.state,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () =>
+            cache.get<String>('history', bucket: MiniProgramCacheBucket.state),
+        throwsArgumentError,
+      );
+    });
 
     test(
       '100 mini-program appIds can store the same key without conflict',

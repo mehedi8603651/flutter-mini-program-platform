@@ -2016,5 +2016,94 @@ void main() {
         });
       },
     );
+
+    test('serializes cache helpers deterministically', () {
+      final screen = MpProgram(
+        screens: <String, MpScreenBuilder>{
+          'cache_home': () => Mp.column(
+            children: <MpNode>[
+              Mp.primaryButton(
+                label: 'Save history',
+                action: Mp.action.sequence(<MpAction>[
+                  Mp.cache.state.set(
+                    'calculator_history',
+                    const <Object?>['1 + 1 = 2'],
+                    requestId: 'save-history',
+                    ttl: const Duration(days: 1),
+                    priority: 'high',
+                  ),
+                  Mp.cache.state.get(
+                    'calculator_history',
+                    targetState: 'calculator.history',
+                    skipMissing: true,
+                  ),
+                  Mp.cache.video.has(
+                    'intro_video',
+                    targetState: 'video.cached',
+                  ),
+                  Mp.cache.clear(bucket: 'image', requestId: 'clear-images'),
+                ]),
+              ),
+            ],
+          ),
+        },
+      ).buildScreensJson()['cache_home']!;
+
+      expect(screen['root'], <String, Object?>{
+        'type': 'column',
+        'props': <String, Object?>{},
+        'children': <Object?>[
+          <String, Object?>{
+            'type': 'primaryButton',
+            'props': <String, Object?>{
+              'action': <String, Object?>{
+                'type': 'sequence',
+                'props': <String, Object?>{
+                  'steps': <Object?>[
+                    <String, Object?>{
+                      'type': 'cache.set',
+                      'props': <String, Object?>{
+                        'bucket': 'state',
+                        'key': 'calculator_history',
+                        'priority': 'high',
+                        'requestId': 'save-history',
+                        'ttlMs': 86400000,
+                        'value': <Object?>['1 + 1 = 2'],
+                      },
+                    },
+                    <String, Object?>{
+                      'type': 'cache.get',
+                      'props': <String, Object?>{
+                        'bucket': 'state',
+                        'key': 'calculator_history',
+                        'skipMissing': true,
+                        'targetState': 'calculator.history',
+                      },
+                    },
+                    <String, Object?>{
+                      'type': 'cache.has',
+                      'props': <String, Object?>{
+                        'bucket': 'video',
+                        'key': 'intro_video',
+                        'targetState': 'video.cached',
+                      },
+                    },
+                    <String, Object?>{
+                      'type': 'cache.clear',
+                      'props': <String, Object?>{
+                        'bucket': 'image',
+                        'requestId': 'clear-images',
+                      },
+                    },
+                  ],
+                },
+              },
+              'label': 'Save history',
+            },
+            'children': <Object?>[],
+          },
+        ],
+      });
+    });
   });
 }
