@@ -28,6 +28,46 @@ class MpActionRunner {
   }
 }
 
+class _MpMathActionOutcome {
+  const _MpMathActionOutcome(
+    this.value, {
+    this.data = const <String, dynamic>{},
+  });
+
+  final Object? value;
+  final Map<String, dynamic> data;
+}
+
+bool _stateValuesEqual(Object? left, Object? right) {
+  if (identical(left, right) || left == right) {
+    return true;
+  }
+  if (left is List && right is List) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (var index = 0; index < left.length; index += 1) {
+      if (!_stateValuesEqual(left[index], right[index])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (left is Map && right is Map) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (final entry in left.entries) {
+      if (!right.containsKey(entry.key) ||
+          !_stateValuesEqual(entry.value, right[entry.key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 abstract final class _MpActionDispatcher {
   static Future<Object?> dispatch(
     BuildContext context,
@@ -65,8 +105,20 @@ abstract final class _MpActionDispatcher {
         'ui.dialog' => _showDialog(context, props),
         'state.set' || 'state.put' => _setState(scope, action.type, props),
         'state.increment' => _incrementState(scope, props),
+        'state.appendText' => _appendStateText(scope, props),
+        'state.backspace' => _backspaceStateText(scope, props),
+        'state.listAppend' => _addStateListValue(scope, props, prepend: false),
+        'state.listPrepend' => _addStateListValue(scope, props, prepend: true),
+        'state.listInsert' => _insertStateListValue(scope, props),
+        'state.listRemoveAt' => _removeStateListAt(scope, props),
+        'state.listRemoveValue' => _removeStateListValue(scope, props),
         'state.remove' => _removeState(scope, props),
         'state.clear' => _clearState(scope),
+        'math.evaluate' => _evaluateMath(scope, props),
+        'math.compare' => _compareMath(scope, props),
+        'math.randomInt' => _randomMathInt(scope, props),
+        'math.randomDouble' => _randomMathDouble(scope, props),
+        'math.aggregate' => _aggregateMath(scope, props),
         'cache.set' => _cacheSet(scope, props),
         'cache.get' => _cacheGet(scope, props),
         'cache.has' => _cacheHas(scope, props),
@@ -637,13 +689,459 @@ abstract final class _MpActionDispatcher {
       return HostActionResult.failed(
         actionName: 'state.increment',
         message: 'Mp state.increment requires a numeric current value.',
-        errorCode: 'state_invalid_value',
+        errorCode: MiniProgramErrorCodes.stateInvalidValue,
       );
     }
     final by = _numProp(props, 'by', fallback: 1);
     final next = (current as num? ?? 0) + by;
     state.set(key, next);
     return HostActionResult.success(actionName: 'state.increment');
+  }
+
+  static Future<HostActionResult> _appendStateText(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.appendText';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current != null && current is! String) {
+      return _stateTypeFailure(actionName, 'string');
+    }
+    final text = _stringProp(props, 'text');
+    final maxLength = _intProp(props, 'maxLength', fallback: 4096);
+    final next = '${current as String? ?? ''}$text';
+    final length = next.runes.length;
+    if (length > maxLength || length > _maxStateTextLength) {
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: 'Mp state.appendText exceeds the configured text limit.',
+        errorCode: MiniProgramErrorCodes.stateLimitExceeded,
+        data: <String, dynamic>{'length': length, 'maxLength': maxLength},
+      );
+    }
+    state.set(key, next);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{'value': next, 'length': length},
+    );
+  }
+
+  static Future<HostActionResult> _backspaceStateText(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.backspace';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current != null && current is! String) {
+      return _stateTypeFailure(actionName, 'string');
+    }
+    final runes = (current as String? ?? '').runes.toList(growable: false);
+    final count = _intProp(props, 'count', fallback: 1);
+    final keep = math.max(0, runes.length - count);
+    final next = String.fromCharCodes(runes.take(keep));
+    state.set(key, next);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{'value': next, 'length': keep},
+    );
+  }
+
+  static Future<HostActionResult> _addStateListValue(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props, {
+    required bool prepend,
+  }) async {
+    final actionName = prepend ? 'state.listPrepend' : 'state.listAppend';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current != null && current is! List) {
+      return _stateTypeFailure(actionName, 'list');
+    }
+    final next = current == null
+        ? <Object?>[]
+        : List<Object?>.from(current as List);
+    if (prepend) {
+      next.insert(0, props['value']);
+    } else {
+      next.add(props['value']);
+    }
+    final maxItems = _optionalIntProp(props, 'maxItems');
+    if (maxItems != null && next.length > maxItems) {
+      if (prepend) {
+        next.removeRange(maxItems, next.length);
+      } else {
+        next.removeRange(0, next.length - maxItems);
+      }
+    }
+    if (next.length > _maxStateListItems) {
+      return _stateListLimitFailure(actionName, next.length);
+    }
+    state.set(key, next);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{'value': next, 'length': next.length},
+    );
+  }
+
+  static Future<HostActionResult> _insertStateListValue(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.listInsert';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current != null && current is! List) {
+      return _stateTypeFailure(actionName, 'list');
+    }
+    final next = current == null
+        ? <Object?>[]
+        : List<Object?>.from(current as List);
+    final index = _optionalIntProp(props, 'index');
+    if (index == null) {
+      return _stateIntegerFailure(actionName, 'index');
+    }
+    if (index < 0 || index > next.length) {
+      return _stateIndexFailure(actionName, index, next.length);
+    }
+    if (next.length >= _maxStateListItems) {
+      return _stateListLimitFailure(actionName, next.length + 1);
+    }
+    next.insert(index, props['value']);
+    state.set(key, next);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{'value': next, 'length': next.length},
+    );
+  }
+
+  static Future<HostActionResult> _removeStateListAt(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.listRemoveAt';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current == null) {
+      return HostActionResult.success(
+        actionName: actionName,
+        data: const <String, dynamic>{'removed': false},
+      );
+    }
+    if (current is! List) {
+      return _stateTypeFailure(actionName, 'list');
+    }
+    final next = List<Object?>.from(current);
+    final index = _optionalIntProp(props, 'index');
+    if (index == null) {
+      return _stateIntegerFailure(actionName, 'index');
+    }
+    if (index < 0 || index >= next.length) {
+      return _stateIndexFailure(actionName, index, next.length);
+    }
+    final removed = next.removeAt(index);
+    state.set(key, next);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{
+        'removed': true,
+        'removedValue': removed,
+        'value': next,
+        'length': next.length,
+      },
+    );
+  }
+
+  static Future<HostActionResult> _removeStateListValue(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.listRemoveValue';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current == null) {
+      return HostActionResult.success(
+        actionName: actionName,
+        data: const <String, dynamic>{'removed': false, 'removedCount': 0},
+      );
+    }
+    if (current is! List) {
+      return _stateTypeFailure(actionName, 'list');
+    }
+    final next = List<Object?>.from(current);
+    final value = props['value'];
+    var removedCount = 0;
+    if (_boolProp(props, 'all')) {
+      next.removeWhere((item) {
+        final matches = _stateValuesEqual(item, value);
+        if (matches) {
+          removedCount += 1;
+        }
+        return matches;
+      });
+    } else {
+      final index = next.indexWhere((item) => _stateValuesEqual(item, value));
+      if (index >= 0) {
+        next.removeAt(index);
+        removedCount = 1;
+      }
+    }
+    if (removedCount > 0) {
+      state.set(key, next);
+    }
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{
+        'removed': removedCount > 0,
+        'removedCount': removedCount,
+        'value': next,
+        'length': next.length,
+      },
+    );
+  }
+
+  static Future<HostActionResult> _evaluateMath(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    return _runMathAction(scope, 'math.evaluate', props, () {
+      final value = _MpMathEngine.evaluate(
+        props['expression'],
+        variables: _mapProp(props, 'variables'),
+        precision: _intProp(props, 'precision', fallback: 12),
+        angleMode: _optionalStringProp(props, 'angleMode') ?? 'radians',
+      );
+      return _MpMathActionOutcome(value);
+    });
+  }
+
+  static Future<HostActionResult> _compareMath(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    return _runMathAction(scope, 'math.compare', props, () {
+      final variables = _mapProp(props, 'variables');
+      final left = _MpMathEngine.evaluate(
+        props['left'],
+        variables: variables,
+        precision: 15,
+      ).toDouble();
+      final right = _MpMathEngine.evaluate(
+        props['right'],
+        variables: variables,
+        precision: 15,
+      ).toDouble();
+      final tolerance = _numProp(props, 'tolerance', fallback: 1e-9).toDouble();
+      final scale = math.max(1.0, math.max(left.abs(), right.abs()));
+      final equal = (left - right).abs() <= tolerance * scale;
+      final comparison = _stringProp(props, 'comparison');
+      final matches = switch (comparison) {
+        'equal' => equal,
+        'notEqual' => !equal,
+        'lessThan' => left < right,
+        'lessThanOrEqual' => left < right || equal,
+        'greaterThan' => left > right,
+        'greaterThanOrEqual' => left > right || equal,
+        _ => throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathInvalidOperand,
+          'Unsupported math comparison.',
+        ),
+      };
+      return _MpMathActionOutcome(
+        matches,
+        data: <String, dynamic>{'left': left, 'right': right},
+      );
+    });
+  }
+
+  static Future<HostActionResult> _randomMathInt(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    return _runMathAction(scope, 'math.randomInt', props, () {
+      final minValue = _MpMathEngine.evaluate(props['min']);
+      final maxValue = _MpMathEngine.evaluate(props['max']);
+      if (minValue is! int || maxValue is! int) {
+        throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathInvalidRange,
+          'Random integer bounds must evaluate to integers.',
+        );
+      }
+      final difference = maxValue - minValue;
+      if (difference < 0 || difference > _maxMathRandomIntegerSpan) {
+        throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathInvalidRange,
+          'Random integer range is invalid or too large.',
+        );
+      }
+      final seed = _optionalIntProp(props, 'seed');
+      final random = seed == null ? math.Random() : math.Random(seed);
+      final value = minValue + random.nextInt(difference + 1);
+      return _MpMathActionOutcome(value);
+    });
+  }
+
+  static Future<HostActionResult> _randomMathDouble(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    return _runMathAction(scope, 'math.randomDouble', props, () {
+      final minValue = _MpMathEngine.evaluate(props['min']).toDouble();
+      final maxValue = _MpMathEngine.evaluate(props['max']).toDouble();
+      if (maxValue < minValue || !(maxValue - minValue).isFinite) {
+        throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathInvalidRange,
+          'Random double maximum must be greater than or equal to minimum.',
+        );
+      }
+      final seed = _optionalIntProp(props, 'seed');
+      final random = seed == null ? math.Random() : math.Random(seed);
+      var value = minValue == maxValue
+          ? minValue
+          : minValue + random.nextDouble() * (maxValue - minValue);
+      final decimalPlaces = _optionalIntProp(props, 'decimalPlaces');
+      if (decimalPlaces != null) {
+        value = double.parse(value.toStringAsFixed(decimalPlaces));
+      }
+      return _MpMathActionOutcome(
+        _MpMathEngine.normalize(value, precision: 15),
+      );
+    });
+  }
+
+  static Future<HostActionResult> _aggregateMath(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    return _runMathAction(scope, 'math.aggregate', props, () {
+      final rawValues = props['values'];
+      if (rawValues is! List) {
+        throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathInvalidOperand,
+          'Math aggregate values must be a list.',
+        );
+      }
+      if (rawValues.length > _maxMathAggregateItems) {
+        throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathComplexityExceeded,
+          'Math aggregate exceeds the 1000 item limit.',
+        );
+      }
+      final operation = _stringProp(props, 'operation');
+      if (operation == 'count') {
+        return _MpMathActionOutcome(rawValues.length);
+      }
+      if (rawValues.isEmpty) {
+        if (operation == 'sum') {
+          return const _MpMathActionOutcome(0);
+        }
+        throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathEmptyValues,
+          'Math aggregate requires at least one value.',
+        );
+      }
+      final values = <double>[];
+      for (final value in rawValues) {
+        if (value is! num || !value.isFinite) {
+          throw const _MpMathFailure(
+            MiniProgramErrorCodes.mathInvalidOperand,
+            'Math aggregate values must be finite numbers.',
+          );
+        }
+        values.add(value.toDouble());
+      }
+      final double result = switch (operation) {
+        'sum' => values.fold(0.0, (total, value) => total + value),
+        'average' =>
+          values.fold(0.0, (total, value) => total + value) / values.length,
+        'min' => values.reduce(math.min),
+        'max' => values.reduce(math.max),
+        'median' => _median(values),
+        _ => throw const _MpMathFailure(
+          MiniProgramErrorCodes.mathInvalidOperand,
+          'Unsupported math aggregate operation.',
+        ),
+      };
+      final value = _MpMathEngine.normalize(
+        result,
+        precision: _intProp(props, 'precision', fallback: 12),
+      );
+      return _MpMathActionOutcome(
+        value,
+        data: <String, dynamic>{'operation': operation, 'count': values.length},
+      );
+    });
+  }
+
+  static Future<HostActionResult> _runMathAction(
+    MiniProgramSdkScope scope,
+    String actionName,
+    Map<String, dynamic> props,
+    _MpMathActionOutcome Function() callback,
+  ) async {
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    try {
+      final outcome = callback();
+      state.set(_stringProp(props, 'targetState'), outcome.value);
+      final errorState = _optionalStringProp(props, 'errorState');
+      if (errorState != null) {
+        state.remove(errorState);
+      }
+      return HostActionResult.success(
+        actionName: actionName,
+        data: <String, dynamic>{'value': outcome.value, ...outcome.data},
+      );
+    } on _MpMathFailure catch (failure) {
+      final errorState = _optionalStringProp(props, 'errorState');
+      if (errorState != null) {
+        state.set(errorState, <String, dynamic>{
+          'action': actionName,
+          'code': failure.code,
+          'message': failure.message,
+        });
+      }
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: failure.message,
+        errorCode: failure.code,
+      );
+    }
+  }
+
+  static double _median(List<double> values) {
+    final sorted = List<double>.from(values)..sort();
+    final middle = sorted.length ~/ 2;
+    return sorted.length.isOdd
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
   static Future<HostActionResult> _removeState(
@@ -990,6 +1488,45 @@ abstract final class _MpActionDispatcher {
     );
   }
 
+  static HostActionResult _stateTypeFailure(
+    String actionName,
+    String expectedType,
+  ) => HostActionResult.failed(
+    actionName: actionName,
+    message: 'Mp $actionName requires an existing $expectedType state value.',
+    errorCode: MiniProgramErrorCodes.stateInvalidValue,
+  );
+
+  static HostActionResult _stateListLimitFailure(
+    String actionName,
+    int length,
+  ) => HostActionResult.failed(
+    actionName: actionName,
+    message: 'Mp state lists cannot exceed $_maxStateListItems items.',
+    errorCode: MiniProgramErrorCodes.stateLimitExceeded,
+    data: <String, dynamic>{'length': length, 'maxItems': _maxStateListItems},
+  );
+
+  static HostActionResult _stateIndexFailure(
+    String actionName,
+    int index,
+    int length,
+  ) => HostActionResult.failed(
+    actionName: actionName,
+    message: 'Mp $actionName index is outside the list range.',
+    errorCode: MiniProgramErrorCodes.stateIndexOutOfRange,
+    data: <String, dynamic>{'index': index, 'length': length},
+  );
+
+  static HostActionResult _stateIntegerFailure(
+    String actionName,
+    String name,
+  ) => HostActionResult.failed(
+    actionName: actionName,
+    message: 'Mp $actionName $name must resolve to an integer.',
+    errorCode: MiniProgramErrorCodes.stateInvalidValue,
+  );
+
   static HostActionResult _routerUnavailable(String actionName) {
     return HostActionResult.failed(
       actionName: actionName,
@@ -1299,6 +1836,11 @@ abstract final class _MpActionDispatcher {
       return value;
     }
     throw FormatException('Mp action "$key" must be an integer.');
+  }
+
+  static int? _optionalIntProp(Map<String, dynamic> props, String key) {
+    final value = props[key];
+    return value is int ? value : null;
   }
 
   static num _numProp(

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Add bounded text and list state transformation action helpers.
+- Add safe offline evaluate, compare, random, and aggregate math helpers.
+
 ## 0.1.5
 
 - Add `Mp.cache.*` authoring helpers for `memory`, `data`, `image`, `state`,

@@ -73,6 +73,29 @@ void main() {
         MiniProgramErrorCodes.secureApiNotAllowlisted,
         'secure_api_not_allowlisted',
       );
+      expect(MiniProgramErrorCodes.stateInvalidValue, 'state_invalid_value');
+      expect(MiniProgramErrorCodes.stateLimitExceeded, 'state_limit_exceeded');
+      expect(
+        MiniProgramErrorCodes.stateIndexOutOfRange,
+        'state_index_out_of_range',
+      );
+      expect(
+        MiniProgramErrorCodes.mathInvalidExpression,
+        'math_invalid_expression',
+      );
+      expect(MiniProgramErrorCodes.mathDivisionByZero, 'math_division_by_zero');
+      expect(MiniProgramErrorCodes.mathDomainError, 'math_domain_error');
+      expect(
+        MiniProgramErrorCodes.mathResultNotFinite,
+        'math_result_not_finite',
+      );
+      expect(
+        MiniProgramErrorCodes.mathComplexityExceeded,
+        'math_complexity_exceeded',
+      );
+      expect(MiniProgramErrorCodes.mathInvalidOperand, 'math_invalid_operand');
+      expect(MiniProgramErrorCodes.mathInvalidRange, 'math_invalid_range');
+      expect(MiniProgramErrorCodes.mathEmptyValues, 'math_empty_values');
     });
 
     test('Publisher API header and error values stay stable', () {

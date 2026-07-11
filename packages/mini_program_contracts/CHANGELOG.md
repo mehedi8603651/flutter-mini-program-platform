@@ -1,3 +1,7 @@
+## 0.3.1
+
+- Add stable state transformation and math runtime error code constants.
+
 ## 0.3.0
 
 - Remove artifact credential and access-mode contract constants.

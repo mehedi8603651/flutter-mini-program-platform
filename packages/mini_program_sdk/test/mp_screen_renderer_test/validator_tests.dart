@@ -53,6 +53,91 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts generated state transformation and math actions', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.primaryButton(
+                  label: 'Calculate',
+                  action: Mp.action.sequence(<MpAction>[
+                    Mp.state.appendText('calc.expression', '7'),
+                    Mp.math.evaluate(
+                      expression: '{{state.calc.expression}}',
+                      targetState: 'calc.result',
+                      errorState: 'calc.error',
+                    ),
+                    Mp.state.listPrepend(
+                      'calc.history',
+                      '{{state.calc.result}}',
+                      maxItems: 50,
+                    ),
+                  ]),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
+    test('rejects malformed state transformation and math actions', () {
+      final cases = <String, Map<String, dynamic>>{
+        'text limit': _cacheActionScreen('state.appendText', {
+          'key': 'calc.expression',
+          'text': '1',
+          'maxLength': 65537,
+        }),
+        'list index': _cacheActionScreen('state.listRemoveAt', {
+          'key': 'items',
+          'index': 'first',
+        }),
+        'math expression': _cacheActionScreen('math.evaluate', {
+          'expression': '',
+          'targetState': 'result',
+        }),
+        'math precision': _cacheActionScreen('math.evaluate', {
+          'expression': '1 + 1',
+          'targetState': 'result',
+          'precision': 16,
+        }),
+        'math comparison': _cacheActionScreen('math.compare', {
+          'left': 1,
+          'right': 2,
+          'comparison': 'symbolic',
+          'targetState': 'result',
+        }),
+        'math random seed': _cacheActionScreen('math.randomInt', {
+          'min': 1,
+          'max': 2,
+          'seed': 'random',
+          'targetState': 'result',
+        }),
+        'math aggregate values': _cacheActionScreen('math.aggregate', {
+          'values': 'not-a-binding',
+          'operation': 'sum',
+          'targetState': 'result',
+        }),
+      };
+
+      for (final entry in cases.entries) {
+        expect(
+          () => const MpScreenValidator().validate(
+            entry.value,
+            expectedScreenId: 'coupon_home',
+          ),
+          throwsA(isA<MiniProgramRenderException>()),
+          reason: entry.key,
+        );
+      }
+    });
+
     test('accepts author-generated form JSON', () {
       final screen = _jsonMap(
         MpProgram(

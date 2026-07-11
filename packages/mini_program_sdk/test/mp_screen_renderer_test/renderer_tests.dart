@@ -1748,6 +1748,358 @@ void _mpScreenRendererTests() {
       backendStore.dispose();
     });
 
+    testWidgets('state text and list actions transform bound values safely', (
+      tester,
+    ) async {
+      final state = MpStateManager();
+
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.appendText('editor.value', 'A')),
+        stateManager: state,
+      );
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.appendText('editor.value', '🙂')),
+        stateManager: state,
+      );
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.backspace('editor.value')),
+        stateManager: state,
+      );
+      expect(state.get<String>('editor.value'), 'A');
+
+      for (final value in <int>[1, 2, 3]) {
+        await _runMpAction(
+          tester,
+          _jsonAction(Mp.state.listAppend('items', value, maxItems: 2)),
+          stateManager: state,
+        );
+      }
+      expect(state.get<List<Object?>>('items'), <Object?>[2, 3]);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.listPrepend('items', 1, maxItems: 3)),
+        stateManager: state,
+      );
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.state.listInsert('items', 1, <String, Object?>{'id': 7}),
+        ),
+        stateManager: state,
+      );
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.state.listRemoveValue('items', <String, Object?>{'id': 7}),
+        ),
+        stateManager: state,
+      );
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.listRemoveAt('items', 2)),
+        stateManager: state,
+      );
+      expect(state.get<List<Object?>>('items'), <Object?>[1, 2]);
+
+      state.set('items', 'wrong type');
+      final failure =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.state.listAppend('items', 4)),
+                stateManager: state,
+              )
+              as HostActionResult;
+      expect(failure.errorCode, MiniProgramErrorCodes.stateInvalidValue);
+      expect(state.get<String>('items'), 'wrong type');
+
+      state.dispose();
+    });
+
+    testWidgets(
+      'math evaluate covers parser precedence functions and bindings',
+      (tester) async {
+        final state = MpStateManager()..set('input.x', 9);
+        final cases = <(String, num)>[
+          ('2 + 3 * 4', 14),
+          ('2^3^2', 512),
+          ('-2^2', -4),
+          ('50%', 0.5),
+          ('sqrt(81) + mod(10, 4)', 11),
+          ('0.1 + 0.2', 0.3),
+        ];
+
+        for (final (expression, expected) in cases) {
+          final result =
+              await _runMpAction(
+                    tester,
+                    _jsonAction(
+                      Mp.math.evaluate(
+                        expression: expression,
+                        targetState: 'math.result',
+                      ),
+                    ),
+                    stateManager: state,
+                  )
+                  as HostActionResult;
+          expect(result.isSuccess, isTrue, reason: expression);
+          expect(state.get<num>('math.result'), expected, reason: expression);
+        }
+
+        await _runMpAction(
+          tester,
+          _jsonAction(
+            Mp.math.evaluate(
+              expression: 'sin(30) + x',
+              variables: const <String, Object?>{'x': '{{state.input.x}}'},
+              targetState: 'math.result',
+              angleMode: 'degrees',
+            ),
+          ),
+          stateManager: state,
+        );
+        expect(state.get<num>('math.result'), 9.5);
+
+        state.dispose();
+      },
+    );
+
+    testWidgets(
+      'math failures preserve targets and successful runs clear errors',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('math.result', 99)
+          ..set('math.error', <String, Object?>{'code': 'stale'});
+
+        final failure =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.math.evaluate(
+                      expression: '1 / 0',
+                      targetState: 'math.result',
+                      errorState: 'math.error',
+                    ),
+                  ),
+                  stateManager: state,
+                )
+                as HostActionResult;
+        expect(failure.errorCode, MiniProgramErrorCodes.mathDivisionByZero);
+        expect(state.get<num>('math.result'), 99);
+        expect(
+          state.get<Map<String, dynamic>>('math.error')?['code'],
+          MiniProgramErrorCodes.mathDivisionByZero,
+        );
+
+        final success =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.math.evaluate(
+                      expression: 'sqrt(16)',
+                      targetState: 'math.result',
+                      errorState: 'math.error',
+                    ),
+                  ),
+                  stateManager: state,
+                )
+                as HostActionResult;
+        expect(success.isSuccess, isTrue);
+        expect(state.get<num>('math.result'), 4);
+        expect(state.get<Object?>('math.error'), isNull);
+
+        final failures = <(String, String)>[
+          ('sqrt(-1)', MiniProgramErrorCodes.mathDomainError),
+          ('exp(10000)', MiniProgramErrorCodes.mathResultNotFinite),
+          ('2pi', MiniProgramErrorCodes.mathInvalidExpression),
+        ];
+        for (final (expression, errorCode) in failures) {
+          final result =
+              await _runMpAction(
+                    tester,
+                    _jsonAction(
+                      Mp.math.evaluate(
+                        expression: expression,
+                        targetState: 'math.result',
+                        errorState: 'math.error',
+                      ),
+                    ),
+                    stateManager: state,
+                  )
+                  as HostActionResult;
+          expect(result.errorCode, errorCode, reason: expression);
+          expect(state.get<num>('math.result'), 4, reason: expression);
+        }
+
+        final complexity = List<String>.filled(130, '1').join('+');
+        final complexityFailure =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.math.evaluate(
+                      expression: complexity,
+                      targetState: 'math.result',
+                      errorState: 'math.error',
+                    ),
+                  ),
+                  stateManager: state,
+                )
+                as HostActionResult;
+        expect(
+          complexityFailure.errorCode,
+          MiniProgramErrorCodes.mathComplexityExceeded,
+        );
+
+        state.dispose();
+      },
+    );
+
+    testWidgets('math compare random and aggregate actions update state', (
+      tester,
+    ) async {
+      final state = MpStateManager()..set('scores', <num>[1, 2, 8, 9]);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.math.compare(
+            left: '0.1 + 0.2',
+            right: 0.3,
+            targetState: 'math.equal',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<bool>('math.equal'), isTrue);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.math.randomInt(
+            min: 5,
+            max: 10,
+            seed: 44,
+            targetState: 'random.first',
+          ),
+        ),
+        stateManager: state,
+      );
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.math.randomInt(
+            min: 5,
+            max: 10,
+            seed: 44,
+            targetState: 'random.second',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<int>('random.first'), state.get<int>('random.second'));
+      expect(state.get<int>('random.first'), inInclusiveRange(5, 10));
+
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.math.randomDouble(
+            min: 1,
+            max: 2,
+            seed: 9,
+            decimalPlaces: 3,
+            targetState: 'random.double',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<num>('random.double'), inInclusiveRange(1, 2));
+
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.math.aggregate(
+            values: '{{state.scores}}',
+            operation: 'median',
+            targetState: 'scores.median',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<num>('scores.median'), 5);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.math.aggregate(
+            values: const <Object?>[],
+            operation: 'sum',
+            targetState: 'scores.sum',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<num>('scores.sum'), 0);
+
+      state.dispose();
+    });
+
+    testWidgets(
+      'sequence resolves math output before history and cache steps',
+      (tester) async {
+        final state = MpStateManager()..set('calc.expression', '7 + 5');
+        final cache = MiniProgramCacheManager.inMemory();
+        final result =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.action.sequence(<MpAction>[
+                      Mp.math.evaluate(
+                        expression: '{{state.calc.expression}}',
+                        targetState: 'calc.result',
+                      ),
+                      Mp.state.listPrepend('calc.history', <String, Object?>{
+                        'expression': '{{state.calc.expression}}',
+                        'result': '{{state.calc.result}}',
+                      }, maxItems: 50),
+                      Mp.cache.state.set(
+                        'calculator_history',
+                        '{{state.calc.history}}',
+                      ),
+                    ]),
+                  ),
+                  miniProgramId: 'calculator',
+                  cacheManager: cache,
+                  cachePolicy: const MiniProgramCachePolicy(
+                    allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{
+                      MiniProgramCacheBucket.state,
+                    },
+                  ),
+                  stateManager: state,
+                )
+                as HostActionResult;
+        expect(result.isSuccess, isTrue);
+        expect(state.get<num>('calc.result'), 12);
+        expect(state.get<List<Object?>>('calc.history'), <Object?>[
+          <String, Object?>{'expression': '7 + 5', 'result': 12},
+        ]);
+        final appCache = cache.forApp('calculator');
+        expect(
+          await appCache.get<Object?>(
+            'calculator_history',
+            bucket: MiniProgramCacheBucket.state,
+          ),
+          <Object?>[
+            <String, Object?>{'expression': '7 + 5', 'result': 12},
+          ],
+        );
+
+        state.dispose();
+      },
+    );
+
     testWidgets('repeat renders state lists maps scalars index and nesting', (
       tester,
     ) async {

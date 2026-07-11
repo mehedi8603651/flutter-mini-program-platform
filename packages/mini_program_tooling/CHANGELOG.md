@@ -1,3 +1,8 @@
+## 0.6.5
+
+- Generate mini-program and host projects with the state transformation and
+  core math action package releases.
+
 ## 0.6.4
 
 - Generate preview hosts that use `MiniProgramCacheBundle.webPersistent()` on

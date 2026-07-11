@@ -20,4 +20,15 @@ abstract final class MiniProgramErrorCodes {
   static const String secureApiInvalidPayload = 'secure_api_invalid_payload';
   static const String secureApiValidationFailed =
       'secure_api_validation_failed';
+  static const String stateInvalidValue = 'state_invalid_value';
+  static const String stateLimitExceeded = 'state_limit_exceeded';
+  static const String stateIndexOutOfRange = 'state_index_out_of_range';
+  static const String mathInvalidExpression = 'math_invalid_expression';
+  static const String mathDivisionByZero = 'math_division_by_zero';
+  static const String mathDomainError = 'math_domain_error';
+  static const String mathResultNotFinite = 'math_result_not_finite';
+  static const String mathComplexityExceeded = 'math_complexity_exceeded';
+  static const String mathInvalidOperand = 'math_invalid_operand';
+  static const String mathInvalidRange = 'math_invalid_range';
+  static const String mathEmptyValues = 'math_empty_values';
 }

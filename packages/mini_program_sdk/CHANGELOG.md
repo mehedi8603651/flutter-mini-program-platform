@@ -1,3 +1,10 @@
+## 0.5.4
+
+- Execute bounded text and list state transformation actions.
+- Add a core-Dart restricted math parser with evaluate, compare, seeded random,
+  and aggregate actions.
+- Preserve math targets on failure and expose stable structured error state.
+
 ## 0.5.3
 
 - Add `MiniProgramCacheBundle.webPersistent()` backed by shared preferences for browser runtime cache persistence.

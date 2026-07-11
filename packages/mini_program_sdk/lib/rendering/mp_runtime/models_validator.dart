@@ -2648,8 +2648,24 @@ class MpScreenValidator {
       'ui.dialog' => _parseDialogAction(type, props, path),
       'state.set' || 'state.put' => _parseStateSetAction(type, props, path),
       'state.increment' => _parseStateIncrementAction(type, props, path),
+      'state.appendText' => _parseStateAppendTextAction(type, props, path),
+      'state.backspace' => _parseStateBackspaceAction(type, props, path),
+      'state.listAppend' ||
+      'state.listPrepend' => _parseStateListAddAction(type, props, path),
+      'state.listInsert' => _parseStateListInsertAction(type, props, path),
+      'state.listRemoveAt' => _parseStateListRemoveAtAction(type, props, path),
+      'state.listRemoveValue' => _parseStateListRemoveValueAction(
+        type,
+        props,
+        path,
+      ),
       'state.remove' => _parseStateRemoveAction(type, props, path),
       'state.clear' => _parseNoPropsAction(type, props, path),
+      'math.evaluate' => _parseMathEvaluateAction(type, props, path),
+      'math.compare' => _parseMathCompareAction(type, props, path),
+      'math.randomInt' => _parseMathRandomIntAction(type, props, path),
+      'math.randomDouble' => _parseMathRandomDoubleAction(type, props, path),
+      'math.aggregate' => _parseMathAggregateAction(type, props, path),
       'cache.set' => _parseCacheSetAction(type, props, path),
       'cache.get' => _parseCacheGetAction(type, props, path),
       'cache.has' => _parseCacheHasAction(type, props, path),
@@ -3253,6 +3269,495 @@ class MpScreenValidator {
         'by': by ?? 1,
       },
     );
+  }
+
+  _MpAction _parseStateAppendTextAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'text',
+      'maxLength',
+    }, path: '$path.props');
+    final text = _requiredString(props, 'text', path: '$path.props');
+    final maxLength =
+        _optionalPositiveInt(
+          props['maxLength'],
+          path: '$path.props.maxLength',
+        ) ??
+        4096;
+    if (maxLength > _maxStateTextLength) {
+      _fail(
+        'Mp state.appendText maxLength cannot exceed $_maxStateTextLength.',
+        path: '$path.props.maxLength',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'text': text,
+        'maxLength': maxLength,
+      },
+    );
+  }
+
+  _MpAction _parseStateBackspaceAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'count',
+    }, path: '$path.props');
+    final count =
+        _optionalPositiveInt(props['count'], path: '$path.props.count') ?? 1;
+    if (count > _maxStateTextLength) {
+      _fail(
+        'Mp state.backspace count cannot exceed $_maxStateTextLength.',
+        path: '$path.props.count',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'count': count,
+      },
+    );
+  }
+
+  _MpAction _parseStateListAddAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'value',
+      'maxItems',
+    }, path: '$path.props');
+    if (!props.containsKey('value')) {
+      _fail('Mp $type requires a value.', path: '$path.props.value');
+    }
+    final maxItems = _optionalPositiveInt(
+      props['maxItems'],
+      path: '$path.props.maxItems',
+    );
+    if (maxItems != null && maxItems > _maxStateListItems) {
+      _fail(
+        'Mp state list maxItems cannot exceed $_maxStateListItems.',
+        path: '$path.props.maxItems',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'value': props['value'],
+        if (maxItems != null) 'maxItems': maxItems,
+      },
+    );
+  }
+
+  _MpAction _parseStateListInsertAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'index',
+      'value',
+    }, path: '$path.props');
+    if (!props.containsKey('value')) {
+      _fail('Mp state.listInsert requires a value.', path: '$path.props.value');
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'index': _requiredIntegerOrBinding(
+          props['index'],
+          path: '$path.props.index',
+        ),
+        'value': props['value'],
+      },
+    );
+  }
+
+  _MpAction _parseStateListRemoveAtAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'index',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'index': _requiredIntegerOrBinding(
+          props['index'],
+          path: '$path.props.index',
+        ),
+      },
+    );
+  }
+
+  _MpAction _parseStateListRemoveValueAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'value',
+      'all',
+    }, path: '$path.props');
+    if (!props.containsKey('value')) {
+      _fail(
+        'Mp state.listRemoveValue requires a value.',
+        path: '$path.props.value',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'value': props['value'],
+        'all': _optionalBool(props['all'], path: '$path.props.all') ?? false,
+      },
+    );
+  }
+
+  _MpAction _parseMathEvaluateAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'expression',
+      'variables',
+      'targetState',
+      'errorState',
+      'precision',
+      'angleMode',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'expression': _requiredMathOperand(
+          props['expression'],
+          path: '$path.props.expression',
+        ),
+        ..._parsedMathCommon(props, path: '$path.props'),
+        'precision': _mathPrecision(props, path: '$path.props'),
+        'angleMode': _mathOption(
+          props,
+          'angleMode',
+          const <String>{'radians', 'degrees'},
+          fallback: 'radians',
+          path: '$path.props',
+        ),
+      },
+    );
+  }
+
+  _MpAction _parseMathCompareAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'left',
+      'right',
+      'comparison',
+      'tolerance',
+      'variables',
+      'targetState',
+      'errorState',
+    }, path: '$path.props');
+    final tolerance = props['tolerance'] ?? 1e-9;
+    if (tolerance is! num || !tolerance.isFinite || tolerance < 0) {
+      _fail(
+        'Mp math.compare tolerance must be finite and non-negative.',
+        path: '$path.props.tolerance',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'left': _requiredMathOperand(props['left'], path: '$path.props.left'),
+        'right': _requiredMathOperand(
+          props['right'],
+          path: '$path.props.right',
+        ),
+        'comparison': _mathOption(
+          props,
+          'comparison',
+          const <String>{
+            'equal',
+            'notEqual',
+            'lessThan',
+            'lessThanOrEqual',
+            'greaterThan',
+            'greaterThanOrEqual',
+          },
+          fallback: 'equal',
+          path: '$path.props',
+        ),
+        'tolerance': tolerance,
+        ..._parsedMathCommon(props, path: '$path.props'),
+      },
+    );
+  }
+
+  _MpAction _parseMathRandomIntAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) => _parseMathRandomAction(type, props, path, allowDecimalPlaces: false);
+
+  _MpAction _parseMathRandomDoubleAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) => _parseMathRandomAction(type, props, path, allowDecimalPlaces: true);
+
+  _MpAction _parseMathRandomAction(
+    String type,
+    Map<String, dynamic> props,
+    String path, {
+    required bool allowDecimalPlaces,
+  }) {
+    _validateObjectKeys(props, <String>{
+      'min',
+      'max',
+      'targetState',
+      'errorState',
+      'seed',
+      if (allowDecimalPlaces) 'decimalPlaces',
+    }, path: '$path.props');
+    final seed = props['seed'];
+    if (seed != null && seed is! int) {
+      _fail('Mp $type seed must be an integer.', path: '$path.props.seed');
+    }
+    final decimalPlaces = allowDecimalPlaces
+        ? _optionalNonNegativeInt(
+            props['decimalPlaces'],
+            path: '$path.props.decimalPlaces',
+          )
+        : null;
+    if (decimalPlaces != null && decimalPlaces > 15) {
+      _fail(
+        'Mp math.randomDouble decimalPlaces cannot exceed 15.',
+        path: '$path.props.decimalPlaces',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'min': _requiredMathOperand(props['min'], path: '$path.props.min'),
+        'max': _requiredMathOperand(props['max'], path: '$path.props.max'),
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        if (seed != null) 'seed': seed,
+        if (decimalPlaces != null) 'decimalPlaces': decimalPlaces,
+      },
+    );
+  }
+
+  _MpAction _parseMathAggregateAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'values',
+      'operation',
+      'targetState',
+      'errorState',
+      'precision',
+    }, path: '$path.props');
+    final operation = _mathOption(props, 'operation', const <String>{
+      'sum',
+      'average',
+      'min',
+      'max',
+      'count',
+      'median',
+    }, path: '$path.props');
+    final values = props['values'];
+    if (values is List) {
+      if (values.length > _maxMathAggregateItems) {
+        _fail(
+          'Mp math.aggregate cannot exceed $_maxMathAggregateItems values.',
+          path: '$path.props.values',
+        );
+      }
+      if (operation != 'count') {
+        for (var index = 0; index < values.length; index += 1) {
+          final value = values[index];
+          if (value is num && value.isFinite) {
+            continue;
+          }
+          if (value is String &&
+              _MpBindingResolver.isSingleBindingExpression(value)) {
+            continue;
+          }
+          _fail(
+            'Mp math.aggregate numeric values must be finite numbers or bindings.',
+            path: '$path.props.values[$index]',
+          );
+        }
+      }
+    } else if (values is! String ||
+        !_MpBindingResolver.isSingleBindingExpression(values)) {
+      _fail(
+        'Mp math.aggregate values must be a list or single list binding.',
+        path: '$path.props.values',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'values': values,
+        'operation': operation,
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        'precision': _mathPrecision(props, path: '$path.props'),
+      },
+    );
+  }
+
+  Map<String, dynamic> _parsedMathCommon(
+    Map<String, dynamic> props, {
+    required String path,
+  }) => <String, dynamic>{
+    if (props.containsKey('variables'))
+      'variables': _requiredMathVariables(
+        props['variables'],
+        path: '$path.variables',
+      ),
+    'targetState': _requiredStateKey(props, 'targetState', path: path),
+    if (props.containsKey('errorState'))
+      'errorState': _requiredStateKey(props, 'errorState', path: path),
+  };
+
+  Object _requiredMathOperand(Object? value, {required String path}) {
+    if (value is num && value.isFinite) {
+      return value;
+    }
+    if (value is String && value.trim().isNotEmpty) {
+      if (value.length > _maxMathExpressionLength) {
+        _fail(
+          'Mp math expression exceeds $_maxMathExpressionLength characters.',
+          path: path,
+        );
+      }
+      return value;
+    }
+    _fail(
+      'Mp math operand must be a finite number or non-empty expression.',
+      path: path,
+    );
+  }
+
+  Map<String, dynamic> _requiredMathVariables(
+    Object? value, {
+    required String path,
+  }) {
+    if (value is! Map) {
+      _fail('Mp math variables must be an object.', path: path);
+    }
+    final variables = Map<String, dynamic>.from(value);
+    if (variables.length > _maxMathVariables) {
+      _fail(
+        'Mp math actions support at most $_maxMathVariables variables.',
+        path: path,
+      );
+    }
+    for (final entry in variables.entries) {
+      if (!_mathVariableNamePattern.hasMatch(entry.key) ||
+          _reservedMathNames.contains(entry.key)) {
+        _fail(
+          'Invalid or reserved math variable name.',
+          path: '$path.${entry.key}',
+        );
+      }
+      final variable = entry.value;
+      if (variable is num && variable.isFinite) {
+        continue;
+      }
+      if (variable is String &&
+          _MpBindingResolver.isSingleBindingExpression(variable)) {
+        continue;
+      }
+      _fail(
+        'Mp math variables must be finite numbers or single bindings.',
+        path: '$path.${entry.key}',
+      );
+    }
+    return variables;
+  }
+
+  int _mathPrecision(Map<String, dynamic> props, {required String path}) {
+    final precision =
+        _optionalPositiveInt(props['precision'], path: '$path.precision') ?? 12;
+    if (precision > 15) {
+      _fail('Mp math precision cannot exceed 15.', path: '$path.precision');
+    }
+    return precision;
+  }
+
+  String _mathOption(
+    Map<String, dynamic> props,
+    String key,
+    Set<String> allowed, {
+    String? fallback,
+    required String path,
+  }) {
+    final value = props[key] ?? fallback;
+    if (value is! String || !allowed.contains(value)) {
+      _fail(
+        'Mp math $key must be one of: ${allowed.join(', ')}.',
+        path: '$path.$key',
+      );
+    }
+    return value;
+  }
+
+  Object _requiredIntegerOrBinding(Object? value, {required String path}) {
+    if (value is int ||
+        value is String &&
+            _MpBindingResolver.isSingleBindingExpression(value)) {
+      return value!;
+    }
+    _fail('Mp state list index must be an integer or binding.', path: path);
   }
 
   _MpAction _parseStateRemoveAction(
