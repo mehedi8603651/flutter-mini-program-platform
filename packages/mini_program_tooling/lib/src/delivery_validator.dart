@@ -230,10 +230,10 @@ class DeliveryRepositoryValidator {
       final publishedManifestFile = File(
         path.join(
           backendApiRootPath,
-          'manifests',
+          'artifacts',
           manifest.id,
-          'versions',
-          '${manifest.version}.json',
+          manifest.version,
+          'manifest.json',
         ),
       );
       if (!await publishedManifestFile.exists()) {
@@ -328,12 +328,12 @@ class DeliveryRepositoryValidator {
     required List<DeliveryValidationMessage> messages,
   }) async {
     final publishedVersionsByMiniProgram = <String, Set<String>>{};
-    final manifestsRoot = Directory(path.join(backendApiRootPath, 'manifests'));
-    if (!await manifestsRoot.exists()) {
+    final artifactsRoot = Directory(path.join(backendApiRootPath, 'artifacts'));
+    if (!await artifactsRoot.exists()) {
       return publishedVersionsByMiniProgram;
     }
 
-    final miniProgramDirectories = await manifestsRoot
+    final miniProgramDirectories = await artifactsRoot
         .list()
         .where((entity) => entity is Directory)
         .cast<Directory>()
@@ -376,33 +376,31 @@ class DeliveryRepositoryValidator {
         );
       }
 
-      final versionsDirectory = Directory(
-        path.join(miniProgramDirectory.path, 'versions'),
-      );
-      if (!await versionsDirectory.exists()) {
-        messages.add(
-          DeliveryValidationMessage(
-            severity: ValidationSeverity.error,
-            code: 'manifest_versions_missing',
-            path: _relative(repoRootPath, miniProgramDirectory.path),
-            message: 'Published manifest directory does not contain versions/.',
-          ),
-        );
-        continue;
-      }
-
-      final versionFiles = await versionsDirectory
+      final versionDirectories = await miniProgramDirectory
           .list()
-          .where((entity) => entity is File)
-          .cast<File>()
-          .where((file) => path.extension(file.path) == '.json')
+          .where((entity) => entity is Directory)
+          .cast<Directory>()
+          .where((directory) => !path.basename(directory.path).startsWith('.'))
           .toList();
-      versionFiles.sort((a, b) => a.path.compareTo(b.path));
+      versionDirectories.sort((a, b) => a.path.compareTo(b.path));
 
-      for (final manifestFile in versionFiles) {
-        final expectedVersion = path.basenameWithoutExtension(
-          manifestFile.path,
+      for (final versionDirectory in versionDirectories) {
+        final expectedVersion = path.basename(versionDirectory.path);
+        final manifestFile = File(
+          path.join(versionDirectory.path, 'manifest.json'),
         );
+        if (!await manifestFile.exists()) {
+          messages.add(
+            DeliveryValidationMessage(
+              severity: ValidationSeverity.error,
+              code: 'version_manifest_missing',
+              path: _relative(repoRootPath, versionDirectory.path),
+              message:
+                  'Artifact version directory does not contain manifest.json.',
+            ),
+          );
+          continue;
+        }
         final manifest = await _validatePublishedManifestFile(
           manifestFile: manifestFile,
           expectedMiniProgramId: currentMiniProgramId,
@@ -473,7 +471,7 @@ class DeliveryRepositoryValidator {
           code: 'published_manifest_version_mismatch',
           path: _relative(repoRootPath, manifestFile.path),
           message:
-              'Published manifest version "${manifest.version}" must match filename "$expectedVersion.json".',
+              'Published manifest version "${manifest.version}" must match directory "$expectedVersion".',
         ),
       );
     }
@@ -481,9 +479,10 @@ class DeliveryRepositoryValidator {
     final entryScreenFile = File(
       path.join(
         backendApiRootPath,
-        'screens',
+        'artifacts',
         manifest.id,
         manifest.version,
+        'screens',
         '${manifest.entry}.json',
       ),
     );
@@ -494,7 +493,7 @@ class DeliveryRepositoryValidator {
           code: 'entry_screen_missing',
           path: _relative(repoRootPath, manifestFile.path),
           message:
-              'Entry screen "${manifest.entry}.json" was not found under backend/api/screens/${manifest.id}/${manifest.version}/.',
+              'Entry screen "${manifest.entry}.json" was not found under backend/api/artifacts/${manifest.id}/${manifest.version}/screens/.',
         ),
       );
     }

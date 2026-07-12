@@ -85,10 +85,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
     }
 
     if (_matchesSegments(segments, const ['health'])) {
-      response = buildJsonResponse(
-        body: buildHealthBody(),
-        traceId: traceId,
-      );
+      response = buildJsonResponse(body: buildHealthBody(), traceId: traceId);
       return finalize(response, routeKind: 'health');
     }
 
@@ -108,7 +105,7 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
 
     if (segments.length == 4 &&
         segments[0] == 'api' &&
-        segments[1] == 'manifests' &&
+        segments[1] == 'artifacts' &&
         _isLatestSegment(segments[3])) {
       response = await repository.readLatestManifest(
         miniProgramId: segments[2],
@@ -139,26 +136,21 @@ Handler createLocalBackendHandler({required Directory apiRootDirectory}) {
 
     if (segments.length == 5 &&
         segments[0] == 'api' &&
-        segments[1] == 'manifests' &&
-        segments[3] == 'versions') {
-      final version = _stripJsonSuffix(segments[4]);
-      if (version == null) {
-        response = _badRequest('Manifest version path is invalid.', traceId);
-        return finalize(response, routeKind: 'manifest_versioned_invalid');
-      }
-
+        segments[1] == 'artifacts' &&
+        segments[4] == 'manifest.json') {
       response = await repository.readVersionedManifest(
         miniProgramId: segments[2],
-        version: version,
+        version: segments[3],
         traceId: traceId,
       );
       return finalize(response, routeKind: 'manifest_versioned');
     }
 
-    if (segments.length == 5 &&
+    if (segments.length == 6 &&
         segments[0] == 'api' &&
-        segments[1] == 'screens') {
-      final screenId = _stripJsonSuffix(segments[4]);
+        segments[1] == 'artifacts' &&
+        segments[4] == 'screens') {
+      final screenId = _stripJsonSuffix(segments[5]);
       if (screenId == null) {
         response = _badRequest('Screen path is invalid.', traceId);
         return finalize(response, routeKind: 'screen_invalid');
@@ -202,15 +194,19 @@ class _PublishedArtifactRepository {
       return contextValidationError;
     }
 
-    final manifestsDirectory = Directory(path.join(apiRootPath, 'manifests'));
-    if (!await manifestsDirectory.exists()) {
+    final artifactsDirectory = Directory(path.join(apiRootPath, 'artifacts'));
+    if (!await artifactsDirectory.exists()) {
       return buildJsonResponse(
-        body: buildMiniProgramCatalogBody(entries: const <Map<String, Object?>>[]),
+        body: buildMiniProgramCatalogBody(
+          entries: const <Map<String, Object?>>[],
+        ),
         traceId: traceId,
       );
     }
 
-    final miniProgramIds = await _listPublishedMiniProgramIds(manifestsDirectory);
+    final miniProgramIds = await _listPublishedMiniProgramIds(
+      artifactsDirectory,
+    );
     final entries = <Map<String, Object?>>[];
 
     for (final miniProgramId in miniProgramIds) {
@@ -250,7 +246,8 @@ class _PublishedArtifactRepository {
     }
 
     entries.sort(
-      (left, right) => (left['title'] as String).compareTo(right['title'] as String),
+      (left, right) =>
+          (left['title'] as String).compareTo(right['title'] as String),
     );
 
     logBackendEvent(
@@ -266,7 +263,9 @@ class _PublishedArtifactRepository {
     return buildJsonResponse(
       body: buildMiniProgramCatalogBody(entries: entries),
       traceId: traceId,
-      extraHeaders: <String, String>{'x-mini-program-catalog-count': '${entries.length}'},
+      extraHeaders: <String, String>{
+        'x-mini-program-catalog-count': '${entries.length}',
+      },
     );
   }
 
@@ -301,7 +300,7 @@ class _PublishedArtifactRepository {
             ...selection.decision.toJson(),
             'traceId': traceId,
           },
-      );
+        );
       final headers = <String, String>{
         HttpHeaders.contentTypeHeader: backendJsonContentType,
         'x-mini-program-id': miniProgramId,
@@ -386,10 +385,10 @@ class _PublishedArtifactRepository {
     return _readJsonFile(
       path.join(
         apiRootPath,
-        'manifests',
+        'artifacts',
         miniProgramId,
-        'versions',
-        '$version.json',
+        version,
+        'manifest.json',
       ),
       notFoundMessage:
           'Manifest version "$version" for mini-program "$miniProgramId" was not found.',
@@ -436,10 +435,7 @@ class _PublishedArtifactRepository {
     );
 
     return buildJsonResponse(
-      body: buildInspectionBody(
-        body: report.toJson()
-          ..['traceId'] = traceId,
-      ),
+      body: buildInspectionBody(body: report.toJson()..['traceId'] = traceId),
       traceId: traceId,
       extraHeaders: <String, String>{
         'x-debug-route': 'manifest_decision_inspect',
@@ -484,9 +480,10 @@ class _PublishedArtifactRepository {
     return _readJsonFile(
       path.join(
         apiRootPath,
-        'screens',
+        'artifacts',
         miniProgramId,
         version,
+        'screens',
         '$screenId.json',
       ),
       notFoundMessage:
@@ -669,10 +666,10 @@ class _PublishedArtifactRepository {
   }
 
   Future<List<String>> _listPublishedMiniProgramIds(
-    Directory manifestsDirectory,
+    Directory artifactsDirectory,
   ) async {
     final ids = <String>[];
-    await for (final entity in manifestsDirectory.list(followLinks: false)) {
+    await for (final entity in artifactsDirectory.list(followLinks: false)) {
       if (entity is! Directory) {
         continue;
       }

@@ -66,7 +66,7 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
     );
     final manifestJson = await _loadJsonObject(
       _resolve(
-        'manifests/$miniProgramId/latest.json',
+        'artifacts/$miniProgramId/latest.json',
         queryParameters: queryParameters,
       ),
       resourceLabel: 'manifest',
@@ -81,7 +81,7 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
     required String screenId,
   }) async {
     return _loadJsonObject(
-      _resolve('screens/$miniProgramId/$version/$screenId.json'),
+      _resolve('artifacts/$miniProgramId/$version/screens/$screenId.json'),
       resourceLabel: 'screen',
     );
   }

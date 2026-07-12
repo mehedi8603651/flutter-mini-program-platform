@@ -1,3 +1,9 @@
+## 0.5.7
+
+- Load manifests and screens from the canonical portable artifact layout at
+  `artifacts/<appId>/latest.json` and
+  `artifacts/<appId>/<version>/screens/<screenId>.json`.
+
 ## 0.5.6
 
 - Render and validate reusable styled text and icon action buttons.

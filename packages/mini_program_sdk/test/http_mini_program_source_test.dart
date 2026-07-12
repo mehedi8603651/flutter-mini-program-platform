@@ -10,7 +10,7 @@ void main() {
       'builds manifest query parameters from MiniProgramDeliveryContext',
       () async {
         final client = MockClient((request) async {
-          expect(request.url.path, '/api/manifests/profile_center/latest.json');
+          expect(request.url.path, '/api/artifacts/profile_center/latest.json');
           expect(request.url.queryParameters['hostApp'], 'embedded_app');
           expect(request.url.queryParameters['sdkVersion'], '1.0.0');
           expect(request.url.queryParameters['hostVersion'], '2.4.0');
@@ -51,7 +51,7 @@ void main() {
 
     test('loads the latest manifest from the backend endpoint', () async {
       final client = MockClient((request) async {
-        expect(request.url.path, '/api/manifests/profile_center/latest.json');
+        expect(request.url.path, '/api/artifacts/profile_center/latest.json');
         expect(request.url.queryParameters['hostApp'], 'super_app_host');
         expect(request.url.queryParameters['sdkVersion'], '1.0.0');
         expect(
@@ -81,7 +81,7 @@ void main() {
       final client = MockClient((request) async {
         expect(
           request.url.toString(),
-          'http://localhost:8080/api/screens/profile_center/1.0.0/profile_center_home.json',
+          'http://localhost:8080/api/artifacts/profile_center/1.0.0/screens/profile_center_home.json',
         );
         return http.Response(_screenJson, 200);
       });
@@ -111,7 +111,7 @@ void main() {
                 'access-key'],
           );
           expect(request.headers['x-host-channel'], 'stable');
-          if (request.url.path.contains('/manifests/')) {
+          if (request.url.path.endsWith('/latest.json')) {
             return http.Response(_manifestJson, 200);
           }
           return http.Response(_screenJson, 200);

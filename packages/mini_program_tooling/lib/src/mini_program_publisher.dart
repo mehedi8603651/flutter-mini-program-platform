@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
 import 'delivery_validation.dart';
 import 'delivery_validator.dart';
+import 'mini_program_artifacts.dart';
 import 'mini_program_builder.dart';
 
 class MiniProgramPublishRequest {
@@ -93,6 +93,13 @@ class MiniProgramPublisher {
     final backendRootPath = p.normalize(
       p.absolute(request.backendRootPath ?? request.repoRootPath),
     );
+    final backendApiPath = p.join(backendRootPath, 'backend', 'api');
+    if (!await Directory(backendApiPath).exists()) {
+      throw MiniProgramPublishException(
+        'Artifact workspace API root does not exist: $backendApiPath',
+      );
+    }
+
     final buildResult = await _builder.build(
       MiniProgramBuildRequest(
         repoRootPath: repoRootPath,
@@ -102,7 +109,6 @@ class MiniProgramPublisher {
         skipPubGet: request.skipBuildPubGet,
       ),
     );
-
     final preValidation = await _validator.validate(
       repoRootPath: backendRootPath,
       authoredRepoRootPath: repoRootPath,
@@ -118,27 +124,23 @@ class MiniProgramPublisher {
       );
     }
 
-    final manifestPath = p.join(
-      buildResult.miniProgramRootPath,
-      'manifest.json',
-    );
-    final manifest =
-        jsonDecode(await File(manifestPath).readAsString())
-            as Map<String, dynamic>;
-    final version = '${manifest['version']}'.trim();
-    if (version.isEmpty) {
-      throw MiniProgramPublishException(
-        'Manifest is missing a usable version: $manifestPath',
-      );
+    late final MiniProgramArtifactBuildResult artifactResult;
+    try {
+      artifactResult =
+          await MiniProgramArtifactBuilder(
+            builder: _CompletedMiniProgramBuilder(buildResult),
+          ).build(
+            MiniProgramArtifactBuildRequest(
+              repoRootPath: repoRootPath,
+              miniProgramId: buildResult.miniProgramId,
+              miniProgramRootPath: buildResult.miniProgramRootPath,
+              artifactsRootPath: p.join(backendApiPath, 'artifacts'),
+              skipPubGet: true,
+            ),
+          );
+    } on MiniProgramArtifactException catch (error) {
+      throw MiniProgramPublishException(error.toString());
     }
-
-    final publishResult = await _publishLocalBackendArtifacts(
-      backendRootPath: backendRootPath,
-      miniProgramId: buildResult.miniProgramId,
-      version: version,
-      manifestPath: manifestPath,
-      screensDirectoryPath: buildResult.screensDirectoryPath,
-    );
 
     final postValidation = await _validator.validate(
       repoRootPath: backendRootPath,
@@ -155,143 +157,42 @@ class MiniProgramPublisher {
       );
     }
 
+    final screensDirectoryPath = p.join(
+      artifactResult.versionArtifactsPath,
+      'screens',
+    );
+    final copiedScreenCount = await Directory(screensDirectoryPath)
+        .list(followLinks: false)
+        .where(
+          (entity) => entity is File && p.extension(entity.path) == '.json',
+        )
+        .length;
+
     return MiniProgramPublishResult(
       repoRootPath: repoRootPath,
       backendRootPath: backendRootPath,
       miniProgramId: buildResult.miniProgramId,
-      version: version,
+      version: artifactResult.version,
       buildResult: buildResult,
       prePublishValidation: preValidation,
       postPublishValidation: postValidation,
-      latestManifestPath: publishResult.latestManifestPath,
-      versionedManifestPath: publishResult.versionedManifestPath,
-      screensDirectoryPath: publishResult.screensDirectoryPath,
-      copiedScreenCount: publishResult.copiedScreenCount,
-    );
-  }
-
-  Future<_LocalPublishResult> _publishLocalBackendArtifacts({
-    required String backendRootPath,
-    required String miniProgramId,
-    required String version,
-    required String manifestPath,
-    required String screensDirectoryPath,
-  }) async {
-    final normalizedBackendRootPath = p.normalize(p.absolute(backendRootPath));
-    final backendRootDir = Directory(
-      p.join(normalizedBackendRootPath, 'backend'),
-    );
-    if (!await backendRootDir.exists()) {
-      throw MiniProgramPublishException(
-        'Artifact workspace root does not exist: ${backendRootDir.path}',
-      );
-    }
-
-    final screensDirectory = Directory(screensDirectoryPath);
-    if (!await screensDirectory.exists()) {
-      throw MiniProgramPublishException(
-        'Built screens directory does not exist: $screensDirectoryPath',
-      );
-    }
-
-    final apiRootPath = p.join(normalizedBackendRootPath, 'backend', 'api');
-    final manifestTargetDirPath = p.join(
-      apiRootPath,
-      'manifests',
-      miniProgramId,
-    );
-    final versionedManifestDirPath = p.join(manifestTargetDirPath, 'versions');
-    final latestManifestPath = p.join(manifestTargetDirPath, 'latest.json');
-    final versionedManifestPath = p.join(
-      versionedManifestDirPath,
-      '$version.json',
-    );
-    final screenTargetDirPath = p.join(
-      apiRootPath,
-      'screens',
-      miniProgramId,
-      version,
-    );
-
-    for (final path in <String>[
-      manifestTargetDirPath,
-      versionedManifestDirPath,
-      screenTargetDirPath,
-    ]) {
-      _assertContainedPath(
-        path: path,
-        root: p.join(normalizedBackendRootPath, 'backend'),
-      );
-      await Directory(path).create(recursive: true);
-    }
-
-    await File(manifestPath).copy(latestManifestPath);
-    await File(manifestPath).copy(versionedManifestPath);
-
-    final existingScreenFiles = await Directory(screenTargetDirPath)
-        .list(followLinks: false)
-        .where((entity) => entity is File)
-        .cast<File>()
-        .where((file) => p.extension(file.path) == '.json')
-        .toList();
-    for (final file in existingScreenFiles) {
-      await file.delete();
-    }
-
-    var copiedScreenCount = 0;
-    final builtScreenFiles = await screensDirectory
-        .list(followLinks: false)
-        .where((entity) => entity is File)
-        .cast<File>()
-        .where((file) => p.extension(file.path) == '.json')
-        .toList();
-    builtScreenFiles.sort((a, b) => a.path.compareTo(b.path));
-
-    for (final sourceFile in builtScreenFiles) {
-      final targetPath = p.join(
-        screenTargetDirPath,
-        p.basename(sourceFile.path),
-      );
-      await sourceFile.copy(targetPath);
-      copiedScreenCount += 1;
-    }
-
-    if (copiedScreenCount == 0) {
-      throw MiniProgramPublishException(
-        'No built screen JSON files were found in $screensDirectoryPath',
-      );
-    }
-
-    return _LocalPublishResult(
-      latestManifestPath: latestManifestPath,
-      versionedManifestPath: versionedManifestPath,
-      screensDirectoryPath: screenTargetDirPath,
+      latestManifestPath: artifactResult.latestManifestPath,
+      versionedManifestPath: p.join(
+        artifactResult.versionArtifactsPath,
+        'manifest.json',
+      ),
+      screensDirectoryPath: screensDirectoryPath,
       copiedScreenCount: copiedScreenCount,
     );
   }
-
-  void _assertContainedPath({required String path, required String root}) {
-    final resolvedPath = p.normalize(p.absolute(path));
-    final resolvedRoot = p.normalize(p.absolute(root));
-    if (!p.isWithin(resolvedRoot, resolvedPath) &&
-        resolvedPath != resolvedRoot) {
-      throw MiniProgramPublishException(
-        'Publish target escaped backend root: $resolvedPath',
-      );
-    }
-  }
 }
 
-class _LocalPublishResult {
-  const _LocalPublishResult({
-    required this.latestManifestPath,
-    required this.versionedManifestPath,
-    required this.screensDirectoryPath,
-    required this.copiedScreenCount,
-  });
+class _CompletedMiniProgramBuilder extends MiniProgramBuilder {
+  const _CompletedMiniProgramBuilder(this.result);
 
-  final String latestManifestPath;
-  final String versionedManifestPath;
-  final String screensDirectoryPath;
-  final int copiedScreenCount;
+  final MiniProgramBuildResult result;
+
+  @override
+  Future<MiniProgramBuildResult> build(MiniProgramBuildRequest request) async =>
+      result;
 }

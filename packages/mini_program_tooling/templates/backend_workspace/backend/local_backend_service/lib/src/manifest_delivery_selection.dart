@@ -218,10 +218,10 @@ class ManifestDeliverySelector {
       manifestJson = await _readJsonMap(
         path.join(
           apiRootPath,
-          'manifests',
+          'artifacts',
           miniProgramId,
-          'versions',
-          '${decision.resolvedVersion}.json',
+          decision.resolvedVersion,
+          'manifest.json',
         ),
         notFoundMessage:
             'Manifest version "${decision.resolvedVersion}" for mini-program "$miniProgramId" was not found.',
@@ -294,10 +294,10 @@ class ManifestDeliverySelector {
       final manifestJson = await _readJsonMap(
         path.join(
           apiRootPath,
-          'manifests',
+          'artifacts',
           miniProgramId,
-          'versions',
-          '${decision.resolvedVersion}.json',
+          decision.resolvedVersion,
+          'manifest.json',
         ),
         notFoundMessage:
             'Manifest version "${decision.resolvedVersion}" for mini-program "$miniProgramId" was not found.',
@@ -515,7 +515,7 @@ class ManifestDeliverySelector {
 
   String _readStaticLatestVersion(String miniProgramId) {
     final file = File(
-      path.join(apiRootPath, 'manifests', miniProgramId, 'latest.json'),
+      path.join(apiRootPath, 'artifacts', miniProgramId, 'latest.json'),
     );
 
     if (!file.existsSync()) {

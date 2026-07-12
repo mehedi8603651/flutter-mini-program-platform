@@ -11,6 +11,7 @@ import 'local_backend_controller.dart';
 import 'local_backend_initializer.dart';
 import 'local_cli_state.dart';
 import 'mini_program_builder.dart';
+import 'mini_program_artifacts.dart';
 import 'mini_program_host_controller.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
@@ -27,6 +28,7 @@ import 'publisher_backend_starter.dart';
 
 part 'cli/miniprogram_cli_constants.dart';
 part 'cli/core_commands.dart';
+part 'cli/artifact_commands.dart';
 part 'cli/workflow_commands.dart';
 part 'cli/host_partner_commands.dart';
 part 'cli/env_commands.dart';
@@ -44,6 +46,10 @@ class MiniprogramCli {
   MiniprogramCli({
     MiniProgramScaffolder scaffolder = const MiniProgramScaffolder(),
     MiniProgramBuilder builder = const MiniProgramBuilder(),
+    MiniProgramArtifactBuilder artifactBuilder =
+        const MiniProgramArtifactBuilder(),
+    MiniProgramArtifactVerifier artifactVerifier =
+        const MiniProgramArtifactVerifier(),
     DeliveryRepositoryValidator validator = const DeliveryRepositoryValidator(),
     MiniProgramPublisher publisher = const MiniProgramPublisher(),
     MiniProgramEmbeddingInitializer embeddingInitializer =
@@ -70,6 +76,8 @@ class MiniprogramCli {
     String? workingDirectory,
   }) : _scaffolder = scaffolder,
        _builder = builder,
+       _artifactBuilder = artifactBuilder,
+       _artifactVerifier = artifactVerifier,
        _validator = validator,
        _publisher = publisher,
        _embeddingInitializer = embeddingInitializer,
@@ -90,6 +98,8 @@ class MiniprogramCli {
 
   final MiniProgramScaffolder _scaffolder;
   final MiniProgramBuilder _builder;
+  final MiniProgramArtifactBuilder _artifactBuilder;
+  final MiniProgramArtifactVerifier _artifactVerifier;
   final DeliveryRepositoryValidator _validator;
   final MiniProgramPublisher _publisher;
   final MiniProgramEmbeddingInitializer _embeddingInitializer;
@@ -129,6 +139,8 @@ class MiniprogramCli {
           return await _runEnv(arguments.sublist(1));
         case 'build':
           return await _runBuild(arguments.sublist(1));
+        case 'artifact':
+          return await _runArtifact(arguments.sublist(1));
         case 'preview':
           return await _runPreview(arguments.sublist(1));
         case 'validate':
@@ -144,9 +156,9 @@ class MiniprogramCli {
         case 'clo'
             'ud':
           throw const FormatException(
-            'provider delivery commands were removed. Publish static '
-            'artifacts with `miniprogram publish --target static` and host '
-            'them on any simple static file host.',
+            'provider delivery commands were removed. Build portable '
+            'artifacts with `miniprogram artifact build`, verify them, and '
+            'host the artifacts directory on any static file host.',
           );
         case 'workflow':
           return await _runWorkflow(arguments.sublist(1));
@@ -186,6 +198,12 @@ class MiniprogramCli {
       return 1;
     } on MiniProgramBuildException catch (error) {
       _stderr.writeln(error.message);
+      return 1;
+    } on MiniProgramArtifactException catch (error) {
+      _stderr.writeln(error);
+      if (error.details.isNotEmpty) {
+        _stderr.writeln(_prettyJson(error.details));
+      }
       return 1;
     } on MiniProgramPreviewException catch (error) {
       _stderr.writeln(error.message);

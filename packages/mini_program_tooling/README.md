@@ -44,15 +44,15 @@ The CLI has two main jobs:
 The normal static flow is:
 
 ```text
-create -> edit -> preview -> build -> validate -> publish static -> partner package -> embed/import host -> run host
+create -> edit -> preview -> build -> validate -> artifact build -> artifact verify -> partner package -> embed/import host -> run host
 ```
 
 Important terms:
 
 - `mini-program root`: the folder with `manifest.json`, `mp/`, `tool/`, and `pubspec.yaml`
 - `host project root`: the Flutter app folder with `pubspec.yaml`, `lib/`, and platform folders
-- `public_mini_program`: the generated static artifact folder to upload
-- `artifactBaseUrl`: the public URL where `public_mini_program` is hosted
+- `artifacts`: the generated portable static artifact root to upload
+- `artifactBaseUrl`: the public URL whose `artifacts/` child is hosted
 - `partner package`: JSON handoff containing `appId`, title, and `artifactBaseUrl`
 - `publisher API`: optional middle-server API for runtime data actions
 
@@ -172,37 +172,37 @@ Use an explicit root when needed:
 miniprogram validate --mini-program-root D:\my_profile
 ```
 
-### 5. Publish Static Artifacts
+### 5. Build Portable Artifacts
 
 Use when the mini-program is ready to serve from GitHub Pages, CDN, object
 storage, or any HTTPS static file host.
 
 ```powershell
-miniprogram publish --target static --output public_mini_program --clean
+miniprogram artifact build
+miniprogram artifact verify
 ```
 
 Use explicit paths:
 
 ```powershell
-miniprogram publish --target static `
+miniprogram artifact build `
   --mini-program-root D:\my_profile `
-  --output D:\my_profile\public_mini_program `
-  --clean
+  --artifacts-root D:\my_profile\artifacts
 ```
 
 Static output includes:
 
 ```text
-manifests/<appId>/latest.json
-manifests/<appId>/versions/<version>.json
-screens/<appId>/<version>/<screenId>.json
-assets/<appId>/<version>/
-metadata/
-.nojekyll
-PUBLISH_INSTRUCTIONS.md
+artifacts/<appId>/latest.json
+artifacts/<appId>/catalog.json
+artifacts/<appId>/<version>/manifest.json
+artifacts/<appId>/<version>/release.json
+artifacts/<appId>/<version>/checksums.json
+artifacts/<appId>/<version>/screens/<screenId>.json
+artifacts/<appId>/<version>/assets/
 ```
 
-Upload the contents of `public_mini_program` to a public static host.
+Upload or copy the generated `artifacts` directory to a public static host.
 
 For GitHub Pages, a common URL is:
 
@@ -545,7 +545,8 @@ miniprogram env status --json
 | `miniprogram preview -d chrome` | Test UI quickly during editing. |
 | `miniprogram build` | Generate Mp JSON from Dart authoring code. |
 | `miniprogram validate` | Check manifest and generated screen JSON. |
-| `miniprogram publish --target static` | Write public static artifact files. |
+| `miniprogram artifact build` | Create an immutable portable release bundle. |
+| `miniprogram artifact verify` | Verify bundle structure, identity, and checksums. |
 | `miniprogram partner package <appId>` | Create a JSON handoff for host apps. |
 | `miniprogram embed init` | Add SDK integration files to a Flutter host. |
 | `miniprogram host endpoint import` | Import a partner package into a host. |
@@ -560,10 +561,9 @@ miniprogram env status --json
 
 - `miniprogram` is not recognized: add Dart pub global bin to `PATH`.
 - Host cannot open the mini-program: check `artifactBaseUrl` and verify
-  `manifests/<appId>/latest.json` opens in a browser.
-- Static publish looks empty on GitHub Pages: upload the contents of
-  `public_mini_program`, not the folder itself unless the URL includes that
-  folder name.
+  `artifacts/<appId>/latest.json` opens in a browser.
+- Static artifacts are missing on GitHub Pages: upload the generated
+  `artifacts` directory without changing its internal paths.
 - Android release build fails with disk errors: keep 5-8 GB free on `C:`.
 - Android release build reports missing Cupertino icons: add
   `cupertino_icons: ^1.0.8` to the host app dependencies.

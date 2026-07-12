@@ -5,18 +5,17 @@ The package name remains `local_backend_service` for compatibility.
 
 ## What it does
 
-- serves manifest JSON from `backend/api/manifests`
-- serves screen JSON from `backend/api/screens`
+- serves portable mini-program bundles from `backend/api/artifacts`
 - applies local rollout rules for `latest` manifest selection
 - enforces capability-aware manifest delivery when policy files exist
 - returns JSON `404` and `400` responses instead of raw file-server behavior
-- gives the workspace a real local artifact host before production static
-  hosting is configured
+- gives the repo a real local artifact host before production static hosting is
+  configured
 
 ## Run
 
 ```powershell
-cd backend\local_backend_service
+cd D:\flutter-mini-program-platform\backend\local_backend_service
 dart pub get
 dart run bin\server.dart
 ```
@@ -34,12 +33,9 @@ Default base URL:
 ## Endpoints
 
 - `GET /health`
-- `GET /api/manifests/:id/latest`
-- `GET /api/manifests/:id/latest.json`
-- `GET /api/manifests/:id/versions/:version`
-- `GET /api/manifests/:id/versions/:version.json`
-- `GET /api/screens/:id/:version/:screenId`
-- `GET /api/screens/:id/:version/:screenId.json`
+- `GET /api/artifacts/:id/latest.json`
+- `GET /api/artifacts/:id/:version/manifest.json`
+- `GET /api/artifacts/:id/:version/screens/:screenId.json`
 
 ## Query-aware latest delivery
 
@@ -49,6 +45,10 @@ manifest route can use query parameters such as:
 - `hostApp`
 - `sdkVersion`
 - `capabilities`
+
+`sdkVersion` is the host runtime compatibility version used for manifest
+`sdkVersionRange` checks. It is not the Dart pub package version of
+`mini_program_sdk`.
 
 For the current `profile_center` sample, a missing required capability returns
 `412` with a JSON error body instead of a manifest.

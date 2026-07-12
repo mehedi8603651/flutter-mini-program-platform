@@ -17,6 +17,8 @@ void _registerCoreAndPreviewTests() {
       expect(stderrBuffer.toString(), isEmpty);
       final output = stdoutBuffer.toString();
       expect(output, contains('create <mini-program-id> [--screen-format mp]'));
+      expect(output, contains('artifact build [mini-program-id]'));
+      expect(output, contains('artifact verify [mini-program-id]'));
       expect(
         output,
         contains('publish [mini-program-id] [--target local|static]'),
@@ -100,6 +102,20 @@ void _registerCoreAndPreviewTests() {
     expect(previewStdout.toString(), contains('--mp-build-script'));
   });
 
+  test('artifact help exposes portable build and verify commands', () async {
+    final stdoutBuffer = StringBuffer();
+    final exitCode = await MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: StringBuffer(),
+      workingDirectory: tempDir.path,
+    ).run(<String>['artifact', '--help']);
+
+    expect(exitCode, 0);
+    expect(stdoutBuffer.toString(), contains('build [mini-program-id]'));
+    expect(stdoutBuffer.toString(), contains('verify [mini-program-id]'));
+  });
+
   test(
     'capabilities expose only static artifact and runtime API support',
     () async {
@@ -113,7 +129,7 @@ void _registerCoreAndPreviewTests() {
 
       expect(exitCode, 0);
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['toolingVersion'], '0.6.2');
+      expect(json['toolingVersion'], '0.6.8');
       final capabilities = (json['capabilityIds'] as List).cast<String>();
       expect(capabilities, contains('publish.static'));
       expect(capabilities, contains('publisher_api.mock.scaffold'));
@@ -178,6 +194,53 @@ void _registerCoreAndPreviewTests() {
     );
   });
 
+  test('artifact build and verify use the mini-program local bundle', () async {
+    final miniProgramRoot = p.join(tempDir.path, 'calculator');
+    await _writeMiniProgramFixture(
+      miniProgramRoot,
+      miniProgramId: 'calculator',
+      version: '1.0.0',
+    );
+    final buildOutput = StringBuffer();
+    final buildErrors = StringBuffer();
+    final cli = MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: buildOutput,
+      stderrSink: buildErrors,
+      workingDirectory: miniProgramRoot,
+    );
+
+    expect(await cli.run(<String>['artifact', 'build', '--skip-pub-get']), 0);
+    expect(buildErrors.toString(), isEmpty);
+    expect(buildOutput.toString(), contains('Version: 1.0.0'));
+    expect(
+      await File(
+        p.join(
+          miniProgramRoot,
+          'artifacts',
+          'calculator',
+          '1.0.0',
+          'checksums.json',
+        ),
+      ).exists(),
+      isTrue,
+    );
+
+    final verifyOutput = StringBuffer();
+    final verifyErrors = StringBuffer();
+    expect(
+      await MiniprogramCli(
+        stateStore: stateStore,
+        stdoutSink: verifyOutput,
+        stderrSink: verifyErrors,
+        workingDirectory: miniProgramRoot,
+      ).run(<String>['artifact', 'verify']),
+      0,
+    );
+    expect(verifyErrors.toString(), isEmpty);
+    expect(verifyOutput.toString(), contains('Artifact verification passed.'));
+  });
+
   test('publish static writes a public artifact folder', () async {
     final miniProgramRoot = p.join(tempDir.path, 'coupon_center');
     await _writeMiniProgramFixture(
@@ -210,7 +273,7 @@ void _registerCoreAndPreviewTests() {
     );
     expect(
       await File(
-        p.join(outputRoot, 'manifests', 'coupon_center', 'latest.json'),
+        p.join(outputRoot, 'artifacts', 'coupon_center', 'latest.json'),
       ).exists(),
       isTrue,
     );

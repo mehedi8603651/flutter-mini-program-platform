@@ -130,6 +130,35 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
+  String _formatArtifactBuildResult(MiniProgramArtifactBuildResult result) {
+    return <String>[
+      result.created
+          ? 'Created immutable mini-program artifact.'
+          : 'Artifact already exists with identical content.',
+      'Mini-program: ${result.buildResult.miniProgramId}',
+      'Version: ${result.version}',
+      'Artifacts root: ${result.artifactsRootPath}',
+      'Version directory: ${result.versionArtifactsPath}',
+      'Latest manifest: ${result.latestManifestPath}',
+      'Catalog: ${result.catalogPath}',
+      'Latest updated: ${result.latestUpdated}',
+      'Files: ${result.fileCount}',
+      'Bytes: ${result.totalBytes}',
+    ].join('\n');
+  }
+
+  String _formatArtifactVerifyResult(MiniProgramArtifactVerifyResult result) {
+    return <String>[
+      'Artifact verification passed.',
+      'Mini-program: ${result.miniProgramId}',
+      'Latest version: ${result.latestVersion}',
+      'Versions: ${result.versions.join(', ')}',
+      'App artifacts: ${result.appArtifactsPath}',
+      'Files verified: ${result.fileCount}',
+      'Bytes verified: ${result.totalBytes}',
+    ].join('\n');
+  }
+
   String _formatPublishResult(MiniProgramPublishResult result) {
     final lines = <String>[
       'Published mini-program: ${result.miniProgramId}',

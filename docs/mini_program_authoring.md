@@ -264,17 +264,20 @@ Normal flow:
 ```powershell
 miniprogram build
 miniprogram validate
-miniprogram publish --target static --output public_mini_program --clean
+miniprogram artifact build
+miniprogram artifact verify
 ```
 
 Static publish writes the public artifact layout:
 
 ```text
-manifests/<appId>/latest.json
-manifests/<appId>/versions/<version>.json
-screens/<appId>/<version>/<screenId>.json
-assets/<appId>/<version>/
-metadata/
+artifacts/<appId>/latest.json
+artifacts/<appId>/catalog.json
+artifacts/<appId>/<version>/manifest.json
+artifacts/<appId>/<version>/release.json
+artifacts/<appId>/<version>/checksums.json
+artifacts/<appId>/<version>/screens/<screenId>.json
+artifacts/<appId>/<version>/assets/
 ```
 
 ## Practical Guidance

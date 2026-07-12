@@ -2,10 +2,12 @@ part of '../miniprogram_cli.dart';
 
 const List<String> _supportedPublishTargets = <String>['local', 'static'];
 
-const String _miniProgramToolingVersion = '0.6.2';
+const String _miniProgramToolingVersion = '0.6.8';
 
 const List<String> _capabilityIds = <String>[
   'publish.static',
+  'artifact.build',
+  'artifact.verify',
   'publisher_api.mock.scaffold',
   'publisher_api.mock.run',
   'publisher_backend.contract.init',

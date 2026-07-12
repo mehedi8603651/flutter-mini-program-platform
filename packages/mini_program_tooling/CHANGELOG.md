@@ -1,3 +1,12 @@
+## 0.6.8
+
+- Add deterministic `miniprogram artifact build` and
+  `miniprogram artifact verify` commands for portable immutable bundles.
+- Standardize artifact delivery on
+  `artifacts/<appId>/<version>/` with checksums, release metadata, a catalog,
+  and an atomically updated latest manifest.
+- Generate hosts with `mini_program_sdk: ^0.5.7` for canonical artifact URLs.
+
 ## 0.6.7
 
 - Generate mini-programs with `mini_program_ui: ^0.1.8` and hosts with

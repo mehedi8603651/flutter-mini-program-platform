@@ -184,26 +184,29 @@ Validation checks the manifest and generated screen JSON.
 ## 7. Publish Static Artifacts
 
 ```powershell
-miniprogram publish --target static --output public_mini_program --clean
+miniprogram artifact build
+miniprogram artifact verify
 ```
 
-This writes public static files under:
+This writes portable static files under:
 
 ```text
-D:\my_profile\public_mini_program
+D:\my_profile\artifacts
 ```
 
-That folder is the mini-program artifact bundle. Upload the contents of this
-folder to a public static file host.
+That folder is the portable artifact root. Copy or upload it to a public static
+file host without changing its internal paths.
 
 The artifact layout includes:
 
 ```text
-manifests/my_profile/latest.json
-manifests/my_profile/versions/1.0.0.json
-screens/my_profile/<version>/<screenId>.json
-assets/my_profile/<version>/
-metadata/
+artifacts/my_profile/latest.json
+artifacts/my_profile/catalog.json
+artifacts/my_profile/1.0.0/manifest.json
+artifacts/my_profile/1.0.0/release.json
+artifacts/my_profile/1.0.0/checksums.json
+artifacts/my_profile/1.0.0/screens/<screenId>.json
+artifacts/my_profile/1.0.0/assets/
 ```
 
 ## 8. Publish With GitHub Pages
@@ -212,8 +215,8 @@ GitHub Pages is the easiest first static host because most developers already
 know GitHub.
 
 1. Create a public GitHub repository named `my_profile_static`.
-2. Upload or push the contents of `D:\my_profile\public_mini_program` into the
-   repository root.
+2. Upload or push `D:\my_profile\artifacts` into the repository root so the
+   repository contains `artifacts/my_profile/...`.
 3. In GitHub, open repository settings and enable Pages from the branch root. example: go to your root repo settings then click Pages button then Branch None change add main and then /root are okay then click save then need few minute for page can be live.
 4. Use the GitHub Pages URL as the artifact base URL.
 
@@ -226,11 +229,11 @@ https://<github-user>.github.io/my_profile_static/
 The trailing slash is recommended. You can verify the publish by opening:
 
 ```text
-https://<github-user>.github.io/my_profile_static/manifests/my_profile/latest.json
+https://<github-user>.github.io/my_profile_static/artifacts/my_profile/latest.json
 ```
 
 Other static hosts work the same way. Any HTTPS host that serves static files
-can serve `public_mini_program`, including S3/object storage, Cloudflare Pages,
+can serve the `artifacts` directory, including S3/object storage, Cloudflare Pages,
 Netlify, Vercel, a CDN, or a normal static server. Track 1 does not need any
 provider-specific setup beyond serving static files.
 
@@ -471,8 +474,8 @@ The VS Code extension runs the same CLI commands.
 5. `MiniProgram: Preview`
 6. `MiniProgram: Build`
 7. `MiniProgram: Validate`
-8. `MiniProgram: Publish Public Static MiniProgram`
-9. Publish `public_mini_program` to GitHub Pages.
+8. Run `miniprogram artifact build` and `miniprogram artifact verify`.
+9. Publish the generated `artifacts` directory to GitHub Pages.
 10. `MiniProgram: Create Partner Package`
 11. Create or open the Flutter host app workspace.
 12. `MiniProgram: Embed Init`

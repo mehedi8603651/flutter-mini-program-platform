@@ -17,9 +17,10 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       case 'configure':
         throw const FormatException(
           'env configure provider delivery was removed. Mini-program '
-          'artifacts are static files; publish with '
-          '`miniprogram publish --target static --output <folder>` and host '
-          'that folder anywhere.',
+          'artifacts are static files; build with '
+          '`miniprogram artifact build`, verify with '
+          '`miniprogram artifact verify`, and host the generated artifacts '
+          'directory anywhere.',
         );
       case 'list':
         return _runEnvList(arguments.sublist(1));
@@ -236,8 +237,8 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
     }
     throw FormatException(
       'Environment "$rawName" is not supported in the MVP flow. '
-      'Mini-program artifacts are public static files; publish with '
-      '`miniprogram publish --target static --output <folder>` and use '
+      'Mini-program artifacts are public static files; build with '
+      '`miniprogram artifact build`, verify the result, and use '
       'an optional middle-server API from runtime actions.',
     );
   }

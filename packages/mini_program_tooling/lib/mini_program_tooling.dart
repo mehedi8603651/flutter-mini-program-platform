@@ -1,4 +1,5 @@
 export 'src/mini_program_builder.dart';
+export 'src/mini_program_artifacts.dart';
 export 'src/mini_program_host_controller.dart';
 export 'src/mini_program_partner_handoff.dart';
 export 'src/mini_program_workflow_status.dart';

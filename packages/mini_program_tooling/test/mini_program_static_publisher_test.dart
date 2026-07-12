@@ -46,7 +46,9 @@ void main() {
       );
       await File(
         p.join(screensDirectoryPath, 'coupon_center_home.json'),
-      ).writeAsString('{"type":"text","data":"Coupon Center"}');
+      ).writeAsString('''
+{"schemaVersion":1,"screenId":"coupon_center_home","root":{"type":"text","props":{"data":"Coupon Center"},"children":[]}}
+''');
       await File(
         p.join(miniProgramRoot.path, 'assets', 'icon.png'),
       ).writeAsBytes(<int>[0, 1, 2, 3]);
@@ -93,7 +95,7 @@ void main() {
       expect(result.version, '1.2.3');
       expect(
         File(
-          p.join(outputPath, 'manifests', 'coupon_center', 'latest.json'),
+          p.join(outputPath, 'artifacts', 'coupon_center', 'latest.json'),
         ).existsSync(),
         isTrue,
       );
@@ -101,10 +103,10 @@ void main() {
         File(
           p.join(
             outputPath,
-            'manifests',
+            'artifacts',
             'coupon_center',
-            'versions',
-            '1.2.3.json',
+            '1.2.3',
+            'manifest.json',
           ),
         ).existsSync(),
         isTrue,
@@ -113,9 +115,10 @@ void main() {
         File(
           p.join(
             outputPath,
-            'screens',
+            'artifacts',
             'coupon_center',
             '1.2.3',
+            'screens',
             'coupon_center_home.json',
           ),
         ).existsSync(),
@@ -123,7 +126,14 @@ void main() {
       );
       expect(
         File(
-          p.join(outputPath, 'assets', 'coupon_center', '1.2.3', 'icon.png'),
+          p.join(
+            outputPath,
+            'artifacts',
+            'coupon_center',
+            '1.2.3',
+            'assets',
+            'icon.png',
+          ),
         ).existsSync(),
         isTrue,
       );
@@ -133,20 +143,20 @@ void main() {
                 await File(
                   p.join(
                     outputPath,
-                    'metadata',
-                    'catalog',
-                    'coupon_center.json',
+                    'artifacts',
+                    'coupon_center',
+                    'catalog.json',
                   ),
                 ).readAsString(),
               )
               as Map<String, dynamic>;
-      expect(catalog['provider'], 'static');
+      expect(catalog['artifactLayoutVersion'], 1);
       expect(catalog['latestVersion'], '1.2.3');
       expect(
         await File(
           p.join(outputPath, 'PUBLISH_INSTRUCTIONS.md'),
         ).readAsString(),
-        contains('MiniProgramEndpoint.public'),
+        contains('portable artifact bundle'),
       );
       expect(await File(p.join(outputPath, '.nojekyll')).exists(), isTrue);
     });
@@ -178,9 +188,10 @@ void main() {
         File(
           p.join(
             outputPath,
-            'screens',
+            'artifacts',
             'mp_coupon_center',
             '1.0.0',
+            'screens',
             'mp_coupon_center_home.json',
           ),
         ).existsSync(),
@@ -193,23 +204,19 @@ void main() {
       final catalog =
           jsonDecode(await File(result.metadataCatalogPath).readAsString())
               as Map<String, dynamic>;
-      expect(release['screenFormat'], 'mp');
-      expect(release['screenSchemaVersion'], 1);
-      expect(catalog['screenFormat'], 'mp');
-      expect(catalog['screenSchemaVersion'], 1);
-      expect(
-        release['artifacts'],
-        containsPair('screensBasePath', 'screens/mp_coupon_center/1.0.0/'),
-      );
+      expect(release['artifactLayoutVersion'], 1);
+      expect(release['screensPath'], 'screens/');
+      expect(catalog['artifactLayoutVersion'], 1);
+      expect(catalog['latestVersion'], '1.0.0');
     });
 
-    test('clean removes only generated static output before writing', () async {
+    test('clean is app-scoped and preserves unrelated artifacts', () async {
       final outputPath = p.join(tempDir.path, 'public_mini_program');
       await Directory(
-        p.join(outputPath, 'screens', 'old_app'),
+        p.join(outputPath, 'artifacts', 'old_app'),
       ).create(recursive: true);
       await File(
-        p.join(outputPath, 'screens', 'old_app', 'old.json'),
+        p.join(outputPath, 'artifacts', 'old_app', 'old.json'),
       ).writeAsString('{}');
       await File(p.join(outputPath, 'README.md')).writeAsString('keep me');
 
@@ -245,9 +252,9 @@ void main() {
       expect(result.cleaned, isTrue);
       expect(
         await File(
-          p.join(outputPath, 'screens', 'old_app', 'old.json'),
+          p.join(outputPath, 'artifacts', 'old_app', 'old.json'),
         ).exists(),
-        isFalse,
+        isTrue,
       );
       expect(
         await File(p.join(outputPath, 'README.md')).readAsString(),
@@ -257,9 +264,10 @@ void main() {
         await File(
           p.join(
             outputPath,
-            'screens',
+            'artifacts',
             'coupon_center',
             '1.2.3',
+            'screens',
             'coupon_center_home.json',
           ),
         ).exists(),

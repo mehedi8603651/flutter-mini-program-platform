@@ -11,6 +11,8 @@ Commands:
   env init|list|status
   env use local
   build [mini-program-id]
+  artifact build [mini-program-id]
+  artifact verify [mini-program-id]
   preview -d <chrome|edge|ios|linux|macos|windows|emulator-5554|android-device-id|android-wifi-device-id> [mini-program-id]
   validate [mini-program-id]
   publish [mini-program-id] [--target local|static] [--output <folder>] [--clean]
@@ -36,6 +38,14 @@ Commands:
 
 Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
+''';
+
+  String _artifactUsage() => '''
+Usage: miniprogram artifact <command> [arguments]
+
+Commands:
+  build [mini-program-id]   Create an immutable portable artifact bundle.
+  verify [mini-program-id]  Verify structure, identity, and SHA-256 checksums.
 ''';
 
   String _workflowUsage() => '''

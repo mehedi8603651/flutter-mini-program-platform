@@ -445,7 +445,7 @@ class MiniProgramWorkflowStatusController {
           actions.add('Run `miniprogram validate`.');
         }
         actions.add(
-          'Publish static artifacts with `miniprogram publish --target static --output <folder>`.',
+          'Build and verify portable artifacts with `miniprogram artifact build` and `miniprogram artifact verify`.',
         );
       case 'host_app':
         if (hostApp['runtimeSetupExists'] != true) {

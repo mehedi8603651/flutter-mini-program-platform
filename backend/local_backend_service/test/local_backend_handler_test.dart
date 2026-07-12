@@ -17,7 +17,7 @@ void main() {
 
     await _writeJsonFile(
       tempDirectory,
-      'manifests/profile_center/latest.json',
+      'artifacts/profile_center/latest.json',
       <String, Object?>{
         'id': 'profile_center',
         'version': '1.1.0',
@@ -29,7 +29,7 @@ void main() {
     );
     await _writeJsonFile(
       tempDirectory,
-      'manifests/profile_center/versions/1.1.0.json',
+      'artifacts/profile_center/1.1.0/manifest.json',
       <String, Object?>{
         'id': 'profile_center',
         'version': '1.1.0',
@@ -41,7 +41,7 @@ void main() {
     );
     await _writeJsonFile(
       tempDirectory,
-      'manifests/profile_center/versions/1.0.0.json',
+      'artifacts/profile_center/1.0.0/manifest.json',
       <String, Object?>{
         'id': 'profile_center',
         'version': '1.0.0',
@@ -53,17 +53,17 @@ void main() {
     );
     await _writeJsonFile(
       tempDirectory,
-      'screens/profile_center/1.0.0/profile_center_home.json',
+      'artifacts/profile_center/1.0.0/screens/profile_center_home.json',
       <String, Object?>{'type': 'scaffold', 'versionLabel': '1.0.0'},
     );
     await _writeJsonFile(
       tempDirectory,
-      'screens/profile_center/1.1.0/profile_center_home.json',
+      'artifacts/profile_center/1.1.0/screens/profile_center_home.json',
       <String, Object?>{'type': 'scaffold', 'versionLabel': '1.1.0'},
     );
     await _writeJsonFile(
       tempDirectory,
-      'manifests/feedback_form/latest.json',
+      'artifacts/feedback_form/latest.json',
       <String, Object?>{
         'id': 'feedback_form',
         'version': '1.1.0',
@@ -79,7 +79,7 @@ void main() {
     );
     await _writeJsonFile(
       tempDirectory,
-      'manifests/feedback_form/versions/1.1.0.json',
+      'artifacts/feedback_form/1.1.0/manifest.json',
       <String, Object?>{
         'id': 'feedback_form',
         'version': '1.1.0',
@@ -95,7 +95,7 @@ void main() {
     );
     await _writeJsonFile(
       tempDirectory,
-      'manifests/feedback_form/versions/1.0.0.json',
+      'artifacts/feedback_form/1.0.0/manifest.json',
       <String, Object?>{
         'id': 'feedback_form',
         'version': '1.0.0',
@@ -107,12 +107,12 @@ void main() {
     );
     await _writeJsonFile(
       tempDirectory,
-      'screens/feedback_form/1.1.0/feedback_form_home.json',
+      'artifacts/feedback_form/1.1.0/screens/feedback_form_home.json',
       <String, Object?>{'type': 'scaffold', 'versionLabel': '1.1.0'},
     );
     await _writeJsonFile(
       tempDirectory,
-      'screens/feedback_form/1.0.0/feedback_form_home.json',
+      'artifacts/feedback_form/1.0.0/screens/feedback_form_home.json',
       <String, Object?>{'type': 'scaffold', 'versionLabel': '1.0.0'},
     );
 
@@ -143,14 +143,17 @@ void main() {
     expect(body['status'], 'ok');
     expect(body['service'], 'local_backend_service');
     expect(response.headers['access-control-allow-origin'], '*');
-    expect(response.headers['access-control-expose-headers'], contains('x-backend-trace-id'));
+    expect(
+      response.headers['access-control-expose-headers'],
+      contains('x-backend-trace-id'),
+    );
   });
 
   test('returns CORS headers for browser preflight requests', () async {
     final response = await handler(
       Request(
         'OPTIONS',
-        Uri.parse('http://localhost/api/manifests/profile_center/latest.json'),
+        Uri.parse('http://localhost/api/artifacts/profile_center/latest.json'),
         headers: const <String, String>{
           'origin': 'http://localhost:53000',
           'access-control-request-method': 'GET',
@@ -171,10 +174,7 @@ void main() {
       response.headers['access-control-allow-headers'],
       contains('Content-Type'),
     );
-    expect(
-      response.headers['access-control-allow-private-network'],
-      'true',
-    );
+    expect(response.headers['access-control-allow-private-network'], 'true');
     expect(response.headers['vary'], contains('Origin'));
   });
 
@@ -237,8 +237,8 @@ void main() {
     expect(response.statusCode, HttpStatus.ok);
     final body =
         jsonDecode(await response.readAsString()) as Map<String, dynamic>;
-    final entries =
-        (body['entries'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final entries = (body['entries'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     expect(entries, hasLength(1));
     expect(entries.single['id'], 'profile_center');
   });
@@ -250,7 +250,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
         ),
       ),
     );
@@ -303,7 +303,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -360,7 +360,7 @@ void main() {
         Request(
           'GET',
           Uri.parse(
-            'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=0.9.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
+            'http://localhost/api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=0.9.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth',
           ),
         ),
       );
@@ -379,7 +379,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=zh-CN&capabilities=analytics,native_navigation',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=zh-CN&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -397,7 +397,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&tenantId=vip_partner&capabilities=analytics,native_navigation',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&tenantId=vip_partner&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -415,7 +415,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,secure_api',
+          'http://localhost/api/artifacts/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,secure_api',
         ),
       ),
     );
@@ -632,7 +632,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth&pinnedVersion=1.0.0',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth&pinnedVersion=1.0.0',
         ),
       ),
     );
@@ -682,7 +682,7 @@ void main() {
         Request(
           'GET',
           Uri.parse(
-            'http://localhost/api/manifests/profile_center/latest.json',
+            'http://localhost/api/artifacts/profile_center/latest.json',
           ),
         ),
       );
@@ -701,7 +701,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=unknown_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=unknown_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -723,7 +723,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&tenantId=blocked_lab&capabilities=analytics,native_navigation,secure_api',
+          'http://localhost/api/artifacts/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&tenantId=blocked_lab&capabilities=analytics,native_navigation,secure_api',
         ),
       ),
     );
@@ -747,7 +747,7 @@ void main() {
         Request(
           'GET',
           Uri.parse(
-            'http://localhost/api/manifests/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+            'http://localhost/api/artifacts/feedback_form/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
           ),
         ),
       );
@@ -768,7 +768,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics',
         ),
       ),
     );
@@ -786,7 +786,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=2.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
+          'http://localhost/api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=2.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation',
         ),
       ),
     );
@@ -802,7 +802,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/manifests/profile_center/versions/1.0.0',
+          'http://localhost/api/artifacts/profile_center/1.0.0/manifest.json',
         ),
       ),
     );
@@ -854,7 +854,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/screens/profile_center/1.0.0/profile_center_home.json',
+          'http://localhost/api/artifacts/profile_center/1.0.0/screens/profile_center_home.json',
         ),
       ),
     );
@@ -871,7 +871,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/screens/profile_center/1.1.0/profile_center_home.json',
+          'http://localhost/api/artifacts/profile_center/1.1.0/screens/profile_center_home.json',
         ),
       ),
     );
@@ -887,7 +887,7 @@ void main() {
     final response = await handler(
       Request(
         'GET',
-        Uri.parse('http://localhost/api/manifests/missing_program/latest.json'),
+        Uri.parse('http://localhost/api/artifacts/missing_program/latest.json'),
       ),
     );
 
@@ -904,7 +904,7 @@ void main() {
       Request(
         'GET',
         Uri.parse(
-          'http://localhost/api/screens/profile%20center/1.0.0/profile_center_home.json',
+          'http://localhost/api/artifacts/profile%20center/1.0.0/screens/profile_center_home.json',
         ),
       ),
     );

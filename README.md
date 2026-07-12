@@ -46,10 +46,13 @@ For the beginner static-only path, start with
 miniprogram create coupon_demo --screen-format mp
 miniprogram build --mini-program-root .\coupon_demo
 miniprogram validate --mini-program-root .\coupon_demo
-miniprogram publish --target static --mini-program-root .\coupon_demo --output .\coupon_demo\public_mini_program --clean
+miniprogram artifact build --mini-program-root .\coupon_demo
+miniprogram artifact verify --mini-program-root .\coupon_demo
 ```
 
-Serve `public_mini_program` from any public static file host or simple HTTP static server.
+Copy `coupon_demo/artifacts` to any public static file host. Building the same
+version with different content is rejected; update the manifest version for a
+new release.
 
 Create a partner package for a host app:
 

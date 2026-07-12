@@ -256,17 +256,17 @@ Future<void> _writeValidFixture(
   );
   await _writeFile(
     repoRootPath,
-    'backend/api/manifests/$miniProgramId/latest.json',
+    'backend/api/artifacts/$miniProgramId/latest.json',
     manifestJson,
   );
   await _writeFile(
     repoRootPath,
-    'backend/api/manifests/$miniProgramId/versions/1.1.0.json',
+    'backend/api/artifacts/$miniProgramId/1.1.0/manifest.json',
     manifestJson,
   );
   await _writeFile(
     repoRootPath,
-    'backend/api/screens/$miniProgramId/1.1.0/$entryName.json',
+    'backend/api/artifacts/$miniProgramId/1.1.0/screens/$entryName.json',
     '{"type":"scaffold","body":{"type":"text","data":"ok"}}',
   );
   await _writeFile(
