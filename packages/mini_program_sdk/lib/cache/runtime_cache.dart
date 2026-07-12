@@ -100,6 +100,96 @@ class MiniProgramCachePolicy {
 }
 
 @immutable
+class MiniProgramCacheBucketUsage {
+  const MiniProgramCacheBucketUsage({
+    required this.bucket,
+    required this.enabledForMiniProgram,
+    required this.usedBytes,
+    required this.miniProgramUsedBytes,
+    required this.maxBytes,
+    required this.remainingBytes,
+    required this.ttl,
+    required this.entryCount,
+    required this.miniProgramEntryCount,
+  });
+
+  final MiniProgramCacheBucket bucket;
+  final bool enabledForMiniProgram;
+  final int usedBytes;
+  final int miniProgramUsedBytes;
+  final int? maxBytes;
+  final int? remainingBytes;
+  final Duration ttl;
+  final int entryCount;
+  final int miniProgramEntryCount;
+}
+
+@immutable
+class MiniProgramCacheUsage {
+  const MiniProgramCacheUsage({
+    required this.appId,
+    required this.enabled,
+    required this.usedBytes,
+    required this.maxBytes,
+    required this.remainingBytes,
+    required this.entryCount,
+    required this.buckets,
+  });
+
+  final String appId;
+  final bool enabled;
+  final int usedBytes;
+  final int maxBytes;
+  final int remainingBytes;
+  final int entryCount;
+  final Map<MiniProgramCacheBucket, MiniProgramCacheBucketUsage> buckets;
+
+  Map<String, dynamic> toMiniProgramJson() {
+    const visibleBuckets = <MiniProgramCacheBucket>[
+      MiniProgramCacheBucket.memory,
+      MiniProgramCacheBucket.data,
+      MiniProgramCacheBucket.image,
+      MiniProgramCacheBucket.state,
+      MiniProgramCacheBucket.video,
+    ];
+    final visible = <String, dynamic>{};
+    var visibleBytes = 0;
+    var visibleEntries = 0;
+    for (final bucket in visibleBuckets) {
+      final usage = buckets[bucket]!;
+      final bucketEnabled = enabled && usage.enabledForMiniProgram;
+      if (bucketEnabled) {
+        visibleBytes += usage.miniProgramUsedBytes;
+        visibleEntries += usage.miniProgramEntryCount;
+      }
+      visible[bucket.name] = <String, dynamic>{
+        'enabled': bucketEnabled,
+        'usedBytes': bucketEnabled ? usage.miniProgramUsedBytes : 0,
+        'maxBytes': bucketEnabled ? usage.maxBytes : null,
+        'remainingBytes': bucketEnabled && usage.maxBytes != null
+            ? (usage.maxBytes! - usage.miniProgramUsedBytes)
+                  .clamp(0, usage.maxBytes!)
+                  .toInt()
+            : null,
+        'ttlMs': bucketEnabled ? usage.ttl.inMilliseconds : null,
+        'entryCount': bucketEnabled ? usage.miniProgramEntryCount : 0,
+      };
+    }
+    return <String, dynamic>{
+      'appId': appId,
+      'enabled': enabled,
+      'usedBytes': visibleBytes,
+      'maxBytes': enabled ? maxBytes : 0,
+      'remainingBytes': enabled
+          ? (maxBytes - visibleBytes).clamp(0, maxBytes).toInt()
+          : 0,
+      'entryCount': visibleEntries,
+      'buckets': visible,
+    };
+  }
+}
+
+@immutable
 class MiniProgramCacheEntry {
   const MiniProgramCacheEntry({
     required this.appId,
@@ -600,6 +690,69 @@ class MiniProgramCacheManager {
       total += await store.totalBytes(knownAppId);
     }
     return total;
+  }
+
+  Future<MiniProgramCacheUsage> usageForApp(
+    String appId, {
+    MiniProgramCachePolicy? policy,
+  }) async {
+    final normalizedAppId = _rememberApp(appId, policy: policy);
+    final effectivePolicy = _policyFor(normalizedAppId, policy);
+    await clearExpired(appId: normalizedAppId, policy: effectivePolicy);
+    final entries = await store.entries(normalizedAppId);
+    final buckets = <MiniProgramCacheBucket, MiniProgramCacheBucketUsage>{};
+    for (final bucket in MiniProgramCacheBucket.values) {
+      final bucketEntries = entries
+          .where((entry) => entry.bucket == bucket)
+          .toList(growable: false);
+      final usedBytes = bucketEntries.fold<int>(
+        0,
+        (total, entry) => total + entry.sizeBytes,
+      );
+      final miniProgramEntries = bucketEntries
+          .where(
+            (entry) => entry.priority != MiniProgramCachePriority.hostPinned,
+          )
+          .toList(growable: false);
+      final miniProgramUsedBytes = miniProgramEntries.fold<int>(
+        0,
+        (total, entry) => total + entry.sizeBytes,
+      );
+      final maxBytes = effectivePolicy.maxBytesFor(bucket);
+      buckets[bucket] = MiniProgramCacheBucketUsage(
+        bucket: bucket,
+        enabledForMiniProgram:
+            effectivePolicy.enabled &&
+            effectivePolicy.allowsMiniProgramBucket(bucket),
+        usedBytes: usedBytes,
+        miniProgramUsedBytes: miniProgramUsedBytes,
+        maxBytes: maxBytes,
+        remainingBytes: maxBytes == null
+            ? null
+            : (maxBytes - usedBytes).clamp(0, maxBytes).toInt(),
+        ttl: effectivePolicy.ttlFor(bucket),
+        entryCount: bucketEntries.length,
+        miniProgramEntryCount: miniProgramEntries.length,
+      );
+    }
+    final usedBytes = entries.fold<int>(
+      0,
+      (total, entry) => total + entry.sizeBytes,
+    );
+    return MiniProgramCacheUsage(
+      appId: normalizedAppId,
+      enabled: effectivePolicy.enabled,
+      usedBytes: usedBytes,
+      maxBytes: effectivePolicy.maxBytes,
+      remainingBytes: (effectivePolicy.maxBytes - usedBytes)
+          .clamp(0, effectivePolicy.maxBytes)
+          .toInt(),
+      entryCount: entries.length,
+      buckets:
+          Map<MiniProgramCacheBucket, MiniProgramCacheBucketUsage>.unmodifiable(
+            buckets,
+          ),
+    );
   }
 
   Future<void> _set({

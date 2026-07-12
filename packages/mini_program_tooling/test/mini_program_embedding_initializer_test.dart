@@ -128,10 +128,10 @@ void main() {
       expect(barrel, contains("export 'app_host_bridge.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.5.4'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.5.5'));
       expect(updatedPubspec, contains('mini_program_contracts: ^0.3.1'));
       expect(updatedPubspec, isNot(contains('mini_program_legacy_stac:')));
-      expect(readme, contains('mini_program_sdk: ^0.5.4'));
+      expect(readme, contains('mini_program_sdk: ^0.5.5'));
       expect(readme, contains('mini_program_contracts: ^0.3.1'));
       expect(readme, contains('MiniProgramScope('));
       expect(

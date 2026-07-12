@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+
+- Add `state.setDefault`, `state.decrement`, `state.copy`, and `state.toggle`.
+- Extend `state.increment` with bound operands, defaults, and numeric bounds.
+- Add atomic `state.patch`, `Mp.initialize`, and `Mp.stateScope` builders.
+- Add app-scoped `Mp.cache.info` usage and accepted-policy introspection.
+
 ## 0.1.6
 
 - Add bounded text and list state transformation action helpers.

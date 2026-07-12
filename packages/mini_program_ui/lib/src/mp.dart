@@ -870,6 +870,66 @@ abstract final class Mp {
     props: <String, Object?>{'keys': _requiredStateKeys(keys), 'child': child},
   );
 
+  /// Runs [actions] once for each mounted instance before showing [child].
+  static MpNode initialize({
+    required List<MpAction> actions,
+    required MpNode child,
+    MpNode? loading,
+    MpNode? error,
+    String? statusState,
+    String? errorState,
+    int retry = 0,
+    Duration retryDelay = const Duration(milliseconds: 300),
+  }) {
+    if (actions.isEmpty) {
+      throw ArgumentError.value(
+        actions,
+        'actions',
+        'Mp.initialize requires at least one action.',
+      );
+    }
+    final retryDelayMs = retryDelay.inMilliseconds;
+    if (retry < 0 || retry > 10) {
+      throw ArgumentError.value(retry, 'retry', 'Value must be from 0 to 10.');
+    }
+    if (retryDelayMs < 0 || retryDelayMs > 60000) {
+      throw ArgumentError.value(
+        retryDelay,
+        'retryDelay',
+        'Value must be from zero to 60 seconds.',
+      );
+    }
+    return MpNode(
+      'initialize',
+      props: <String, Object?>{
+        'actions': actions,
+        if (loading != null) 'loading': loading,
+        if (error != null) 'error': error,
+        if (statusState != null)
+          'statusState': _requiredStateKey(statusState, 'statusState'),
+        if (errorState != null)
+          'errorState': _requiredStateKey(errorState, 'errorState'),
+        if (retry != 0) 'retry': retry,
+        if (retryDelayMs != 300) 'retryDelayMs': retryDelayMs,
+      },
+      children: <MpNode>[child],
+    );
+  }
+
+  /// Owns a state prefix and optionally removes it when the subtree disposes.
+  static MpNode stateScope({
+    required String prefix,
+    required MpNode child,
+    bool clearOnDispose = true,
+  }) => MpNode(
+    'stateScope',
+    props: <String, Object?>{
+      'prefix': _requiredStateKey(prefix, 'prefix'),
+      if (!clearOnDispose) 'clearOnDispose': false,
+    },
+    children: <MpNode>[child],
+  );
+
   /// Creates a toast/snackbar-style UI feedback action.
   static MpAction toast({required String message, int durationMs = 2400}) =>
       MpAction(
@@ -918,10 +978,85 @@ final class MpStateActions {
     },
   );
 
+  /// Sets [value] only when [key] is missing or null.
+  MpAction setDefault(String key, Object? value) => MpAction(
+    'state.setDefault',
+    props: <String, Object?>{
+      'key': _requiredStateKey(key, 'key'),
+      'value': value,
+    },
+  );
+
+  /// Atomically writes and removes multiple state paths.
+  MpAction patch(
+    Map<String, Object?> values, {
+    List<String> remove = const <String>[],
+  }) {
+    final normalized = _statePatchProps(values, remove);
+    return MpAction('state.patch', props: normalized);
+  }
+
   /// Adds [by] to the numeric state value at [key].
-  MpAction increment(String key, {num by = 1}) => MpAction(
+  MpAction increment(
+    String key, {
+    Object by = 1,
+    num defaultValue = 0,
+    num? min,
+    num? max,
+  }) => MpAction(
     'state.increment',
-    props: <String, Object?>{'key': _requiredStateKey(key, 'key'), 'by': by},
+    props: _stateNumberMutationProps(
+      key: key,
+      by: by,
+      defaultValue: defaultValue,
+      min: min,
+      max: max,
+    ),
+  );
+
+  /// Subtracts [by] from the numeric state value at [key].
+  MpAction decrement(
+    String key, {
+    Object by = 1,
+    num defaultValue = 0,
+    num? min,
+    num? max,
+  }) => MpAction(
+    'state.decrement',
+    props: _stateNumberMutationProps(
+      key: key,
+      by: by,
+      defaultValue: defaultValue,
+      min: min,
+      max: max,
+    ),
+  );
+
+  /// Copies one state value to another with an optional scalar conversion.
+  MpAction copy({
+    required String from,
+    required String to,
+    String convertTo = 'value',
+  }) => MpAction(
+    'state.copy',
+    props: <String, Object?>{
+      'from': _requiredStateKey(from, 'from'),
+      'to': _requiredStateKey(to, 'to'),
+      'convertTo': _allowedValue(convertTo, 'convertTo', const <String>{
+        'value',
+        'text',
+        'number',
+      }),
+    },
+  );
+
+  /// Toggles a boolean state value, using [defaultValue] when it is unset.
+  MpAction toggle(String key, {bool defaultValue = false}) => MpAction(
+    'state.toggle',
+    props: <String, Object?>{
+      'key': _requiredStateKey(key, 'key'),
+      if (defaultValue) 'defaultValue': true,
+    },
   );
 
   /// Appends [text] to a string state value.
@@ -1230,6 +1365,16 @@ final class MpCacheActions {
       _cacheBucket(bucket),
     ).clear(requestId: requestId);
   }
+
+  /// Reads app-scoped cache usage and accepted limits into state.
+  MpAction info({required String targetState, String? requestId}) => MpAction(
+    'cache.info',
+    props: <String, Object?>{
+      'targetState': _requiredStateKey(targetState, 'targetState'),
+      if (requestId != null)
+        'requestId': _requiredString(requestId, 'requestId'),
+    },
+  );
 }
 
 /// Mini-program cache action builders for a fixed bucket.
@@ -1974,6 +2119,49 @@ int _boundedInt(
   return value;
 }
 
+Map<String, Object?> _stateNumberMutationProps({
+  required String key,
+  required Object by,
+  required num defaultValue,
+  required num? min,
+  required num? max,
+}) {
+  final normalizedDefault = _finiteStateNumber(defaultValue, 'defaultValue');
+  final normalizedMin = min == null ? null : _finiteStateNumber(min, 'min');
+  final normalizedMax = max == null ? null : _finiteStateNumber(max, 'max');
+  if (normalizedMin != null &&
+      normalizedMax != null &&
+      normalizedMin > normalizedMax) {
+    throw ArgumentError.value(min, 'min', 'Value cannot be greater than max.');
+  }
+  return <String, Object?>{
+    'key': _requiredStateKey(key, 'key'),
+    'by': _stateNumberOperand(by, 'by'),
+    if (normalizedDefault != 0) 'defaultValue': normalizedDefault,
+    if (normalizedMin != null) 'min': normalizedMin,
+    if (normalizedMax != null) 'max': normalizedMax,
+  };
+}
+
+Object _stateNumberOperand(Object value, String name) {
+  if (value is num && value.isFinite ||
+      value is String && _singleBindingPattern.hasMatch(value)) {
+    return value;
+  }
+  throw ArgumentError.value(
+    value,
+    name,
+    'Value must be a finite number or full binding.',
+  );
+}
+
+num _finiteStateNumber(num value, String name) {
+  if (!value.isFinite) {
+    throw ArgumentError.value(value, name, 'Value must be finite.');
+  }
+  return value;
+}
+
 Object _integerOrBinding(Object value, String name) {
   if (value is int ||
       value is String && _singleBindingPattern.hasMatch(value)) {
@@ -2098,6 +2286,45 @@ List<String> _requiredStateKeys(List<String> keys) {
   return keys
       .map((key) => _requiredStateKey(key, 'key'))
       .toList(growable: false);
+}
+
+Map<String, Object?> _statePatchProps(
+  Map<String, Object?> values,
+  List<String> remove,
+) {
+  if (values.isEmpty && remove.isEmpty) {
+    throw ArgumentError('Mp.state.patch requires values or remove paths.');
+  }
+  final normalizedValues = <String, Object?>{
+    for (final entry in values.entries)
+      _requiredStateKey(entry.key, 'values'): entry.value,
+  };
+  final normalizedRemove = remove
+      .map((key) => _requiredStateKey(key, 'remove'))
+      .toList(growable: false);
+  final paths = <String>[...normalizedValues.keys, ...normalizedRemove];
+  for (var left = 0; left < paths.length; left += 1) {
+    for (var right = left + 1; right < paths.length; right += 1) {
+      if (_statePathsOverlap(paths[left], paths[right])) {
+        throw ArgumentError.value(
+          paths,
+          'values',
+          'Mp.state.patch paths cannot duplicate or overlap.',
+        );
+      }
+    }
+  }
+  normalizedRemove.sort();
+  return <String, Object?>{
+    if (normalizedValues.isNotEmpty) 'values': normalizedValues,
+    if (normalizedRemove.isNotEmpty) 'remove': normalizedRemove,
+  };
+}
+
+bool _statePathsOverlap(String left, String right) {
+  return left == right ||
+      left.startsWith('$right.') ||
+      right.startsWith('$left.');
 }
 
 String _requiredStateKey(String value, String name) {

@@ -23,6 +23,7 @@ part 'mp_runtime/models_validator_helpers.dart';
 part 'mp_runtime/models.dart';
 part 'mp_runtime/widgets.dart';
 part 'mp_runtime/widgets_lazy.dart';
+part 'mp_runtime/widgets_lifecycle.dart';
 part 'mp_runtime/widgets_primitives.dart';
 part 'mp_runtime/widgets_forms.dart';
 part 'mp_runtime/widgets_backend.dart';

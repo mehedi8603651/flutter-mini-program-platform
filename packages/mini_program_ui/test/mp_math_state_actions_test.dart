@@ -43,6 +43,138 @@ void main() {
       });
     });
 
+    test('serialize default numeric copy and toggle actions', () {
+      expect(Mp.state.setDefault('cart.quantity', 0).toJson(), {
+        'type': 'state.setDefault',
+        'props': {'key': 'cart.quantity', 'value': 0},
+      });
+      expect(
+        Mp.state
+            .increment(
+              'cart.quantity',
+              by: '{{state.cart.step}}',
+              defaultValue: 1,
+              min: 0,
+              max: 99,
+            )
+            .toJson(),
+        {
+          'type': 'state.increment',
+          'props': {
+            'key': 'cart.quantity',
+            'by': '{{state.cart.step}}',
+            'defaultValue': 1,
+            'min': 0,
+            'max': 99,
+          },
+        },
+      );
+      expect(Mp.state.decrement('player.health', by: 5, min: 0).toJson(), {
+        'type': 'state.decrement',
+        'props': {'key': 'player.health', 'by': 5, 'min': 0},
+      });
+      expect(
+        Mp.state
+            .copy(
+              from: 'calculator.memory',
+              to: 'calculator.expression',
+              convertTo: 'text',
+            )
+            .toJson(),
+        {
+          'type': 'state.copy',
+          'props': {
+            'from': 'calculator.memory',
+            'to': 'calculator.expression',
+            'convertTo': 'text',
+          },
+        },
+      );
+      expect(Mp.state.toggle('settings.enabled').toJson(), {
+        'type': 'state.toggle',
+        'props': {'key': 'settings.enabled'},
+      });
+      expect(Mp.state.toggle('settings.enabled', defaultValue: true).toJson(), {
+        'type': 'state.toggle',
+        'props': {'key': 'settings.enabled', 'defaultValue': true},
+      });
+    });
+
+    test('serializes atomic patch, lifecycle nodes, and cache info', () {
+      expect(
+        Mp.state
+            .patch(
+              const <String, Object?>{
+                'checkout.total': 120,
+                'checkout.ready': true,
+              },
+              remove: const <String>['checkout.error'],
+            )
+            .toJson(),
+        <String, Object?>{
+          'type': 'state.patch',
+          'props': <String, Object?>{
+            'values': <String, Object?>{
+              'checkout.ready': true,
+              'checkout.total': 120,
+            },
+            'remove': <String>['checkout.error'],
+          },
+        },
+      );
+      expect(
+        Mp.cache
+            .info(targetState: 'settings.cache_info', requestId: 'cache-info')
+            .toJson(),
+        <String, Object?>{
+          'type': 'cache.info',
+          'props': <String, Object?>{
+            'requestId': 'cache-info',
+            'targetState': 'settings.cache_info',
+          },
+        },
+      );
+      expect(
+        Mp.initialize(
+          actions: <MpAction>[Mp.state.set('screen.ready', true)],
+          child: Mp.text('Ready'),
+          loading: Mp.text('Loading'),
+          error: Mp.text('Error'),
+          statusState: 'screen.status',
+          errorState: 'screen.error',
+          retry: 1,
+        ).toJson(),
+        <String, Object?>{
+          'type': 'initialize',
+          'props': <String, Object?>{
+            'actions': <Object?>[
+              <String, Object?>{
+                'type': 'state.set',
+                'props': <String, Object?>{
+                  'key': 'screen.ready',
+                  'value': true,
+                },
+              },
+            ],
+            'error': Mp.text('Error').toJson(),
+            'errorState': 'screen.error',
+            'loading': Mp.text('Loading').toJson(),
+            'retry': 1,
+            'statusState': 'screen.status',
+          },
+          'children': <Object?>[Mp.text('Ready').toJson()],
+        },
+      );
+      expect(
+        Mp.stateScope(prefix: 'checkout', child: Mp.text('Checkout')).toJson(),
+        <String, Object?>{
+          'type': 'stateScope',
+          'props': <String, Object?>{'prefix': 'checkout'},
+          'children': <Object?>[Mp.text('Checkout').toJson()],
+        },
+      );
+    });
+
     test('rejects unsafe author values', () {
       expect(
         () => Mp.state.appendText('calc.expression', '1', maxLength: 65537),
@@ -55,6 +187,29 @@ void main() {
       expect(() => Mp.state.listRemoveAt('items', 1.5), throwsArgumentError);
       expect(
         () => Mp.state.listRemoveAt('items', 'first'),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.state.increment('count', by: 'not-a-binding'),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.state.increment('count', min: 10, max: 1),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.state.copy(from: 'source', to: 'target', convertTo: 'json'),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.state.patch(
+          const <String, Object?>{'profile': <String, Object?>{}},
+          remove: const <String>['profile.name'],
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.initialize(actions: const <MpAction>[], child: Mp.text('x')),
         throwsArgumentError,
       );
     });

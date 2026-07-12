@@ -1003,6 +1003,12 @@ String _validateStateKey(String value, {required String path}) {
   }
 }
 
+bool _statePatchPathsOverlap(String left, String right) {
+  return left == right ||
+      left.startsWith('$right.') ||
+      right.startsWith('$left.');
+}
+
 String _requiredCacheKey(
   Map<String, dynamic> json,
   String key, {

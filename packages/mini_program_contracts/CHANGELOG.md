@@ -1,6 +1,7 @@
 ## 0.3.1
 
 - Add stable state transformation and math runtime error code constants.
+- Add the stable `initialize_failed` lifecycle error code.
 
 ## 0.3.0
 

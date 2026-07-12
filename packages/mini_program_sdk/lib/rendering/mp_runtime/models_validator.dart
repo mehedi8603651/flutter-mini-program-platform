@@ -299,6 +299,18 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'initialize' => _parseInitializeNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
+      'stateScope' => _parseStateScopeNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'skeleton' => _parseSkeletonNode(
         props: props,
         children: parsedChildren,
@@ -2647,7 +2659,12 @@ class MpScreenValidator {
       'ui.toast' => _parseToastAction(type, props, path),
       'ui.dialog' => _parseDialogAction(type, props, path),
       'state.set' || 'state.put' => _parseStateSetAction(type, props, path),
-      'state.increment' => _parseStateIncrementAction(type, props, path),
+      'state.setDefault' => _parseStateSetAction(type, props, path),
+      'state.patch' => _parseStatePatchAction(type, props, path),
+      'state.increment' ||
+      'state.decrement' => _parseStateNumberMutationAction(type, props, path),
+      'state.copy' => _parseStateCopyAction(type, props, path),
+      'state.toggle' => _parseStateToggleAction(type, props, path),
       'state.appendText' => _parseStateAppendTextAction(type, props, path),
       'state.backspace' => _parseStateBackspaceAction(type, props, path),
       'state.listAppend' ||
@@ -2671,6 +2688,7 @@ class MpScreenValidator {
       'cache.has' => _parseCacheHasAction(type, props, path),
       'cache.remove' => _parseCacheRemoveAction(type, props, path),
       'cache.clear' => _parseCacheClearAction(type, props, path),
+      'cache.info' => _parseCacheInfoAction(type, props, path),
       'sequence' => _parseSequenceAction(type, props, path),
       'router.push' ||
       'router.replace' ||
@@ -3249,7 +3267,187 @@ class MpScreenValidator {
     );
   }
 
-  _MpAction _parseStateIncrementAction(
+  _MpNode _parseInitializeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'actions',
+      'loading',
+      'error',
+      'statusState',
+      'errorState',
+      'retry',
+      'retryDelayMs',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'initialize', path: path);
+    final actions = _parseLazyActions(
+      props['actions'],
+      path: '$path.props.actions',
+    );
+    if (actions.isEmpty) {
+      _fail(
+        'Mp initialize requires at least one action.',
+        path: '$path.props.actions',
+      );
+    }
+    final retry =
+        _optionalNonNegativeInt(props['retry'], path: '$path.props.retry') ?? 0;
+    final retryDelayMs =
+        _optionalNonNegativeInt(
+          props['retryDelayMs'],
+          path: '$path.props.retryDelayMs',
+        ) ??
+        300;
+    if (retry > 10) {
+      _fail('Mp initialize retry cannot exceed 10.', path: '$path.props.retry');
+    }
+    if (retryDelayMs > 60000) {
+      _fail(
+        'Mp initialize retryDelayMs cannot exceed 60000.',
+        path: '$path.props.retryDelayMs',
+      );
+    }
+    return _MpNode(
+      type: 'initialize',
+      props: <String, dynamic>{
+        'actions': actions,
+        'retry': retry,
+        'retryDelayMs': retryDelayMs,
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        ..._parseTemplateProps(
+          props,
+          const <String>{'loading', 'error'},
+          path: '$path.props',
+          depth: depth,
+          state: state,
+        ),
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseStateScopeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'prefix',
+      'clearOnDispose',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'stateScope', path: path);
+    return _MpNode(
+      type: 'stateScope',
+      props: <String, dynamic>{
+        'prefix': _requiredStateKey(props, 'prefix', path: '$path.props'),
+        'clearOnDispose': props.containsKey('clearOnDispose')
+            ? _requiredBoolValue(
+                props['clearOnDispose'],
+                path: '$path.props.clearOnDispose',
+              )
+            : true,
+      },
+      children: children,
+    );
+  }
+
+  _MpAction _parseStatePatchAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'values',
+      'remove',
+    }, path: '$path.props');
+    final rawValues = props['values'];
+    if (rawValues != null && rawValues is! Map) {
+      _fail(
+        'Mp state.patch values must be an object.',
+        path: '$path.props.values',
+      );
+    }
+    final values = rawValues == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(rawValues as Map);
+    final normalizedValues = <String, dynamic>{};
+    for (final entry in values.entries) {
+      final key = _validateStateKey(
+        entry.key,
+        path: '$path.props.values.${entry.key}',
+      );
+      normalizedValues[key] = entry.value;
+    }
+
+    final rawRemove = props['remove'];
+    if (rawRemove != null && rawRemove is! List) {
+      _fail(
+        'Mp state.patch remove must be an array.',
+        path: '$path.props.remove',
+      );
+    }
+    final remove = <String>[];
+    if (rawRemove is List) {
+      for (var index = 0; index < rawRemove.length; index += 1) {
+        final rawKey = rawRemove[index];
+        if (rawKey is! String) {
+          _fail(
+            'Mp state.patch remove paths must be strings.',
+            path: '$path.props.remove[$index]',
+          );
+        }
+        remove.add(
+          _validateStateKey(rawKey, path: '$path.props.remove[$index]'),
+        );
+      }
+    }
+    if (normalizedValues.isEmpty && remove.isEmpty) {
+      _fail(
+        'Mp state.patch requires values or remove paths.',
+        path: '$path.props',
+      );
+    }
+    final paths = <String>[...normalizedValues.keys, ...remove];
+    for (var left = 0; left < paths.length; left += 1) {
+      for (var right = left + 1; right < paths.length; right += 1) {
+        if (_statePatchPathsOverlap(paths[left], paths[right])) {
+          _fail(
+            'Mp state.patch paths cannot duplicate or overlap.',
+            path: '$path.props',
+            details: <String, dynamic>{
+              'left': paths[left],
+              'right': paths[right],
+            },
+          );
+        }
+      }
+    }
+    remove.sort();
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (normalizedValues.isNotEmpty) 'values': normalizedValues,
+        if (remove.isNotEmpty) 'remove': remove,
+      },
+    );
+  }
+
+  _MpAction _parseStateNumberMutationAction(
     String type,
     Map<String, dynamic> props,
     String path,
@@ -3257,18 +3455,112 @@ class MpScreenValidator {
     _validateObjectKeys(props, const <String>{
       'key',
       'by',
+      'defaultValue',
+      'min',
+      'max',
     }, path: '$path.props');
-    final by = props['by'];
-    if (by != null && by is! num) {
-      _fail('Mp state.increment by must be numeric.', path: '$path.props.by');
+    final by = props['by'] ?? 1;
+    _validateFiniteNumberOrBinding(by, path: '$path.props.by');
+    final defaultValue = _optionalFiniteNumber(
+      props['defaultValue'],
+      fallback: 0,
+      path: '$path.props.defaultValue',
+    );
+    final min = _optionalFiniteNumber(props['min'], path: '$path.props.min');
+    final max = _optionalFiniteNumber(props['max'], path: '$path.props.max');
+    if (min != null && max != null && min > max) {
+      _fail(
+        'Mp $type min cannot be greater than max.',
+        path: '$path.props.min',
+      );
     }
     return _MpAction(
       type: type,
       props: <String, dynamic>{
         'key': _requiredStateKey(props, 'key', path: '$path.props'),
-        'by': by ?? 1,
+        'by': by,
+        'defaultValue': defaultValue,
+        if (min != null) 'min': min,
+        if (max != null) 'max': max,
       },
     );
+  }
+
+  _MpAction _parseStateCopyAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'from',
+      'to',
+      'convertTo',
+    }, path: '$path.props');
+    final convertTo = props['convertTo'] ?? 'value';
+    if (convertTo is! String ||
+        !const <String>{'value', 'text', 'number'}.contains(convertTo)) {
+      _fail(
+        'Mp state.copy convertTo must be value, text, or number.',
+        path: '$path.props.convertTo',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'from': _requiredStateKey(props, 'from', path: '$path.props'),
+        'to': _requiredStateKey(props, 'to', path: '$path.props'),
+        'convertTo': convertTo,
+      },
+    );
+  }
+
+  _MpAction _parseStateToggleAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'key',
+      'defaultValue',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'key': _requiredStateKey(props, 'key', path: '$path.props'),
+        'defaultValue':
+            _optionalBool(
+              props['defaultValue'],
+              path: '$path.props.defaultValue',
+            ) ??
+            false,
+      },
+    );
+  }
+
+  void _validateFiniteNumberOrBinding(Object? value, {required String path}) {
+    if (value is num && value.isFinite ||
+        value is String &&
+            _MpBindingResolver.isSingleBindingExpression(value)) {
+      return;
+    }
+    _fail(
+      'Mp state numeric operand must be a finite number or full binding.',
+      path: path,
+    );
+  }
+
+  num? _optionalFiniteNumber(
+    Object? value, {
+    num? fallback,
+    required String path,
+  }) {
+    if (value == null) {
+      return fallback;
+    }
+    if (value is num && value.isFinite) {
+      return value;
+    }
+    _fail('Mp state numeric option must be finite.', path: path);
   }
 
   _MpAction _parseStateAppendTextAction(
@@ -3930,6 +4222,33 @@ class MpScreenValidator {
           ),
         if (props.containsKey('bucket'))
           'bucket': _optionalCacheBucket(props, path: '$path.props'),
+      },
+    );
+  }
+
+  _MpAction _parseCacheInfoAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'requestId',
+      'targetState',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
       },
     );
   }

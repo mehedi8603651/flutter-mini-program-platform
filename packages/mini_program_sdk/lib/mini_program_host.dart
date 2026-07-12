@@ -181,6 +181,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     }
 
     final cachePolicy = _cachePolicyFor(loadedMiniProgram.manifest.id);
+    final liveStatePolicy = _liveStatePolicyFor(loadedMiniProgram.manifest.id);
+    _stateManager.updatePolicy(liveStatePolicy);
     await _cacheManager.openApp(
       loadedMiniProgram.manifest.id,
       policy: cachePolicy,
@@ -218,6 +220,16 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       return (source as MiniProgramCachePolicyProvider).cachePolicyFor(appId);
     }
     return _cacheManager.defaultPolicy;
+  }
+
+  MiniProgramLiveStatePolicy _liveStatePolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramLiveStatePolicyProvider) {
+      return (source as MiniProgramLiveStatePolicyProvider).liveStatePolicyFor(
+        appId,
+      );
+    }
+    return const MiniProgramLiveStatePolicy();
   }
 
   void _closeActiveCacheApp() {

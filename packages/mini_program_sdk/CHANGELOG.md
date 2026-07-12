@@ -1,3 +1,14 @@
+## 0.5.5
+
+- Execute default, decrement, copy conversion, and toggle state actions.
+- Support bound increment/decrement operands with finite defaults and clamped
+  minimum/maximum bounds.
+- Add rollback-capable state batches, atomic patch actions, defensive reads,
+  and host-owned live-state byte, entry, value, and depth limits.
+- Add one-time initialization and disposable state-scope runtime nodes.
+- Add app-scoped cache usage snapshots and the safe `cache.info` action.
+- Route generated per-app live-state policy through mini-program endpoints.
+
 ## 0.5.4
 
 - Execute bounded text and list state transformation actions.

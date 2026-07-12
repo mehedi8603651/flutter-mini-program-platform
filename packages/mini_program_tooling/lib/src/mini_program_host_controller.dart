@@ -3,6 +3,13 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+const Map<String, Object?> _defaultLiveStatePolicy = <String, Object?>{
+  'maxBytes': 2 * 1024 * 1024,
+  'maxEntries': 1000,
+  'maxValueBytes': 256 * 1024,
+  'maxDepth': 32,
+};
+
 typedef MiniProgramHostProcessRunner =
     Future<int> Function(
       String executable,
@@ -443,6 +450,15 @@ class MiniProgramHostController {
         forceAcceptedPolicy: forceAcceptedPolicy,
       ),
     };
+    for (final entry in apps.entries.toList(growable: false)) {
+      final app = _jsonObjectOrEmpty(entry.value);
+      final accepted = _jsonObjectOrEmpty(app['accepted']);
+      accepted['liveState'] = accepted['liveState'] is Map
+          ? _validatedLiveStatePolicy(_jsonObjectOrEmpty(accepted['liveState']))
+          : _deepJsonObjectCopy(_defaultLiveStatePolicy);
+      app['accepted'] = _sortedObject(accepted);
+      apps[entry.key] = app;
+    }
 
     final document = <String, Object?>{
       'schemaVersion': 1,
@@ -488,6 +504,7 @@ class MiniProgramHostController {
     if (forceAcceptedPolicy || existingAccepted == null) {
       return <String, Object?>{
         'cache': _acceptedCacheFromRequested(requestedCache),
+        'liveState': _deepJsonObjectCopy(_defaultLiveStatePolicy),
         'permissions': <String, Object?>{},
       };
     }
@@ -502,12 +519,36 @@ class MiniProgramHostController {
         );
       }
     }
-    return <String, Object?>{
-      'cache': _sortedObject(acceptedCache),
-      'permissions': accepted['permissions'] is Map
-          ? _jsonObjectOrEmpty(accepted['permissions'])
-          : <String, Object?>{},
-    };
+    accepted['cache'] = _sortedObject(acceptedCache);
+    accepted['liveState'] = accepted['liveState'] is Map
+        ? _validatedLiveStatePolicy(_jsonObjectOrEmpty(accepted['liveState']))
+        : _deepJsonObjectCopy(_defaultLiveStatePolicy);
+    accepted['permissions'] = accepted['permissions'] is Map
+        ? _jsonObjectOrEmpty(accepted['permissions'])
+        : <String, Object?>{};
+    return _sortedObject(accepted);
+  }
+
+  Map<String, Object?> _validatedLiveStatePolicy(Map<String, Object?> value) {
+    final normalized = <String, Object?>{};
+    for (final entry in _defaultLiveStatePolicy.entries) {
+      final candidate = value[entry.key] ?? entry.value;
+      final parsed = _positiveInt(candidate);
+      if (parsed == null) {
+        throw MiniProgramHostException(
+          'Accepted live-state policy ${entry.key} must be a positive integer.',
+        );
+      }
+      normalized[entry.key] = parsed;
+    }
+    final maxBytes = normalized['maxBytes']! as int;
+    final maxValueBytes = normalized['maxValueBytes']! as int;
+    if (maxValueBytes > maxBytes) {
+      throw const MiniProgramHostException(
+        'Accepted live-state maxValueBytes cannot exceed maxBytes.',
+      );
+    }
+    return normalized;
   }
 
   Map<String, Object?> _acceptedCacheFromRequested(
@@ -592,8 +633,36 @@ class MiniProgramHostController {
       ..writeln('      return const MiniProgramCachePolicy();')
       ..writeln('  }')
       ..writeln('}')
+      ..writeln()
+      ..writeln('MiniProgramLiveStatePolicy liveStatePolicyForMiniProgram(')
+      ..writeln('  String appId,')
+      ..writeln(') {')
+      ..writeln('  switch (appId) {');
+    for (final entry in sortedEntries) {
+      final appPolicy = _jsonObjectOrEmpty(entry.value);
+      final accepted = _jsonObjectOrEmpty(appPolicy['accepted']);
+      final liveState = _validatedLiveStatePolicy(
+        _jsonObjectOrEmpty(accepted['liveState']),
+      );
+      buffer
+        ..writeln('    case ${_dartString(entry.key)}:')
+        ..writeln('      return ${_liveStatePolicyExpression(liveState)};');
+    }
+    buffer
+      ..writeln('    default:')
+      ..writeln('      return const MiniProgramLiveStatePolicy();')
+      ..writeln('  }')
+      ..writeln('}')
       ..writeln();
     return buffer.toString();
+  }
+
+  String _liveStatePolicyExpression(Map<String, Object?> liveState) {
+    return 'const MiniProgramLiveStatePolicy('
+        'maxBytes: ${liveState['maxBytes']}, '
+        'maxEntries: ${liveState['maxEntries']}, '
+        'maxValueBytes: ${liveState['maxValueBytes']}, '
+        'maxDepth: ${liveState['maxDepth']})';
   }
 
   String _cachePolicyExpression(Map<String, Object?> acceptedCache) {
@@ -756,6 +825,9 @@ class MiniProgramHostController {
           '      apiBaseUri: Uri.parse(${_dartString(entry.value.apiBaseUri)}),',
         )
         ..writeln('      cachePolicy: cachePolicyForMiniProgram($mapKey),')
+        ..writeln(
+          '      liveStatePolicy: liveStatePolicyForMiniProgram($mapKey),',
+        )
         ..writeln('      requestTimeout: const Duration(seconds: 20),');
       if (entry.value.backendBaseUri != null) {
         buffer

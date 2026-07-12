@@ -1,3 +1,9 @@
+## 0.6.6
+
+- Generate mini-program and host projects with the expanded state action API.
+- Import host-owned live-state limits, preserve accepted policy extensions,
+  and generate cache plus live-state endpoint policy resolvers.
+
 ## 0.6.5
 
 - Generate mini-program and host projects with the state transformation and

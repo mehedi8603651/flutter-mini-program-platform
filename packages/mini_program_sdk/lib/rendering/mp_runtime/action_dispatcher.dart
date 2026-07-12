@@ -85,7 +85,7 @@ abstract final class _MpActionDispatcher {
 
     final props = bindings.resolveMap(action.props);
     try {
-      return switch (action.type) {
+      final result = switch (action.type) {
         'auth.showEmailAuth' => _showEmailAuth(context, scope, props),
         'auth.signOut' => _signOut(scope),
         'auth.restore' => scope.authController?.restore(
@@ -104,7 +104,12 @@ abstract final class _MpActionDispatcher {
         'ui.toast' => _showToast(context, props),
         'ui.dialog' => _showDialog(context, props),
         'state.set' || 'state.put' => _setState(scope, action.type, props),
-        'state.increment' => _incrementState(scope, props),
+        'state.setDefault' => _setDefaultState(scope, props),
+        'state.patch' => _patchState(scope, props),
+        'state.increment' => _mutateNumberState(scope, props, subtract: false),
+        'state.decrement' => _mutateNumberState(scope, props, subtract: true),
+        'state.copy' => _copyState(scope, props),
+        'state.toggle' => _toggleState(scope, props),
         'state.appendText' => _appendStateText(scope, props),
         'state.backspace' => _backspaceStateText(scope, props),
         'state.listAppend' => _addStateListValue(scope, props, prepend: false),
@@ -124,6 +129,7 @@ abstract final class _MpActionDispatcher {
         'cache.has' => _cacheHas(scope, props),
         'cache.remove' => _cacheRemove(scope, props),
         'cache.clear' => _cacheClear(scope, props),
+        'cache.info' => _cacheInfo(scope, props),
         'sequence' => _runSequence(context, props, bindings),
         'router.push' => _routerPush(scope, props),
         'router.replace' => _routerReplace(scope, props),
@@ -170,6 +176,15 @@ abstract final class _MpActionDispatcher {
           errorCode: MiniProgramErrorCodes.unknownAction,
         ),
       };
+      return result is Future<Object?> ? await result : result;
+    } on MiniProgramStateLimitException catch (error) {
+      return HostActionResult.failed(
+        requestId: _optionalStringProp(props, 'requestId'),
+        actionName: action.type,
+        message: error.toString(),
+        errorCode: MiniProgramErrorCodes.stateLimitExceeded,
+        data: error.details,
+      );
     } catch (error, stackTrace) {
       scope.logger.error(
         'Unhandled Mp action failure.',
@@ -675,27 +690,203 @@ abstract final class _MpActionDispatcher {
     return HostActionResult.success(actionName: actionName);
   }
 
-  static Future<HostActionResult> _incrementState(
+  static Future<HostActionResult> _setDefaultState(
     MiniProgramSdkScope scope,
     Map<String, dynamic> props,
   ) async {
     final state = scope.stateManager;
     if (state == null) {
-      return _stateUnavailable('state.increment');
+      return _stateUnavailable('state.setDefault');
     }
     final key = _stringProp(props, 'key');
     final current = state.get<Object?>(key);
-    if (current != null && current is! num) {
+    if (current != null) {
+      return HostActionResult.success(
+        actionName: 'state.setDefault',
+        data: <String, dynamic>{'changed': false, 'value': current},
+      );
+    }
+    final value = props['value'];
+    state.set(key, value);
+    return HostActionResult.success(
+      actionName: 'state.setDefault',
+      data: <String, dynamic>{'changed': true, 'value': value},
+    );
+  }
+
+  static Future<HostActionResult> _patchState(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.patch';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final values = props['values'] is Map
+        ? Map<String, dynamic>.from(props['values'] as Map)
+        : <String, dynamic>{};
+    final remove = props['remove'] is List
+        ? List<String>.from(props['remove'] as List)
+        : <String>[];
+    final changedKeys = <String>[];
+    final removedKeys = <String>[];
+    for (final entry in values.entries) {
+      if (!state.contains(entry.key) ||
+          !_stateValuesEqual(state.get<Object?>(entry.key), entry.value)) {
+        changedKeys.add(entry.key);
+      }
+    }
+    for (final key in remove) {
+      if (state.contains(key)) {
+        removedKeys.add(key);
+      }
+    }
+    state.batchUpdates(() {
+      for (final key in remove) {
+        state.remove(key);
+      }
+      for (final entry in values.entries) {
+        state.set(entry.key, entry.value);
+      }
+    });
+    changedKeys.sort();
+    removedKeys.sort();
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{
+        'changedKeys': changedKeys,
+        'removedKeys': removedKeys,
+      },
+    );
+  }
+
+  static Future<HostActionResult> _mutateNumberState(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props, {
+    required bool subtract,
+  }) async {
+    final actionName = subtract ? 'state.decrement' : 'state.increment';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    final by = props['by'];
+    final defaultValue = props['defaultValue'] ?? 0;
+    if (current != null && (current is! num || !current.isFinite) ||
+        by is! num ||
+        !by.isFinite ||
+        defaultValue is! num ||
+        !defaultValue.isFinite) {
       return HostActionResult.failed(
-        actionName: 'state.increment',
-        message: 'Mp state.increment requires a numeric current value.',
+        actionName: actionName,
+        message: 'Mp $actionName requires finite numeric values.',
         errorCode: MiniProgramErrorCodes.stateInvalidValue,
       );
     }
-    final by = _numProp(props, 'by', fallback: 1);
-    final next = (current as num? ?? 0) + by;
+    final previous = current as num? ?? defaultValue;
+    var next = subtract ? previous - by : previous + by;
+    if (!next.isFinite) {
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: 'Mp $actionName result must be finite.',
+        errorCode: MiniProgramErrorCodes.stateInvalidValue,
+      );
+    }
+    var clamped = false;
+    final min = props['min'];
+    final max = props['max'];
+    if (min is num && next < min) {
+      next = min;
+      clamped = true;
+    }
+    if (max is num && next > max) {
+      next = max;
+      clamped = true;
+    }
     state.set(key, next);
-    return HostActionResult.success(actionName: 'state.increment');
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{
+        'previousValue': previous,
+        'by': by,
+        'value': next,
+        'clamped': clamped,
+      },
+    );
+  }
+
+  static Future<HostActionResult> _copyState(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.copy';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final source = state.get<Object?>(_stringProp(props, 'from'));
+    final convertTo = _stringProp(props, 'convertTo');
+    final Object? value;
+    switch (convertTo) {
+      case 'value':
+        value = source;
+        break;
+      case 'text':
+        if (source is! String && source is! num && source is! bool) {
+          return _stateConversionFailure(actionName, convertTo);
+        }
+        if (source is num && !source.isFinite) {
+          return _stateConversionFailure(actionName, convertTo);
+        }
+        value = source.toString();
+        break;
+      case 'number':
+        if (source is num && source.isFinite) {
+          value = source;
+        } else if (source is String) {
+          final parsed = num.tryParse(source.trim());
+          if (parsed == null || !parsed.isFinite) {
+            return _stateConversionFailure(actionName, convertTo);
+          }
+          value = parsed;
+        } else {
+          return _stateConversionFailure(actionName, convertTo);
+        }
+        break;
+      default:
+        return _stateConversionFailure(actionName, convertTo);
+    }
+    state.set(_stringProp(props, 'to'), value);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{'value': value, 'convertTo': convertTo},
+    );
+  }
+
+  static Future<HostActionResult> _toggleState(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'state.toggle';
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName);
+    }
+    final key = _stringProp(props, 'key');
+    final current = state.get<Object?>(key);
+    if (current != null && current is! bool) {
+      return _stateTypeFailure(actionName, 'boolean');
+    }
+    final previous = current as bool? ?? _boolProp(props, 'defaultValue');
+    final next = !previous;
+    state.set(key, next);
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{'previousValue': previous, 'value': next},
+    );
   }
 
   static Future<HostActionResult> _appendStateText(
@@ -1354,6 +1545,29 @@ abstract final class _MpActionDispatcher {
     );
   }
 
+  static Future<HostActionResult> _cacheInfo(
+    MiniProgramSdkScope scope,
+    Map<String, dynamic> props,
+  ) async {
+    const actionName = 'cache.info';
+    final requestId = _optionalStringProp(props, 'requestId');
+    final state = scope.stateManager;
+    if (state == null) {
+      return _stateUnavailable(actionName, requestId: requestId);
+    }
+    final usage = await scope.cacheManager.usageForApp(
+      scope.miniProgramId,
+      policy: scope.cachePolicy,
+    );
+    final data = usage.toMiniProgramJson();
+    state.set(_stringProp(props, 'targetState'), data);
+    return HostActionResult.success(
+      requestId: requestId,
+      actionName: actionName,
+      data: data,
+    );
+  }
+
   static Future<HostActionResult> _runSequence(
     BuildContext context,
     Map<String, dynamic> props,
@@ -1497,6 +1711,15 @@ abstract final class _MpActionDispatcher {
     errorCode: MiniProgramErrorCodes.stateInvalidValue,
   );
 
+  static HostActionResult _stateConversionFailure(
+    String actionName,
+    String convertTo,
+  ) => HostActionResult.failed(
+    actionName: actionName,
+    message: 'Mp $actionName cannot convert the source to $convertTo.',
+    errorCode: MiniProgramErrorCodes.stateInvalidValue,
+  );
+
   static HostActionResult _stateListLimitFailure(
     String actionName,
     int length,
@@ -1541,7 +1764,8 @@ abstract final class _MpActionDispatcher {
     MiniProgramCacheBucket bucket, {
     String? requestId,
   }) {
-    if (scope.cachePolicy.allowsMiniProgramBucket(bucket)) {
+    if (scope.cachePolicy.enabled &&
+        scope.cachePolicy.allowsMiniProgramBucket(bucket)) {
       return null;
     }
     return HostActionResult.failed(

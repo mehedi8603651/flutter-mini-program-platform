@@ -452,6 +452,80 @@ void main() {
       );
     });
 
+    test('reports policy-aware app usage without host-private data', () async {
+      final clock = _TestClock(DateTime.utc(2026, 7, 1));
+      final manager = MiniProgramCacheManager.inMemory(clock: clock.now);
+      const policy = MiniProgramCachePolicy(
+        maxBytes: 100,
+        maxDataBytes: 40,
+        maxStateBytes: 30,
+        dataTtl: Duration(days: 7),
+        stateInactiveTtl: Duration(days: 30),
+        allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{
+          MiniProgramCacheBucket.data,
+          MiniProgramCacheBucket.state,
+        },
+      );
+      await manager.set(
+        appId: 'calculator',
+        key: 'data',
+        value: 1,
+        sizeBytes: 10,
+        policy: policy,
+      );
+      await manager.set(
+        appId: 'calculator',
+        key: 'history',
+        value: const <int>[1, 2],
+        bucket: MiniProgramCacheBucket.state,
+        sizeBytes: 6,
+        policy: policy,
+      );
+      await manager.set(
+        appId: 'calculator',
+        key: 'session',
+        value: 'private',
+        bucket: MiniProgramCacheBucket.session,
+        sizeBytes: 9,
+        policy: policy,
+      );
+      await manager.set(
+        appId: 'calculator',
+        key: 'pinned',
+        value: true,
+        priority: MiniProgramCachePriority.hostPinned,
+        sizeBytes: 12,
+        policy: policy,
+      );
+
+      final hostUsage = await manager.usageForApp('calculator', policy: policy);
+      expect(hostUsage.usedBytes, 37);
+
+      final json = hostUsage.toMiniProgramJson();
+      expect(json['usedBytes'], 16);
+      expect(json['entryCount'], 2);
+      expect(json['buckets'], isNot(contains('session')));
+      final buckets = json['buckets']! as Map<String, dynamic>;
+      expect(buckets['data'], <String, dynamic>{
+        'enabled': true,
+        'usedBytes': 10,
+        'maxBytes': 40,
+        'remainingBytes': 30,
+        'ttlMs': const Duration(days: 7).inMilliseconds,
+        'entryCount': 1,
+      });
+      expect(buckets['state'], <String, dynamic>{
+        'enabled': true,
+        'usedBytes': 6,
+        'maxBytes': 30,
+        'remainingBytes': 24,
+        'ttlMs': const Duration(days: 30).inMilliseconds,
+        'entryCount': 1,
+      });
+      expect((buckets['image'] as Map<String, dynamic>)['enabled'], isFalse);
+      expect((buckets['image'] as Map<String, dynamic>)['usedBytes'], 0);
+    });
+
     test(
       '100 mini-program appIds can store the same key without conflict',
       () async {

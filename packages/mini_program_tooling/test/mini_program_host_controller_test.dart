@@ -73,6 +73,12 @@ void main() {
                     'ttlDays': 30,
                   },
                 },
+                'liveState': <String, dynamic>{
+                  'maxBytes': 2097152,
+                  'maxEntries': 1000,
+                  'maxValueBytes': 262144,
+                  'maxDepth': 32,
+                },
                 'permissions': <String, dynamic>{},
               },
             },
@@ -90,6 +96,12 @@ void main() {
             'cachePolicy: cachePolicyForMiniProgram(MiniPrograms.calculator.appId)',
           ),
         );
+        expect(
+          endpoints,
+          contains(
+            'liveStatePolicy: liveStatePolicyForMiniProgram(MiniPrograms.calculator.appId)',
+          ),
+        );
 
         final resolver = await File(
           result.policyResolverFilePath,
@@ -97,6 +109,12 @@ void main() {
         expect(resolver, contains('case "calculator":'));
         expect(resolver, contains('maxStateBytes: 1048576'));
         expect(resolver, contains('stateInactiveTtl: Duration(days: 30)'));
+        expect(
+          resolver,
+          contains('MiniProgramLiveStatePolicy liveStatePolicyForMiniProgram'),
+        );
+        expect(resolver, contains('maxBytes: 2097152'));
+        expect(resolver, contains('maxEntries: 1000'));
         expect(
           resolver,
           contains(
@@ -138,6 +156,8 @@ void main() {
                 'cache': <String, Object?>{
                   'state': <String, Object?>{'enabled': true, 'maxBytes': 524288, 'ttlDays': 7},
                 },
+                'liveState': <String, Object?>{'maxBytes': 3145728, 'maxEntries': 1500, 'maxValueBytes': 524288, 'maxDepth': 24},
+                'futurePolicy': <String, Object?>{'enabled': true},
                 'permissions': <String, Object?>{},
               },
             },
@@ -178,6 +198,19 @@ void main() {
             as Map<String, dynamic>)['state'],
         <String, dynamic>{'enabled': true, 'maxBytes': 524288, 'ttlDays': 7},
       );
+      expect(
+        (app['accepted'] as Map<String, dynamic>)['liveState'],
+        <String, dynamic>{
+          'maxBytes': 3145728,
+          'maxEntries': 1500,
+          'maxValueBytes': 524288,
+          'maxDepth': 24,
+        },
+      );
+      expect(
+        (app['accepted'] as Map<String, dynamic>)['futurePolicy'],
+        <String, dynamic>{'enabled': true},
+      );
 
       await controller.addEndpoint(
         MiniProgramHostEndpointAddRequest(
@@ -207,6 +240,10 @@ void main() {
         ((app['accepted'] as Map<String, dynamic>)['cache']
             as Map<String, dynamic>)['state'],
         <String, dynamic>{'enabled': true, 'maxBytes': 2097152, 'ttlDays': 60},
+      );
+      expect(
+        (app['accepted'] as Map<String, dynamic>)['liveState'],
+        containsPair('maxBytes', 3145728),
       );
     });
 
@@ -278,6 +315,15 @@ void main() {
             'enabled': true,
             'maxBytes': 1048576,
             'ttlDays': 30,
+          },
+        );
+        expect(
+          (app['accepted'] as Map<String, dynamic>)['liveState'],
+          <String, dynamic>{
+            'maxBytes': 2097152,
+            'maxEntries': 1000,
+            'maxValueBytes': 262144,
+            'maxDepth': 32,
           },
         );
       },

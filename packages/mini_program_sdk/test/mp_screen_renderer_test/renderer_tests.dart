@@ -1819,6 +1819,392 @@ void _mpScreenRendererTests() {
       state.dispose();
     });
 
+    testWidgets('state defaults numeric mutations copy and toggle are safe', (
+      tester,
+    ) async {
+      final state = MpStateManager()..set('cart.step', 3);
+
+      final firstDefault =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.state.setDefault('cart.quantity', 2)),
+                stateManager: state,
+              )
+              as HostActionResult;
+      final secondDefault =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.state.setDefault('cart.quantity', 50)),
+                stateManager: state,
+              )
+              as HostActionResult;
+      expect(firstDefault.data['changed'], isTrue);
+      expect(secondDefault.data['changed'], isFalse);
+      expect(state.get<num>('cart.quantity'), 2);
+
+      final increment =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.state.increment(
+                    'cart.quantity',
+                    by: '{{state.cart.step}}',
+                    max: 4,
+                  ),
+                ),
+                stateManager: state,
+              )
+              as HostActionResult;
+      expect(increment.data['previousValue'], 2);
+      expect(increment.data['value'], 4);
+      expect(increment.data['clamped'], isTrue);
+      expect(state.get<num>('cart.quantity'), 4);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.decrement('cart.quantity', by: 10, min: 0)),
+        stateManager: state,
+      );
+      expect(state.get<num>('cart.quantity'), 0);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.increment('new.counter', by: 2, defaultValue: 5)),
+        stateManager: state,
+      );
+      expect(state.get<num>('new.counter'), 7);
+
+      state.set('source.value', <String, Object?>{
+        'items': <Object?>[1, 2],
+      });
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.copy(from: 'source.value', to: 'target.value')),
+        stateManager: state,
+      );
+      state.set('source.value', <String, Object?>{
+        'items': <Object?>[9],
+      });
+      expect(state.get<Map<String, dynamic>>('target.value'), {
+        'items': <Object?>[1, 2],
+      });
+
+      state.set('source.number', 12.5);
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.state.copy(
+            from: 'source.number',
+            to: 'target.text',
+            convertTo: 'text',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<String>('target.text'), '12.5');
+
+      state.set('source.text', '42');
+      await _runMpAction(
+        tester,
+        _jsonAction(
+          Mp.state.copy(
+            from: 'source.text',
+            to: 'target.number',
+            convertTo: 'number',
+          ),
+        ),
+        stateManager: state,
+      );
+      expect(state.get<num>('target.number'), 42);
+
+      state.set('target.preserved', 8);
+      state.set('source.invalid', 'not-a-number');
+      final copyFailure =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.state.copy(
+                    from: 'source.invalid',
+                    to: 'target.preserved',
+                    convertTo: 'number',
+                  ),
+                ),
+                stateManager: state,
+              )
+              as HostActionResult;
+      expect(copyFailure.errorCode, MiniProgramErrorCodes.stateInvalidValue);
+      expect(state.get<num>('target.preserved'), 8);
+
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.toggle('settings.enabled')),
+        stateManager: state,
+      );
+      expect(state.get<bool>('settings.enabled'), isTrue);
+      await _runMpAction(
+        tester,
+        _jsonAction(Mp.state.toggle('settings.enabled')),
+        stateManager: state,
+      );
+      expect(state.get<bool>('settings.enabled'), isFalse);
+
+      state.set('settings.invalid', 'yes');
+      final toggleFailure =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.state.toggle('settings.invalid')),
+                stateManager: state,
+              )
+              as HostActionResult;
+      expect(toggleFailure.errorCode, MiniProgramErrorCodes.stateInvalidValue);
+      expect(state.get<String>('settings.invalid'), 'yes');
+
+      state.dispose();
+    });
+
+    testWidgets('state.patch applies bindings atomically and reports changes', (
+      tester,
+    ) async {
+      final state = MpStateManager()
+        ..set('source.total', 120)
+        ..set('checkout.error', 'stale');
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.state.patch(
+                    const <String, Object?>{
+                      'checkout.total': '{{state.source.total}}',
+                      'checkout.ready': true,
+                    },
+                    remove: const <String>['checkout.error'],
+                  ),
+                ),
+                stateManager: state,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data['changedKeys'], <String>[
+        'checkout.ready',
+        'checkout.total',
+      ]);
+      expect(result.data['removedKeys'], <String>['checkout.error']);
+      expect(state.get<num>('checkout.total'), 120);
+      expect(state.get<bool>('checkout.ready'), isTrue);
+      expect(state.contains('checkout.error'), isFalse);
+      state.dispose();
+    });
+
+    testWidgets('state quota failures return a stable code and roll back', (
+      tester,
+    ) async {
+      final state = MpStateManager(
+        policy: const MiniProgramLiveStatePolicy(
+          maxBytes: 100,
+          maxEntries: 20,
+          maxValueBytes: 5,
+          maxDepth: 10,
+        ),
+      )..set('value', 'ok');
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.state.set('value', 'too-long')),
+                stateManager: state,
+              )
+              as HostActionResult;
+
+      expect(result.errorCode, MiniProgramErrorCodes.stateLimitExceeded);
+      expect(result.data['metric'], 'maxValueBytes');
+      expect(state.get<String>('value'), 'ok');
+      state.dispose();
+    });
+
+    testWidgets('initialize runs once per mount and clears stale errors', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager()..set('screen.error', 'stale');
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.initialize(
+              actions: <MpAction>[Mp.state.increment('screen.count')],
+              statusState: 'screen.status',
+              errorState: 'screen.error',
+              loading: Mp.text('Initializing'),
+              error: Mp.text('Initialization error'),
+              child: Mp.text('Ready {{state.screen.count}}'),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Ready 1'), findsOneWidget);
+      expect(state.get<String>('screen.status'), 'success');
+      expect(state.contains('screen.error'), isFalse);
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(state.get<num>('screen.count'), 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(state.get<num>('screen.count'), 2);
+
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('initialize writes structured failure after retries', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager()..set('screen.count', 'invalid');
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.initialize(
+              actions: <MpAction>[Mp.state.increment('screen.count')],
+              statusState: 'screen.status',
+              errorState: 'screen.error',
+              retry: 1,
+              retryDelay: Duration.zero,
+              error: Mp.text('Initialization error'),
+              child: Mp.text('Ready'),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Initialization error'), findsOneWidget);
+      expect(state.get<String>('screen.status'), 'error');
+      expect(state.get<Map<String, dynamic>>('screen.error'), <String, dynamic>{
+        'action': 'state.increment',
+        'code': MiniProgramErrorCodes.stateInvalidValue,
+        'message': 'Mp state.increment requires finite numeric values.',
+      });
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('stateScope removes its owned prefix on disposal', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () =>
+                Mp.stateScope(prefix: 'checkout', child: Mp.text('Checkout')),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      state.set('checkout.total', 50);
+      state.set('global.keep', true);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(state.contains('checkout'), isFalse);
+      expect(state.get<bool>('global.keep'), isTrue);
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('cache.info writes only app-visible policy and usage', (
+      tester,
+    ) async {
+      final cacheManager = MiniProgramCacheManager.inMemory();
+      const policy = MiniProgramCachePolicy(
+        maxBytes: 100,
+        maxStateBytes: 40,
+        stateInactiveTtl: Duration(days: 7),
+        allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{
+          MiniProgramCacheBucket.state,
+        },
+      );
+      await cacheManager.set(
+        appId: 'coupon',
+        key: 'history',
+        value: 1,
+        bucket: MiniProgramCacheBucket.state,
+        sizeBytes: 8,
+        policy: policy,
+      );
+      await cacheManager.set(
+        appId: 'coupon',
+        key: 'session',
+        value: 'private',
+        bucket: MiniProgramCacheBucket.session,
+        sizeBytes: 12,
+        policy: policy,
+      );
+      final state = MpStateManager();
+
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.cache.info(targetState: 'cache.info')),
+                cacheManager: cacheManager,
+                cachePolicy: policy,
+                stateManager: state,
+              )
+              as HostActionResult;
+      final info = state.get<Map<String, dynamic>>('cache.info')!;
+      expect(result.data, info);
+      expect(info['usedBytes'], 8);
+      expect(info['entryCount'], 1);
+      final buckets = info['buckets']! as Map<String, dynamic>;
+      expect(buckets, isNot(contains('session')));
+      expect(
+        (buckets['state'] as Map<String, dynamic>)['ttlMs'],
+        const Duration(days: 7).inMilliseconds,
+      );
+      expect((buckets['data'] as Map<String, dynamic>)['enabled'], isFalse);
+      state.dispose();
+    });
+
     testWidgets(
       'math evaluate covers parser precedence functions and bindings',
       (tester) async {

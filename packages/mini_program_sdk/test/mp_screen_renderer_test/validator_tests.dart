@@ -62,7 +62,24 @@ void _mpScreenValidatorTests() {
                 Mp.primaryButton(
                   label: 'Calculate',
                   action: Mp.action.sequence(<MpAction>[
+                    Mp.state.setDefault('calc.memory', 0),
                     Mp.state.appendText('calc.expression', '7'),
+                    Mp.state.increment(
+                      'calc.memory',
+                      by: '{{state.calc.result}}',
+                      min: 0,
+                    ),
+                    Mp.state.decrement('calc.memory', by: 1),
+                    Mp.state.copy(
+                      from: 'calc.memory',
+                      to: 'calc.expression',
+                      convertTo: 'text',
+                    ),
+                    Mp.state.toggle('calc.scientific'),
+                    Mp.state.patch(
+                      const <String, Object?>{'calc.ready': true},
+                      remove: const <String>['calc.stale'],
+                    ),
                     Mp.math.evaluate(
                       expression: '{{state.calc.expression}}',
                       targetState: 'calc.result',
@@ -73,7 +90,19 @@ void _mpScreenValidatorTests() {
                       '{{state.calc.result}}',
                       maxItems: 50,
                     ),
+                    Mp.cache.info(targetState: 'calc.cache_info'),
                   ]),
+                ),
+                Mp.initialize(
+                  actions: <MpAction>[
+                    Mp.state.setDefault('screen.ready', true),
+                  ],
+                  statusState: 'screen.status',
+                  errorState: 'screen.error',
+                  child: Mp.stateScope(
+                    prefix: 'screen.form',
+                    child: Mp.text('Initialized'),
+                  ),
                 ),
               ],
             ),
@@ -97,6 +126,30 @@ void _mpScreenValidatorTests() {
         'list index': _cacheActionScreen('state.listRemoveAt', {
           'key': 'items',
           'index': 'first',
+        }),
+        'numeric operand': _cacheActionScreen('state.increment', {
+          'key': 'count',
+          'by': 'one',
+        }),
+        'numeric bounds': _cacheActionScreen('state.decrement', {
+          'key': 'count',
+          'min': 10,
+          'max': 1,
+        }),
+        'copy conversion': _cacheActionScreen('state.copy', {
+          'from': 'source',
+          'to': 'target',
+          'convertTo': 'json',
+        }),
+        'toggle default': _cacheActionScreen('state.toggle', {
+          'key': 'enabled',
+          'defaultValue': 'yes',
+        }),
+        'patch overlap': _cacheActionScreen('state.patch', {
+          'values': <String, Object?>{
+            'profile': <String, Object?>{},
+            'profile.name': 'Ada',
+          },
         }),
         'math expression': _cacheActionScreen('math.evaluate', {
           'expression': '',
@@ -136,6 +189,58 @@ void _mpScreenValidatorTests() {
           reason: entry.key,
         );
       }
+    });
+
+    test('rejects malformed initialize and stateScope nodes', () {
+      final initialize = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'initialize',
+          'props': <String, dynamic>{
+            'actions': <Object?>[
+              <String, dynamic>{
+                'type': 'state.set',
+                'props': <String, dynamic>{'key': 'ready', 'value': true},
+              },
+            ],
+            'retry': 11,
+          },
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Ready'},
+              'children': <Object?>[],
+            },
+          ],
+        };
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          initialize,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+
+      final stateScope = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'stateScope',
+          'props': <String, dynamic>{'prefix': 'auth.token'},
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Scoped'},
+              'children': <Object?>[],
+            },
+          ],
+        };
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          stateScope,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
     });
 
     test('accepts author-generated form JSON', () {

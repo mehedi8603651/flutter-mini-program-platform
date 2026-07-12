@@ -165,7 +165,7 @@ void main() {
       (connector as DisposableMiniProgramBackendConnector).dispose();
     });
 
-    test('exposes per-app cache policy from endpoint routing', () {
+    test('exposes per-app cache and live-state policy from routing', () {
       final source = EndpointRoutingMiniProgramSource(
         endpoints: <String, MiniProgramEndpoint>{
           'temporary': MiniProgramEndpoint(
@@ -173,6 +173,12 @@ void main() {
             cachePolicy: const MiniProgramCachePolicy(
               dataTtl: Duration(hours: 12),
               maxBytes: 5 * 1024 * 1024,
+            ),
+            liveStatePolicy: const MiniProgramLiveStatePolicy(
+              maxBytes: 3 * 1024 * 1024,
+              maxEntries: 1500,
+              maxValueBytes: 512 * 1024,
+              maxDepth: 24,
             ),
           ),
           'normal': MiniProgramEndpoint(
@@ -188,6 +194,9 @@ void main() {
       );
       expect(source.cachePolicyFor('temporary').maxBytes, 5 * 1024 * 1024);
       expect(source.cachePolicyFor('normal').dataTtl, const Duration(days: 30));
+      expect(source.liveStatePolicyFor('temporary').maxBytes, 3 * 1024 * 1024);
+      expect(source.liveStatePolicyFor('temporary').maxEntries, 1500);
+      expect(source.liveStatePolicyFor('normal').maxEntries, 1000);
     });
 
     test('throws a structured error for an unregistered appId', () async {
