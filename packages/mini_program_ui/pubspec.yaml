@@ -1,13 +1,13 @@
 name: mini_program_ui
 description: Pure-Dart authoring helpers for versioned Mp JSON mini-program screens.
-version: 0.1.7
+version: 0.1.8
 repository: https://github.com/mehedi8603651/flutter-mini-program-platform
 
 environment:
   sdk: ^3.10.0
 
 dependencies:
-  mini_program_contracts: ^0.3.1
+  mini_program_contracts: ^0.3.2
 
 dev_dependencies:
   lints: ^5.1.1

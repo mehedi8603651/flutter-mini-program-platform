@@ -14,12 +14,16 @@ class MiniProgramLaunchOptions {
   const MiniProgramLaunchOptions({
     this.useRootNavigator = false,
     this.fullscreenDialog = false,
+    this.showAppBar = true,
+    this.backgroundColor,
     this.routeSettings,
     this.routeBuilder,
   });
 
   final bool useRootNavigator;
   final bool fullscreenDialog;
+  final bool showAppBar;
+  final Color? backgroundColor;
   final RouteSettings? routeSettings;
   final MiniProgramRouteBuilder<dynamic>? routeBuilder;
 }

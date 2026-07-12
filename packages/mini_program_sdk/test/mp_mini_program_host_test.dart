@@ -56,6 +56,38 @@ void main() {
     expect(scaffold.backgroundColor, const Color(0xFFF8FAFC));
   });
 
+  testWidgets('MiniProgramPage can hide host chrome for immersive apps', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MiniProgramRuntimeScope(
+          runtime: MiniProgramRuntime(
+            sdkVersion: '1.0.0',
+            source: const _MpSource(),
+            hostBridge: const _HostBridge(),
+            capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+            cacheBundle: MiniProgramCacheBundle.inMemory(),
+          ),
+          child: const MiniProgramPage(
+            miniProgramId: 'mp_test',
+            title: 'Hidden title',
+            showAppBar: false,
+            backgroundColor: Colors.black,
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hidden title'), findsNothing);
+    expect(find.text('Mp-only host screen'), findsOneWidget);
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.appBar, isNull);
+    expect(scaffold.backgroundColor, Colors.black);
+  });
+
   testWidgets('Mp router passes params and returns pop results', (
     tester,
   ) async {

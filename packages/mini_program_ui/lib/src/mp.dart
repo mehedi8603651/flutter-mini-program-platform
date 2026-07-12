@@ -5,6 +5,7 @@ import 'mp_lazy.dart';
 import 'mp_node.dart';
 import 'mp_skeleton.dart';
 import 'widgets/display_widgets.dart';
+import 'widgets/button_widgets.dart';
 import 'widgets/image_widgets.dart';
 import 'widgets/layout_widgets.dart';
 import 'widgets/list_widgets.dart';
@@ -714,6 +715,56 @@ abstract final class Mp {
   }) => MpNode(
     'secondaryButton',
     props: <String, Object?>{'label': label, 'action': action},
+  );
+
+  /// Creates a styled command button.
+  static MpNode button({
+    required String label,
+    required MpAction action,
+    num height = 56,
+    String backgroundColor = '#252525',
+    String foregroundColor = '#F5F5F5',
+    String borderColor = '#252525',
+    num borderWidth = 0,
+    num borderRadius = 8,
+    num fontSize = 18,
+    String fontWeight = 'medium',
+  }) => buildButtonNode(
+    label: label,
+    action: action,
+    height: height,
+    backgroundColor: backgroundColor,
+    foregroundColor: foregroundColor,
+    borderColor: borderColor,
+    borderWidth: borderWidth,
+    borderRadius: borderRadius,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+  );
+
+  /// Creates a tappable icon command with a semantic label.
+  static MpNode iconButton(
+    String name, {
+    required String semanticLabel,
+    required MpAction action,
+    num size = 48,
+    num iconSize = 24,
+    String color = '#9CA3AF',
+    String backgroundColor = '#00000000',
+    String borderColor = '#00000000',
+    num borderWidth = 0,
+    num borderRadius = 24,
+  }) => buildIconButtonNode(
+    name: name,
+    semanticLabel: semanticLabel,
+    action: action,
+    size: size,
+    iconSize: iconSize,
+    color: color,
+    backgroundColor: backgroundColor,
+    borderColor: borderColor,
+    borderWidth: borderWidth,
+    borderRadius: borderRadius,
   );
 
   /// Creates a compact list row.

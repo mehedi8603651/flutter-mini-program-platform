@@ -12,11 +12,15 @@ class MiniProgramPage extends StatelessWidget {
     required this.miniProgramId,
     this.title,
     this.runtime,
+    this.showAppBar = true,
+    this.backgroundColor = const Color(0xFFF8FAFC),
   });
 
   final String miniProgramId;
   final String? title;
   final MiniProgramRuntime? runtime;
+  final bool showAppBar;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +28,8 @@ class MiniProgramPage extends StatelessWidget {
     final resolvedTitle = title ?? _defaultTitle(miniProgramId);
 
     return Scaffold(
-      appBar: AppBar(title: Text(resolvedTitle)),
-      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: showAppBar ? AppBar(title: Text(resolvedTitle)) : null,
+      backgroundColor: backgroundColor,
       body: MiniProgramHost(
         miniProgramId: miniProgramId,
         sdkVersion: resolvedRuntime.sdkVersion,

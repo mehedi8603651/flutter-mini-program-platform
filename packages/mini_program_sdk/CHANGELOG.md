@@ -1,3 +1,10 @@
+## 0.5.6
+
+- Render and validate reusable styled text and icon action buttons.
+- Add history, backspace, and back-arrow runtime icons.
+- Allow hosts to hide `MiniProgramPage` chrome and select its background color
+  through launch options for immersive mini-programs.
+
 ## 0.5.5
 
 - Execute default, decrement, copy conversion, and toggle state actions.

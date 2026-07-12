@@ -151,14 +151,12 @@ class _MpImage extends StatelessWidget {
 
 class _MpButton extends StatefulWidget {
   const _MpButton({
-    required this.label,
-    required this.action,
+    required this.node,
     required this.primary,
     required this.bindings,
   });
 
-  final String label;
-  final _MpAction action;
+  final _MpNode node;
   final bool primary;
   final _MpRenderBindings bindings;
 
@@ -173,6 +171,10 @@ class _MpButtonState extends State<_MpButton> {
 
   @override
   Widget build(BuildContext context) {
+    final label = widget.bindings.resolveString(
+      widget.node.props['label'] as String,
+    );
+    final styled = widget.node.type == 'button';
     final colors = _mpButtonColors(
       primary: widget.primary,
       enabled: true,
@@ -180,10 +182,40 @@ class _MpButtonState extends State<_MpButton> {
       pressed: _pressed,
       theme: widget.bindings.theme,
     );
+    final background = styled
+        ? _mpColor(
+            widget.node.props['backgroundColor'] as String?,
+            fallback: colors.background,
+          )
+        : colors.background;
+    final pressedBackground = _pressed
+        ? Color.lerp(background, const Color(0xFF000000), 0.14)!
+        : background;
+    final foreground = styled
+        ? _mpColor(
+            widget.node.props['foregroundColor'] as String?,
+            fallback: colors.foreground,
+          )
+        : colors.foreground;
+    final border = styled
+        ? _mpColor(
+            widget.node.props['borderColor'] as String?,
+            fallback: colors.border,
+          )
+        : colors.border;
+    final borderWidth = styled
+        ? (widget.node.props['borderWidth'] as num).toDouble()
+        : 1.0;
+    final borderRadius = styled
+        ? (widget.node.props['borderRadius'] as num).toDouble()
+        : 8.0;
+    final height = styled
+        ? (widget.node.props['height'] as num).toDouble()
+        : null;
 
     return Semantics(
       button: true,
-      label: widget.label,
+      label: label,
       child: FocusableActionDetector(
         mouseCursor: SystemMouseCursors.click,
         onShowHoverHighlight: (value) => setState(() => _hovered = value),
@@ -196,29 +228,119 @@ class _MpButtonState extends State<_MpButton> {
           onTap: () => unawaited(
             _MpActionDispatcher.dispatch(
               context,
-              widget.action,
+              widget.node.props['action'] as _MpAction,
               widget.bindings,
             ),
           ),
+          child: SizedBox(
+            height: height,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: pressedBackground,
+                border: Border.all(color: border, width: borderWidth),
+                borderRadius: BorderRadius.circular(borderRadius),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: styled ? 8 : 16,
+                  vertical: styled ? 0 : 11,
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: styled
+                          ? TextStyle(
+                              color: foreground,
+                              fontSize: (widget.node.props['fontSize'] as num)
+                                  .toDouble(),
+                              fontWeight: _mpFontWeight(
+                                widget.node.props['fontWeight'] as String,
+                              ),
+                            )
+                          : _mpThemeTextStyle(
+                              widget.bindings.theme,
+                              'button',
+                              defaultColor: foreground,
+                              defaultSize: 15,
+                              defaultWeight: 'semibold',
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MpIconButton extends StatefulWidget {
+  const _MpIconButton({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  State<_MpIconButton> createState() => _MpIconButtonState();
+}
+
+class _MpIconButtonState extends State<_MpIconButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final node = widget.node;
+    final size = (node.props['size'] as num).toDouble();
+    final background = _mpColor(
+      node.props['backgroundColor'] as String?,
+      fallback: const Color(0x00000000),
+    );
+    return Semantics(
+      button: true,
+      label: node.props['semanticLabel'] as String,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTap: () => unawaited(
+          _MpActionDispatcher.dispatch(
+            context,
+            node.props['action'] as _MpAction,
+            widget.bindings,
+          ),
+        ),
+        child: SizedBox.square(
+          dimension: size,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: colors.background,
-              border: Border.all(color: colors.border),
-              borderRadius: BorderRadius.circular(8),
+              color: _pressed
+                  ? Color.lerp(background, const Color(0xFFFFFFFF), 0.12)
+                  : background,
+              border: Border.all(
+                color: _mpColor(
+                  node.props['borderColor'] as String?,
+                  fallback: const Color(0x00000000),
+                ),
+                width: (node.props['borderWidth'] as num).toDouble(),
+              ),
+              borderRadius: BorderRadius.circular(
+                (node.props['borderRadius'] as num).toDouble(),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-              child: Center(
-                widthFactor: 1,
-                child: Text(
-                  widget.label,
-                  style: _mpThemeTextStyle(
-                    widget.bindings.theme,
-                    'button',
-                    defaultColor: colors.foreground,
-                    defaultSize: 15,
-                    defaultWeight: 'semibold',
-                  ),
+            child: Center(
+              child: Icon(
+                _mpIconData(node.props['name'] as String),
+                size: (node.props['iconSize'] as num).toDouble(),
+                color: _mpColor(
+                  node.props['color'] as String?,
+                  fallback: const Color(0xFF9CA3AF),
                 ),
               ),
             ),

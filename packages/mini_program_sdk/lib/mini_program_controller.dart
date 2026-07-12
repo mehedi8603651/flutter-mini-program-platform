@@ -69,6 +69,8 @@ class MiniProgramController {
       miniProgramId: normalizedAppId,
       title: title,
       runtime: resolvedRuntime,
+      showAppBar: options.showAppBar,
+      backgroundColor: options.backgroundColor ?? const Color(0xFFF8FAFC),
     );
     final request = MiniProgramLaunchRequest(
       appId: normalizedAppId,

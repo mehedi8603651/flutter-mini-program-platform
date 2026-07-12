@@ -73,6 +73,9 @@ class MpScreenValidator {
     'mail',
     'home',
     'search',
+    'history',
+    'backspace',
+    'arrowBack',
   };
   static const Set<String> _alignmentNames = <String>{
     'topLeft',
@@ -470,6 +473,16 @@ class MpScreenValidator {
       ),
       'primaryButton' || 'secondaryButton' => _parseButtonNode(
         type: type,
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'button' => _parseStyledButtonNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'iconButton' => _parseIconButtonNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -2004,6 +2017,138 @@ class MpScreenValidator {
     return _MpNode(
       type: type,
       props: <String, dynamic>{'label': props['label'], 'action': action},
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseStyledButtonNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'label',
+      'action',
+      'height',
+      'backgroundColor',
+      'foregroundColor',
+      'borderColor',
+      'borderWidth',
+      'borderRadius',
+      'fontSize',
+      'fontWeight',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    return _MpNode(
+      type: 'button',
+      props: <String, dynamic>{
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        'action': _parseAction(props['action'], path: '$path.props.action'),
+        'height': _requiredPositiveNumber(props, 'height', path: '$path.props'),
+        'backgroundColor': _requiredHexColor(
+          props,
+          'backgroundColor',
+          path: '$path.props',
+        ),
+        'foregroundColor': _requiredHexColor(
+          props,
+          'foregroundColor',
+          path: '$path.props',
+        ),
+        'borderColor': _requiredHexColor(
+          props,
+          'borderColor',
+          path: '$path.props',
+        ),
+        'borderWidth': _requiredNonNegativeNumber(
+          props,
+          'borderWidth',
+          path: '$path.props',
+        ),
+        'borderRadius': _requiredNonNegativeNumber(
+          props,
+          'borderRadius',
+          path: '$path.props',
+        ),
+        'fontSize': _requiredPositiveNumber(
+          props,
+          'fontSize',
+          path: '$path.props',
+        ),
+        'fontWeight': _optionalTextWeight(
+          props,
+          'fontWeight',
+          path: '$path.props',
+        )!,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseIconButtonNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'name',
+      'semanticLabel',
+      'action',
+      'size',
+      'iconSize',
+      'color',
+      'backgroundColor',
+      'borderColor',
+      'borderWidth',
+      'borderRadius',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final size = _requiredPositiveNumber(props, 'size', path: '$path.props');
+    final iconSize = _requiredPositiveNumber(
+      props,
+      'iconSize',
+      path: '$path.props',
+    );
+    if (iconSize > size) {
+      _fail(
+        'Mp iconButton iconSize cannot exceed size.',
+        path: '$path.props.iconSize',
+      );
+    }
+    return _MpNode(
+      type: 'iconButton',
+      props: <String, dynamic>{
+        'name': _requiredIconName(props, 'name', path: '$path.props'),
+        'semanticLabel': _requiredString(
+          props,
+          'semanticLabel',
+          path: '$path.props',
+        ),
+        'action': _parseAction(props['action'], path: '$path.props.action'),
+        'size': size,
+        'iconSize': iconSize,
+        'color': _requiredHexColor(props, 'color', path: '$path.props'),
+        'backgroundColor': _requiredHexColor(
+          props,
+          'backgroundColor',
+          path: '$path.props',
+        ),
+        'borderColor': _requiredHexColor(
+          props,
+          'borderColor',
+          path: '$path.props',
+        ),
+        'borderWidth': _requiredNonNegativeNumber(
+          props,
+          'borderWidth',
+          path: '$path.props',
+        ),
+        'borderRadius': _requiredNonNegativeNumber(
+          props,
+          'borderRadius',
+          path: '$path.props',
+        ),
+      },
       children: const <_MpNode>[],
     );
   }

@@ -4758,5 +4758,53 @@ void _mpScreenRendererTests() {
 
       backendStore.dispose();
     });
+
+    testWidgets('styled buttons render and dispatch actions', (tester) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.button(
+                  label: 'Memory add',
+                  action: Mp.state.set('controls.memory', true),
+                  height: 68,
+                  backgroundColor: '#FF252525',
+                  foregroundColor: '#FFF5F5F5',
+                  borderColor: '#FF252525',
+                  borderRadius: 999,
+                ),
+                Mp.iconButton(
+                  'history',
+                  semanticLabel: 'Open history',
+                  action: Mp.state.set('controls.history', true),
+                  color: '#FF9A9A9A',
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+
+      await tester.tap(find.text('Memory add'));
+      await tester.pump();
+      expect(stateManager.get<bool>('controls.memory'), isTrue);
+
+      await tester.tap(find.bySemanticsLabel('Open history'));
+      await tester.pump();
+      expect(stateManager.get<bool>('controls.history'), isTrue);
+
+      backendStore.dispose();
+    });
   });
 }

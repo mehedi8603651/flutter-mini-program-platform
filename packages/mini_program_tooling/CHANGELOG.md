@@ -1,3 +1,8 @@
+## 0.6.7
+
+- Generate mini-programs with `mini_program_ui: ^0.1.8` and hosts with
+  `mini_program_sdk: ^0.5.6` for styled action controls and immersive launches.
+
 ## 0.6.6
 
 - Generate mini-program and host projects with the expanded state action API.

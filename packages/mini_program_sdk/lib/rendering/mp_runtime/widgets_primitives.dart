@@ -1673,4 +1673,15 @@ const Map<String, IconData> _mpIcons = <String, IconData>{
   'mail': IconData(0xe3c4, fontFamily: 'MaterialIcons'),
   'home': IconData(0xf107, fontFamily: 'MaterialIcons'),
   'search': IconData(0xe567, fontFamily: 'MaterialIcons'),
+  'history': IconData(0xe314, fontFamily: 'MaterialIcons'),
+  'backspace': IconData(
+    0xe0c5,
+    fontFamily: 'MaterialIcons',
+    matchTextDirection: true,
+  ),
+  'arrowBack': IconData(
+    0xe092,
+    fontFamily: 'MaterialIcons',
+    matchTextDirection: true,
+  ),
 };

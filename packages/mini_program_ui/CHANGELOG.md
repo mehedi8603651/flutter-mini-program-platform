@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8
+
+- Add reusable styled text buttons and semantic icon buttons for compact,
+  domain-specific mini-program controls.
+- Add `history`, `backspace`, and `arrowBack` runtime icon names.
+
 ## 0.1.7
 
 - Add `state.setDefault`, `state.decrement`, `state.copy`, and `state.toggle`.

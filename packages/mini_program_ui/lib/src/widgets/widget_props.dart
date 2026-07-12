@@ -19,6 +19,9 @@ const Set<String> mpIconNames = <String>{
   'mail',
   'home',
   'search',
+  'history',
+  'backspace',
+  'arrowBack',
 };
 
 const Set<String> mpAlignmentNames = <String>{
