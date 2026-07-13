@@ -1,0 +1,836 @@
+# Flutter Mini-Program Platform Guide
+
+This file is the persistent repository guide for maintainers and coding agents. Read it before changing code. It explains the architecture, source ownership, important paths, generated files, workflows, tests, security boundaries, release conventions, and unfinished work.
+
+## Project Purpose
+
+This repository provides a provider-neutral Flutter mini-program platform. A mini-program is authored in Dart with `mini_program_ui`, compiled into static JSON screens and assets, and rendered by a host Flutter app through `mini_program_sdk`.
+
+The primary delivery model is:
+
+```text
+Mini-program Dart source
+  -> miniprogram build
+  -> static manifest, screens, and assets
+  -> miniprogram artifact build
+  -> immutable artifacts/<appId>/<version>/ bundle
+  -> any public static storage
+  -> host opens appId + artifactBaseUrl
+  -> SDK validates and renders the JSON UI
+```
+
+A mini-program may optionally call its publisher's HTTPS middle-server at runtime. The static artifact host and runtime API are separate systems. The Flutter host must not become a proxy for publisher business logic.
+
+## Current Package Set
+
+These versions are the repository's current development/release line. Check each `pubspec.yaml` before publishing because this section can become stale after a version bump.
+
+| Package | Current version | Role |
+| --- | ---: | --- |
+| `mini_program_contracts` | `0.3.4` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.1.10` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.5.10` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.6.10` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_vscode` | `0.4.0` | VS Code workflows that invoke the CLI |
+
+Dependency direction:
+
+```text
+mini_program_contracts
+  <- mini_program_ui
+  <- mini_program_sdk
+  <- mini_program_tooling
+
+mini_program_vscode -> invokes mini_program_tooling through the CLI
+mini-program projects -> depend on mini_program_ui
+host applications -> depend on mini_program_sdk
+```
+
+Do not make `mini_program_ui` depend on Flutter. It must remain usable by plain Dart build scripts.
+
+## Architecture Rules
+
+These are system invariants, not preferences:
+
+1. A host opens a static mini-program using only `appId + artifactBaseUrl`.
+2. Static mini-program artifacts are public, untrusted UI bundles. Never place secrets in them.
+3. Runtime API configuration is optional and belongs to mini-program runtime actions.
+4. Publisher middle-servers own authentication, databases, payments, files, secrets, external APIs, admin logic, and business rules.
+5. Runtime API actions may call only the configured publisher middle-server URL.
+6. `mini_program_ui` stays pure Dart.
+7. SDK runtime and tooling remain provider-neutral. Provider examples belong in docs or example backends.
+8. The host owns accepted permissions, cache policy, live-state limits, capabilities, and endpoint configuration.
+9. A publisher request is never runtime authority. Runtime uses host-accepted policy only.
+10. Published version directories are immutable. A changed release gets a new version.
+11. Mini-program JSON is strictly validated before rendering or dispatching actions.
+12. Session, token, password, login data, and other sensitive host storage are never exposed as mini-program cache buckets.
+
+## Repository Map
+
+The trees below list maintained source and important generated boundaries. Flutter platform boilerplate (`android/`, `ios/`, `web/`, and similar generated runner files), package build output, and repetitive test fixtures are grouped instead of listing every generated file.
+
+### Root
+
+```text
+flutter-mini-program-platform/
+|-- AGENTS.md                                  # This architecture and maintenance guide; keep it current
+|-- README.md                                  # Public project overview and primary quick commands
+|-- LICENSE                                    # Repository license
+|-- .gitignore                                 # Ignores Dart/Flutter output, logs, secrets, and local CLI state
+|-- .github/
+|   `-- workflows/
+|       `-- repo-smoke.yml                     # Windows CI: delivery, backend, SDK, and reference-host smoke tests
+|-- packages/                                  # Publishable contracts, authoring, runtime, tooling, and editor packages
+|-- mini_programs/                             # In-repo example mini-program source projects
+|-- hosts/                                     # Reference Flutter host applications
+|-- backend/                                   # Reference local delivery and secure API implementations
+|-- docs/                                      # Architecture, authoring, embedding, and end-to-end guides
+|-- tools/                                     # PowerShell wrappers, validation, synchronization, and release checks
+|-- emulator.flutter_emulator.log              # Local ignored emulator log; not project source
+`-- firebase-debug.log                         # Local ignored Firebase log; not project source
+```
+
+### `packages/mini_program_contracts`
+
+The contracts package defines the stable data crossing package, process, and network boundaries. Add a contract here when both producers and consumers must agree on the same serialized value.
+
+```text
+packages/mini_program_contracts/
+|-- lib/
+|   |-- mini_program_contracts.dart             # Public export barrel; public contracts must be exported here
+|   |-- action_names.dart                       # Canonical action type strings shared by UI, SDK, and validators
+|   |-- action_payloads.dart                    # Typed action payload models
+|   |-- action_payloads.freezed.dart            # Generated immutable-model code; never edit manually
+|   |-- action_payloads.g.dart                  # Generated JSON code; never edit manually
+|   |-- host_actions.dart                       # Host action request/result wire models
+|   |-- host_actions.freezed.dart               # Generated immutable-model code; never edit manually
+|   |-- host_actions.g.dart                     # Generated JSON code; never edit manually
+|   |-- manifest.dart                           # Mini-program manifest and delivery metadata models
+|   |-- manifest.freezed.dart                   # Generated manifest model code; never edit manually
+|   |-- manifest.g.dart                         # Generated manifest JSON code; never edit manually
+|   |-- sdk_version.dart                        # SDK version/range compatibility models
+|   |-- sdk_version.freezed.dart                # Generated version model code; never edit manually
+|   |-- sdk_version.g.dart                      # Generated version JSON code; never edit manually
+|   |-- capability.dart                         # Host capability names and capability contracts
+|   |-- error_codes.dart                        # Stable machine-readable error codes used across layers
+|   |-- feature_flags.dart                      # Feature flag contract and identifiers
+|   |-- mini_program_navigation_actions.dart    # Navigation action contracts
+|   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
+|   `-- screen_format.dart                      # Static screen document format/version contract
+|-- test/                                       # Contract serialization, equality, compatibility, and error tests
+|-- pubspec.yaml                                # Dart dependencies and package version
+|-- CHANGELOG.md                                # Published and pending contract changes
+|-- README.md                                   # Package-facing contract documentation
+`-- analysis_options.yaml                       # Package analyzer configuration
+```
+
+Regenerate Freezed/JSON files from this package directory after changing annotated models:
+
+```powershell
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### `packages/mini_program_ui`
+
+The UI package is the publisher-facing pure-Dart authoring DSL. It creates deterministic JSON; it does not render Flutter widgets.
+
+```text
+packages/mini_program_ui/
+|-- lib/
+|   |-- mini_program_ui.dart                    # Public export barrel used by mini-program authors
+|   `-- src/
+|       |-- mp.dart                             # Main `Mp` namespace: widgets, state, math, cache, control flow, actions
+|       |-- mp_action.dart                      # Serializable action value and action helpers
+|       |-- mp_node.dart                        # Serializable UI node value and node helpers
+|       |-- mp_program.dart                     # Screen/program document assembly
+|       |-- mp_build_output.dart                # Deterministic build output model/writer support
+|       |-- mp_json.dart                        # Canonical JSON normalization and deterministic encoding
+|       |-- mp_schema.dart                      # Authoring-side schema and value validation
+|       |-- mp_image.dart                       # Image source and image helper models
+|       |-- mp_lazy.dart                        # Lazy chunk authoring models and helpers
+|       |-- mp_skeleton.dart                    # Loading skeleton authoring models
+|       `-- widgets/
+|           |-- widget_props.dart               # Shared widget property normalization and validation
+|           |-- layout_widgets.dart             # Row, column, stack, padding, sizing, and scrolling builders
+|           |-- display_widgets.dart            # General display/container builders
+|           |-- text_widgets.dart               # Text and rich-text style builders
+|           |-- image_widgets.dart              # Image node builders
+|           |-- button_widgets.dart             # Button and interaction builders
+|           |-- list_widgets.dart               # Static and bound list builders
+|           |-- lazy_widgets.dart               # Lazy data/chunk UI builders
+|           |-- skeleton_widgets.dart           # Skeleton placeholder builders
+|           `-- theme_widgets.dart              # Theme and visual configuration builders
+|-- test/                                       # Deterministic serialization and authoring validation tests
+|-- pubspec.yaml                                # Pure-Dart dependencies and package version
+|-- CHANGELOG.md                                # Published and pending authoring API changes
+|-- README.md                                   # Package-facing authoring examples
+`-- analysis_options.yaml                       # Package analyzer configuration
+```
+
+When adding an authoring API, emit explicit JSON, validate author mistakes early, and add deterministic serialization tests. Do not import Flutter or duplicate runtime behavior here.
+
+### `packages/mini_program_sdk`
+
+The SDK is the Flutter execution boundary. It fetches, validates, caches, binds, renders, and executes static mini-program documents under host policy.
+
+```text
+packages/mini_program_sdk/
+|-- lib/
+|   |-- mini_program_sdk.dart                   # Public SDK export barrel
+|   |-- mini_program_host.dart                  # Host screen stack, loading, stale/offline content, and app lifecycle
+|   |-- mini_program_page.dart                  # Public page widget for a loaded mini-program
+|   |-- mini_program_launcher.dart              # Launch orchestration from app ID/options to runtime page
+|   |-- mini_program_launch_options.dart        # Per-launch route/input/options model
+|   |-- mini_program_config.dart                # Host-provided SDK dependencies and defaults
+|   |-- mini_program_scope.dart                 # Inherited runtime scope for active mini-program services
+|   |-- mini_program_runtime.dart               # Runtime assembly and execution services
+|   |-- mini_program_controller.dart            # Imperative host/runtime controller
+|   |-- mini_program_discovery.dart             # Catalog/discovery abstraction
+|   |-- mini_program_failure.dart               # Typed SDK loading/runtime failure model
+|   |-- manifest_loader.dart                    # Manifest/screen fetch, validation, and stale-cache fallback
+|   |-- host_bridge.dart                        # Boundary for approved host actions/capabilities
+|   |-- capability_registry.dart                # Host capability registration and checks
+|   |-- feature_flag_evaluator.dart             # Runtime feature flag evaluation
+|   |-- sdk_context.dart                        # Internal SDK context shared during rendering
+|   |-- version_validator.dart                  # Manifest/SDK compatibility checks
+|   |-- actions/
+|   |   `-- host_action_dispatcher.dart         # Dispatches approved actions to the host bridge
+|   |-- auth/
+|   |   `-- mini_program_auth.dart              # Host-owned mini-program authentication abstractions
+|   |-- observability/
+|   |   `-- sdk_logger.dart                     # Provider-neutral structured SDK logging hook
+|   |-- state/
+|   |   `-- mp_state.dart                       # Reactive store, manager, routing, batches, scopes, and live-state limits
+|   |-- cache/
+|   |   |-- mini_program_cache_bundle.dart      # Host-selected cache bundle and cache policy models
+|   |   |-- manifest_cache.dart                 # Cached manifests and expiration behavior
+|   |   |-- screen_cache.dart                   # Cached screen documents
+|   |   |-- asset_cache.dart                    # Cached static assets
+|   |   |-- runtime_cache.dart                  # App-scoped public runtime cache manager and usage reporting
+|   |   |-- runtime_file_cache.dart             # Persistent file-backed runtime cache implementation
+|   |   `-- runtime_shared_preferences_cache.dart # Persistent preferences/web-compatible cache implementation
+|   |-- network/
+|   |   |-- mini_program_source.dart            # Abstract static artifact source
+|   |   |-- http_mini_program_source.dart       # HTTP static artifact source for production/public storage
+|   |   |-- mini_program_source_exception.dart  # Fetch/source failure taxonomy
+|   |   |-- asset_resolver.dart                 # Resolves manifest-relative artifact asset URLs
+|   |   |-- mini_program_endpoint.dart          # Per-app artifact/API endpoint plus cache/live-state policy
+|   |   |-- mini_program_delivery_context.dart  # Delivery metadata available during loading
+|   |   |-- published_mini_program_catalog_client.dart # Reads published catalog/latest metadata
+|   |   |-- mini_program_backend_connector.dart # Optional publisher middle-server HTTPS connector
+|   |   |-- mini_program_backend_store.dart     # Reactive snapshots of publisher API responses
+|   |   `-- local_backend_defaults.dart         # Local development source defaults
+|   |-- rendering/
+|   |   |-- mini_program_screen_renderer.dart   # Higher-level renderer facade
+|   |   |-- mini_program_backend_binding_resolver.dart # Resolves bindings from backend response snapshots
+|   |   |-- mp_screen_renderer.dart             # Core validated JSON-to-Flutter renderer entry
+|   |   `-- mp_runtime/
+|   |       |-- models.dart                     # Internal parsed runtime node/action models
+|   |       |-- models_validator.dart           # Strict node/action schema validator
+|   |       |-- models_validator_helpers.dart   # Shared validator rules, keys, ranges, and binding checks
+|   |       |-- bindings.dart                   # Resolves `{{state...}}` and other runtime bindings
+|   |       |-- action_dispatcher.dart          # Executes state, math, cache, flow, timer, backend, and host actions
+|   |       |-- math_engine.dart                # Restricted core-Dart expression tokenizer/parser/evaluator
+|   |       |-- forms.dart                      # Form state, validation, and submission helpers
+|   |       |-- widgets.dart                    # Runtime widget dispatcher shared by renderer parts
+|   |       |-- widgets_primitives.dart         # Basic text/layout/display/button rendering
+|   |       |-- widgets_forms.dart              # Form widget rendering
+|   |       |-- widgets_backend.dart            # Publisher API-bound widget rendering
+|   |       |-- widgets_lazy.dart               # Lazy chunk and load-more rendering
+|   |       `-- widgets_lifecycle.dart          # initialize, condition, timer, scope, and action-scope lifecycle
+|   `-- widgets/
+|       |-- sdk_loading_view.dart               # Default host loading UI
+|       |-- sdk_error_view.dart                 # Default host failure UI
+|       |-- sdk_offline_notice.dart             # Temporary stale-content/offline notice overlay
+|       `-- sdk_email_auth_sheet.dart           # Reference host-owned email auth UI
+|-- test/                                       # Unit/widget tests for loading, rendering, state, cache, source, and actions
+|-- pubspec.yaml                                # Flutter dependencies, SDK floor, and package version
+|-- CHANGELOG.md                                # Published and pending SDK behavior changes
+|-- README.md                                   # Host integration API documentation
+`-- analysis_options.yaml                       # Package analyzer configuration
+```
+
+Renderer files use Dart `part` organization in places. Read `mp_screen_renderer.dart` and all related runtime parts before moving symbols or changing private contracts.
+
+### `packages/mini_program_tooling`
+
+The tooling package is the supported CLI and generator layer. Prefer extending its command groups over adding standalone repository scripts.
+
+```text
+packages/mini_program_tooling/
+|-- bin/
+|   |-- miniprogram.dart                        # Primary user-facing CLI executable
+|   |-- create_mini_program.dart                # Compatibility create entry point
+|   |-- build_mini_program.dart                 # Compatibility build entry point
+|   |-- validate_delivery.dart                  # Compatibility delivery validator entry point
+|   |-- inspect_delivery.dart                   # Compatibility delivery inspector entry point
+|   |-- publish_mini_program.dart               # Legacy/static publisher entry point
+|   `-- init_mini_program_embedding.dart        # Compatibility host embedding entry point
+|-- lib/
+|   |-- mini_program_tooling.dart                # Public tooling export barrel
+|   `-- src/
+|       |-- miniprogram_cli.dart                 # Top-level command parser and dispatcher
+|       |-- mini_program_scaffolder.dart         # Creates a new mini-program source project
+|       |-- mini_program_builder.dart            # Builds fast development output in `mp/.build`
+|       |-- mini_program_artifacts.dart          # Builds/verifies immutable portable artifact bundles
+|       |-- mini_program_partner_handoff.dart    # Reads/writes partner handoff and requested policy
+|       |-- mini_program_embedding_initializer.dart # Generates host integration files
+|       |-- mini_program_host_controller.dart    # Starts and controls generated/reference hosts
+|       |-- mini_program_preview_host_initializer.dart # Generates a preview Flutter host
+|       |-- mini_program_preview_controller.dart # Coordinates preview build/server/host lifecycle
+|       |-- mini_program_preview_server.dart     # Serves local static artifacts with development headers
+|       |-- mini_program_path_resolver.dart      # Resolves workspace/project paths consistently
+|       |-- mini_program_workflow_status.dart    # Computes project workflow status for CLI/editor
+|       |-- miniprogram_doctor.dart              # Environment and project diagnostics
+|       |-- local_cli_state.dart                 # Ignored local process/port/workflow state
+|       |-- delivery_validation.dart             # Delivery validation result models
+|       |-- delivery_validator.dart              # Validates static delivery content
+|       |-- delivery_inspector.dart              # Human/JSON inspection of built delivery
+|       |-- mini_program_publisher.dart           # Older publishing orchestration retained for compatibility
+|       |-- mini_program_static_publisher.dart    # Static directory publishing support
+|       |-- local_backend_initializer.dart        # Creates local artifact backend workspace
+|       |-- local_backend_controller.dart         # Starts/stops local backend service
+|       |-- publisher_backend_starter.dart        # Creates optional publisher API starter
+|       |-- publisher_backend_contract_controller.dart # Publisher API contract commands
+|       |-- publisher_backend/
+|       |   |-- core_operations.dart              # Shared create/start/stop/validate API workspace operations
+|       |   |-- models.dart                       # Public/internal publisher backend workflow models
+|       |   |-- internal_models.dart              # Implementation-only operation values
+|       |   |-- starter_helpers.dart              # Workspace starter path, template, and process helpers
+|       |   |-- runtime_smoke_helpers.dart        # Runtime API health/contract smoke helpers
+|       |   |-- models/
+|       |   |   `-- local_models.dart             # Local backend process and endpoint models
+|       |   |-- generated_files.dart              # Generates mock middle-server workspace files
+|       |   `-- generated_files/
+|       |       `-- mock_templates.dart           # Source templates embedded by generated API workspaces
+|       |-- cli/
+|       |   |-- core_commands.dart                # Create/build/validate/preview core commands
+|       |   |-- artifact_commands.dart            # `artifact build` and `artifact verify`
+|       |   |-- host_partner_commands.dart        # Partner handoff and host endpoint import commands
+|       |   |-- workflow_commands.dart            # Higher-level workflow/status commands
+|       |   |-- backend_commands.dart             # Local backend compatibility commands
+|       |   |-- publisher_backend_commands.dart   # Optional publisher API starter/runtime commands
+|       |   |-- publisher_backend_contract_commands.dart # API contract validation commands
+|       |   |-- env_commands.dart                 # Environment and doctor commands
+|       |   |-- json_output_helpers.dart          # Stable machine-readable CLI output helpers
+|       |   |-- result_formatters.dart            # Human CLI formatting
+|       |   |-- publisher_backend_output_helpers.dart # API command output formatting
+|       |   |-- shared_helpers.dart               # Shared command validation/path helpers
+|       |   |-- usage_helpers.dart                # CLI usage/help text
+|       |   |-- miniprogram_cli_constants.dart    # Command names/defaults/limits
+|       |   `-- private_models.dart               # CLI-internal values not exported as API
+|-- templates/
+|   `-- backend_workspace/                       # Files copied for generated mock publisher API workspaces
+|-- test/                                       # CLI, generator, artifact, policy, host, and backend tests
+|-- pubspec.yaml                                # CLI dependencies, executable, and package version
+|-- CHANGELOG.md                                # Published and pending tooling changes
+|-- README.md                                   # CLI command and workflow documentation
+`-- analysis_options.yaml                       # Package analyzer configuration
+```
+
+All CLI failures should be actionable and have nonzero exit status. Preserve JSON output compatibility when commands are consumed by VS Code or scripts.
+
+### `packages/mini_program_vscode`
+
+The extension is a thin user interface over CLI capabilities. Business rules belong in tooling so terminal and editor workflows behave the same.
+
+```text
+packages/mini_program_vscode/
+|-- src/
+|   |-- extension.ts                            # Activates extension and registers commands/views
+|   |-- cli.ts                                  # CLI discovery and invocation facade
+|   |-- diagnostics.ts                          # Maps CLI/project issues to VS Code diagnostics
+|   |-- workflowStatus.ts                       # Reads and refreshes CLI workflow status
+|   |-- statusTree.ts                           # VS Code tree view provider
+|   |-- statusTreeModel.ts                      # Editor-independent status tree model
+|   |-- hostIntegration.ts                      # Guided host embedding/import integration
+|   |-- guidedWorkflows.ts                      # Multi-step editor workflows
+|   |-- commands/
+|   |   |-- coreCommands.ts                     # Create/build/validate/preview command handlers
+|   |   |-- hostCommands.ts                     # Host integration handlers
+|   |   |-- partnerCommands.ts                  # Partner handoff handlers
+|   |   |-- localBackendCommands.ts             # Local backend handlers
+|   |   |-- publisherBackendContractCommands.ts # Publisher API contract handlers
+|   |   |-- environmentCommands.ts              # Doctor/environment handlers
+|   |   `-- guidedCommands.ts                   # Guided workflow entry points
+|   `-- extensionSupport/
+|       |-- index.ts                            # Support-module export barrel
+|       |-- workspace.ts                        # Workspace/project path discovery
+|       |-- prompts.ts                          # Consistent VS Code user prompts
+|       |-- jsonValues.ts                       # Safe parsing of CLI JSON values
+|       |-- commandRunner.ts                    # Process execution and output handling
+|       `-- cliCapabilities.ts                  # Detects installed CLI command support/version
+|-- test/                                       # Node tests for commands, status, diagnostics, and registration
+|-- media/                                      # Extension/marketplace icons
+|-- package.json                                # Extension manifest, commands, views, scripts, and version
+|-- package-lock.json                           # Reproducible npm dependency resolution; update with npm
+|-- tsconfig.json                               # TypeScript compiler configuration
+|-- .vscodeignore                               # Excludes development-only files from packaged extensions
+|-- mini-program-tools-*.vsix                   # Built extension release archives; do not edit as source
+|-- README.md                                   # Marketplace/user documentation
+|-- CHANGELOG.md                                # Extension release notes
+`-- LICENSE                                     # Extension package license copy
+```
+
+`out/` and `node_modules/` are generated. Edit `src/`, then compile and test with npm.
+
+All Dart package roots also use the following conventional files where present:
+
+```text
+packages/<dart-package>/
+|-- pubspec.yaml                                # Published dependency constraints, SDK floor, and version
+|-- pubspec.lock                                # Current checked-in local resolution where already tracked
+|-- pubspec_overrides.yaml                      # Local cross-package path overrides for repository development
+|-- analysis_options.yaml                       # Analyzer/lint configuration
+|-- README.md                                   # Public package usage documentation
+|-- CHANGELOG.md                                # Release history and pending release notes
+|-- LICENSE                                     # Package license copy
+`-- .gitignore                                  # Package-specific generated/local exclusions where present
+```
+
+Do not add or remove lock/override files mechanically across all packages. Preserve each package's existing repository convention.
+
+### Example Mini-Programs
+
+These projects are executable documentation. Their source is authoritative; generated `mp/.build` output is disposable.
+
+```text
+mini_programs/
+|-- mp_profile_center/                          # Basic profile/layout/image/navigation example
+|-- mp_rewards_center/                          # Backend bindings, auth builder, lazy chunks, and load-more example
+|-- food_order/                                 # Static multi-screen food-order interaction fixture
+`-- recharge/                                   # Static recharge/form/action fixture
+
+mini_programs/<project>/
+|-- manifest.json                               # App ID, title, version, SDK requirement, and entry screen
+|-- pubspec.yaml                                # Authoring dependency, normally `mini_program_ui`
+|-- mp/
+|   |-- program.dart                            # Program/screen registry used by the build script
+|   |-- screens/*.dart                          # Maintained screen definitions using `Mp.*`
+|   `-- .build/                                 # Generated development JSON; ignored and safe to rebuild
+|-- tool/build_mp.dart                          # Project build entry that writes deterministic screens
+`-- README.md                                   # Example-specific run and behavior notes
+```
+
+Do not edit generated JSON to implement a feature. Edit `mp/*.dart`, rebuild, and verify the resulting artifact.
+
+### Reference Hosts
+
+```text
+hosts/
+|-- mp_only_host/                               # Smallest reference host for pure Mp static screens
+|-- super_app_host/                             # Full first-party host: discovery, bridge, auth, cache, offline, secure API
+`-- partner_app_host/                           # External partner host with a deliberately narrower capability surface
+
+hosts/mp_only_host/
+|-- lib/main.dart                               # Entire minimal host, bundled source, bridge, and launch example
+|-- assets/                                     # Bundled static profile fixture used by the minimal host
+|-- test/widget_test.dart                       # Minimal host loading/rendering smoke test
+|-- android/, ios/, web/, ...                   # Flutter-generated platform runners and configuration
+`-- pubspec.yaml                                # Flutter dependencies and bundled assets
+
+hosts/{super_app_host,partner_app_host}/
+|-- lib/app/                                    # Flutter application shell, routes, and host-level UI
+|-- lib/bridge/                                 # Host action bridge implementations
+|-- lib/capabilities/                           # Capability registrations and policy decisions
+|-- lib/mini_programs/                          # Endpoint/registry/loading integration for mini-programs
+|-- lib/services/                               # Host-owned services such as auth and secure API adapters
+|-- assets/                                     # Bundled artifact snapshots used by reference/offline tests
+|-- test/                                       # Host integration and widget tests
+|-- android/, ios/, web/, ...                   # Flutter-generated platform runners and configuration
+`-- pubspec.yaml                                # Flutter dependencies and bundled assets
+```
+
+Bundled host assets are copies, not authoring source. Synchronize maintained examples with `tools/sync_assets.ps1` instead of hand-editing both locations.
+
+Generated host integration normally lives in an application's `lib/mini_program/` directory:
+
+```text
+lib/mini_program/
+|-- mini_program.dart                           # Generated integration export/entry point
+|-- mini_program_launcher.dart                  # Generated host launch helper
+|-- mini_program_runtime_setup.dart             # Generated SDK/cache/runtime construction
+|-- mini_program_registry.dart                  # Generated app ID to endpoint registry
+|-- mini_program_endpoints.dart                 # Generated artifact endpoints plus accepted policies
+|-- mini_program_policies.json                  # Host-owned requested/accepted policy source of truth
+|-- mini_program_policy_resolver.dart           # Generated Dart mapping for cache/live-state accepted policy
+`-- app_host_bridge.dart                        # Host bridge starting point; host-owned behavior may be edited
+```
+
+Read generator headers before editing generated Dart. Preserve host-owned files and fields when running import/update commands.
+
+### Backend References
+
+```text
+backend/
+|-- api/
+|   |-- manifests/                              # Legacy/reference manifest delivery fixtures
+|   |-- screens/                                # Legacy/reference screen delivery fixtures
+|   |-- capability-policies/                    # Host capability policy fixtures
+|   |-- rollout-rules/                          # Delivery rollout fixtures
+|   `-- secure-api-policies/                    # Secure host API policy fixtures
+`-- local_backend_service/
+    |-- bin/server.dart                         # Starts the local Dart HTTP reference service
+    |-- lib/local_backend_service.dart           # Public service export
+    |-- lib/src/local_backend_handler.dart       # Request routing and artifact/API response handling
+    |-- lib/src/manifest_delivery_selection.dart # Selects manifest versions/rollouts
+    |-- lib/src/secure_feedback_handler.dart     # Reference secure feedback endpoint
+    |-- lib/src/backend_response_contracts.dart  # Local service response shapes
+    |-- lib/src/backend_observability.dart       # Local service logging/metrics hooks
+    |-- test/                                   # Handler, selection, contract, and security tests
+    `-- pubspec.yaml                            # Standalone Dart service dependencies
+```
+
+This backend is a development/reference implementation. Real publisher middle-servers remain independent deployments and must not be coupled into the SDK.
+
+### Documentation
+
+```text
+docs/
+|-- quickstart_static_miniprogram_to_host.md    # Beginner path from static app source to host loading
+|-- mini_program_authoring.md                   # `Mp` nodes/actions, bindings, state, backend, and lazy patterns
+|-- embed_existing_flutter_app.md               # Add SDK and generated integration to an existing Flutter host
+|-- static_artifact_runtime_api_e2e_guide.md    # Complete static artifact plus optional runtime API flow
+|-- middle_server_api_lambda_dynamodb.md        # Concrete provider example, not a platform dependency
+`-- publisher_backend_https_api_roadmap.md      # Planned publisher API contract/runtime evolution
+```
+
+Update docs when a public command, file layout, policy schema, action, or host setup changes.
+
+### Repository Tools
+
+```text
+tools/
+|-- create_mini_program.ps1                     # PowerShell wrapper for project creation
+|-- build_mini_program.ps1                      # PowerShell wrapper for development builds
+|-- init_mini_program_embedding.ps1             # PowerShell wrapper for host integration generation
+|-- inspect_delivery.ps1                        # Inspects static delivery output
+|-- publish_mini_program.ps1                    # Legacy local/static publishing wrapper
+|-- publish_local_backend.ps1                   # Prepares/runs the local reference backend
+|-- validate_delivery.ps1                       # Validates manifests/screens/assets and delivery rules
+|-- sync_assets.ps1                             # Rebuilds/copies example artifacts into reference hosts
+|-- smoke_repo.ps1                              # Repository-level smoke checks
+|-- verify_global_cli.ps1                       # Verifies globally activated `miniprogram` behavior
+`-- verify_mp_engine_release.ps1                # Cross-package release compatibility checks
+```
+
+Use the `miniprogram` CLI for normal user workflows. Use these scripts for repository maintenance, compatibility, and CI-style checks.
+
+## Static Artifact Layout
+
+`miniprogram artifact build` creates a portable storage-neutral tree inside a mini-program project:
+
+```text
+artifacts/
+`-- <appId>/
+    |-- latest.json                             # Active manifest copy, written atomically after a complete build
+    |-- catalog.json                            # Available immutable versions and release metadata
+    `-- <version>/
+        |-- manifest.json                       # Runtime manifest for this exact version
+        |-- release.json                        # Release identity and bundle metadata
+        |-- checksums.json                      # Integrity hashes for all immutable release files
+        |-- screens/
+        |   `-- <screenId>.json                 # Validated static screen documents
+        `-- assets/                             # Images/fonts/static files referenced by the screens
+```
+
+The host's `artifactBaseUrl` points to the public root that contains the canonical `artifacts/` directory. The SDK appends `artifacts/<appId>/latest.json`. For example, if storage serves the calculator pointer at `https://example.test/artifacts/calculator/latest.json`, use `https://example.test/` as the base.
+
+Rules:
+
+- Never replace `artifacts/<appId>/<publishedVersion>/` after publication.
+- Bump `manifest.json` version before building changed content.
+- Build the complete version directory and checksums before atomically updating the active `latest.json` manifest.
+- Run `miniprogram artifact verify` after copying to local portable output and again in deployment automation when possible.
+- `.nojekyll` and storage-specific metadata may exist at the deployment root, but the runtime format stays provider-neutral.
+
+## Runtime System
+
+### Loading and Rendering
+
+1. The host resolves `MiniProgramEndpoint` from the app registry.
+2. `HttpMiniProgramSource` fetches `<artifactBaseUrl>/<appId>/latest.json`, then the selected manifest and screen files.
+3. `ManifestLoader` validates compatibility and uses accepted cache policy.
+4. On a network failure, valid cached manifest/screens may render while `SdkOfflineNotice` appears temporarily.
+5. `MpScreenRenderer` strictly validates each screen document.
+6. Bindings are resolved against live state, launch inputs, forms, and approved backend snapshots.
+7. Runtime widgets subscribe only to relevant state where possible; avoid replacing the entire screen to update one value.
+
+### Actions and State
+
+`MpAction` JSON is dispatched by the SDK, not evaluated as arbitrary Dart or JavaScript. Sequence steps resolve bindings immediately before each step, stop on failure, and may feed later state/cache/history actions.
+
+Important state APIs include:
+
+- `Mp.state.set`, `setDefault`, `patch`, `copy`, `toggle`, `increment`, and `decrement`.
+- Text transforms: `appendText` and `backspace`.
+- List transforms: append, prepend, insert, remove-at, and remove-value.
+- `MpStateManager.batchUpdates` for synchronous, nested, rollback-capable host/runtime batches.
+- `Mp.stateScope` for lifecycle-owned cleanup under a prefix.
+- `Mp.initialize` for once-per-mounted-instance initialization and retry.
+- `Mp.condition` for state-driven branches.
+- `Mp.actionScope` plus `Mp.action.call` for reusable local action definitions and in-place updates.
+- `Mp.timer.countdown` for declarative countdown state.
+
+Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
+
+### Math
+
+The core-Dart math engine supports bounded expression evaluation, comparison, random values, and aggregates. It intentionally does not execute code, perform symbolic algebra, or parse LaTeX. Expressions and operations have strict size, depth, token, range, finite-number, and result limits.
+
+### Cache
+
+Mini-program-visible cache buckets are `memory`, `data`, `image`, `state`, and `video`. A calculator history, quiz history, preferences, and resumable UI state normally use `state`.
+
+Host backends can use:
+
+- `MiniProgramCacheBundle.inMemory()` for process-lifetime development/default behavior.
+- `MiniProgramCacheBundle.fileBacked(...)` for persistent native/mobile storage.
+- `MiniProgramCacheBundle.webPersistent()` for browser persistence.
+
+TTL, enabled buckets, and byte limits are enforced consistently by the manager. `Mp.cache.info` reports only app-scoped accepted limits and usage; it never exposes keys, paths, other apps, global host usage, pinned host entries, or session storage.
+
+### Host-Owned Policy
+
+Partner handoff schema version 3 may request cache for `memory`, `data`, `image`, `state`, or `video`. Sensitive bucket/key names such as session, login data, token, password, and secret are rejected.
+
+`lib/mini_program/mini_program_policies.json` contains:
+
+```json
+{
+  "schemaVersion": 1,
+  "apps": {
+    "example": {
+      "requested": {
+        "source": "example.partner.json",
+        "cache": {},
+        "permissions": {}
+      },
+      "accepted": {
+        "cache": {},
+        "liveState": {},
+        "permissions": {}
+      }
+    }
+  }
+}
+```
+
+Import behavior:
+
+- Normal import updates `requested` and preserves the host's `accepted` values.
+- `--accept-requested-policy` explicitly copies supported requested cache values into accepted policy without replacing unrelated endpoint files.
+- `--force` regenerates known accepted cache policy and resets live-state limits to safe defaults.
+- Runtime resolver generation reads only `accepted` for enforcement.
+- Unknown accepted fields should be preserved for forward compatibility.
+
+### Optional Publisher API
+
+Static-only apps need no runtime backend. Apps requiring accounts, synchronized data, payments, notifications, files, or business rules call one configured publisher middle-server through approved `Mp.backend.*` actions.
+
+```text
+Mini-program runtime action
+  -> SDK validates action and configured API origin
+  -> MiniProgramBackendConnector
+  -> publisher HTTPS middle-server
+  -> publisher auth/database/payment/external services
+  -> normalized response snapshot
+  -> bound mini-program UI/state
+```
+
+Never add direct database credentials, cloud provider secrets, payment secrets, or unrestricted URLs to manifests or screens.
+
+## Main Workflows
+
+Run commands from a mini-program project unless noted otherwise.
+
+### Create and Develop
+
+```powershell
+miniprogram create <directory>
+cd <directory>
+dart pub get
+miniprogram build
+miniprogram preview
+```
+
+`miniprogram build` is fast development output. It writes generated documents under `mp/.build`; it does not create an immutable release.
+
+### Build and Verify a Release
+
+```powershell
+miniprogram build
+miniprogram validate
+miniprogram artifact build
+miniprogram artifact verify
+```
+
+Copy the resulting canonical `artifacts/` tree to any public static storage. Publishing/upload is intentionally outside the portable artifact command.
+
+### Partner Handoff and Host Import
+
+Use CLI help for the exact current arguments:
+
+```powershell
+miniprogram partner --help
+miniprogram host endpoint import --help
+```
+
+After import, the host developer reviews `requested` versus `accepted` in `mini_program_policies.json`, rebuilds generated policy resolution as directed by the CLI, and tests with the same public/static artifact URL used by the app.
+
+### Package Checks
+
+From each Dart package:
+
+```powershell
+dart pub get
+dart analyze
+dart test
+```
+
+For the Flutter SDK and Flutter hosts:
+
+```powershell
+flutter pub get
+flutter analyze
+flutter test
+```
+
+For the VS Code extension:
+
+```powershell
+npm ci
+npm run compile
+npm test
+```
+
+Run repository checks from the root when changing cross-layer behavior:
+
+```powershell
+.\tools\validate_delivery.ps1
+.\tools\smoke_repo.ps1
+.\tools\verify_mp_engine_release.ps1
+```
+
+Consult `package.json` or `pubspec.yaml` when a script name/tool version changes; do not guess around a failing command.
+
+## Changing the Platform Safely
+
+### Add a New `Mp` Action
+
+Most cross-layer actions require this order:
+
+1. Add canonical names, payload contracts, and stable errors in `mini_program_contracts` when shared wire values are needed.
+2. Add the pure-Dart helper and authoring validation in `mini_program_ui`.
+3. Add strict allowed-property/schema validation in SDK runtime validators.
+4. Implement dispatch with atomic state behavior and clear `HostActionResult` data/errors.
+5. Add UI serialization tests, SDK validator tests, dispatcher/renderer tests, and sequence/binding tests.
+6. Update changelogs and compatible dependency constraints across affected packages.
+7. Update tooling templates/scaffolds if generated apps or hosts require the new minimum versions.
+8. Test one real mini-program against local path dependencies before publishing.
+
+### Add a New `Mp` Widget
+
+1. Add a pure-Dart node builder under `mini_program_ui/lib/src/widgets/`.
+2. Define strict property validation and deterministic JSON tests.
+3. Add SDK parsed-model validation.
+4. Render it in the narrowest appropriate runtime widget part.
+5. Subscribe to only relevant state; do not remount the whole screen for local changes.
+6. Test mobile constraints, overflow, disposal, binding changes, and invalid JSON.
+
+### Change Static Delivery
+
+Coordinate contracts, tooling, SDK source/loading, docs, artifact tests, and backward compatibility. Existing published artifacts must continue to load unless a deliberate compatibility boundary and migration are documented.
+
+### Change Host Policy
+
+Test first import, re-import, host-edited accepted values, unknown fields, explicit acceptance, force behavior, generated resolver output, and runtime enforcement. Never let requested policy bypass host acceptance.
+
+## Source Ownership and Generated Files
+
+| Path/content | Owner | Editing rule |
+| --- | --- | --- |
+| `mini_programs/*/mp/**/*.dart` | Mini-program developer | Edit and rebuild |
+| `mini_programs/*/mp/.build/` | Tooling | Generated; do not hand-edit |
+| `artifacts/<appId>/<version>/` | Artifact builder | Immutable after publication |
+| `*.freezed.dart`, `*.g.dart` | build_runner | Regenerate; do not hand-edit |
+| `packages/mini_program_vscode/out/` | TypeScript compiler | Generated; edit `src/` |
+| Host `mini_program_policies.json` | Host developer | Source of truth for accepted policy |
+| Generated host resolver/endpoints | Tooling plus reviewed host config | Regenerate through CLI; read headers |
+| Reference host bundled assets | Sync tooling | Copy of mini-program output, not source |
+| `.dart_tool/`, `build/`, `.mini_program/` | Dart/Flutter/CLI | Local generated state; never commit as source |
+| `emulator*.log`, `firebase-debug.log` | Local tools | Diagnostic output; ignore |
+
+The working tree may contain user changes. Never discard, reset, or overwrite unrelated modifications. Read the diff before editing a file that is already changed.
+
+## Testing Expectations
+
+- Keep narrow changes covered by focused tests near the owning module.
+- Expand coverage for cross-package contracts, shared state/cache behavior, host policy, loading, and user-visible workflows.
+- Test both valid and malicious/invalid mini-program JSON.
+- Test binding values at execution time, not only static literals.
+- Test disposal and stale async completion for timers, initialization, loading, and backend work.
+- Test persistent and in-memory cache behavior under the same accepted policy.
+- For UI smoothness, verify that local state changes rebuild only subscribed subtrees and preserve stable screen identity.
+- For Android-facing changes, run host widget/unit tests and an emulator smoke test when the environment permits.
+- For static delivery, verify checksums and test the exact served URL, including CORS and path casing.
+
+## Release Conventions
+
+- Package changelogs describe the pending release before publishing.
+- Bump only affected packages, but update dependent constraints/templates/tests when the new API is required.
+- Keep contracts, UI, SDK, and tooling versions mutually compatible.
+- Run analysis and full tests for every affected package.
+- Run `tools/verify_mp_engine_release.ps1` for a coordinated engine release.
+- Publish generated code and package metadata, but not build/cache directories.
+- Do not publish packages, create commits, or push unless the user explicitly requests it.
+- Git line-ending warnings on Windows are informational unless a diff shows unintended whole-file churn.
+- Use `git commit -m "message"`; `git commit "message"` treats the text as a pathspec and does not commit.
+
+## Security Checklist
+
+- Treat all remote manifests, screens, bindings, action payloads, and API responses as untrusted.
+- Reject unknown properties where the schema is strict.
+- Enforce length, count, depth, numeric, expression, state, and cache limits before committing data.
+- Keep host secrets and authentication material outside static artifacts and public cache.
+- Allow only host-configured publisher API origins.
+- Stop action sequences on failure and preserve previous target state when specified by the action contract.
+- Return stable machine-readable error codes with developer-friendly messages that do not leak secrets.
+- Never expose cache keys, filesystem paths, session buckets, other applications, or global host storage through `Mp.cache.info`.
+- Keep permissions and accepted policy host-controlled.
+
+## External Integration Workspace
+
+`D:\mini-app-store` is commonly used alongside this repository for real mini-programs such as Calculator and Brain Test plus an Android host. It is a separate Git repository and is not platform source.
+
+When testing there:
+
+- Use local path dependencies to this repository while validating unpublished platform changes.
+- Rebuild the mini-program, immutable artifact, and host integration after a required-version change.
+- Do not copy application-specific behavior into generic SDK APIs unless it benefits multiple mini-program categories.
+- Do not commit or push the external repository unless the task explicitly requests it.
+- After packages are published, switch consumers back to intentional pub.dev constraints only when requested.
+
+## Future Work
+
+Keep this section for unfinished platform work only. Remove items when completed rather than keeping a historical task log.
+
+1. Add real runtime middle-server API examples for catalog search, profile update, file metadata, notification list, checkout draft, and form submit.
+2. Add SDK/runtime tests for common middle-server errors: validation failure, `401` session expired, `403` forbidden, `429` rate limit, `500` server error, and `503` retryable outage.
+3. Add a complete sample mini-program using `Mp.backend.query`, `Mp.backend.call`, `Mp.lazy.chunk`, search/load-more, and form submission against one mock middle-server.
+4. Improve static artifact diagnostics for manifest URL, entry screen URL, public base path, path casing, CORS, and common static server mistakes.
+5. Expand `Mp.lazy.chunk` examples for product lists, news feeds, chat history, order history, and search results.
+6. Add a provider-neutral static artifact host checklist covering headers, cache control, immutable screen paths, latest manifest path, and local server testing.
+7. Add release automation that verifies MVP documentation presents static artifact opening plus optional publisher middle-server APIs without reintroducing provider coupling.
+
+## Agent Start Checklist
+
+At the beginning of a new task:
+
+1. Read this file, the root README, and the README/changelog for every affected package.
+2. Run `git status --short` before making assumptions about the working tree.
+3. Locate the owning layer: contract, authoring DSL, SDK runtime, tooling, extension, example, host, or backend.
+4. Search for existing patterns and tests before creating a new abstraction.
+5. Keep edits scoped and preserve user changes.
+6. Implement through verification; do not stop after a proposal unless the user requested planning only.
+7. Update this guide when architecture, important paths, generated boundaries, commands, or persistent future work changes.
