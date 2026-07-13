@@ -1,3 +1,12 @@
+## 0.5.9
+
+- Render reactive conditional node branches and dispatch strict boolean
+  `action.ifElse` control flow.
+- Run lifecycle-owned countdown nodes with bounded durations, pause/resume,
+  restart tokens, background elapsed-time reconciliation, remaining-seconds
+  state, and exactly-once completion actions.
+- Render generic brain, trophy, timer, close, refresh, and bolt icons.
+
 ## 0.5.8
 
 - Show the stale-cache offline notice with accessible warning colors and

@@ -1,3 +1,8 @@
+## 0.6.9
+
+- Generate mini-programs and hosts with the conditional control-flow and
+  lifecycle countdown package releases.
+
 ## 0.6.8
 
 - Add deterministic `miniprogram artifact build` and

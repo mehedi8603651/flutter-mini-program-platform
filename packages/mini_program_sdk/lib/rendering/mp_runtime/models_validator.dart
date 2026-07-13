@@ -46,6 +46,9 @@ class MpScreenValidator {
   /// Maximum accepted URL string length.
   static const int maxUrlLength = 2048;
 
+  /// Maximum countdown duration accepted by the runtime.
+  static const int maxCountdownDurationMs = 7 * 24 * 60 * 60 * 1000;
+
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
@@ -76,6 +79,12 @@ class MpScreenValidator {
     'history',
     'backspace',
     'arrowBack',
+    'brain',
+    'trophy',
+    'timer',
+    'close',
+    'refresh',
+    'bolt',
   };
   static const Set<String> _alignmentNames = <String>{
     'topLeft',
@@ -308,6 +317,18 @@ class MpScreenValidator {
         path: path,
         depth: depth,
         state: state,
+      ),
+      'condition' => _parseConditionNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
+      'countdown' => _parseCountdownNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
       ),
       'stateScope' => _parseStateScopeNode(
         props: props,
@@ -2835,6 +2856,7 @@ class MpScreenValidator {
       'cache.clear' => _parseCacheClearAction(type, props, path),
       'cache.info' => _parseCacheInfoAction(type, props, path),
       'sequence' => _parseSequenceAction(type, props, path),
+      'action.ifElse' => _parseIfElseAction(type, props, path),
       'router.push' ||
       'router.replace' ||
       'router.reset' => _parseRouterScreenAction(type, props, path),
@@ -3506,6 +3528,102 @@ class MpScreenValidator {
                 path: '$path.props.clearOnDispose',
               )
             : true,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseConditionNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'condition',
+      'whenTrue',
+      'whenFalse',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final parsedProps = <String, dynamic>{
+      'condition': _requiredBooleanOrBindingValue(
+        props['condition'],
+        path: '$path.props.condition',
+      ),
+      ..._parseTemplateProps(
+        props,
+        const <String>{'whenTrue', 'whenFalse'},
+        path: '$path.props',
+        depth: depth,
+        state: state,
+      ),
+    };
+    if (!parsedProps.containsKey('whenTrue')) {
+      _fail(
+        'Mp condition requires a whenTrue template.',
+        path: '$path.props.whenTrue',
+      );
+    }
+    return _MpNode(
+      type: 'condition',
+      props: parsedProps,
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseCountdownNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'durationMs',
+      'running',
+      'restartToken',
+      'remainingState',
+      'onComplete',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'countdown', path: path);
+    final durationMs = _requiredPositiveIntValue(
+      props['durationMs'],
+      path: '$path.props.durationMs',
+    );
+    if (durationMs > maxCountdownDurationMs) {
+      _fail(
+        'Mp countdown durationMs cannot exceed $maxCountdownDurationMs.',
+        path: '$path.props.durationMs',
+      );
+    }
+    final remainingState = props.containsKey('remainingState')
+        ? _requiredStateKey(props, 'remainingState', path: '$path.props')
+        : null;
+    final onComplete = props.containsKey('onComplete')
+        ? _parseAction(props['onComplete'], path: '$path.props.onComplete')
+        : null;
+    if (remainingState == null && onComplete == null) {
+      _fail(
+        'Mp countdown requires remainingState or onComplete.',
+        path: '$path.props',
+      );
+    }
+    return _MpNode(
+      type: 'countdown',
+      props: <String, dynamic>{
+        'durationMs': durationMs,
+        'running': props.containsKey('running')
+            ? _requiredBooleanOrBindingValue(
+                props['running'],
+                path: '$path.props.running',
+              )
+            : true,
+        if (props.containsKey('restartToken'))
+          'restartToken': _requiredCountdownRestartToken(
+            props['restartToken'],
+            path: '$path.props.restartToken',
+          ),
+        if (remainingState != null) 'remainingState': remainingState,
+        if (onComplete != null) 'onComplete': onComplete,
       },
       children: children,
     );
@@ -4418,6 +4536,29 @@ class MpScreenValidator {
           for (var index = 0; index < steps.length; index += 1)
             _parseAction(steps[index], path: '$path.props.steps[$index]'),
         ],
+      },
+    );
+  }
+
+  _MpAction _parseIfElseAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'condition',
+      'then',
+      'else',
+    }, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'condition': _requiredBooleanOrBindingValue(
+          props['condition'],
+          path: '$path.props.condition',
+        ),
+        'then': _parseAction(props['then'], path: '$path.props.then'),
+        'else': _parseAction(props['else'], path: '$path.props.else'),
       },
     );
   }

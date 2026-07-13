@@ -1684,4 +1684,10 @@ const Map<String, IconData> _mpIcons = <String, IconData>{
     fontFamily: 'MaterialIcons',
     matchTextDirection: true,
   ),
+  'brain': IconData(0xf08b1, fontFamily: 'MaterialIcons'),
+  'trophy': IconData(0xf01a, fontFamily: 'MaterialIcons'),
+  'timer': IconData(0xf44a, fontFamily: 'MaterialIcons'),
+  'close': IconData(0xf647, fontFamily: 'MaterialIcons'),
+  'refresh': IconData(0xf00e9, fontFamily: 'MaterialIcons'),
+  'bolt': IconData(0xf5ca, fontFamily: 'MaterialIcons'),
 };

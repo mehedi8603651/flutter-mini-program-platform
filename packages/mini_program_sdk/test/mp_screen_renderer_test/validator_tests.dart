@@ -116,6 +116,108 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts generated condition, ifElse, and countdown primitives', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.timer.countdown(
+              duration: const Duration(seconds: 10),
+              running: '{{state.screen.running}}',
+              restartToken: '{{state.screen.content_id}}',
+              remainingState: 'screen.remaining',
+              onComplete: Mp.action.ifElse(
+                condition: '{{state.screen.should_advance}}',
+                thenAction: Mp.state.set('screen.status', 'advanced'),
+                elseAction: Mp.state.set('screen.status', 'expired'),
+              ),
+              child: Mp.condition(
+                condition: '{{state.screen.ready}}',
+                whenTrue: Mp.text('Ready'),
+                whenFalse: Mp.text('Waiting'),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
+    test('rejects malformed condition, ifElse, and countdown primitives', () {
+      final invalidCondition = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'condition',
+          'props': <String, dynamic>{
+            'condition': 'prefix {{state.ready}}',
+            'whenTrue': <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Ready'},
+              'children': <Object?>[],
+            },
+          },
+          'children': <Object?>[],
+        };
+      });
+      final invalidIfElse = _cacheActionScreen('action.ifElse', {
+        'condition': 1,
+        'then': <String, dynamic>{
+          'type': 'state.set',
+          'props': <String, dynamic>{'key': 'status', 'value': 'yes'},
+        },
+        'else': <String, dynamic>{
+          'type': 'state.set',
+          'props': <String, dynamic>{'key': 'status', 'value': 'no'},
+        },
+      });
+      final invalidCountdownDuration = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'countdown',
+          'props': <String, dynamic>{
+            'durationMs': MpScreenValidator.maxCountdownDurationMs + 1,
+            'remainingState': 'timer.remaining',
+          },
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Timer'},
+              'children': <Object?>[],
+            },
+          ],
+        };
+      });
+      final inertCountdown = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'countdown',
+          'props': <String, dynamic>{'durationMs': 1000},
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Timer'},
+              'children': <Object?>[],
+            },
+          ],
+        };
+      });
+
+      for (final screen in <Map<String, dynamic>>[
+        invalidCondition,
+        invalidIfElse,
+        invalidCountdownDuration,
+        inertCountdown,
+      ]) {
+        expect(
+          () => const MpScreenValidator().validate(
+            screen,
+            expectedScreenId: 'coupon_home',
+          ),
+          throwsA(isA<MiniProgramRenderException>()),
+        );
+      }
+    });
+
     test('rejects malformed state transformation and math actions', () {
       final cases = <String, Map<String, dynamic>>{
         'text limit': _cacheActionScreen('state.appendText', {

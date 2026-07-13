@@ -131,6 +131,7 @@ abstract final class _MpActionDispatcher {
         'cache.clear' => _cacheClear(scope, props),
         'cache.info' => _cacheInfo(scope, props),
         'sequence' => _runSequence(context, props, bindings),
+        'action.ifElse' => _runIfElse(context, props, bindings),
         'router.push' => _routerPush(scope, props),
         'router.replace' => _routerReplace(scope, props),
         'router.reset' => _routerReset(scope, props),
@@ -1592,6 +1593,43 @@ abstract final class _MpActionDispatcher {
       actionName: 'sequence',
       data: <String, dynamic>{
         if (lastResult is HostActionResult) 'lastResult': lastResult.toJson(),
+      },
+    );
+  }
+
+  static Future<HostActionResult> _runIfElse(
+    BuildContext context,
+    Map<String, dynamic> props,
+    _MpRenderBindings bindings,
+  ) async {
+    const actionName = 'action.ifElse';
+    final condition = props['condition'];
+    if (condition is! bool) {
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: 'Mp action.ifElse condition must resolve to a boolean.',
+        errorCode: MiniProgramErrorCodes.conditionInvalidValue,
+        data: <String, dynamic>{'actualType': condition.runtimeType.toString()},
+      );
+    }
+    final branch = condition ? 'then' : 'else';
+    final selected = props[branch];
+    if (selected is! _MpAction) {
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: 'Mp action.ifElse requires parsed then and else actions.',
+        errorCode: MiniProgramErrorCodes.unknownAction,
+      );
+    }
+    final result = await dispatch(context, selected, bindings);
+    if (result is HostActionResult && !result.isSuccess) {
+      return result;
+    }
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{
+        'branch': branch,
+        if (result is HostActionResult) 'result': result.toJson(),
       },
     );
   }

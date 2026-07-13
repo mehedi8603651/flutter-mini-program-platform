@@ -1,3 +1,7 @@
+## 0.3.3
+
+- Add the stable `condition_invalid_value` control-flow error code.
+
 ## 0.3.2
 
 - Add the stable `initialize_failed` lifecycle error code.

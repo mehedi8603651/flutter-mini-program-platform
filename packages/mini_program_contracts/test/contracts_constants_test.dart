@@ -80,6 +80,10 @@ void main() {
         'state_index_out_of_range',
       );
       expect(
+        MiniProgramErrorCodes.conditionInvalidValue,
+        'condition_invalid_value',
+      );
+      expect(
         MiniProgramErrorCodes.mathInvalidExpression,
         'math_invalid_expression',
       );

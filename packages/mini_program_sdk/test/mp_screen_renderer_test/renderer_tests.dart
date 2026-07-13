@@ -29,6 +29,248 @@ void _mpScreenRendererTests() {
       expect(find.byType(Image), findsOneWidget);
     });
 
+    testWidgets('renders generic activity icons', (tester) async {
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.row(
+              children: <MpNode>[
+                for (final name in <String>[
+                  'brain',
+                  'trophy',
+                  'timer',
+                  'close',
+                  'refresh',
+                  'bolt',
+                ])
+                  Mp.icon(name, semanticLabel: '$name icon'),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => const MpScreenRenderer().render(
+              MiniProgramRenderRequest(
+                context: context,
+                manifest: _mpManifest,
+                screenId: 'coupon_home',
+                screenJson: screenJson,
+                logger: DebugPrintSdkLogger(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(Icon), findsNWidgets(6));
+    });
+
+    testWidgets('condition reacts to bound state without stateBuilder', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager()..set('screen.ready', false);
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.condition(
+              condition: '{{state.screen.ready}}',
+              whenTrue: Mp.text('Ready content'),
+              whenFalse: Mp.text('Waiting content'),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      expect(find.text('Waiting content'), findsOneWidget);
+      expect(find.text('Ready content'), findsNothing);
+
+      state.set('screen.ready', true);
+      await tester.pump();
+      expect(find.text('Ready content'), findsOneWidget);
+      expect(find.text('Waiting content'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('ifElse resolves bindings at its sequence step', (
+      tester,
+    ) async {
+      final state = MpStateManager()..set('flow.allowed', false);
+      final branchAction = Mp.action.ifElse(
+        condition: '{{state.flow.allowed}}',
+        thenAction: Mp.state.set('flow.status', 'accepted'),
+        elseAction: Mp.state.set('flow.status', 'rejected'),
+      );
+      final action = Mp.action.sequence(<MpAction>[
+        Mp.state.set('flow.allowed', true),
+        branchAction,
+      ]);
+
+      final result = await _runMpAction(
+        tester,
+        _jsonMap(action.toJson()),
+        stateManager: state,
+      );
+
+      expect(result, isA<HostActionResult>());
+      expect((result! as HostActionResult).isSuccess, isTrue);
+      expect(state.get<String>('flow.status'), 'accepted');
+
+      state.set('flow.allowed', false);
+      final elseResult = await _runMpAction(
+        tester,
+        _jsonMap(branchAction.toJson()),
+        stateManager: state,
+      );
+      expect((elseResult! as HostActionResult).isSuccess, isTrue);
+      expect(state.get<String>('flow.status'), 'rejected');
+      state.dispose();
+    });
+
+    testWidgets('ifElse fails clearly for a non-boolean bound value', (
+      tester,
+    ) async {
+      final state = MpStateManager()..set('flow.allowed', 'yes');
+      final result = await _runMpAction(
+        tester,
+        _jsonMap(
+          Mp.action
+              .ifElse(
+                condition: '{{state.flow.allowed}}',
+                thenAction: Mp.state.set('flow.status', 'accepted'),
+                elseAction: Mp.state.set('flow.status', 'rejected'),
+              )
+              .toJson(),
+        ),
+        stateManager: state,
+      );
+
+      expect(result, isA<HostActionResult>());
+      final failure = result! as HostActionResult;
+      expect(failure.isSuccess, isFalse);
+      expect(failure.errorCode, MiniProgramErrorCodes.conditionInvalidValue);
+      expect(state.contains('flow.status'), isFalse);
+      state.dispose();
+    });
+
+    testWidgets('countdown writes seconds and completes exactly once', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.stateBuilder(
+              keys: const <String>['timer.remaining'],
+              child: Mp.timer.countdown(
+                duration: const Duration(seconds: 2),
+                remainingState: 'timer.remaining',
+                onComplete: Mp.state.increment('timer.completions'),
+                child: Mp.text('Remaining: {{state.timer.remaining}}'),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Remaining: 2'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Remaining: 1'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      expect(find.text('Remaining: 0'), findsOneWidget);
+      expect(state.get<num>('timer.completions'), 1);
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(state.get<num>('timer.completions'), 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('countdown pauses, restarts by token, and cancels on dispose', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager()
+        ..set('timer.running', true)
+        ..set('timer.restart_id', 1);
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.timer.countdown(
+              duration: const Duration(seconds: 2),
+              running: '{{state.timer.running}}',
+              restartToken: '{{state.timer.restart_id}}',
+              remainingState: 'timer.remaining',
+              onComplete: Mp.state.increment('timer.completions'),
+              child: Mp.text('Remaining: {{state.timer.remaining}}'),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(state.get<int>('timer.remaining'), 1);
+
+      state.set('timer.running', false);
+      await tester.pump(const Duration(seconds: 3));
+      expect(state.contains('timer.completions'), isFalse);
+
+      state.set('timer.restart_id', 2);
+      await tester.pump();
+      expect(state.get<int>('timer.remaining'), 2);
+      state.set('timer.running', true);
+      await tester.pump(const Duration(milliseconds: 1500));
+      expect(state.contains('timer.completions'), isFalse);
+
+      state.set('timer.restart_id', 3);
+      await tester.pump();
+      expect(state.get<int>('timer.remaining'), 2);
+      await tester.pump(const Duration(seconds: 1));
+      expect(state.contains('timer.completions'), isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      expect(state.contains('timer.completions'), isFalse);
+      state.dispose();
+      backendStore.dispose();
+    });
+
     testWidgets('renders lightweight text styles and UTF-8 text safely', (
       tester,
     ) async {

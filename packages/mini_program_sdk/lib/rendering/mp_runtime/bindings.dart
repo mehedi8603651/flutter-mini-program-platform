@@ -239,3 +239,25 @@ String _stringify(Object? value) {
   }
   return jsonEncode(value);
 }
+
+Set<String> _stateBindingPaths(Object? value) {
+  if (value is! String) {
+    return const <String>{};
+  }
+  final paths = <String>{};
+  for (final match in _MpRenderBindings._bindingPattern.allMatches(value)) {
+    final bindingPath = match.group(1)!.trim();
+    if (!bindingPath.startsWith('state.')) {
+      continue;
+    }
+    var statePath = bindingPath.substring('state.'.length);
+    final listIndex = statePath.indexOf('[');
+    if (listIndex >= 0) {
+      statePath = statePath.substring(0, listIndex);
+    }
+    if (statePath.isNotEmpty) {
+      paths.add(statePath);
+    }
+  }
+  return paths;
+}

@@ -96,4 +96,28 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('generic activity icons are available to mini-programs', () {
+    for (final name in <String>[
+      'brain',
+      'trophy',
+      'timer',
+      'close',
+      'refresh',
+      'bolt',
+    ]) {
+      expect(
+        Mp.icon(name, semanticLabel: '$name icon').toJson(),
+        <String, Object?>{
+          'type': 'icon',
+          'props': <String, Object?>{
+            'name': name,
+            'semanticLabel': '$name icon',
+            'size': 20,
+          },
+          'children': <Object?>[],
+        },
+      );
+    }
+  });
 }

@@ -24,6 +24,7 @@ abstract final class MiniProgramErrorCodes {
   static const String stateLimitExceeded = 'state_limit_exceeded';
   static const String stateIndexOutOfRange = 'state_index_out_of_range';
   static const String initializeFailed = 'initialize_failed';
+  static const String conditionInvalidValue = 'condition_invalid_value';
   static const String mathInvalidExpression = 'math_invalid_expression';
   static const String mathDivisionByZero = 'math_division_by_zero';
   static const String mathDomainError = 'math_domain_error';

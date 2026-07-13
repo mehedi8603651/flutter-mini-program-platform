@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+- Add reactive `Mp.condition` node authoring.
+- Add generic `Mp.action.ifElse` branching actions.
+- Add lifecycle-owned `Mp.timer.countdown` nodes with pause, restart,
+  remaining-seconds state, and completion actions.
+- Add generic brain, trophy, timer, close, refresh, and bolt icon names.
+
 ## 0.1.8
 
 - Add reusable styled text buttons and semantic icon buttons for compact,

@@ -22,6 +22,12 @@ const Set<String> mpIconNames = <String>{
   'history',
   'backspace',
   'arrowBack',
+  'brain',
+  'trophy',
+  'timer',
+  'close',
+  'refresh',
+  'bolt',
 };
 
 const Set<String> mpAlignmentNames = <String>{

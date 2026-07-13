@@ -35,6 +35,9 @@ abstract final class Mp {
   /// Safe, offline mathematical actions.
   static const math = MpMathActions();
 
+  /// Lifecycle-owned timer nodes.
+  static const timer = MpTimer();
+
   /// Mini-program host-managed cache actions.
   static const cache = MpCacheActions();
 
@@ -921,6 +924,20 @@ abstract final class Mp {
     props: <String, Object?>{'keys': _requiredStateKeys(keys), 'child': child},
   );
 
+  /// Selects one of two node trees from a boolean literal or full binding.
+  static MpNode condition({
+    required Object condition,
+    required MpNode whenTrue,
+    MpNode? whenFalse,
+  }) => MpNode(
+    'condition',
+    props: <String, Object?>{
+      'condition': _booleanOrBinding(condition, 'condition'),
+      'whenTrue': whenTrue,
+      if (whenFalse != null) 'whenFalse': whenFalse,
+    },
+  );
+
   /// Runs [actions] once for each mounted instance before showing [child].
   static MpNode initialize({
     required List<MpAction> actions,
@@ -1616,6 +1633,70 @@ final class MpActionActions {
     'sequence',
     props: <String, Object?>{'steps': _requiredActions(steps)},
   );
+
+  /// Dispatches exactly one action branch from a boolean literal or binding.
+  MpAction ifElse({
+    required Object condition,
+    required MpAction thenAction,
+    required MpAction elseAction,
+  }) => MpAction(
+    'action.ifElse',
+    props: <String, Object?>{
+      'condition': _booleanOrBinding(condition, 'condition'),
+      'then': thenAction,
+      'else': elseAction,
+    },
+  );
+}
+
+/// Lifecycle-owned timer node builders.
+final class MpTimer {
+  /// Creates timer node helpers.
+  const MpTimer();
+
+  /// Maximum supported countdown duration.
+  static const Duration maxDuration = Duration(days: 7);
+
+  /// Runs a deadline-based countdown while [running] resolves to true.
+  ///
+  /// [remainingState] receives the remaining whole seconds, rounded up.
+  /// Changing [restartToken] resets the countdown to [duration].
+  MpNode countdown({
+    required Duration duration,
+    required MpNode child,
+    Object running = true,
+    Object? restartToken,
+    String? remainingState,
+    MpAction? onComplete,
+  }) {
+    final durationMs = duration.inMilliseconds;
+    if (durationMs <= 0 || duration > maxDuration) {
+      throw ArgumentError.value(
+        duration,
+        'duration',
+        'Countdown duration must be from 1 millisecond to 7 days.',
+      );
+    }
+    if (remainingState == null && onComplete == null) {
+      throw ArgumentError(
+        'Mp.timer.countdown requires remainingState or onComplete.',
+      );
+    }
+    final normalizedRunning = _booleanOrBinding(running, 'running');
+    return MpNode(
+      'countdown',
+      props: <String, Object?>{
+        'durationMs': durationMs,
+        if (normalizedRunning != true) 'running': normalizedRunning,
+        if (restartToken != null)
+          'restartToken': _countdownRestartToken(restartToken),
+        if (remainingState != null)
+          'remainingState': _requiredStateKey(remainingState, 'remainingState'),
+        if (onComplete != null) 'onComplete': onComplete,
+      },
+      children: <MpNode>[child],
+    );
+  }
 }
 
 /// Serializable option used by Mp dropdown and radioGroup controls.
@@ -2376,6 +2457,32 @@ bool _statePathsOverlap(String left, String right) {
   return left == right ||
       left.startsWith('$right.') ||
       right.startsWith('$left.');
+}
+
+Object _booleanOrBinding(Object value, String name) {
+  if (value is bool ||
+      value is String && _singleBindingPattern.hasMatch(value)) {
+    return value;
+  }
+  throw ArgumentError.value(
+    value,
+    name,
+    'Value must be a boolean or full binding.',
+  );
+}
+
+Object _countdownRestartToken(Object value) {
+  if (value is bool || value is num && value.isFinite) {
+    return value;
+  }
+  if (value is String && value.trim().isNotEmpty) {
+    return value;
+  }
+  throw ArgumentError.value(
+    value,
+    'restartToken',
+    'Value must be a non-empty string, finite number, or boolean.',
+  );
 }
 
 String _requiredStateKey(String value, String name) {

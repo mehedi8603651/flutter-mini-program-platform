@@ -197,6 +197,34 @@ Mp.secondaryButton(
 );
 ```
 
+## Control Flow And Timers
+
+Conditions are strict booleans or full bindings. Countdown state contains the
+remaining whole seconds, rounded up.
+
+```dart
+Mp.timer.countdown(
+  duration: const Duration(seconds: 10),
+  running: '{{state.screen.running}}',
+  restartToken: '{{state.screen.content_id}}',
+  remainingState: 'screen.remaining_seconds',
+  onComplete: Mp.action.ifElse(
+    condition: '{{state.screen.can_advance}}',
+    thenAction: Mp.state.set('screen.status', 'advanced'),
+    elseAction: Mp.state.set('screen.status', 'expired'),
+  ),
+  child: Mp.condition(
+    condition: '{{state.screen.ready}}',
+    whenTrue: Mp.text('{{state.screen.remaining_seconds}} seconds'),
+    whenFalse: Mp.text('Waiting'),
+  ),
+);
+```
+
+Setting `running` to false pauses the countdown. Changing `restartToken`
+resets it to the configured duration. Timers are cancelled when their node is
+disposed.
+
 ## Security Model
 
 `mini_program_ui` only serializes declarative JSON. It does not execute host

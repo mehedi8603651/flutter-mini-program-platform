@@ -745,6 +745,30 @@ bool _requiredBoolValue(Object? value, {required String path}) {
   return value;
 }
 
+Object _requiredBooleanOrBindingValue(Object? value, {required String path}) {
+  if (value is bool ||
+      value is String && _MpBindingResolver.isSingleBindingExpression(value)) {
+    return value as Object;
+  }
+  _fail('Mp value must be a boolean or full binding.', path: path);
+}
+
+Object _requiredCountdownRestartToken(Object? value, {required String path}) {
+  if (value is bool || value is num && value.isFinite) {
+    return value as Object;
+  }
+  if (value is String && value.trim().isNotEmpty) {
+    if (value.length > MpScreenValidator.maxLiteralTextLength) {
+      _fail('Mp countdown restartToken is too long.', path: path);
+    }
+    return value;
+  }
+  _fail(
+    'Mp countdown restartToken must be a non-empty string, finite number, or boolean.',
+    path: path,
+  );
+}
+
 int? _optionalGridColumns(Object? value, {required String path}) {
   if (value == null) {
     return null;

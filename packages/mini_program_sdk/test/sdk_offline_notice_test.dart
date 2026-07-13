@@ -26,9 +26,9 @@ void main() {
       );
       final icon = tester.widget<Icon>(find.byIcon(Icons.wifi_off_rounded));
       final text = tester.widget<Text>(message);
-      expect(material.color, const Color(0xFFFFE7A3));
-      expect(icon.color, const Color(0xFF9B1C1F));
-      expect(text.style?.color, const Color(0xFF332600));
+      expect(material.color, const Color(0xFF3B2199));
+      expect(icon.color, const Color(0xFFFCF9F9));
+      expect(text.style?.color, const Color(0xFFFAF9F8));
 
       await tester.pump(const Duration(milliseconds: 1999));
       expect(message, findsOneWidget);
