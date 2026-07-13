@@ -8,6 +8,8 @@ abstract final class MiniProgramErrorCodes {
   static const String screenNotFound = 'screen_not_found';
   static const String screenNotInStack = 'screen_not_in_stack';
   static const String unknownAction = 'unknown_action';
+  static const String actionNotFound = 'action_not_found';
+  static const String actionCallLimitExceeded = 'action_call_limit_exceeded';
   static const String invalidResultPayload = 'invalid_result_payload';
   static const String backendUnreachable = 'backend_unreachable';
   static const String backendTimeout = 'backend_timeout';

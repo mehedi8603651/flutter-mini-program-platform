@@ -8,6 +8,7 @@ class _MpRenderBindings {
     this.index,
     this.form,
     this.theme,
+    this.actionDefinitions = const <String, _MpAction>{},
   });
 
   static final RegExp _bindingPattern = RegExp(r'\{\{\s*([^}]+?)\s*\}\}');
@@ -18,6 +19,7 @@ class _MpRenderBindings {
   final int? index;
   final Map<String, dynamic>? form;
   final _MpThemeData? theme;
+  final Map<String, _MpAction> actionDefinitions;
 
   _MpRenderBindings copyWith({
     MiniProgramSdkScope? scope,
@@ -26,6 +28,7 @@ class _MpRenderBindings {
     int? index,
     Map<String, dynamic>? form,
     _MpThemeData? theme,
+    Map<String, _MpAction>? actionDefinitions,
   }) {
     return _MpRenderBindings(
       scope: scope ?? this.scope,
@@ -34,6 +37,16 @@ class _MpRenderBindings {
       index: index ?? this.index,
       form: form ?? this.form,
       theme: theme ?? this.theme,
+      actionDefinitions: actionDefinitions ?? this.actionDefinitions,
+    );
+  }
+
+  _MpRenderBindings withActionDefinitions(Map<String, _MpAction> definitions) {
+    return copyWith(
+      actionDefinitions: <String, _MpAction>{
+        ...actionDefinitions,
+        ...definitions,
+      },
     );
   }
 

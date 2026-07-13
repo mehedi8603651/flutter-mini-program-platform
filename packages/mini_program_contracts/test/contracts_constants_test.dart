@@ -59,6 +59,11 @@ void main() {
       expect(MiniProgramErrorCodes.screenNotFound, 'screen_not_found');
       expect(MiniProgramErrorCodes.screenNotInStack, 'screen_not_in_stack');
       expect(MiniProgramErrorCodes.unknownAction, 'unknown_action');
+      expect(MiniProgramErrorCodes.actionNotFound, 'action_not_found');
+      expect(
+        MiniProgramErrorCodes.actionCallLimitExceeded,
+        'action_call_limit_exceeded',
+      );
       expect(
         MiniProgramErrorCodes.invalidResultPayload,
         'invalid_result_payload',

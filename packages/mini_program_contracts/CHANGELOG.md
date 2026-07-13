@@ -1,3 +1,8 @@
+## 0.3.4
+
+- Add stable errors for missing scoped actions and recursive or excessive
+  reusable action calls.
+
 ## 0.3.3
 
 - Add the stable `condition_invalid_value` control-flow error code.

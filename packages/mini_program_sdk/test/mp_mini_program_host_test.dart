@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
+import 'package:mini_program_contracts/mini_program_contracts.dart'
+    as contracts;
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
@@ -119,6 +121,37 @@ void main() {
     expect(find.text('Saved: true'), findsOneWidget);
   });
 
+  testWidgets('router.replace remounts lifecycle nodes on the same screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: MiniProgramHost(
+          miniProgramId: 'same_screen_replace',
+          sdkVersion: '1.0.0',
+          source: const _SameScreenReplaceSource(),
+          hostBridge: const _HostBridge(),
+          capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+
+    expect(find.text('10'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('9'), findsOneWidget);
+
+    await tester.tap(find.text('Next question'));
+    await tester.pumpAndSettle();
+    await tester.pump();
+
+    expect(find.text('10'), findsOneWidget);
+    expect(find.text('9'), findsNothing);
+  });
+
   testWidgets(
     'MiniProgramHost updates cache metadata and clears memory on close',
     (tester) async {
@@ -166,6 +199,94 @@ void main() {
         ),
         isFalse,
       );
+    },
+  );
+
+  testWidgets(
+    'stale cached content remains visible after offline notice dismisses',
+    (tester) async {
+      const manifest = MiniProgramManifest(
+        id: 'offline_mp',
+        version: '1.0.0',
+        entry: 'offline_home',
+        contractVersion: '1.0.0',
+        sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+        requiredCapabilities: <CapabilityId>[],
+        screenFormat: MiniProgramScreenFormats.mp,
+        screenSchemaVersion: 1,
+        cachePolicy: contracts.MiniProgramCachePolicy(
+          manifest: contracts.MiniProgramCacheRule(
+            mode: contracts.MiniProgramCacheMode.staleWhileError,
+            maxStaleSeconds: 3600,
+          ),
+          entryScreen: contracts.MiniProgramCacheRule(
+            mode: contracts.MiniProgramCacheMode.staleWhileError,
+            maxStaleSeconds: 3600,
+          ),
+        ),
+      );
+      const screen = <String, dynamic>{
+        'schemaVersion': 1,
+        'screenId': 'offline_home',
+        'root': <String, dynamic>{
+          'type': 'text',
+          'props': <String, dynamic>{'data': 'Offline cached content'},
+          'children': <Object?>[],
+        },
+      };
+      final manifestCache = InMemoryManifestCache();
+      final screenCache = InMemoryScreenCache();
+      final cachedAt = DateTime.now();
+      await manifestCache.write(
+        CachedManifestEntry(
+          miniProgramId: manifest.id,
+          manifest: manifest,
+          cachedAt: cachedAt,
+        ),
+      );
+      await screenCache.write(
+        CachedScreenEntry(
+          miniProgramId: manifest.id,
+          version: manifest.version,
+          screenId: manifest.entry,
+          screenJson: screen,
+          cachedAt: cachedAt,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: MiniProgramHost(
+                miniProgramId: manifest.id,
+                sdkVersion: '1.0.0',
+                source: const _OfflineMpSource(),
+                hostBridge: const _HostBridge(),
+                capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+                manifestCache: manifestCache,
+                screenCache: screenCache,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final content = find.text('Offline cached content');
+      final notice = find.text(
+        'Showing cached content while the backend is unavailable.',
+      );
+      expect(content, findsOneWidget);
+      expect(notice, findsOneWidget);
+      expect(tester.getSize(content).width, greaterThan(0));
+
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(notice, findsNothing);
+      expect(content, findsOneWidget);
+      expect(tester.getSize(content).width, greaterThan(0));
     },
   );
 }
@@ -292,6 +413,68 @@ class _RouterMpSource implements MiniProgramSource {
   }
 }
 
+class _SameScreenReplaceSource implements MiniProgramSource {
+  const _SameScreenReplaceSource();
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    return const MiniProgramManifest(
+      id: 'same_screen_replace',
+      version: '1.0.0',
+      entry: 'same_home',
+      contractVersion: '1.0.0',
+      sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+      requiredCapabilities: <CapabilityId>[],
+      screenFormat: MiniProgramScreenFormats.mp,
+      screenSchemaVersion: 1,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    return const <String, dynamic>{
+      'schemaVersion': 1,
+      'screenId': 'same_home',
+      'root': <String, dynamic>{
+        'type': 'countdown',
+        'props': <String, dynamic>{
+          'durationMs': 10000,
+          'running': true,
+          'remainingState': 'same.remaining',
+        },
+        'children': <Object?>[
+          <String, dynamic>{
+            'type': 'column',
+            'props': <String, dynamic>{},
+            'children': <Object?>[
+              <String, dynamic>{
+                'type': 'text',
+                'props': <String, dynamic>{'data': '{{state.same.remaining}}'},
+                'children': <Object?>[],
+              },
+              <String, dynamic>{
+                'type': 'primaryButton',
+                'props': <String, dynamic>{
+                  'label': 'Next question',
+                  'action': <String, dynamic>{
+                    'type': 'router.replace',
+                    'props': <String, dynamic>{'screenId': 'same_home'},
+                  },
+                },
+                'children': <Object?>[],
+              },
+            ],
+          },
+        ],
+      },
+    };
+  }
+}
+
 class _CachePolicyMpSource
     implements MiniProgramSource, MiniProgramCachePolicyProvider {
   const _CachePolicyMpSource();
@@ -333,6 +516,30 @@ class _CachePolicyMpSource
         'children': <Object?>[],
       },
     };
+  }
+}
+
+class _OfflineMpSource implements MiniProgramSource {
+  const _OfflineMpSource();
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) {
+    throw const MiniProgramSourceException(
+      message: 'Backend unavailable.',
+      errorCode: MiniProgramErrorCodes.backendUnreachable,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) {
+    throw const MiniProgramSourceException(
+      message: 'Backend unavailable.',
+      errorCode: MiniProgramErrorCodes.backendUnreachable,
+    );
   }
 }
 

@@ -167,6 +167,135 @@ void _mpScreenRendererTests() {
       state.dispose();
     });
 
+    testWidgets('scoped action calls reuse definitions and resolve each step', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager()..set('flow.count', 0);
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.actionScope(
+              actions: <String, MpAction>{
+                'incrementCount': Mp.action.sequence(<MpAction>[
+                  Mp.state.increment('flow.count'),
+                  Mp.state.set('flow.snapshot', '{{state.flow.count}}'),
+                ]),
+              },
+              child: Mp.stateBuilder(
+                keys: const <String>['flow.count'],
+                child: Mp.column(
+                  children: <MpNode>[
+                    Mp.text('Count {{state.flow.count}}'),
+                    Mp.button(
+                      label: 'Increment',
+                      action: Mp.action.call('incrementCount'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.tap(find.text('Increment'));
+      await tester.pump();
+
+      expect(find.text('Count 1'), findsOneWidget);
+      expect(state.get<num>('flow.snapshot'), 1);
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('recursive scoped calls fail with a stable initialize error', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.actionScope(
+              actions: <String, MpAction>{
+                'recursiveCall': Mp.action.call('recursiveCall'),
+              },
+              child: Mp.initialize(
+                actions: <MpAction>[Mp.action.call('recursiveCall')],
+                errorState: 'screen.error',
+                error: Mp.text('Action failed'),
+                child: Mp.text('Ready'),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Action failed'), findsOneWidget);
+      expect(
+        state.get<Map<String, dynamic>>('screen.error')?['code'],
+        MiniProgramErrorCodes.actionCallLimitExceeded,
+      );
+      state.dispose();
+      backendStore.dispose();
+    });
+
+    testWidgets('missing scoped calls fail with a stable initialize error', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.actionScope(
+              actions: <String, MpAction>{
+                'availableAction': Mp.state.set('screen.ready', true),
+              },
+              child: Mp.initialize(
+                actions: <MpAction>[Mp.action.call('missingAction')],
+                errorState: 'screen.error',
+                error: Mp.text('Action failed'),
+                child: Mp.text('Ready'),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        state.get<Map<String, dynamic>>('screen.error')?['code'],
+        MiniProgramErrorCodes.actionNotFound,
+      );
+      state.dispose();
+      backendStore.dispose();
+    });
+
     testWidgets('countdown writes seconds and completes exactly once', (
       tester,
     ) async {

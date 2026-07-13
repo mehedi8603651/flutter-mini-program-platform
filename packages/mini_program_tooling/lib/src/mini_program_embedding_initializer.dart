@@ -62,8 +62,8 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.5.9';
-  static const String _miniProgramContractsConstraint = '^0.3.3';
+  static const String _miniProgramSdkConstraint = '^0.5.10';
+  static const String _miniProgramContractsConstraint = '^0.3.4';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
     MiniProgramEmbeddingInitRequest request,

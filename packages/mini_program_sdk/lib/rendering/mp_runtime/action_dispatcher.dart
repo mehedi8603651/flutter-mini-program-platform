@@ -38,6 +38,18 @@ class _MpMathActionOutcome {
   final Map<String, dynamic> data;
 }
 
+class _MpActionCallContext {
+  const _MpActionCallContext({this.stack = const <String>[]});
+
+  static const int maxDepth = 16;
+
+  final List<String> stack;
+
+  _MpActionCallContext push(String name) => _MpActionCallContext(
+    stack: List<String>.unmodifiable(<String>[...stack, name]),
+  );
+}
+
 bool _stateValuesEqual(Object? left, Object? right) {
   if (identical(left, right) || left == right) {
     return true;
@@ -72,8 +84,9 @@ abstract final class _MpActionDispatcher {
   static Future<Object?> dispatch(
     BuildContext context,
     _MpAction action,
-    _MpRenderBindings bindings,
-  ) async {
+    _MpRenderBindings bindings, [
+    _MpActionCallContext callContext = const _MpActionCallContext(),
+  ]) async {
     final scope = MiniProgramSdkScope.maybeOf(context);
     if (scope == null) {
       return HostActionResult.failed(
@@ -130,8 +143,9 @@ abstract final class _MpActionDispatcher {
         'cache.remove' => _cacheRemove(scope, props),
         'cache.clear' => _cacheClear(scope, props),
         'cache.info' => _cacheInfo(scope, props),
-        'sequence' => _runSequence(context, props, bindings),
-        'action.ifElse' => _runIfElse(context, props, bindings),
+        'sequence' => _runSequence(context, props, bindings, callContext),
+        'action.ifElse' => _runIfElse(context, props, bindings, callContext),
+        'action.call' => _runNamedAction(context, props, bindings, callContext),
         'router.push' => _routerPush(scope, props),
         'router.replace' => _routerReplace(scope, props),
         'router.reset' => _routerReset(scope, props),
@@ -1573,6 +1587,7 @@ abstract final class _MpActionDispatcher {
     BuildContext context,
     Map<String, dynamic> props,
     _MpRenderBindings bindings,
+    _MpActionCallContext callContext,
   ) async {
     final steps = props['steps'];
     if (steps is! List || steps.any((step) => step is! _MpAction)) {
@@ -1584,7 +1599,12 @@ abstract final class _MpActionDispatcher {
     }
     Object? lastResult;
     for (final step in steps) {
-      lastResult = await dispatch(context, step as _MpAction, bindings);
+      lastResult = await dispatch(
+        context,
+        step as _MpAction,
+        bindings,
+        callContext,
+      );
       if (lastResult is HostActionResult && !lastResult.isSuccess) {
         return lastResult;
       }
@@ -1601,6 +1621,7 @@ abstract final class _MpActionDispatcher {
     BuildContext context,
     Map<String, dynamic> props,
     _MpRenderBindings bindings,
+    _MpActionCallContext callContext,
   ) async {
     const actionName = 'action.ifElse';
     final condition = props['condition'];
@@ -1621,7 +1642,7 @@ abstract final class _MpActionDispatcher {
         errorCode: MiniProgramErrorCodes.unknownAction,
       );
     }
-    final result = await dispatch(context, selected, bindings);
+    final result = await dispatch(context, selected, bindings, callContext);
     if (result is HostActionResult && !result.isSuccess) {
       return result;
     }
@@ -1629,6 +1650,54 @@ abstract final class _MpActionDispatcher {
       actionName: actionName,
       data: <String, dynamic>{
         'branch': branch,
+        if (result is HostActionResult) 'result': result.toJson(),
+      },
+    );
+  }
+
+  static Future<HostActionResult> _runNamedAction(
+    BuildContext context,
+    Map<String, dynamic> props,
+    _MpRenderBindings bindings,
+    _MpActionCallContext callContext,
+  ) async {
+    const actionName = 'action.call';
+    final name = _stringProp(props, 'name');
+    final definition = bindings.actionDefinitions[name];
+    if (definition == null) {
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: 'Scoped Mp action "$name" was not found.',
+        errorCode: MiniProgramErrorCodes.actionNotFound,
+        data: <String, dynamic>{'name': name},
+      );
+    }
+    if (callContext.stack.contains(name) ||
+        callContext.stack.length >= _MpActionCallContext.maxDepth) {
+      return HostActionResult.failed(
+        actionName: actionName,
+        message: 'Scoped Mp action call depth or recursion limit was exceeded.',
+        errorCode: MiniProgramErrorCodes.actionCallLimitExceeded,
+        data: <String, dynamic>{
+          'name': name,
+          'maxDepth': _MpActionCallContext.maxDepth,
+          'callStack': <String>[...callContext.stack, name],
+        },
+      );
+    }
+    final result = await dispatch(
+      context,
+      definition,
+      bindings,
+      callContext.push(name),
+    );
+    if (result is HostActionResult && !result.isSuccess) {
+      return result;
+    }
+    return HostActionResult.success(
+      actionName: actionName,
+      data: <String, dynamic>{
+        'name': name,
         if (result is HostActionResult) 'result': result.toJson(),
       },
     );

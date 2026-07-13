@@ -146,6 +146,32 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts generated scoped reusable actions', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.actionScope(
+              actions: <String, MpAction>{
+                'nextStep': Mp.action.sequence(<MpAction>[
+                  Mp.state.increment('flow.step'),
+                  Mp.state.set('flow.snapshot', '{{state.flow.step}}'),
+                ]),
+              },
+              child: Mp.button(
+                label: 'Next',
+                action: Mp.action.call('nextStep'),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
     test('rejects malformed condition, ifElse, and countdown primitives', () {
       final invalidCondition = _screenWith((json) {
         json['root'] = <String, dynamic>{
@@ -339,6 +365,67 @@ void _mpScreenValidatorTests() {
       expect(
         () => const MpScreenValidator().validate(
           stateScope,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+
+      final actionScope = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'actionScope',
+          'props': <String, dynamic>{
+            'actions': <String, dynamic>{
+              'invalid-name': <String, dynamic>{
+                'type': 'state.set',
+                'props': <String, dynamic>{'key': 'ready', 'value': true},
+              },
+            },
+          },
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Scoped'},
+              'children': <Object?>[],
+            },
+          ],
+        };
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          actionScope,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+
+      final tooManyActions = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'actionScope',
+          'props': <String, dynamic>{
+            'actions': <String, dynamic>{
+              for (
+                var index = 0;
+                index <= MpScreenValidator.maxActionDefinitions;
+                index += 1
+              )
+                'action$index': <String, dynamic>{
+                  'type': 'state.set',
+                  'props': <String, dynamic>{'key': 'ready', 'value': true},
+                },
+            },
+          },
+          'children': <Object?>[
+            <String, dynamic>{
+              'type': 'text',
+              'props': <String, dynamic>{'data': 'Scoped'},
+              'children': <Object?>[],
+            },
+          ],
+        };
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          tooManyActions,
           expectedScreenId: 'coupon_home',
         ),
         throwsA(isA<MiniProgramRenderException>()),

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10
+
+- Add bounded `Mp.actionScope` definitions and static `Mp.action.call`
+  references for compact, reusable in-screen behavior.
+
 ## 0.1.9
 
 - Add reactive `Mp.condition` node authoring.

@@ -849,17 +849,20 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
                 late final Widget rendered;
                 try {
-                  rendered = _rendererRegistry
-                      .resolve(manifest)
-                      .render(
-                        MiniProgramRenderRequest(
-                          context: context,
-                          manifest: manifest,
-                          screenId: currentScreen.screenId,
-                          screenJson: currentScreen.screenJson!,
-                          logger: widget.logger,
+                  rendered = KeyedSubtree(
+                    key: ObjectKey(currentScreen.navigationIdentity),
+                    child: _rendererRegistry
+                        .resolve(manifest)
+                        .render(
+                          MiniProgramRenderRequest(
+                            context: context,
+                            manifest: manifest,
+                            screenId: currentScreen.screenId,
+                            screenJson: currentScreen.screenJson!,
+                            logger: widget.logger,
+                          ),
                         ),
-                      );
+                  );
                 } catch (error, stackTrace) {
                   return _buildError(
                     context,
@@ -879,9 +882,14 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
                 return Stack(
                   children: [
                     Positioned.fill(child: rendered),
-                    IgnorePointer(
-                      child: SdkOfflineNotice(
-                        cachedAssetCount: currentScreen.resolvedAssetCount,
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: IgnorePointer(
+                        child: SdkOfflineNotice(
+                          cachedAssetCount: currentScreen.resolvedAssetCount,
+                        ),
                       ),
                     ),
                   ],
@@ -967,7 +975,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 }
 
 class _RenderedMiniProgramScreen {
-  const _RenderedMiniProgramScreen.content({
+  _RenderedMiniProgramScreen.content({
     required this.screenId,
     required this.screenJson,
     this.routeParams = const <String, dynamic>{},
@@ -975,13 +983,17 @@ class _RenderedMiniProgramScreen {
     this.cachedAssetCount = 0,
     this.downloadedAssetCount = 0,
     this.failedAssetCount = 0,
-  }) : failure = null;
+    Object? navigationIdentity,
+  }) : navigationIdentity = navigationIdentity ?? Object(),
+       failure = null;
 
-  const _RenderedMiniProgramScreen.failure({
+  _RenderedMiniProgramScreen.failure({
     required this.screenId,
     required this.failure,
     this.routeParams = const <String, dynamic>{},
+    Object? navigationIdentity,
   }) : screenJson = null,
+       navigationIdentity = navigationIdentity ?? Object(),
        usedStaleCache = false,
        cachedAssetCount = 0,
        downloadedAssetCount = 0,
@@ -990,6 +1002,7 @@ class _RenderedMiniProgramScreen {
   final String screenId;
   final Map<String, dynamic>? screenJson;
   final Map<String, dynamic> routeParams;
+  final Object navigationIdentity;
   final MiniProgramFailure? failure;
   final bool usedStaleCache;
   final int cachedAssetCount;
@@ -1008,6 +1021,7 @@ class _RenderedMiniProgramScreen {
         screenId: screenId,
         failure: failure!,
         routeParams: updatedParams,
+        navigationIdentity: navigationIdentity,
       );
     }
     return _RenderedMiniProgramScreen.content(
@@ -1018,6 +1032,7 @@ class _RenderedMiniProgramScreen {
       cachedAssetCount: cachedAssetCount,
       downloadedAssetCount: downloadedAssetCount,
       failedAssetCount: failedAssetCount,
+      navigationIdentity: navigationIdentity,
     );
   }
 }

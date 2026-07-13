@@ -62,6 +62,57 @@ void main() {
       );
     });
 
+    test('serializes scoped actions and calls deterministically', () {
+      expect(
+        Mp.actionScope(
+          actions: <String, MpAction>{
+            'resetValue': Mp.state.set('flow.value', 0),
+            'incrementValue': Mp.state.increment('flow.value'),
+          },
+          child: Mp.button(
+            label: 'Next',
+            action: Mp.action.call('incrementValue'),
+          ),
+        ).toJson(),
+        <String, Object?>{
+          'type': 'actionScope',
+          'props': <String, Object?>{
+            'actions': <String, Object?>{
+              'incrementValue': <String, Object?>{
+                'type': 'state.increment',
+                'props': <String, Object?>{'by': 1, 'key': 'flow.value'},
+              },
+              'resetValue': <String, Object?>{
+                'type': 'state.set',
+                'props': <String, Object?>{'key': 'flow.value', 'value': 0},
+              },
+            },
+          },
+          'children': <Object?>[
+            <String, Object?>{
+              'type': 'button',
+              'props': <String, Object?>{
+                'action': <String, Object?>{
+                  'type': 'action.call',
+                  'props': <String, Object?>{'name': 'incrementValue'},
+                },
+                'backgroundColor': '#252525',
+                'borderColor': '#252525',
+                'borderRadius': 8,
+                'borderWidth': 0,
+                'fontSize': 18,
+                'fontWeight': 'medium',
+                'foregroundColor': '#F5F5F5',
+                'height': 56,
+                'label': 'Next',
+              },
+              'children': <Object?>[],
+            },
+          ],
+        },
+      );
+    });
+
     test('serializes countdown options deterministically', () {
       expect(
         Mp.timer
@@ -154,6 +205,36 @@ void main() {
           remainingState: 'timer.remaining',
           child: Mp.text('Timer'),
         ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.actionScope(
+          actions: const <String, MpAction>{},
+          child: Mp.text('Empty'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.actionScope(
+          actions: <String, MpAction>{
+            'invalid-name': Mp.state.set('flow.ready', true),
+          },
+          child: Mp.text('Invalid'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.actionScope(
+          actions: <String, MpAction>{
+            for (var index = 0; index < 65; index += 1)
+              'action$index': Mp.state.set('flow.value', index),
+          },
+          child: Mp.text('Too many'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.action.call('{{state.flow.action}}'),
         throwsArgumentError,
       );
     });

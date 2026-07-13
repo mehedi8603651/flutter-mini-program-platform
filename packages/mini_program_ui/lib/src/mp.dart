@@ -998,6 +998,16 @@ abstract final class Mp {
     children: <MpNode>[child],
   );
 
+  /// Defines reusable actions for [child] and its descendants.
+  static MpNode actionScope({
+    required Map<String, MpAction> actions,
+    required MpNode child,
+  }) => MpNode(
+    'actionScope',
+    props: <String, Object?>{'actions': _actionDefinitions(actions)},
+    children: <MpNode>[child],
+  );
+
   /// Creates a toast/snackbar-style UI feedback action.
   static MpAction toast({required String message, int durationMs = 2400}) =>
       MpAction(
@@ -1647,6 +1657,12 @@ final class MpActionActions {
       'else': elseAction,
     },
   );
+
+  /// Runs the nearest scoped action registered under [name].
+  MpAction call(String name) => MpAction(
+    'action.call',
+    props: <String, Object?>{'name': _requiredActionName(name, 'name')},
+  );
 }
 
 /// Lifecycle-owned timer node builders.
@@ -2036,6 +2052,32 @@ String _requiredString(String value, String name) {
     throw ArgumentError.value(value, name, 'Value cannot be empty.');
   }
   return trimmed;
+}
+
+Map<String, MpAction> _actionDefinitions(Map<String, MpAction> actions) {
+  if (actions.isEmpty || actions.length > 64) {
+    throw ArgumentError.value(
+      actions,
+      'actions',
+      'Mp.actionScope requires from 1 to 64 actions.',
+    );
+  }
+  return <String, MpAction>{
+    for (final entry in actions.entries)
+      _requiredActionName(entry.key, 'actions'): entry.value,
+  };
+}
+
+String _requiredActionName(String value, String name) {
+  final normalized = _stableString(value, name);
+  if (!_actionNamePattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Action names must start with a lowercase letter and contain only letters, numbers, or underscores.',
+    );
+  }
+  return normalized;
 }
 
 String _stableString(String value, String name) {
@@ -2563,6 +2605,8 @@ final RegExp _stateKeyPattern = RegExp(
 final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
 
 final RegExp _mathVariablePattern = RegExp(r'^[a-z][a-z0-9_]*$');
+
+final RegExp _actionNamePattern = RegExp(r'^[a-z][a-zA-Z0-9_]{0,63}$');
 
 final RegExp _singleBindingPattern = RegExp(r'^\{\{\s*[^}]+?\s*\}\}$');
 

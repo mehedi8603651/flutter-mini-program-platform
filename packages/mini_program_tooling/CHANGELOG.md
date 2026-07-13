@@ -1,3 +1,10 @@
+## 0.6.10
+
+- Generate hosts and mini-programs against contracts `0.3.4` and UI `0.1.10`
+  for scoped reusable action support.
+- Generate embedded and preview hosts with SDK `^0.5.10` so stale offline
+  content remains visible after its temporary notice dismisses.
+
 ## 0.6.9
 
 - Generate mini-programs and hosts with the conditional control-flow and

@@ -1,3 +1,12 @@
+## 0.5.10
+
+- Resolve reusable actions from bounded nearest `actionScope` nodes, including
+  stable missing-action and recursive-call failures.
+- Keep stale cached mini-program content laid out after the temporary offline
+  notice dismisses.
+- Remount a replaced mini-program screen even when the replacement uses the
+  same screen ID, resetting its lifecycle-owned widgets correctly.
+
 ## 0.5.9
 
 - Render reactive conditional node branches and dispatch strict boolean

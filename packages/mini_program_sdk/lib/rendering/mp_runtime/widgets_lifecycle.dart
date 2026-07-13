@@ -2,6 +2,22 @@ part of '../mp_screen_renderer.dart';
 
 enum _MpInitializeStatus { loading, success, error }
 
+class _MpActionScope extends StatelessWidget {
+  const _MpActionScope({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final definitions = node.props['actions'] as Map<String, _MpAction>;
+    return _MpNodeView(
+      node: node.children.single,
+      bindings: bindings.withActionDefinitions(definitions),
+    );
+  }
+}
+
 class _MpCondition extends StatelessWidget {
   const _MpCondition({required this.node, required this.bindings});
 

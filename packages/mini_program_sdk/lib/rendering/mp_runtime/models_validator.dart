@@ -49,7 +49,11 @@ class MpScreenValidator {
   /// Maximum countdown duration accepted by the runtime.
   static const int maxCountdownDurationMs = 7 * 24 * 60 * 60 * 1000;
 
+  /// Maximum reusable actions defined by one action scope.
+  static const int maxActionDefinitions = 64;
+
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
+  static final RegExp _actionNamePattern = RegExp(r'^[a-z][a-zA-Z0-9_]{0,63}$');
   static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
   static final RegExp _themeTokenPattern = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
@@ -331,6 +335,11 @@ class MpScreenValidator {
         path: path,
       ),
       'stateScope' => _parseStateScopeNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'actionScope' => _parseActionScopeNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -2857,6 +2866,7 @@ class MpScreenValidator {
       'cache.info' => _parseCacheInfoAction(type, props, path),
       'sequence' => _parseSequenceAction(type, props, path),
       'action.ifElse' => _parseIfElseAction(type, props, path),
+      'action.call' => _parseActionCall(type, props, path),
       'router.push' ||
       'router.replace' ||
       'router.reset' => _parseRouterScreenAction(type, props, path),
@@ -3529,6 +3539,61 @@ class MpScreenValidator {
               )
             : true,
       },
+      children: children,
+    );
+  }
+
+  _MpNode _parseActionScopeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{'actions'}, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'actionScope', path: path);
+    final rawActions = props['actions'];
+    if (rawActions is! Map || rawActions.isEmpty) {
+      _fail(
+        'Mp actionScope requires a non-empty actions object.',
+        path: '$path.props.actions',
+      );
+    }
+    if (rawActions.length > maxActionDefinitions) {
+      _fail(
+        'Mp actionScope cannot define more than $maxActionDefinitions actions.',
+        path: '$path.props.actions',
+        details: <String, dynamic>{
+          'actual': rawActions.length,
+          'maximum': maxActionDefinitions,
+        },
+      );
+    }
+    final actions = <String, _MpAction>{};
+    for (final entry in rawActions.entries) {
+      final rawName = entry.key;
+      if (rawName is! String) {
+        _fail(
+          'Mp actionScope action names must be strings.',
+          path: '$path.props.actions',
+        );
+      }
+      final name = _validateActionName(
+        rawName,
+        path: '$path.props.actions.$rawName',
+      );
+      if (actions.containsKey(name)) {
+        _fail(
+          'Mp actionScope action names must be unique.',
+          path: '$path.props.actions.$rawName',
+        );
+      }
+      actions[name] = _parseAction(
+        entry.value,
+        path: '$path.props.actions.$rawName',
+      );
+    }
+    return _MpNode(
+      type: 'actionScope',
+      props: <String, dynamic>{'actions': actions},
       children: children,
     );
   }
@@ -4561,6 +4626,35 @@ class MpScreenValidator {
         'else': _parseAction(props['else'], path: '$path.props.else'),
       },
     );
+  }
+
+  _MpAction _parseActionCall(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{'name'}, path: '$path.props');
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'name': _validateActionName(props['name'], path: '$path.props.name'),
+      },
+    );
+  }
+
+  String _validateActionName(Object? value, {required String path}) {
+    if (value is! String || value.trim() != value) {
+      _fail('Mp action name must be a stable string.', path: path);
+    }
+    if (_MpBindingResolver.containsBinding(value) ||
+        !_actionNamePattern.hasMatch(value)) {
+      _fail(
+        'Mp action name must start with a lowercase letter and contain only letters, numbers, or underscores.',
+        path: path,
+        details: <String, dynamic>{'actionName': value},
+      );
+    }
+    return value;
   }
 
   _MpAction _parseRouterScreenAction(
