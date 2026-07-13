@@ -1,3 +1,8 @@
+## 0.5.8
+
+- Show the stale-cache offline notice with accessible warning colors and
+  dismiss it automatically after two seconds.
+
 ## 0.5.7
 
 - Load manifests and screens from the canonical portable artifact layout at
