@@ -1,3 +1,12 @@
+## 0.6.11
+
+- Validate statically referenced JSON data assets during development builds,
+  artifact builds, and artifact verification.
+- Generate preview sources that serve JSON resources from the existing
+  same-origin `/preview/assets/` route.
+- Generate mini-programs and hosts against contracts `0.3.5`, UI `0.1.11`,
+  and SDK `0.5.11`.
+
 ## 0.6.10
 
 - Generate hosts and mini-programs against contracts `0.3.4` and UI `0.1.10`

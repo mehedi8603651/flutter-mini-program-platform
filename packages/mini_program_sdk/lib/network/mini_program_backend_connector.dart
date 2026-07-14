@@ -53,6 +53,7 @@ class MiniProgramBackendRequest {
     this.body = const <String, dynamic>{},
     this.headers = const <String, String>{},
     this.cachePolicy = const MiniProgramBackendCachePolicy.noCache(),
+    this.forceRefresh = false,
   });
 
   final String miniProgramId;
@@ -62,10 +63,12 @@ class MiniProgramBackendRequest {
   final Map<String, dynamic> body;
   final Map<String, String> headers;
   final MiniProgramBackendCachePolicy cachePolicy;
+  final bool forceRefresh;
 
   MiniProgramBackendRequest copyWith({
     Map<String, String>? headers,
     MiniProgramBackendCachePolicy? cachePolicy,
+    bool? forceRefresh,
   }) {
     return MiniProgramBackendRequest(
       miniProgramId: miniProgramId,
@@ -75,6 +78,7 @@ class MiniProgramBackendRequest {
       body: body,
       headers: headers ?? this.headers,
       cachePolicy: cachePolicy ?? this.cachePolicy,
+      forceRefresh: forceRefresh ?? this.forceRefresh,
     );
   }
 }
@@ -240,7 +244,9 @@ class EndpointRoutingMiniProgramBackendConnector
       uri: uri,
       headers: safeHeaders,
     );
-    if (method == 'GET' && request.cachePolicy.isEnabled) {
+    if (method == 'GET' &&
+        request.cachePolicy.isEnabled &&
+        !request.forceRefresh) {
       final cached = _cache[cacheKey];
       if (cached != null && !cached.isExpired) {
         return cached.result.copyWith(fromCache: true);

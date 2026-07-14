@@ -1,3 +1,15 @@
+## 0.5.11
+
+- Forward backend query `forceRefresh` to connectors so explicit refreshes can
+  bypass otherwise valid response-cache entries.
+
+- Load validated same-origin JSON artifact assets into the accepted data cache
+  and search them through bounded app/version-scoped in-memory indexes.
+- Render controlled local search fields, horizontal static/dynamic lists,
+  single-series line charts, and root pull-to-refresh viewports.
+- Add optional JSON asset loading to HTTP and endpoint-routing sources.
+- Render reusable location, weather, wind, temperature, and world icons.
+
 ## 0.5.10
 
 - Resolve reusable actions from bounded nearest `actionScope` nodes, including

@@ -143,6 +143,8 @@ MpNode buildScrollViewNode({
 
 MpNode buildListViewNode({
   required List<MpNode> children,
+  String direction = 'vertical',
+  num? height,
   num spacing = 0,
   num? paddingAll,
   num? paddingHorizontal,
@@ -152,6 +154,8 @@ MpNode buildListViewNode({
   num? paddingRight,
   num? paddingBottom,
 }) {
+  final normalizedDirection = _collectionDirection(direction);
+  final normalizedHeight = _collectionHeight(normalizedDirection, height);
   final padding = widgetSpacing(
     all: paddingAll,
     horizontal: paddingHorizontal,
@@ -166,6 +170,8 @@ MpNode buildListViewNode({
     props: <String, Object?>{
       if (padding.isNotEmpty) 'padding': padding,
       'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
+      if (normalizedDirection != 'vertical') 'direction': normalizedDirection,
+      if (normalizedHeight != null) 'height': normalizedHeight,
     },
     children: requiredWidgetList(children, 'children'),
   );
@@ -178,7 +184,11 @@ MpNode buildRepeatNode({
   MpNode? separator,
   num spacing = 0,
   int limit = 100,
+  String direction = 'vertical',
+  num? height,
 }) {
+  final normalizedDirection = _collectionDirection(direction);
+  final normalizedHeight = _collectionHeight(normalizedDirection, height);
   return MpNode(
     'repeat',
     props: <String, Object?>{
@@ -188,8 +198,28 @@ MpNode buildRepeatNode({
       if (separator != null) 'separator': separator,
       'source': widgetBindingExpression(source, 'source'),
       'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
+      if (normalizedDirection != 'vertical') 'direction': normalizedDirection,
+      if (normalizedHeight != null) 'height': normalizedHeight,
     },
   );
+}
+
+String _collectionDirection(String value) {
+  if (value != 'vertical' && value != 'horizontal') {
+    throw ArgumentError.value(
+      value,
+      'direction',
+      'Value must be vertical or horizontal.',
+    );
+  }
+  return value;
+}
+
+num? _collectionHeight(String direction, num? height) {
+  if (direction == 'horizontal' && height == null) {
+    throw ArgumentError('Horizontal collections require a height.');
+  }
+  return height == null ? null : positiveWidgetNumber(height, 'height');
 }
 
 MpNode buildSafeAreaNode({

@@ -594,7 +594,7 @@ void main() {
     final manifest = await source.loadManifest('mp_profile_center');
 
     expect(manifest.version, '1.0.0');
-    expect(requestUri.path, '/api/manifests/mp_profile_center/latest.json');
+    expect(requestUri.path, '/api/artifacts/mp_profile_center/latest.json');
     expect(requestUri.queryParameters['hostApp'], partnerAppHostId);
     expect(requestUri.queryParameters['sdkVersion'], partnerAppHostSdkVersion);
     expect(requestUri.queryParameters['hostVersion'], '1.2.3');

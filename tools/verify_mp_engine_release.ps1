@@ -144,9 +144,9 @@ foreach ($fixture in $Fixtures) {
     '--mini-program-root', $fixtureRoot
   )
 
-  Assert-FileExists (Join-Path $publishRoot "manifests\$appId\latest.json")
-  Assert-FileExists (Join-Path $publishRoot "manifests\$appId\versions\1.0.0.json")
-  Assert-FileExists (Join-Path $publishRoot "screens\$appId\1.0.0\$($appId)_home.json")
+  Assert-FileExists (Join-Path $publishRoot "artifacts\$appId\latest.json")
+  Assert-FileExists (Join-Path $publishRoot "artifacts\$appId\1.0.0\manifest.json")
+  Assert-FileExists (Join-Path $publishRoot "artifacts\$appId\1.0.0\screens\$($appId)_home.json")
 
   $statusRaw = & dart run $Cli workflow status --workspace $fixtureRoot --json
   if ($LASTEXITCODE -ne 0) {

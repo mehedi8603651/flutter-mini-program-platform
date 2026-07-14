@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.11
+
+- Add artifact-local JSON load and ranked search action helpers.
+- Add controlled search fields, horizontal list/repeat layouts, single-series
+  line charts, and root pull-to-refresh authoring nodes.
+- Add reusable location, weather, wind, temperature, and world icon names.
+
 ## 0.1.10
 
 - Add bounded `Mp.actionScope` definitions and static `Mp.action.call`

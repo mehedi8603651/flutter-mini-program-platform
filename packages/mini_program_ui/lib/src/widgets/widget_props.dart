@@ -28,6 +28,18 @@ const Set<String> mpIconNames = <String>{
   'close',
   'refresh',
   'bolt',
+  'location',
+  'menu',
+  'sunny',
+  'cloudy',
+  'rain',
+  'thunderstorm',
+  'waterDrop',
+  'wind',
+  'thermometer',
+  'snow',
+  'fog',
+  'public',
 };
 
 const Set<String> mpAlignmentNames = <String>{

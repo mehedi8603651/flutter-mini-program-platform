@@ -4,9 +4,11 @@ import 'capability_registry.dart';
 import 'auth/mini_program_auth.dart';
 import 'cache/runtime_cache.dart';
 import 'feature_flag_evaluator.dart';
+import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
+import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
@@ -55,6 +57,9 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.authController,
     required this.cacheManager,
     required this.cachePolicy,
+    this.miniProgramVersion,
+    this.dataResourceManager,
+    this.jsonAssetSource,
     required this.backendStore,
     this.stateManager,
     this.router,
@@ -76,6 +81,9 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramAuthController? authController;
   final MiniProgramCacheManager cacheManager;
   final MiniProgramCachePolicy cachePolicy;
+  final String? miniProgramVersion;
+  final MiniProgramDataResourceManager? dataResourceManager;
+  final MiniProgramJsonAssetSource? jsonAssetSource;
   final MiniProgramBackendStore backendStore;
   final MpStateManager? stateManager;
   final MpRouter? router;
@@ -108,6 +116,9 @@ class MiniProgramSdkScope extends InheritedWidget {
         authController != oldWidget.authController ||
         cacheManager != oldWidget.cacheManager ||
         cachePolicy != oldWidget.cachePolicy ||
+        miniProgramVersion != oldWidget.miniProgramVersion ||
+        dataResourceManager != oldWidget.dataResourceManager ||
+        jsonAssetSource != oldWidget.jsonAssetSource ||
         backendStore != oldWidget.backendStore ||
         stateManager != oldWidget.stateManager ||
         router != oldWidget.router ||

@@ -105,6 +105,21 @@ void main() {
       expect(MiniProgramErrorCodes.mathInvalidOperand, 'math_invalid_operand');
       expect(MiniProgramErrorCodes.mathInvalidRange, 'math_invalid_range');
       expect(MiniProgramErrorCodes.mathEmptyValues, 'math_empty_values');
+      expect(
+        MiniProgramErrorCodes.dataAssetUnavailable,
+        'data_asset_unavailable',
+      );
+      expect(MiniProgramErrorCodes.dataInvalidJson, 'data_invalid_json');
+      expect(
+        MiniProgramErrorCodes.dataResourceTooLarge,
+        'data_resource_too_large',
+      );
+      expect(
+        MiniProgramErrorCodes.dataResourceNotFound,
+        'data_resource_not_found',
+      );
+      expect(MiniProgramErrorCodes.dataInvalidQuery, 'data_invalid_query');
+      expect(MiniProgramErrorCodes.dataSearchFailed, 'data_search_failed');
     });
 
     test('Publisher API header and error values stay stable', () {

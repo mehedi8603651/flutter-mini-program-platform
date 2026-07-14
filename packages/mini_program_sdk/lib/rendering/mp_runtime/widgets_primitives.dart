@@ -121,16 +121,23 @@ class _MpListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = _double(node, 'spacing', fallback: 0);
-    return ListView.separated(
+    final horizontal = _string(node, 'direction') == 'horizontal';
+    final list = ListView.separated(
+      scrollDirection: horizontal ? Axis.horizontal : Axis.vertical,
       shrinkWrap: true,
       primary: false,
-      physics: const NeverScrollableScrollPhysics(),
+      physics: horizontal
+          ? const ClampingScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
       padding: _mpInsets(node.props['padding'] as Map<String, dynamic>?),
       itemCount: node.children.length,
-      separatorBuilder: (context, index) => SizedBox(height: spacing),
+      separatorBuilder: (context, index) =>
+          horizontal ? SizedBox(width: spacing) : SizedBox(height: spacing),
       itemBuilder: (context, index) =>
           _MpNodeView(node: node.children[index], bindings: bindings),
     );
+    final height = _optionalDouble(node, 'height');
+    return height == null ? list : SizedBox(height: height, child: list);
   }
 }
 
@@ -155,6 +162,7 @@ class _MpRepeat extends StatelessWidget {
     final spacing = _double(node, 'spacing', fallback: 0);
     final limit = _int(node, 'limit', fallback: 100);
     final visibleCount = resolved.length < limit ? resolved.length : limit;
+    final horizontal = _string(node, 'direction') == 'horizontal';
     final children = <Widget>[];
     for (var index = 0; index < visibleCount; index += 1) {
       final rowBindings = bindings.copyWith(
@@ -166,16 +174,31 @@ class _MpRepeat extends StatelessWidget {
         if (separator != null) {
           children.add(_MpNodeView(node: separator, bindings: rowBindings));
         } else if (spacing > 0) {
-          children.add(SizedBox(height: spacing));
+          children.add(
+            horizontal ? SizedBox(width: spacing) : SizedBox(height: spacing),
+          );
         }
       }
     }
 
-    return Column(
+    if (horizontal) {
+      return SizedBox(
+        height: _double(node, 'height', fallback: 1),
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          primary: false,
+          physics: const ClampingScrollPhysics(),
+          children: children,
+        ),
+      );
+    }
+    final column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: children,
     );
+    final height = _optionalDouble(node, 'height');
+    return height == null ? column : SizedBox(height: height, child: column);
   }
 }
 
@@ -1690,4 +1713,16 @@ const Map<String, IconData> _mpIcons = <String, IconData>{
   'close': IconData(0xf647, fontFamily: 'MaterialIcons'),
   'refresh': IconData(0xf00e9, fontFamily: 'MaterialIcons'),
   'bolt': IconData(0xf5ca, fontFamily: 'MaterialIcons'),
+  'location': IconData(0xf193, fontFamily: 'MaterialIcons'),
+  'menu': IconData(0xf8b6, fontFamily: 'MaterialIcons'),
+  'sunny': IconData(0xf4bc, fontFamily: 'MaterialIcons'),
+  'cloudy': IconData(0xef62, fontFamily: 'MaterialIcons'),
+  'rain': IconData(0xf46d, fontFamily: 'MaterialIcons'),
+  'thunderstorm': IconData(0xf071b, fontFamily: 'MaterialIcons'),
+  'waterDrop': IconData(0xf0695, fontFamily: 'MaterialIcons'),
+  'wind': IconData(0xf542, fontFamily: 'MaterialIcons'),
+  'thermometer': IconData(0xf022c, fontFamily: 'MaterialIcons'),
+  'snow': IconData(0xe037, fontFamily: 'MaterialIcons'),
+  'fog': IconData(0xf0505, fontFamily: 'MaterialIcons'),
+  'public': IconData(0xe4f0, fontFamily: 'MaterialIcons'),
 };

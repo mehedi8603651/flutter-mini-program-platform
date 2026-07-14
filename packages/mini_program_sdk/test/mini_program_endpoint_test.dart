@@ -53,6 +53,13 @@ void main() {
         createdSources[0].loadScreenCalls.single.miniProgramId,
         'coupon_demo',
       );
+      final assetBytes = await source.loadJsonAsset(
+        miniProgramId: 'coupon_demo',
+        version: '1.0.0',
+        assetPath: 'data/items.json',
+      );
+      expect(assetBytes, <int>[91, 93]);
+      expect(createdSources[0].loadJsonAssetCalls, <String>['data/items.json']);
     });
 
     test(
@@ -264,13 +271,15 @@ const MiniProgramDeliveryContext _deliveryContext = MiniProgramDeliveryContext(
   locale: 'en-US',
 );
 
-class _RecordingSource implements DisposableMiniProgramSource {
+class _RecordingSource
+    implements DisposableMiniProgramSource, MiniProgramJsonAssetSource {
   _RecordingSource({required this.appId, required this.endpoint});
 
   final String appId;
   final MiniProgramEndpoint endpoint;
   final List<String> loadManifestCalls = <String>[];
   final List<_ScreenCall> loadScreenCalls = <_ScreenCall>[];
+  final List<String> loadJsonAssetCalls = <String>[];
   int disposeCount = 0;
 
   @override
@@ -300,6 +309,16 @@ class _RecordingSource implements DisposableMiniProgramSource {
       ),
     );
     return const <String, dynamic>{'type': 'text', 'data': 'Loaded'};
+  }
+
+  @override
+  Future<List<int>> loadJsonAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) async {
+    loadJsonAssetCalls.add(assetPath);
+    return <int>[91, 93];
   }
 
   @override

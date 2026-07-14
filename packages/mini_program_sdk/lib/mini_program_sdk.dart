@@ -9,6 +9,7 @@ export 'cache/runtime_shared_preferences_cache.dart';
 export 'cache/runtime_cache.dart';
 export 'cache/screen_cache.dart';
 export 'feature_flag_evaluator.dart';
+export 'data/mini_program_data_resource.dart';
 export 'host_bridge.dart';
 export 'manifest_loader.dart';
 export 'mini_program_config.dart';

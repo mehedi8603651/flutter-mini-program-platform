@@ -2,13 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 
 import '../auth/mini_program_auth.dart';
 import '../cache/runtime_cache.dart';
+import '../data/mini_program_data_resource.dart';
 import '../network/mini_program_backend_connector.dart';
 import '../network/mini_program_backend_store.dart';
+import '../network/mini_program_source_exception.dart';
 import '../sdk_context.dart';
 import '../state/mp_state.dart';
 import '../widgets/sdk_email_auth_sheet.dart';
@@ -27,3 +32,4 @@ part 'mp_runtime/widgets_lifecycle.dart';
 part 'mp_runtime/widgets_primitives.dart';
 part 'mp_runtime/widgets_forms.dart';
 part 'mp_runtime/widgets_backend.dart';
+part 'mp_runtime/widgets_charts.dart';

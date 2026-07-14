@@ -60,8 +60,8 @@ class MiniProgramPreviewHostInitializer {
     'web',
     'windows',
   };
-  static const String _sdkConstraint = '^0.5.10';
-  static const String _contractsConstraint = '^0.3.4';
+  static const String _sdkConstraint = '^0.5.11';
+  static const String _contractsConstraint = '^0.3.5';
   static const String _httpConstraint = '^1.5.0';
   static const String _projectName = 'mini_program_preview_host';
 
@@ -601,7 +601,8 @@ MiniProgramCacheBundle _buildPreviewCacheBundle() {
   return MiniProgramCacheBundle.inMemory();
 }
 
-class PreviewMiniProgramSource implements MiniProgramSource {
+class PreviewMiniProgramSource
+    implements MiniProgramSource, MiniProgramJsonAssetSource {
   PreviewMiniProgramSource({
     required this.previewBaseUri,
     required this.expectedMiniProgramId,
@@ -636,6 +637,51 @@ class PreviewMiniProgramSource implements MiniProgramSource {
       'screens/$screenId.json',
       resourceLabel: 'screen',
     );
+  }
+
+  @override
+  Future<List<int>> loadJsonAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) async {
+    if (miniProgramId != expectedMiniProgramId) {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host only exposes "$expectedMiniProgramId", but the SDK requested "$miniProgramId".',
+        errorCode: MiniProgramErrorCodes.dataAssetUnavailable,
+      );
+    }
+    final uri = previewBaseUri.resolve('assets/$assetPath');
+    late final http.Response response;
+    try {
+      response = await _client.get(uri).timeout(const Duration(seconds: 5));
+    } on TimeoutException {
+      throw MiniProgramSourceException(
+        message: 'Preview host timed out while loading JSON data from $uri.',
+        errorCode: MiniProgramErrorCodes.backendTimeout,
+        details: <String, dynamic>{'uri': uri.toString()},
+      );
+    } catch (error) {
+      throw MiniProgramSourceException(
+        message: 'Preview host could not load JSON data from $uri.',
+        errorCode: MiniProgramErrorCodes.backendUnreachable,
+        details: <String, dynamic>{
+          'uri': uri.toString(),
+          'transportError': '$error',
+        },
+      );
+    }
+    if (response.statusCode != 200) {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host returned HTTP ${response.statusCode} while loading JSON data.',
+        errorCode: MiniProgramErrorCodes.dataResourceNotFound,
+        statusCode: response.statusCode,
+        details: <String, dynamic>{'uri': uri.toString()},
+      );
+    }
+    return response.bodyBytes;
   }
 
   void close() {

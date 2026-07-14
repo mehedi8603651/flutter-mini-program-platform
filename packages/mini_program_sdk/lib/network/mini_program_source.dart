@@ -11,6 +11,15 @@ abstract interface class MiniProgramSource {
   });
 }
 
+/// Optional source capability for immutable JSON files under artifact assets.
+abstract interface class MiniProgramJsonAssetSource {
+  Future<List<int>> loadJsonAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  });
+}
+
 /// Optional contract for sources that own disposable resources.
 abstract interface class DisposableMiniProgramSource
     implements MiniProgramSource {

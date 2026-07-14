@@ -202,6 +202,12 @@ artifacts/<appId>/<version>/screens/<screenId>.json
 artifacts/<appId>/<version>/assets/
 ```
 
+`miniprogram build`, `artifact build`, and `artifact verify` validate every
+static `Mp.data.loadJsonAsset` reference. Referenced files must exist under the
+mini-program `assets/` directory, use a relative `.json` path, parse to an
+object or list, and remain within the runtime size, depth, and member limits.
+Preview serves these files from its same-origin `/preview/assets/` route.
+
 Upload or copy the generated `artifacts` directory to a public static host.
 
 For GitHub Pages, a common URL is:

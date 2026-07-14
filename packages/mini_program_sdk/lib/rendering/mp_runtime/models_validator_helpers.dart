@@ -704,6 +704,78 @@ int? _optionalSearchLimit(Object? value, {required String path}) {
   return value;
 }
 
+int _boundedIntValue(
+  Object? value, {
+  required String path,
+  required int minimum,
+  required int maximum,
+}) {
+  if (value is! int || value < minimum || value > maximum) {
+    _fail(
+      'Mp integer value must be between $minimum and $maximum.',
+      path: path,
+    );
+  }
+  return value;
+}
+
+num _boundedNumber(
+  Object? value, {
+  required String path,
+  required num minimum,
+  required num maximum,
+}) {
+  if (value is! num || !value.isFinite || value < minimum || value > maximum) {
+    _fail(
+      'Mp numeric value must be between $minimum and $maximum.',
+      path: path,
+    );
+  }
+  return value;
+}
+
+String _collectionDirection(
+  Map<String, dynamic> props, {
+  required String path,
+}) {
+  final direction =
+      _optionalStableString(props, 'direction', path: path) ?? 'vertical';
+  if (direction != 'vertical' && direction != 'horizontal') {
+    _fail(
+      'Mp collection direction must be vertical or horizontal.',
+      path: '$path.direction',
+    );
+  }
+  return direction;
+}
+
+num? _collectionHeight(
+  Map<String, dynamic> props, {
+  required String direction,
+  required String path,
+}) {
+  final height = _optionalPositiveNumberValue(
+    props['height'],
+    path: '$path.height',
+  );
+  if (direction == 'horizontal' && height == null) {
+    _fail('Mp horizontal collections require height.', path: '$path.height');
+  }
+  return height;
+}
+
+String _dataFieldPath(
+  Map<String, dynamic> props,
+  String key, {
+  required String path,
+}) {
+  final value = _requiredStableString(props, key, path: path);
+  if (!MpScreenValidator._dataFieldPathPattern.hasMatch(value)) {
+    _fail('Mp "$key" must be a dotted field path.', path: '$path.$key');
+  }
+  return value;
+}
+
 int _requiredPositiveIntValue(Object? value, {required String path}) {
   if (value is! int || value <= 0) {
     _fail('Mp numeric value must be a positive integer.', path: path);

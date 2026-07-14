@@ -100,6 +100,27 @@ void main() {
       expect(screenJson['type'], 'scaffold');
     });
 
+    test('loads versioned artifact-local JSON asset bytes', () async {
+      final source = HttpMiniProgramSource(
+        apiBaseUri: Uri.parse('https://cdn.example.com/store/'),
+        client: MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://cdn.example.com/store/artifacts/weather/1.2.0/assets/data/locations.json',
+          );
+          return http.Response.bytes(<int>[91, 93], 200);
+        }),
+      );
+
+      final bytes = await source.loadJsonAsset(
+        miniProgramId: 'weather',
+        version: '1.2.0',
+        assetPath: 'data/locations.json',
+      );
+
+      expect(bytes, <int>[91, 93]);
+    });
+
     test('does not send artifact credential headers', () async {
       final requestedHeaders = <String?>[];
       final source = HttpMiniProgramSource(

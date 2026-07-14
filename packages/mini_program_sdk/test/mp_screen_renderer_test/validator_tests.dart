@@ -172,6 +172,88 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts local data and visualization primitives', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.refreshIndicator(
+              action: Mp.action.call('refreshData'),
+              child: Mp.actionScope(
+                actions: <String, MpAction>{
+                  'refreshData': Mp.data.loadJsonAsset(
+                    id: 'locations',
+                    asset: 'data/locations.json',
+                    statusState: 'location.status',
+                  ),
+                },
+                child: Mp.column(
+                  children: <MpNode>[
+                    Mp.searchField(
+                      stateKey: 'location.query',
+                      onChanged: Mp.data.search(
+                        resourceId: 'locations',
+                        query: '{{state.location.query}}',
+                        fields: const <String>['name', 'district.name'],
+                        itemsPath: 'locations',
+                        targetState: 'location.results',
+                      ),
+                    ),
+                    Mp.listView(
+                      direction: 'horizontal',
+                      height: 100,
+                      children: <MpNode>[Mp.text('Today'), Mp.text('Tomorrow')],
+                    ),
+                    Mp.repeat(
+                      source: '{{state.forecast.hourly}}',
+                      direction: 'horizontal',
+                      height: 120,
+                      itemTemplate: Mp.text('{{item.timeLabel}}'),
+                    ),
+                    Mp.lineChart(
+                      source: '{{state.forecast.hourly}}',
+                      valueField: 'temperature',
+                      labelField: 'timeLabel',
+                      empty: Mp.emptyState(title: 'No chart data'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
+    test('rejects refresh indicators below the screen root', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.refreshIndicator(
+                  action: Mp.state.set('refresh.done', true),
+                  child: Mp.text('Nested'),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      expect(
+        () => const MpScreenValidator().validate(
+          screen,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+    });
+
     test('rejects malformed condition, ifElse, and countdown primitives', () {
       final invalidCondition = _screenWith((json) {
         json['root'] = <String, dynamic>{

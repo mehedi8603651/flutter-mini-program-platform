@@ -60,6 +60,30 @@ void main() {
         ).readAsString(),
         'asset-data',
       );
+      expect(
+        await File(
+          p.join(
+            result.versionArtifactsPath,
+            'assets',
+            'data',
+            'locations.json',
+          ),
+        ).exists(),
+        isTrue,
+      );
+      final checksums =
+          jsonDecode(
+                await File(
+                  p.join(result.versionArtifactsPath, 'checksums.json'),
+                ).readAsString(),
+              )
+              as Map<String, dynamic>;
+      expect(
+        (checksums['files'] as List).whereType<Map>().any(
+          (record) => record['path'] == 'assets/data/locations.json',
+        ),
+        isTrue,
+      );
 
       final latest =
           jsonDecode(await File(result.latestManifestPath).readAsString())
@@ -249,6 +273,14 @@ Future<void> _writeFixture(String root, {required String version}) async {
   await Directory(p.join(root, 'tool')).create(recursive: true);
   await Directory(p.join(root, 'assets')).create(recursive: true);
   await File(p.join(root, 'assets', 'keypad.txt')).writeAsString('asset-data');
+  await Directory(p.join(root, 'assets', 'data')).create(recursive: true);
+  await File(p.join(root, 'assets', 'data', 'locations.json')).writeAsString(
+    jsonEncode(<String, Object?>{
+      'locations': <Object?>[
+        <String, Object?>{'name': 'Dhaka'},
+      ],
+    }),
+  );
   await File(p.join(root, 'pubspec.yaml')).writeAsString('''
 name: calculator_fixture
 publish_to: none
@@ -296,8 +328,19 @@ Future<void> main(List<String> arguments) async {
       'schemaVersion': 1,
       'screenId': 'calculator_home',
       'root': <String, Object?>{
-        'type': 'text',
-        'props': <String, Object?>{'data': '$label'},
+        'type': 'button',
+        'props': <String, Object?>{
+          'label': '$label',
+          'action': <String, Object?>{
+            'type': 'data.loadJsonAsset',
+            'props': <String, Object?>{
+              'id': 'locations',
+              'asset': 'data/locations.json',
+              'ttlMs': 2592000000,
+              'forceRefresh': false,
+            },
+          },
+        },
         'children': <Object?>[],
       },
     }),

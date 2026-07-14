@@ -6,6 +6,7 @@ import 'mp_node.dart';
 import 'mp_skeleton.dart';
 import 'widgets/display_widgets.dart';
 import 'widgets/button_widgets.dart';
+import 'widgets/chart_widgets.dart';
 import 'widgets/image_widgets.dart';
 import 'widgets/layout_widgets.dart';
 import 'widgets/list_widgets.dart';
@@ -34,6 +35,9 @@ abstract final class Mp {
 
   /// Safe, offline mathematical actions.
   static const math = MpMathActions();
+
+  /// Artifact-local JSON data actions.
+  static const data = MpDataActions();
 
   /// Lifecycle-owned timer nodes.
   static const timer = MpTimer();
@@ -239,6 +243,8 @@ abstract final class Mp {
   /// Creates a small or medium section-level list.
   static MpNode listView({
     required List<MpNode> children,
+    String direction = 'vertical',
+    num? height,
     num spacing = 0,
     num? paddingAll,
     num? paddingHorizontal,
@@ -249,6 +255,8 @@ abstract final class Mp {
     num? paddingBottom,
   }) => buildListViewNode(
     children: children,
+    direction: direction,
+    height: height,
     spacing: spacing,
     paddingAll: paddingAll,
     paddingHorizontal: paddingHorizontal,
@@ -267,6 +275,8 @@ abstract final class Mp {
     MpNode? separator,
     num spacing = 0,
     int limit = 100,
+    String direction = 'vertical',
+    num? height,
   }) => buildRepeatNode(
     source: source,
     itemTemplate: itemTemplate,
@@ -274,6 +284,8 @@ abstract final class Mp {
     separator: separator,
     spacing: spacing,
     limit: limit,
+    direction: direction,
+    height: height,
   );
 
   /// Alias for [repeat].
@@ -284,6 +296,8 @@ abstract final class Mp {
     MpNode? separator,
     num spacing = 0,
     int limit = 100,
+    String direction = 'vertical',
+    num? height,
   }) => repeat(
     source: source,
     itemTemplate: itemTemplate,
@@ -291,6 +305,108 @@ abstract final class Mp {
     separator: separator,
     spacing: spacing,
     limit: limit,
+    direction: direction,
+    height: height,
+  );
+
+  /// Creates a state-controlled local search field.
+  static MpNode searchField({
+    required String stateKey,
+    String label = 'Search',
+    String? hint,
+    String initialValue = '',
+    int maxLength = 256,
+    Duration debounce = const Duration(milliseconds: 300),
+    MpAction? onChanged,
+    MpAction? onSubmitted,
+    bool showClearButton = true,
+  }) {
+    final debounceMs = debounce.inMilliseconds;
+    if (debounceMs < 0 || debounceMs > 60000) {
+      throw ArgumentError.value(
+        debounce,
+        'debounce',
+        'Value must be between 0 and 60 seconds.',
+      );
+    }
+    if (initialValue.length > maxLength) {
+      throw ArgumentError.value(
+        initialValue,
+        'initialValue',
+        'Value cannot exceed maxLength.',
+      );
+    }
+    return MpNode(
+      'searchField',
+      props: <String, Object?>{
+        'stateKey': _requiredStateKey(stateKey, 'stateKey'),
+        'label': _requiredString(label, 'label'),
+        if (hint != null) 'hint': _requiredString(hint, 'hint'),
+        'initialValue': initialValue,
+        'maxLength': _boundedInt(
+          maxLength,
+          'maxLength',
+          minimum: 1,
+          maximum: 256,
+        ),
+        'debounceMs': debounceMs,
+        if (onChanged != null) 'onChanged': onChanged,
+        if (onSubmitted != null) 'onSubmitted': onSubmitted,
+        'showClearButton': showClearButton,
+      },
+    );
+  }
+
+  /// Creates a single-series ordinal line chart.
+  static MpNode lineChart({
+    required String source,
+    required String valueField,
+    String? labelField,
+    num height = 220,
+    num? minY,
+    num? maxY,
+    String unit = '',
+    String color = '#F4C430',
+    num strokeWidth = 3,
+    bool curved = true,
+    bool showPoints = true,
+    bool showGrid = true,
+    bool showArea = true,
+    int maxPoints = 200,
+    String? semanticLabel,
+    MpNode? empty,
+  }) => buildLineChartNode(
+    source: source,
+    valueField: valueField,
+    labelField: labelField,
+    height: height,
+    minY: minY,
+    maxY: maxY,
+    unit: unit,
+    color: color,
+    strokeWidth: strokeWidth,
+    curved: curved,
+    showPoints: showPoints,
+    showGrid: showGrid,
+    showArea: showArea,
+    maxPoints: maxPoints,
+    semanticLabel: semanticLabel,
+    empty: empty,
+  );
+
+  /// Creates a root pull-to-refresh viewport.
+  static MpNode refreshIndicator({
+    required MpAction action,
+    required MpNode child,
+    String? semanticsLabel,
+  }) => MpNode(
+    'refreshIndicator',
+    props: <String, Object?>{
+      'action': action,
+      if (semanticsLabel != null)
+        'semanticsLabel': _requiredString(semanticsLabel, 'semanticsLabel'),
+    },
+    children: <MpNode>[child],
   );
 
   /// Insets [child] away from unsafe display areas.
@@ -1031,6 +1147,105 @@ abstract final class Mp {
       'confirmLabel': _requiredString(confirmLabel, 'confirmLabel'),
     },
   );
+}
+
+/// Artifact-local JSON data action builders.
+final class MpDataActions {
+  /// Creates artifact-local data helpers.
+  const MpDataActions();
+
+  /// Loads and indexes a JSON resource from the immutable artifact assets.
+  MpAction loadJsonAsset({
+    required String id,
+    required String asset,
+    Duration ttl = const Duration(days: 30),
+    bool forceRefresh = false,
+    String? statusState,
+    String? errorState,
+    String? requestId,
+  }) {
+    final ttlMs = ttl.inMilliseconds;
+    if (ttlMs <= 0 || ttlMs > const Duration(days: 3650).inMilliseconds) {
+      throw ArgumentError.value(
+        ttl,
+        'ttl',
+        'Duration must be between 1 millisecond and 3650 days.',
+      );
+    }
+    return MpAction(
+      'data.loadJsonAsset',
+      props: <String, Object?>{
+        'id': _dataResourceId(id, 'id'),
+        'asset': _jsonAssetPath(asset),
+        'ttlMs': ttlMs,
+        'forceRefresh': forceRefresh,
+        if (statusState != null)
+          'statusState': _requiredStateKey(statusState, 'statusState'),
+        if (errorState != null)
+          'errorState': _requiredStateKey(errorState, 'errorState'),
+        if (requestId != null)
+          'requestId': _stableString(requestId, 'requestId'),
+      },
+    );
+  }
+
+  /// Searches an already loaded artifact-local JSON resource.
+  MpAction search({
+    required String resourceId,
+    required String query,
+    required List<String> fields,
+    String? itemsPath,
+    int minQueryLength = 2,
+    int limit = 20,
+    required String targetState,
+    String? statusState,
+    String? errorState,
+  }) {
+    if (fields.isEmpty || fields.length > 8) {
+      throw ArgumentError.value(
+        fields,
+        'fields',
+        'Data search requires from 1 to 8 fields.',
+      );
+    }
+    final normalizedFields = fields
+        .map((field) => _dataFieldPath(field, 'fields'))
+        .toList(growable: false);
+    if (normalizedFields.toSet().length != normalizedFields.length) {
+      throw ArgumentError.value(fields, 'fields', 'Fields must be unique.');
+    }
+    final normalizedQuery = query;
+    if (!_singleBindingPattern.hasMatch(normalizedQuery) &&
+        normalizedQuery.length > 256) {
+      throw ArgumentError.value(
+        query,
+        'query',
+        'Static query text cannot exceed 256 characters.',
+      );
+    }
+    return MpAction(
+      'data.search',
+      props: <String, Object?>{
+        'resourceId': _dataResourceId(resourceId, 'resourceId'),
+        'query': normalizedQuery,
+        'fields': normalizedFields,
+        if (itemsPath != null)
+          'itemsPath': _dataFieldPath(itemsPath, 'itemsPath'),
+        'minQueryLength': _boundedInt(
+          minQueryLength,
+          'minQueryLength',
+          minimum: 0,
+          maximum: 256,
+        ),
+        'limit': _boundedInt(limit, 'limit', minimum: 1, maximum: 100),
+        'targetState': _requiredStateKey(targetState, 'targetState'),
+        if (statusState != null)
+          'statusState': _requiredStateKey(statusState, 'statusState'),
+        if (errorState != null)
+          'errorState': _requiredStateKey(errorState, 'errorState'),
+      },
+    );
+  }
 }
 
 /// Mini-program memory state action builders.
@@ -2561,6 +2776,44 @@ String _requiredCacheKey(String value, String name) {
   return normalized;
 }
 
+String _dataResourceId(String value, String name) {
+  final normalized = _stableString(value, name);
+  if (!_dataResourceIdPattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Resource IDs must be lowercase identifiers up to 64 characters.',
+    );
+  }
+  return normalized;
+}
+
+String _jsonAssetPath(String value) {
+  final normalized = _stableString(value, 'asset');
+  if (normalized.length > 256 ||
+      !_jsonAssetPathPattern.hasMatch(normalized) ||
+      normalized.contains('..')) {
+    throw ArgumentError.value(
+      value,
+      'asset',
+      'Asset must be a relative JSON path under the artifact assets directory.',
+    );
+  }
+  return normalized;
+}
+
+String _dataFieldPath(String value, String name) {
+  final normalized = _stableString(value, name);
+  if (!_dataFieldPathPattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      name,
+      'Value must be a dotted field path.',
+    );
+  }
+  return normalized;
+}
+
 String _cacheBucket(String value) {
   final normalized = _stableString(value, 'bucket');
   if (!_allowedCacheBuckets.contains(normalized)) {
@@ -2607,6 +2860,16 @@ final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
 final RegExp _mathVariablePattern = RegExp(r'^[a-z][a-z0-9_]*$');
 
 final RegExp _actionNamePattern = RegExp(r'^[a-z][a-zA-Z0-9_]{0,63}$');
+
+final RegExp _dataResourceIdPattern = RegExp(r'^[a-z][a-z0-9_]{0,63}$');
+
+final RegExp _dataFieldPathPattern = RegExp(
+  r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$',
+);
+
+final RegExp _jsonAssetPathPattern = RegExp(
+  r'^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)*\.json$',
+);
 
 final RegExp _singleBindingPattern = RegExp(r'^\{\{\s*[^}]+?\s*\}\}$');
 

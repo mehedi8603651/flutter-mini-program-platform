@@ -449,6 +449,54 @@ void main() {
       expect(requests, 2);
     });
 
+    test('force refresh bypasses an otherwise valid GET cache entry', () async {
+      var requests = 0;
+      final connector = EndpointRoutingMiniProgramBackendConnector(
+        backends: <String, MiniProgramBackendEndpoint>{
+          'weather': MiniProgramBackendEndpoint(
+            baseUri: Uri.parse('https://publisher.example.com/api/'),
+          ),
+        },
+        deliveryContext: _deliveryContext,
+        clientFactory: () => _RecordingClient((request) async {
+          requests++;
+          return http.Response('{"request":$requests}', 200);
+        }),
+      );
+      const cachePolicy = MiniProgramBackendCachePolicy(
+        ttl: Duration(minutes: 10),
+      );
+
+      final first = await connector.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'weather',
+          endpoint: 'forecast',
+          cachePolicy: cachePolicy,
+        ),
+      );
+      final cached = await connector.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'weather',
+          endpoint: 'forecast',
+          cachePolicy: cachePolicy,
+        ),
+      );
+      final refreshed = await connector.call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'weather',
+          endpoint: 'forecast',
+          cachePolicy: cachePolicy,
+          forceRefresh: true,
+        ),
+      );
+
+      expect(first.data['request'], 1);
+      expect(cached.fromCache, isTrue);
+      expect(refreshed.data['request'], 2);
+      expect(refreshed.fromCache, isFalse);
+      expect(requests, 2);
+    });
+
     test('disposes owned backend HTTP client', () async {
       late _RecordingClient client;
       final connector = EndpointRoutingMiniProgramBackendConnector(

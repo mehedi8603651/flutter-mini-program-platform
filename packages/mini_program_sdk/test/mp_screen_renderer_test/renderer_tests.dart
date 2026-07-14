@@ -4035,6 +4035,153 @@ void _mpScreenRendererTests() {
       stateManager.dispose();
     });
 
+    testWidgets(
+      'local JSON data actions load search and preserve failed targets',
+      (tester) async {
+        final cacheManager = MiniProgramCacheManager.inMemory();
+        final stateManager = MpStateManager();
+        final dataManager = MiniProgramDataResourceManager();
+        final source = _TestJsonAssetSource(<String, Object?>{
+          'data/locations.json': <String, Object?>{
+            'locations': <Object?>[
+              <String, Object?>{'name': 'Dhaka', 'district': 'Dhaka'},
+              <String, Object?>{'name': 'Dhamrai', 'district': 'Dhaka'},
+            ],
+          },
+          'data/large.json': <Object?>[
+            <String, Object?>{
+              'name': 'Dhaka ${List<String>.filled(700, 'x').join()}',
+            },
+          ],
+        });
+
+        final loadResult = await _runMpAction(
+          tester,
+          Mp.data
+              .loadJsonAsset(
+                id: 'locations',
+                asset: 'data/locations.json',
+                statusState: 'location.resource_status',
+                errorState: 'location.resource_error',
+              )
+              .toJson(),
+          miniProgramId: 'weather',
+          miniProgramVersion: '1.0.0',
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          dataResourceManager: dataManager,
+          jsonAssetSource: source,
+        );
+        expect(loadResult, isA<HostActionResult>());
+        expect((loadResult as HostActionResult).isSuccess, isTrue);
+        expect(stateManager.get<String>('location.resource_status'), 'success');
+
+        final searchResult = await _runMpAction(
+          tester,
+          Mp.data
+              .search(
+                resourceId: 'locations',
+                query: 'dha',
+                fields: const <String>['name', 'district'],
+                itemsPath: 'locations',
+                targetState: 'location.results',
+                statusState: 'location.search_status',
+                errorState: 'location.search_error',
+              )
+              .toJson(),
+          miniProgramId: 'weather',
+          miniProgramVersion: '1.0.0',
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          dataResourceManager: dataManager,
+        );
+        expect((searchResult as HostActionResult).isSuccess, isTrue);
+        expect(
+          stateManager.get<Map<String, dynamic>>(
+            'location.results',
+          )?['matchCount'],
+          2,
+        );
+        expect(stateManager.get<String>('location.search_status'), 'success');
+
+        final previous = stateManager.get<Object?>('location.results');
+        final failedResult = await _runMpAction(
+          tester,
+          Mp.data
+              .search(
+                resourceId: 'missing',
+                query: 'dha',
+                fields: const <String>['name'],
+                targetState: 'location.results',
+                statusState: 'location.search_status',
+                errorState: 'location.search_error',
+              )
+              .toJson(),
+          miniProgramId: 'weather',
+          miniProgramVersion: '1.0.0',
+          cacheManager: cacheManager,
+          stateManager: stateManager,
+          dataResourceManager: dataManager,
+        );
+        expect((failedResult as HostActionResult).isSuccess, isFalse);
+        expect(stateManager.get<Object?>('location.results'), previous);
+        expect(
+          stateManager.get<Map<String, dynamic>>(
+            'location.search_error',
+          )?['code'],
+          MiniProgramErrorCodes.dataResourceNotFound,
+        );
+
+        final limitedState = MpStateManager(
+          policy: const MiniProgramLiveStatePolicy(
+            maxBytes: 2048,
+            maxEntries: 100,
+            maxValueBytes: 512,
+          ),
+        )..set('location.results', 'previous');
+        await _runMpAction(
+          tester,
+          Mp.data.loadJsonAsset(id: 'large', asset: 'data/large.json').toJson(),
+          miniProgramId: 'weather',
+          miniProgramVersion: '1.0.0',
+          cacheManager: cacheManager,
+          stateManager: limitedState,
+          dataResourceManager: dataManager,
+          jsonAssetSource: source,
+        );
+        final quotaResult = await _runMpAction(
+          tester,
+          Mp.data
+              .search(
+                resourceId: 'large',
+                query: 'dhaka',
+                fields: const <String>['name'],
+                targetState: 'location.results',
+                statusState: 'location.search_status',
+                errorState: 'location.search_error',
+              )
+              .toJson(),
+          miniProgramId: 'weather',
+          miniProgramVersion: '1.0.0',
+          cacheManager: cacheManager,
+          stateManager: limitedState,
+          dataResourceManager: dataManager,
+        );
+        expect((quotaResult as HostActionResult).isSuccess, isFalse);
+        expect(quotaResult.errorCode, MiniProgramErrorCodes.stateLimitExceeded);
+        expect(limitedState.get<String>('location.results'), 'previous');
+        expect(
+          limitedState.get<Map<String, dynamic>>(
+            'location.search_error',
+          )?['code'],
+          MiniProgramErrorCodes.stateLimitExceeded,
+        );
+
+        limitedState.dispose();
+        stateManager.dispose();
+      },
+    );
+
     testWidgets('cache get handles missing and cached null values', (
       tester,
     ) async {
@@ -5177,5 +5324,107 @@ void _mpScreenRendererTests() {
 
       backendStore.dispose();
     });
+
+    testWidgets(
+      'renders controlled search, chart, horizontal lists, and refresh',
+      (tester) async {
+        final backendStore = MiniProgramBackendStore();
+        final stateManager = MpStateManager();
+        stateManager.set('forecast.hourly', <Object?>[
+          <String, Object?>{'timeLabel': '10 AM', 'temperature': 30},
+          <String, Object?>{'timeLabel': '11 AM', 'temperature': 32},
+          <String, Object?>{'timeLabel': '12 PM', 'temperature': 31},
+        ]);
+        final screenJson = _jsonMap(
+          MpProgram(
+            screens: <String, MpScreenBuilder>{
+              'coupon_home': () => Mp.refreshIndicator(
+                action: Mp.state.increment('refresh.count'),
+                semanticsLabel: 'Refresh forecast',
+                child: Mp.column(
+                  children: <MpNode>[
+                    Mp.searchField(
+                      stateKey: 'location.query',
+                      hint: 'Dhaka',
+                      onChanged: Mp.state.copy(
+                        from: 'location.query',
+                        to: 'location.last_search',
+                        convertTo: 'text',
+                      ),
+                    ),
+                    Mp.listView(
+                      direction: 'horizontal',
+                      height: 80,
+                      children: <MpNode>[
+                        Mp.container(width: 100, child: Mp.text('Today')),
+                        Mp.container(width: 100, child: Mp.text('Tomorrow')),
+                      ],
+                    ),
+                    Mp.lineChart(
+                      source: '{{state.forecast.hourly}}',
+                      valueField: 'temperature',
+                      labelField: 'timeLabel',
+                      semanticLabel: 'Hourly temperature',
+                    ),
+                  ],
+                ),
+              ),
+            },
+          ).buildScreensJson()['coupon_home']!,
+        );
+
+        await tester.pumpWidget(
+          _scopedApp(
+            backendStore: backendStore,
+            stateManager: stateManager,
+            screenJson: screenJson,
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.label ==
+                    'Hourly temperature, 3 points, minimum 30, maximum 32, latest 31',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widgetList<ListView>(find.byType(ListView))
+              .any((list) => list.scrollDirection == Axis.horizontal),
+          isTrue,
+        );
+
+        await tester.enterText(find.byType(EditableText), 'Dhaka');
+        await tester.pump(const Duration(milliseconds: 301));
+        expect(stateManager.get<String>('location.last_search'), 'Dhaka');
+
+        stateManager.set('location.query', 'Chattogram');
+        await tester.pump();
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText))
+              .controller
+              .text,
+          'Chattogram',
+        );
+
+        await tester.tap(find.bySemanticsLabel('Clear search'));
+        await tester.pump();
+        expect(stateManager.get<String>('location.query'), '');
+
+        await tester.drag(
+          find.byType(SingleChildScrollView),
+          const Offset(0, 320),
+        );
+        await tester.pumpAndSettle();
+        expect(stateManager.get<num>('refresh.count'), 1);
+
+        backendStore.dispose();
+      },
+    );
   });
 }

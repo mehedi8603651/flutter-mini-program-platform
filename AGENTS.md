@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.4` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.1.10` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.5.10` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.6.10` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.5` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.1.11` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.5.11` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.6.11` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.0` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -156,6 +156,7 @@ packages/mini_program_ui/
 |           |-- text_widgets.dart               # Text and rich-text style builders
 |           |-- image_widgets.dart              # Image node builders
 |           |-- button_widgets.dart             # Button and interaction builders
+|           |-- chart_widgets.dart              # Single-series chart authoring and strict range validation
 |           |-- list_widgets.dart               # Static and bound list builders
 |           |-- lazy_widgets.dart               # Lazy data/chunk UI builders
 |           |-- skeleton_widgets.dart           # Skeleton placeholder builders
@@ -209,6 +210,8 @@ packages/mini_program_sdk/
 |   |   |-- runtime_cache.dart                  # App-scoped public runtime cache manager and usage reporting
 |   |   |-- runtime_file_cache.dart             # Persistent file-backed runtime cache implementation
 |   |   `-- runtime_shared_preferences_cache.dart # Persistent preferences/web-compatible cache implementation
+|   |-- data/
+|   |   `-- mini_program_data_resource.dart     # Validated artifact JSON loading, data-cache persistence, and ranked indexes
 |   |-- network/
 |   |   |-- mini_program_source.dart            # Abstract static artifact source
 |   |   |-- http_mini_program_source.dart       # HTTP static artifact source for production/public storage
@@ -236,6 +239,7 @@ packages/mini_program_sdk/
 |   |       |-- widgets_primitives.dart         # Basic text/layout/display/button rendering
 |   |       |-- widgets_forms.dart              # Form widget rendering
 |   |       |-- widgets_backend.dart            # Publisher API-bound widget rendering
+|   |       |-- widgets_charts.dart             # fl_chart-backed single-series line chart rendering
 |   |       |-- widgets_lazy.dart               # Lazy chunk and load-more rendering
 |   |       `-- widgets_lifecycle.dart          # initialize, condition, timer, scope, and action-scope lifecycle
 |   `-- widgets/

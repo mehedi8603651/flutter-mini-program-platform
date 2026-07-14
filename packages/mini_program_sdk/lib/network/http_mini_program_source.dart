@@ -13,7 +13,8 @@ typedef ManifestRequestQueryParametersBuilder =
 
 /// HTTP-backed source that loads manifests and screen JSON from static
 /// artifact paths.
-class HttpMiniProgramSource implements DisposableMiniProgramSource {
+class HttpMiniProgramSource
+    implements DisposableMiniProgramSource, MiniProgramJsonAssetSource {
   HttpMiniProgramSource({
     required this.apiBaseUri,
     this.manifestRequestQueryParametersBuilder,
@@ -86,6 +87,18 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
     );
   }
 
+  @override
+  Future<List<int>> loadJsonAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) {
+    return _loadBytes(
+      _resolve('artifacts/$miniProgramId/$version/assets/$assetPath'),
+      resourceLabel: 'JSON data asset',
+    );
+  }
+
   Uri _resolve(String relativePath, {Map<String, String>? queryParameters}) {
     final baseUrl = apiBaseUri.toString();
     final normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
@@ -131,6 +144,56 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
   }
 
   Future<Map<String, dynamic>> _loadSingleJsonObject(
+    Uri uri, {
+    required String resourceLabel,
+    required List<Uri> attemptedUris,
+  }) async {
+    final responseBytes = await _loadSingleBytes(
+      uri,
+      resourceLabel: resourceLabel,
+      attemptedUris: attemptedUris,
+    );
+    final responseBody = utf8.decode(responseBytes);
+    final decoded = jsonDecode(responseBody);
+    if (decoded is! Map<String, dynamic>) {
+      throw FormatException(
+        'Expected a JSON object for $resourceLabel at "$uri".',
+        responseBody,
+      );
+    }
+
+    return decoded;
+  }
+
+  Future<List<int>> _loadBytes(Uri uri, {required String resourceLabel}) async {
+    final candidateUris = _candidateUris(uri);
+    MiniProgramSourceException? lastTransportException;
+    for (final candidateUri in candidateUris) {
+      try {
+        return await _loadSingleBytes(
+          candidateUri,
+          resourceLabel: resourceLabel,
+          attemptedUris: candidateUris,
+        );
+      } on _TransportSourceException catch (error) {
+        lastTransportException = error.sourceException;
+      }
+    }
+    if (lastTransportException != null) {
+      throw lastTransportException;
+    }
+    throw MiniProgramSourceException(
+      message:
+          'Failed to reach the mini-program backend while loading $resourceLabel.',
+      errorCode: MiniProgramErrorCodes.backendUnreachable,
+      details: <String, dynamic>{
+        'uri': uri.toString(),
+        'resourceLabel': resourceLabel,
+      },
+    );
+  }
+
+  Future<List<int>> _loadSingleBytes(
     Uri uri, {
     required String resourceLabel,
     required List<Uri> attemptedUris,
@@ -185,15 +248,7 @@ class HttpMiniProgramSource implements DisposableMiniProgramSource {
       );
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw FormatException(
-        'Expected a JSON object for $resourceLabel at "$uri".',
-        response.body,
-      );
-    }
-
-    return decoded;
+    return response.bodyBytes;
   }
 
   Map<String, String> _requestHeaders() {

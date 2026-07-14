@@ -88,7 +88,8 @@ class EndpointRoutingMiniProgramSource
     implements
         DisposableMiniProgramSource,
         MiniProgramCachePolicyProvider,
-        MiniProgramLiveStatePolicyProvider {
+        MiniProgramLiveStatePolicyProvider,
+        MiniProgramJsonAssetSource {
   EndpointRoutingMiniProgramSource({
     required Map<String, MiniProgramEndpoint> endpoints,
     required MiniProgramDeliveryContext deliveryContext,
@@ -125,6 +126,27 @@ class EndpointRoutingMiniProgramSource
       miniProgramId: miniProgramId,
       version: version,
       screenId: screenId,
+    );
+  }
+
+  @override
+  Future<List<int>> loadJsonAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) {
+    final source = _sourceFor(miniProgramId);
+    if (source is! MiniProgramJsonAssetSource) {
+      throw MiniProgramSourceException(
+        message: 'The configured mini-program source cannot load JSON assets.',
+        errorCode: MiniProgramErrorCodes.dataAssetUnavailable,
+        details: <String, dynamic>{'miniProgramId': miniProgramId},
+      );
+    }
+    return (source as MiniProgramJsonAssetSource).loadJsonAsset(
+      miniProgramId: miniProgramId,
+      version: version,
+      assetPath: assetPath,
     );
   }
 

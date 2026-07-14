@@ -90,8 +90,8 @@ void main() {
             .replaceAll('\\', '/');
         expect(pubspec, contains('path: $expectedSdkPath'));
         expect(pubspec, contains('path: $expectedContractsPath'));
-        expect(pubspec, contains('mini_program_sdk: ^0.5.10'));
-        expect(pubspec, contains('mini_program_contracts: ^0.3.4'));
+        expect(pubspec, contains('mini_program_sdk: ^0.5.11'));
+        expect(pubspec, contains('mini_program_contracts: ^0.3.5'));
         expect(pubspec, isNot(contains('mini_program_legacy_stac')));
         expect(pubspec, contains('dependency_overrides:'));
 
@@ -99,6 +99,11 @@ void main() {
           p.join(hostRootPath, 'lib', 'main.dart'),
         ).readAsString();
         expect(mainDart, contains('PreviewMiniProgramSource'));
+        expect(mainDart, contains('MiniProgramJsonAssetSource'));
+        expect(
+          mainDart,
+          contains("previewBaseUri.resolve('assets/\$assetPath')"),
+        );
         expect(mainDart, isNot(contains('legacyStacRenderers')));
         expect(mainDart, contains('PreviewHostBridge'));
         expect(mainDart, contains("status.json"));
@@ -384,8 +389,8 @@ void main() {
       final pubspec = await File(
         p.join(hostRootPath, 'pubspec.yaml'),
       ).readAsString();
-      expect(pubspec, contains('mini_program_sdk: ^0.5.10'));
-      expect(pubspec, contains('mini_program_contracts: ^0.3.4'));
+      expect(pubspec, contains('mini_program_sdk: ^0.5.11'));
+      expect(pubspec, contains('mini_program_contracts: ^0.3.5'));
       expect(pubspec, contains('http: ^1.5.0'));
     });
 

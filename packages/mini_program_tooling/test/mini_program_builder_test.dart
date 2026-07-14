@@ -128,6 +128,70 @@ void main() {
         throwsA(isA<MiniProgramBuildException>()),
       );
     });
+
+    test('validates statically referenced JSON data assets', () async {
+      final root = p.join(tempDir.path, 'weather');
+      await _writeMpMiniProgramFixture(
+        root,
+        miniProgramId: 'weather',
+        jsonAsset: 'data/locations.json',
+      );
+      await Directory(p.join(root, 'assets', 'data')).create(recursive: true);
+      await File(
+        p.join(root, 'assets', 'data', 'locations.json'),
+      ).writeAsString(
+        jsonEncode(<String, Object?>{
+          'locations': <Object?>[
+            <String, Object?>{'name': 'Dhaka'},
+          ],
+        }),
+      );
+
+      final result = await const MiniProgramBuilder().build(
+        MiniProgramBuildRequest(miniProgramRootPath: root, skipPubGet: true),
+      );
+      expect(await File(result.entryScreenJsonPath).exists(), isTrue);
+    });
+
+    test('rejects missing and malformed referenced JSON data assets', () async {
+      final missingRoot = p.join(tempDir.path, 'missing_data');
+      await _writeMpMiniProgramFixture(
+        missingRoot,
+        miniProgramId: 'missing_data',
+        jsonAsset: 'data/locations.json',
+      );
+      await expectLater(
+        const MiniProgramBuilder().build(
+          MiniProgramBuildRequest(
+            miniProgramRootPath: missingRoot,
+            skipPubGet: true,
+          ),
+        ),
+        throwsA(isA<MiniProgramBuildException>()),
+      );
+
+      final malformedRoot = p.join(tempDir.path, 'malformed_data');
+      await _writeMpMiniProgramFixture(
+        malformedRoot,
+        miniProgramId: 'malformed_data',
+        jsonAsset: 'data/locations.json',
+      );
+      await Directory(
+        p.join(malformedRoot, 'assets', 'data'),
+      ).create(recursive: true);
+      await File(
+        p.join(malformedRoot, 'assets', 'data', 'locations.json'),
+      ).writeAsString('{');
+      await expectLater(
+        const MiniProgramBuilder().build(
+          MiniProgramBuildRequest(
+            miniProgramRootPath: malformedRoot,
+            skipPubGet: true,
+          ),
+        ),
+        throwsA(isA<MiniProgramBuildException>()),
+      );
+    });
   });
 }
 
@@ -136,6 +200,7 @@ Future<void> _writeMpMiniProgramFixture(
   required String miniProgramId,
   String screenFormat = 'mp',
   String? generatedScreenId,
+  String? jsonAsset,
 }) async {
   await Directory(p.join(root, 'tool')).create(recursive: true);
   await File(p.join(root, 'pubspec.yaml')).writeAsString('''
@@ -160,11 +225,15 @@ environment:
   await File(p.join(root, 'tool', 'build_mp.dart')).writeAsString(
     _fakeMpBuildScriptSource(
       screenId: generatedScreenId ?? '${miniProgramId}_home',
+      jsonAsset: jsonAsset,
     ),
   );
 }
 
-String _fakeMpBuildScriptSource({required String screenId}) =>
+String _fakeMpBuildScriptSource({
+  required String screenId,
+  String? jsonAsset,
+}) =>
     '''
 import 'dart:convert';
 import 'dart:io';
@@ -179,8 +248,11 @@ Future<void> main(List<String> arguments) async {
       'schemaVersion': 1,
       'screenId': '$screenId',
       'root': <String, Object?>{
-        'type': 'text',
-        'props': <String, Object?>{'data': 'Hello'},
+        'type': '${jsonAsset == null ? 'text' : 'button'}',
+        'props': <String, Object?>{
+          ${jsonAsset == null ? "'data': 'Hello'," : "'label': 'Load', 'action': <String, Object?>{'type': 'data.loadJsonAsset', 'props': <String, Object?>{'id': 'locations', 'asset': '$jsonAsset', 'ttlMs': 1000, 'forceRefresh': false}},"}
+        },
+        'children': <Object?>[],
       },
     }),
   );

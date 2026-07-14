@@ -282,6 +282,10 @@ class MiniProgramArtifactBuilder {
           targetRoot: assetsTarget,
         );
       }
+      await _validateReferencedJsonAssets(
+        screenFiles: screenFiles,
+        assetsRoot: assetsTarget,
+      );
 
       await _writeCanonicalJson(p.join(stagingPath, 'release.json'), {
         'schemaVersion': 1,
@@ -796,6 +800,10 @@ class MiniProgramArtifactVerifier {
         message: 'Artifact assets directory is missing for $expectedVersion.',
       );
     }
+    await _validateReferencedJsonAssets(
+      screenFiles: screenFiles,
+      assetsRoot: p.join(versionRoot, 'assets'),
+    );
     return _ArtifactMetrics(fileCount: files.length, totalBytes: totalBytes);
   }
 
@@ -827,6 +835,141 @@ class _ArtifactMetrics {
 
   final int fileCount;
   final int totalBytes;
+}
+
+const int _jsonDataAssetMaxBytes = 2 * 1024 * 1024;
+const int _jsonDataAssetMaxDepth = 32;
+const int _jsonDataAssetMaxMembers = 50000;
+const int _jsonDataAssetPathMaxLength = 256;
+
+Future<void> _validateReferencedJsonAssets({
+  required List<File> screenFiles,
+  required String assetsRoot,
+}) async {
+  final references = <String, String>{};
+  for (final screenFile in screenFiles) {
+    final screen = await _readJsonMap(
+      screenFile.path,
+      code: MiniProgramArtifactErrorCodes.structureInvalid,
+      label: 'Screen data reference source',
+    );
+    void visit(Object? value, String jsonPath) {
+      if (value is Map) {
+        final map = value.map((key, item) => MapEntry(key.toString(), item));
+        if (map['type'] == 'data.loadJsonAsset') {
+          final props = map['props'];
+          final asset = props is Map ? props['asset'] : null;
+          if (asset is! String || asset.trim().isEmpty) {
+            throw MiniProgramArtifactException(
+              code: MiniProgramArtifactErrorCodes.structureInvalid,
+              message:
+                  'data.loadJsonAsset requires a static asset path in '
+                  '${screenFile.path} at $jsonPath.',
+            );
+          }
+          references.putIfAbsent(asset, () => '${screenFile.path}:$jsonPath');
+        }
+        for (final entry in map.entries) {
+          visit(entry.value, '$jsonPath.${entry.key}');
+        }
+      } else if (value is List) {
+        for (var index = 0; index < value.length; index += 1) {
+          visit(value[index], '$jsonPath[$index]');
+        }
+      }
+    }
+
+    visit(screen, r'$');
+  }
+
+  final normalizedAssetsRoot = p.normalize(p.absolute(assetsRoot));
+  for (final entry in references.entries) {
+    final asset = entry.key;
+    final validPath =
+        asset.length <= _jsonDataAssetPathMaxLength &&
+        RegExp(
+          r'^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)*\.json$',
+        ).hasMatch(asset) &&
+        !asset.contains('..');
+    if (!validPath) {
+      throw MiniProgramArtifactException(
+        code: MiniProgramArtifactErrorCodes.pathUnsafe,
+        message:
+            'Unsafe JSON data asset path "$asset" referenced by ${entry.value}.',
+      );
+    }
+    final assetPath = p.normalize(
+      p.absolute(
+        p.joinAll(<String>[normalizedAssetsRoot, ...asset.split('/')]),
+      ),
+    );
+    _assertContained(assetPath, normalizedAssetsRoot);
+    final file = File(assetPath);
+    if (!await file.exists()) {
+      throw MiniProgramArtifactException(
+        code: MiniProgramArtifactErrorCodes.fileMissing,
+        message:
+            'Referenced JSON data asset was not found: $asset '
+            '(from ${entry.value}).',
+      );
+    }
+    final bytes = await file.readAsBytes();
+    if (bytes.length > _jsonDataAssetMaxBytes) {
+      throw MiniProgramArtifactException(
+        code: MiniProgramArtifactErrorCodes.structureInvalid,
+        message:
+            'JSON data asset "$asset" exceeds the '
+            '$_jsonDataAssetMaxBytes byte limit.',
+      );
+    }
+    late final Object? decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(bytes));
+    } catch (error) {
+      throw MiniProgramArtifactException(
+        code: MiniProgramArtifactErrorCodes.structureInvalid,
+        message: 'Referenced JSON data asset is malformed: $asset\n$error',
+      );
+    }
+    if (decoded is! Map && decoded is! List) {
+      throw MiniProgramArtifactException(
+        code: MiniProgramArtifactErrorCodes.structureInvalid,
+        message: 'JSON data asset root must be an object or list: $asset',
+      );
+    }
+    var members = 0;
+    void validateValue(Object? value, int depth) {
+      if (depth > _jsonDataAssetMaxDepth) {
+        throw MiniProgramArtifactException(
+          code: MiniProgramArtifactErrorCodes.structureInvalid,
+          message:
+              'JSON data asset "$asset" exceeds depth '
+              '$_jsonDataAssetMaxDepth.',
+        );
+      }
+      if (value is Map) {
+        members += value.length;
+        for (final nested in value.values) {
+          validateValue(nested, depth + 1);
+        }
+      } else if (value is List) {
+        members += value.length;
+        for (final nested in value) {
+          validateValue(nested, depth + 1);
+        }
+      }
+      if (members > _jsonDataAssetMaxMembers) {
+        throw MiniProgramArtifactException(
+          code: MiniProgramArtifactErrorCodes.structureInvalid,
+          message:
+              'JSON data asset "$asset" exceeds '
+              '$_jsonDataAssetMaxMembers members.',
+        );
+      }
+    }
+
+    validateValue(decoded, 1);
+  }
 }
 
 MiniProgramManifest _parseManifest(

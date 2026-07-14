@@ -765,6 +765,9 @@ Future<Object?> _runMpAction(
   MpStateManager? stateManager,
   MiniProgramBackendConnector? backendConnector,
   MiniProgramBackendStore? backendStore,
+  String? miniProgramVersion,
+  MiniProgramDataResourceManager? dataResourceManager,
+  MiniProgramJsonAssetSource? jsonAssetSource,
 }) async {
   final activeBackendStore = backendStore ?? MiniProgramBackendStore();
   final ownsBackendStore = backendStore == null;
@@ -780,6 +783,9 @@ Future<Object?> _runMpAction(
         backendConnector: backendConnector,
         cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
         cachePolicy: cachePolicy,
+        miniProgramVersion: miniProgramVersion,
+        dataResourceManager: dataResourceManager,
+        jsonAssetSource: jsonAssetSource,
         backendStore: activeBackendStore,
         stateManager: stateManager,
         featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
@@ -828,6 +834,19 @@ class _TestClock {
   void advance(Duration duration) {
     _now = _now.add(duration);
   }
+}
+
+class _TestJsonAssetSource implements MiniProgramJsonAssetSource {
+  _TestJsonAssetSource(this.assets);
+
+  final Map<String, Object?> assets;
+
+  @override
+  Future<List<int>> loadJsonAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) async => utf8.encode(jsonEncode(assets[assetPath]));
 }
 
 Widget _scopedApp({

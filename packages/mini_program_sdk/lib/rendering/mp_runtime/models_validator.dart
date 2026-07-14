@@ -55,6 +55,15 @@ class MpScreenValidator {
   static final RegExp _screenIdPattern = RegExp(r'^[a-z][a-z0-9_]*$');
   static final RegExp _actionNamePattern = RegExp(r'^[a-z][a-zA-Z0-9_]{0,63}$');
   static final RegExp _fieldNamePattern = RegExp(r'^[a-z][a-z0-9_]*$');
+  static final RegExp _dataResourceIdPattern = RegExp(
+    r'^[a-z][a-z0-9_]{0,63}$',
+  );
+  static final RegExp _dataFieldPathPattern = RegExp(
+    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$',
+  );
+  static final RegExp _jsonAssetPathPattern = RegExp(
+    r'^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)*\.json$',
+  );
   static final RegExp _localePattern = RegExp(r'^[a-z]{2,3}(?:-[A-Z]{2})?$');
   static final RegExp _themeTokenPattern = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
   static final RegExp _hexColorPattern = RegExp(
@@ -89,6 +98,18 @@ class MpScreenValidator {
     'close',
     'refresh',
     'bolt',
+    'location',
+    'menu',
+    'sunny',
+    'cloudy',
+    'rain',
+    'thunderstorm',
+    'waterDrop',
+    'wind',
+    'thermometer',
+    'snow',
+    'fog',
+    'public',
   };
   static const Set<String> _alignmentNames = <String>{
     'topLeft',
@@ -411,6 +432,18 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'lineChart' => _parseLineChartNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+        depth: depth,
+        state: state,
+      ),
+      'refreshIndicator' => _parseRefreshIndicatorNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'safeArea' => _parseSafeAreaNode(
         props: props,
         children: parsedChildren,
@@ -524,6 +557,11 @@ class MpScreenValidator {
         path: path,
       ),
       'searchInput' => _parseSearchInputNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'searchField' => _parseSearchFieldNode(
         props: props,
         children: parsedChildren,
         path: path,
@@ -1395,8 +1433,16 @@ class MpScreenValidator {
     _validateObjectKeys(props, const <String>{
       'spacing',
       'padding',
+      'direction',
+      'height',
     }, path: '$path.props');
     _validateNonEmptyChildren(children, nodeType: 'listView', path: path);
+    final direction = _collectionDirection(props, path: '$path.props');
+    final height = _collectionHeight(
+      props,
+      direction: direction,
+      path: '$path.props',
+    );
     return _MpNode(
       type: 'listView',
       props: <String, dynamic>{
@@ -1411,6 +1457,8 @@ class MpScreenValidator {
               path: '$path.props.spacing',
             ) ??
             0,
+        'direction': direction,
+        if (height != null) 'height': height,
       },
       children: children,
     );
@@ -1430,6 +1478,8 @@ class MpScreenValidator {
       'separator',
       'source',
       'spacing',
+      'direction',
+      'height',
     }, path: '$path.props');
     _validateNoChildren(children, path: '$path.children');
     final source = _requiredString(props, 'source', path: '$path.props').trim();
@@ -1439,6 +1489,12 @@ class MpScreenValidator {
         path: '$path.props.source',
       );
     }
+    final direction = _collectionDirection(props, path: '$path.props');
+    final height = _collectionHeight(
+      props,
+      direction: direction,
+      path: '$path.props',
+    );
     final parsedProps = <String, dynamic>{
       'limit': _optionalRepeatLimit(props['limit'], path: '$path.props.limit'),
       'source': source,
@@ -1448,6 +1504,8 @@ class MpScreenValidator {
             path: '$path.props.spacing',
           ) ??
           0,
+      'direction': direction,
+      if (height != null) 'height': height,
       ..._parseTemplateProps(
         props,
         const <String>{'itemTemplate', 'empty', 'separator'},
@@ -1463,6 +1521,148 @@ class MpScreenValidator {
       type: 'repeat',
       props: parsedProps,
       children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseLineChartNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+    required int depth,
+    required _MpValidationState state,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'source',
+      'valueField',
+      'labelField',
+      'height',
+      'minY',
+      'maxY',
+      'unit',
+      'color',
+      'strokeWidth',
+      'curved',
+      'showPoints',
+      'showGrid',
+      'showArea',
+      'maxPoints',
+      'semanticLabel',
+      'empty',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final source = _requiredString(props, 'source', path: '$path.props');
+    if (!_MpBindingResolver.isSingleBindingExpression(source)) {
+      _fail(
+        'Mp lineChart source must be a single full binding expression.',
+        path: '$path.props.source',
+      );
+    }
+    final height = _boundedNumber(
+      props['height'],
+      path: '$path.props.height',
+      minimum: 80,
+      maximum: 600,
+    );
+    final strokeWidth = _boundedNumber(
+      props['strokeWidth'],
+      path: '$path.props.strokeWidth',
+      minimum: 1,
+      maximum: 12,
+    );
+    final maxPoints = _boundedIntValue(
+      props['maxPoints'],
+      path: '$path.props.maxPoints',
+      minimum: 2,
+      maximum: 500,
+    );
+    final minY = _optionalFiniteNumber(props['minY'], path: '$path.props.minY');
+    final maxY = _optionalFiniteNumber(props['maxY'], path: '$path.props.maxY');
+    if (minY != null && maxY != null && minY >= maxY) {
+      _fail('Mp lineChart minY must be less than maxY.', path: '$path.props');
+    }
+    return _MpNode(
+      type: 'lineChart',
+      props: <String, dynamic>{
+        'source': source,
+        'valueField': _dataFieldPath(props, 'valueField', path: '$path.props'),
+        if (props.containsKey('labelField'))
+          'labelField': _dataFieldPath(
+            props,
+            'labelField',
+            path: '$path.props',
+          ),
+        'height': height,
+        if (minY != null) 'minY': minY,
+        if (maxY != null) 'maxY': maxY,
+        'unit': _optionalStringLiteral(
+          props['unit'] ?? '',
+          path: '$path.props.unit',
+        ),
+        'color': _requiredHexColor(props, 'color', path: '$path.props'),
+        'strokeWidth': strokeWidth,
+        'curved': _requiredBoolValue(
+          props['curved'],
+          path: '$path.props.curved',
+        ),
+        'showPoints': _requiredBoolValue(
+          props['showPoints'],
+          path: '$path.props.showPoints',
+        ),
+        'showGrid': _requiredBoolValue(
+          props['showGrid'],
+          path: '$path.props.showGrid',
+        ),
+        'showArea': _requiredBoolValue(
+          props['showArea'],
+          path: '$path.props.showArea',
+        ),
+        'maxPoints': maxPoints,
+        if (props.containsKey('semanticLabel'))
+          'semanticLabel': _requiredString(
+            props,
+            'semanticLabel',
+            path: '$path.props',
+          ),
+        ..._parseTemplateProps(
+          props,
+          const <String>{'empty'},
+          path: '$path.props',
+          depth: depth,
+          state: state,
+        ),
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseRefreshIndicatorNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    if (path != r'$.root') {
+      _fail(
+        'Mp refreshIndicator is supported only as the screen root.',
+        path: path,
+      );
+    }
+    _validateObjectKeys(props, const <String>{
+      'action',
+      'semanticsLabel',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'refreshIndicator', path: path);
+    return _MpNode(
+      type: 'refreshIndicator',
+      props: <String, dynamic>{
+        'action': _parseAction(props['action'], path: '$path.props.action'),
+        if (props.containsKey('semanticsLabel'))
+          'semanticsLabel': _requiredString(
+            props,
+            'semanticsLabel',
+            path: '$path.props',
+          ),
+      },
+      children: children,
     );
   }
 
@@ -2319,6 +2519,67 @@ class MpScreenValidator {
     );
   }
 
+  _MpNode _parseSearchFieldNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'stateKey',
+      'label',
+      'hint',
+      'initialValue',
+      'maxLength',
+      'debounceMs',
+      'onChanged',
+      'onSubmitted',
+      'showClearButton',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final maxLength = _boundedIntValue(
+      props['maxLength'],
+      path: '$path.props.maxLength',
+      minimum: 1,
+      maximum: 256,
+    );
+    final debounceMs = _boundedIntValue(
+      props['debounceMs'],
+      path: '$path.props.debounceMs',
+      minimum: 0,
+      maximum: 60000,
+    );
+    return _MpNode(
+      type: 'searchField',
+      props: <String, dynamic>{
+        'stateKey': _requiredStateKey(props, 'stateKey', path: '$path.props'),
+        'label': _requiredString(props, 'label', path: '$path.props'),
+        if (props.containsKey('hint'))
+          'hint': _requiredString(props, 'hint', path: '$path.props'),
+        'initialValue': _optionalStringLiteral(
+          props['initialValue'] ?? '',
+          path: '$path.props.initialValue',
+        ),
+        'maxLength': maxLength,
+        'debounceMs': debounceMs,
+        if (props.containsKey('onChanged'))
+          'onChanged': _parseAction(
+            props['onChanged'],
+            path: '$path.props.onChanged',
+          ),
+        if (props.containsKey('onSubmitted'))
+          'onSubmitted': _parseAction(
+            props['onSubmitted'],
+            path: '$path.props.onSubmitted',
+          ),
+        'showClearButton': _requiredBoolValue(
+          props['showClearButton'],
+          path: '$path.props.showClearButton',
+        ),
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
   _MpNode _parseTextAreaNode({
     required Map<String, dynamic> props,
     required List<_MpNode> children,
@@ -2858,6 +3119,8 @@ class MpScreenValidator {
       'math.randomInt' => _parseMathRandomIntAction(type, props, path),
       'math.randomDouble' => _parseMathRandomDoubleAction(type, props, path),
       'math.aggregate' => _parseMathAggregateAction(type, props, path),
+      'data.loadJsonAsset' => _parseDataLoadJsonAssetAction(type, props, path),
+      'data.search' => _parseDataSearchAction(type, props, path),
       'cache.set' => _parseCacheSetAction(type, props, path),
       'cache.get' => _parseCacheGetAction(type, props, path),
       'cache.has' => _parseCacheHasAction(type, props, path),
@@ -4390,6 +4653,176 @@ class MpScreenValidator {
       type: type,
       props: <String, dynamic>{
         'key': _requiredStateKey(props, 'key', path: '$path.props'),
+      },
+    );
+  }
+
+  _MpAction _parseDataLoadJsonAssetAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'id',
+      'asset',
+      'ttlMs',
+      'forceRefresh',
+      'statusState',
+      'errorState',
+      'requestId',
+    }, path: '$path.props');
+    final id = _requiredStableString(props, 'id', path: '$path.props');
+    if (!_dataResourceIdPattern.hasMatch(id)) {
+      _fail('Mp data resource ID is invalid.', path: '$path.props.id');
+    }
+    final asset = _requiredStableString(props, 'asset', path: '$path.props');
+    if (asset.length > miniProgramJsonAssetPathMaxLength ||
+        !_jsonAssetPathPattern.hasMatch(asset) ||
+        asset.contains('..')) {
+      _fail(
+        'Mp JSON asset path is invalid or unsafe.',
+        path: '$path.props.asset',
+      );
+    }
+    final ttlMs = _requiredPositiveIntValue(
+      props['ttlMs'],
+      path: '$path.props.ttlMs',
+    );
+    if (ttlMs > const Duration(days: 3650).inMilliseconds) {
+      _fail(
+        'Mp JSON asset TTL cannot exceed 3650 days.',
+        path: '$path.props.ttlMs',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'id': id,
+        'asset': asset,
+        'ttlMs': ttlMs,
+        'forceRefresh': _requiredBoolValue(
+          props['forceRefresh'],
+          path: '$path.props.forceRefresh',
+        ),
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
+            path: '$path.props',
+          ),
+      },
+    );
+  }
+
+  _MpAction _parseDataSearchAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'resourceId',
+      'query',
+      'fields',
+      'itemsPath',
+      'minQueryLength',
+      'limit',
+      'targetState',
+      'statusState',
+      'errorState',
+    }, path: '$path.props');
+    final resourceId = _requiredStableString(
+      props,
+      'resourceId',
+      path: '$path.props',
+    );
+    if (!_dataResourceIdPattern.hasMatch(resourceId)) {
+      _fail('Mp data resource ID is invalid.', path: '$path.props.resourceId');
+    }
+    final queryValue = props['query'];
+    if (queryValue is! String ||
+        (!_MpBindingResolver.isSingleBindingExpression(queryValue) &&
+            queryValue.length > 256)) {
+      _fail(
+        'Mp data search query must be a string or full binding up to 256 characters.',
+        path: '$path.props.query',
+      );
+    }
+    final rawFields = props['fields'];
+    if (rawFields is! List || rawFields.isEmpty || rawFields.length > 8) {
+      _fail(
+        'Mp data search requires from 1 to 8 fields.',
+        path: '$path.props.fields',
+      );
+    }
+    final fields = <String>[];
+    final seenFields = <String>{};
+    for (var index = 0; index < rawFields.length; index += 1) {
+      final field = rawFields[index];
+      if (field is! String || !_dataFieldPathPattern.hasMatch(field)) {
+        _fail(
+          'Mp data search field is invalid.',
+          path: '$path.props.fields[$index]',
+        );
+      }
+      if (!seenFields.add(field)) {
+        _fail(
+          'Mp data search fields must be unique.',
+          path: '$path.props.fields[$index]',
+        );
+      }
+      fields.add(field);
+    }
+    final minQueryLength = _boundedIntValue(
+      props['minQueryLength'],
+      path: '$path.props.minQueryLength',
+      minimum: 0,
+      maximum: 256,
+    );
+    final limit = _boundedIntValue(
+      props['limit'],
+      path: '$path.props.limit',
+      minimum: 1,
+      maximum: 100,
+    );
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'resourceId': resourceId,
+        'query': queryValue,
+        'fields': fields,
+        if (props.containsKey('itemsPath'))
+          'itemsPath': _dataFieldPath(props, 'itemsPath', path: '$path.props'),
+        'minQueryLength': minQueryLength,
+        'limit': limit,
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
       },
     );
   }

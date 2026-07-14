@@ -7,16 +7,19 @@ class _MpScreenView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bindings = _MpRenderBindings(
+      scope: MiniProgramSdkScope.maybeOf(context),
+      screenId: screen.screenId,
+    );
+    if (screen.root.type == 'refreshIndicator') {
+      return SafeArea(
+        child: _MpRefreshViewport(node: screen.root, bindings: bindings),
+      );
+    }
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        child: _MpNodeView(
-          node: screen.root,
-          bindings: _MpRenderBindings(
-            scope: MiniProgramSdkScope.maybeOf(context),
-            screenId: screen.screenId,
-          ),
-        ),
+        child: _MpNodeView(node: screen.root, bindings: bindings),
       ),
     );
   }
@@ -538,6 +541,11 @@ class _MpNodeView extends StatelessWidget {
       'scrollView' => _MpScrollView(node: node, bindings: bindings),
       'listView' => _MpListView(node: node, bindings: bindings),
       'repeat' => _MpRepeat(node: node, bindings: bindings),
+      'lineChart' => _MpLineChart(node: node, bindings: bindings),
+      'refreshIndicator' => _MpNodeView(
+        node: node.children.single,
+        bindings: bindings,
+      ),
       'safeArea' => SafeArea(
         left: _bool(node, 'left'),
         top: _bool(node, 'top'),
@@ -586,6 +594,7 @@ class _MpNodeView extends StatelessWidget {
       'iconButton' => _MpIconButton(node: node, bindings: bindings),
       'textInput' => _MpTextInputField(node: node, multiline: false),
       'searchInput' => _MpSearchInputField(node: node, bindings: bindings),
+      'searchField' => _MpStateSearchField(node: node, bindings: bindings),
       'textArea' => _MpTextInputField(node: node, multiline: true),
       'dropdown' => _MpDropdownField(node: node),
       'checkbox' => _MpCheckboxField(node: node),

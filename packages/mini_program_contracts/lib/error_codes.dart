@@ -35,4 +35,10 @@ abstract final class MiniProgramErrorCodes {
   static const String mathInvalidOperand = 'math_invalid_operand';
   static const String mathInvalidRange = 'math_invalid_range';
   static const String mathEmptyValues = 'math_empty_values';
+  static const String dataAssetUnavailable = 'data_asset_unavailable';
+  static const String dataInvalidJson = 'data_invalid_json';
+  static const String dataResourceTooLarge = 'data_resource_too_large';
+  static const String dataResourceNotFound = 'data_resource_not_found';
+  static const String dataInvalidQuery = 'data_invalid_query';
+  static const String dataSearchFailed = 'data_search_failed';
 }

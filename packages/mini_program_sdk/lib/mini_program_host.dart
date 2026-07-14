@@ -12,6 +12,7 @@ import 'cache/screen_cache.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
+import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
 import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
@@ -79,6 +80,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   final AssetResolver _assetResolver = AssetResolver();
   final MiniProgramBackendStore _backendStore = MiniProgramBackendStore();
   final MpStateManager _stateManager = MpStateManager();
+  final MiniProgramDataResourceManager _dataResourceManager =
+      MiniProgramDataResourceManager();
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
@@ -142,6 +145,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _screenStack = const <_RenderedMiniProgramScreen>[];
     _backendStore.clear();
     _stateManager.clear();
+    _dataResourceManager.clear();
     _loadFuture = _loadMiniProgram(_loadGeneration);
   }
 
@@ -822,6 +826,11 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           authController: widget.authController,
           cacheManager: _cacheManager,
           cachePolicy: _activeCachePolicy ?? _cachePolicyFor(manifest.id),
+          miniProgramVersion: manifest.version,
+          dataResourceManager: _dataResourceManager,
+          jsonAssetSource: widget.source is MiniProgramJsonAssetSource
+              ? widget.source as MiniProgramJsonAssetSource
+              : null,
           backendStore: _backendStore,
           stateManager: _stateManager,
           router: router,

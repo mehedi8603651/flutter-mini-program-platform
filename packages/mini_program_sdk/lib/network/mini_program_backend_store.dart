@@ -36,6 +36,7 @@ class MiniProgramBackendQuery {
       cachePolicy: ttl == null
           ? const MiniProgramBackendCachePolicy.noCache()
           : MiniProgramBackendCachePolicy(ttl: ttl),
+      forceRefresh: forceRefresh,
     );
   }
 }
@@ -81,6 +82,7 @@ class MiniProgramPagedBackendQuery {
       cachePolicy: ttl == null
           ? const MiniProgramBackendCachePolicy.noCache()
           : MiniProgramBackendCachePolicy(ttl: ttl),
+      forceRefresh: forceRefresh,
     );
   }
 

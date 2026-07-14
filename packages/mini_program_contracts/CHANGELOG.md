@@ -1,3 +1,7 @@
+## 0.3.5
+
+- Add stable artifact-local JSON data loading and search error codes.
+
 ## 0.3.4
 
 - Add stable errors for missing scoped actions and recursive or excessive

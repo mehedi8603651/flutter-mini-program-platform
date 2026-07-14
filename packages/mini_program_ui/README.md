@@ -101,6 +101,50 @@ Mp.backendBuilder(
 );
 ```
 
+## Artifact-Local Data And Visualization
+
+Large immutable lookup data can stay under the mini-program's `assets/`
+directory. The runtime validates it, persists it only in the host-approved
+`data` cache, and keeps search indexes outside live state.
+
+```dart
+Mp.initialize(
+  actions: <MpAction>[
+    Mp.data.loadJsonAsset(
+      id: 'locations',
+      asset: 'data/locations.json',
+      statusState: 'location.resource_status',
+      errorState: 'location.resource_error',
+    ),
+  ],
+  child: Mp.column(
+    children: <MpNode>[
+      Mp.searchField(
+        stateKey: 'location.query',
+        hint: 'Dhaka',
+        onChanged: Mp.data.search(
+          resourceId: 'locations',
+          query: '{{state.location.query}}',
+          fields: const <String>['name', 'district'],
+          itemsPath: 'locations',
+          targetState: 'location.results',
+        ),
+      ),
+      Mp.lineChart(
+        source: '{{state.forecast.hourly}}',
+        valueField: 'temperature',
+        labelField: 'timeLabel',
+      ),
+    ],
+  ),
+);
+```
+
+JSON data paths are artifact-relative and cannot be remote URLs. Use
+`direction: 'horizontal'` with an explicit `height` on `Mp.listView` or
+`Mp.repeat` for horizontal collections. `Mp.refreshIndicator` is supported
+only as a screen root.
+
 ## Paged Lists
 
 Use `Mp.lazy.chunk` when repeated data is large, dynamic, comes from a

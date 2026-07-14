@@ -105,6 +105,18 @@ void main() {
       'close',
       'refresh',
       'bolt',
+      'location',
+      'menu',
+      'sunny',
+      'cloudy',
+      'rain',
+      'thunderstorm',
+      'waterDrop',
+      'wind',
+      'thermometer',
+      'snow',
+      'fog',
+      'public',
     ]) {
       expect(
         Mp.icon(name, semanticLabel: '$name icon').toJson(),

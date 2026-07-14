@@ -24,6 +24,13 @@ final config = MiniProgramConfig(
 
 The host fetches manifest and screen/static artifact JSON from the artifact base URL. No runtime API URL is required to open the mini-program.
 
+Artifact-local JSON resources are loaded through the optional
+`MiniProgramJsonAssetSource` capability. `HttpMiniProgramSource` and
+`EndpointRoutingMiniProgramSource` implement it for immutable files at
+`artifacts/<appId>/<version>/assets/<path>`. Resources are constrained by the
+host-accepted `data` cache policy and are never copied wholesale into live
+state.
+
 ## Optional Runtime API
 
 ```dart

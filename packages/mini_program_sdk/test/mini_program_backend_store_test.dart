@@ -313,6 +313,25 @@ void main() {
       expect(connector.calls[1].headers['authorization'], 'Bearer test-token');
     },
   );
+
+  test('forwards force refresh to the backend connector', () async {
+    final store = MiniProgramBackendStore();
+    final connector = _RecordingBackendConnector(
+      responses: <MiniProgramBackendResult>[MiniProgramBackendResult.success()],
+    );
+
+    await store.runQuery(
+      connector: connector,
+      miniProgramId: 'weather',
+      query: const MiniProgramBackendQuery(
+        requestId: 'weather-refresh',
+        endpoint: 'forecast',
+        forceRefresh: true,
+      ),
+    );
+
+    expect(connector.calls.single.forceRefresh, isTrue);
+  });
 }
 
 class _CompleterBackendConnector implements MiniProgramBackendConnector {
