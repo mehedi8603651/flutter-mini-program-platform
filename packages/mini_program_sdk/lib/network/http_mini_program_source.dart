@@ -14,13 +14,18 @@ typedef ManifestRequestQueryParametersBuilder =
 /// HTTP-backed source that loads manifests and screen JSON from static
 /// artifact paths.
 class HttpMiniProgramSource
-    implements DisposableMiniProgramSource, MiniProgramJsonAssetSource {
+    implements
+        DisposableMiniProgramSource,
+        MiniProgramJsonAssetSource,
+        MiniProgramPublisherBackendContractSource,
+        MiniProgramDeliveryContextProvider {
   HttpMiniProgramSource({
     required this.apiBaseUri,
     this.manifestRequestQueryParametersBuilder,
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
+    this.deliveryContext,
     http.Client? client,
   }) : _client = client ?? http.Client(),
        _ownsClient = client == null;
@@ -40,6 +45,7 @@ class HttpMiniProgramSource
       headers: headers,
       requestTimeout: requestTimeout,
       enableLocalLoopbackFallback: enableLocalLoopbackFallback,
+      deliveryContext: deliveryContext,
       client: client,
     );
   }
@@ -50,6 +56,8 @@ class HttpMiniProgramSource
   final Map<String, String> headers;
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
+  @override
+  final MiniProgramDeliveryContext? deliveryContext;
   final http.Client _client;
   final bool _ownsClient;
 
@@ -97,6 +105,44 @@ class HttpMiniProgramSource
       _resolve('artifacts/$miniProgramId/$version/assets/$assetPath'),
       resourceLabel: 'JSON data asset',
     );
+  }
+
+  @override
+  Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({
+    required String miniProgramId,
+    required String version,
+  }) async {
+    Map<String, dynamic> json;
+    try {
+      json = await _loadJsonObject(
+        _resolve('artifacts/$miniProgramId/$version/publisher_backend.json'),
+        resourceLabel: 'Publisher API contract',
+      );
+    } on MiniProgramSourceException catch (error) {
+      if (error.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
+    try {
+      final contract = MiniProgramPublisherBackendContract.fromJson(json);
+      if (contract.appId != miniProgramId) {
+        throw FormatException(
+          'Contract appId "${contract.appId}" does not match '
+          '"$miniProgramId".',
+        );
+      }
+      return contract;
+    } catch (error) {
+      throw MiniProgramSourceException(
+        message: 'Publisher API contract is invalid: $error',
+        errorCode: MiniProgramPublisherBackendErrorCodes.invalidContract,
+        details: <String, dynamic>{
+          'miniProgramId': miniProgramId,
+          'version': version,
+        },
+      );
+    }
   }
 
   Uri _resolve(String relativePath, {Map<String, String>? queryParameters}) {

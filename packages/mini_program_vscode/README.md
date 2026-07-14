@@ -105,7 +105,7 @@ see its command name.
 | `Validate Publisher API Contract` | You edited the runtime API contract. | Validates `publisher_backend.json`. |
 | `Smoke Test Publisher API Contract` | You want to test the middle-server API. | Calls health/routes defined by the contract. |
 | `Copy Mock Publisher API URLs` | You need local mock URLs. | Copies `publisher-api urls` output. |
-| `Copy Mock Publisher API Host Command` | You want a terminal command to add a local mock runtime API to a host endpoint. | Copies `miniprogram host endpoint add ... --backend-local-mock ...`. |
+| `Copy Local Publisher API Contract Command` | You want a local mock URL in the artifact-owned contract. | Copies `miniprogram publisher-api contract init ... --allow-local-http`. |
 | `Prepare Partner Handoff` | You are ready to publish and share a mini-program. | Builds, validates, publishes static artifacts, creates and validates a partner package. |
 | `Publish Public Static MiniProgram` | You want GitHub Pages/CDN-ready files. | Runs static publish into a chosen output folder. |
 
@@ -406,7 +406,7 @@ What it asks:
 - app ID
 - display title
 - static artifact base URL
-- Publisher API mode: no backend, local mock, or remote API
+- requested Publisher API permission review when the handoff declares one
 - normal or force mode
 
 CLI equivalent without runtime API:
@@ -418,17 +418,19 @@ miniprogram host endpoint add my_profile `
   --project-root <host-project-root>
 ```
 
-CLI equivalent with optional runtime API:
+CLI equivalent with an artifact-owned optional runtime API:
 
 ```powershell
-miniprogram host endpoint add my_profile `
+miniprogram partner package my_profile `
   --artifact-base-url https://<github-user>.github.io/my_profile_static/ `
-  --backend-base-url https://publisher.example.com/api/ `
-  --project-root <host-project-root>
+  --mini-program-root <mini-program-root> `
+  --output my_profile.partner.json
+miniprogram host endpoint import my_profile.partner.json `
+  --project-root <host-project-root> `
+  --accept-requested-policy
 ```
 
-`--backend-base-url` is the current CLI flag for the optional runtime
-`middleServerApiUrl`. Static opening does not need it.
+The extension does not ask the host developer for a per-app Publisher API URL.
 
 ### 4. Copy Demo Host Button
 
@@ -527,7 +529,7 @@ For a concrete AWS Lambda/DynamoDB/JWT example, see
 | `MiniProgram: Stop Mock Publisher API` | `miniprogram publisher-api stop` | Stop the local mock server. |
 | `MiniProgram: Mock Publisher API Status` | `miniprogram publisher-api status --json` | Check mock server status. |
 | `MiniProgram: Copy Mock Publisher API URLs` | `miniprogram publisher-api urls --port 9090` | Copy local URLs for preview/host testing. |
-| `MiniProgram: Copy Mock Publisher API Host Command` | `miniprogram host endpoint add ... --backend-local-mock` | Copy a host endpoint command using the local mock API. |
+| `MiniProgram: Copy Local Publisher API Contract Command` | `miniprogram publisher-api contract init ... --allow-local-http` | Copy a contract command using the local mock API. |
 
 ### Contract Commands
 

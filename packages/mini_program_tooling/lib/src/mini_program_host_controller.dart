@@ -78,10 +78,9 @@ class MiniProgramHostEndpointAddRequest {
     required this.appId,
     required this.apiBaseUri,
     this.title,
-    this.backendBaseUri,
-    this.backendMode,
     this.policySourcePath,
     this.requestedCache = const <String, Object?>{},
+    this.requestedPublisherApi = const <String, Object?>{},
     this.acceptRequestedPolicy = false,
     this.force = false,
   });
@@ -90,10 +89,9 @@ class MiniProgramHostEndpointAddRequest {
   final String appId;
   final Uri apiBaseUri;
   final String? title;
-  final Uri? backendBaseUri;
-  final String? backendMode;
   final String? policySourcePath;
   final Map<String, Object?> requestedCache;
+  final Map<String, Object?> requestedPublisherApi;
   final bool acceptRequestedPolicy;
   final bool force;
 }
@@ -108,8 +106,6 @@ class MiniProgramHostEndpointAddResult {
     required this.appId,
     required this.title,
     required this.apiBaseUri,
-    this.backendBaseUri,
-    required this.backendMode,
     required this.endpointCount,
     required this.registryCount,
     required this.created,
@@ -124,8 +120,6 @@ class MiniProgramHostEndpointAddResult {
   final String appId;
   final String title;
   final Uri apiBaseUri;
-  final Uri? backendBaseUri;
-  final String backendMode;
   final int endpointCount;
   final int registryCount;
   final bool created;
@@ -220,18 +214,6 @@ class MiniProgramHostController {
         '${request.apiBaseUri}',
       );
     }
-    final backendBaseUri = request.backendBaseUri;
-    final backendMode = _normalizeBackendMode(
-      request.backendMode,
-      hasBackendBaseUri: backendBaseUri != null,
-    );
-    if (backendBaseUri != null &&
-        (!backendBaseUri.hasScheme || backendBaseUri.host.isEmpty)) {
-      throw MiniProgramHostException(
-        'Mini-program backend base URL must be absolute: $backendBaseUri',
-      );
-    }
-
     final miniProgramDirectory = Directory(
       p.join(projectRootPath, 'lib', 'mini_program'),
     );
@@ -264,10 +246,6 @@ class MiniProgramHostController {
         : existingEndpoints;
     endpoints[request.appId] = _EndpointRecord(
       apiBaseUri: _normalizeUri(request.apiBaseUri),
-      backendBaseUri: backendBaseUri == null
-          ? null
-          : _normalizeUri(backendBaseUri),
-      backendMode: backendMode,
     );
 
     final registryCreated = !await registryFile.exists();
@@ -316,6 +294,7 @@ class MiniProgramHostController {
       appId: request.appId,
       sourcePath: request.policySourcePath,
       requestedCache: request.requestedCache,
+      requestedPublisherApi: request.requestedPublisherApi,
       acceptRequestedPolicy: request.acceptRequestedPolicy,
       forceAcceptedPolicy: request.force,
     );
@@ -332,8 +311,6 @@ class MiniProgramHostController {
       appId: request.appId,
       title: title,
       apiBaseUri: request.apiBaseUri,
-      backendBaseUri: backendBaseUri,
-      backendMode: backendMode,
       endpointCount: endpoints.length,
       registryCount: registry.length,
       created: created,
@@ -365,26 +342,12 @@ class MiniProgramHostController {
         );
       }
       final apiBaseUri = value['apiBaseUri']?.toString().trim() ?? '';
-      final backendBaseUri = value['backendBaseUri']?.toString().trim();
-      final backendMode = _normalizeBackendMode(
-        value['backendMode']?.toString(),
-        hasBackendBaseUri: backendBaseUri != null && backendBaseUri.isNotEmpty,
-      );
       if (apiBaseUri.isEmpty) {
         throw MiniProgramHostException(
           'Generated endpoint entry "$key" is incomplete in $filePath.',
         );
       }
-      return MapEntry(
-        key.toString(),
-        _EndpointRecord(
-          apiBaseUri: apiBaseUri,
-          backendBaseUri: backendBaseUri == null || backendBaseUri.isEmpty
-              ? null
-              : backendBaseUri,
-          backendMode: backendMode,
-        ),
-      );
+      return MapEntry(key.toString(), _EndpointRecord(apiBaseUri: apiBaseUri));
     });
   }
 
@@ -425,6 +388,7 @@ class MiniProgramHostController {
     required String appId,
     required String? sourcePath,
     required Map<String, Object?> requestedCache,
+    required Map<String, Object?> requestedPublisherApi,
     required bool acceptRequestedPolicy,
     required bool forceAcceptedPolicy,
   }) async {
@@ -441,10 +405,13 @@ class MiniProgramHostController {
       'requested': <String, Object?>{
         'source': _policySourceName(sourcePath),
         'cache': _deepJsonObjectCopy(requestedCache),
+        if (requestedPublisherApi.isNotEmpty)
+          'publisherApi': _deepJsonObjectCopy(requestedPublisherApi),
         'permissions': <String, Object?>{},
       },
       'accepted': _acceptedPolicyFor(
         requestedCache: requestedCache,
+        requestedPublisherApi: requestedPublisherApi,
         existingAccepted: existingAccepted,
         acceptRequestedPolicy: acceptRequestedPolicy,
         forceAcceptedPolicy: forceAcceptedPolicy,
@@ -456,6 +423,11 @@ class MiniProgramHostController {
       accepted['liveState'] = accepted['liveState'] is Map
           ? _validatedLiveStatePolicy(_jsonObjectOrEmpty(accepted['liveState']))
           : _deepJsonObjectCopy(_defaultLiveStatePolicy);
+      accepted['publisherApi'] = accepted['publisherApi'] is Map
+          ? _validatedAcceptedPublisherApi(
+              _jsonObjectOrEmpty(accepted['publisherApi']),
+            )
+          : <String, Object?>{'enabled': false};
       app['accepted'] = _sortedObject(accepted);
       apps[entry.key] = app;
     }
@@ -497,6 +469,7 @@ class MiniProgramHostController {
 
   Map<String, Object?> _acceptedPolicyFor({
     required Map<String, Object?> requestedCache,
+    required Map<String, Object?> requestedPublisherApi,
     required Map<String, Object?>? existingAccepted,
     required bool acceptRequestedPolicy,
     required bool forceAcceptedPolicy,
@@ -504,6 +477,10 @@ class MiniProgramHostController {
     if (forceAcceptedPolicy || existingAccepted == null) {
       return <String, Object?>{
         'cache': _acceptedCacheFromRequested(requestedCache),
+        'publisherApi': _acceptedPublisherApiFromRequested(
+          requestedPublisherApi,
+          acceptRequested: forceAcceptedPolicy || acceptRequestedPolicy,
+        ),
         'liveState': _deepJsonObjectCopy(_defaultLiveStatePolicy),
         'permissions': <String, Object?>{},
       };
@@ -520,6 +497,25 @@ class MiniProgramHostController {
       }
     }
     accepted['cache'] = _sortedObject(acceptedCache);
+    if (acceptRequestedPolicy) {
+      final acceptedPublisherApi = accepted['publisherApi'] is Map
+          ? _deepJsonObjectCopy(_jsonObjectOrEmpty(accepted['publisherApi']))
+          : <String, Object?>{};
+      acceptedPublisherApi['enabled'] =
+          requestedPublisherApi['enabled'] == true;
+      accepted['publisherApi'] = _validatedAcceptedPublisherApi(
+        acceptedPublisherApi,
+      );
+    } else if (accepted['publisherApi'] is! Map) {
+      accepted['publisherApi'] = _acceptedPublisherApiFromRequested(
+        requestedPublisherApi,
+        acceptRequested: false,
+      );
+    } else {
+      accepted['publisherApi'] = _validatedAcceptedPublisherApi(
+        _jsonObjectOrEmpty(accepted['publisherApi']),
+      );
+    }
     accepted['liveState'] = accepted['liveState'] is Map
         ? _validatedLiveStatePolicy(_jsonObjectOrEmpty(accepted['liveState']))
         : _deepJsonObjectCopy(_defaultLiveStatePolicy);
@@ -527,6 +523,29 @@ class MiniProgramHostController {
         ? _jsonObjectOrEmpty(accepted['permissions'])
         : <String, Object?>{};
     return _sortedObject(accepted);
+  }
+
+  Map<String, Object?> _acceptedPublisherApiFromRequested(
+    Map<String, Object?> requestedPublisherApi, {
+    required bool acceptRequested,
+  }) {
+    final requestedEnabled = requestedPublisherApi['enabled'] == true;
+    return <String, Object?>{'enabled': acceptRequested && requestedEnabled};
+  }
+
+  Map<String, Object?> _validatedAcceptedPublisherApi(
+    Map<String, Object?> value,
+  ) {
+    final enabled = value['enabled'];
+    if (enabled is! bool) {
+      throw const MiniProgramHostException(
+        'Accepted publisherApi.enabled must be a boolean.',
+      );
+    }
+    return _sortedObject(<String, Object?>{
+      ..._deepJsonObjectCopy(value),
+      'enabled': enabled,
+    });
   }
 
   Map<String, Object?> _validatedLiveStatePolicy(Map<String, Object?> value) {
@@ -651,6 +670,33 @@ class MiniProgramHostController {
     buffer
       ..writeln('    default:')
       ..writeln('      return const MiniProgramLiveStatePolicy();')
+      ..writeln('  }')
+      ..writeln('}')
+      ..writeln()
+      ..writeln(
+        'MiniProgramPublisherApiPolicy publisherApiPolicyForMiniProgram(',
+      )
+      ..writeln('  String appId,')
+      ..writeln(') {')
+      ..writeln('  switch (appId) {');
+    for (final entry in sortedEntries) {
+      final appPolicy = _jsonObjectOrEmpty(entry.value);
+      final accepted = _jsonObjectOrEmpty(appPolicy['accepted']);
+      final publisherApi = accepted['publisherApi'] is Map
+          ? _validatedAcceptedPublisherApi(
+              _jsonObjectOrEmpty(accepted['publisherApi']),
+            )
+          : <String, Object?>{'enabled': false};
+      buffer
+        ..writeln('    case ${_dartString(entry.key)}:')
+        ..writeln(
+          '      return const MiniProgramPublisherApiPolicy('
+          'enabled: ${publisherApi['enabled']});',
+        );
+    }
+    buffer
+      ..writeln('    default:')
+      ..writeln('      return const MiniProgramPublisherApiPolicy();')
       ..writeln('  }')
       ..writeln('}')
       ..writeln();
@@ -791,12 +837,7 @@ class MiniProgramHostController {
       ..sort((a, b) => a.key.compareTo(b.key));
     final jsonMetadata = jsonEncode(<String, Object?>{
       for (final entry in sortedEntries)
-        entry.key: <String, Object?>{
-          'apiBaseUri': entry.value.apiBaseUri,
-          if (entry.value.backendBaseUri != null)
-            'backendBaseUri': entry.value.backendBaseUri,
-          'backendMode': entry.value.backendMode,
-        },
+        entry.key: <String, Object?>{'apiBaseUri': entry.value.apiBaseUri},
     });
     final buffer = StringBuffer()
       ..writeln('// Generated by `miniprogram host endpoint add`.')
@@ -828,16 +869,10 @@ class MiniProgramHostController {
         ..writeln(
           '      liveStatePolicy: liveStatePolicyForMiniProgram($mapKey),',
         )
+        ..writeln(
+          '      publisherApiPolicy: publisherApiPolicyForMiniProgram($mapKey),',
+        )
         ..writeln('      requestTimeout: const Duration(seconds: 20),');
-      if (entry.value.backendBaseUri != null) {
-        buffer
-          ..writeln('      backend: MiniProgramBackendEndpoint(')
-          ..writeln(
-            '        baseUri: Uri.parse(${_dartString(entry.value.backendBaseUri!)}),',
-          )
-          ..writeln('        requestTimeout: const Duration(seconds: 30),')
-          ..writeln('      ),');
-      }
       buffer.writeln('    ),');
     }
     buffer
@@ -898,28 +933,6 @@ class MiniProgramHostController {
 
   String _normalizeUri(Uri uri) =>
       uri.toString().replaceFirst(RegExp(r'/+$'), '');
-
-  String _normalizeBackendMode(
-    String? rawMode, {
-    required bool hasBackendBaseUri,
-  }) {
-    final mode = rawMode?.trim().toLowerCase();
-    if (mode == null || mode.isEmpty) {
-      return hasBackendBaseUri ? 'remote' : 'none';
-    }
-    if (mode == 'none' || mode == 'remote' || mode == 'local_mock') {
-      if (mode == 'none' && hasBackendBaseUri) {
-        return 'remote';
-      }
-      if (mode != 'none' && !hasBackendBaseUri) {
-        return 'none';
-      }
-      return mode;
-    }
-    throw MiniProgramHostException(
-      'Unsupported mini-program backend mode: $rawMode',
-    );
-  }
 
   String _dartString(String value) => jsonEncode(value);
 
@@ -1099,15 +1112,9 @@ const Set<String> _dartKeywords = <String>{
 };
 
 class _EndpointRecord {
-  const _EndpointRecord({
-    required this.apiBaseUri,
-    this.backendBaseUri,
-    required this.backendMode,
-  });
+  const _EndpointRecord({required this.apiBaseUri});
 
   final String apiBaseUri;
-  final String? backendBaseUri;
-  final String backendMode;
 }
 
 class _RegistryRecord {

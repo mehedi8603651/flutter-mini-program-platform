@@ -62,8 +62,8 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.5.11';
-  static const String _miniProgramContractsConstraint = '^0.3.5';
+  static const String _miniProgramSdkConstraint = '^0.5.12';
+  static const String _miniProgramContractsConstraint = '^0.3.6';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
     MiniProgramEmbeddingInitRequest request,
@@ -559,12 +559,6 @@ MiniProgramConfig buildMiniProgramConfig({
     source: source,
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
-    backendConnector: endpoints.isEmpty
-        ? null
-        : buildEndpointRoutingBackendConnector(
-            endpoints: endpoints,
-            deliveryContext: deliveryContext,
-    ),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,
     cacheBundle: cacheBundle ?? MiniProgramCacheBundle.inMemory(),

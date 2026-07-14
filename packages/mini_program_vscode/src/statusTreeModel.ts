@@ -115,18 +115,6 @@ export function buildStatusTreeSections(
       })
       .filter(Boolean)
       .join(', ');
-    const runtimeApis = endpoints
-      .map((entry) => {
-        const endpoint = asRecord(entry);
-        const appId = asString(endpoint.appId);
-        const mode = asString(
-          endpoint.backendMode,
-          asBoolean(endpoint.backendConfigured) ? 'remote' : 'none',
-        );
-        return appId ? `${appId}:${mode}` : '';
-      })
-      .filter(Boolean)
-      .join(', ');
     sections.push({
       label: 'Host app',
       icon: 'device-mobile',
@@ -136,7 +124,6 @@ export function buildStatusTreeSections(
         row('Endpoint count', String(endpointCount)),
         row('Endpoint app IDs', asStringList(hostApp.endpointAppIds).join(', ')),
         row('Static artifacts', artifactEndpoints),
-        row('Runtime Publisher APIs', runtimeApis),
         row(
           'Routing',
           endpointCount > 0

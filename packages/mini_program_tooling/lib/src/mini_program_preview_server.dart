@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:path/path.dart' as p;
 
 import 'mini_program_builder.dart';
@@ -15,6 +16,7 @@ class MiniProgramPreviewBundle {
     required this.manifestJson,
     required this.screenJsonById,
     this.assetRootPath,
+    this.publisherBackendJson,
   });
 
   final String miniProgramId;
@@ -22,6 +24,7 @@ class MiniProgramPreviewBundle {
   final Map<String, dynamic> manifestJson;
   final Map<String, Map<String, dynamic>> screenJsonById;
   final String? assetRootPath;
+  final Map<String, dynamic>? publisherBackendJson;
 }
 
 abstract final class MiniProgramPreviewStates {
@@ -99,6 +102,34 @@ class MiniProgramPreviewBundleLoader {
 
     final assetRootPath = p.join(buildResult.miniProgramRootPath, 'assets');
     final hasAssetRoot = await Directory(assetRootPath).exists();
+    final publisherBackendPath = p.join(
+      buildResult.miniProgramRootPath,
+      'publisher_backend.json',
+    );
+    Map<String, dynamic>? publisherBackendJson;
+    if (await File(publisherBackendPath).exists()) {
+      final rawContract = await _readJsonMap(
+        File(publisherBackendPath),
+        label: 'Publisher API contract',
+      );
+      try {
+        final contract = MiniProgramPublisherBackendContract.fromJson(
+          rawContract,
+          allowLocalHttp: true,
+        );
+        if (contract.appId != buildResult.miniProgramId) {
+          throw FormatException(
+            'Contract appId "${contract.appId}" does not match '
+            '"${buildResult.miniProgramId}".',
+          );
+        }
+        publisherBackendJson = Map<String, dynamic>.from(contract.toJson());
+      } catch (error) {
+        throw MiniProgramPreviewException(
+          'Publisher API contract is invalid: $publisherBackendPath\n$error',
+        );
+      }
+    }
 
     return MiniProgramPreviewBundle(
       miniProgramId: buildResult.miniProgramId,
@@ -106,6 +137,7 @@ class MiniProgramPreviewBundleLoader {
       manifestJson: manifestJson,
       screenJsonById: screenJsonById,
       assetRootPath: hasAssetRoot ? assetRootPath : null,
+      publisherBackendJson: publisherBackendJson,
     );
   }
 
@@ -285,6 +317,24 @@ class MiniProgramPreviewServer {
           segments[0] == 'preview' &&
           segments[1] == 'manifest.json') {
         await _writeJson(request.response, HttpStatus.ok, bundle.manifestJson);
+        return;
+      }
+
+      if (segments.length == 2 &&
+          segments[0] == 'preview' &&
+          segments[1] == 'publisher_backend.json') {
+        final contract = bundle.publisherBackendJson;
+        if (contract == null) {
+          await _writeJson(
+            request.response,
+            HttpStatus.notFound,
+            <String, Object?>{
+              'message': 'Preview Publisher API contract was not found.',
+            },
+          );
+          return;
+        }
+        await _writeJson(request.response, HttpStatus.ok, contract);
         return;
       }
 

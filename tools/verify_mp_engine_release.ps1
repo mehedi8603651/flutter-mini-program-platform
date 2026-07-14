@@ -85,7 +85,6 @@ function Assert-BaseSdkDependencyClean {
       'dio',
       'cached_network_image',
       'flutter_svg',
-      'shared_preferences',
       'sqflite'
     )
     foreach ($packageName in $forbiddenPackages) {

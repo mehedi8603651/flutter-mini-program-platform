@@ -133,6 +133,70 @@ void main() {
       );
     });
 
+    test('packages and verifies the Publisher API contract', () async {
+      await _writePublisherBackendContract(miniProgramRoot);
+
+      final result = await const MiniProgramArtifactBuilder().build(
+        MiniProgramArtifactBuildRequest(
+          miniProgramRootPath: miniProgramRoot,
+          skipPubGet: true,
+        ),
+      );
+
+      final release =
+          jsonDecode(
+                await File(
+                  p.join(result.versionArtifactsPath, 'release.json'),
+                ).readAsString(),
+              )
+              as Map<String, dynamic>;
+      expect(release['publisherBackend'], 'publisher_backend.json');
+      final packagedContract = File(
+        p.join(result.versionArtifactsPath, 'publisher_backend.json'),
+      );
+      expect(await packagedContract.exists(), isTrue);
+
+      final checksums =
+          jsonDecode(
+                await File(
+                  p.join(result.versionArtifactsPath, 'checksums.json'),
+                ).readAsString(),
+              )
+              as Map<String, dynamic>;
+      expect(
+        (checksums['files'] as List).whereType<Map>().any(
+          (record) => record['path'] == 'publisher_backend.json',
+        ),
+        isTrue,
+      );
+      await const MiniProgramArtifactVerifier().verify(
+        MiniProgramArtifactVerifyRequest(miniProgramRootPath: miniProgramRoot),
+      );
+    });
+
+    test('rejects a Publisher API contract for another app', () async {
+      await _writePublisherBackendContract(
+        miniProgramRoot,
+        appId: 'another_app',
+      );
+
+      await expectLater(
+        const MiniProgramArtifactBuilder().build(
+          MiniProgramArtifactBuildRequest(
+            miniProgramRootPath: miniProgramRoot,
+            skipPubGet: true,
+          ),
+        ),
+        throwsA(
+          isA<MiniProgramArtifactException>().having(
+            (error) => error.code,
+            'code',
+            MiniProgramArtifactErrorCodes.publisherBackendInvalid,
+          ),
+        ),
+      );
+    });
+
     test('different content under the same version is rejected', () async {
       final builder = const MiniProgramArtifactBuilder();
       await builder.build(
@@ -310,6 +374,31 @@ Future<void> _setVersion(String root, String version) async {
   manifest['version'] = version;
   await manifestFile.writeAsString(
     const JsonEncoder.withIndent('  ').convert(manifest),
+  );
+}
+
+Future<void> _writePublisherBackendContract(
+  String root, {
+  String appId = 'calculator',
+}) {
+  return File(p.join(root, 'publisher_backend.json')).writeAsString(
+    const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+      'schemaVersion': 1,
+      'type': 'mini_program_publisher_backend_contract',
+      'contractVersion': '1',
+      'appId': appId,
+      'backendBaseUrl': 'https://publisher.example.com/calculator/',
+      'healthEndpoint': 'health',
+      'smokeTests': <Object?>[
+        <String, Object?>{
+          'id': 'health',
+          'method': 'GET',
+          'endpoint': 'health',
+          'expectedStatus': 200,
+          'expectJsonObject': true,
+        },
+      ],
+    }),
   );
 }
 

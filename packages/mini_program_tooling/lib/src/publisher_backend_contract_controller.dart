@@ -13,6 +13,8 @@ class PublisherBackendContractInitRequest {
     required this.miniProgramRootPath,
     required this.appId,
     required this.backendBaseUri,
+    this.permissionReason =
+        MiniProgramPublisherBackendContract.defaultPermissionReason,
     this.healthEndpoint =
         MiniProgramPublisherBackendContract.defaultHealthEndpoint,
     this.outputPath,
@@ -22,6 +24,7 @@ class PublisherBackendContractInitRequest {
   final String miniProgramRootPath;
   final String appId;
   final Uri backendBaseUri;
+  final String permissionReason;
   final String healthEndpoint;
   final String? outputPath;
   final bool allowLocalHttp;
@@ -116,6 +119,7 @@ class PublisherBackendContractController {
     final contract = MiniProgramPublisherBackendContract(
       appId: request.appId,
       backendBaseUri: request.backendBaseUri,
+      permissionReason: request.permissionReason,
       healthEndpoint: request.healthEndpoint,
       allowLocalHttp: request.allowLocalHttp,
     );

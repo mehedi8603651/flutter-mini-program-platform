@@ -19,7 +19,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       'miniprogram publisher-api run --mini-program-root "${result.miniProgramRootPath}" --port 9090',
       '',
       'External API flow:',
-      'miniprogram publisher-api contract init --mini-program-root "${result.miniProgramRootPath}" --backend-base-url <https-api-url>',
+      'miniprogram publisher-api contract init --mini-program-root "${result.miniProgramRootPath}" --publisher-api-url <https-api-url> --permission-reason "Describe why network access is needed."',
       'miniprogram publisher-api contract smoke --mini-program-root "${result.miniProgramRootPath}"',
       'miniprogram publisher-api contract handoff --mini-program-root "${result.miniProgramRootPath}" --delivery-url <delivery-url> --public',
     ]);
@@ -81,12 +81,12 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       'Publisher API mock local URLs:',
       ..._formatPublisherBackendTargetUrls(result.port),
       '',
-      'Host endpoint examples:',
-      'miniprogram host endpoint add <appId> --artifact-base-url <artifact-base-url> --backend-local-mock',
-      'miniprogram host endpoint add <appId> --artifact-base-url <artifact-base-url> --backend-base-url ${result.desktopBaseUrl}',
+      'Artifact contract example:',
+      'miniprogram publisher-api contract init --publisher-api-url ${result.desktopBaseUrl} --permission-reason "Load development data." --allow-local-http',
+      'miniprogram preview',
       '',
-      'Use --backend-local-mock for generated host config. With mini_program_sdk 0.3.5+,',
-      'the SDK falls back between 127.0.0.1/localhost and Android emulator 10.0.2.2.',
+      'Preview reads the artifact-owned contract. The SDK falls back between',
+      '127.0.0.1/localhost and Android emulator 10.0.2.2.',
       'Real Android/iOS devices need a LAN IP URL or adb reverse.',
     ].join('\n');
   }

@@ -1,3 +1,10 @@
+## 0.5.12
+
+- Load optional versioned `publisher_backend.json` contracts with manifests.
+- Enforce host-accepted Publisher API permission before runtime actions and
+  create an app-scoped connector from the artifact declaration.
+- Return `publisher_api_disabled` when the host denies Publisher API access.
+
 ## 0.5.11
 
 - Forward backend query `forceRefresh` to connectors so explicit refreshes can

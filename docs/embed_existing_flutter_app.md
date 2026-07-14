@@ -28,16 +28,22 @@ miniprogram host endpoint add coupon_demo `
 
 ## 3. Optional Runtime API
 
-Only add a runtime Publisher API URL when the mini-program uses runtime actions that need server data:
+When a mini-program uses runtime actions, it declares its Publisher API in
+root `publisher_backend.json`. Build the artifact and package the partner
+handoff from that mini-program root, then import and accept the request:
 
 ```powershell
-miniprogram host endpoint add coupon_demo `
+miniprogram partner package coupon_demo `
   --artifact-base-url https://static.example.com/coupon_demo/ `
-  --backend-base-url https://publisher.example.com/api/ `
-  --project-root D:\my_host_app
+  --mini-program-root D:\coupon_demo `
+  --output D:\coupon_demo\coupon_demo.partner.json
+miniprogram host endpoint import D:\coupon_demo\coupon_demo.partner.json `
+  --project-root D:\my_host_app `
+  --accept-requested-policy
 ```
 
-`--backend-base-url` is the current compatibility flag name for the optional runtime middle-server URL. In architecture docs, this is `middleServerApiUrl`.
+The host owns only `accepted.publisherApi.enabled`; the artifact owns the
+Publisher API URL.
 
 The runtime API is a publisher-owned middle-server. It handles auth, database access, payments, files, secrets, external APIs, admin logic, and business rules. It should return JSON success, pagination, and error envelopes:
 

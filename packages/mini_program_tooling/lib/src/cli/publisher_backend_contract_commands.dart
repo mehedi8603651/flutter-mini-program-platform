@@ -67,8 +67,13 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         help: 'Mini-program app id. Defaults to manifest.json id.',
       )
       ..addOption(
-        'backend-base-url',
-        help: 'Publisher-owned backend API base URL. Use HTTPS for production.',
+        'publisher-api-url',
+        help: 'Publisher-owned API base URL. Use HTTPS for production.',
+      )
+      ..addOption(
+        'permission-reason',
+        defaultsTo: MiniProgramPublisherBackendContract.defaultPermissionReason,
+        help: 'Host-facing reason for requesting Publisher API access.',
       )
       ..addOption(
         'health-endpoint',
@@ -91,7 +96,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram $qualifiedCommand --backend-base-url <url> [options]',
+        'Usage: miniprogram $qualifiedCommand --publisher-api-url <url> [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -101,16 +106,16 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         '$qualifiedCommand does not accept positional arguments.',
       );
     }
-    final rawBackendBaseUrl = results.option('backend-base-url')?.trim() ?? '';
+    final rawBackendBaseUrl = results.option('publisher-api-url')?.trim() ?? '';
     if (rawBackendBaseUrl.isEmpty) {
       throw FormatException(
-        '$qualifiedCommand requires --backend-base-url <url>.',
+        '$qualifiedCommand requires --publisher-api-url <url>.',
       );
     }
     final backendBaseUri = Uri.tryParse(rawBackendBaseUrl);
     if (backendBaseUri == null) {
       throw FormatException(
-        '$qualifiedCommand expected a valid --backend-base-url, got: $rawBackendBaseUrl',
+        '$qualifiedCommand expected a valid --publisher-api-url, got: $rawBackendBaseUrl',
       );
     }
     final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
@@ -127,6 +132,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         miniProgramRootPath: miniProgramRootPath,
         appId: appId,
         backendBaseUri: backendBaseUri,
+        permissionReason: results.option('permission-reason')!,
         healthEndpoint: results.option('health-endpoint')!,
         outputPath: results.option('output'),
         allowLocalHttp: results.flag('allow-local-http'),

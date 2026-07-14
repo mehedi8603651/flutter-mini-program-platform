@@ -234,9 +234,6 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'Mini-program: ${result.appId}',
       'Title: ${result.title}',
       'Artifact base URL: ${result.apiBaseUri}',
-      'Runtime API mode: ${result.backendMode}',
-      if (result.backendBaseUri != null)
-        'Middle-server API URL: ${result.backendBaseUri}',
       'Endpoint count: ${result.endpointCount}',
       'Registry count: ${result.registryCount}',
       'Use it from MiniProgramScope:',

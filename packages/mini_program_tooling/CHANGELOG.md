@@ -1,3 +1,14 @@
+## 0.6.12
+
+- Package, reference, checksum, and verify root `publisher_backend.json` in
+  immutable artifacts.
+- Import requested Publisher API permission into host-owned policy while
+  preserving explicit host acceptance.
+- Generate accepted Publisher API policy resolvers and remove per-app host URL
+  and preview URL configuration.
+- Rename contract initialization input to `--publisher-api-url` and add a
+  host-facing `--permission-reason`.
+
 ## 0.6.11
 
 - Validate statically referenced JSON data assets during development builds,

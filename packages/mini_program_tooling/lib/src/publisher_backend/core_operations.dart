@@ -8,7 +8,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       throw PublisherBackendException(
         'Publisher API provider templates were removed. Use your own '
         'middle server and connect it with '
-        '`miniprogram publisher-backend contract init --backend-base-url <url>`, '
+        '`miniprogram publisher-api contract init --publisher-api-url <url>`, '
         'or use `--template mock` for local API testing.',
       );
     }

@@ -2,13 +2,11 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import {
-  buildHostEndpointAddArgs,
   buildPartnerPackageArgs,
+  buildPublisherBackendContractInitArgs,
   buildPublisherBackendUrlsArgs,
   formatCommandLine,
 } from '../cli';
-import { titleFromAppId as hostTitleFromAppId } from '../hostIntegration';
-
 import {
   choosePartnerPackageFile,
   choosePartnerPackageOutputPath,
@@ -20,7 +18,6 @@ import {
   runCliCommand,
   titleFromAppId,
   validateAbsoluteUrl,
-  validateAppId,
   validatePartnerPackageJson,
   validatePort,
 } from '../extensionSupport';
@@ -60,34 +57,6 @@ export async function copyPublisherBackendUrls(
 }
 
 export async function copyMockBackendHostCommand(): Promise<void> {
-  const appId = await vscode.window.showInputBox({
-    prompt: 'Mini-program appId',
-    placeHolder: 'coupon_app',
-    ignoreFocusOut: true,
-    validateInput: validateAppId,
-  });
-  if (!appId) {
-    return;
-  }
-  const title = await vscode.window.showInputBox({
-    prompt: 'Mini-program display title',
-    value: hostTitleFromAppId(appId.trim()),
-    placeHolder: 'Coupon App',
-    ignoreFocusOut: true,
-    validateInput: (value) => value.trim() ? undefined : 'Title is required.',
-  });
-  if (!title) {
-    return;
-  }
-  const apiBaseUrl = await vscode.window.showInputBox({
-    prompt: 'Mini-program static artifact base URL',
-    placeHolder: 'https://cdn.example.com/public_mini_program/',
-    ignoreFocusOut: true,
-    validateInput: validateAbsoluteUrl,
-  });
-  if (!apiBaseUrl) {
-    return;
-  }
   const port = await vscode.window.showInputBox({
     prompt: 'Publisher mock backend port',
     value: '9090',
@@ -97,19 +66,15 @@ export async function copyMockBackendHostCommand(): Promise<void> {
   if (!port) {
     return;
   }
-  const args = buildHostEndpointAddArgs({
-    appId: appId.trim(),
-    title: title.trim(),
-    apiBaseUrl: apiBaseUrl.trim(),
-    backendLocalMock: true,
-    backendLocalMockPort: port.trim(),
-    projectRoot: '.',
-  }).filter((arg, index, all) => {
-    return !(arg === '--project-root' || all[index - 1] === '--project-root');
+  const args = buildPublisherBackendContractInitArgs({
+    publisherApiUrl: `http://127.0.0.1:${port.trim()}/`,
+    allowLocalHttp: true,
   });
   const command = formatCommandLine(configuredCliPath(), args);
   await vscode.env.clipboard.writeText(command);
-  vscode.window.showInformationMessage('Mock backend host command copied.');
+  vscode.window.showInformationMessage(
+    'Mock Publisher API contract command copied.',
+  );
 }
 
 export async function createPartnerPackage(

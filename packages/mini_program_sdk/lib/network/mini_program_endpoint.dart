@@ -30,9 +30,9 @@ class MiniProgramEndpoint {
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
-    this.backend,
     this.cachePolicy = const MiniProgramCachePolicy(),
     this.liveStatePolicy = const MiniProgramLiveStatePolicy(),
+    this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
   });
 
   /// Creates a public/static mini-program endpoint.
@@ -44,43 +44,18 @@ class MiniProgramEndpoint {
     this.headers = const <String, String>{},
     this.requestTimeout = const Duration(seconds: 5),
     this.enableLocalLoopbackFallback = true,
-    this.backend,
     this.cachePolicy = const MiniProgramCachePolicy(),
     this.liveStatePolicy = const MiniProgramLiveStatePolicy(),
+    this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
   });
 
   final Uri apiBaseUri;
   final Map<String, String> headers;
   final Duration requestTimeout;
   final bool enableLocalLoopbackFallback;
-  final MiniProgramBackendEndpoint? backend;
   final MiniProgramCachePolicy cachePolicy;
   final MiniProgramLiveStatePolicy liveStatePolicy;
-}
-
-MiniProgramBackendConnector? buildEndpointRoutingBackendConnector({
-  required Map<String, MiniProgramEndpoint> endpoints,
-  required MiniProgramDeliveryContext deliveryContext,
-  MiniProgramBackendHttpClientFactory? clientFactory,
-}) {
-  final backends = <String, MiniProgramBackendEndpoint>{};
-  for (final entry in EndpointRoutingMiniProgramSource._normalizeEndpoints(
-    endpoints,
-  ).entries) {
-    final backend = entry.value.backend;
-    if (backend == null) {
-      continue;
-    }
-    backends[entry.key] = backend;
-  }
-  if (backends.isEmpty) {
-    return null;
-  }
-  return EndpointRoutingMiniProgramBackendConnector(
-    backends: backends,
-    deliveryContext: deliveryContext,
-    clientFactory: clientFactory,
-  );
+  final MiniProgramPublisherApiPolicy publisherApiPolicy;
 }
 
 /// Routes manifest and screen requests to per-app delivery endpoints.
@@ -89,6 +64,9 @@ class EndpointRoutingMiniProgramSource
         DisposableMiniProgramSource,
         MiniProgramCachePolicyProvider,
         MiniProgramLiveStatePolicyProvider,
+        MiniProgramPublisherApiPolicyProvider,
+        MiniProgramDeliveryContextProvider,
+        MiniProgramPublisherBackendContractSource,
         MiniProgramJsonAssetSource {
   EndpointRoutingMiniProgramSource({
     required Map<String, MiniProgramEndpoint> endpoints,
@@ -110,6 +88,9 @@ class EndpointRoutingMiniProgramSource
   final MiniProgramDeliveryContext _deliveryContext;
   final MiniProgramEndpointSourceFactory _sourceFactory;
   final Map<String, MiniProgramSource> _sources = <String, MiniProgramSource>{};
+
+  @override
+  MiniProgramDeliveryContext get deliveryContext => _deliveryContext;
 
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) {
@@ -151,6 +132,22 @@ class EndpointRoutingMiniProgramSource
   }
 
   @override
+  Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({
+    required String miniProgramId,
+    required String version,
+  }) {
+    final source = _sourceFor(miniProgramId);
+    if (source is! MiniProgramPublisherBackendContractSource) {
+      return Future<MiniProgramPublisherBackendContract?>.value();
+    }
+    return (source as MiniProgramPublisherBackendContractSource)
+        .loadPublisherBackendContract(
+          miniProgramId: miniProgramId,
+          version: version,
+        );
+  }
+
+  @override
   void dispose() {
     for (final source in _sources.values) {
       if (source is DisposableMiniProgramSource) {
@@ -188,6 +185,21 @@ class EndpointRoutingMiniProgramSource
       );
     }
     return endpoint.liveStatePolicy;
+  }
+
+  @override
+  MiniProgramPublisherApiPolicy publisherApiPolicyFor(String miniProgramId) {
+    final normalizedAppId = _normalizeAppId(miniProgramId);
+    final endpoint = _endpoints[normalizedAppId];
+    if (endpoint == null) {
+      throw MiniProgramSourceException(
+        message:
+            'No MiniProgramEndpoint is configured for appId "$normalizedAppId".',
+        errorCode: MiniProgramErrorCodes.endpointNotConfigured,
+        details: <String, dynamic>{'miniProgramId': normalizedAppId},
+      );
+    }
+    return endpoint.publisherApiPolicy;
   }
 
   MiniProgramSource _sourceFor(String miniProgramId) {

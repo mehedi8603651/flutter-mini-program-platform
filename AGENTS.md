@@ -27,11 +27,11 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.5` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_contracts` | `0.3.6` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.1.11` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.5.11` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.6.11` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
-| `mini_program_vscode` | `0.4.0` | VS Code workflows that invoke the CLI |
+| `mini_program_sdk` | `0.5.12` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.6.12` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
 
@@ -56,14 +56,15 @@ These are system invariants, not preferences:
 2. Static mini-program artifacts are public, untrusted UI bundles. Never place secrets in them.
 3. Runtime API configuration is optional and belongs to mini-program runtime actions.
 4. Publisher middle-servers own authentication, databases, payments, files, secrets, external APIs, admin logic, and business rules.
-5. Runtime API actions may call only the configured publisher middle-server URL.
+5. Runtime API actions may call only the validated artifact-declared publisher middle-server URL after host acceptance.
 6. `mini_program_ui` stays pure Dart.
 7. SDK runtime and tooling remain provider-neutral. Provider examples belong in docs or example backends.
-8. The host owns accepted permissions, cache policy, live-state limits, capabilities, and endpoint configuration.
-9. A publisher request is never runtime authority. Runtime uses host-accepted policy only.
-10. Published version directories are immutable. A changed release gets a new version.
-11. Mini-program JSON is strictly validated before rendering or dispatching actions.
-12. Session, token, password, login data, and other sensitive host storage are never exposed as mini-program cache buckets.
+8. The host owns accepted permissions, cache policy, live-state limits, capabilities, and static artifact endpoint configuration.
+9. A mini-program may declare one Publisher API in root `publisher_backend.json`; the host may enable or deny it but does not override its URL.
+10. A publisher request is never runtime authority. Runtime uses host-accepted policy only.
+11. Published version directories are immutable. A changed release gets a new version.
+12. Mini-program JSON is strictly validated before rendering or dispatching actions.
+13. Session, token, password, login data, and other sensitive host storage are never exposed as mini-program cache buckets.
 
 ## Repository Map
 
@@ -496,7 +497,7 @@ docs/
 |-- embed_existing_flutter_app.md               # Add SDK and generated integration to an existing Flutter host
 |-- static_artifact_runtime_api_e2e_guide.md    # Complete static artifact plus optional runtime API flow
 |-- middle_server_api_lambda_dynamodb.md        # Concrete provider example, not a platform dependency
-`-- publisher_backend_https_api_roadmap.md      # Planned publisher API contract/runtime evolution
+`-- publisher_backend_https_api_roadmap.md      # Publisher API contract/runtime guidance and future evolution
 ```
 
 Update docs when a public command, file layout, policy schema, action, or host setup changes.
@@ -531,6 +532,7 @@ artifacts/
     |-- catalog.json                            # Available immutable versions and release metadata
     `-- <version>/
         |-- manifest.json                       # Runtime manifest for this exact version
+        |-- publisher_backend.json              # Optional validated artifact-owned Publisher API declaration
         |-- release.json                        # Release identity and bundle metadata
         |-- checksums.json                      # Integrity hashes for all immutable release files
         |-- screens/
@@ -553,8 +555,8 @@ Rules:
 ### Loading and Rendering
 
 1. The host resolves `MiniProgramEndpoint` from the app registry.
-2. `HttpMiniProgramSource` fetches `<artifactBaseUrl>/<appId>/latest.json`, then the selected manifest and screen files.
-3. `ManifestLoader` validates compatibility and uses accepted cache policy.
+2. `HttpMiniProgramSource` fetches `artifacts/<appId>/latest.json`, then the selected screen files and optional versioned Publisher API contract.
+3. `ManifestLoader` validates compatibility, loads the optional contract, and uses accepted host policy.
 4. On a network failure, valid cached manifest/screens may render while `SdkOfflineNotice` appears temporarily.
 5. `MpScreenRenderer` strictly validates each screen document.
 6. Bindings are resolved against live state, launch inputs, forms, and approved backend snapshots.
@@ -596,7 +598,7 @@ TTL, enabled buckets, and byte limits are enforced consistently by the manager. 
 
 ### Host-Owned Policy
 
-Partner handoff schema version 3 may request cache for `memory`, `data`, `image`, `state`, or `video`. Sensitive bucket/key names such as session, login data, token, password, and secret are rejected.
+Partner handoff schema version 3 may request cache for `memory`, `data`, `image`, `state`, or `video` and may request Publisher API access when the artifact declares it. Sensitive bucket/key names such as session, login data, token, password, and secret are rejected.
 
 `lib/mini_program/mini_program_policies.json` contains:
 
@@ -608,11 +610,17 @@ Partner handoff schema version 3 may request cache for `memory`, `data`, `image`
       "requested": {
         "source": "example.partner.json",
         "cache": {},
+        "publisherApi": {
+          "enabled": true,
+          "reason": "Load current publisher data.",
+          "contract": "publisher_backend.json"
+        },
         "permissions": {}
       },
       "accepted": {
         "cache": {},
         "liveState": {},
+        "publisherApi": { "enabled": false },
         "permissions": {}
       }
     }
@@ -623,18 +631,19 @@ Partner handoff schema version 3 may request cache for `memory`, `data`, `image`
 Import behavior:
 
 - Normal import updates `requested` and preserves the host's `accepted` values.
-- `--accept-requested-policy` explicitly copies supported requested cache values into accepted policy without replacing unrelated endpoint files.
-- `--force` regenerates known accepted cache policy and resets live-state limits to safe defaults.
+- `--accept-requested-policy` explicitly copies supported requested cache and Publisher API permission into accepted policy without replacing unrelated endpoint files.
+- `--force` regenerates known accepted cache and Publisher API policy and resets live-state limits to safe defaults.
 - Runtime resolver generation reads only `accepted` for enforcement.
 - Unknown accepted fields should be preserved for forward compatibility.
 
 ### Optional Publisher API
 
-Static-only apps need no runtime backend. Apps requiring accounts, synchronized data, payments, notifications, files, or business rules call one configured publisher middle-server through approved `Mp.backend.*` actions.
+Static-only apps need no runtime backend. Apps requiring accounts, synchronized data, payments, notifications, files, or business rules declare one HTTPS middle-server in root `publisher_backend.json` and call relative endpoints through approved `Mp.backend.*` actions.
 
 ```text
 Mini-program runtime action
-  -> SDK validates action and configured API origin
+  -> SDK validates action and artifact-declared API origin
+  -> SDK checks host-accepted Publisher API permission
   -> MiniProgramBackendConnector
   -> publisher HTTPS middle-server
   -> publisher auth/database/payment/external services
@@ -642,7 +651,7 @@ Mini-program runtime action
   -> bound mini-program UI/state
 ```
 
-Never add direct database credentials, cloud provider secrets, payment secrets, or unrestricted URLs to manifests or screens.
+Never add direct database credentials, cloud provider secrets, payment secrets, or unrestricted URLs to contracts, manifests, or screens.
 
 ## Main Workflows
 
@@ -757,6 +766,7 @@ Test first import, re-import, host-edited accepted values, unknown fields, expli
 | `mini_programs/*/mp/**/*.dart` | Mini-program developer | Edit and rebuild |
 | `mini_programs/*/mp/.build/` | Tooling | Generated; do not hand-edit |
 | `artifacts/<appId>/<version>/` | Artifact builder | Immutable after publication |
+| Mini-program `publisher_backend.json` | Mini-program publisher | Edit at source root; artifact tooling validates and packages it |
 | `*.freezed.dart`, `*.g.dart` | build_runner | Regenerate; do not hand-edit |
 | `packages/mini_program_vscode/out/` | TypeScript compiler | Generated; edit `src/` |
 | Host `mini_program_policies.json` | Host developer | Source of truth for accepted policy |
@@ -797,7 +807,7 @@ The working tree may contain user changes. Never discard, reset, or overwrite un
 - Reject unknown properties where the schema is strict.
 - Enforce length, count, depth, numeric, expression, state, and cache limits before committing data.
 - Keep host secrets and authentication material outside static artifacts and public cache.
-- Allow only host-configured publisher API origins.
+- Allow only the validated artifact-declared Publisher API origin after host acceptance.
 - Stop action sequences on failure and preserve previous target state when specified by the action contract.
 - Return stable machine-readable error codes with developer-friendly messages that do not leak secrets.
 - Never expose cache keys, filesystem paths, session buckets, other applications, or global host storage through `Mp.cache.info`.

@@ -100,22 +100,33 @@ miniprogram publisher-api scaffold --template mock --mini-program-root D:\bd_are
 miniprogram publisher-api run --mini-program-root D:\bd_area_search --port 9090
 miniprogram publisher-api contract init `
   --mini-program-root D:\bd_area_search `
-  --backend-base-url http://127.0.0.1:9090 `
+  --publisher-api-url http://127.0.0.1:9090 `
+  --permission-reason "Load current area data." `
   --allow-local-http
 miniprogram publisher-api contract validate --mini-program-root D:\bd_area_search --allow-local-http
 miniprogram publisher-api contract smoke --mini-program-root D:\bd_area_search --allow-local-http
 ```
 
-To attach the runtime API to a host endpoint:
+For production, update the contract to the publisher HTTPS URL, build a new
+immutable artifact version, create a partner handoff, and let the host accept
+the request:
 
 ```powershell
-miniprogram host endpoint add bd_area_search `
+miniprogram publisher-api contract init `
+  --mini-program-root D:\bd_area_search `
+  --publisher-api-url https://publisher.example.com/api/bd-area-search/ `
+  --permission-reason "Load current area data."
+miniprogram artifact build --mini-program-root D:\bd_area_search
+miniprogram partner package bd_area_search `
   --artifact-base-url https://static.example.com/bd_area_search/ `
-  --backend-base-url https://publisher.example.com/api/bd-area-search/ `
-  --project-root D:\bd_area_host
+  --mini-program-root D:\bd_area_search `
+  --output D:\bd_area_search\bd_area_search.partner.json
+miniprogram host endpoint import D:\bd_area_search\bd_area_search.partner.json `
+  --project-root D:\bd_area_host `
+  --accept-requested-policy
 ```
 
-`--backend-base-url` is the current compatibility flag name for the optional runtime middle-server URL. In docs and architecture, prefer the term `middleServerApiUrl`.
+The host stores the accepted permission, not the Publisher API URL.
 
 ## 7. Middle-Server API Shape
 

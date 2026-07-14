@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -120,6 +122,67 @@ void main() {
 
       expect(bytes, <int>[91, 93]);
     });
+
+    test('loads a versioned artifact-owned Publisher API contract', () async {
+      final source = HttpMiniProgramSource.fromDeliveryContext(
+        apiBaseUri: Uri.parse('https://cdn.example.com/store/'),
+        deliveryContext: _deliveryContext,
+        client: MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://cdn.example.com/store/artifacts/weather/1.2.0/publisher_backend.json',
+          );
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'schemaVersion': 1,
+              'type': 'mini_program_publisher_backend_contract',
+              'contractVersion': '1',
+              'appId': 'weather',
+              'backendBaseUrl': 'https://api.publisher.example/weather/',
+              'permissionReason': 'Load current forecasts.',
+              'healthEndpoint': 'health',
+              'smokeTests': <Object?>[
+                <String, Object?>{
+                  'id': 'health',
+                  'endpoint': 'health',
+                  'expectedStatus': 200,
+                  'expectJsonObject': true,
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      final contract = await source.loadPublisherBackendContract(
+        miniProgramId: 'weather',
+        version: '1.2.0',
+      );
+
+      expect(contract?.appId, 'weather');
+      expect(contract?.permissionReason, 'Load current forecasts.');
+      expect(source.deliveryContext, same(_deliveryContext));
+    });
+
+    test(
+      'treats a missing Publisher API contract as an optional resource',
+      () async {
+        final source = HttpMiniProgramSource(
+          apiBaseUri: Uri.parse('https://cdn.example.com/store/'),
+          client: MockClient(
+            (request) async => http.Response('Not found', 404),
+          ),
+        );
+
+        final contract = await source.loadPublisherBackendContract(
+          miniProgramId: 'calculator',
+          version: '1.0.0',
+        );
+
+        expect(contract, isNull);
+      },
+    );
 
     test('does not send artifact credential headers', () async {
       final requestedHeaders = <String?>[];
@@ -346,6 +409,15 @@ void main() {
     );
   });
 }
+
+const MiniProgramDeliveryContext _deliveryContext = MiniProgramDeliveryContext(
+  hostApp: 'test_host',
+  sdkVersion: '0.5.12',
+  hostVersion: '1.0.0',
+  capabilities: <CapabilityId>{},
+  platform: 'test',
+  locale: 'en',
+);
 
 const String _manifestJson = '''
 {

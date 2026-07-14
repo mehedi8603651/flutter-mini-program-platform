@@ -300,9 +300,6 @@ class MiniProgramWorkflowStatusController {
             (entry) => <String, Object?>{
               'appId': entry.key,
               'apiBaseUri': entry.value['apiBaseUri'],
-              'backendBaseUri': entry.value['backendBaseUri'],
-              'backendConfigured': entry.value['backendConfigured'],
-              'backendMode': entry.value['backendMode'],
             },
           )
           .toList(),
@@ -565,21 +562,8 @@ class MiniProgramWorkflowStatusController {
       final record = value is Map ? value : <String, Object?>{};
       return MapEntry(key.toString(), <String, Object?>{
         'apiBaseUri': record['apiBaseUri']?.toString(),
-        'backendBaseUri': record['backendBaseUri']?.toString(),
-        'backendConfigured':
-            record['backendBaseUri']?.toString().trim().isNotEmpty ?? false,
-        'backendMode': _readBackendMode(record),
       });
     });
-  }
-
-  String _readBackendMode(Map<Object?, Object?> record) {
-    final mode = record['backendMode']?.toString().trim().toLowerCase();
-    if (mode == 'local_mock' || mode == 'remote' || mode == 'none') {
-      return mode!;
-    }
-    final backendBaseUri = record['backendBaseUri']?.toString().trim() ?? '';
-    return backendBaseUri.isEmpty ? 'none' : 'remote';
   }
 
   Future<Map<String, String>> _readRegistryMetadata(File file) async {

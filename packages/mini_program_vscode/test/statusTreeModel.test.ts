@@ -23,14 +23,10 @@ test('renders mini-program and host status rows for static artifacts', () => {
         {
           appId: 'coupon_demo',
           apiBaseUri: 'https://cdn.example.com/coupon_demo',
-          backendConfigured: true,
-          backendMode: 'remote',
         },
         {
           appId: 'rewards',
           apiBaseUri: 'https://cdn.example.com/rewards',
-          backendConfigured: false,
-          backendMode: 'none',
         },
       ],
     },
@@ -86,7 +82,7 @@ test('renders mini-program and host status rows for static artifacts', () => {
   assert.match(text, /Endpoint count: 2/);
   assert.match(text, /Endpoint app IDs: coupon_demo, rewards/);
   assert.match(text, /Static artifacts: coupon_demo:static, rewards:static/);
-  assert.match(text, /Runtime Publisher APIs: coupon_demo:remote, rewards:none/);
+  assert.doesNotMatch(text, /Runtime Publisher APIs/);
   assert.match(text, /Routing: endpoint map active/);
   assert.match(text, /Artifact host fallback/);
   assert.match(text, /Artifact base URL: https:\/\/cdn\.example\.com\/coupon_demo/);

@@ -36,6 +36,21 @@ export async function publisherBackendContractInit(
   if (!backendBaseUrl) {
     return;
   }
+  const permissionReason = await vscode.window.showInputBox({
+    prompt: 'Why does this mini-program need Publisher API access?',
+    value: 'Access publisher-hosted runtime data.',
+    ignoreFocusOut: true,
+    validateInput: (value) => {
+      const reason = value.trim();
+      if (!reason) {
+        return 'Permission reason is required.';
+      }
+      return reason.length > 256 ? 'Use at most 256 characters.' : undefined;
+    },
+  });
+  if (!permissionReason) {
+    return;
+  }
   const healthEndpoint = await vscode.window.showInputBox({
     prompt: 'Health endpoint',
     value: 'health',
@@ -59,7 +74,8 @@ export async function publisherBackendContractInit(
     'Init Publisher API Contract',
     buildPublisherBackendContractInitArgs({
       miniProgramRoot: workspacePath,
-      backendBaseUrl,
+      publisherApiUrl: backendBaseUrl,
+      permissionReason,
       healthEndpoint,
       allowLocalHttp,
     }),

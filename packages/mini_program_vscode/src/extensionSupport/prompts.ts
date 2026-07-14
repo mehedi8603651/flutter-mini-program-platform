@@ -10,7 +10,6 @@ import {
 import {
   validateAbsoluteUrl,
   validateAppId,
-  validateOptionalAbsoluteUrl,
   validatePort,
 } from './jsonValues';
 import {
@@ -60,9 +59,6 @@ export async function promptHostEndpointInputs(): Promise<
       readonly appId: string;
       readonly title: string;
       readonly apiBaseUrl: string;
-      readonly backendBaseUrl?: string;
-      readonly backendLocalMock?: boolean;
-      readonly backendLocalMockPort?: string;
     }
   | undefined
 > {
@@ -94,17 +90,10 @@ export async function promptHostEndpointInputs(): Promise<
   if (!apiBaseUrl) {
     return undefined;
   }
-  const backend = await choosePublisherBackendMode();
-  if (!backend) {
-    return undefined;
-  }
   return {
     appId: appId.trim(),
     title: title.trim(),
     apiBaseUrl: apiBaseUrl.trim(),
-    backendBaseUrl: backend.kind === 'remote' ? backend.backendBaseUrl : undefined,
-    backendLocalMock: backend.kind === 'local_mock',
-    backendLocalMockPort: backend.kind === 'local_mock' ? backend.port : undefined,
   };
 }
 
@@ -376,61 +365,6 @@ export async function chooseStaticClean(): Promise<boolean | undefined> {
   );
   return choice?.value;
 }
-
-export async function promptOptionalPublisherBackendBaseUrl(): Promise<string | undefined> {
-  const value = await vscode.window.showInputBox({
-    prompt: 'Optional runtime middle-server API URL',
-    placeHolder: 'https://publisher.example.com/api/ (leave blank for none)',
-    ignoreFocusOut: true,
-    validateInput: validateOptionalAbsoluteUrl,
-  });
-  return value?.trim() || undefined;
-}
-
-export async function choosePublisherBackendMode(): Promise<PublisherBackendMode | undefined> {
-  const choice = await vscode.window.showQuickPick(
-    [
-      {
-        label: 'No backend',
-        description: 'Only configure manifest/screen delivery',
-        value: 'none' as const,
-      },
-      {
-        label: 'Local mock Publisher API',
-        description: 'Use miniprogram publisher-api run, default port 9090',
-        value: 'local_mock' as const,
-      },
-      {
-        label: 'Remote Publisher API',
-        description: 'Use a real HTTPS publisher-owned API base URL',
-        value: 'remote' as const,
-      },
-    ],
-    { title: 'Publisher API mode', ignoreFocusOut: true },
-  );
-  if (!choice) {
-    return undefined;
-  }
-  if (choice.value === 'none') {
-    return { kind: 'none' };
-  }
-  if (choice.value === 'local_mock') {
-    const port = await vscode.window.showInputBox({
-      prompt: 'Publisher mock backend port',
-      value: '9090',
-      ignoreFocusOut: true,
-      validateInput: validatePort,
-    });
-    return port ? { kind: 'local_mock', port: port.trim() } : undefined;
-  }
-  const backendBaseUrl = await promptOptionalPublisherBackendBaseUrl();
-  return backendBaseUrl ? { kind: 'remote', backendBaseUrl } : undefined;
-}
-
-export type PublisherBackendMode =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'local_mock'; readonly port: string }
-  | { readonly kind: 'remote'; readonly backendBaseUrl: string };
 
 export async function chooseBackendRoot(
   workspacePath: string,

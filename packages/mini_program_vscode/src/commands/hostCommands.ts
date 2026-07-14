@@ -20,7 +20,6 @@ import {
   chooseAppIdForRegistry,
   chooseForce,
   chooseHostMiniProgramEntry,
-  choosePublisherBackendMode,
   configuredCliPath,
   configuredDefaultPreviewDevice,
   hostRegistryPath,
@@ -124,10 +123,6 @@ export async function addHostEndpoint(
   if (!apiBaseUrl) {
     return;
   }
-  const backend = await choosePublisherBackendMode();
-  if (!backend) {
-    return;
-  }
   const force = await chooseForce('Replace an unrecognized endpoint file?');
   if (force === undefined) {
     return;
@@ -139,9 +134,6 @@ export async function addHostEndpoint(
       appId: appId.trim(),
       title: title.trim(),
       apiBaseUrl: apiBaseUrl.trim(),
-      backendBaseUrl: backend.kind === 'remote' ? backend.backendBaseUrl : undefined,
-      backendLocalMock: backend.kind === 'local_mock',
-      backendLocalMockPort: backend.kind === 'local_mock' ? backend.port : undefined,
       projectRoot,
       force,
     }),

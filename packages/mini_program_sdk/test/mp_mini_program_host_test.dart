@@ -289,6 +289,33 @@ void main() {
       expect(tester.getSize(content).width, greaterThan(0));
     },
   );
+
+  testWidgets(
+    'denied artifact Publisher API contract returns a stable policy error',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MiniProgramHost(
+            miniProgramId: 'publisher_test',
+            sdkVersion: '1.0.0',
+            source: _PublisherApiMpSource(
+              baseUri: Uri.parse('http://127.0.0.1:1/api/'),
+              enabled: false,
+            ),
+            hostBridge: const _HostBridge(),
+            capabilityRegistry: CapabilityRegistry(const <CapabilityId>[]),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Runtime API error: publisher_api_disabled'),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
 class _MpSource implements MiniProgramSource {
@@ -540,6 +567,100 @@ class _OfflineMpSource implements MiniProgramSource {
       message: 'Backend unavailable.',
       errorCode: MiniProgramErrorCodes.backendUnreachable,
     );
+  }
+}
+
+class _PublisherApiMpSource
+    implements
+        MiniProgramSource,
+        MiniProgramPublisherBackendContractSource,
+        MiniProgramPublisherApiPolicyProvider,
+        MiniProgramDeliveryContextProvider {
+  const _PublisherApiMpSource({required this.baseUri, required this.enabled});
+
+  final Uri baseUri;
+  final bool enabled;
+
+  @override
+  MiniProgramDeliveryContext get deliveryContext =>
+      const MiniProgramDeliveryContext(
+        hostApp: 'sdk_test_host',
+        sdkVersion: '1.0.0',
+        hostVersion: '1.0.0',
+        capabilities: <CapabilityId>{},
+        platform: 'test',
+        locale: 'en',
+      );
+
+  @override
+  MiniProgramPublisherApiPolicy publisherApiPolicyFor(String miniProgramId) {
+    return MiniProgramPublisherApiPolicy(enabled: enabled);
+  }
+
+  @override
+  Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({
+    required String miniProgramId,
+    required String version,
+  }) async {
+    return MiniProgramPublisherBackendContract(
+      appId: miniProgramId,
+      backendBaseUri: baseUri,
+      permissionReason: 'Load test forecast data.',
+      allowLocalHttp: true,
+    );
+  }
+
+  @override
+  Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
+    return const MiniProgramManifest(
+      id: 'publisher_test',
+      version: '1.0.0',
+      entry: 'publisher_home',
+      contractVersion: '1.0.0',
+      sdkVersionRange: SdkVersionRange(value: '>=1.0.0 <2.0.0'),
+      requiredCapabilities: <CapabilityId>[],
+      screenFormat: MiniProgramScreenFormats.mp,
+      screenSchemaVersion: 1,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadScreen({
+    required String miniProgramId,
+    required String version,
+    required String screenId,
+  }) async {
+    return const <String, dynamic>{
+      'schemaVersion': 1,
+      'screenId': 'publisher_home',
+      'root': <String, dynamic>{
+        'type': 'backendBuilder',
+        'props': <String, dynamic>{
+          'requestId': 'forecast',
+          'endpoint': 'forecast/current',
+          'loading': <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{'data': 'Loading forecast'},
+            'children': <Object?>[],
+          },
+          'error': <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{
+              'data': 'Runtime API error: {{backend.forecast.errorCode}}',
+            },
+            'children': <Object?>[],
+          },
+          'child': <String, dynamic>{
+            'type': 'text',
+            'props': <String, dynamic>{
+              'data': '{{backend.forecast.data.title}}',
+            },
+            'children': <Object?>[],
+          },
+        },
+        'children': <Object?>[],
+      },
+    };
   }
 }
 

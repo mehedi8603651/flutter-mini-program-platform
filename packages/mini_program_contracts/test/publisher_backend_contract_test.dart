@@ -32,6 +32,7 @@ void main() {
         'contractVersion': '1',
         'appId': 'shop_demo',
         'backendBaseUrl': 'https://api.publisher.example',
+        'permissionReason': 'Access publisher-hosted runtime data.',
         'healthEndpoint': 'health',
         'smokeTests': <Object?>[
           <String, Object?>{

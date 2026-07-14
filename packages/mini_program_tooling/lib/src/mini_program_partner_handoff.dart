@@ -21,13 +21,17 @@ class MiniProgramPartnerHandoff {
     Uri? apiBaseUri,
     required String generatedAtUtc,
     Map<String, Object?> requestedCache = const <String, Object?>{},
+    Map<String, Object?> requestedPublisherApi = const <String, Object?>{},
   }) : appId = appId.trim(),
        title = title.trim(),
        artifactBaseUri = _normalizeArtifactBaseUri(
          artifactBaseUri ?? apiBaseUri,
        ),
        generatedAtUtc = generatedAtUtc.trim(),
-       requestedCache = _normalizeRequestedCache(requestedCache) {
+       requestedCache = _normalizeRequestedCache(requestedCache),
+       requestedPublisherApi = _normalizeRequestedPublisherApi(
+         requestedPublisherApi,
+       ) {
     if (schemaVersion != 1 &&
         schemaVersion != legacySchemaVersion &&
         schemaVersion != currentSchemaVersion) {
@@ -79,6 +83,9 @@ class MiniProgramPartnerHandoff {
       artifactBaseUri: artifactBaseUri,
       generatedAtUtc: _readString(decoded, 'generatedAtUtc'),
       requestedCache: _normalizeRequestedCache(decoded['requestedCache']),
+      requestedPublisherApi: _normalizeRequestedPublisherApi(
+        decoded['requestedPublisherApi'],
+      ),
     );
   }
 
@@ -99,6 +106,7 @@ class MiniProgramPartnerHandoff {
   final Uri artifactBaseUri;
   final String generatedAtUtc;
   final Map<String, Object?> requestedCache;
+  final Map<String, Object?> requestedPublisherApi;
 
   Uri get apiBaseUri => artifactBaseUri;
 
@@ -111,7 +119,61 @@ class MiniProgramPartnerHandoff {
       'artifactBaseUrl': artifactBaseUri.toString(),
       'generatedAtUtc': generatedAtUtc,
       if (requestedCache.isNotEmpty) 'requestedCache': requestedCache,
+      if (requestedPublisherApi.isNotEmpty)
+        'requestedPublisherApi': requestedPublisherApi,
     };
+  }
+
+  static Map<String, Object?> _normalizeRequestedPublisherApi(Object? raw) {
+    if (raw == null) {
+      return const <String, Object?>{};
+    }
+    if (raw is! Map) {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPublisherApi must be an object.',
+      );
+    }
+    if (raw.isEmpty) {
+      return const <String, Object?>{};
+    }
+    const allowedKeys = <String>{'enabled', 'reason', 'contract'};
+    final normalized = <String, Object?>{};
+    for (final entry in raw.entries) {
+      final key = entry.key;
+      if (key is! String || !allowedKeys.contains(key)) {
+        throw MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff requestedPublisherApi contains an '
+          'unsupported property: $key.',
+        );
+      }
+      normalized[key] = entry.value;
+    }
+    final enabled = normalized['enabled'];
+    if (enabled is! bool) {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPublisherApi.enabled must be a '
+        'boolean.',
+      );
+    }
+    final reason = normalized['reason'];
+    if (reason is! String || reason.trim().isEmpty || reason.length > 256) {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPublisherApi.reason must be '
+        '1-256 characters.',
+      );
+    }
+    final contract = normalized['contract'];
+    if (contract != null && contract != 'publisher_backend.json') {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPublisherApi.contract must be '
+        '"publisher_backend.json".',
+      );
+    }
+    return Map<String, Object?>.unmodifiable(<String, Object?>{
+      'enabled': enabled,
+      'reason': reason.trim(),
+      'contract': 'publisher_backend.json',
+    });
   }
 
   static Map<String, Object?> _normalizeRequestedCache(Object? raw) {
@@ -295,6 +357,7 @@ class MiniProgramPartnerPackageRequest {
     this.outputPath,
     this.generatedAtUtc,
     this.requestedCache = const <String, Object?>{},
+    this.requestedPublisherApi = const <String, Object?>{},
   });
 
   final String appId;
@@ -305,6 +368,7 @@ class MiniProgramPartnerPackageRequest {
   final String? outputPath;
   final DateTime? generatedAtUtc;
   final Map<String, Object?> requestedCache;
+  final Map<String, Object?> requestedPublisherApi;
 }
 
 class MiniProgramPartnerPackageResult {
@@ -332,6 +396,7 @@ class MiniProgramPartnerHandoffController {
       generatedAtUtc: (request.generatedAtUtc ?? DateTime.now().toUtc())
           .toIso8601String(),
       requestedCache: request.requestedCache,
+      requestedPublisherApi: request.requestedPublisherApi,
     );
     final outputPath = p.normalize(
       p.absolute(

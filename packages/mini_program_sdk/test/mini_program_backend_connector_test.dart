@@ -6,6 +6,21 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
 void main() {
+  test(
+    'disabled Publisher API policy fails without making a request',
+    () async {
+      final result = await const DisabledMiniProgramBackendConnector().call(
+        const MiniProgramBackendRequest(
+          miniProgramId: 'weather',
+          endpoint: 'forecast',
+        ),
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.errorCode, MiniProgramErrorCodes.publisherApiDisabled);
+    },
+  );
+
   group('EndpointRoutingMiniProgramBackendConnector', () {
     test('does not create an HTTP client before the first backend call', () {
       var createdClients = 0;

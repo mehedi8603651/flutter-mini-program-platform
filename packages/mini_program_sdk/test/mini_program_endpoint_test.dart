@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
 import 'package:mini_program_sdk/mini_program_sdk.dart';
@@ -60,6 +59,11 @@ void main() {
       );
       expect(assetBytes, <int>[91, 93]);
       expect(createdSources[0].loadJsonAssetCalls, <String>['data/items.json']);
+      final contract = await source.loadPublisherBackendContract(
+        miniProgramId: 'coupon_demo',
+        version: '1.0.0',
+      );
+      expect(contract?.appId, 'coupon_demo');
     });
 
     test(
@@ -94,85 +98,7 @@ void main() {
       },
     );
 
-    test(
-      'does not build a backend connector for static artifact endpoints only',
-      () {
-        final connector = buildEndpointRoutingBackendConnector(
-          endpoints: <String, MiniProgramEndpoint>{
-            'public_coupon_demo': MiniProgramEndpoint.public(
-              apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
-            ),
-          },
-          deliveryContext: _deliveryContext,
-          clientFactory: () => _PublicBackendRecordingClient(),
-        );
-
-        expect(connector, isNull);
-      },
-    );
-
-    test(
-      'builds an optional runtime middle-server connector when configured',
-      () async {
-        final connector = buildEndpointRoutingBackendConnector(
-          endpoints: <String, MiniProgramEndpoint>{
-            'public_coupon_demo': MiniProgramEndpoint.public(
-              apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
-              backend: MiniProgramBackendEndpoint(
-                baseUri: Uri.parse('https://publisher.example.com/api/'),
-              ),
-            ),
-          },
-          deliveryContext: _deliveryContext,
-          clientFactory: () => _PublicBackendRecordingClient(),
-        );
-
-        expect(connector, isNotNull);
-
-        final result = await connector!.call(
-          const MiniProgramBackendRequest(
-            miniProgramId: 'public_coupon_demo',
-            endpoint: 'home/bootstrap',
-          ),
-        );
-
-        expect(result.isSuccess, isTrue);
-        expect(result.data['ok'], isTrue);
-        (connector as DisposableMiniProgramBackendConnector).dispose();
-      },
-    );
-
-    test('builds a backend connector from endpoint backend config', () async {
-      final connector = buildEndpointRoutingBackendConnector(
-        endpoints: <String, MiniProgramEndpoint>{
-          'coupon': MiniProgramEndpoint(
-            apiBaseUri: Uri.parse('https://delivery.example.com/api/'),
-            backend: MiniProgramBackendEndpoint(
-              baseUri: Uri.parse('https://publisher.example.com/api/'),
-            ),
-          ),
-          'public_demo': MiniProgramEndpoint.public(
-            apiBaseUri: Uri.parse('https://cdn.example.com/public/'),
-          ),
-        },
-        deliveryContext: _deliveryContext,
-        clientFactory: () => _BackendRecordingClient(),
-      );
-
-      expect(connector, isNotNull);
-
-      final result = await connector!.call(
-        const MiniProgramBackendRequest(
-          miniProgramId: 'coupon',
-          endpoint: 'home/bootstrap',
-        ),
-      );
-
-      expect(result.isSuccess, isTrue);
-      (connector as DisposableMiniProgramBackendConnector).dispose();
-    });
-
-    test('exposes per-app cache and live-state policy from routing', () {
+    test('exposes per-app accepted policies from routing', () {
       final source = EndpointRoutingMiniProgramSource(
         endpoints: <String, MiniProgramEndpoint>{
           'temporary': MiniProgramEndpoint(
@@ -186,6 +112,9 @@ void main() {
               maxEntries: 1500,
               maxValueBytes: 512 * 1024,
               maxDepth: 24,
+            ),
+            publisherApiPolicy: const MiniProgramPublisherApiPolicy(
+              enabled: true,
             ),
           ),
           'normal': MiniProgramEndpoint(
@@ -204,6 +133,9 @@ void main() {
       expect(source.liveStatePolicyFor('temporary').maxBytes, 3 * 1024 * 1024);
       expect(source.liveStatePolicyFor('temporary').maxEntries, 1500);
       expect(source.liveStatePolicyFor('normal').maxEntries, 1000);
+      expect(source.publisherApiPolicyFor('temporary').enabled, isTrue);
+      expect(source.publisherApiPolicyFor('normal').enabled, isFalse);
+      expect(source.deliveryContext, same(_deliveryContext));
     });
 
     test('throws a structured error for an unregistered appId', () async {
@@ -272,7 +204,10 @@ const MiniProgramDeliveryContext _deliveryContext = MiniProgramDeliveryContext(
 );
 
 class _RecordingSource
-    implements DisposableMiniProgramSource, MiniProgramJsonAssetSource {
+    implements
+        DisposableMiniProgramSource,
+        MiniProgramJsonAssetSource,
+        MiniProgramPublisherBackendContractSource {
   _RecordingSource({required this.appId, required this.endpoint});
 
   final String appId;
@@ -322,6 +257,17 @@ class _RecordingSource
   }
 
   @override
+  Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({
+    required String miniProgramId,
+    required String version,
+  }) async {
+    return MiniProgramPublisherBackendContract(
+      appId: miniProgramId,
+      backendBaseUri: Uri.parse('https://publisher.example.com/api/'),
+    );
+  }
+
+  @override
   void dispose() {
     disposeCount++;
   }
@@ -337,72 +283,4 @@ class _ScreenCall {
   final String miniProgramId;
   final String version;
   final String screenId;
-}
-
-class _BackendRecordingClient extends http.BaseClient {
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    expect(
-      request.url.toString(),
-      'https://publisher.example.com/api/home/bootstrap',
-    );
-    expect(
-      request.headers.containsKey(
-        'x-mini-program-'
-        'access-key',
-      ),
-      isFalse,
-    );
-    return http.StreamedResponse(
-      Stream<List<int>>.value(<int>[
-        123,
-        34,
-        111,
-        107,
-        34,
-        58,
-        116,
-        114,
-        117,
-        101,
-        125,
-      ]),
-      200,
-      request: request,
-    );
-  }
-}
-
-class _PublicBackendRecordingClient extends http.BaseClient {
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    expect(
-      request.url.toString(),
-      'https://publisher.example.com/api/home/bootstrap',
-    );
-    expect(
-      request.headers.containsKey(
-        'x-mini-program-'
-        'access-key',
-      ),
-      false,
-    );
-    return http.StreamedResponse(
-      Stream<List<int>>.value(<int>[
-        123,
-        34,
-        111,
-        107,
-        34,
-        58,
-        116,
-        114,
-        117,
-        101,
-        125,
-      ]),
-      200,
-      request: request,
-    );
-  }
 }

@@ -80,23 +80,32 @@ For local runtime API testing:
 ```powershell
 miniprogram publisher-api scaffold --template mock --mini-program-root .\coupon_demo
 miniprogram publisher-api run --mini-program-root .\coupon_demo --port 9090
-miniprogram publisher-api contract init --mini-program-root .\coupon_demo --backend-base-url http://127.0.0.1:9090 --allow-local-http
+miniprogram publisher-api contract init --mini-program-root .\coupon_demo --publisher-api-url http://127.0.0.1:9090 --permission-reason "Load coupon offers." --allow-local-http
 miniprogram publisher-api contract validate --mini-program-root .\coupon_demo --allow-local-http
 miniprogram publisher-api contract smoke --mini-program-root .\coupon_demo --allow-local-http
+miniprogram artifact build --mini-program-root .\coupon_demo
 ```
 
 Use a real publisher middle-server in production. It can be written in any language or framework, as long as it exposes the agreed HTTPS API.
 
-Attach an optional runtime API URL to a host endpoint only when the mini-program uses runtime data actions:
+The contract is packaged inside the immutable artifact. A partner handoff made
+from the mini-program root requests Publisher API permission, and the host can
+accept it explicitly:
 
 ```powershell
-miniprogram host endpoint add coupon_demo `
+miniprogram partner package coupon_demo `
   --artifact-base-url https://static.example.com/coupon_demo/ `
-  --backend-base-url https://publisher.example.com/api/coupon_demo/ `
-  --project-root .\coupon_host
+  --mini-program-root .\coupon_demo `
+  --output .\coupon_demo\coupon_demo.partner.json
+
+miniprogram host endpoint import .\coupon_demo\coupon_demo.partner.json `
+  --project-root .\coupon_host `
+  --accept-requested-policy
 ```
 
-`--backend-base-url` is the current compatibility flag name for the runtime middle-server URL. The architecture name is `middleServerApiUrl`.
+The host stores only the accepted `publisherApi.enabled` decision in
+`lib/mini_program/mini_program_policies.json`. It does not duplicate or
+override the publisher URL.
 
 Recommended runtime response shapes:
 

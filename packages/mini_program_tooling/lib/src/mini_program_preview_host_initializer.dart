@@ -60,8 +60,8 @@ class MiniProgramPreviewHostInitializer {
     'web',
     'windows',
   };
-  static const String _sdkConstraint = '^0.5.11';
-  static const String _contractsConstraint = '^0.3.5';
+  static const String _sdkConstraint = '^0.5.12';
+  static const String _contractsConstraint = '^0.3.6';
   static const String _httpConstraint = '^1.5.0';
   static const String _projectName = 'mini_program_preview_host';
 
@@ -319,10 +319,6 @@ const String _configuredTitle = String.fromEnvironment(
   'MINI_PROGRAM_PREVIEW_TITLE',
   defaultValue: 'Mini Program Preview',
 );
-const String _configuredBackendBaseUrl = String.fromEnvironment(
-  'MINI_PROGRAM_PREVIEW_BACKEND_BASE_URL',
-);
-
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const PreviewHostApp());
@@ -343,7 +339,6 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
   late final PreviewHostBridge _hostBridge;
   late final CapabilityRegistry _capabilityRegistry;
   late final MiniProgramDeliveryContext _deliveryContext;
-  MiniProgramBackendConnector? _backendConnector;
   late MiniProgramCacheBundle _cacheBundle;
 
   Timer? _pollTimer;
@@ -353,10 +348,6 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
   void initState() {
     super.initState();
     _previewBaseUri = Uri.parse(_configuredPreviewBaseUrl);
-    _source = PreviewMiniProgramSource(
-      previewBaseUri: _previewBaseUri,
-      expectedMiniProgramId: _configuredMiniProgramId,
-    );
     _hostBridge = PreviewHostBridge(navigatorKey: _navigatorKey);
     _capabilityRegistry = CapabilityRegistry(
       const <CapabilityId>[
@@ -372,7 +363,11 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       capabilities: _capabilityRegistry.supportedCapabilities,
       platform: defaultTargetPlatform.name,
     );
-    _backendConnector = _buildPreviewBackendConnector(_deliveryContext);
+    _source = PreviewMiniProgramSource(
+      previewBaseUri: _previewBaseUri,
+      expectedMiniProgramId: _configuredMiniProgramId,
+      deliveryContext: _deliveryContext,
+    );
     _cacheBundle = _buildPreviewCacheBundle();
     _refreshStatus();
     _pollTimer = Timer.periodic(
@@ -386,10 +381,6 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
     _pollTimer?.cancel();
     _statusClient.close();
     _source.close();
-    final connector = _backendConnector;
-    if (connector is DisposableMiniProgramBackendConnector) {
-      connector.dispose();
-    }
     super.dispose();
   }
 
@@ -403,7 +394,6 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
       source: _source,
       hostBridge: _hostBridge,
       capabilityRegistry: _capabilityRegistry,
-      backendConnector: _backendConnector,
       cacheBundle: _cacheBundle,
     );
 
@@ -491,33 +481,6 @@ class _PreviewHostAppState extends State<PreviewHostApp> {
     }
   }
 
-  MiniProgramBackendConnector? _buildPreviewBackendConnector(
-    MiniProgramDeliveryContext deliveryContext,
-  ) {
-    final rawBackendBaseUrl = _configuredBackendBaseUrl.trim();
-    if (rawBackendBaseUrl.isEmpty) {
-      return null;
-    }
-
-    final backendBaseUri = Uri.tryParse(rawBackendBaseUrl);
-    if (backendBaseUri == null ||
-        !backendBaseUri.hasScheme ||
-        backendBaseUri.host.isEmpty) {
-      debugPrint(
-        '[preview][backend] Ignoring invalid runtime middle-server API URL: $rawBackendBaseUrl',
-      );
-      return null;
-    }
-
-    return EndpointRoutingMiniProgramBackendConnector(
-      backends: <String, MiniProgramBackendEndpoint>{
-        _configuredMiniProgramId: MiniProgramBackendEndpoint(
-          baseUri: backendBaseUri,
-        ),
-      },
-      deliveryContext: deliveryContext,
-    );
-  }
 }
 
 class PreviewStatus {
@@ -602,15 +565,23 @@ MiniProgramCacheBundle _buildPreviewCacheBundle() {
 }
 
 class PreviewMiniProgramSource
-    implements MiniProgramSource, MiniProgramJsonAssetSource {
+    implements
+        MiniProgramSource,
+        MiniProgramJsonAssetSource,
+        MiniProgramPublisherBackendContractSource,
+        MiniProgramPublisherApiPolicyProvider,
+        MiniProgramDeliveryContextProvider {
   PreviewMiniProgramSource({
     required this.previewBaseUri,
     required this.expectedMiniProgramId,
+    required this.deliveryContext,
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   final Uri previewBaseUri;
   final String expectedMiniProgramId;
+  @override
+  final MiniProgramDeliveryContext deliveryContext;
   final http.Client _client;
 
   @override
@@ -682,6 +653,40 @@ class PreviewMiniProgramSource
       );
     }
     return response.bodyBytes;
+  }
+
+  @override
+  Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({
+    required String miniProgramId,
+    required String version,
+  }) async {
+    if (miniProgramId != expectedMiniProgramId) {
+      throw MiniProgramSourceException(
+        message:
+            'Preview host only exposes "$expectedMiniProgramId", but the SDK requested "$miniProgramId".',
+        errorCode: MiniProgramPublisherBackendErrorCodes.invalidContract,
+      );
+    }
+    try {
+      final json = await _loadJson(
+        'publisher_backend.json',
+        resourceLabel: 'Publisher API contract',
+      );
+      return MiniProgramPublisherBackendContract.fromJson(
+        json,
+        allowLocalHttp: true,
+      );
+    } on MiniProgramSourceException catch (error) {
+      if (error.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  MiniProgramPublisherApiPolicy publisherApiPolicyFor(String miniProgramId) {
+    return const MiniProgramPublisherApiPolicy(enabled: true);
   }
 
   void close() {

@@ -218,7 +218,6 @@ test('builds host app command arguments', () => {
       appId: 'coupon_demo',
       title: 'Coupon Demo',
       apiBaseUrl: 'https://cdn.example.com/coupon_demo',
-      backendBaseUrl: 'https://publisher.example.com/api',
       projectRoot: 'D:/host',
       force: true,
     }),
@@ -231,8 +230,6 @@ test('builds host app command arguments', () => {
       'https://cdn.example.com/coupon_demo',
       '--title',
       'Coupon Demo',
-      '--backend-base-url',
-      'https://publisher.example.com/api',
       '--project-root',
       'D:/host',
       '--force',
@@ -242,8 +239,6 @@ test('builds host app command arguments', () => {
     buildHostEndpointAddArgs({
       appId: 'coupon_app',
       apiBaseUrl: 'https://cdn.example.com/public_mini_program',
-      backendLocalMock: true,
-      backendLocalMockPort: '9091',
       projectRoot: 'D:/host',
     }),
     [
@@ -253,9 +248,6 @@ test('builds host app command arguments', () => {
       'coupon_app',
       '--artifact-base-url',
       'https://cdn.example.com/public_mini_program',
-      '--backend-local-mock',
-      '--backend-local-mock-port',
-      '9091',
       '--project-root',
       'D:/host',
     ],
@@ -365,7 +357,7 @@ test('builds Publisher API contract command arguments', () => {
   assert.deepEqual(
     buildPublisherBackendContractInitArgs({
       miniProgramRoot: 'D:/work/coupon_demo',
-      backendBaseUrl: ' https://api.publisher.example/ ',
+      publisherApiUrl: ' https://api.publisher.example/ ',
       healthEndpoint: ' health ',
       allowLocalHttp: true,
       json: true,
@@ -374,7 +366,7 @@ test('builds Publisher API contract command arguments', () => {
       'publisher-api',
       'contract',
       'init',
-      '--backend-base-url',
+      '--publisher-api-url',
       'https://api.publisher.example/',
       '--health-endpoint',
       'health',

@@ -42,7 +42,7 @@ Connect a host endpoint with:
 ```powershell
 miniprogram host endpoint add $appId `
   --artifact-base-url <public-static-artifact-url> `
-  --backend-base-url http://127.0.0.1:9090/
+  --publisher-api-url http://127.0.0.1:9090/
 ```
 
 Production provider SDKs, database clients, payment clients, credentials, and

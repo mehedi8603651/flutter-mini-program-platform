@@ -348,26 +348,6 @@ async function buildHostAppChecks(
     })
     .filter(Boolean)
     .join(', ');
-  const endpointBackendSummaries = endpoints
-    .map((entry) => {
-      const endpoint = asRecord(entry);
-      const appId = asString(endpoint.appId);
-      const backendBaseUri = asString(endpoint.backendBaseUri);
-      const backendMode = asString(endpoint.backendMode, backendBaseUri ? 'remote' : 'none');
-      return appId ? `${appId}:${backendMode}` : '';
-    })
-    .filter(Boolean);
-  const endpointBackendIssues = endpoints
-    .map((entry) => asRecord(entry))
-    .filter((entry) => {
-      const backendBaseUri = asString(entry.backendBaseUri);
-      return backendBaseUri.length > 0 && !isAbsoluteUrl(backendBaseUri);
-    })
-    .map((entry) => asString(entry.appId, 'unknown'));
-  const usesLocalMockBackend = endpoints
-    .map((entry) => asRecord(entry))
-    .some((entry) => asString(entry.backendMode) === 'local_mock');
-  const localMockSdkSupported = !usesLocalMockBackend || sdkSupportsLocalMockFallback(pubspec);
   const endpointAppIdsFromReport = endpoints
     .map((entry) => asString(asRecord(entry).appId))
     .filter((appId): appId is string => Boolean(appId));
@@ -450,30 +430,6 @@ async function buildHostAppChecks(
         : `Incomplete endpoint entries: ${endpointIssues.join(', ')}.`,
       endpointArtifactSummaries || undefined,
       endpointIssues.length === 0 ? undefined : 'Re-import the partner package or run MiniProgram: Add Host Endpoint.',
-    ),
-    check(
-      'host_app.publisher_backend_endpoints',
-      'Publisher API endpoints',
-      endpointBackendIssues.length === 0 ? 'ok' : 'error',
-      endpointBackendSummaries.length > 0
-        ? `Publisher API configuration: ${endpointBackendSummaries.join(', ')}.`
-        : 'No endpoint metadata was available for Publisher API checks.',
-      undefined,
-      endpointBackendIssues.length === 0
-        ? undefined
-        : 'Re-add the endpoint with a valid absolute Publisher API URL.',
-    ),
-    check(
-      'host_app.local_mock_backend_sdk',
-      'Local mock backend SDK',
-      localMockSdkSupported ? 'ok' : 'warning',
-      usesLocalMockBackend
-        ? localMockSdkSupported
-          ? 'Local mock backend endpoint uses an SDK version with loopback fallback support.'
-          : 'Local mock backend endpoint may need mini_program_sdk 0.3.5 or newer for Android emulator fallback.'
-        : 'No local mock backend endpoint is configured.',
-      undefined,
-      localMockSdkSupported ? undefined : 'Run flutter pub upgrade mini_program_sdk or update pubspec.yaml to mini_program_sdk: ^0.3.5.',
     ),
     check(
       'host_app.endpoint_routing',

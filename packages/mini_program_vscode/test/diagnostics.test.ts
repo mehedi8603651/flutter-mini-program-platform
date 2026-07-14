@@ -102,7 +102,7 @@ test('mini-program runtime API usage suggests optional middle-server URL', async
   }
 });
 
-test('host app reports static artifact endpoints and optional runtime API modes', async () => {
+test('host app reports static artifact endpoints without Publisher API URLs', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-host-launcher-');
   try {
     await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
@@ -117,7 +117,7 @@ test('host app reports static artifact endpoints and optional runtime API modes'
     await writeFile(
       path.join(workspacePath, 'lib', 'mini_program', 'mini_program_endpoints.dart'),
       `// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"profile":{"apiBaseUri":"https://cdn.example.com/profile","backendBaseUri":"https://publisher.example.com/api"}}
+// {"profile":{"apiBaseUri":"https://cdn.example.com/profile"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 `,
     );
@@ -131,9 +131,6 @@ test('host app reports static artifact endpoints and optional runtime API modes'
           {
             appId: 'profile',
             apiBaseUri: 'https://cdn.example.com/profile',
-            backendBaseUri: 'https://publisher.example.com/api',
-            backendConfigured: true,
-            backendMode: 'remote',
           },
         ],
       }),
@@ -142,7 +139,8 @@ test('host app reports static artifact endpoints and optional runtime API modes'
     const text = formatDiagnosticsReport(report);
     assert.match(text, /Endpoint entries include static artifact base URLs/);
     assert.match(text, /not opened from host UI: profile/);
-    assert.match(text, /profile:remote/);
+    assert.match(text, /profile:static/);
+    assert.doesNotMatch(text, /profile:remote|backendBaseUri/);
     assert.match(text, /Auth, payments, database access/);
     assert.doesNotMatch(text, /credential header/);
   } finally {
@@ -150,7 +148,7 @@ test('host app reports static artifact endpoints and optional runtime API modes'
   }
 });
 
-test('host app warns when local mock backend uses old SDK constraint', async () => {
+test('host app ignores obsolete per-app backend metadata', async () => {
   const workspacePath = await tempWorkspace('mini-program-diag-host-local-mock-');
   try {
     await mkdir(path.join(workspacePath, 'lib', 'mini_program'), { recursive: true });
@@ -181,8 +179,9 @@ test('host app warns when local mock backend uses old SDK constraint', async () 
     });
 
     const text = formatDiagnosticsReport(report);
-    assert.match(text, /coupon_app:local_mock/);
-    assert.match(text, /mini_program_sdk 0\.3\.5 or newer/);
+    assert.match(text, /coupon_app:static/);
+    assert.doesNotMatch(text, /coupon_app:local_mock/);
+    assert.doesNotMatch(text, /mini_program_sdk 0\.3\.5 or newer/);
   } finally {
     await rm(workspacePath, { recursive: true, force: true });
   }

@@ -65,7 +65,7 @@ Commands:
   status [--mini-program-root <path>] [--json]
   stop [--mini-program-root <path>]
   urls [--port 9090]
-  contract init --backend-base-url <url> [--mini-program-root <path>]
+  contract init --publisher-api-url <url> [--permission-reason <text>] [--mini-program-root <path>]
   contract validate [--mini-program-root <path>] [--contract <file>] [--json]
   contract smoke [--mini-program-root <path>] [--contract <file>] [--auth-token <token>] [--json]
 ''';
@@ -77,7 +77,7 @@ Commands:
 Usage: miniprogram $commandName contract <command> [arguments]
 
 Commands:
-  init --backend-base-url <url> [--mini-program-root <path>]
+  init --publisher-api-url <url> [--permission-reason <text>] [--mini-program-root <path>]
   validate [--mini-program-root <path>] [--contract <file>] [--json]
   smoke [--mini-program-root <path>] [--contract <file>] [--auth-token <token>] [--json]
 ''';

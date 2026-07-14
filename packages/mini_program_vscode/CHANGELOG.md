@@ -1,3 +1,9 @@
+## 0.4.1
+
+- Initialize artifact-owned Publisher API contracts with permission reasons.
+- Remove per-app host and preview Publisher API URL prompts and status modes.
+- Keep host integration focused on requested and accepted permission policy.
+
 ## 0.4.0
 
 - Remove external artifact delivery adapters and credential handoff commands from the active extension.

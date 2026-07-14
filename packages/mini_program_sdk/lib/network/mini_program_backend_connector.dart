@@ -3,10 +3,24 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:mini_program_contracts/mini_program_contracts.dart';
 
 import 'mini_program_delivery_context.dart';
 
 typedef MiniProgramBackendHttpClientFactory = http.Client Function();
+
+/// Host-owned permission for using an artifact-declared Publisher API.
+@immutable
+class MiniProgramPublisherApiPolicy {
+  const MiniProgramPublisherApiPolicy({this.enabled = false});
+
+  final bool enabled;
+}
+
+/// Optional source capability that supplies accepted Publisher API policy.
+abstract interface class MiniProgramPublisherApiPolicyProvider {
+  MiniProgramPublisherApiPolicy publisherApiPolicyFor(String miniProgramId);
+}
 
 abstract final class MiniProgramBackendHttpHeaders {
   static const String appId = 'x-mini-program-app-id';
@@ -176,6 +190,27 @@ abstract interface class MiniProgramBackendConnector {
 abstract interface class DisposableMiniProgramBackendConnector
     implements MiniProgramBackendConnector {
   void dispose();
+}
+
+/// Connector used when an artifact declares an API that the host denied.
+class DisabledMiniProgramBackendConnector
+    implements MiniProgramBackendConnector {
+  const DisabledMiniProgramBackendConnector();
+
+  @override
+  Future<MiniProgramBackendResult> call(
+    MiniProgramBackendRequest request,
+  ) async {
+    return MiniProgramBackendResult.failed(
+      requestId: request.requestId,
+      endpoint: request.endpoint,
+      method: request.method,
+      message:
+          'Publisher API access is disabled by the host for mini-program '
+          '"${request.miniProgramId}".',
+      errorCode: MiniProgramErrorCodes.publisherApiDisabled,
+    );
+  }
 }
 
 class EndpointRoutingMiniProgramBackendConnector

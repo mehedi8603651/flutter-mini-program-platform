@@ -1,3 +1,8 @@
+## 0.3.6
+
+- Add a host-facing permission reason to Publisher API contracts.
+- Add the stable `publisher_api_disabled` runtime error code.
+
 ## 0.3.5
 
 - Add stable artifact-local JSON data loading and search error codes.

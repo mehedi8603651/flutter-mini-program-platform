@@ -101,6 +101,56 @@ void main() {
       });
     });
 
+    test('writes and reads a Publisher API permission request', () async {
+      const controller = MiniProgramPartnerHandoffController();
+      final outputPath = p.join(tempDir.path, 'weather.partner.json');
+
+      await controller.createPackage(
+        MiniProgramPartnerPackageRequest(
+          appId: 'weather',
+          title: 'Weather',
+          artifactBaseUri: Uri.parse('https://cdn.example.com/weather/'),
+          outputPath: outputPath,
+          generatedAtUtc: DateTime.utc(2026, 7, 14),
+          requestedPublisherApi: const <String, Object?>{
+            'enabled': true,
+            'reason': 'Load current forecasts.',
+            'contract': 'publisher_backend.json',
+          },
+        ),
+      );
+
+      final handoff = await controller.readPackage(outputPath);
+      expect(handoff.requestedPublisherApi, <String, Object?>{
+        'enabled': true,
+        'reason': 'Load current forecasts.',
+        'contract': 'publisher_backend.json',
+      });
+    });
+
+    test('rejects malformed Publisher API permission requests', () async {
+      final path = p.join(tempDir.path, 'invalid-api.partner.json');
+      await File(path).writeAsString(
+        jsonEncode(<String, Object?>{
+          'schemaVersion': 3,
+          'type': MiniProgramPartnerHandoff.documentType,
+          'appId': 'weather',
+          'title': 'Weather',
+          'artifactBaseUrl': 'https://cdn.example.com/weather/',
+          'generatedAtUtc': DateTime.utc(2026, 7, 14).toIso8601String(),
+          'requestedPublisherApi': <String, Object?>{
+            'enabled': true,
+            'reason': '',
+          },
+        }),
+      );
+
+      expect(
+        () => const MiniProgramPartnerHandoffController().readPackage(path),
+        throwsA(isA<MiniProgramPartnerHandoffException>()),
+      );
+    });
+
     test('rejects sensitive requested cache buckets and keys', () async {
       final sessionPath = p.join(tempDir.path, 'session.partner.json');
       await File(sessionPath).writeAsString(

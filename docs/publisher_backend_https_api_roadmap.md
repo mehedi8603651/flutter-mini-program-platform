@@ -41,13 +41,16 @@ Create and smoke the runtime API contract:
 ```powershell
 miniprogram publisher-api contract init `
   --mini-program-root D:\coupon_demo `
-  --backend-base-url http://127.0.0.1:9090 `
+  --publisher-api-url http://127.0.0.1:9090 `
+  --permission-reason "Load coupon offers." `
   --allow-local-http
 miniprogram publisher-api contract validate --mini-program-root D:\coupon_demo --allow-local-http
 miniprogram publisher-api contract smoke --mini-program-root D:\coupon_demo --allow-local-http
 ```
 
-`--backend-base-url` is the current Contract V1 compatibility field. In product docs and architecture discussions, call this the optional `middleServerApiUrl`.
+The generated root `publisher_backend.json` is packaged and checksummed by
+`artifact build`. A partner handoff requests Publisher API permission; the host
+accepts or denies it without owning a URL override.
 
 ## Contract V1 Fixtures
 
@@ -75,7 +78,8 @@ Middle-server routes should return JSON for both success and failure. The runtim
 - Use stable `errorCode` values, such as `validation_failed`, `unauthorized`, `forbidden`, `not_found`, `rate_limited`, and `server_error`.
 - Return pagination as `{ "items": [], "nextCursor": null, "hasMore": false }`.
 - For `Mp.lazy.chunk`, keep prior loaded items visible when a later page fails.
-- For no configured runtime API URL, actions should enter a predictable failure state instead of crashing.
+- If the artifact has no contract, actions enter the existing not-configured failure state.
+- If the host denies the contract request, actions fail with `publisher_api_disabled`.
 - Auth, database, payment, provider SDKs, secrets, and admin logic stay inside the middle-server.
 
 Recommended HTTP statuses:

@@ -147,8 +147,6 @@ class _FakeMiniProgramHostController extends MiniProgramHostController {
       appId: request.appId,
       title: request.title ?? request.appId,
       apiBaseUri: request.apiBaseUri,
-      backendBaseUri: request.backendBaseUri,
-      backendMode: request.backendMode ?? 'none',
       endpointCount: 1,
       registryCount: 1,
       created: true,

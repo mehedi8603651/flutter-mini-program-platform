@@ -122,14 +122,18 @@ Use an explicit root when not inside the mini-program folder:
 miniprogram preview -d chrome --mini-program-root D:\my_profile
 ```
 
-For optional runtime API testing, preview can use a backend URL:
+For optional runtime API testing, initialize an artifact-owned contract first:
 
 ```powershell
-miniprogram preview -d chrome --backend-base-url http://127.0.0.1:9090
+miniprogram publisher-api contract init `
+  --publisher-api-url http://127.0.0.1:9090 `
+  --permission-reason "Load preview data." `
+  --allow-local-http
+miniprogram preview -d chrome
 ```
 
-`--backend-base-url` is the compatibility flag name for the optional runtime
-middle-server URL. Static opening does not need it.
+Preview reads `publisher_backend.json` and automatically enables its Publisher
+API permission. Static opening does not need the contract.
 
 ### 3. Build
 
@@ -310,18 +314,10 @@ miniprogram host endpoint add my_profile `
   --project-root D:\my_profile_host
 ```
 
-Only add `--backend-base-url` when the mini-program uses runtime API actions:
-
-```powershell
-miniprogram host endpoint add my_profile `
-  --artifact-base-url https://<github-user>.github.io/my_profile_static/ `
-  --backend-base-url https://publisher.example.com/api/ `
-  --project-root D:\my_profile_host
-```
-
-Opening the mini-program still uses static artifacts. The backend URL is only
-for runtime actions such as `Mp.backend.call`, `Mp.backend.query`, search,
-load-more, forms, and `Mp.lazy.chunk`.
+When the mini-program has `publisher_backend.json`, use `partner package` from
+its root so the handoff requests Publisher API permission. Import with
+`--accept-requested-policy` only after reviewing the request. The generated
+host endpoint never stores a per-app Publisher API URL.
 
 ### 4. Run The Host
 
@@ -446,7 +442,8 @@ Use when the mini-program calls a real or mock middle-server.
 ```powershell
 miniprogram publisher-api contract init `
   --mini-program-root D:\my_profile `
-  --backend-base-url http://127.0.0.1:9090 `
+  --publisher-api-url http://127.0.0.1:9090 `
+  --permission-reason "Load profile data." `
   --allow-local-http
 ```
 
@@ -474,8 +471,9 @@ miniprogram publisher-api contract smoke `
   --auth-token <token>
 ```
 
-`--backend-base-url` is the current compatibility flag name for the optional
-runtime middle-server URL. In architecture docs this is `middleServerApiUrl`.
+The command writes root `publisher_backend.json`. `artifact build` validates,
+packages, references, and checksums it. Hosts accept or deny the requested
+Publisher API permission without overriding its URL.
 
 `publisher-backend <command>` is a legacy alias for `publisher-api <command>`.
 

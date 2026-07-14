@@ -90,6 +90,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   MiniProgramManifest? _manifest;
   String? _activeCacheAppId;
   MiniProgramCachePolicy? _activeCachePolicy;
+  MiniProgramBackendConnector? _activeBackendConnector;
+  DisposableMiniProgramBackendConnector? _ownedBackendConnector;
   bool _usedStaleManifestCache = false;
   List<_RenderedMiniProgramScreen> _screenStack =
       const <_RenderedMiniProgramScreen>[];
@@ -137,6 +139,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
   void _restartLoad() {
     _closeActiveCacheApp();
+    _disposeOwnedBackendConnector();
     _loadGeneration++;
     _manifest = null;
     _activeCacheAppId = null;
@@ -152,6 +155,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   @override
   void dispose() {
     _closeActiveCacheApp();
+    _disposeOwnedBackendConnector();
     _backendStore.dispose();
     _stateManager.dispose();
     super.dispose();
@@ -186,6 +190,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
     final cachePolicy = _cachePolicyFor(loadedMiniProgram.manifest.id);
     final liveStatePolicy = _liveStatePolicyFor(loadedMiniProgram.manifest.id);
+    final backendConnector = _backendConnectorFor(loadedMiniProgram);
     _stateManager.updatePolicy(liveStatePolicy);
     await _cacheManager.openApp(
       loadedMiniProgram.manifest.id,
@@ -197,12 +202,18 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         loadedMiniProgram.manifest.id,
         policy: cachePolicy,
       );
+      if (backendConnector is DisposableMiniProgramBackendConnector &&
+          !identical(backendConnector, widget.backendConnector)) {
+        backendConnector.dispose();
+      }
       return;
     }
 
+    _setActiveBackendConnector(backendConnector);
+
     await widget.authController?.restore(
       miniProgramId: loadedMiniProgram.manifest.id,
-      connector: widget.backendConnector,
+      connector: _activeBackendConnector,
     );
 
     if (!mounted || generation != _loadGeneration) {
@@ -234,6 +245,57 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       );
     }
     return const MiniProgramLiveStatePolicy();
+  }
+
+  MiniProgramBackendConnector? _backendConnectorFor(
+    LoadedMiniProgram loadedMiniProgram,
+  ) {
+    final contract = loadedMiniProgram.publisherBackendContract;
+    if (contract == null) {
+      return widget.backendConnector;
+    }
+    final source = widget.source;
+    final policy = source is MiniProgramPublisherApiPolicyProvider
+        ? (source as MiniProgramPublisherApiPolicyProvider)
+              .publisherApiPolicyFor(contract.appId)
+        : const MiniProgramPublisherApiPolicy();
+    if (!policy.enabled) {
+      return const DisabledMiniProgramBackendConnector();
+    }
+    final deliveryContext = source is MiniProgramDeliveryContextProvider
+        ? (source as MiniProgramDeliveryContextProvider).deliveryContext
+        : null;
+    if (deliveryContext == null) {
+      widget.logger.warn(
+        'Publisher API was accepted, but the mini-program source does not '
+        'provide delivery context for request headers.',
+        context: <String, Object?>{'miniProgramId': contract.appId},
+      );
+      return null;
+    }
+    return EndpointRoutingMiniProgramBackendConnector(
+      backends: <String, MiniProgramBackendEndpoint>{
+        contract.appId: MiniProgramBackendEndpoint(
+          baseUri: contract.backendBaseUri,
+        ),
+      },
+      deliveryContext: deliveryContext,
+    );
+  }
+
+  void _setActiveBackendConnector(MiniProgramBackendConnector? connector) {
+    _disposeOwnedBackendConnector();
+    _activeBackendConnector = connector;
+    if (connector is DisposableMiniProgramBackendConnector &&
+        !identical(connector, widget.backendConnector)) {
+      _ownedBackendConnector = connector;
+    }
+  }
+
+  void _disposeOwnedBackendConnector() {
+    _ownedBackendConnector?.dispose();
+    _ownedBackendConnector = null;
+    _activeBackendConnector = null;
   }
 
   void _closeActiveCacheApp() {
@@ -822,7 +884,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           miniProgramId: manifest.id,
           hostBridge: widget.hostBridge,
           capabilityRegistry: widget.capabilityRegistry,
-          backendConnector: widget.backendConnector,
+          backendConnector: _activeBackendConnector,
           authController: widget.authController,
           cacheManager: _cacheManager,
           cachePolicy: _activeCachePolicy ?? _cachePolicyFor(manifest.id),

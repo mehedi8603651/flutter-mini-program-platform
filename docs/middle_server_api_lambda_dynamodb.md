@@ -646,7 +646,8 @@ In the mini-program project:
 ```powershell
 miniprogram publisher-api contract init `
   --mini-program-root D:\my_profile `
-  --backend-base-url https://abc123.lambda-url.ap-south-1.on.aws/ `
+  --publisher-api-url https://abc123.lambda-url.ap-south-1.on.aws/ `
+  --permission-reason "Load profile and note data." `
   --health-endpoint health
 ```
 
@@ -672,9 +673,8 @@ miniprogram publisher-api contract smoke `
   --auth-token $token
 ```
 
-`--backend-base-url` is the current CLI and Contract V1 compatibility name for
-the optional runtime API URL. In architecture docs, call it
-`middleServerApiUrl`.
+This writes artifact-owned `publisher_backend.json`. Screen actions continue
+to use relative endpoints.
 
 ## 8. Call The API From A Mini-Program
 
@@ -747,27 +747,28 @@ Mp.lazy.chunk(
 
 ## 9. Preview With The Runtime API
 
-Static preview still works without any runtime API URL. Add the backend URL only
-when the screen uses runtime actions:
+Static preview works without a runtime API contract. When the contract exists,
+preview reads and enables it automatically:
 
 ```powershell
 miniprogram preview -d chrome `
-  --mini-program-root D:\my_profile `
-  --backend-base-url https://abc123.lambda-url.ap-south-1.on.aws/
+  --mini-program-root D:\my_profile
 ```
 
 ## 10. Add The Runtime API To A Host Endpoint
 
-If the host already imported the static partner package, re-add the endpoint
-with the same `artifactBaseUrl` and the optional runtime API URL:
+Build a new immutable artifact version after adding or changing the contract,
+then regenerate and import the partner handoff:
 
 ```powershell
-miniprogram host endpoint add my_profile `
+miniprogram artifact build --mini-program-root D:\my_profile
+miniprogram partner package my_profile `
   --artifact-base-url https://<github-user>.github.io/my_profile_static/ `
-  --backend-base-url https://abc123.lambda-url.ap-south-1.on.aws/ `
-  --title "My Profile" `
+  --mini-program-root D:\my_profile `
+  --output D:\my_profile\my_profile.partner.json
+miniprogram host endpoint import D:\my_profile\my_profile.partner.json `
   --project-root D:\my_profile_host `
-  --force
+  --accept-requested-policy
 ```
 
 Then run:

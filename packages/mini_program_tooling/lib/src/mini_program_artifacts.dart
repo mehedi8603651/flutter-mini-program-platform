@@ -17,6 +17,7 @@ abstract final class MiniProgramArtifactErrorCodes {
   static const fileMissing = 'artifact_file_missing';
   static const checksumMismatch = 'artifact_checksum_mismatch';
   static const latestInvalid = 'artifact_latest_invalid';
+  static const publisherBackendInvalid = 'artifact_publisher_backend_invalid';
   static const pathUnsafe = 'artifact_path_unsafe';
   static const ioFailed = 'artifact_io_failed';
 }
@@ -287,6 +288,22 @@ class MiniProgramArtifactBuilder {
         assetsRoot: assetsTarget,
       );
 
+      final publisherBackendSourcePath = p.join(
+        miniProgramRoot,
+        'publisher_backend.json',
+      );
+      MiniProgramPublisherBackendContract? publisherBackendContract;
+      if (await File(publisherBackendSourcePath).exists()) {
+        publisherBackendContract = await _readPublisherBackendContract(
+          publisherBackendSourcePath,
+          expectedAppId: buildResult.miniProgramId,
+        );
+        await _writeCanonicalJson(
+          p.join(stagingPath, 'publisher_backend.json'),
+          publisherBackendContract.toJson(),
+        );
+      }
+
       await _writeCanonicalJson(p.join(stagingPath, 'release.json'), {
         'schemaVersion': 1,
         'artifactLayoutVersion': artifactLayoutVersion,
@@ -295,6 +312,8 @@ class MiniProgramArtifactBuilder {
         'manifest': 'manifest.json',
         'screensPath': 'screens/',
         'assetsPath': 'assets/',
+        if (publisherBackendContract != null)
+          'publisherBackend': 'publisher_backend.json',
         'checksums': 'checksums.json',
       });
 
@@ -658,12 +677,22 @@ class MiniProgramArtifactVerifier {
       'manifest': 'manifest.json',
       'screensPath': 'screens/',
       'assetsPath': 'assets/',
+      if (await File(p.join(versionRoot, 'publisher_backend.json')).exists())
+        'publisherBackend': 'publisher_backend.json',
       'checksums': 'checksums.json',
     };
     if (_canonicalJson(release) != _canonicalJson(expectedRelease)) {
       throw MiniProgramArtifactException(
         code: MiniProgramArtifactErrorCodes.structureInvalid,
         message: 'Release metadata is invalid: $releasePath',
+      );
+    }
+
+    final publisherBackendPath = p.join(versionRoot, 'publisher_backend.json');
+    if (await File(publisherBackendPath).exists()) {
+      await _readPublisherBackendContract(
+        publisherBackendPath,
+        expectedAppId: expectedAppId,
       );
     }
 
@@ -982,6 +1011,32 @@ MiniProgramManifest _parseManifest(
     throw MiniProgramArtifactException(
       code: MiniProgramArtifactErrorCodes.manifestInvalid,
       message: 'Manifest could not be parsed: $manifestPath\n$error',
+    );
+  }
+}
+
+Future<MiniProgramPublisherBackendContract> _readPublisherBackendContract(
+  String contractPath, {
+  required String expectedAppId,
+}) async {
+  final json = await _readJsonMap(
+    contractPath,
+    code: MiniProgramArtifactErrorCodes.publisherBackendInvalid,
+    label: 'Publisher API contract',
+  );
+  try {
+    final contract = MiniProgramPublisherBackendContract.fromJson(json);
+    if (contract.appId != expectedAppId) {
+      throw FormatException(
+        'Publisher API contract appId "${contract.appId}" does not match '
+        'artifact appId "$expectedAppId".',
+      );
+    }
+    return contract;
+  } catch (error) {
+    throw MiniProgramArtifactException(
+      code: MiniProgramArtifactErrorCodes.publisherBackendInvalid,
+      message: 'Publisher API contract is invalid: $contractPath\n$error',
     );
   }
 }

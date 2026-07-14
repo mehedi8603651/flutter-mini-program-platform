@@ -94,6 +94,12 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
             'Output JSON package path. Defaults to ./<mini-program-id>.partner.json.',
       )
       ..addOption(
+        'mini-program-root',
+        help:
+            'Mini-program root used to detect publisher_backend.json. '
+            'Defaults to the current directory.',
+      )
+      ..addOption(
         'env',
         help:
             'Ignored legacy option. Static artifact handoff requires --artifact-base-url.',
@@ -126,6 +132,33 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       explicitApiBaseUrl:
           results.option('artifact-base-url') ?? results.option('api-base-url'),
     );
+    final miniProgramRootPath = p.normalize(
+      p.absolute(
+        results.option('mini-program-root') ?? _currentWorkingDirectory(),
+      ),
+    );
+    final publisherBackendContractPath = p.join(
+      miniProgramRootPath,
+      'publisher_backend.json',
+    );
+    var requestedPublisherApi = const <String, Object?>{};
+    if (await File(publisherBackendContractPath).exists()) {
+      final contract = await _publisherBackendContractController.readContract(
+        contractPath: publisherBackendContractPath,
+        allowLocalHttp: true,
+      );
+      if (contract.appId != appId) {
+        throw FormatException(
+          'publisher_backend.json appId "${contract.appId}" does not match '
+          'partner package appId "$appId".',
+        );
+      }
+      requestedPublisherApi = <String, Object?>{
+        'enabled': true,
+        'reason': contract.permissionReason,
+        'contract': 'publisher_backend.json',
+      };
+    }
     final result = await _partnerHandoffController.createPackage(
       MiniProgramPartnerPackageRequest(
         appId: appId,
@@ -134,6 +167,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
             : _defaultTitleForAppId(appId),
         artifactBaseUri: Uri.parse(apiBaseUrl),
         outputPath: results.option('output'),
+        requestedPublisherApi: requestedPublisherApi,
       ),
     );
     _stdout.writeln(_formatPartnerPackageResult(result));
@@ -217,21 +251,6 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
             'Legacy alias for --artifact-base-url. Kept for existing scripts.',
       )
       ..addOption(
-        'backend-base-url',
-        help:
-            'Optional publisher-owned business API base URL, for example https://publisher.example.com/api/.',
-      )
-      ..addFlag(
-        'backend-local-mock',
-        negatable: false,
-        help: 'Use the local mock Publisher API at http://127.0.0.1:<port>/.',
-      )
-      ..addOption(
-        'backend-local-mock-port',
-        defaultsTo: '9090',
-        help: 'Local mock Publisher API port used with --backend-local-mock.',
-      )
-      ..addOption(
         'title',
         help:
             'Display title to write into mini_program_registry.dart. Defaults to a title-cased appId.',
@@ -272,39 +291,6 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         '$rawApiBaseUrl',
       );
     }
-    final rawBackendBaseUrl = results.option('backend-base-url')?.trim() ?? '';
-    final useLocalMockBackend = results.flag('backend-local-mock');
-    if (useLocalMockBackend && rawBackendBaseUrl.isNotEmpty) {
-      throw const FormatException(
-        'host endpoint add cannot use both --backend-local-mock and '
-        '--backend-base-url.',
-      );
-    }
-    final rawLocalMockPort =
-        results.option('backend-local-mock-port')?.trim() ?? '9090';
-    final localMockPort = int.tryParse(rawLocalMockPort);
-    if (useLocalMockBackend &&
-        (localMockPort == null ||
-            localMockPort <= 0 ||
-            localMockPort > 65535)) {
-      throw const FormatException(
-        'host endpoint add --backend-local-mock-port must be 1-65535.',
-      );
-    }
-    final backendBaseUri = useLocalMockBackend
-        ? Uri.parse('http://127.0.0.1:$localMockPort/')
-        : rawBackendBaseUrl.isEmpty
-        ? null
-        : Uri.tryParse(rawBackendBaseUrl);
-    if (rawBackendBaseUrl.isNotEmpty &&
-        (backendBaseUri == null ||
-            !backendBaseUri.hasScheme ||
-            backendBaseUri.host.isEmpty)) {
-      throw FormatException(
-        'host endpoint add expected an absolute --backend-base-url, got: '
-        '$rawBackendBaseUrl',
-      );
-    }
     final projectRootPath =
         results.option('project-root') ?? _currentWorkingDirectory();
     await _requireEmbeddedHostProject(projectRootPath);
@@ -314,12 +300,6 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         appId: results.rest.single,
         title: results.option('title'),
         apiBaseUri: apiBaseUri,
-        backendBaseUri: backendBaseUri,
-        backendMode: useLocalMockBackend
-            ? 'local_mock'
-            : backendBaseUri == null
-            ? 'none'
-            : 'remote',
         force: results.flag('force'),
       ),
     );
@@ -377,6 +357,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         apiBaseUri: handoff.artifactBaseUri,
         policySourcePath: packagePath,
         requestedCache: handoff.requestedCache,
+        requestedPublisherApi: handoff.requestedPublisherApi,
         acceptRequestedPolicy: results.flag('accept-requested-policy'),
         force: results.flag('force'),
       ),

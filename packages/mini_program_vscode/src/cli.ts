@@ -80,9 +80,6 @@ export interface HostEndpointAddArgsOptions {
   readonly appId: string;
   readonly title?: string;
   readonly apiBaseUrl: string;
-  readonly backendBaseUrl?: string;
-  readonly backendLocalMock?: boolean;
-  readonly backendLocalMockPort?: string;
   readonly projectRoot: string;
   readonly force?: boolean;
 }
@@ -159,8 +156,9 @@ export interface PublisherBackendContractBaseArgsOptions {
 
 export interface PublisherBackendContractInitArgsOptions
   extends PublisherBackendContractBaseArgsOptions {
-  readonly backendBaseUrl: string;
+  readonly publisherApiUrl: string;
   readonly appId?: string;
+  readonly permissionReason?: string;
   readonly healthEndpoint?: string;
   readonly outputPath?: string;
 }
@@ -319,15 +317,6 @@ export function buildHostEndpointAddArgs(
   if (options.title?.trim()) {
     args.push('--title', options.title.trim());
   }
-  if (options.backendBaseUrl?.trim()) {
-    args.push('--backend-base-url', options.backendBaseUrl.trim());
-  }
-  if (options.backendLocalMock) {
-    args.push('--backend-local-mock');
-    if (options.backendLocalMockPort?.trim()) {
-      args.push('--backend-local-mock-port', options.backendLocalMockPort.trim());
-    }
-  }
   args.push('--project-root', options.projectRoot);
   if (options.force) {
     args.push('--force');
@@ -449,11 +438,14 @@ export function buildPublisherBackendContractInitArgs(
     'publisher-api',
     'contract',
     'init',
-    '--backend-base-url',
-    options.backendBaseUrl.trim(),
+    '--publisher-api-url',
+    options.publisherApiUrl.trim(),
   ];
   if (options.appId?.trim()) {
     args.push('--app-id', options.appId.trim());
+  }
+  if (options.permissionReason?.trim()) {
+    args.push('--permission-reason', options.permissionReason.trim());
   }
   if (options.healthEndpoint?.trim()) {
     args.push('--health-endpoint', options.healthEndpoint.trim());

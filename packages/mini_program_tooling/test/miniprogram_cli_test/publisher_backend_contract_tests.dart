@@ -14,7 +14,7 @@ void _registerPublisherBackendContractTests() {
 
       expect(exitCode, 0);
       final output = stdoutBuffer.toString();
-      expect(output, contains('init --backend-base-url'));
+      expect(output, contains('init --publisher-api-url'));
       expect(output, contains('validate [--mini-program-root'));
       expect(output, contains('smoke [--mini-program-root'));
       expect(output, isNot(contains('access-key')));
@@ -42,8 +42,10 @@ void _registerPublisherBackendContractTests() {
             'publisher-api',
             'contract',
             'init',
-            '--backend-base-url',
+            '--publisher-api-url',
             'http://127.0.0.1:9090',
+            '--permission-reason',
+            'Load coupon offers.',
             '--allow-local-http',
             '--json',
           ]);
@@ -58,6 +60,7 @@ void _registerPublisherBackendContractTests() {
           jsonDecode(await File(contractPath).readAsString())
               as Map<String, dynamic>;
       expect(contractJson.containsKey('accessMode'), isFalse);
+      expect(contractJson['permissionReason'], 'Load coupon offers.');
     },
   );
 

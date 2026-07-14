@@ -21,108 +21,127 @@ void main() {
       }
     });
 
-    test(
-      'creates host policies JSON, resolver, and endpoint policy wiring',
-      () async {
-        final hostRoot = p.join(tempDir.path, 'host_app');
-        await _writeHostProject(hostRoot);
-        final handoffPath = p.join(tempDir.path, 'calculator.partner.json');
+    test('creates host policies JSON, resolver, and endpoint policy wiring', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeHostProject(hostRoot);
+      final handoffPath = p.join(tempDir.path, 'calculator.partner.json');
 
-        final result = await MiniProgramHostController().addEndpoint(
-          MiniProgramHostEndpointAddRequest(
-            projectRootPath: hostRoot,
-            appId: 'calculator',
-            title: 'Calculator',
-            apiBaseUri: Uri.parse('https://cdn.example.com/calculator/'),
-            policySourcePath: handoffPath,
-            requestedCache: const <String, Object?>{
-              'state': <String, Object?>{
-                'enabled': true,
-                'reason': 'calculator history',
-                'recommendedMaxBytes': 1048576,
-                'recommendedTtlDays': 30,
-              },
-            },
-          ),
-        );
-
-        final policies =
-            jsonDecode(await File(result.policyFilePath).readAsString())
-                as Map<String, dynamic>;
-        expect(policies, <String, dynamic>{
-          'schemaVersion': 1,
-          'apps': <String, dynamic>{
-            'calculator': <String, dynamic>{
-              'requested': <String, dynamic>{
-                'source': 'calculator.partner.json',
-                'cache': <String, dynamic>{
-                  'state': <String, dynamic>{
-                    'enabled': true,
-                    'reason': 'calculator history',
-                    'recommendedMaxBytes': 1048576,
-                    'recommendedTtlDays': 30,
-                  },
-                },
-                'permissions': <String, dynamic>{},
-              },
-              'accepted': <String, dynamic>{
-                'cache': <String, dynamic>{
-                  'state': <String, dynamic>{
-                    'enabled': true,
-                    'maxBytes': 1048576,
-                    'ttlDays': 30,
-                  },
-                },
-                'liveState': <String, dynamic>{
-                  'maxBytes': 2097152,
-                  'maxEntries': 1000,
-                  'maxValueBytes': 262144,
-                  'maxDepth': 32,
-                },
-                'permissions': <String, dynamic>{},
-              },
+      final result = await MiniProgramHostController().addEndpoint(
+        MiniProgramHostEndpointAddRequest(
+          projectRootPath: hostRoot,
+          appId: 'calculator',
+          title: 'Calculator',
+          apiBaseUri: Uri.parse('https://cdn.example.com/calculator/'),
+          policySourcePath: handoffPath,
+          requestedCache: const <String, Object?>{
+            'state': <String, Object?>{
+              'enabled': true,
+              'reason': 'calculator history',
+              'recommendedMaxBytes': 1048576,
+              'recommendedTtlDays': 30,
             },
           },
-        });
+          requestedPublisherApi: const <String, Object?>{
+            'enabled': true,
+            'reason': 'Load calculator exchange rates.',
+            'contract': 'publisher_backend.json',
+          },
+        ),
+      );
 
-        final endpoints = await File(result.filePath).readAsString();
-        expect(
-          endpoints,
-          contains("import 'mini_program_policy_resolver.dart';"),
-        );
-        expect(
-          endpoints,
-          contains(
-            'cachePolicy: cachePolicyForMiniProgram(MiniPrograms.calculator.appId)',
-          ),
-        );
-        expect(
-          endpoints,
-          contains(
-            'liveStatePolicy: liveStatePolicyForMiniProgram(MiniPrograms.calculator.appId)',
-          ),
-        );
+      final policies =
+          jsonDecode(await File(result.policyFilePath).readAsString())
+              as Map<String, dynamic>;
+      expect(policies, <String, dynamic>{
+        'schemaVersion': 1,
+        'apps': <String, dynamic>{
+          'calculator': <String, dynamic>{
+            'requested': <String, dynamic>{
+              'source': 'calculator.partner.json',
+              'cache': <String, dynamic>{
+                'state': <String, dynamic>{
+                  'enabled': true,
+                  'reason': 'calculator history',
+                  'recommendedMaxBytes': 1048576,
+                  'recommendedTtlDays': 30,
+                },
+              },
+              'publisherApi': <String, dynamic>{
+                'enabled': true,
+                'reason': 'Load calculator exchange rates.',
+                'contract': 'publisher_backend.json',
+              },
+              'permissions': <String, dynamic>{},
+            },
+            'accepted': <String, dynamic>{
+              'cache': <String, dynamic>{
+                'state': <String, dynamic>{
+                  'enabled': true,
+                  'maxBytes': 1048576,
+                  'ttlDays': 30,
+                },
+              },
+              'liveState': <String, dynamic>{
+                'maxBytes': 2097152,
+                'maxEntries': 1000,
+                'maxValueBytes': 262144,
+                'maxDepth': 32,
+              },
+              'publisherApi': <String, dynamic>{'enabled': false},
+              'permissions': <String, dynamic>{},
+            },
+          },
+        },
+      });
 
-        final resolver = await File(
-          result.policyResolverFilePath,
-        ).readAsString();
-        expect(resolver, contains('case "calculator":'));
-        expect(resolver, contains('maxStateBytes: 1048576'));
-        expect(resolver, contains('stateInactiveTtl: Duration(days: 30)'));
-        expect(
-          resolver,
-          contains('MiniProgramLiveStatePolicy liveStatePolicyForMiniProgram'),
-        );
-        expect(resolver, contains('maxBytes: 2097152'));
-        expect(resolver, contains('maxEntries: 1000'));
-        expect(
-          resolver,
-          contains(
-            'allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{MiniProgramCacheBucket.state}',
-          ),
-        );
-      },
-    );
+      final endpoints = await File(result.filePath).readAsString();
+      expect(
+        endpoints,
+        contains("import 'mini_program_policy_resolver.dart';"),
+      );
+      expect(
+        endpoints,
+        contains(
+          'cachePolicy: cachePolicyForMiniProgram(MiniPrograms.calculator.appId)',
+        ),
+      );
+      expect(
+        endpoints,
+        contains(
+          'liveStatePolicy: liveStatePolicyForMiniProgram(MiniPrograms.calculator.appId)',
+        ),
+      );
+      expect(
+        endpoints,
+        contains(
+          'publisherApiPolicy: publisherApiPolicyForMiniProgram(MiniPrograms.calculator.appId)',
+        ),
+      );
+
+      final resolver = await File(result.policyResolverFilePath).readAsString();
+      expect(resolver, contains('case "calculator":'));
+      expect(resolver, contains('maxStateBytes: 1048576'));
+      expect(resolver, contains('stateInactiveTtl: Duration(days: 30)'));
+      expect(
+        resolver,
+        contains('MiniProgramLiveStatePolicy liveStatePolicyForMiniProgram'),
+      );
+      expect(resolver, contains('maxBytes: 2097152'));
+      expect(resolver, contains('maxEntries: 1000'));
+      expect(
+        resolver,
+        contains(
+          'MiniProgramPublisherApiPolicy publisherApiPolicyForMiniProgram',
+        ),
+      );
+      expect(resolver, contains('enabled: false'));
+      expect(
+        resolver,
+        contains(
+          'allowedMiniProgramCacheBuckets: <MiniProgramCacheBucket>{MiniProgramCacheBucket.state}',
+        ),
+      );
+    });
 
     test('preserves accepted policy on re-import and accepts explicitly', () async {
       final hostRoot = p.join(tempDir.path, 'host_app');
@@ -144,6 +163,11 @@ void main() {
               'recommendedTtlDays': 30,
             },
           },
+          requestedPublisherApi: const <String, Object?>{
+            'enabled': true,
+            'reason': 'Load rates.',
+            'contract': 'publisher_backend.json',
+          },
         ),
       );
       await File(initial.policyFilePath).writeAsString(
@@ -157,6 +181,7 @@ void main() {
                   'state': <String, Object?>{'enabled': true, 'maxBytes': 524288, 'ttlDays': 7},
                 },
                 'liveState': <String, Object?>{'maxBytes': 3145728, 'maxEntries': 1500, 'maxValueBytes': 524288, 'maxDepth': 24},
+                'publisherApi': <String, Object?>{'enabled': false, 'reviewedBy': 'host-security'},
                 'futurePolicy': <String, Object?>{'enabled': true},
                 'permissions': <String, Object?>{},
               },
@@ -178,6 +203,11 @@ void main() {
               'recommendedMaxBytes': 2097152,
               'recommendedTtlDays': 60,
             },
+          },
+          requestedPublisherApi: const <String, Object?>{
+            'enabled': true,
+            'reason': 'Load rates.',
+            'contract': 'publisher_backend.json',
           },
         ),
       );
@@ -211,6 +241,10 @@ void main() {
         (app['accepted'] as Map<String, dynamic>)['futurePolicy'],
         <String, dynamic>{'enabled': true},
       );
+      expect(
+        (app['accepted'] as Map<String, dynamic>)['publisherApi'],
+        <String, dynamic>{'enabled': false, 'reviewedBy': 'host-security'},
+      );
 
       await controller.addEndpoint(
         MiniProgramHostEndpointAddRequest(
@@ -226,6 +260,11 @@ void main() {
               'recommendedMaxBytes': 2097152,
               'recommendedTtlDays': 60,
             },
+          },
+          requestedPublisherApi: const <String, Object?>{
+            'enabled': true,
+            'reason': 'Load rates.',
+            'contract': 'publisher_backend.json',
           },
         ),
       );
@@ -244,6 +283,10 @@ void main() {
       expect(
         (app['accepted'] as Map<String, dynamic>)['liveState'],
         containsPair('maxBytes', 3145728),
+      );
+      expect(
+        (app['accepted'] as Map<String, dynamic>)['publisherApi'],
+        <String, dynamic>{'enabled': true, 'reviewedBy': 'host-security'},
       );
     });
 

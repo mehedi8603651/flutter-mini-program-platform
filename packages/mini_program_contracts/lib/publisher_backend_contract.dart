@@ -63,6 +63,7 @@ class MiniProgramPublisherBackendContract {
     this.contractVersion = currentContractVersion,
     required String appId,
     required Uri backendBaseUri,
+    String permissionReason = defaultPermissionReason,
     String healthEndpoint = defaultHealthEndpoint,
     List<MiniProgramPublisherBackendSmokeCase>? smokeTests,
     bool allowLocalHttp = false,
@@ -71,6 +72,7 @@ class MiniProgramPublisherBackendContract {
          backendBaseUri,
          allowLocalHttp: allowLocalHttp,
        ),
+       permissionReason = _normalizePermissionReason(permissionReason),
        healthEndpoint = _normalizeRelativeEndpoint(
          healthEndpoint,
          'healthEndpoint',
@@ -120,6 +122,9 @@ class MiniProgramPublisherBackendContract {
       contractVersion: _readString(json, 'contractVersion'),
       appId: _readString(json, 'appId'),
       backendBaseUri: backendBaseUri,
+      permissionReason:
+          _readOptionalString(json, 'permissionReason') ??
+          defaultPermissionReason,
       healthEndpoint: healthEndpoint,
       smokeTests: _readSmokeTests(
         json['smokeTests'],
@@ -141,6 +146,10 @@ class MiniProgramPublisherBackendContract {
   /// Default health route.
   static const String defaultHealthEndpoint = 'health';
 
+  /// Default host-facing reason for requesting Publisher API access.
+  static const String defaultPermissionReason =
+      'Access publisher-hosted runtime data.';
+
   /// Contract schema version.
   final int schemaVersion;
 
@@ -152,6 +161,9 @@ class MiniProgramPublisherBackendContract {
 
   /// Publisher-owned Publisher API base URL.
   final Uri backendBaseUri;
+
+  /// Host-facing explanation for why this mini-program needs network access.
+  final String permissionReason;
 
   /// Relative health endpoint.
   final String healthEndpoint;
@@ -167,6 +179,7 @@ class MiniProgramPublisherBackendContract {
       'contractVersion': contractVersion,
       'appId': appId,
       'backendBaseUrl': backendBaseUri.toString(),
+      'permissionReason': permissionReason,
       'healthEndpoint': healthEndpoint,
       'smokeTests': smokeTests.map((test) => test.toJson()).toList(),
     };
@@ -306,6 +319,16 @@ class MiniProgramPublisherBackendSmokeExpectation {
 }
 
 String _normalizeAppId(String value) => _normalizeSafeId(value, 'appId');
+
+String _normalizePermissionReason(String value) {
+  final reason = value.trim();
+  if (reason.isEmpty || reason.length > 256) {
+    throw const FormatException(
+      'Publisher API contract permissionReason must be 1-256 characters.',
+    );
+  }
+  return reason;
+}
 
 String _normalizeSafeId(String value, String label) {
   final trimmed = value.trim();

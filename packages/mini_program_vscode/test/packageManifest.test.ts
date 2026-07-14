@@ -24,7 +24,7 @@ test('package manifest exposes provider-neutral Publisher API commands', () => {
     ),
   );
 
-  assert.equal(manifest.version, '0.4.0');
+  assert.equal(manifest.version, '0.4.1');
   const contributedCommands = [
     'miniProgramTools.publishPublicStaticMiniProgram',
     'miniProgramTools.importHostEndpoint',

@@ -134,7 +134,7 @@ Mp.backend.query(
   });
 
   test(
-    'workflow status reports host endpoints without access fields',
+    'workflow status reports artifact endpoints without Publisher API URLs',
     () async {
       final hostRoot = p.join(tempDir.path, 'host_app');
       await _writeEmbeddedHostFixture(hostRoot);
@@ -143,7 +143,7 @@ Mp.backend.query(
       );
       await endpointFile.writeAsString('''
 // BEGIN MINI_PROGRAM_ENDPOINTS_JSON
-// {"coupon_center":{"apiBaseUri":"https://static.example.com/coupon","backendBaseUri":"https://publisher.example.com/api","backendMode":"remote"}}
+// {"coupon_center":{"apiBaseUri":"https://static.example.com/coupon"}}
 // END MINI_PROGRAM_ENDPOINTS_JSON
 ''');
       final stdoutBuffer = StringBuffer();
@@ -168,8 +168,9 @@ Mp.backend.query(
       expect(endpoint['apiBaseUri'], 'https://static.example.com/coupon');
       expect(endpoint.containsKey('accessMode'), isFalse);
       expect(endpoint.containsKey(legacySecretFlag), isFalse);
-      expect(endpoint['backendConfigured'], isTrue);
-      expect(endpoint['backendMode'], 'remote');
+      expect(endpoint.containsKey('backendConfigured'), isFalse);
+      expect(endpoint.containsKey('backendMode'), isFalse);
+      expect(endpoint.containsKey('backendBaseUri'), isFalse);
     },
   );
 
