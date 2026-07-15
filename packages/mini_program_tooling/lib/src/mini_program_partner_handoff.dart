@@ -22,6 +22,7 @@ class MiniProgramPartnerHandoff {
     required String generatedAtUtc,
     Map<String, Object?> requestedCache = const <String, Object?>{},
     Map<String, Object?> requestedPublisherApi = const <String, Object?>{},
+    Map<String, Object?> requestedPermissions = const <String, Object?>{},
   }) : appId = appId.trim(),
        title = title.trim(),
        artifactBaseUri = _normalizeArtifactBaseUri(
@@ -31,6 +32,9 @@ class MiniProgramPartnerHandoff {
        requestedCache = _normalizeRequestedCache(requestedCache),
        requestedPublisherApi = _normalizeRequestedPublisherApi(
          requestedPublisherApi,
+       ),
+       requestedPermissions = _normalizeRequestedPermissions(
+         requestedPermissions,
        ) {
     if (schemaVersion != 1 &&
         schemaVersion != legacySchemaVersion &&
@@ -86,6 +90,9 @@ class MiniProgramPartnerHandoff {
       requestedPublisherApi: _normalizeRequestedPublisherApi(
         decoded['requestedPublisherApi'],
       ),
+      requestedPermissions: _normalizeRequestedPermissions(
+        decoded['requestedPermissions'],
+      ),
     );
   }
 
@@ -107,6 +114,7 @@ class MiniProgramPartnerHandoff {
   final String generatedAtUtc;
   final Map<String, Object?> requestedCache;
   final Map<String, Object?> requestedPublisherApi;
+  final Map<String, Object?> requestedPermissions;
 
   Uri get apiBaseUri => artifactBaseUri;
 
@@ -121,7 +129,79 @@ class MiniProgramPartnerHandoff {
       if (requestedCache.isNotEmpty) 'requestedCache': requestedCache,
       if (requestedPublisherApi.isNotEmpty)
         'requestedPublisherApi': requestedPublisherApi,
+      if (requestedPermissions.isNotEmpty)
+        'requestedPermissions': requestedPermissions,
     };
+  }
+
+  static Map<String, Object?> _normalizeRequestedPermissions(Object? raw) {
+    if (raw == null) {
+      return const <String, Object?>{};
+    }
+    if (raw is! Map) {
+      throw const MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions must be an object.',
+      );
+    }
+    final normalized = <String, Object?>{};
+    for (final entry in raw.entries) {
+      if (entry.key != 'location') {
+        throw MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff requestedPermissions contains an '
+          'unsupported permission: ${entry.key}.',
+        );
+      }
+      final value = entry.value;
+      if (value is! Map) {
+        throw const MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff requestedPermissions.location must be '
+          'an object.',
+        );
+      }
+      const allowedKeys = <String>{'enabled', 'reason', 'accuracy', 'mode'};
+      for (final key in value.keys) {
+        if (key is! String || !allowedKeys.contains(key)) {
+          throw MiniProgramPartnerHandoffException(
+            'MiniProgram partner handoff requestedPermissions.location '
+            'contains an unsupported property: $key.',
+          );
+        }
+      }
+      final enabled = value['enabled'];
+      if (enabled is! bool) {
+        throw const MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff '
+          'requestedPermissions.location.enabled must be a boolean.',
+        );
+      }
+      final reason = value['reason'];
+      if (reason is! String || reason.trim().isEmpty || reason.length > 256) {
+        throw const MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff '
+          'requestedPermissions.location.reason must be 1-256 characters.',
+        );
+      }
+      if (value['accuracy'] != 'approximate') {
+        throw const MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff '
+          'requestedPermissions.location.accuracy must be "approximate".',
+        );
+      }
+      if (value['mode'] != 'whenInUse') {
+        throw const MiniProgramPartnerHandoffException(
+          'MiniProgram partner handoff '
+          'requestedPermissions.location.mode must be "whenInUse".',
+        );
+      }
+      normalized['location'] =
+          Map<String, Object?>.unmodifiable(<String, Object?>{
+            'enabled': enabled,
+            'reason': reason.trim(),
+            'accuracy': 'approximate',
+            'mode': 'whenInUse',
+          });
+    }
+    return Map<String, Object?>.unmodifiable(normalized);
   }
 
   static Map<String, Object?> _normalizeRequestedPublisherApi(Object? raw) {
@@ -358,6 +438,7 @@ class MiniProgramPartnerPackageRequest {
     this.generatedAtUtc,
     this.requestedCache = const <String, Object?>{},
     this.requestedPublisherApi = const <String, Object?>{},
+    this.requestedPermissions = const <String, Object?>{},
   });
 
   final String appId;
@@ -369,6 +450,7 @@ class MiniProgramPartnerPackageRequest {
   final DateTime? generatedAtUtc;
   final Map<String, Object?> requestedCache;
   final Map<String, Object?> requestedPublisherApi;
+  final Map<String, Object?> requestedPermissions;
 }
 
 class MiniProgramPartnerPackageResult {
@@ -397,6 +479,7 @@ class MiniProgramPartnerHandoffController {
           .toIso8601String(),
       requestedCache: request.requestedCache,
       requestedPublisherApi: request.requestedPublisherApi,
+      requestedPermissions: request.requestedPermissions,
     );
     final outputPath = p.normalize(
       p.absolute(

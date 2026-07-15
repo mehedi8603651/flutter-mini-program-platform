@@ -60,8 +60,8 @@ class MiniProgramPreviewHostInitializer {
     'web',
     'windows',
   };
-  static const String _sdkConstraint = '^0.5.12';
-  static const String _contractsConstraint = '^0.3.6';
+  static const String _sdkConstraint = '^0.5.13';
+  static const String _contractsConstraint = '^0.3.7';
   static const String _httpConstraint = '^1.5.0';
   static const String _projectName = 'mini_program_preview_host';
 

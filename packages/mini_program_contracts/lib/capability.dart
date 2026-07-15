@@ -28,6 +28,9 @@ abstract final class CapabilityIds {
   /// Host opted into embedded browser or webview feature support.
   static const CapabilityId browserWebview = 'browser.webview';
 
+  /// Host can provide an explicitly requested one-time current location.
+  static const CapabilityId locationCurrent = 'location.current';
+
   /// Stable ordering used by scaffolds and human-readable output.
   static const List<CapabilityId> standardValues = <CapabilityId>[
     auth,
@@ -37,6 +40,7 @@ abstract final class CapabilityIds {
     mediaVideo,
     documentPdf,
     browserWebview,
+    locationCurrent,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

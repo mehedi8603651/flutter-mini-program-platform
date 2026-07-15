@@ -36,11 +36,110 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         return _runHostRun(arguments.sublist(1));
       case 'endpoint':
         return _runHostEndpoint(arguments.sublist(1));
+      case 'capability':
+        return _runHostCapability(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown host command: ${arguments.first}');
         _stderr.writeln(_hostUsage());
         return 64;
     }
+  }
+
+  Future<int> _runHostCapability(List<String> arguments) async {
+    if (_isGroupHelpRequest(arguments)) {
+      _stdout.writeln(_hostCapabilityUsage());
+      return 0;
+    }
+    if (arguments.isEmpty) {
+      _stderr.writeln(_hostCapabilityUsage());
+      return 64;
+    }
+
+    switch (arguments.first) {
+      case 'init':
+        return _runHostCapabilityInit(arguments.sublist(1));
+      default:
+        _stderr.writeln('Unknown host capability command: ${arguments.first}');
+        _stderr.writeln(_hostCapabilityUsage());
+        return 64;
+    }
+  }
+
+  Future<int> _runHostCapabilityInit(List<String> arguments) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        negatable: false,
+        help: 'Show usage information.',
+      )
+      ..addOption(
+        'platform',
+        help: 'Host platform to configure. Current value: android.',
+      )
+      ..addOption(
+        'project-root',
+        help:
+            'Existing embedded Flutter host root. Defaults to the current directory.',
+      )
+      ..addFlag(
+        'json',
+        negatable: false,
+        help: 'Write a machine-readable result.',
+      );
+    final results = parser.parse(arguments);
+    if (results.flag('help')) {
+      _stdout.writeln(
+        'Usage: miniprogram host capability init location --platform android [options]',
+      );
+      _stdout.writeln(parser.usage);
+      return 0;
+    }
+    if (results.rest.length != 1) {
+      throw const FormatException(
+        'host capability init expects exactly one capability name.',
+      );
+    }
+    final platform = results.option('platform')?.trim() ?? '';
+    if (platform.isEmpty) {
+      throw const FormatException(
+        'host capability init requires --platform android.',
+      );
+    }
+
+    final result = await _hostCapabilityInstaller.initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath:
+            results.option('project-root') ?? _currentWorkingDirectory(),
+        capability: results.rest.single,
+        platform: platform,
+      ),
+    );
+    if (results.flag('json')) {
+      _stdout.writeln(_prettyJson(result.toJson()));
+      return 0;
+    }
+    if (result.alreadyInstalled) {
+      _stdout.writeln(
+        'Android one-time approximate location support is already installed.',
+      );
+    } else {
+      _stdout.writeln(
+        'Installed Android one-time approximate location support.',
+      );
+      for (final path in result.createdPaths) {
+        _stdout.writeln('Created: $path');
+      }
+      for (final path in result.updatedPaths) {
+        _stdout.writeln('Updated: $path');
+      }
+    }
+    _stdout.writeln(
+      'No mini-program permission was accepted. Review '
+      'lib/mini_program/mini_program_policies.json before enabling location '
+      'for an app.',
+    );
+    return 0;
   }
 
   Future<int> _runHostEndpoint(List<String> arguments) async {
@@ -358,6 +457,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         policySourcePath: packagePath,
         requestedCache: handoff.requestedCache,
         requestedPublisherApi: handoff.requestedPublisherApi,
+        requestedPermissions: handoff.requestedPermissions,
         acceptRequestedPolicy: results.flag('accept-requested-policy'),
         force: results.flag('force'),
       ),

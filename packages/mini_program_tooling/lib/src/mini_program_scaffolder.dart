@@ -425,7 +425,7 @@ class MiniProgramScaffolder {
     }
 
     return '''
-  mini_program_ui: ^0.1.11
+  mini_program_ui: ^0.1.12
 ''';
   }
 

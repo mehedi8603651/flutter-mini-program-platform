@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.6` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.1.11` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.5.12` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.6.13` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.7` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.1.12` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.5.13` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.6.14` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -65,6 +65,9 @@ These are system invariants, not preferences:
 11. Published version directories are immutable. A changed release gets a new version.
 12. Mini-program JSON is strictly validated before rendering or dispatching actions.
 13. Session, token, password, login data, and other sensitive host storage are never exposed as mini-program cache buckets.
+14. Device location is an optional host capability: a mini-program may request
+    one-time approximate foreground access, but runtime authority comes only
+    from host-accepted policy and a host-installed provider.
 
 ## Repository Map
 
@@ -114,6 +117,7 @@ packages/mini_program_contracts/
 |   |-- sdk_version.g.dart                      # Generated version JSON code; never edit manually
 |   |-- capability.dart                         # Host capability names and capability contracts
 |   |-- error_codes.dart                        # Stable machine-readable error codes used across layers
+|   |-- mini_program_location.dart              # Approximate one-time location enums and JSON-safe result contract
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -201,6 +205,8 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_auth.dart              # Host-owned mini-program authentication abstractions
 |   |-- observability/
 |   |   `-- sdk_logger.dart                     # Provider-neutral structured SDK logging hook
+|   |-- location/
+|   |   `-- mini_program_location.dart          # Host provider, accepted policy, and structured provider failures
 |   |-- state/
 |   |   `-- mp_state.dart                       # Reactive store, manager, routing, batches, scopes, and live-state limits
 |   |-- cache/
@@ -280,6 +286,7 @@ packages/mini_program_tooling/
 |       |-- mini_program_artifacts.dart          # Builds/verifies immutable portable artifact bundles
 |       |-- mini_program_partner_handoff.dart    # Reads/writes partner handoff and requested policy
 |       |-- mini_program_embedding_initializer.dart # Generates host integration files
+|       |-- mini_program_host_capability_installer.dart # Installs optional generic native host providers safely
 |       |-- mini_program_host_controller.dart    # Starts and controls generated/reference hosts
 |       |-- mini_program_preview_host_initializer.dart # Generates a preview Flutter host
 |       |-- mini_program_preview_controller.dart # Coordinates preview build/server/host lifecycle
@@ -458,10 +465,18 @@ lib/mini_program/
 |-- mini_program_endpoints.dart                 # Endpoint-import generated artifact routes plus accepted policies
 |-- mini_program_registry.dart                  # Generated app ID to endpoint registry
 |-- mini_program_policies.json                  # Host-owned requested/accepted policy source of truth
-|-- mini_program_policy_resolver.dart           # Generated Dart mapping for cache/live-state accepted policy
+|-- mini_program_policy_resolver.dart           # Generated Dart mapping for accepted cache/state/location policy
 |-- mini_program_launcher.dart                  # Generated dynamic and registry-based launch helpers
+|-- app_android_location_provider.dart          # Optional host-owned adapter installed by the location capability command
 `-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
+
+Android one-time approximate location additionally installs
+`MiniProgramLocationChannel.kt`, registers it from `MainActivity`, and adds
+only `ACCESS_COARSE_LOCATION`. Run
+`miniprogram host capability init location --platform android` once per host.
+The installer never edits accepted app policy; provider availability and app
+authorization remain separate controls.
 
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
@@ -582,6 +597,8 @@ Important state APIs include:
 - `Mp.condition` for state-driven branches.
 - `Mp.actionScope` plus `Mp.action.call` for reusable local action definitions and in-place updates.
 - `Mp.timer.countdown` for declarative countdown state.
+- `Mp.location.getCurrent` for explicit one-time approximate foreground
+  location through an accepted host policy and installed host provider.
 
 Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
 
@@ -603,7 +620,11 @@ TTL, enabled buckets, and byte limits are enforced consistently by the manager. 
 
 ### Host-Owned Policy
 
-Partner handoff schema version 3 may request cache for `memory`, `data`, `image`, `state`, or `video` and may request Publisher API access when the artifact declares it. Sensitive bucket/key names such as session, login data, token, password, and secret are rejected.
+Partner handoff schema version 3 may request cache for `memory`, `data`,
+`image`, `state`, or `video`, may request Publisher API access when the
+artifact declares it, and may request one-time foreground approximate
+location. Sensitive bucket/key names such as session, login data, token,
+password, and secret are rejected.
 
 `lib/mini_program/mini_program_policies.json` contains:
 
@@ -620,13 +641,26 @@ Partner handoff schema version 3 may request cache for `memory`, `data`, `image`
           "reason": "Load current publisher data.",
           "contract": "publisher_backend.json"
         },
-        "permissions": {}
+        "permissions": {
+          "location": {
+            "enabled": true,
+            "reason": "Load local content for the device area.",
+            "accuracy": "approximate",
+            "mode": "whenInUse"
+          }
+        }
       },
       "accepted": {
         "cache": {},
         "liveState": {},
         "publisherApi": { "enabled": false },
-        "permissions": {}
+        "permissions": {
+          "location": {
+            "enabled": false,
+            "accuracy": "approximate",
+            "mode": "whenInUse"
+          }
+        }
       }
     }
   }
@@ -636,8 +670,12 @@ Partner handoff schema version 3 may request cache for `memory`, `data`, `image`
 Import behavior:
 
 - Normal import updates `requested` and preserves the host's `accepted` values.
-- `--accept-requested-policy` explicitly copies supported requested cache and Publisher API permission into accepted policy without replacing unrelated endpoint files.
-- `--force` regenerates known accepted cache and Publisher API policy and resets live-state limits to safe defaults.
+- `--accept-requested-policy` explicitly copies supported requested cache,
+  Publisher API, and location permission into accepted policy without
+  replacing unrelated endpoint files.
+- New location requests default to denied. Normal re-import preserves the
+  host decision; `--force` resets location to denied and resets live-state
+  limits to safe defaults.
 - Runtime resolver generation reads only `accepted` for enforcement.
 - Unknown accepted fields should be preserved for forward compatibility.
 

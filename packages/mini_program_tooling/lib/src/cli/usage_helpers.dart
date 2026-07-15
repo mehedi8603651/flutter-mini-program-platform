@@ -21,6 +21,7 @@ Commands:
   host run -d <device>
   host endpoint add <mini-program-id> --artifact-base-url <url> [--title <title>]
   host endpoint import <partner-package.json>
+  host capability init location --platform android [--project-root <path>]
   embed init [--project-root <path>]
   artifact-host init [--root <path>]
   artifact-host start --port 8080
@@ -113,6 +114,14 @@ Commands:
   run -d <device>
   endpoint add <mini-program-id> --artifact-base-url <url>
   endpoint import <partner-package.json>
+  capability init location --platform android
+''';
+
+  String _hostCapabilityUsage() => '''
+Usage: miniprogram host capability <command> [arguments]
+
+Commands:
+  init location --platform android [--project-root <path>] [--json]
 ''';
 
   String _hostEndpointUsage() => '''

@@ -13,6 +13,7 @@ import 'local_cli_state.dart';
 import 'mini_program_builder.dart';
 import 'mini_program_artifacts.dart';
 import 'mini_program_host_controller.dart';
+import 'mini_program_host_capability_installer.dart';
 import 'miniprogram_doctor.dart';
 import 'mini_program_embedding_initializer.dart';
 import 'mini_program_path_resolver.dart';
@@ -62,6 +63,8 @@ class MiniprogramCli {
     MiniProgramStaticPublisher staticPublisher =
         const MiniProgramStaticPublisher(),
     MiniProgramHostController? hostController,
+    MiniProgramHostCapabilityInstaller hostCapabilityInstaller =
+        const MiniProgramHostCapabilityInstaller(),
     MiniProgramPartnerHandoffController partnerHandoffController =
         const MiniProgramPartnerHandoffController(),
     MiniprogramDoctor doctor = const MiniprogramDoctor(),
@@ -86,6 +89,7 @@ class MiniprogramCli {
        _previewController = previewController,
        _staticPublisher = staticPublisher,
        _hostController = hostController ?? MiniProgramHostController(),
+       _hostCapabilityInstaller = hostCapabilityInstaller,
        _partnerHandoffController = partnerHandoffController,
        _doctor = doctor,
        _stateStore = stateStore,
@@ -108,6 +112,7 @@ class MiniprogramCli {
   final MiniProgramPreviewController _previewController;
   final MiniProgramStaticPublisher _staticPublisher;
   final MiniProgramHostController _hostController;
+  final MiniProgramHostCapabilityInstaller _hostCapabilityInstaller;
   final MiniProgramPartnerHandoffController _partnerHandoffController;
   final MiniprogramDoctor _doctor;
   final LocalCliStateStore _stateStore;
@@ -212,6 +217,9 @@ class MiniprogramCli {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramHostException catch (error) {
+      _stderr.writeln(error.message);
+      return 1;
+    } on MiniProgramHostCapabilityException catch (error) {
       _stderr.writeln(error.message);
       return 1;
     } on MiniProgramPartnerHandoffException catch (error) {

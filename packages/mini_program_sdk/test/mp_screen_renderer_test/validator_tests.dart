@@ -91,6 +91,13 @@ void _mpScreenValidatorTests() {
                       maxItems: 50,
                     ),
                     Mp.cache.info(targetState: 'calc.cache_info'),
+                    Mp.location.getCurrent(
+                      timeout: const Duration(seconds: 10),
+                      targetState: 'location.current',
+                      statusState: 'location.status',
+                      errorState: 'location.error',
+                      requestId: 'current-location',
+                    ),
                   ]),
                 ),
                 Mp.initialize(
@@ -113,6 +120,34 @@ void _mpScreenValidatorTests() {
       const MpScreenValidator().validate(
         screen,
         expectedScreenId: 'coupon_home',
+      );
+    });
+
+    test('rejects malformed current-location actions', () {
+      final screen = _uiGeneratedScreen();
+      final root = screen['root']! as Map<String, dynamic>;
+      final children = root['children']! as List<dynamic>;
+      children.add(<String, dynamic>{
+        'type': 'button',
+        'props': <String, dynamic>{
+          'label': 'Locate',
+          'action': <String, dynamic>{
+            'type': 'location.getCurrent',
+            'props': <String, dynamic>{
+              'accuracy': 'precise',
+              'timeoutMs': 0,
+              'targetState': 'location.current',
+            },
+          },
+        },
+      });
+
+      expect(
+        () => const MpScreenValidator().validate(
+          screen,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
       );
     });
 

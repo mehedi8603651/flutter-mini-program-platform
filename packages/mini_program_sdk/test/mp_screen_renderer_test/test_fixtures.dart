@@ -765,6 +765,8 @@ Future<Object?> _runMpAction(
   MpStateManager? stateManager,
   MiniProgramBackendConnector? backendConnector,
   MiniProgramBackendStore? backendStore,
+  MiniProgramLocationProvider? locationProvider,
+  MiniProgramLocationPolicy locationPolicy = const MiniProgramLocationPolicy(),
   String? miniProgramVersion,
   MiniProgramDataResourceManager? dataResourceManager,
   MiniProgramJsonAssetSource? jsonAssetSource,
@@ -781,6 +783,8 @@ Future<Object?> _runMpAction(
           CapabilityIds.auth,
         ]),
         backendConnector: backendConnector,
+        locationProvider: locationProvider,
+        locationPolicy: locationPolicy,
         cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
         cachePolicy: cachePolicy,
         miniProgramVersion: miniProgramVersion,
@@ -853,6 +857,8 @@ Widget _scopedApp({
   required MiniProgramBackendStore backendStore,
   required Map<String, dynamic> screenJson,
   MiniProgramBackendConnector? backendConnector,
+  MiniProgramLocationProvider? locationProvider,
+  MiniProgramLocationPolicy locationPolicy = const MiniProgramLocationPolicy(),
   MiniProgramAuthController? authController,
   MiniProgramCacheManager? cacheManager,
   MiniProgramCachePolicy cachePolicy = const MiniProgramCachePolicy(),
@@ -869,6 +875,8 @@ Widget _scopedApp({
         CapabilityIds.auth,
       ]),
       backendConnector: backendConnector,
+      locationProvider: locationProvider,
+      locationPolicy: locationPolicy,
       authController: authController,
       cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
       cachePolicy: cachePolicy,
@@ -900,6 +908,30 @@ Widget _scopedApp({
       ),
     ),
   );
+}
+
+class _ResultLocationProvider implements MiniProgramLocationProvider {
+  const _ResultLocationProvider(this.result);
+
+  final MiniProgramLocationResult result;
+
+  @override
+  Future<MiniProgramLocationResult> getCurrentLocation({
+    required MiniProgramLocationAccuracy accuracy,
+    required Duration timeout,
+  }) async => result;
+}
+
+class _FailingLocationProvider implements MiniProgramLocationProvider {
+  const _FailingLocationProvider(this.error);
+
+  final MiniProgramLocationException error;
+
+  @override
+  Future<MiniProgramLocationResult> getCurrentLocation({
+    required MiniProgramLocationAccuracy accuracy,
+    required Duration timeout,
+  }) async => throw error;
 }
 
 class _AuthConnector implements MiniProgramBackendConnector {

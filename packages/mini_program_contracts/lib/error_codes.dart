@@ -42,4 +42,14 @@ abstract final class MiniProgramErrorCodes {
   static const String dataResourceNotFound = 'data_resource_not_found';
   static const String dataInvalidQuery = 'data_invalid_query';
   static const String dataSearchFailed = 'data_search_failed';
+  static const String locationNotAccepted = 'location_not_accepted';
+  static const String locationUnavailable = 'location_unavailable';
+  static const String locationPermissionDenied = 'location_permission_denied';
+  static const String locationPermissionDeniedPermanently =
+      'location_permission_denied_permanently';
+  static const String locationServiceDisabled = 'location_service_disabled';
+  static const String locationTimeout = 'location_timeout';
+  static const String locationRequestInProgress =
+      'location_request_in_progress';
+  static const String locationInvalidResult = 'location_invalid_result';
 }

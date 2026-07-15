@@ -1,3 +1,15 @@
+## 0.6.14
+
+- Add `miniprogram host capability init location --platform android` to
+  install reusable, foreground-only approximate location plumbing in an
+  embedded Flutter host without accepting any app policy.
+- Import requested foreground approximate location permission while preserving
+  host-owned accepted decisions and unknown permission entries.
+- Generate per-app location policy resolution and optional host location
+  provider wiring with capability advertisement.
+- Generate hosts against contracts `0.3.7` and SDK `0.5.13`, and
+  mini-programs against UI `0.1.12`.
+
 ## 0.6.13
 
 - Generate a complete design-neutral `lib/mini_program/` host integration with

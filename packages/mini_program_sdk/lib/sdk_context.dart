@@ -6,6 +6,7 @@ import 'cache/runtime_cache.dart';
 import 'feature_flag_evaluator.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
+import 'location/mini_program_location.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
@@ -54,6 +55,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.locationProvider,
+    this.locationPolicy = const MiniProgramLocationPolicy(),
     this.authController,
     required this.cacheManager,
     required this.cachePolicy,
@@ -78,6 +81,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramLocationProvider? locationProvider;
+  final MiniProgramLocationPolicy locationPolicy;
   final MiniProgramAuthController? authController;
   final MiniProgramCacheManager cacheManager;
   final MiniProgramCachePolicy cachePolicy;
@@ -113,6 +118,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         hostBridge != oldWidget.hostBridge ||
         capabilityRegistry != oldWidget.capabilityRegistry ||
         backendConnector != oldWidget.backendConnector ||
+        locationProvider != oldWidget.locationProvider ||
+        locationPolicy != oldWidget.locationPolicy ||
         authController != oldWidget.authController ||
         cacheManager != oldWidget.cacheManager ||
         cachePolicy != oldWidget.cachePolicy ||

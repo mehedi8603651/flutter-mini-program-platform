@@ -22,6 +22,9 @@ export 'mini_program_navigation_actions.dart';
 // Manifest contract models for portable mini-program delivery.
 export 'manifest.dart';
 
+// Provider-neutral one-time location values.
+export 'mini_program_location.dart';
+
 // Provider-neutral Publisher API contract models.
 export 'publisher_backend_contract.dart';
 

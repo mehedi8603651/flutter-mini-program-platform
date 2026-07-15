@@ -11,6 +11,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart';
 import '../auth/mini_program_auth.dart';
 import '../cache/runtime_cache.dart';
 import '../data/mini_program_data_resource.dart';
+import '../location/mini_program_location.dart';
 import '../network/mini_program_backend_connector.dart';
 import '../network/mini_program_backend_store.dart';
 import '../network/mini_program_source_exception.dart';

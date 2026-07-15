@@ -1,3 +1,10 @@
+## 0.5.13
+
+- Add provider-neutral, host-policy-controlled one-time approximate location.
+- Validate and dispatch `location.getCurrent` with atomic state updates,
+  stable errors, request deduplication, and target preservation on failure.
+- Route accepted per-app location policy through mini-program endpoints.
+
 ## 0.5.12
 
 - Load optional versioned `publisher_backend.json` contracts with manifests.

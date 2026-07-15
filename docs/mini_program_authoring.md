@@ -257,6 +257,25 @@ Mp.secondaryButton(
 Native host screens should remain behind approved host bridge contracts. Do not
 download Dart, JavaScript, or arbitrary expressions.
 
+## Current Location
+
+Use current location only from an explicit user action. Version 1 supports one
+approximate foreground snapshot:
+
+```dart
+Mp.location.getCurrent(
+  accuracy: 'approximate',
+  timeout: const Duration(seconds: 10),
+  targetState: 'location.current',
+  statusState: 'location.status',
+  errorState: 'location.error',
+);
+```
+
+The partner handoff must request `permissions.location`, and the host must both
+accept it and install a `MiniProgramLocationProvider`. Always retain a useful
+manual or offline fallback when location is denied or unavailable.
+
 ## Build, Validate, Publish
 
 Normal flow:

@@ -212,6 +212,14 @@ Mp.backend.query(
             'recommendedTtlDays': 30,
           },
         },
+        'requestedPermissions': <String, Object?>{
+          'location': <String, Object?>{
+            'enabled': true,
+            'reason': 'Use approximate location for local results.',
+            'accuracy': 'approximate',
+            'mode': 'whenInUse',
+          },
+        },
       }),
     );
     final hostController = _FakeMiniProgramHostController();
@@ -240,6 +248,10 @@ Mp.backend.query(
     expect(
       request.requestedCache['state'],
       containsPair('recommendedMaxBytes', 1048576),
+    );
+    expect(
+      request.requestedPermissions['location'],
+      containsPair('accuracy', 'approximate'),
     );
   });
 

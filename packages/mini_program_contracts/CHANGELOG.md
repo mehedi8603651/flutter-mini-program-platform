@@ -1,3 +1,10 @@
+## 0.3.7
+
+- Add provider-neutral one-time approximate location result contracts.
+- Add the `location.getCurrent` action and `location.current` capability IDs.
+- Add stable location policy, permission, service, timeout, concurrency, and
+  result-validation error codes.
+
 ## 0.3.6
 
 - Add a host-facing permission reason to Publisher API contracts.

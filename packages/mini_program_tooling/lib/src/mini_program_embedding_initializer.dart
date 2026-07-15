@@ -62,8 +62,8 @@ class MiniProgramEmbeddingInitException implements Exception {
 class MiniProgramEmbeddingInitializer {
   const MiniProgramEmbeddingInitializer();
 
-  static const String _miniProgramSdkConstraint = '^0.5.12';
-  static const String _miniProgramContractsConstraint = '^0.3.6';
+  static const String _miniProgramSdkConstraint = '^0.5.13';
+  static const String _miniProgramContractsConstraint = '^0.3.7';
 
   Future<MiniProgramEmbeddingInitResult> initialize(
     MiniProgramEmbeddingInitRequest request,
@@ -611,11 +611,13 @@ import 'mini_program_runtime_setup.dart';
 /// here while keeping generated endpoint and policy files untouched.
 Future<MiniProgramConfig> buildHostMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
+  MiniProgramLocationProvider? locationProvider,
   Map<String, MiniProgramEndpoint>? endpoints,
   MiniProgramCacheBundle? cacheBundle,
 }) async {
   return buildMiniProgramConfig(
     openNativeRoute: openNativeRoute,
+    locationProvider: locationProvider,
     endpoints: endpoints ?? buildMiniProgramEndpoints(),
     cacheBundle: cacheBundle,
   );
@@ -677,6 +679,10 @@ MiniProgramLiveStatePolicy liveStatePolicyForMiniProgram(String appId) {
 MiniProgramPublisherApiPolicy publisherApiPolicyForMiniProgram(String appId) {
   return const MiniProgramPublisherApiPolicy();
 }
+
+MiniProgramLocationPolicy locationPolicyForMiniProgram(String appId) {
+  return const MiniProgramLocationPolicy();
+}
 ''';
   }
 
@@ -719,6 +725,7 @@ const int _configuredBackendPort = int.fromEnvironment(
 
 MiniProgramConfig buildMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
+  MiniProgramLocationProvider? locationProvider,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
   MiniProgramCacheBundle? cacheBundle,
@@ -729,6 +736,7 @@ MiniProgramConfig buildMiniProgramConfig({
   final supportedCapabilities = <CapabilityId>{
     CapabilityIds.analytics,
     if (openNativeRoute != null) CapabilityIds.nativeNavigation,
+    if (locationProvider != null) CapabilityIds.locationCurrent,
   };
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,
@@ -746,6 +754,7 @@ MiniProgramConfig buildMiniProgramConfig({
     sdkVersion: _sdkVersion,
     source: source,
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
+    locationProvider: locationProvider,
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,
@@ -931,6 +940,16 @@ miniprogram host endpoint import ../my_data.partner.json
 `buildHostMiniProgramConfig()` automatically uses the generated endpoint map.
 No additional import or runtime wiring is required when another mini-program is
 added.
+
+For Android apps that request explicit one-time approximate location, install
+the generic host provider once:
+
+```bash
+miniprogram host capability init location --platform android
+```
+
+The command does not accept location policy for any mini-program. Continue to
+review each app in `mini_program_policies.json`.
 
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
 An optional `publisher_backend.json` declares the mini-program's Publisher API,

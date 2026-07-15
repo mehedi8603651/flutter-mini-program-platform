@@ -128,6 +128,78 @@ void main() {
       });
     });
 
+    test(
+      'writes and reads an approximate location permission request',
+      () async {
+        const controller = MiniProgramPartnerHandoffController();
+        final outputPath = p.join(
+          tempDir.path,
+          'weather-location.partner.json',
+        );
+
+        await controller.createPackage(
+          MiniProgramPartnerPackageRequest(
+            appId: 'weather',
+            title: 'Weather',
+            artifactBaseUri: Uri.parse('https://cdn.example.com/weather/'),
+            outputPath: outputPath,
+            generatedAtUtc: DateTime.utc(2026, 7, 15),
+            requestedPermissions: const <String, Object?>{
+              'location': <String, Object?>{
+                'enabled': true,
+                'reason': 'Use approximate location for local weather.',
+                'accuracy': 'approximate',
+                'mode': 'whenInUse',
+              },
+            },
+          ),
+        );
+
+        final handoff = await controller.readPackage(outputPath);
+        expect(handoff.requestedPermissions['location'], <String, Object?>{
+          'enabled': true,
+          'reason': 'Use approximate location for local weather.',
+          'accuracy': 'approximate',
+          'mode': 'whenInUse',
+        });
+      },
+    );
+
+    test('rejects malformed or unsupported permission requests', () async {
+      for (final permissions in <Map<String, Object?>>[
+        <String, Object?>{
+          'camera': <String, Object?>{'enabled': true},
+        },
+        <String, Object?>{
+          'location': <String, Object?>{
+            'enabled': true,
+            'reason': 'Locate weather',
+            'accuracy': 'precise',
+            'mode': 'whenInUse',
+          },
+        },
+        <String, Object?>{
+          'location': <String, Object?>{
+            'enabled': true,
+            'reason': '',
+            'accuracy': 'approximate',
+            'mode': 'always',
+          },
+        },
+      ]) {
+        expect(
+          () => MiniProgramPartnerHandoff(
+            appId: 'weather',
+            title: 'Weather',
+            artifactBaseUri: Uri.parse('https://cdn.example.com/weather/'),
+            generatedAtUtc: DateTime.utc(2026, 7, 15).toIso8601String(),
+            requestedPermissions: permissions,
+          ),
+          throwsA(isA<MiniProgramPartnerHandoffException>()),
+        );
+      }
+    });
+
     test('rejects malformed Publisher API permission requests', () async {
       final path = p.join(tempDir.path, 'invalid-api.partner.json');
       await File(path).writeAsString(

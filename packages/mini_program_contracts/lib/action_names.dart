@@ -9,4 +9,5 @@ abstract final class ActionNames {
   static const String resetMiniProgramStack = 'resetMiniProgramStack';
   static const String popToMiniProgramRoot = 'popToMiniProgramRoot';
   static const String popToMiniProgramScreen = 'popToMiniProgramScreen';
+  static const String locationGetCurrent = 'location.getCurrent';
 }

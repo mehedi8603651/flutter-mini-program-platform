@@ -25,10 +25,66 @@ void _registerCoreAndPreviewTests() {
       );
       expect(output, contains('partner package <mini-program-id>'));
       expect(output, contains('host endpoint import <partner-package.json>'));
+      expect(
+        output,
+        contains('host capability init location --platform android'),
+      );
       expect(output, contains('publisher-api scaffold --template mock'));
       expect(output, contains('publisher-api contract init|validate|smoke'));
     },
   );
+
+  test(
+    'host capability init forwards generic Android location setup',
+    () async {
+      final installer = _FakeMiniProgramHostCapabilityInstaller();
+      final stdoutBuffer = StringBuffer();
+
+      final exitCode =
+          await MiniprogramCli(
+            hostCapabilityInstaller: installer,
+            stateStore: stateStore,
+            stdoutSink: stdoutBuffer,
+            stderrSink: StringBuffer(),
+            workingDirectory: tempDir.path,
+          ).run(<String>[
+            'host',
+            'capability',
+            'init',
+            'location',
+            '--platform',
+            'android',
+            '--project-root',
+            tempDir.path,
+          ]);
+
+      expect(exitCode, 0);
+      expect(installer.lastRequest, isNotNull);
+      expect(installer.lastRequest!.capability, 'location');
+      expect(installer.lastRequest!.platform, 'android');
+      expect(installer.lastRequest!.projectRootPath, tempDir.path);
+      expect(stdoutBuffer.toString(), contains('Installed Android'));
+      expect(
+        stdoutBuffer.toString(),
+        contains('No mini-program permission was accepted'),
+      );
+    },
+  );
+
+  test('host capability init requires an explicit platform', () async {
+    final stderrBuffer = StringBuffer();
+
+    final exitCode = await MiniprogramCli(
+      hostCapabilityInstaller: _FakeMiniProgramHostCapabilityInstaller(),
+      stateStore: stateStore,
+      stdoutSink: StringBuffer(),
+      stderrSink: stderrBuffer,
+      workingDirectory: tempDir.path,
+    ).run(<String>['host', 'capability', 'init', 'location']);
+
+    expect(exitCode, 64);
+    expect(stderrBuffer.toString(), contains('requires --platform android'));
+  });
 
   test(
     'removed provider delivery commands fail with migration message',
@@ -129,7 +185,7 @@ void _registerCoreAndPreviewTests() {
 
       expect(exitCode, 0);
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['toolingVersion'], '0.6.13');
+      expect(json['toolingVersion'], '0.6.14');
       final capabilities = (json['capabilityIds'] as List).cast<String>();
       expect(capabilities, contains('publish.static'));
       expect(capabilities, contains('publisher_api.mock.scaffold'));

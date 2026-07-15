@@ -14,6 +14,7 @@ import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
+import 'location/mini_program_location.dart';
 import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
 import 'network/asset_resolver.dart';
@@ -42,6 +43,7 @@ class MiniProgramHost extends StatefulWidget {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.locationProvider,
     this.authController,
     this.assetCache,
     this.manifestCache,
@@ -60,6 +62,7 @@ class MiniProgramHost extends StatefulWidget {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramLocationProvider? locationProvider;
   final MiniProgramAuthController? authController;
   final AssetCache? assetCache;
   final ManifestCache? manifestCache;
@@ -114,6 +117,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.hostBridge != oldWidget.hostBridge ||
         widget.capabilityRegistry != oldWidget.capabilityRegistry ||
         widget.backendConnector != oldWidget.backendConnector ||
+        widget.locationProvider != oldWidget.locationProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
@@ -245,6 +249,16 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       );
     }
     return const MiniProgramLiveStatePolicy();
+  }
+
+  MiniProgramLocationPolicy _locationPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramLocationPolicyProvider) {
+      return (source as MiniProgramLocationPolicyProvider).locationPolicyFor(
+        appId,
+      );
+    }
+    return const MiniProgramLocationPolicy();
   }
 
   MiniProgramBackendConnector? _backendConnectorFor(
@@ -885,6 +899,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
           hostBridge: widget.hostBridge,
           capabilityRegistry: widget.capabilityRegistry,
           backendConnector: _activeBackendConnector,
+          locationProvider: widget.locationProvider,
+          locationPolicy: _locationPolicyFor(manifest.id),
           authController: widget.authController,
           cacheManager: _cacheManager,
           cachePolicy: _activeCachePolicy ?? _cachePolicyFor(manifest.id),

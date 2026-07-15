@@ -6,6 +6,7 @@ import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
+import 'location/mini_program_location.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
@@ -22,6 +23,7 @@ class MiniProgramRuntime {
     required this.capabilityRegistry,
     required this.cacheBundle,
     this.backendConnector,
+    this.locationProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -35,6 +37,7 @@ class MiniProgramRuntime {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramLocationProvider? locationProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -49,6 +52,7 @@ class MiniProgramRuntime {
     HostBridge? hostBridge,
     CapabilityRegistry? capabilityRegistry,
     MiniProgramBackendConnector? backendConnector,
+    MiniProgramLocationProvider? locationProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
     FeatureFlagEvaluator? featureFlagEvaluator,
@@ -63,6 +67,7 @@ class MiniProgramRuntime {
       hostBridge: hostBridge ?? this.hostBridge,
       capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
       backendConnector: backendConnector ?? this.backendConnector,
+      locationProvider: locationProvider ?? this.locationProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
           disposeAuthController ?? this.disposeAuthController,
@@ -126,6 +131,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.hostBridge != oldWidget.runtime.hostBridge ||
         runtime.capabilityRegistry != oldWidget.runtime.capabilityRegistry ||
         runtime.backendConnector != oldWidget.runtime.backendConnector ||
+        runtime.locationProvider != oldWidget.runtime.locationProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=
             oldWidget.runtime.disposeAuthController ||

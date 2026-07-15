@@ -301,7 +301,8 @@ Important generated files:
   ordinary host UI needs.
 - `mini_program_host_setup.dart` is host-owned, created once, and provides
   `buildHostMiniProgramConfig()`.
-- `mini_program_runtime_setup.dart` creates `buildMiniProgramConfig(...)`.
+- `mini_program_runtime_setup.dart` creates `buildMiniProgramConfig(...)` and
+  accepts optional host providers such as current location.
 - `mini_program_launcher.dart` creates dynamic and registry-based launch
   helpers.
 - `mini_program_endpoints.dart` stores imported `artifactBaseUrl` endpoints.
@@ -309,6 +310,18 @@ Important generated files:
 - `mini_program_policy_resolver.dart` maps accepted policy into SDK policy.
 - `mini_program_policies.json` is the host-owned requested/accepted policy.
 - `app_host_bridge.dart` is where host-owned native actions can be wired later.
+
+For a mini-program that requests location, review
+`mini_program_policies.json`, accept only the requested approximate
+`whenInUse` policy, then install the generic Android provider once:
+
+```powershell
+miniprogram host capability init location --platform android --project-root .
+```
+
+The installer updates recognized Android host files and
+`mini_program_host_setup.dart`, but does not accept policy for any app. The SDK
+never grants location merely because provider support is installed.
 
 `embed init --force` refreshes scaffold-generated files while preserving host
 setup, bridge, policies, and endpoint-import generated output.

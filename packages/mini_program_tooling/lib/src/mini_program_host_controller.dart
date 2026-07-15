@@ -81,6 +81,7 @@ class MiniProgramHostEndpointAddRequest {
     this.policySourcePath,
     this.requestedCache = const <String, Object?>{},
     this.requestedPublisherApi = const <String, Object?>{},
+    this.requestedPermissions = const <String, Object?>{},
     this.acceptRequestedPolicy = false,
     this.force = false,
   });
@@ -92,6 +93,7 @@ class MiniProgramHostEndpointAddRequest {
   final String? policySourcePath;
   final Map<String, Object?> requestedCache;
   final Map<String, Object?> requestedPublisherApi;
+  final Map<String, Object?> requestedPermissions;
   final bool acceptRequestedPolicy;
   final bool force;
 }
@@ -300,6 +302,7 @@ class MiniProgramHostController {
       sourcePath: request.policySourcePath,
       requestedCache: request.requestedCache,
       requestedPublisherApi: request.requestedPublisherApi,
+      requestedPermissions: request.requestedPermissions,
       acceptRequestedPolicy: request.acceptRequestedPolicy,
       forceAcceptedPolicy: request.force,
     );
@@ -405,6 +408,7 @@ class MiniProgramHostController {
     required String? sourcePath,
     required Map<String, Object?> requestedCache,
     required Map<String, Object?> requestedPublisherApi,
+    required Map<String, Object?> requestedPermissions,
     required bool acceptRequestedPolicy,
     required bool forceAcceptedPolicy,
   }) async {
@@ -423,11 +427,12 @@ class MiniProgramHostController {
         'cache': _deepJsonObjectCopy(requestedCache),
         if (requestedPublisherApi.isNotEmpty)
           'publisherApi': _deepJsonObjectCopy(requestedPublisherApi),
-        'permissions': <String, Object?>{},
+        'permissions': _deepJsonObjectCopy(requestedPermissions),
       },
       'accepted': _acceptedPolicyFor(
         requestedCache: requestedCache,
         requestedPublisherApi: requestedPublisherApi,
+        requestedPermissions: requestedPermissions,
         existingAccepted: existingAccepted,
         acceptRequestedPolicy: acceptRequestedPolicy,
         forceAcceptedPolicy: forceAcceptedPolicy,
@@ -444,6 +449,11 @@ class MiniProgramHostController {
               _jsonObjectOrEmpty(accepted['publisherApi']),
             )
           : <String, Object?>{'enabled': false};
+      accepted['permissions'] = accepted['permissions'] is Map
+          ? _validatedAcceptedPermissions(
+              _jsonObjectOrEmpty(accepted['permissions']),
+            )
+          : <String, Object?>{};
       app['accepted'] = _sortedObject(accepted);
       apps[entry.key] = app;
     }
@@ -486,6 +496,7 @@ class MiniProgramHostController {
   Map<String, Object?> _acceptedPolicyFor({
     required Map<String, Object?> requestedCache,
     required Map<String, Object?> requestedPublisherApi,
+    required Map<String, Object?> requestedPermissions,
     required Map<String, Object?>? existingAccepted,
     required bool acceptRequestedPolicy,
     required bool forceAcceptedPolicy,
@@ -498,7 +509,10 @@ class MiniProgramHostController {
           acceptRequested: forceAcceptedPolicy || acceptRequestedPolicy,
         ),
         'liveState': _deepJsonObjectCopy(_defaultLiveStatePolicy),
-        'permissions': <String, Object?>{},
+        'permissions': _acceptedPermissionsFromRequested(
+          requestedPermissions,
+          acceptRequested: acceptRequestedPolicy && !forceAcceptedPolicy,
+        ),
       };
     }
 
@@ -535,10 +549,97 @@ class MiniProgramHostController {
     accepted['liveState'] = accepted['liveState'] is Map
         ? _validatedLiveStatePolicy(_jsonObjectOrEmpty(accepted['liveState']))
         : _deepJsonObjectCopy(_defaultLiveStatePolicy);
-    accepted['permissions'] = accepted['permissions'] is Map
-        ? _jsonObjectOrEmpty(accepted['permissions'])
+    final acceptedPermissions = accepted['permissions'] is Map
+        ? _deepJsonObjectCopy(_jsonObjectOrEmpty(accepted['permissions']))
         : <String, Object?>{};
+    for (final entry in requestedPermissions.entries) {
+      if (acceptRequestedPolicy ||
+          !acceptedPermissions.containsKey(entry.key)) {
+        final current = acceptedPermissions[entry.key] is Map
+            ? _deepJsonObjectCopy(
+                _jsonObjectOrEmpty(acceptedPermissions[entry.key]),
+              )
+            : <String, Object?>{};
+        acceptedPermissions[entry.key] = _acceptedPermissionFromRequested(
+          entry.key,
+          entry.value,
+          acceptRequested: acceptRequestedPolicy,
+          existing: current,
+        );
+      }
+    }
+    accepted['permissions'] = _validatedAcceptedPermissions(
+      acceptedPermissions,
+    );
     return _sortedObject(accepted);
+  }
+
+  Map<String, Object?> _acceptedPermissionsFromRequested(
+    Map<String, Object?> requestedPermissions, {
+    required bool acceptRequested,
+  }) {
+    final accepted = <String, Object?>{};
+    for (final entry in requestedPermissions.entries) {
+      accepted[entry.key] = _acceptedPermissionFromRequested(
+        entry.key,
+        entry.value,
+        acceptRequested: acceptRequested,
+      );
+    }
+    return _sortedObject(accepted);
+  }
+
+  Map<String, Object?> _acceptedPermissionFromRequested(
+    String permission,
+    Object? requested, {
+    required bool acceptRequested,
+    Map<String, Object?> existing = const <String, Object?>{},
+  }) {
+    if (permission != 'location') {
+      return _deepJsonObjectCopy(existing);
+    }
+    final request = requested is Map
+        ? _jsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return _sortedObject(<String, Object?>{
+      ..._deepJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'accuracy': 'approximate',
+      'mode': 'whenInUse',
+    });
+  }
+
+  Map<String, Object?> _validatedAcceptedPermissions(
+    Map<String, Object?> permissions,
+  ) {
+    final normalized = _deepJsonObjectCopy(permissions);
+    final rawLocation = normalized['location'];
+    if (rawLocation == null) {
+      return _sortedObject(normalized);
+    }
+    if (rawLocation is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location must be an object.',
+      );
+    }
+    final location = _deepJsonObjectCopy(_jsonObjectOrEmpty(rawLocation));
+    if (location['enabled'] is! bool) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location.enabled must be a boolean.',
+      );
+    }
+    if (location['accuracy'] != 'approximate') {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location.accuracy must be "approximate".',
+      );
+    }
+    if (location['mode'] != 'whenInUse') {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location.mode must be "whenInUse".',
+      );
+    }
+    normalized['location'] = _sortedObject(location);
+    return _sortedObject(normalized);
   }
 
   Map<String, Object?> _acceptedPublisherApiFromRequested(
@@ -649,6 +750,10 @@ class MiniProgramHostController {
       ..writeln('// Generated by miniprogram tooling.')
       ..writeln('// Runtime uses accepted host policy only.')
       ..writeln()
+      ..writeln(
+        "import 'package:mini_program_contracts/mini_program_contracts.dart' "
+        'show MiniProgramLocationAccuracy, MiniProgramLocationMode;',
+      )
       ..writeln("import 'package:mini_program_sdk/mini_program_sdk.dart';")
       ..writeln()
       ..writeln('MiniProgramCachePolicy cachePolicyForMiniProgram(')
@@ -713,6 +818,38 @@ class MiniProgramHostController {
     buffer
       ..writeln('    default:')
       ..writeln('      return const MiniProgramPublisherApiPolicy();')
+      ..writeln('  }')
+      ..writeln('}')
+      ..writeln()
+      ..writeln('MiniProgramLocationPolicy locationPolicyForMiniProgram(')
+      ..writeln('  String appId,')
+      ..writeln(') {')
+      ..writeln('  switch (appId) {');
+    for (final entry in sortedEntries) {
+      final appPolicy = _jsonObjectOrEmpty(entry.value);
+      final accepted = _jsonObjectOrEmpty(appPolicy['accepted']);
+      final permissions = _validatedAcceptedPermissions(
+        _jsonObjectOrEmpty(accepted['permissions']),
+      );
+      final location = permissions['location'] is Map
+          ? _jsonObjectOrEmpty(permissions['location'])
+          : <String, Object?>{
+              'enabled': false,
+              'accuracy': 'approximate',
+              'mode': 'whenInUse',
+            };
+      buffer
+        ..writeln('    case ${_dartString(entry.key)}:')
+        ..writeln(
+          '      return const MiniProgramLocationPolicy('
+          'enabled: ${location['enabled'] == true}, '
+          'accuracy: MiniProgramLocationAccuracy.approximate, '
+          'mode: MiniProgramLocationMode.whenInUse);',
+        );
+    }
+    buffer
+      ..writeln('    default:')
+      ..writeln('      return const MiniProgramLocationPolicy();')
       ..writeln('  }')
       ..writeln('}')
       ..writeln();
@@ -887,6 +1024,9 @@ class MiniProgramHostController {
         )
         ..writeln(
           '      publisherApiPolicy: publisherApiPolicyForMiniProgram($mapKey),',
+        )
+        ..writeln(
+          '      locationPolicy: locationPolicyForMiniProgram($mapKey),',
         )
         ..writeln('      requestTimeout: const Duration(seconds: 20),');
       buffer.writeln('    ),');

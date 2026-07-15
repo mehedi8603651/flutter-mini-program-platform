@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.12
+
+- Add strict `Mp.location.getCurrent` authoring for foreground, one-time,
+  approximate host-provided location requests.
+
 ## 0.1.11
 
 - Add artifact-local JSON load and ranked search action helpers.

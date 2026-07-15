@@ -5,6 +5,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
 
 import '../cache/runtime_cache.dart';
+import '../location/mini_program_location.dart';
 import '../state/mp_state.dart';
 import 'http_mini_program_source.dart';
 import 'mini_program_delivery_context.dart';
@@ -33,6 +34,7 @@ class MiniProgramEndpoint {
     this.cachePolicy = const MiniProgramCachePolicy(),
     this.liveStatePolicy = const MiniProgramLiveStatePolicy(),
     this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
+    this.locationPolicy = const MiniProgramLocationPolicy(),
   });
 
   /// Creates a public/static mini-program endpoint.
@@ -47,6 +49,7 @@ class MiniProgramEndpoint {
     this.cachePolicy = const MiniProgramCachePolicy(),
     this.liveStatePolicy = const MiniProgramLiveStatePolicy(),
     this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
+    this.locationPolicy = const MiniProgramLocationPolicy(),
   });
 
   final Uri apiBaseUri;
@@ -56,6 +59,7 @@ class MiniProgramEndpoint {
   final MiniProgramCachePolicy cachePolicy;
   final MiniProgramLiveStatePolicy liveStatePolicy;
   final MiniProgramPublisherApiPolicy publisherApiPolicy;
+  final MiniProgramLocationPolicy locationPolicy;
 }
 
 /// Routes manifest and screen requests to per-app delivery endpoints.
@@ -65,6 +69,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramCachePolicyProvider,
         MiniProgramLiveStatePolicyProvider,
         MiniProgramPublisherApiPolicyProvider,
+        MiniProgramLocationPolicyProvider,
         MiniProgramDeliveryContextProvider,
         MiniProgramPublisherBackendContractSource,
         MiniProgramJsonAssetSource {
@@ -200,6 +205,21 @@ class EndpointRoutingMiniProgramSource
       );
     }
     return endpoint.publisherApiPolicy;
+  }
+
+  @override
+  MiniProgramLocationPolicy locationPolicyFor(String miniProgramId) {
+    final normalizedAppId = _normalizeAppId(miniProgramId);
+    final endpoint = _endpoints[normalizedAppId];
+    if (endpoint == null) {
+      throw MiniProgramSourceException(
+        message:
+            'No MiniProgramEndpoint is configured for appId "$normalizedAppId".',
+        errorCode: MiniProgramErrorCodes.endpointNotConfigured,
+        details: <String, dynamic>{'miniProgramId': normalizedAppId},
+      );
+    }
+    return endpoint.locationPolicy;
   }
 
   MiniProgramSource _sourceFor(String miniProgramId) {

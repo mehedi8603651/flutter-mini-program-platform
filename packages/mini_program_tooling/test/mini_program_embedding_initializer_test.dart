@@ -152,6 +152,15 @@ void main() {
       expect(runtimeSetup, isNot(contains('MaterialApp(')));
       expect(runtimeSetup, isNot(contains('legacyStacRenderers')));
       expect(runtimeSetup, isNot(contains('mini_program_legacy_stac')));
+      expect(
+        runtimeSetup,
+        contains('MiniProgramLocationProvider? locationProvider'),
+      );
+      expect(
+        runtimeSetup,
+        contains('if (locationProvider != null) CapabilityIds.locationCurrent'),
+      );
+      expect(runtimeSetup, contains('locationProvider: locationProvider'));
       expect(barrel, isNot(contains("export 'mini_program_app_shell.dart';")));
       expect(
         barrel,
@@ -165,13 +174,18 @@ void main() {
       expect(barrel, contains("export 'mini_program_registry.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.5.12'));
-      expect(updatedPubspec, contains('mini_program_contracts: ^0.3.6'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.5.13'));
+      expect(updatedPubspec, contains('mini_program_contracts: ^0.3.7'));
       expect(updatedPubspec, isNot(contains('mini_program_legacy_stac:')));
       expect(
         hostSetup,
         contains('Future<MiniProgramConfig> buildHostMiniProgramConfig('),
       );
+      expect(
+        hostSetup,
+        contains('MiniProgramLocationProvider? locationProvider'),
+      );
+      expect(hostSetup, contains('locationProvider: locationProvider'));
       expect(hostSetup, contains('endpoints ?? buildMiniProgramEndpoints()'));
       expect(
         hostSetup,
@@ -181,10 +195,11 @@ void main() {
       expect(endpoints, contains('// {}'));
       expect(registry, contains('static const values = <MiniProgramInfo>[];'));
       expect(policyResolver, contains('publisherApiPolicyForMiniProgram'));
+      expect(policyResolver, contains('locationPolicyForMiniProgram'));
       expect(policies, contains('"schemaVersion": 1'));
       expect(policies, contains('"apps": {}'));
-      expect(readme, contains('mini_program_sdk: ^0.5.12'));
-      expect(readme, contains('mini_program_contracts: ^0.3.6'));
+      expect(readme, contains('mini_program_sdk: ^0.5.13'));
+      expect(readme, contains('mini_program_contracts: ^0.3.7'));
       expect(readme, contains('MiniProgramScope('));
       expect(readme, contains("import 'mini_program/mini_program.dart';"));
       expect(readme, contains('buildHostMiniProgramConfig()'));

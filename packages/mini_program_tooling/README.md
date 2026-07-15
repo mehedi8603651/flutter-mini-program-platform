@@ -304,6 +304,27 @@ lib/mini_program/mini_program_policy_resolver.dart
 lib/mini_program/mini_program_policies.json
 ```
 
+Partner handoff schema 3 may request approximate, foreground-only current
+location under `requestedPermissions.location`. New requests are imported as
+denied unless the host reviews and manually enables them or imports with
+`--accept-requested-policy`. Policy acceptance alone does not access the
+device.
+
+Install the reusable Android provider once per host app:
+
+```powershell
+miniprogram host capability init location `
+  --platform android `
+  --project-root .
+```
+
+The command adds only coarse, foreground, one-time location support. It is
+idempotent, preserves recognized host code, and does not enable location for
+any mini-program. Review each app under
+`lib/mini_program/mini_program_policies.json` separately. Background tracking,
+continuous updates, GPS/fine permission, and app-specific Weather behavior are
+not installed.
+
 ### 3. Add An Endpoint Manually
 
 Use when you know the `artifactBaseUrl` and do not have a partner JSON file.
@@ -556,6 +577,7 @@ miniprogram env status --json
 | `miniprogram embed init` | Add SDK integration files to a Flutter host. |
 | `miniprogram host endpoint import` | Import a partner package into a host. |
 | `miniprogram host endpoint add` | Add an endpoint manually by URL. |
+| `miniprogram host capability init location --platform android` | Install generic one-time approximate Android location support. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |
 | `miniprogram artifact-host ...` | Manage a local static artifact host. |
 | `miniprogram publisher-api ...` | Work with optional runtime middle-server APIs. |

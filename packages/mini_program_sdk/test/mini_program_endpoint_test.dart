@@ -116,6 +116,7 @@ void main() {
             publisherApiPolicy: const MiniProgramPublisherApiPolicy(
               enabled: true,
             ),
+            locationPolicy: const MiniProgramLocationPolicy(enabled: true),
           ),
           'normal': MiniProgramEndpoint(
             apiBaseUri: Uri.parse('https://normal.example.com/api/'),
@@ -135,6 +136,8 @@ void main() {
       expect(source.liveStatePolicyFor('normal').maxEntries, 1000);
       expect(source.publisherApiPolicyFor('temporary').enabled, isTrue);
       expect(source.publisherApiPolicyFor('normal').enabled, isFalse);
+      expect(source.locationPolicyFor('temporary').enabled, isTrue);
+      expect(source.locationPolicyFor('normal').enabled, isFalse);
       expect(source.deliveryContext, same(_deliveryContext));
     });
 

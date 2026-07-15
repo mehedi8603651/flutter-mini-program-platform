@@ -71,6 +71,15 @@ miniprogram host endpoint import .\coupon_demo\coupon_demo.partner.json --projec
 miniprogram host run -d chrome --project-root .\coupon_host
 ```
 
+When an imported app requests one-time approximate location, install the
+generic Android host provider once, then review that app's accepted policy:
+
+```powershell
+miniprogram host capability init location --platform android --project-root .\coupon_host
+```
+
+Provider installation does not grant location to any mini-program.
+
 ## Optional Runtime API
 
 Publisher API Contract V1 is a runtime API standard only; host opening still uses `appId + artifactBaseUrl`.

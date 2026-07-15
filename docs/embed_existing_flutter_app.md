@@ -61,6 +61,25 @@ The runtime API is a publisher-owned middle-server. It handles auth, database ac
 { "errorCode": "validation_failed", "message": "Validation failed", "traceId": "trace-error" }
 ```
 
+## Optional Android Current Location
+
+A handoff may request `requestedPermissions.location` with `approximate` and
+`whenInUse`. Importing normally creates a denied accepted policy; review it and
+enable it manually or use `--accept-requested-policy`. Install the reusable
+Android provider once in the host:
+
+```powershell
+miniprogram host capability init location `
+  --platform android `
+  --project-root D:\my_host_app
+```
+
+This installs `ACCESS_COARSE_LOCATION`, a host-owned Kotlin MethodChannel, and
+the provider registration in `mini_program_host_setup.dart`. It does not accept
+location for any mini-program. The same provider supports any accepted app
+that needs explicit, one-time approximate foreground location; it contains no
+Weather-specific behavior.
+
 ## 4. Launch From UI
 
 Import the public barrel and use the generated registry launcher:

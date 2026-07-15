@@ -155,6 +155,41 @@ class _FakeMiniProgramHostController extends MiniProgramHostController {
   }
 }
 
+class _FakeMiniProgramHostCapabilityInstaller
+    extends MiniProgramHostCapabilityInstaller {
+  MiniProgramHostCapabilityInitRequest? lastRequest;
+
+  @override
+  Future<MiniProgramHostCapabilityInitResult> initialize(
+    MiniProgramHostCapabilityInitRequest request,
+  ) async {
+    lastRequest = request;
+    return MiniProgramHostCapabilityInitResult(
+      projectRootPath: request.projectRootPath,
+      capability: request.capability,
+      platform: request.platform,
+      createdPaths: <String>[
+        p.join(
+          request.projectRootPath,
+          'lib',
+          'mini_program',
+          'app_android_location_provider.dart',
+        ),
+      ],
+      updatedPaths: <String>[
+        p.join(
+          request.projectRootPath,
+          'android',
+          'app',
+          'src',
+          'main',
+          'AndroidManifest.xml',
+        ),
+      ],
+    );
+  }
+}
+
 Future<void> _writeMiniProgramFixture(
   String miniProgramRootPath, {
   required String miniProgramId,

@@ -2577,6 +2577,175 @@ void _mpScreenRendererTests() {
     });
 
     testWidgets(
+      'location action writes accepted result and clears stale errors',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('location.error', <String, dynamic>{'code': 'stale'});
+        final capturedAt = DateTime.utc(2026, 7, 15, 12);
+        final result =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.location.getCurrent(
+                      timeout: const Duration(seconds: 10),
+                      targetState: 'location.current',
+                      statusState: 'location.status',
+                      errorState: 'location.error',
+                      requestId: 'current-location',
+                    ),
+                  ),
+                  stateManager: state,
+                  locationPolicy: const MiniProgramLocationPolicy(
+                    enabled: true,
+                  ),
+                  locationProvider: _ResultLocationProvider(
+                    MiniProgramLocationResult(
+                      latitude: 23.8103,
+                      longitude: 90.4125,
+                      accuracyMeters: 900,
+                      capturedAtUtc: capturedAt,
+                    ),
+                  ),
+                )
+                as HostActionResult;
+
+        expect(result.isSuccess, isTrue);
+        expect(result.requestId, 'current-location');
+        expect(result.data['latitude'], 23.8103);
+        expect(state.get<String>('location.status'), 'success');
+        expect(state.contains('location.error'), isFalse);
+        expect(
+          state.get<Map<String, dynamic>>('location.current'),
+          containsPair('source', 'device'),
+        );
+        state.dispose();
+      },
+    );
+
+    testWidgets(
+      'location action enforces policy and preserves the previous target',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('location.current', <String, dynamic>{'latitude': 1});
+        final action = _jsonAction(
+          Mp.location.getCurrent(
+            timeout: const Duration(seconds: 10),
+            targetState: 'location.current',
+            statusState: 'location.status',
+            errorState: 'location.error',
+            requestId: 'denied-location',
+          ),
+        );
+
+        final denied =
+            await _runMpAction(tester, action, stateManager: state)
+                as HostActionResult;
+        expect(denied.errorCode, MiniProgramErrorCodes.locationNotAccepted);
+        expect(state.get<String>('location.status'), 'error');
+        expect(
+          state.get<Map<String, dynamic>>('location.current'),
+          <String, dynamic>{'latitude': 1},
+        );
+
+        final unavailable =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  locationPolicy: const MiniProgramLocationPolicy(
+                    enabled: true,
+                  ),
+                )
+                as HostActionResult;
+        expect(
+          unavailable.errorCode,
+          MiniProgramErrorCodes.locationUnavailable,
+        );
+        expect(
+          state.get<Map<String, dynamic>>('location.current'),
+          <String, dynamic>{'latitude': 1},
+        );
+        state.dispose();
+      },
+    );
+
+    testWidgets('location action propagates stable provider failures', (
+      tester,
+    ) async {
+      for (final code in <String>[
+        MiniProgramErrorCodes.locationPermissionDenied,
+        MiniProgramErrorCodes.locationPermissionDeniedPermanently,
+        MiniProgramErrorCodes.locationServiceDisabled,
+        MiniProgramErrorCodes.locationTimeout,
+        MiniProgramErrorCodes.locationRequestInProgress,
+      ]) {
+        final state = MpStateManager();
+        final result =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.location.getCurrent(
+                      timeout: const Duration(seconds: 10),
+                      targetState: 'location.current',
+                      statusState: 'location.status',
+                      errorState: 'location.error',
+                      requestId: 'location-$code',
+                    ),
+                  ),
+                  stateManager: state,
+                  locationPolicy: const MiniProgramLocationPolicy(
+                    enabled: true,
+                  ),
+                  locationProvider: _FailingLocationProvider(
+                    MiniProgramLocationException(
+                      errorCode: code,
+                      message: 'Provider failure: $code',
+                    ),
+                  ),
+                )
+                as HostActionResult;
+        expect(result.errorCode, code);
+        expect(
+          state.get<Map<String, dynamic>>('location.error'),
+          containsPair('code', code),
+        );
+        state.dispose();
+      }
+    });
+
+    testWidgets('location action rejects invalid provider results', (
+      tester,
+    ) async {
+      final state = MpStateManager();
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.location.getCurrent(
+                    timeout: const Duration(seconds: 10),
+                    targetState: 'location.current',
+                    errorState: 'location.error',
+                  ),
+                ),
+                stateManager: state,
+                locationPolicy: const MiniProgramLocationPolicy(enabled: true),
+                locationProvider: _ResultLocationProvider(
+                  MiniProgramLocationResult(
+                    latitude: 100,
+                    longitude: 90,
+                    accuracyMeters: 10,
+                    capturedAtUtc: DateTime.utc(2026),
+                  ),
+                ),
+              )
+              as HostActionResult;
+
+      expect(result.errorCode, MiniProgramErrorCodes.locationInvalidResult);
+      expect(state.contains('location.current'), isFalse);
+      state.dispose();
+    });
+
+    testWidgets(
       'math evaluate covers parser precedence functions and bindings',
       (tester) async {
         final state = MpStateManager()..set('input.x', 9);

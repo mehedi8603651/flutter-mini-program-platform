@@ -3121,6 +3121,11 @@ class MpScreenValidator {
       'math.aggregate' => _parseMathAggregateAction(type, props, path),
       'data.loadJsonAsset' => _parseDataLoadJsonAssetAction(type, props, path),
       'data.search' => _parseDataSearchAction(type, props, path),
+      'location.getCurrent' => _parseLocationGetCurrentAction(
+        type,
+        props,
+        path,
+      ),
       'cache.set' => _parseCacheSetAction(type, props, path),
       'cache.get' => _parseCacheGetAction(type, props, path),
       'cache.has' => _parseCacheHasAction(type, props, path),
@@ -4821,6 +4826,67 @@ class MpScreenValidator {
           'errorState': _requiredStateKey(
             props,
             'errorState',
+            path: '$path.props',
+          ),
+      },
+    );
+  }
+
+  _MpAction _parseLocationGetCurrentAction(
+    String type,
+    Map<String, dynamic> props,
+    String path,
+  ) {
+    _validateObjectKeys(props, const <String>{
+      'accuracy',
+      'timeoutMs',
+      'targetState',
+      'statusState',
+      'errorState',
+      'requestId',
+    }, path: '$path.props');
+    final accuracy = _requiredStableString(
+      props,
+      'accuracy',
+      path: '$path.props',
+    );
+    if (accuracy != 'approximate') {
+      _fail(
+        'Mp location accuracy must be "approximate".',
+        path: '$path.props.accuracy',
+      );
+    }
+    return _MpAction(
+      type: type,
+      props: <String, dynamic>{
+        'accuracy': accuracy,
+        'timeoutMs': _boundedIntValue(
+          props['timeoutMs'],
+          path: '$path.props.timeoutMs',
+          minimum: 1000,
+          maximum: 60000,
+        ),
+        'targetState': _requiredStateKey(
+          props,
+          'targetState',
+          path: '$path.props',
+        ),
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('requestId'))
+          'requestId': _requiredStableString(
+            props,
+            'requestId',
             path: '$path.props',
           ),
       },

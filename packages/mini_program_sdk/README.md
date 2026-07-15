@@ -67,3 +67,24 @@ Runtime APIs are used only by actions such as `Mp.backend.call`,
 Opening a mini-program requires only `appId + artifactBaseUrl`. The publisher
 owns the optional runtime API declaration; the host owns only permission to use
 it.
+
+## Optional Current Location
+
+`location.getCurrent` is provider-neutral. A host opts in by accepting a
+per-app `MiniProgramLocationPolicy`, installing a
+`MiniProgramLocationProvider`, and advertising `CapabilityIds.locationCurrent`.
+The SDK validates the host result and exposes only one approximate,
+foreground, user-initiated snapshot to the requesting mini-program.
+
+```dart
+final config = MiniProgramConfig(
+  source: source,
+  locationProvider: appLocationProvider,
+  capabilityRegistry: CapabilityRegistry(
+    const <CapabilityId>{CapabilityIds.locationCurrent},
+  ),
+);
+```
+
+Missing providers and denied policy fail with stable location error codes;
+they do not fall through to host bridge actions.

@@ -291,6 +291,152 @@ void main() {
     });
 
     test(
+      'location permission defaults denied, preserves host edits, and accepts explicitly',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeHostProject(hostRoot);
+        final controller = MiniProgramHostController();
+        final request = MiniProgramHostEndpointAddRequest(
+          projectRootPath: hostRoot,
+          appId: 'weather',
+          title: 'Weather',
+          apiBaseUri: Uri.parse('https://cdn.example.com/weather/'),
+          policySourcePath: p.join(tempDir.path, 'weather.partner.json'),
+          requestedPermissions: const <String, Object?>{
+            'location': <String, Object?>{
+              'enabled': true,
+              'reason': 'Use approximate location for local weather.',
+              'accuracy': 'approximate',
+              'mode': 'whenInUse',
+            },
+          },
+        );
+
+        final initial = await controller.addEndpoint(request);
+        var policies =
+            jsonDecode(await File(initial.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        var weather =
+            (policies['apps'] as Map<String, dynamic>)['weather']
+                as Map<String, dynamic>;
+        expect(
+          ((weather['requested'] as Map<String, dynamic>)['permissions']
+              as Map<String, dynamic>)['location'],
+          containsPair('reason', 'Use approximate location for local weather.'),
+        );
+        expect(
+          ((weather['accepted'] as Map<String, dynamic>)['permissions']
+              as Map<String, dynamic>)['location'],
+          <String, dynamic>{
+            'accuracy': 'approximate',
+            'enabled': false,
+            'mode': 'whenInUse',
+          },
+        );
+
+        final accepted = weather['accepted'] as Map<String, dynamic>;
+        accepted['permissions'] = <String, dynamic>{
+          'cameraFuture': <String, dynamic>{'enabled': false},
+          'location': <String, dynamic>{
+            'accuracy': 'approximate',
+            'enabled': false,
+            'mode': 'whenInUse',
+            'reviewedBy': 'host-security',
+          },
+        };
+        await File(initial.policyFilePath).writeAsString(
+          '${const JsonEncoder.withIndent('  ').convert(policies)}\n',
+        );
+
+        await controller.addEndpoint(request);
+        policies =
+            jsonDecode(await File(initial.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        weather =
+            (policies['apps'] as Map<String, dynamic>)['weather']
+                as Map<String, dynamic>;
+        var acceptedPermissions =
+            (weather['accepted'] as Map<String, dynamic>)['permissions']
+                as Map<String, dynamic>;
+        expect(
+          acceptedPermissions['location'],
+          containsPair('reviewedBy', 'host-security'),
+        );
+        expect(acceptedPermissions, contains('cameraFuture'));
+
+        await controller.addEndpoint(
+          MiniProgramHostEndpointAddRequest(
+            projectRootPath: request.projectRootPath,
+            appId: request.appId,
+            title: request.title,
+            apiBaseUri: request.apiBaseUri,
+            policySourcePath: request.policySourcePath,
+            requestedPermissions: request.requestedPermissions,
+            acceptRequestedPolicy: true,
+          ),
+        );
+        policies =
+            jsonDecode(await File(initial.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        weather =
+            (policies['apps'] as Map<String, dynamic>)['weather']
+                as Map<String, dynamic>;
+        acceptedPermissions =
+            (weather['accepted'] as Map<String, dynamic>)['permissions']
+                as Map<String, dynamic>;
+        expect(acceptedPermissions['location'], containsPair('enabled', true));
+        expect(acceptedPermissions, contains('cameraFuture'));
+
+        final endpoints = await File(initial.filePath).readAsString();
+        expect(
+          endpoints,
+          contains('locationPolicy: locationPolicyForMiniProgram('),
+        );
+        final resolver = await File(
+          initial.policyResolverFilePath,
+        ).readAsString();
+        expect(
+          resolver,
+          contains('MiniProgramLocationPolicy locationPolicyForMiniProgram'),
+        );
+        expect(resolver, contains('enabled: true'));
+      },
+    );
+
+    test('force resets requested location permission to denied', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeHostProject(hostRoot);
+      final result = await MiniProgramHostController().addEndpoint(
+        MiniProgramHostEndpointAddRequest(
+          projectRootPath: hostRoot,
+          appId: 'weather',
+          apiBaseUri: Uri.parse('https://cdn.example.com/weather/'),
+          force: true,
+          acceptRequestedPolicy: true,
+          requestedPermissions: const <String, Object?>{
+            'location': <String, Object?>{
+              'enabled': true,
+              'reason': 'Local weather',
+              'accuracy': 'approximate',
+              'mode': 'whenInUse',
+            },
+          },
+        ),
+      );
+      final policies =
+          jsonDecode(await File(result.policyFilePath).readAsString())
+              as Map<String, dynamic>;
+      final weather =
+          (policies['apps'] as Map<String, dynamic>)['weather']
+              as Map<String, dynamic>;
+      final location =
+          (((weather['accepted'] as Map<String, dynamic>)['permissions']
+                  as Map<String, dynamic>)['location'])
+              as Map<String, dynamic>;
+      expect(location['enabled'], isFalse);
+    });
+
+    test(
       'force regenerates accepted policy from current requested policy',
       () async {
         final hostRoot = p.join(tempDir.path, 'host_app');

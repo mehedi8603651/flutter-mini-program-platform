@@ -5,6 +5,7 @@ import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'host_bridge.dart';
+import 'location/mini_program_location.dart';
 import 'mini_program_runtime.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
@@ -19,6 +20,7 @@ class MiniProgramConfig {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.locationProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -38,6 +40,7 @@ class MiniProgramConfig {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramLocationProvider? locationProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -53,6 +56,7 @@ class MiniProgramConfig {
       hostBridge: hostBridge,
       capabilityRegistry: capabilityRegistry,
       backendConnector: backendConnector,
+      locationProvider: locationProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,
       featureFlagEvaluator: featureFlagEvaluator,

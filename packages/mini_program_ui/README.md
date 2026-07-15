@@ -269,6 +269,26 @@ Setting `running` to false pauses the countdown. Changing `restartToken`
 resets it to the configured duration. Timers are cancelled when their node is
 disposed.
 
+## Current Location
+
+Mini-programs can request one foreground, approximate location through a host
+provider. The host must separately accept the request and install the native
+provider.
+
+```dart
+Mp.location.getCurrent(
+  accuracy: 'approximate',
+  timeout: const Duration(seconds: 10),
+  targetState: 'location.current',
+  statusState: 'location.status',
+  errorState: 'location.error',
+  requestId: 'current-location',
+);
+```
+
+This API does not support background tracking, continuous updates, or precise
+location.
+
 ## Security Model
 
 `mini_program_ui` only serializes declarative JSON. It does not execute host

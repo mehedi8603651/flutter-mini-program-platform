@@ -90,8 +90,8 @@ void main() {
             .replaceAll('\\', '/');
         expect(pubspec, contains('path: $expectedSdkPath'));
         expect(pubspec, contains('path: $expectedContractsPath'));
-        expect(pubspec, contains('mini_program_sdk: ^0.5.12'));
-        expect(pubspec, contains('mini_program_contracts: ^0.3.6'));
+        expect(pubspec, contains('mini_program_sdk: ^0.5.13'));
+        expect(pubspec, contains('mini_program_contracts: ^0.3.7'));
         expect(pubspec, isNot(contains('mini_program_legacy_stac')));
         expect(pubspec, contains('dependency_overrides:'));
 
@@ -389,8 +389,8 @@ void main() {
       final pubspec = await File(
         p.join(hostRootPath, 'pubspec.yaml'),
       ).readAsString();
-      expect(pubspec, contains('mini_program_sdk: ^0.5.12'));
-      expect(pubspec, contains('mini_program_contracts: ^0.3.6'));
+      expect(pubspec, contains('mini_program_sdk: ^0.5.13'));
+      expect(pubspec, contains('mini_program_contracts: ^0.3.7'));
       expect(pubspec, contains('http: ^1.5.0'));
     });
 
