@@ -284,22 +284,34 @@ The generated `lib/mini_program/` folder normally contains:
 
 ```text
 lib/mini_program/
-  app_host_bridge.dart
   mini_program.dart
-  mini_program_launcher.dart
+  mini_program_host_setup.dart
   mini_program_runtime_setup.dart
   mini_program_endpoints.dart
   mini_program_registry.dart
+  mini_program_policy_resolver.dart
+  mini_program_launcher.dart
+  mini_program_policies.json
+  app_host_bridge.dart
 ```
 
 Important generated files:
 
-- `mini_program.dart` is the barrel import. It re-exports the SDK and generated helpers.
+- `mini_program.dart` is the public barrel and the only mini-program import
+  ordinary host UI needs.
+- `mini_program_host_setup.dart` is host-owned, created once, and provides
+  `buildHostMiniProgramConfig()`.
 - `mini_program_runtime_setup.dart` creates `buildMiniProgramConfig(...)`.
-- `mini_program_launcher.dart` creates `openAppMiniProgram(...)`.
+- `mini_program_launcher.dart` creates dynamic and registry-based launch
+  helpers.
 - `mini_program_endpoints.dart` stores imported `artifactBaseUrl` endpoints.
 - `mini_program_registry.dart` stores app IDs and titles for imported mini-programs.
+- `mini_program_policy_resolver.dart` maps accepted policy into SDK policy.
+- `mini_program_policies.json` is the host-owned requested/accepted policy.
 - `app_host_bridge.dart` is where host-owned native actions can be wired later.
+
+`embed init --force` refreshes scaffold-generated files while preserving host
+setup, bridge, policies, and endpoint-import generated output.
 
 `host endpoint import` reads `D:\my_profile\my_profile.partner.json` and adds an
 endpoint for `my_profile`. Opening still uses only `appId + artifactBaseUrl`.
@@ -313,12 +325,14 @@ example:
 import 'package:flutter/material.dart';
 
 import 'mini_program/mini_program.dart';
-import 'mini_program/mini_program_endpoints.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final miniProgramConfig = await buildHostMiniProgramConfig();
+
   runApp(
     MiniProgramScope(
-      config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
+      config: miniProgramConfig,
       child: const MyProfileHostApp(),
     ),
   );
@@ -363,10 +377,9 @@ class MyProfileHostHome extends StatelessWidget {
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () {
-                  openAppMiniProgram(
+                  openRegisteredMiniProgram(
                     context,
-                    appId: 'my_profile',
-                    title: 'My Profile',
+                    MiniPrograms.myProfile,
                   );
                 },
                 icon: const Icon(Icons.open_in_new),
@@ -381,26 +394,26 @@ class MyProfileHostHome extends StatelessWidget {
 }
 ```
 
-Imports used by the host:
+Import used by the host:
 
 ```dart
 import 'mini_program/mini_program.dart';
-import 'mini_program/mini_program_endpoints.dart';
 ```
 
-Why these imports are needed:
+Why this import is sufficient:
 
-- `mini_program.dart` exposes `MiniProgramScope`, `buildMiniProgramConfig`, and
-  `openAppMiniProgram`.
-- `mini_program_endpoints.dart` exposes `buildMiniProgramEndpoints()`, which maps
-  `my_profile` to the GitHub Pages `artifactBaseUrl`.
+- `mini_program.dart` exposes `MiniProgramScope`,
+  `buildHostMiniProgramConfig()`, `MiniPrograms`, and the launch helpers.
+- `mini_program_host_setup.dart` automatically composes generated endpoints and
+  host runtime choices without another import in app UI.
 
 How the integration works:
 
 1. `MiniProgramScope` is placed above the app so any page can open mini-programs.
-2. `buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints())` gives the SDK
-   the imported static artifact endpoints.
-3. The button calls `openAppMiniProgram(context, appId: 'my_profile')`.
+2. `buildHostMiniProgramConfig()` gives the SDK the imported static artifact
+   endpoints.
+3. The button calls
+   `openRegisteredMiniProgram(context, MiniPrograms.myProfile)`.
 4. The SDK looks up `my_profile`, downloads `latest.json`, then downloads the
    screen JSON from the static artifact host.
 5. The SDK renders the Mp JSON screen inside the host app.
@@ -425,10 +438,9 @@ flutter run -d chrome
 In a host app button, menu item, or navigation action, call:
 
 ```dart
-openAppMiniProgram(
+openRegisteredMiniProgram(
   context,
-  appId: 'my_profile',
-  title: 'My Profile',
+  MiniPrograms.myProfile,
 );
 ```
 
@@ -436,8 +448,8 @@ The host app opens the mini-program by downloading the manifest and screen
 artifacts from `artifactBaseUrl`.
 
 For an existing app, the same rule applies: wrap the app with
-`MiniProgramScope`, import the endpoint map, then call `openAppMiniProgram` from
-your own button, drawer item, tab, or route.
+`MiniProgramScope` using `buildHostMiniProgramConfig()`, then call
+`openRegisteredMiniProgram` from your own button, drawer item, tab, or route.
 
 ## 15. Run Android And Build APK
 

@@ -30,7 +30,7 @@ These versions are the repository's current development/release line. Check each
 | `mini_program_contracts` | `0.3.6` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.1.11` | Pure-Dart authoring API that serializes UI and actions to JSON |
 | `mini_program_sdk` | `0.5.12` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.6.12` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_tooling` | `0.6.13` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -452,17 +452,22 @@ Generated host integration normally lives in an application's `lib/mini_program/
 
 ```text
 lib/mini_program/
-|-- mini_program.dart                           # Generated integration export/entry point
-|-- mini_program_launcher.dart                  # Generated host launch helper
+|-- mini_program.dart                           # Generated public barrel; ordinary host UI imports only this
+|-- mini_program_host_setup.dart                # Host-owned runtime composition; created once and preserved
 |-- mini_program_runtime_setup.dart             # Generated SDK/cache/runtime construction
+|-- mini_program_endpoints.dart                 # Endpoint-import generated artifact routes plus accepted policies
 |-- mini_program_registry.dart                  # Generated app ID to endpoint registry
-|-- mini_program_endpoints.dart                 # Generated artifact endpoints plus accepted policies
 |-- mini_program_policies.json                  # Host-owned requested/accepted policy source of truth
 |-- mini_program_policy_resolver.dart           # Generated Dart mapping for cache/live-state accepted policy
-`-- app_host_bridge.dart                        # Host bridge starting point; host-owned behavior may be edited
+|-- mini_program_launcher.dart                  # Generated dynamic and registry-based launch helpers
+`-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
 
-Read generator headers before editing generated Dart. Preserve host-owned files and fields when running import/update commands.
+`embed init --force` refreshes scaffold-generated files but must preserve
+`mini_program_host_setup.dart`, `app_host_bridge.dart`,
+`mini_program_policies.json`, and endpoint-import generated output. Read
+generator headers before editing generated Dart. Preserve host-owned files and
+accepted policy fields when running import/update commands.
 
 ### Backend References
 

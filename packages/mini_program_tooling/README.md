@@ -258,31 +258,29 @@ miniprogram embed init --project-root .
 What it does:
 
 - adds `mini_program_sdk` and `mini_program_contracts` dependencies
-- creates `lib/mini_program/`
-- creates `openAppMiniProgram(...)`
-- creates `buildMiniProgramConfig(...)`
+- creates the complete design-neutral `lib/mini_program/` integration
+- creates dynamic and registry-based launch helpers
+- creates host-owned `buildHostMiniProgramConfig()` composition
 - adds Android debug network files when Android exists
 
 Generated folder shape:
 
 ```text
 lib/mini_program/
-  app_host_bridge.dart
   mini_program.dart
-  mini_program_launcher.dart
+  mini_program_host_setup.dart
   mini_program_runtime_setup.dart
-```
-
-After importing endpoints, the host also gets:
-
-```text
-lib/mini_program/
   mini_program_endpoints.dart
   mini_program_registry.dart
+  mini_program_policy_resolver.dart
+  mini_program_launcher.dart
+  mini_program_policies.json
+  app_host_bridge.dart
 ```
 
-Use `--force` only when you intentionally want to overwrite scaffold-managed
-generated files:
+Use `--force` to refresh scaffold-generated runtime, launcher, barrel, and
+README files. Host setup, bridge, policies, and endpoint-import output are
+preserved:
 
 ```powershell
 miniprogram embed init --project-root D:\my_profile_host --force
@@ -296,11 +294,14 @@ Use when a mini-program publisher gives you a partner JSON file.
 miniprogram host endpoint import D:\my_profile\my_profile.partner.json --project-root .
 ```
 
-This writes or updates:
+This writes or updates generated routing and requested policy while preserving
+host-owned accepted policy:
 
 ```text
 lib/mini_program/mini_program_endpoints.dart
 lib/mini_program/mini_program_registry.dart
+lib/mini_program/mini_program_policy_resolver.dart
+lib/mini_program/mini_program_policies.json
 ```
 
 ### 3. Add An Endpoint Manually
@@ -338,23 +339,23 @@ The command wraps `flutter run` with the same device ID.
 
 ### 5. Open From Host UI
 
-Use the generated helper from any host page:
+Import only the public barrel and use the registered helper from any host page:
 
 ```dart
-openAppMiniProgram(
+import 'mini_program/mini_program.dart';
+
+openRegisteredMiniProgram(
   context,
-  appId: 'my_profile',
-  title: 'My Profile',
+  MiniPrograms.myProfile,
 );
 ```
 
 For a fresh host app, wrap the app once:
 
 ```dart
-MiniProgramScope(
-  config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-  child: const MyApp(),
-)
+final miniProgramConfig = await buildHostMiniProgramConfig();
+
+MiniProgramScope(config: miniProgramConfig, child: const MyApp())
 ```
 
 ## Optional Local Static Artifact Host

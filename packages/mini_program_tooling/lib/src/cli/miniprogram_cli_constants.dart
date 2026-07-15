@@ -2,7 +2,7 @@ part of '../miniprogram_cli.dart';
 
 const List<String> _supportedPublishTargets = <String>['local', 'static'];
 
-const String _miniProgramToolingVersion = '0.6.8';
+const String _miniProgramToolingVersion = '0.6.13';
 
 const List<String> _capabilityIds = <String>[
   'publish.static',

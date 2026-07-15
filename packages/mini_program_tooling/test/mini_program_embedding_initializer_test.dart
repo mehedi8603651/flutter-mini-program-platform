@@ -48,6 +48,21 @@ void main() {
       final hostBridge = await File(
         p.join(integrationRootPath, 'app_host_bridge.dart'),
       ).readAsString();
+      final hostSetup = await File(
+        p.join(integrationRootPath, 'mini_program_host_setup.dart'),
+      ).readAsString();
+      final endpoints = await File(
+        p.join(integrationRootPath, 'mini_program_endpoints.dart'),
+      ).readAsString();
+      final registry = await File(
+        p.join(integrationRootPath, 'mini_program_registry.dart'),
+      ).readAsString();
+      final policyResolver = await File(
+        p.join(integrationRootPath, 'mini_program_policy_resolver.dart'),
+      ).readAsString();
+      final policies = await File(
+        p.join(integrationRootPath, 'mini_program_policies.json'),
+      ).readAsString();
       final readme = await File(
         p.join(integrationRootPath, 'README.md'),
       ).readAsString();
@@ -59,7 +74,7 @@ void main() {
       expect(result.hostAppId, 'my_existing_app');
       expect(result.hostVersion, '3.2.0');
       expect(result.nativeRoutePath, '/native/profile-editor');
-      expect(result.createdPaths, hasLength(6));
+      expect(result.createdPaths, hasLength(11));
       expect(
         runtimeSetup,
         contains("const String _hostAppId = 'my_existing_app';"),
@@ -88,6 +103,13 @@ void main() {
       expect(runtimeSetup, contains('_buildEndpointRoutingSource'));
       expect(
         runtimeSetup,
+        contains(
+          ': _buildEndpointRoutingSource(endpoints, deliveryContext);\n\n'
+          '  return MiniProgramConfig(',
+        ),
+      );
+      expect(
+        runtimeSetup,
         isNot(contains('buildEndpointRoutingBackendConnector')),
       );
       expect(runtimeSetup, contains('MiniProgramCacheBundle? cacheBundle'));
@@ -114,10 +136,17 @@ void main() {
       expect(hostBridge, isNot(contains('MiniProgramRoutes')));
       expect(hostBridge, isNot(contains('navigatorKey')));
       expect(launcher, contains('Future<T?> openAppMiniProgram<T>('));
+      expect(launcher, contains('Future<T?> openRegisteredMiniProgram<T>('));
       expect(
         launcher,
         contains('class AppMiniProgramLauncher extends StatelessWidget'),
       );
+      expect(
+        launcher,
+        contains('class RegisteredMiniProgramLauncher extends StatelessWidget'),
+      );
+      expect(launcher, contains("import 'package:flutter/widgets.dart';"));
+      expect(launcher, isNot(contains('package:flutter/material.dart')));
       expect(launcher, contains('MiniProgramScope.of(context)'));
       expect(launcher, isNot(contains('MiniProgramLauncherButton')));
       expect(runtimeSetup, isNot(contains('MaterialApp(')));
@@ -129,35 +158,42 @@ void main() {
         contains("export 'package:mini_program_sdk/mini_program_sdk.dart';"),
       );
       expect(barrel, contains("export 'app_host_bridge.dart';"));
+      expect(barrel, contains("export 'mini_program_endpoints.dart';"));
+      expect(barrel, contains("export 'mini_program_host_setup.dart';"));
+      expect(barrel, contains("export 'mini_program_launcher.dart';"));
+      expect(barrel, contains("export 'mini_program_policy_resolver.dart';"));
+      expect(barrel, contains("export 'mini_program_registry.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
       expect(updatedPubspec, contains('mini_program_sdk: ^0.5.12'));
       expect(updatedPubspec, contains('mini_program_contracts: ^0.3.6'));
       expect(updatedPubspec, isNot(contains('mini_program_legacy_stac:')));
+      expect(
+        hostSetup,
+        contains('Future<MiniProgramConfig> buildHostMiniProgramConfig('),
+      );
+      expect(hostSetup, contains('endpoints ?? buildMiniProgramEndpoints()'));
+      expect(
+        hostSetup,
+        contains('This file is created once and is never overwritten'),
+      );
+      expect(endpoints, contains('// BEGIN MINI_PROGRAM_ENDPOINTS_JSON'));
+      expect(endpoints, contains('// {}'));
+      expect(registry, contains('static const values = <MiniProgramInfo>[];'));
+      expect(policyResolver, contains('publisherApiPolicyForMiniProgram'));
+      expect(policies, contains('"schemaVersion": 1'));
+      expect(policies, contains('"apps": {}'));
       expect(readme, contains('mini_program_sdk: ^0.5.12'));
       expect(readme, contains('mini_program_contracts: ^0.3.6'));
       expect(readme, contains('MiniProgramScope('));
-      expect(
-        readme,
-        contains("import 'package:mini_program_sdk/mini_program_sdk.dart';"),
-      );
-      expect(
-        readme,
-        contains("import 'mini_program/mini_program_launcher.dart';"),
-      );
-      expect(
-        readme,
-        contains("import 'mini_program/mini_program_runtime_setup.dart';"),
-      );
-      expect(
-        readme,
-        isNot(contains("import 'mini_program/mini_program.dart';")),
-      );
+      expect(readme, contains("import 'mini_program/mini_program.dart';"));
+      expect(readme, contains('buildHostMiniProgramConfig()'));
+      expect(readme, contains('openRegisteredMiniProgram('));
       expect(readme, contains('MINI_PROGRAM_BACKEND_HOST'));
       expect(readme, contains('MiniProgramConfig` is immutable'));
-      expect(readme, contains('middleServerApiUrl'));
+      expect(readme, contains('publisher_backend.json'));
       expect(readme, contains('miniprogram host endpoint import'));
-      expect(readme, contains('buildMiniProgramEndpoints()'));
+      expect(readme, contains('automatically uses the generated endpoint map'));
       expect(readme, contains('State management still stays app-owned'));
       expect(readme, contains('Riverpod, Provider, Bloc, GetX'));
       expect(readme, contains('openAppMiniProgram('));
@@ -217,6 +253,36 @@ void main() {
       );
       expect(runtimeSetup, contains('disposeAuthController: true'));
     });
+
+    test(
+      'accepts the first endpoint import into generated empty files',
+      () async {
+        await const MiniProgramEmbeddingInitializer().initialize(
+          MiniProgramEmbeddingInitRequest(projectRootPath: tempDir.path),
+        );
+
+        final result = await MiniProgramHostController().addEndpoint(
+          MiniProgramHostEndpointAddRequest(
+            projectRootPath: tempDir.path,
+            appId: 'my_profile',
+            title: 'My Profile',
+            apiBaseUri: Uri.parse('https://cdn.example.com/mini-programs'),
+          ),
+        );
+
+        expect(result.created, isFalse);
+        expect(result.endpointCount, 1);
+        expect(result.registryCount, 1);
+        expect(
+          await File(result.filePath).readAsString(),
+          contains('MiniPrograms.myProfile.appId'),
+        );
+        expect(
+          await File(result.registryFilePath).readAsString(),
+          contains('static const myProfile = MiniProgramInfo('),
+        );
+      },
+    );
 
     test(
       'generates Android network config for release and local debug access',
@@ -368,29 +434,77 @@ void main() {
       },
     );
 
-    test('overwrites scaffold-managed files when force is true', () async {
-      final integrationRoot = Directory(
-        p.join(tempDir.path, 'lib', 'mini_program'),
-      );
-      await integrationRoot.create(recursive: true);
-      await File(
-        p.join(integrationRoot.path, 'app_host_bridge.dart'),
-      ).writeAsString('stale');
+    test(
+      'refreshes scaffold files while preserving host and import ownership',
+      () async {
+        final integrationRoot = Directory(
+          p.join(tempDir.path, 'lib', 'mini_program'),
+        );
+        await integrationRoot.create(recursive: true);
+        await File(
+          p.join(integrationRoot.path, 'app_host_bridge.dart'),
+        ).writeAsString('host bridge customization');
+        await File(
+          p.join(integrationRoot.path, 'mini_program_host_setup.dart'),
+        ).writeAsString('host setup customization');
+        await File(
+          p.join(integrationRoot.path, 'mini_program_policies.json'),
+        ).writeAsString('{"host":"policy"}');
+        await File(
+          p.join(integrationRoot.path, 'mini_program_endpoints.dart'),
+        ).writeAsString('imported endpoints');
+        await File(
+          p.join(integrationRoot.path, 'mini_program_registry.dart'),
+        ).writeAsString('imported registry');
+        await File(
+          p.join(integrationRoot.path, 'mini_program_policy_resolver.dart'),
+        ).writeAsString('imported resolver');
+        await File(
+          p.join(integrationRoot.path, 'mini_program_runtime_setup.dart'),
+        ).writeAsString('stale generated runtime');
 
-      final result = await const MiniProgramEmbeddingInitializer().initialize(
-        MiniProgramEmbeddingInitRequest(
-          projectRootPath: tempDir.path,
-          force: true,
-        ),
-      );
+        final result = await const MiniProgramEmbeddingInitializer().initialize(
+          MiniProgramEmbeddingInitRequest(
+            projectRootPath: tempDir.path,
+            force: true,
+          ),
+        );
 
-      final hostBridge = await File(
-        p.join(integrationRoot.path, 'app_host_bridge.dart'),
-      ).readAsString();
+        final hostBridge = await File(
+          p.join(integrationRoot.path, 'app_host_bridge.dart'),
+        ).readAsString();
+        final hostSetup = await File(
+          p.join(integrationRoot.path, 'mini_program_host_setup.dart'),
+        ).readAsString();
+        final policies = await File(
+          p.join(integrationRoot.path, 'mini_program_policies.json'),
+        ).readAsString();
+        final endpoints = await File(
+          p.join(integrationRoot.path, 'mini_program_endpoints.dart'),
+        ).readAsString();
+        final registry = await File(
+          p.join(integrationRoot.path, 'mini_program_registry.dart'),
+        ).readAsString();
+        final policyResolver = await File(
+          p.join(integrationRoot.path, 'mini_program_policy_resolver.dart'),
+        ).readAsString();
+        final runtimeSetup = await File(
+          p.join(integrationRoot.path, 'mini_program_runtime_setup.dart'),
+        ).readAsString();
 
-      expect(result.createdPaths, isNotEmpty);
-      expect(hostBridge, contains('class AppHostBridge implements HostBridge'));
-    });
+        expect(result.createdPaths, isNotEmpty);
+        expect(hostBridge, 'host bridge customization');
+        expect(hostSetup, 'host setup customization');
+        expect(policies, '{"host":"policy"}');
+        expect(endpoints, 'imported endpoints');
+        expect(registry, 'imported registry');
+        expect(policyResolver, 'imported resolver');
+        expect(
+          runtimeSetup,
+          contains('MiniProgramConfig buildMiniProgramConfig'),
+        );
+      },
+    );
   });
 }
 

@@ -1,3 +1,12 @@
+## 0.6.13
+
+- Generate a complete design-neutral `lib/mini_program/` host integration with
+  one public barrel import and a host-owned runtime composition file.
+- Add registry-based launch helpers so host UI can open imported mini-programs
+  without repeating app IDs and titles.
+- Preserve host setup, bridge, policies, and endpoint-import output when
+  `embed init --force` refreshes scaffold-generated files.
+
 ## 0.6.12
 
 - Package, reference, checksum, and verify root `publisher_backend.json` in

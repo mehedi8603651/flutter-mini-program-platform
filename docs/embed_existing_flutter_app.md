@@ -8,7 +8,9 @@ This guide wires an existing Flutter app to open public static mini-program arti
 miniprogram embed init --project-root D:\my_host_app
 ```
 
-This adds the generated host adapter files under `lib/mini_program/`.
+This creates the complete integration under `lib/mini_program/`. Ordinary host
+UI imports only `mini_program.dart`; host-owned setup, bridge, and accepted
+policy are preserved by later tooling refreshes.
 
 ## 2. Import A Static Artifact Partner Package
 
@@ -61,20 +63,25 @@ The runtime API is a publisher-owned middle-server. It handles auth, database ac
 
 ## 4. Launch From UI
 
-Use the generated launcher helper:
+Import the public barrel and use the generated registry launcher:
 
 ```dart
+import 'mini_program/mini_program.dart';
+
 FilledButton(
   onPressed: () {
-    openAppMiniProgram(
+    openRegisteredMiniProgram(
       context,
-      appId: 'coupon_demo',
-      title: 'Coupon Demo',
+      MiniPrograms.couponDemo,
     );
   },
   child: const Text('Open Coupon Demo'),
 )
 ```
+
+At application startup, await `buildHostMiniProgramConfig()` and pass the
+result to the root `MiniProgramScope`. It automatically uses every imported
+endpoint.
 
 ## 5. Run
 

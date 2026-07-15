@@ -116,10 +116,7 @@ class MiniProgramEmbeddingInitializer {
     final integrationRootPath = p.join(projectRootPath, 'lib', 'mini_program');
     final integrationRootDir = Directory(integrationRootPath);
 
-    final managedFiles = <String, String>{
-      p.join(integrationRootPath, 'app_host_bridge.dart'): _buildHostBridge(
-        logPrefix: resolvedHostAppId,
-      ),
+    final scaffoldGeneratedFiles = <String, String>{
       p.join(
         integrationRootPath,
         'mini_program_runtime_setup.dart',
@@ -137,8 +134,25 @@ class MiniProgramEmbeddingInitializer {
         hostVersion: resolvedHostVersion,
       ),
     };
-    managedFiles.addAll(
-      _buildPlatformIntegrationFiles(projectRootPath: projectRootPath),
+    final endpointImportGeneratedFiles = <String, String>{
+      p.join(integrationRootPath, 'mini_program_endpoints.dart'):
+          _buildEmptyEndpoints(),
+      p.join(integrationRootPath, 'mini_program_registry.dart'):
+          _buildEmptyRegistry(),
+      p.join(integrationRootPath, 'mini_program_policy_resolver.dart'):
+          _buildEmptyPolicyResolver(),
+    };
+    final hostOwnedFiles = <String, String>{
+      p.join(integrationRootPath, 'app_host_bridge.dart'): _buildHostBridge(
+        logPrefix: resolvedHostAppId,
+      ),
+      p.join(integrationRootPath, 'mini_program_host_setup.dart'):
+          _buildHostSetup(),
+      p.join(integrationRootPath, 'mini_program_policies.json'):
+          _buildEmptyPolicies(),
+    };
+    final platformIntegrationFiles = _buildPlatformIntegrationFiles(
+      projectRootPath: projectRootPath,
     );
 
     if (await integrationRootDir.exists() &&
@@ -157,7 +171,31 @@ class MiniProgramEmbeddingInitializer {
       await pubspecFile.writeAsString(updatedPubspecSource);
       createdPaths.add(pubspecFile.path);
     }
-    for (final entry in managedFiles.entries) {
+    for (final entry in scaffoldGeneratedFiles.entries) {
+      final file = File(entry.key);
+      await file.parent.create(recursive: true);
+      await file.writeAsString(entry.value);
+      createdPaths.add(file.path);
+    }
+    for (final entry in endpointImportGeneratedFiles.entries) {
+      final file = File(entry.key);
+      if (await file.exists()) {
+        continue;
+      }
+      await file.parent.create(recursive: true);
+      await file.writeAsString(entry.value);
+      createdPaths.add(file.path);
+    }
+    for (final entry in hostOwnedFiles.entries) {
+      final file = File(entry.key);
+      if (await file.exists()) {
+        continue;
+      }
+      await file.parent.create(recursive: true);
+      await file.writeAsString(entry.value);
+      createdPaths.add(file.path);
+    }
+    for (final entry in platformIntegrationFiles.entries) {
       final file = File(entry.key);
       await file.parent.create(recursive: true);
       await file.writeAsString(entry.value);
@@ -433,8 +471,10 @@ class AppHostBridge implements HostBridge {
 
   String _buildLauncher() {
     return '''
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+import 'mini_program_registry.dart';
 
 Future<T?> openAppMiniProgram<T>(
   BuildContext context, {
@@ -448,6 +488,25 @@ Future<T?> openAppMiniProgram<T>(
   return MiniProgramScope.of(context).openMiniProgram<T>(
     appId: appId,
     title: title,
+    initialData: initialData,
+    version: version,
+    source: source,
+    options: options,
+  );
+}
+
+Future<T?> openRegisteredMiniProgram<T>(
+  BuildContext context,
+  MiniProgramInfo miniProgram, {
+  Map<String, dynamic>? initialData,
+  String? version,
+  Uri? source,
+  MiniProgramLaunchOptions options = const MiniProgramLaunchOptions(),
+}) {
+  return openAppMiniProgram<T>(
+    context,
+    appId: miniProgram.appId,
+    title: miniProgram.title,
     initialData: initialData,
     version: version,
     source: source,
@@ -488,6 +547,38 @@ class AppMiniProgramLauncher extends StatelessWidget {
     );
   }
 }
+
+class RegisteredMiniProgramLauncher extends StatelessWidget {
+  const RegisteredMiniProgramLauncher({
+    super.key,
+    required this.miniProgram,
+    required this.child,
+    this.initialData,
+    this.version,
+    this.source,
+    this.options = const MiniProgramLaunchOptions(),
+  });
+
+  final MiniProgramInfo miniProgram;
+  final Widget child;
+  final Map<String, dynamic>? initialData;
+  final String? version;
+  final Uri? source;
+  final MiniProgramLaunchOptions options;
+
+  @override
+  Widget build(BuildContext context) {
+    return MiniProgramLauncher(
+      appId: miniProgram.appId,
+      title: miniProgram.title,
+      initialData: initialData,
+      version: version,
+      source: source,
+      options: options,
+      child: child,
+    );
+  }
+}
 ''';
   }
 
@@ -496,8 +587,105 @@ class AppMiniProgramLauncher extends StatelessWidget {
 export 'package:mini_program_sdk/mini_program_sdk.dart';
 
 export 'app_host_bridge.dart';
+export 'mini_program_endpoints.dart';
+export 'mini_program_host_setup.dart';
 export 'mini_program_launcher.dart';
+export 'mini_program_policy_resolver.dart';
+export 'mini_program_registry.dart';
 export 'mini_program_runtime_setup.dart';
+''';
+  }
+
+  String _buildHostSetup() {
+    return '''
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+import 'app_host_bridge.dart';
+import 'mini_program_endpoints.dart';
+import 'mini_program_runtime_setup.dart';
+
+/// Host-owned composition point for mini-program runtime configuration.
+///
+/// This file is created once and is never overwritten by tooling. Add the
+/// host's persistent cache, environment selection, and native capabilities
+/// here while keeping generated endpoint and policy files untouched.
+Future<MiniProgramConfig> buildHostMiniProgramConfig({
+  AppNativeRouteOpener? openNativeRoute,
+  Map<String, MiniProgramEndpoint>? endpoints,
+  MiniProgramCacheBundle? cacheBundle,
+}) async {
+  return buildMiniProgramConfig(
+    openNativeRoute: openNativeRoute,
+    endpoints: endpoints ?? buildMiniProgramEndpoints(),
+    cacheBundle: cacheBundle,
+  );
+}
+''';
+  }
+
+  String _buildEmptyEndpoints() {
+    return '''
+// Generated by `miniprogram host endpoint import`.
+// Static artifact URLs and accepted policies are wired here.
+// BEGIN MINI_PROGRAM_ENDPOINTS_JSON
+// {}
+// END MINI_PROGRAM_ENDPOINTS_JSON
+
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+Map<String, MiniProgramEndpoint> buildMiniProgramEndpoints() {
+  return <String, MiniProgramEndpoint>{};
+}
+''';
+  }
+
+  String _buildEmptyRegistry() {
+    return '''
+// Generated by miniprogram tooling.
+// Updated by `miniprogram host endpoint import`.
+
+class MiniProgramInfo {
+  const MiniProgramInfo({required this.appId, required this.title});
+
+  final String appId;
+  final String title;
+}
+
+class MiniPrograms {
+  const MiniPrograms._();
+
+  static const values = <MiniProgramInfo>[];
+  static const byAppId = <String, MiniProgramInfo>{};
+}
+''';
+  }
+
+  String _buildEmptyPolicyResolver() {
+    return '''
+// Generated by `miniprogram host endpoint import`.
+
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+MiniProgramCachePolicy cachePolicyForMiniProgram(String appId) {
+  return const MiniProgramCachePolicy();
+}
+
+MiniProgramLiveStatePolicy liveStatePolicyForMiniProgram(String appId) {
+  return const MiniProgramLiveStatePolicy();
+}
+
+MiniProgramPublisherApiPolicy publisherApiPolicyForMiniProgram(String appId) {
+  return const MiniProgramPublisherApiPolicy();
+}
+''';
+  }
+
+  String _buildEmptyPolicies() {
+    return '''
+{
+  "schemaVersion": 1,
+  "apps": {}
+}
 ''';
   }
 
@@ -662,12 +850,17 @@ String _platformName() {
 
 This folder was generated by `miniprogram embed init`.
 
-Generated files:
+Integration files:
 
-- `mini_program.dart`
-- `app_host_bridge.dart`
-- `mini_program_runtime_setup.dart`
-- `mini_program_launcher.dart`
+- `mini_program.dart`: generated single public import
+- `mini_program_host_setup.dart`: host-owned runtime composition
+- `mini_program_runtime_setup.dart`: generated SDK construction
+- `mini_program_endpoints.dart`: endpoint-import generated artifact routing
+- `mini_program_registry.dart`: endpoint-import generated app registry
+- `mini_program_policy_resolver.dart`: endpoint-import generated policy mapping
+- `mini_program_launcher.dart`: generated launch helpers
+- `mini_program_policies.json`: host-owned requested/accepted policy
+- `app_host_bridge.dart`: host-owned capability implementation
 - `android/app/src/debug/AndroidManifest.xml` when the Flutter app has an
   Android target
 - `android/app/src/debug/res/xml/mini_program_network_security_config.xml`
@@ -689,14 +882,16 @@ scaffold is generated.
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:mini_program_sdk/mini_program_sdk.dart';
 
-import 'mini_program/mini_program_runtime_setup.dart';
+import 'mini_program/mini_program.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final miniProgramConfig = await buildHostMiniProgramConfig();
+
   runApp(
     MiniProgramScope(
-      config: buildMiniProgramConfig(),
+      config: miniProgramConfig,
       child: const MyApp(),
     ),
   );
@@ -706,49 +901,42 @@ void main() {
 ## 3. Open any mini-program from an ordinary app button
 
 ```dart
-import 'mini_program/mini_program_launcher.dart';
-
-openAppMiniProgram(
+openRegisteredMiniProgram(
   context,
-  appId: 'my_data',
-  title: 'My Data',
+  MiniPrograms.myData,
 );
 ```
 
 Or use the generated launcher widget:
 
 ```dart
-const AppMiniProgramLauncher(
-  appId: 'my_data',
-  title: 'My Data',
+const RegisteredMiniProgramLauncher(
+  miniProgram: MiniPrograms.myData,
   child: Text('Open Mini Program'),
 )
 ```
 
-## 4. Optional endpoint registry
+The raw `openAppMiniProgram(...)` and `AppMiniProgramLauncher` APIs remain
+available for dynamic app IDs that are not in the generated registry.
 
-For one or two buttons, inline strings are easiest to read. When one host app
-opens many mini-programs, keep each `appId`, title, and static artifact URL in
-generated endpoint files from partner handoff import:
+## 4. Import endpoint registry and policy
+
+Keep each `appId`, title, static artifact URL, and accepted host policy in the
+generated integration by importing the publisher handoff:
 
 ```bash
-miniprogram host endpoint import ../my_program.partner.json
+miniprogram host endpoint import ../my_data.partner.json
 ```
 
-Then wire the generated endpoint map into runtime setup:
-
-```dart
-MiniProgramScope(
-  config: buildMiniProgramConfig(endpoints: buildMiniProgramEndpoints()),
-  child: const MyApp(),
-);
-```
+`buildHostMiniProgramConfig()` automatically uses the generated endpoint map.
+No additional import or runtime wiring is required when another mini-program is
+added.
 
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
-Optional runtime `middleServerApiUrl` belongs to mini-program runtime actions and
-config, not the host-opening handoff. Provider credentials and backend secrets
-stay on the Publisher API server, never in Mp JSON, APK, IPA, web JavaScript,
-logs, or handoff docs.
+An optional `publisher_backend.json` declares the mini-program's Publisher API,
+while `mini_program_policies.json` records whether the host accepts it. Provider
+credentials and backend secrets stay on the Publisher API server, never in Mp
+JSON, APK, IPA, web JavaScript, logs, or handoff docs.
 
 ## Generated defaults
 
@@ -756,22 +944,31 @@ logs, or handoff docs.
 - host app id: `$hostAppId`
 - host version: `$hostVersion`
 - lean capabilities: `analytics`; `native_navigation` is added when you pass an
-  `openNativeRoute` callback to `buildMiniProgramConfig`
+  `openNativeRoute` callback to `buildHostMiniProgramConfig`
 
 ## Host app structure
 
-- `mini_program.dart` is an optional generated barrel export.
-- `mini_program_launcher.dart` exposes `openAppMiniProgram(...)` and
-  `AppMiniProgramLauncher`.
+- `mini_program.dart` is the generated public barrel and the only integration
+  import ordinary host UI needs.
+- `mini_program_host_setup.dart` is created once and never overwritten. Edit it
+  for persistent cache, environment selection, and host capabilities.
+- `mini_program_launcher.dart` exposes registered and dynamic launch helpers.
 - `mini_program_runtime_setup.dart` resolves the static artifact host URL and
   builds `MiniProgramConfig`.
-- `app_host_bridge.dart` is app-owned. Edit it for real analytics,
+- endpoint import owns endpoints, registry, and generated policy resolution.
+- `app_host_bridge.dart` is host-owned. Edit it for real analytics,
   host-native routes, and secure API behavior.
+- `mini_program_policies.json` is host-owned. Endpoint import merges publisher
+  requests while preserving accepted host decisions.
 - your app `lib/main.dart` stays app-owned.
+
+`miniprogram embed init --force` refreshes scaffold-generated files but
+preserves host-owned files and endpoint-import output.
 
 ## Runtime ownership
 
-- Recommended: `MiniProgramScope(config: buildMiniProgramConfig(), child: MyApp())`.
+- Recommended: await `buildHostMiniProgramConfig()` once, then pass it to the
+  root `MiniProgramScope`.
 - Advanced: `MiniProgramController` and `MiniProgramNavigationDelegate`.
 - Manual embedding: `MiniProgramRuntimeScope`, `MiniProgramPage`, and
   `MiniProgramHost`.
