@@ -220,7 +220,13 @@ packages/mini_program_sdk/
 |   |-- mini_program_scope.dart                 # Inherited runtime scope for active mini-program services
 |   |-- mini_program_runtime.dart               # Runtime assembly and execution services
 |   |-- mini_program_controller.dart            # Imperative host/runtime controller
-|   |-- mini_program_discovery.dart             # Catalog/discovery abstraction
+|   |-- mini_program_discovery.dart             # Public availability resolver import boundary and part registry
+|   |-- discovery_runtime/
+|   |   |-- models.dart                         # Public source/status enums and immutable discovery state
+|   |   |-- resolver.dart                       # Public availability resolve operation and orchestration
+|   |   |-- cache.dart                          # Remote manifest cache writes/removals and stale-age checks
+|   |   |-- offline_fallback.dart               # Retryable failure gating and cached entry-screen availability
+|   |   `-- messages.dart                       # Stable bundled/remote unavailable messages
 |   |-- mini_program_failure.dart               # Typed SDK loading/runtime failure model
 |   |-- manifest_loader.dart                    # Public loader facade, imports, and private delivery part registry
 |   |-- delivery_loading/
@@ -340,7 +346,7 @@ packages/mini_program_sdk/
 |   |   |-- asset_resolver.dart                 # Public offline image-resolution import boundary and part registry
 |   |   |-- mini_program_endpoint.dart          # Public endpoint-routing import boundary and part registry
 |   |   |-- mini_program_delivery_context.dart  # Delivery metadata available during loading
-|   |   |-- published_mini_program_catalog_client.dart # Reads published catalog/latest metadata
+|   |   |-- published_mini_program_catalog_client.dart # Public catalog client import boundary and part registry
 |   |   |-- mini_program_backend_connector.dart # Public Publisher API connector import boundary and part registry
 |   |   |-- mini_program_backend_store.dart     # Public reactive store import boundary and part registry
 |   |   |-- asset_resolution/
@@ -349,6 +355,12 @@ packages/mini_program_sdk/
 |   |   |   |-- traversal.dart                  # Sequential recursive map/list screen rewriting
 |   |   |   |-- detection.dart                  # Eligible network-image recognition and extension inference
 |   |   |   `-- image_resolution.dart           # Cache reads, HTTP download, persistence, fallback, logging, and rewrite
+|   |   |-- published_catalog/
+|   |   |   |-- models.dart                     # Public catalog and published mini-program summary models
+|   |   |   |-- client.dart                     # Public client construction, delivery context, and list operation
+|   |   |   |-- transport.dart                  # Catalog URI, GET, timeout, transport, and HTTP status handling
+|   |   |   |-- parsing.dart                    # JSON object, ordered entries, capability normalization, and trace ID
+|   |   |   `-- errors.dart                     # Nested backend failure normalization and details
 |   |   |-- static_delivery/
 |   |   |   |-- http/
 |   |   |   |   |-- source.dart                 # Public HTTP source constructor, fields, operations, and disposal
@@ -483,6 +495,8 @@ Artifact JSON data uses one private Dart `part` library rooted at `data/mini_pro
 Static artifact delivery uses private Dart `part` libraries rooted at `network/http_mini_program_source.dart` and `network/mini_program_endpoint.dart`. Keep `ManifestRequestQueryParametersBuilder`, `HttpMiniProgramSource`, `MiniProgramEndpointSourceFactory`, `MiniProgramEndpoint`, and `EndpointRoutingMiniProgramSource` available through those historical files and the SDK barrel. Public load, policy, and disposal operations remain actual class members. Preserve canonical `artifacts/<appId>/...` paths, latest-manifest-only query parameters, request headers and timeouts, transport-only loopback fallback order, attempted-URI details, JSON object validation, backend error normalization, optional Publisher API contract 404 behavior, contract app-ID matching, normalized endpoint identity, one lazy source per app, optional source capabilities, host-accepted policy lookup, injected-client ownership, and source disposal order.
 
 Offline image resolution uses one private Dart `part` library rooted at `network/asset_resolver.dart`. Keep `AssetResolutionResult` and `AssetResolver` available through that historical file and the SDK barrel; `resolveEntryScreenAssets` and `resolveScreenAssets` remain actual class members. Preserve entry-screen cache-policy gating, the shallow top-level clone when disabled, sequential depth-first map/list traversal, eligible `image` plus HTTP(S) plus null/`network` detection, fresh-cache short circuiting, direct `DateTime.now()` age checks, HTTP 200/non-empty-byte requirements, content type and source-extension forwarding, cache-write-before-file rewrite, second cache read after every unsuccessful download, exact warning/error ordering for exceptions, unchanged failed image JSON, and cached/downloaded/failed counters.
+
+Published catalog and list-level availability use private Dart `part` libraries rooted at `network/published_mini_program_catalog_client.dart` and `mini_program_discovery.dart`. Keep all catalog models, `PublishedMiniProgramCatalogClient`, discovery enums/state, and `MiniProgramDiscoveryResolver` available through those historical files and the SDK barrel; `listAvailableMiniPrograms` and `resolve` remain actual class members. Preserve `discovery/mini-programs.json` URI resolution, delivery query ordering, timeout and transport failures, body-over-header trace precedence, ordered entry parsing, capability normalization, nested backend errors/details, and malformed success/error behavior. Discovery order is compatibility-sensitive: read cached manifest, load source manifest, mutate manifest cache only for remote sources, then return live/cached; on failure, offline fallback is remote-only, accepts only backend unreachable/timeout, validates manifest policy/age before reading entry-screen cache, validates screen policy/age inclusively, and otherwise returns the same manifest metadata, details, badges, `canOpen`, and stable bundled/remote messages.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
