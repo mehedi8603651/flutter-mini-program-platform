@@ -421,8 +421,17 @@ packages/mini_program_sdk/
 |   |       |-- math_engine.dart                # Restricted core-Dart expression tokenizer/parser/evaluator
 |   |       |-- validation/
 |   |       |   |-- screen_validator.dart       # Public validator facade, limits, root parsing, and dispatch tables
-|   |       |   |-- shared_validation.dart      # Shared keys, ranges, bindings, values, and controlled failures
 |   |       |   |-- shared.dart                 # Cross-feature template and action parsing helpers
+|   |       |   |-- shared/
+|   |       |   |   |-- structure.dart          # Object keys, child cardinality, and generic object/list parsing
+|   |       |   |   |-- strings.dart            # Stable strings, field names, locales, and dotted data paths
+|   |       |   |   |-- numbers.dart            # Integer, number, boolean, and bounded scalar validation
+|   |       |   |   |-- presentation.dart       # Spacing, positioning, icons, tones, text choices, and headings
+|   |       |   |   |-- theme.dart              # Theme colors, typography, tokens, and theme-specific values
+|   |       |   |   |-- media.dart              # Image sources, headers, URLs, base64 data, and preview hosts
+|   |       |   |   |-- collections_forms.dart  # Collection direction/limits and selection option parsing
+|   |       |   |   |-- state_cache.dart        # State paths, patch overlap, cache keys, buckets, and JSON values
+|   |       |   |   `-- failures.dart           # Unsupported type and controlled render failures
 |   |       |   |-- nodes/                      # Private node validators grouped by runtime feature
 |   |       |   `-- actions/                    # Private action validators grouped by runtime feature
 |   |       |-- widgets.dart                    # Screen/root rendering and central node-type dispatch only
@@ -498,7 +507,7 @@ Offline image resolution uses one private Dart `part` library rooted at `network
 
 Published catalog and list-level availability use private Dart `part` libraries rooted at `network/published_mini_program_catalog_client.dart` and `mini_program_discovery.dart`. Keep all catalog models, `PublishedMiniProgramCatalogClient`, discovery enums/state, and `MiniProgramDiscoveryResolver` available through those historical files and the SDK barrel; `listAvailableMiniPrograms` and `resolve` remain actual class members. Preserve `discovery/mini-programs.json` URI resolution, delivery query ordering, timeout and transport failures, body-over-header trace precedence, ordered entry parsing, capability normalization, nested backend errors/details, and malformed success/error behavior. Discovery order is compatibility-sensitive: read cached manifest, load source manifest, mutate manifest cache only for remote sources, then return live/cached; on failure, offline fallback is remote-only, accepts only backend unreachable/timeout, validates manifest policy/age before reading entry-screen cache, validates screen policy/age inclusively, and otherwise returns the same manifest metadata, details, badges, `canOpen`, and stable bundled/remote messages.
 
-Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
+Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Shared scalar and structural validation belongs in the matching file under `mp_runtime/validation/shared/`; preserve validation call order, exact messages, paths, details, defaults, regexes, allowed sets, and normalized map insertion order when moving helpers. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
 ### `packages/mini_program_tooling`
 
