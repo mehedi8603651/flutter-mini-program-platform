@@ -258,10 +258,28 @@ packages/mini_program_sdk/
 |   |   `-- router/
 |   |       `-- router.dart                     # MpRouter public callback typedefs and forwarding facade
 |   |-- cache/
-|   |   |-- mini_program_cache_bundle.dart      # Host-selected cache bundle and cache policy models
-|   |   |-- manifest_cache.dart                 # Cached manifests and expiration behavior
-|   |   |-- screen_cache.dart                   # Cached screen documents
-|   |   |-- asset_cache.dart                    # Cached static assets
+|   |   |-- mini_program_cache_bundle.dart      # Host-selected delivery/runtime cache composition
+|   |   |-- manifest_cache.dart                 # Public compatibility barrel for manifest cache APIs
+|   |   |-- screen_cache.dart                   # Public compatibility barrel for screen cache APIs
+|   |   |-- asset_cache.dart                    # Public compatibility barrel for asset cache APIs
+|   |   |-- delivery/
+|   |   |   |-- storage_key_codec.dart          # Shared base64url delivery-cache filename encoding
+|   |   |   |-- manifest/
+|   |   |   |   |-- entry.dart                  # Cached manifest JSON model
+|   |   |   |   |-- store.dart                  # Manifest cache contract
+|   |   |   |   |-- memory_store.dart           # In-memory manifest cache
+|   |   |   |   `-- file_store.dart             # Corruption-tolerant file-backed manifest cache
+|   |   |   |-- screen/
+|   |   |   |   |-- entry.dart                  # Versioned cached screen JSON model
+|   |   |   |   |-- keys.dart                   # Stable app/version/screen cache-key construction
+|   |   |   |   |-- store.dart                  # Screen cache contract
+|   |   |   |   |-- memory_store.dart           # In-memory screen cache
+|   |   |   |   `-- file_store.dart             # Corruption-tolerant file-backed screen cache
+|   |   |   `-- asset/
+|   |   |       |-- entry.dart                  # Cached asset metadata model
+|   |   |       |-- store.dart                  # Asset cache contract
+|   |   |       |-- no_op_store.dart            # Disabled/non-persistent asset cache
+|   |   |       `-- file_store.dart             # Asset bytes, metadata, extensions, and cleanup
 |   |   |-- runtime_cache.dart                  # Public runtime-cache import boundary and private part registry
 |   |   |-- runtime/
 |   |   |   |-- types.dart                      # Cache clock plus bucket, storage, and priority enums
@@ -277,8 +295,13 @@ packages/mini_program_sdk/
 |   |   |   |-- tracking.dart                   # Known apps, policy memory, access timestamps, and metadata refresh
 |   |   |   |-- app_cache.dart                  # Mini-program-visible app-scoped cache facade and bucket checks
 |   |   |   `-- values.dart                     # App/key safety, JSON value normalization, and byte sizing
-|   |   |-- runtime_file_cache.dart             # Persistent file-backed runtime cache implementation
-|   |   `-- runtime_shared_preferences_cache.dart # Persistent preferences/web-compatible cache implementation
+|   |   |-- runtime_file_cache.dart             # Public compatibility barrel for file runtime persistence
+|   |   |-- runtime_shared_preferences_cache.dart # Public compatibility barrel for preferences persistence
+|   |   `-- persistence/
+|   |       |-- runtime_entry_codec.dart         # Shared immutable schema-v1 runtime entry codec
+|   |       |-- storage_key_codec.dart           # Runtime filename/preference-key encoding and prefix validation
+|   |       |-- file_runtime_store.dart          # Atomic file-backed indexed runtime store
+|   |       `-- preferences_runtime_store.dart   # SharedPreferences/web-compatible indexed runtime store
 |   |-- data/
 |   |   `-- mini_program_data_resource.dart     # Validated artifact JSON loading, data-cache persistence, and ranked indexes
 |   |-- network/
@@ -376,7 +399,9 @@ packages/mini_program_sdk/
 
 Live state and routing use one private Dart `part` library rooted at `state/mp_state.dart`. Keep `MpStore`, `MpStateManager`, `MiniProgramLiveStatePolicy`, `MiniProgramStateLimitException`, `validateStateKey`, router typedefs, and `MpRouter` available through the existing public SDK barrel. State values must remain JSON-safe and defensively cloned; reads inside a batch must observe staged writes; nested batches must commit once or roll back as one unit; related-path watchers must notify once after the outer commit; policy and quota failures must preserve prior state and stable details. Preserve UTF-8 JSON byte accounting, recursive entry/depth rules, secret-like key blocking, dispose behavior, and exact router argument/result/request-ID forwarding.
 
-Runtime cache uses one private Dart `part` library rooted at `cache/runtime_cache.dart`. Keep all public cache enums, models, store interfaces, `MiniProgramCacheManager`, and `MiniProgramAppCache` available through the existing barrel. Public manager operations must remain real class members because hosts may subclass and override lifecycle or cleanup behavior; internal orchestration must call those public methods where the previous implementation did. Preserve namespaced keys, injected-clock TTL behavior, stored-null versus missing semantics, policy memory, metadata timestamps, cleanup order by priority then bucket then access time, and host-pinned protection. Mini-program app caches must never expose session or host-pinned writes, disabled buckets must fail before access, and usage JSON must hide session entries and host-pinned bytes. `runtime_file_cache.dart` and `runtime_shared_preferences_cache.dart` own persistent formats and must not be changed as part of runtime manager organization.
+Runtime cache uses one private Dart `part` library rooted at `cache/runtime_cache.dart`. Keep all public cache enums, models, store interfaces, `MiniProgramCacheManager`, and `MiniProgramAppCache` available through the existing barrel. Public manager operations must remain real class members because hosts may subclass and override lifecycle or cleanup behavior; internal orchestration must call those public methods where the previous implementation did. Preserve namespaced keys, injected-clock TTL behavior, stored-null versus missing semantics, policy memory, metadata timestamps, cleanup order by priority then bucket then access time, and host-pinned protection. Mini-program app caches must never expose session or host-pinned writes, disabled buckets must fail before access, and usage JSON must hide session entries and host-pinned bytes.
+
+Delivery cache APIs keep their historical `manifest_cache.dart`, `screen_cache.dart`, and `asset_cache.dart` import paths as explicit compatibility barrels; models, contracts, memory/no-op stores, and file stores belong under `cache/delivery/`. Runtime persistence keeps the historical file and SharedPreferences import paths as compatibility barrels while implementations and the shared schema-v1 codec live under `cache/persistence/`. Preserve base64url filenames and preference keys, JSON property names and ordering, UTC timestamp encoding, corruption and expiration cleanup, asset extension resolution, atomic runtime file replacement, and the distinct default persistent bucket sets. `MiniProgramCacheBundle.inMemory`, `.fileBacked`, and `.webPersistent` composition is a public behavior boundary.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
