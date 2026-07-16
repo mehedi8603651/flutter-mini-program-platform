@@ -319,7 +319,20 @@ packages/mini_program_sdk/
 |   |       |-- file_runtime_store.dart          # Atomic file-backed indexed runtime store
 |   |       `-- preferences_runtime_store.dart   # SharedPreferences/web-compatible indexed runtime store
 |   |-- data/
-|   |   `-- mini_program_data_resource.dart     # Validated artifact JSON loading, data-cache persistence, and ranked indexes
+|   |   |-- mini_program_data_resource.dart     # Public data-resource import boundary and private part registry
+|   |   `-- runtime/
+|   |       |-- constants.dart                  # Public JSON asset byte, depth, member, and path limits
+|   |       |-- models.dart                     # Public load result and stable data exception
+|   |       |-- manager.dart                    # Public manager operations and owned resource/index state
+|   |       |-- loading.dart                    # Cache-first artifact loading, source mapping, persistence, and replacement
+|   |       |-- resource_keys.dart              # Versioned cache keys and app/version/resource runtime keys
+|   |       |-- resource_state.dart             # Loaded resource model and index invalidation
+|   |       |-- resource_validation.dart        # Cache policy, resource ID, safe path, size, depth, and member validation
+|   |       `-- search/
+|   |           |-- models.dart                 # Private search index, record, and ranked-item models
+|   |           |-- indexing.dart               # List/path extraction, field normalization, index building, and eviction
+|   |           |-- ranking.dart                # Diacritic normalization and exact/prefix/contains ranking
+|   |           `-- execution.dart              # Query validation, stale suppression, sorting, limits, and result projection
 |   |-- network/
 |   |   |-- mini_program_source.dart            # Abstract static artifact source
 |   |   |-- http_mini_program_source.dart       # HTTP static artifact source for production/public storage
@@ -442,6 +455,8 @@ Delivery cache APIs keep their historical `manifest_cache.dart`, `screen_cache.d
 Publisher API networking uses private Dart `part` libraries rooted at `network/mini_program_backend_connector.dart` and `network/mini_program_backend_store.dart`. Keep every existing connector, policy, request/result, query/snapshot, and store type available through those historical files and the SDK barrel. `EndpointRoutingMiniProgramBackendConnector.call`/`dispose` and all public `MiniProgramBackendStore` operations must remain actual class members. Preserve relative endpoint and traversal rejection, lazy client creation, HTTP method/body behavior, local loopback fallback order, delivery/backend/request header precedence, GET-only TTL caching, authorization-based cache partitioning, response normalization, error codes/messages, and disposal. Reactive store order is compatibility-sensitive: publish loading, apply the optional interceptor, invoke the connector, reject late generation/disposal results, publish the terminal snapshot, then clean matching in-flight identity. Failed refreshes and page loads keep previous data/items; pagination registration, deduplication, binding-map ordering, listener notification timing, `clear()`, and `dispose()` semantics must remain unchanged.
 
 Authentication uses one private Dart `part` library rooted at `auth/mini_program_auth.dart`. Keep all auth models, stores, and `MiniProgramAuthController` available through that historical file and the SDK barrel; controller public operations remain actual class members so host subclasses retain virtual dispatch. Auth tokens may appear only in the token-bearing session/storage model and Publisher API request headers, never in snapshot, result, or binding projections. Preserve the base64url secure-storage key, JSON property ordering, UTC expiry parsing, 30-second default expiry skew, app-ID isolation, notification transitions, expired restore-to-refresh routing, refresh failure cleanup, local-first sign-out, request-header precedence, and calls through public `refresh()` where prior subclass dispatch was possible.
+
+Artifact JSON data uses one private Dart `part` library rooted at `data/mini_program_data_resource.dart`. Keep the four public asset limits, load result, data exception, and `MiniProgramDataResourceManager` available through that historical file and the SDK barrel; `load`, `search`, and `clear` remain actual manager members. Preserve validation order, host-approved data-bucket enforcement, versioned internal cache keys, cache-before-source loading, force-refresh behavior, source-error mapping, UTF-8 JSON size/depth/member limits, cache-write-before-resource replacement, and app/version/resource isolation. Search behavior is compatibility-sensitive: increment generation and yield before short-query/resource checks, suppress only matching app/resource/target requests, build indexes by items path plus ordered fields, keep at most eight insertion-ordered indexes, normalize case/whitespace/diacritics, rank exact then token-prefix then contains, preserve source order for ties, and invalidate resource indexes on replacement or clear.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
