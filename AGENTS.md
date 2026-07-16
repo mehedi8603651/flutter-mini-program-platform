@@ -337,12 +337,18 @@ packages/mini_program_sdk/
 |   |   |-- mini_program_source.dart            # Abstract static artifact source
 |   |   |-- http_mini_program_source.dart       # Public HTTP static-delivery import boundary and part registry
 |   |   |-- mini_program_source_exception.dart  # Fetch/source failure taxonomy
-|   |   |-- asset_resolver.dart                 # Resolves manifest-relative artifact asset URLs
+|   |   |-- asset_resolver.dart                 # Public offline image-resolution import boundary and part registry
 |   |   |-- mini_program_endpoint.dart          # Public endpoint-routing import boundary and part registry
 |   |   |-- mini_program_delivery_context.dart  # Delivery metadata available during loading
 |   |   |-- published_mini_program_catalog_client.dart # Reads published catalog/latest metadata
 |   |   |-- mini_program_backend_connector.dart # Public Publisher API connector import boundary and part registry
 |   |   |-- mini_program_backend_store.dart     # Public reactive store import boundary and part registry
+|   |   |-- asset_resolution/
+|   |   |   |-- models.dart                     # Public result counters and private mutable statistics
+|   |   |   |-- resolver.dart                   # Public resolver constructor and entry/screen operations
+|   |   |   |-- traversal.dart                  # Sequential recursive map/list screen rewriting
+|   |   |   |-- detection.dart                  # Eligible network-image recognition and extension inference
+|   |   |   `-- image_resolution.dart           # Cache reads, HTTP download, persistence, fallback, logging, and rewrite
 |   |   |-- static_delivery/
 |   |   |   |-- http/
 |   |   |   |   |-- source.dart                 # Public HTTP source constructor, fields, operations, and disposal
@@ -475,6 +481,8 @@ Authentication uses one private Dart `part` library rooted at `auth/mini_program
 Artifact JSON data uses one private Dart `part` library rooted at `data/mini_program_data_resource.dart`. Keep the four public asset limits, load result, data exception, and `MiniProgramDataResourceManager` available through that historical file and the SDK barrel; `load`, `search`, and `clear` remain actual manager members. Preserve validation order, host-approved data-bucket enforcement, versioned internal cache keys, cache-before-source loading, force-refresh behavior, source-error mapping, UTF-8 JSON size/depth/member limits, cache-write-before-resource replacement, and app/version/resource isolation. Search behavior is compatibility-sensitive: increment generation and yield before short-query/resource checks, suppress only matching app/resource/target requests, build indexes by items path plus ordered fields, keep at most eight insertion-ordered indexes, normalize case/whitespace/diacritics, rank exact then token-prefix then contains, preserve source order for ties, and invalidate resource indexes on replacement or clear.
 
 Static artifact delivery uses private Dart `part` libraries rooted at `network/http_mini_program_source.dart` and `network/mini_program_endpoint.dart`. Keep `ManifestRequestQueryParametersBuilder`, `HttpMiniProgramSource`, `MiniProgramEndpointSourceFactory`, `MiniProgramEndpoint`, and `EndpointRoutingMiniProgramSource` available through those historical files and the SDK barrel. Public load, policy, and disposal operations remain actual class members. Preserve canonical `artifacts/<appId>/...` paths, latest-manifest-only query parameters, request headers and timeouts, transport-only loopback fallback order, attempted-URI details, JSON object validation, backend error normalization, optional Publisher API contract 404 behavior, contract app-ID matching, normalized endpoint identity, one lazy source per app, optional source capabilities, host-accepted policy lookup, injected-client ownership, and source disposal order.
+
+Offline image resolution uses one private Dart `part` library rooted at `network/asset_resolver.dart`. Keep `AssetResolutionResult` and `AssetResolver` available through that historical file and the SDK barrel; `resolveEntryScreenAssets` and `resolveScreenAssets` remain actual class members. Preserve entry-screen cache-policy gating, the shallow top-level clone when disabled, sequential depth-first map/list traversal, eligible `image` plus HTTP(S) plus null/`network` detection, fresh-cache short circuiting, direct `DateTime.now()` age checks, HTTP 200/non-empty-byte requirements, content type and source-extension forwarding, cache-write-before-file rewrite, second cache read after every unsuccessful download, exact warning/error ordering for exceptions, unchanged failed image JSON, and cached/downloaded/failed counters.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
