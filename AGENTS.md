@@ -262,7 +262,21 @@ packages/mini_program_sdk/
 |   |   |-- manifest_cache.dart                 # Cached manifests and expiration behavior
 |   |   |-- screen_cache.dart                   # Cached screen documents
 |   |   |-- asset_cache.dart                    # Cached static assets
-|   |   |-- runtime_cache.dart                  # App-scoped public runtime cache manager and usage reporting
+|   |   |-- runtime_cache.dart                  # Public runtime-cache import boundary and private part registry
+|   |   |-- runtime/
+|   |   |   |-- types.dart                      # Cache clock plus bucket, storage, and priority enums
+|   |   |   |-- policy.dart                     # Host policy, allowed buckets, TTLs, limits, and policy provider
+|   |   |   |-- usage.dart                      # Host usage models and privacy-filtered mini-program JSON
+|   |   |   |-- entries.dart                    # Cache entry and per-app metadata models
+|   |   |   |-- store.dart                      # Base and indexed runtime cache store contracts
+|   |   |   |-- memory_store.dart               # In-memory indexed store implementation
+|   |   |   |-- manager.dart                    # Public overrideable manager methods and service state
+|   |   |   |-- operations.dart                 # Reads, writes, removals, clears, TTL clamping, totals, and usage
+|   |   |   |-- lifecycle.dart                  # App open/close, expiry, logout, inactive, and global cleanup
+|   |   |   |-- enforcement.dart                # Bucket/total quota eviction order and host-pinned protection
+|   |   |   |-- tracking.dart                   # Known apps, policy memory, access timestamps, and metadata refresh
+|   |   |   |-- app_cache.dart                  # Mini-program-visible app-scoped cache facade and bucket checks
+|   |   |   `-- values.dart                     # App/key safety, JSON value normalization, and byte sizing
 |   |   |-- runtime_file_cache.dart             # Persistent file-backed runtime cache implementation
 |   |   `-- runtime_shared_preferences_cache.dart # Persistent preferences/web-compatible cache implementation
 |   |-- data/
@@ -361,6 +375,8 @@ packages/mini_program_sdk/
 `ManifestLoader` uses one private Dart `part` library rooted at `manifest_loader.dart`. Keep the public loader signatures, constructor, result-type APIs, imports, and part registry stable; orchestration, result implementations, manifest acceptance, optional Publisher API contract loading, cache reads/writes, stale fallback, and private load results belong in `delivery_loading/`. Runtime order is compatibility-sensitive: load the manifest, validate SDK/capabilities/feature flags, load the entry screen, then load the optional Publisher API contract. Preserve cache write/remove order, retryable error classification, maximum stale-age checks, warning/error payloads, structured failure details, and the rule that Publisher API connectivity failures do not fail static app loading.
 
 Live state and routing use one private Dart `part` library rooted at `state/mp_state.dart`. Keep `MpStore`, `MpStateManager`, `MiniProgramLiveStatePolicy`, `MiniProgramStateLimitException`, `validateStateKey`, router typedefs, and `MpRouter` available through the existing public SDK barrel. State values must remain JSON-safe and defensively cloned; reads inside a batch must observe staged writes; nested batches must commit once or roll back as one unit; related-path watchers must notify once after the outer commit; policy and quota failures must preserve prior state and stable details. Preserve UTF-8 JSON byte accounting, recursive entry/depth rules, secret-like key blocking, dispose behavior, and exact router argument/result/request-ID forwarding.
+
+Runtime cache uses one private Dart `part` library rooted at `cache/runtime_cache.dart`. Keep all public cache enums, models, store interfaces, `MiniProgramCacheManager`, and `MiniProgramAppCache` available through the existing barrel. Public manager operations must remain real class members because hosts may subclass and override lifecycle or cleanup behavior; internal orchestration must call those public methods where the previous implementation did. Preserve namespaced keys, injected-clock TTL behavior, stored-null versus missing semantics, policy memory, metadata timestamps, cleanup order by priority then bucket then access time, and host-pinned protection. Mini-program app caches must never expose session or host-pinned writes, disabled buckets must fail before access, and usage JSON must hide session entries and host-pinned bytes. `runtime_file_cache.dart` and `runtime_shared_preferences_cache.dart` own persistent formats and must not be changed as part of runtime manager organization.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
