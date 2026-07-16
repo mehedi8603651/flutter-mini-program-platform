@@ -202,7 +202,17 @@ The SDK is the Flutter execution boundary. It fetches, validates, caches, binds,
 packages/mini_program_sdk/
 |-- lib/
 |   |-- mini_program_sdk.dart                   # Public SDK export barrel
-|   |-- mini_program_host.dart                  # Host screen stack, loading, stale/offline content, and app lifecycle
+|   |-- mini_program_host.dart                  # Public MiniProgramHost widget, typedef, imports, and private part registry
+|   |-- host_runtime/
+|   |   |-- host_state.dart                     # Private State fields plus Flutter lifecycle and build/setState delegates
+|   |   |-- loading.dart                        # Generation-safe initial manifest, screen, renderer, cache, and auth loading
+|   |   |-- policies.dart                       # Cache, live-state, and location policy lookup from the active source
+|   |   |-- publisher_backend.dart              # Artifact Publisher API connector creation, ownership, and disposal
+|   |   |-- cache_lifecycle.dart                # Active app cache close and policy cleanup
+|   |   |-- navigation.dart                     # Legacy screen actions, Mp router stack operations, and screen loading
+|   |   |-- rendering.dart                      # Future/loading/error UI, SDK scope, keyed screen rendering, and offline notice
+|   |   |-- failures.dart                       # Source/load/render exception conversion and SDK error view selection
+|   |   `-- models.dart                         # Rendered screen, route result, asset counts, and navigation identity
 |   |-- mini_program_page.dart                  # Public page widget for a loaded mini-program
 |   |-- mini_program_launcher.dart              # Launch orchestration from app ID/options to runtime page
 |   |-- mini_program_launch_options.dart        # Per-launch route/input/options model
@@ -326,6 +336,8 @@ packages/mini_program_sdk/
 |-- README.md                                   # Host integration API documentation
 `-- analysis_options.yaml                       # Package analyzer configuration
 ```
+
+`MiniProgramHost` uses one private Dart `part` library rooted at `mini_program_host.dart`. Keep its public constructor and typedef in the root file; host loading, policies, Publisher API ownership, cache lifecycle, navigation, rendering, failures, and internal screen models belong in `host_runtime/`. `State.build` and protected `setState` access stay as thin delegates in `host_state.dart`. Preserve load-generation checks, cache open/close order, host-versus-SDK connector ownership, navigation identity, route-result propagation, stale-content behavior, callback order, and disposal behavior.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
