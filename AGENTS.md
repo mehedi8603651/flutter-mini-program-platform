@@ -312,8 +312,28 @@ packages/mini_program_sdk/
 |   |   |-- mini_program_endpoint.dart          # Per-app artifact/API endpoint plus cache/live-state policy
 |   |   |-- mini_program_delivery_context.dart  # Delivery metadata available during loading
 |   |   |-- published_mini_program_catalog_client.dart # Reads published catalog/latest metadata
-|   |   |-- mini_program_backend_connector.dart # Optional publisher middle-server HTTPS connector
-|   |   |-- mini_program_backend_store.dart     # Reactive snapshots of publisher API responses
+|   |   |-- mini_program_backend_connector.dart # Public Publisher API connector import boundary and part registry
+|   |   |-- mini_program_backend_store.dart     # Public reactive store import boundary and part registry
+|   |   |-- publisher_api/
+|   |   |   |-- connector/
+|   |   |   |   |-- policy.dart                 # Host-accepted Publisher API policy and provider
+|   |   |   |   |-- headers.dart                # Stable delivery/request header names and precedence
+|   |   |   |   |-- models.dart                 # Endpoint, cache policy, request, result, and HTTP client factory
+|   |   |   |   |-- interfaces.dart             # Connector and disposable connector contracts
+|   |   |   |   |-- disabled.dart               # Stable host-denied connector behavior
+|   |   |   |   |-- endpoint_routing.dart       # Public endpoint-routing connector members and lifecycle
+|   |   |   |   |-- endpoint_validation.dart    # Backend map, method, relative path, URI, and header normalization
+|   |   |   |   |-- request_transport.dart      # Lazy HTTP client, verbs, timeout, and loopback fallback
+|   |   |   |   |-- response_decoder.dart       # HTTP/JSON normalization and stable result failures
+|   |   |   |   `-- memory_cache.dart           # GET-only TTL cache and authorization partitioning
+|   |   |   `-- store/
+|   |   |       |-- queries.dart                 # Single/paged query models and request conversion
+|   |   |       |-- snapshots.dart               # Single-query immutable reactive snapshot
+|   |   |       |-- pagination.dart              # Paged snapshot, append behavior, and nested-path reads
+|   |   |       |-- store.dart                   # Public store members, lifecycle, and owned state
+|   |   |       |-- execution.dart               # Connector execution, interceptors, and stale-result suppression
+|   |   |       |-- in_flight.dart               # Request identity, deduplication, and completion cleanup
+|   |   |       `-- binding_data.dart            # Combined single/paged binding projection
 |   |   `-- local_backend_defaults.dart         # Local development source defaults
 |   |-- rendering/
 |   |   |-- mini_program_screen_renderer.dart   # Higher-level renderer facade
@@ -402,6 +422,8 @@ Live state and routing use one private Dart `part` library rooted at `state/mp_s
 Runtime cache uses one private Dart `part` library rooted at `cache/runtime_cache.dart`. Keep all public cache enums, models, store interfaces, `MiniProgramCacheManager`, and `MiniProgramAppCache` available through the existing barrel. Public manager operations must remain real class members because hosts may subclass and override lifecycle or cleanup behavior; internal orchestration must call those public methods where the previous implementation did. Preserve namespaced keys, injected-clock TTL behavior, stored-null versus missing semantics, policy memory, metadata timestamps, cleanup order by priority then bucket then access time, and host-pinned protection. Mini-program app caches must never expose session or host-pinned writes, disabled buckets must fail before access, and usage JSON must hide session entries and host-pinned bytes.
 
 Delivery cache APIs keep their historical `manifest_cache.dart`, `screen_cache.dart`, and `asset_cache.dart` import paths as explicit compatibility barrels; models, contracts, memory/no-op stores, and file stores belong under `cache/delivery/`. Runtime persistence keeps the historical file and SharedPreferences import paths as compatibility barrels while implementations and the shared schema-v1 codec live under `cache/persistence/`. Preserve base64url filenames and preference keys, JSON property names and ordering, UTC timestamp encoding, corruption and expiration cleanup, asset extension resolution, atomic runtime file replacement, and the distinct default persistent bucket sets. `MiniProgramCacheBundle.inMemory`, `.fileBacked`, and `.webPersistent` composition is a public behavior boundary.
+
+Publisher API networking uses private Dart `part` libraries rooted at `network/mini_program_backend_connector.dart` and `network/mini_program_backend_store.dart`. Keep every existing connector, policy, request/result, query/snapshot, and store type available through those historical files and the SDK barrel. `EndpointRoutingMiniProgramBackendConnector.call`/`dispose` and all public `MiniProgramBackendStore` operations must remain actual class members. Preserve relative endpoint and traversal rejection, lazy client creation, HTTP method/body behavior, local loopback fallback order, delivery/backend/request header precedence, GET-only TTL caching, authorization-based cache partitioning, response normalization, error codes/messages, and disposal. Reactive store order is compatibility-sensitive: publish loading, apply the optional interceptor, invoke the connector, reject late generation/disposal results, publish the terminal snapshot, then clean matching in-flight identity. Failed refreshes and page loads keep previous data/items; pagination registration, deduplication, binding-map ordering, listener notification timing, `clear()`, and `dispose()` semantics must remain unchanged.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
