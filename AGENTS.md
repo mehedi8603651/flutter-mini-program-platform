@@ -255,12 +255,16 @@ packages/mini_program_sdk/
 |   |   |-- mp_screen_renderer.dart             # Core validated JSON-to-Flutter renderer entry
 |   |   `-- mp_runtime/
 |   |       |-- models.dart                     # Internal parsed runtime node/action models
-|   |       |-- models_validator.dart           # Strict node/action schema validator
-|   |       |-- models_validator_helpers.dart   # Shared validator rules, keys, ranges, and binding checks
 |   |       |-- bindings.dart                   # Resolves `{{state...}}` and other runtime bindings
 |   |       |-- action_dispatcher.dart          # Executes state, math, cache, flow, timer, backend, and host actions
 |   |       |-- math_engine.dart                # Restricted core-Dart expression tokenizer/parser/evaluator
 |   |       |-- forms.dart                      # Form state, validation, and submission helpers
+|   |       |-- validation/
+|   |       |   |-- screen_validator.dart       # Public validator facade, limits, root parsing, and dispatch tables
+|   |       |   |-- shared_validation.dart      # Shared keys, ranges, bindings, values, and controlled failures
+|   |       |   |-- shared.dart                 # Cross-feature template and action parsing helpers
+|   |       |   |-- nodes/                      # Private node validators grouped by runtime feature
+|   |       |   `-- actions/                    # Private action validators grouped by runtime feature
 |   |       |-- widgets.dart                    # Runtime widget dispatcher shared by renderer parts
 |   |       |-- widgets_primitives.dart         # Basic text/layout/display/button rendering
 |   |       |-- widgets_forms.dart              # Form widget rendering
@@ -280,7 +284,7 @@ packages/mini_program_sdk/
 `-- analysis_options.yaml                       # Package analyzer configuration
 ```
 
-Renderer files use Dart `part` organization in places. Read `mp_screen_renderer.dart` and all related runtime parts before moving symbols or changing private contracts.
+Renderer files use Dart `part` organization in places. Read `mp_screen_renderer.dart` and all related runtime parts before moving symbols or changing private contracts. Keep validation behavior in the owning file under `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Validation parts remain private to the renderer library and must not add imports or exports.
 
 ### `packages/mini_program_tooling`
 

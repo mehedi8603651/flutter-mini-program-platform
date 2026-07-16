@@ -1,4 +1,4 @@
-part of '../mp_screen_renderer.dart';
+part of '../../mp_screen_renderer.dart';
 
 void _validateObjectKeys(
   Map<String, dynamic> json,
