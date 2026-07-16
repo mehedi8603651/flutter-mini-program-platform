@@ -245,7 +245,18 @@ packages/mini_program_sdk/
 |   |-- location/
 |   |   `-- mini_program_location.dart          # Host provider, accepted policy, and structured provider failures
 |   |-- state/
-|   |   `-- mp_state.dart                       # Reactive store, manager, routing, batches, scopes, and live-state limits
+|   |   |-- mp_state.dart                       # Public state/router import boundary and private part registry
+|   |   |-- live_state/
+|   |   |   |-- policy.dart                     # Host-owned limits, policy provider, and stable quota exception
+|   |   |   |-- store.dart                      # MpStore public members, watchers, lifecycle, and mutation entry points
+|   |   |   |-- manager.dart                    # MpStateManager public facade over one store
+|   |   |   |-- batching.dart                   # Atomic nested batches, rollback, commits, and watcher coalescing
+|   |   |   |-- paths.dart                      # Public key validation plus dotted-path read/write/remove helpers
+|   |   |   |-- values.dart                     # JSON-safe value normalization and defensive cloning
+|   |   |   |-- limits.dart                     # UTF-8 byte, recursive entry, value-size, and depth enforcement
+|   |   |   `-- models.dart                     # Private branch metrics and batch checkpoints
+|   |   `-- router/
+|   |       `-- router.dart                     # MpRouter public callback typedefs and forwarding facade
 |   |-- cache/
 |   |   |-- mini_program_cache_bundle.dart      # Host-selected cache bundle and cache policy models
 |   |   |-- manifest_cache.dart                 # Cached manifests and expiration behavior
@@ -348,6 +359,8 @@ packages/mini_program_sdk/
 `MiniProgramHost` uses one private Dart `part` library rooted at `mini_program_host.dart`. Keep its public constructor and typedef in the root file; host loading, policies, Publisher API ownership, cache lifecycle, navigation, rendering, failures, and internal screen models belong in `host_runtime/`. `State.build` and protected `setState` access stay as thin delegates in `host_state.dart`. Preserve load-generation checks, cache open/close order, host-versus-SDK connector ownership, navigation identity, route-result propagation, stale-content behavior, callback order, and disposal behavior.
 
 `ManifestLoader` uses one private Dart `part` library rooted at `manifest_loader.dart`. Keep the public loader signatures, constructor, result-type APIs, imports, and part registry stable; orchestration, result implementations, manifest acceptance, optional Publisher API contract loading, cache reads/writes, stale fallback, and private load results belong in `delivery_loading/`. Runtime order is compatibility-sensitive: load the manifest, validate SDK/capabilities/feature flags, load the entry screen, then load the optional Publisher API contract. Preserve cache write/remove order, retryable error classification, maximum stale-age checks, warning/error payloads, structured failure details, and the rule that Publisher API connectivity failures do not fail static app loading.
+
+Live state and routing use one private Dart `part` library rooted at `state/mp_state.dart`. Keep `MpStore`, `MpStateManager`, `MiniProgramLiveStatePolicy`, `MiniProgramStateLimitException`, `validateStateKey`, router typedefs, and `MpRouter` available through the existing public SDK barrel. State values must remain JSON-safe and defensively cloned; reads inside a batch must observe staged writes; nested batches must commit once or roll back as one unit; related-path watchers must notify once after the outer commit; policy and quota failures must preserve prior state and stable details. Preserve UTF-8 JSON byte accounting, recursive entry/depth rules, secret-like key blocking, dispose behavior, and exact router argument/result/request-ID forwarding.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
