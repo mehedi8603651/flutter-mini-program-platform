@@ -1,4 +1,4 @@
-part of '../mp_screen_renderer.dart';
+part of '../../../mp_screen_renderer.dart';
 
 class _MpLineChart extends StatelessWidget {
   const _MpLineChart({required this.node, required this.bindings});

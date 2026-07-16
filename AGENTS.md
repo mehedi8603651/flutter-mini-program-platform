@@ -270,20 +270,51 @@ packages/mini_program_sdk/
 |   |       |   |-- composition.dart            # Sequence, conditional, and reusable-action calls
 |   |       |   `-- navigation.dart             # Router action execution and failures
 |   |       |-- math_engine.dart                # Restricted core-Dart expression tokenizer/parser/evaluator
-|   |       |-- forms.dart                      # Form state, validation, and submission helpers
 |   |       |-- validation/
 |   |       |   |-- screen_validator.dart       # Public validator facade, limits, root parsing, and dispatch tables
 |   |       |   |-- shared_validation.dart      # Shared keys, ranges, bindings, values, and controlled failures
 |   |       |   |-- shared.dart                 # Cross-feature template and action parsing helpers
 |   |       |   |-- nodes/                      # Private node validators grouped by runtime feature
 |   |       |   `-- actions/                    # Private action validators grouped by runtime feature
-|   |       |-- widgets.dart                    # Runtime widget dispatcher shared by renderer parts
-|   |       |-- widgets_primitives.dart         # Basic text/layout/display/button rendering
-|   |       |-- widgets_forms.dart              # Form widget rendering
-|   |       |-- widgets_backend.dart            # Publisher API-bound widget rendering
-|   |       |-- widgets_charts.dart             # fl_chart-backed single-series line chart rendering
-|   |       |-- widgets_lazy.dart               # Lazy chunk and load-more rendering
-|   |       `-- widgets_lifecycle.dart          # initialize, condition, timer, scope, and action-scope lifecycle
+|   |       |-- widgets.dart                    # Screen/root rendering and central node-type dispatch only
+|   |       `-- widgets/
+|   |           |-- shared.dart                 # Shared node property readers, numeric helpers, and no-op listenable
+|   |           |-- theme.dart                  # Theme models, tokens, typography, tones, and button colors
+|   |           |-- layout.dart                 # Row/column/container/scroll/stack/flex layout implementations
+|   |           |-- collections.dart            # List, repeat, grid, wrap, and repeated-item bindings
+|   |           |-- content.dart                # Text, cards, alerts, skeletons, badges, and display content
+|   |           |-- media.dart                  # Images, box fit, icon rendering, glyphs, and const icon table
+|   |           |-- controls.dart               # Tap/styled/icon buttons, list-tile actions, and action wrappers
+|   |           |-- feedback.dart               # SDK-owned toast and dialog views
+|   |           |-- charts/
+|   |           |   `-- line_chart.dart         # fl_chart-backed single-series line chart rendering
+|   |           |-- forms/
+|   |           |   |-- models.dart             # Form controller, scope, field registration, and validators
+|   |           |   |-- shared.dart             # Shared field frame, decoration, options, and selection marks
+|   |           |   |-- state_builder.dart      # State-key-driven subtree rebuilding
+|   |           |   |-- form_container.dart     # Form lifecycle and controller identity
+|   |           |   |-- text_input.dart         # Controlled form text and text-area fields
+|   |           |   |-- backend_search_input.dart # Debounced Publisher API search field
+|   |           |   |-- state_search_field.dart # Controlled local-state search field
+|   |           |   |-- selection_controls.dart # Dropdown, checkbox, and radio controls
+|   |           |   `-- submit.dart             # Form validation and Publisher API submission
+|   |           |-- backend/
+|   |           |   |-- auth_builder.dart       # Authentication snapshot builder
+|   |           |   |-- query_builder.dart      # Single Publisher API query lifecycle
+|   |           |   |-- pagination.dart         # Paged Publisher API query lifecycle
+|   |           |   `-- helpers.dart            # Query keys, request models, and normalized search data
+|   |           |-- lazy/
+|   |           |   |-- section.dart            # Lazy action section lifecycle and cache hydration
+|   |           |   |-- chunk.dart              # Lazy paged chunk lifecycle and load-more execution
+|   |           |   |-- models.dart             # Lazy result models, registries, and once-key storage
+|   |           |   `-- helpers.dart            # Runtime keys, cache keys, merge rules, and result parsing
+|   |           `-- lifecycle/
+|   |               |-- refresh_viewport.dart   # Root pull-to-refresh viewport
+|   |               |-- condition_scopes.dart   # Conditional rendering and reusable action scope
+|   |               |-- countdown.dart          # Countdown timer, lifecycle suspension, and completion
+|   |               |-- initialize.dart         # One-time initialization, retries, and error rendering
+|   |               |-- state_scope.dart        # State-prefix disposal ownership
+|   |               `-- identity.dart           # Stable lifecycle runtime-key calculation
 |   `-- widgets/
 |       |-- sdk_loading_view.dart               # Default host loading UI
 |       |-- sdk_error_view.dart                 # Default host failure UI
@@ -296,7 +327,7 @@ packages/mini_program_sdk/
 `-- analysis_options.yaml                       # Package analyzer configuration
 ```
 
-Renderer files use Dart `part` organization in places. Read `mp_screen_renderer.dart` and all related runtime parts before moving symbols or changing private contracts. Keep validation behavior in the owning file under `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in the owning file under `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Runtime parts remain private to the renderer library and must not add imports or exports.
+Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
 ### `packages/mini_program_tooling`
 

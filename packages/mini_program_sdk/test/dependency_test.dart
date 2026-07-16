@@ -54,7 +54,7 @@ void main() {
 
   test('Mp runtime icons use const IconData values for release builds', () {
     final source = File(
-      'lib/rendering/mp_runtime/widgets_primitives.dart',
+      'lib/rendering/mp_runtime/widgets/media.dart',
     ).readAsStringSync();
 
     expect(source, contains('const Map<String, IconData> _mpIcons'));
