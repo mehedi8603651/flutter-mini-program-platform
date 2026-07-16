@@ -582,6 +582,102 @@ Rules:
 6. Bindings are resolved against live state, launch inputs, forms, and approved backend snapshots.
 7. Runtime widgets subscribe only to relevant state where possible; avoid replacing the entire screen to update one value.
 
+### Current Widget Catalog
+
+The authoring API currently maps to 63 unique SDK runtime node types. There are
+67 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 69 public builder entry points when the two aliases are
+also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`, and
+`Mp.location.*` are not widgets and are excluded from these totals.
+
+Layout and structure:
+
+- `Mp.column`: lays out children vertically in source order.
+- `Mp.row`: lays out children horizontally in source order.
+- `Mp.sizedBox`: reserves a validated fixed width, height, or both.
+- `Mp.padding`: adds explicit edge insets around one child.
+- `Mp.align`: positions one child using a supported alignment value.
+- `Mp.center`: centers one child; it is the concise form of centered alignment.
+- `Mp.spacer`: consumes remaining flex space inside a bounded row or column.
+- `Mp.expanded`: makes a child fill its assigned remaining flex space.
+- `Mp.flexible`: gives a child flexible space with a configurable flex and fit.
+- `Mp.container`: applies sizing, padding, color, border, and radius to one child.
+- `Mp.scrollView`: creates a one-child scrolling viewport for general content.
+- `Mp.listView`: renders static children in a vertical or fixed-height horizontal scrolling list.
+- `Mp.safeArea`: keeps one child clear of host display cutouts and system insets.
+- `Mp.visibility`: shows or hides one child with optional layout-size and state preservation.
+- `Mp.opacity`: paints one child with validated alpha without changing its layout.
+- `Mp.aspectRatio`: constrains one child to a stable width-to-height ratio.
+- `Mp.stack`: overlays children in paint order.
+- `Mp.positioned`: places a child by stack edges; it is meaningful as a direct stack child.
+- `Mp.divider`: draws a horizontal separator with configurable thickness and color.
+- `Mp.grid`: lays out static children in a fixed-column grid.
+- `Mp.wrap`: flows children onto additional horizontal or vertical runs when space is exhausted.
+- `Mp.card`: gives one child the platform's standard framed card treatment.
+- `Mp.section`: groups a title, optional subtitle/action, and one content child.
+- `Mp.theme`: applies lightweight mini-program color and typography tokens to a subtree.
+
+Display and visualization:
+
+- `Mp.text`: renders body text, including supported runtime bindings and text styling.
+- `Mp.heading`: renders hierarchy-aware heading text with supported heading styling.
+- `Mp.image`: renders a validated image source with optional placeholder and error nodes.
+- `Mp.icon`: renders a supported named icon with semantic and visual options.
+- `Mp.avatar`: renders a compact person/entity image or fallback identity presentation.
+- `Mp.alert`: renders a tone-aware inline status or warning message.
+- `Mp.progress`: renders bounded linear progress from a required value and maximum.
+- `Mp.emptyState`: renders a standardized no-data/error-style message with optional action.
+- `Mp.chip`: renders a compact label that may optionally dispatch an action.
+- `Mp.badge`: renders a small tone-aware status label.
+- `Mp.lineChart`: renders one ordinal numeric series from bound data with points, grid, area, labels, and tooltips.
+- `Mp.skeleton.box`: renders a rectangular loading placeholder.
+- `Mp.skeleton.text`: renders a text-line loading placeholder.
+- `Mp.skeleton.circle`: renders a circular loading placeholder.
+- `Mp.skeleton.card`: renders a card-sized loading placeholder.
+- `Mp.skeleton.list`: renders a repeated list of loading placeholders.
+
+Inputs and controls:
+
+- `Mp.primaryButton`: renders the standard high-emphasis command button.
+- `Mp.secondaryButton`: renders the standard lower-emphasis command button.
+- `Mp.button`: renders a fully styled text command button with stable dimensions.
+- `Mp.iconButton`: renders a semantic icon command with explicit size and decoration.
+- `Mp.listTile`: renders a scan-friendly row with title, subtitle, leading/trailing content, and optional action.
+- `Mp.textInput`: edits one single-line form/state value.
+- `Mp.searchInput`: performs debounced Publisher API search and writes bounded result state.
+- `Mp.searchField`: edits live state and dispatches caller-provided local search actions after debounce or submit.
+- `Mp.textArea`: edits one multiline form/state value.
+- `Mp.dropdown`: selects one value from validated labeled options.
+- `Mp.checkbox`: edits a boolean form/state value.
+- `Mp.radioGroup`: selects one value from a visible group of labeled options.
+- `Mp.form`: groups controls under a form identifier for validation and submission.
+- `Mp.formSubmit`: validates and submits a form through its configured action behavior.
+
+Dynamic data and lifecycle:
+
+- `Mp.repeat`: renders a bounded template for each item in a bound list, with optional empty and separator nodes.
+- `Mp.lazy.section`: mounts a section through lifecycle-owned actions with placeholder, retry, error, and optional cache hydration.
+- `Mp.lazy.chunk`: renders bounded paged data with initial load, load-more, cache, empty, error, loading, and end states.
+- `Mp.initialize`: runs a non-empty action list once per mounted instance before revealing its child, with bounded retries.
+- `Mp.condition`: reactively chooses true or false child content from a boolean literal or binding.
+- `Mp.timer.countdown`: owns a deadline-based countdown, writes remaining state, and optionally dispatches completion.
+- `Mp.stateScope`: owns a state prefix and may clear that prefix when its subtree is disposed.
+- `Mp.actionScope`: defines reusable named actions for descendants without duplicating sequences.
+- `Mp.stateBuilder`: rebuilds one child template only for the declared live-state keys.
+- `Mp.authBuilder`: selects loading, signed-out, signed-in, or error content from host-owned authentication state.
+- `Mp.backendBuilder`: loads one Publisher API request and renders its loading, success, empty, or error content.
+- `Mp.pagedBackendBuilder`: renders Publisher API pagination while preserving loaded items during additional-page failures.
+- `Mp.refreshIndicator`: supplies root-level pull-to-refresh, prevents concurrent refreshes, and preserves existing content on failure.
+
+Aliases do not add runtime node types:
+
+- `Mp.forEach`: alias for `Mp.repeat`.
+- `Mp.search.input`: namespace alias for `Mp.searchInput`.
+
+When adding or changing a widget, update this catalog together with the UI
+serialization tests, SDK validator, SDK renderer, package documentation, and
+the widget count above.
+
 ### Actions and State
 
 `MpAction` JSON is dispatched by the SDK, not evaluated as arbitrary Dart or JavaScript. Sequence steps resolve bindings immediately before each step, stop on failure, and may feed later state/cache/history actions.
