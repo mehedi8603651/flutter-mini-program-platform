@@ -222,7 +222,15 @@ packages/mini_program_sdk/
 |   |-- mini_program_controller.dart            # Imperative host/runtime controller
 |   |-- mini_program_discovery.dart             # Catalog/discovery abstraction
 |   |-- mini_program_failure.dart               # Typed SDK loading/runtime failure model
-|   |-- manifest_loader.dart                    # Manifest/screen fetch, validation, and stale-cache fallback
+|   |-- manifest_loader.dart                    # Public loader facade, imports, and private delivery part registry
+|   |-- delivery_loading/
+|   |   |-- pipeline.dart                       # Manifest-to-entry-screen orchestration and public result assembly
+|   |   |-- validation.dart                     # SDK range, capability, and feature-flag acceptance order
+|   |   |-- publisher_backend.dart              # Optional artifact Publisher API contract loading and app ownership checks
+|   |   |-- manifest_cache.dart                 # Fresh manifest loading, persistence, stale fallback, and structured failures
+|   |   |-- screen_cache.dart                   # Fresh screen loading, persistence, stale fallback, and structured failures
+|   |   |-- stale_cache.dart                    # Retryable source errors and maximum stale-age rules
+|   |   `-- models.dart                         # Loaded public results plus private manifest/screen load results
 |   |-- host_bridge.dart                        # Boundary for approved host actions/capabilities
 |   |-- capability_registry.dart                # Host capability registration and checks
 |   |-- feature_flag_evaluator.dart             # Runtime feature flag evaluation
@@ -338,6 +346,8 @@ packages/mini_program_sdk/
 ```
 
 `MiniProgramHost` uses one private Dart `part` library rooted at `mini_program_host.dart`. Keep its public constructor and typedef in the root file; host loading, policies, Publisher API ownership, cache lifecycle, navigation, rendering, failures, and internal screen models belong in `host_runtime/`. `State.build` and protected `setState` access stay as thin delegates in `host_state.dart`. Preserve load-generation checks, cache open/close order, host-versus-SDK connector ownership, navigation identity, route-result propagation, stale-content behavior, callback order, and disposal behavior.
+
+`ManifestLoader` uses one private Dart `part` library rooted at `manifest_loader.dart`. Keep the public loader signatures, constructor, result-type APIs, imports, and part registry stable; orchestration, result implementations, manifest acceptance, optional Publisher API contract loading, cache reads/writes, stale fallback, and private load results belong in `delivery_loading/`. Runtime order is compatibility-sensitive: load the manifest, validate SDK/capabilities/feature flags, load the entry screen, then load the optional Publisher API contract. Preserve cache write/remove order, retryable error classification, maximum stale-age checks, warning/error payloads, structured failure details, and the rule that Publisher API connectivity failures do not fail static app loading.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 
