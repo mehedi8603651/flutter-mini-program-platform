@@ -1,3 +1,13 @@
+## 0.5.14
+
+- Refactor validator, action, widget, host lifecycle, navigation, state, router,
+  cache, persistence, authentication, data, delivery, asset, catalog, and
+  discovery internals into focused feature-owned modules.
+- Add architecture, behavioral identity, and historical import guards for the
+  reorganized runtime boundaries.
+- Preserve existing public APIs, import paths, JSON validation, rendering,
+  lifecycle, cache, networking, and error behavior.
+
 ## 0.5.13
 
 - Add provider-neutral, host-policy-controlled one-time approximate location.
