@@ -21,6 +21,17 @@ import '../widgets/sdk_email_auth_sheet.dart';
 import 'mini_program_screen_renderer.dart';
 
 part 'mp_runtime/action_dispatcher.dart';
+part 'mp_runtime/actions/shared.dart';
+part 'mp_runtime/actions/auth_backend.dart';
+part 'mp_runtime/actions/backend_search.dart';
+part 'mp_runtime/actions/feedback_forms_lazy.dart';
+part 'mp_runtime/actions/state.dart';
+part 'mp_runtime/actions/math.dart';
+part 'mp_runtime/actions/data.dart';
+part 'mp_runtime/actions/location.dart';
+part 'mp_runtime/actions/cache.dart';
+part 'mp_runtime/actions/composition.dart';
+part 'mp_runtime/actions/navigation.dart';
 part 'mp_runtime/bindings.dart';
 part 'mp_runtime/forms.dart';
 part 'mp_runtime/math_engine.dart';

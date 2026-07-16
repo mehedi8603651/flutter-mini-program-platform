@@ -256,7 +256,19 @@ packages/mini_program_sdk/
 |   |   `-- mp_runtime/
 |   |       |-- models.dart                     # Internal parsed runtime node/action models
 |   |       |-- bindings.dart                   # Resolves `{{state...}}` and other runtime bindings
-|   |       |-- action_dispatcher.dart          # Executes state, math, cache, flow, timer, backend, and host actions
+|   |       |-- action_dispatcher.dart          # Public runner plus central action routing, logging, and error boundary
+|   |       |-- actions/
+|   |       |   |-- shared.dart                 # Common action property, authorization, cache, and duration helpers
+|   |       |   |-- auth_backend.dart           # Authentication and basic Publisher API execution
+|   |       |   |-- backend_search.dart         # Search paging, refresh, clear, and result-state helpers
+|   |       |   |-- state.dart                  # State mutations and stable state failure results
+|   |       |   |-- math.dart                   # Math execution, normalization, and aggregate helpers
+|   |       |   |-- data.dart                   # Artifact JSON resource load and search execution
+|   |       |   |-- location.dart               # Accepted one-time location execution and request deduplication
+|   |       |   |-- cache.dart                  # App-scoped cache action execution
+|   |       |   |-- feedback_forms_lazy.dart    # Form, lazy-load, toast, and dialog execution
+|   |       |   |-- composition.dart            # Sequence, conditional, and reusable-action calls
+|   |       |   `-- navigation.dart             # Router action execution and failures
 |   |       |-- math_engine.dart                # Restricted core-Dart expression tokenizer/parser/evaluator
 |   |       |-- forms.dart                      # Form state, validation, and submission helpers
 |   |       |-- validation/
@@ -284,7 +296,7 @@ packages/mini_program_sdk/
 `-- analysis_options.yaml                       # Package analyzer configuration
 ```
 
-Renderer files use Dart `part` organization in places. Read `mp_screen_renderer.dart` and all related runtime parts before moving symbols or changing private contracts. Keep validation behavior in the owning file under `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Validation parts remain private to the renderer library and must not add imports or exports.
+Renderer files use Dart `part` organization in places. Read `mp_screen_renderer.dart` and all related runtime parts before moving symbols or changing private contracts. Keep validation behavior in the owning file under `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in the owning file under `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Runtime parts remain private to the renderer library and must not add imports or exports.
 
 ### `packages/mini_program_tooling`
 
