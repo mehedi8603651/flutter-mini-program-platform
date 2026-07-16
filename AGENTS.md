@@ -335,14 +335,30 @@ packages/mini_program_sdk/
 |   |           `-- execution.dart              # Query validation, stale suppression, sorting, limits, and result projection
 |   |-- network/
 |   |   |-- mini_program_source.dart            # Abstract static artifact source
-|   |   |-- http_mini_program_source.dart       # HTTP static artifact source for production/public storage
+|   |   |-- http_mini_program_source.dart       # Public HTTP static-delivery import boundary and part registry
 |   |   |-- mini_program_source_exception.dart  # Fetch/source failure taxonomy
 |   |   |-- asset_resolver.dart                 # Resolves manifest-relative artifact asset URLs
-|   |   |-- mini_program_endpoint.dart          # Per-app artifact/API endpoint plus cache/live-state policy
+|   |   |-- mini_program_endpoint.dart          # Public endpoint-routing import boundary and part registry
 |   |   |-- mini_program_delivery_context.dart  # Delivery metadata available during loading
 |   |   |-- published_mini_program_catalog_client.dart # Reads published catalog/latest metadata
 |   |   |-- mini_program_backend_connector.dart # Public Publisher API connector import boundary and part registry
 |   |   |-- mini_program_backend_store.dart     # Public reactive store import boundary and part registry
+|   |   |-- static_delivery/
+|   |   |   |-- http/
+|   |   |   |   |-- source.dart                 # Public HTTP source constructor, fields, operations, and disposal
+|   |   |   |   |-- paths.dart                  # Canonical artifact URI resolution and manifest query parameters
+|   |   |   |   |-- loading.dart                # Candidate iteration plus JSON-object and byte loading
+|   |   |   |   |-- transport.dart              # HTTP GET, headers, timeout, status handling, and response bytes
+|   |   |   |   |-- loopback.dart               # Localhost/Android-emulator fallback candidates and transport wrapper
+|   |   |   |   |-- errors.dart                 # Backend error normalization and structured response details
+|   |   |   |   `-- publisher_backend.dart      # Optional artifact-owned Publisher API contract loading/validation
+|   |   |   `-- endpoint/
+|   |   |       |-- models.dart                 # Public endpoint model and source-factory typedef
+|   |   |       |-- routing_source.dart         # Public routing operations, accepted policies, and disposal
+|   |   |       |-- source_factory.dart         # Lazy per-app source identity and default HTTP construction
+|   |   |       |-- capabilities.dart           # Optional JSON asset and Publisher API contract delegation
+|   |   |       |-- policies.dart               # Accepted endpoint policy resolution and missing-app failures
+|   |   |       `-- validation.dart             # App ID and endpoint-map normalization
 |   |   |-- publisher_api/
 |   |   |   |-- connector/
 |   |   |   |   |-- policy.dart                 # Host-accepted Publisher API policy and provider
@@ -457,6 +473,8 @@ Publisher API networking uses private Dart `part` libraries rooted at `network/m
 Authentication uses one private Dart `part` library rooted at `auth/mini_program_auth.dart`. Keep all auth models, stores, and `MiniProgramAuthController` available through that historical file and the SDK barrel; controller public operations remain actual class members so host subclasses retain virtual dispatch. Auth tokens may appear only in the token-bearing session/storage model and Publisher API request headers, never in snapshot, result, or binding projections. Preserve the base64url secure-storage key, JSON property ordering, UTC expiry parsing, 30-second default expiry skew, app-ID isolation, notification transitions, expired restore-to-refresh routing, refresh failure cleanup, local-first sign-out, request-header precedence, and calls through public `refresh()` where prior subclass dispatch was possible.
 
 Artifact JSON data uses one private Dart `part` library rooted at `data/mini_program_data_resource.dart`. Keep the four public asset limits, load result, data exception, and `MiniProgramDataResourceManager` available through that historical file and the SDK barrel; `load`, `search`, and `clear` remain actual manager members. Preserve validation order, host-approved data-bucket enforcement, versioned internal cache keys, cache-before-source loading, force-refresh behavior, source-error mapping, UTF-8 JSON size/depth/member limits, cache-write-before-resource replacement, and app/version/resource isolation. Search behavior is compatibility-sensitive: increment generation and yield before short-query/resource checks, suppress only matching app/resource/target requests, build indexes by items path plus ordered fields, keep at most eight insertion-ordered indexes, normalize case/whitespace/diacritics, rank exact then token-prefix then contains, preserve source order for ties, and invalidate resource indexes on replacement or clear.
+
+Static artifact delivery uses private Dart `part` libraries rooted at `network/http_mini_program_source.dart` and `network/mini_program_endpoint.dart`. Keep `ManifestRequestQueryParametersBuilder`, `HttpMiniProgramSource`, `MiniProgramEndpointSourceFactory`, `MiniProgramEndpoint`, and `EndpointRoutingMiniProgramSource` available through those historical files and the SDK barrel. Public load, policy, and disposal operations remain actual class members. Preserve canonical `artifacts/<appId>/...` paths, latest-manifest-only query parameters, request headers and timeouts, transport-only loopback fallback order, attempted-URI details, JSON object validation, backend error normalization, optional Publisher API contract 404 behavior, contract app-ID matching, normalized endpoint identity, one lazy source per app, optional source capabilities, host-accepted policy lookup, injected-client ownership, and source disposal order.
 
 Renderer files use one Dart `part` library rooted at `mp_screen_renderer.dart`. Read the central library and the owning runtime parts before moving symbols or changing private contracts. Keep validation behavior in `mp_runtime/validation/nodes/` or `actions/`; only document parsing, limits, and central dispatch belong in `screen_validator.dart`. Keep action execution in `mp_runtime/actions/`; `action_dispatcher.dart` owns only parsing entry, binding resolution, routing, logging, and common exception mapping. Keep widget behavior in the owning file under `mp_runtime/widgets/`; `widgets.dart` owns only root scrolling, node dispatch, trivial inline wrappers whose ancestry is compatibility-sensitive, and unsupported-node failures. Runtime parts remain private to the renderer library and must not add imports or exports. Preserve private widget class names, state classes, runtime-key formulas, controller/focus lifecycles, callback order, and Flutter ancestry when reorganizing renderer code.
 

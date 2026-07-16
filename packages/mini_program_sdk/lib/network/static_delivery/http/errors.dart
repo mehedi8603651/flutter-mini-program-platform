@@ -1,0 +1,131 @@
+part of '../../http_mini_program_source.dart';
+
+extension _HttpMiniProgramSourceErrors on HttpMiniProgramSource {
+  MiniProgramSourceException _buildSourceException({
+    required Uri uri,
+    required String resourceLabel,
+    required http.Response response,
+  }) {
+    final decodedBody = _tryDecodeJsonObject(response.body);
+    final nestedError = _tryReadNestedError(decodedBody);
+    final errorCode =
+        decodedBody?['errorCode']?.toString() ??
+        nestedError?['code']?.toString();
+    final message =
+        decodedBody?['message']?.toString() ??
+        nestedError?['message']?.toString() ??
+        'Failed to load $resourceLabel from "$uri" (HTTP ${response.statusCode}).';
+
+    return MiniProgramSourceException(
+      message: message,
+      errorCode: errorCode,
+      statusCode: response.statusCode,
+      details: <String, dynamic>{
+        'uri': uri.toString(),
+        'resourceLabel': resourceLabel,
+        'statusCode': response.statusCode,
+        ..._extractBackendDetails(decodedBody, response.headers),
+      },
+    );
+  }
+
+  Map<String, dynamic>? _tryDecodeJsonObject(String rawBody) {
+    try {
+      final decoded = jsonDecode(rawBody);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      // Ignore malformed backend error bodies and use the generic message.
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic> _extractBackendDetails(
+    Map<String, dynamic>? decodedBody,
+    Map<String, String> responseHeaders,
+  ) {
+    final details = <String, dynamic>{};
+
+    final responseType = decodedBody?['responseType']?.toString();
+    if (responseType != null && responseType.isNotEmpty) {
+      details['responseType'] = responseType;
+    }
+
+    final traceId =
+        decodedBody?['traceId']?.toString() ??
+        responseHeaders['x-backend-trace-id'];
+    if (traceId != null && traceId.isNotEmpty) {
+      details['traceId'] = traceId;
+    }
+
+    final selectionMode =
+        decodedBody?['selectionMode']?.toString() ??
+        responseHeaders['x-mini-program-selection-mode'];
+    if (selectionMode != null && selectionMode.isNotEmpty) {
+      details['selectionMode'] = selectionMode;
+    }
+
+    final decisionReason =
+        decodedBody?['decisionReason']?.toString() ??
+        responseHeaders['x-mini-program-decision-reason'];
+    if (decisionReason != null && decisionReason.isNotEmpty) {
+      details['decisionReason'] = decisionReason;
+    }
+
+    final matchedRuleId =
+        decodedBody?['matchedRuleId']?.toString() ??
+        responseHeaders['x-mini-program-matched-rule-id'];
+    if (matchedRuleId != null && matchedRuleId.isNotEmpty) {
+      details['matchedRuleId'] = matchedRuleId;
+    }
+
+    final resolvedVersion =
+        decodedBody?['resolvedVersion']?.toString() ??
+        responseHeaders['x-mini-program-version'];
+    if (resolvedVersion != null && resolvedVersion.isNotEmpty) {
+      details['resolvedVersion'] = resolvedVersion;
+    }
+
+    if (decodedBody == null) {
+      return details;
+    }
+
+    final rawDetails =
+        decodedBody['details'] ?? _tryReadNestedError(decodedBody)?['details'];
+    if (rawDetails is Map<String, dynamic>) {
+      details.addAll(rawDetails);
+      return details;
+    }
+
+    if (rawDetails is Map) {
+      details.addAll(
+        rawDetails.map((key, value) => MapEntry(key.toString(), value)),
+      );
+      return details;
+    }
+
+    if (rawDetails != null) {
+      details['backendDetails'] = rawDetails;
+    }
+
+    return details;
+  }
+
+  Map<String, dynamic>? _tryReadNestedError(Map<String, dynamic>? decodedBody) {
+    if (decodedBody == null) {
+      return null;
+    }
+
+    final rawError = decodedBody['error'];
+    if (rawError is Map<String, dynamic>) {
+      return rawError;
+    }
+    if (rawError is Map) {
+      return rawError.map((key, value) => MapEntry(key.toString(), value));
+    }
+
+    return null;
+  }
+}
