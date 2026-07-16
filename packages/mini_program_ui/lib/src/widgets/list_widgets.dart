@@ -1,27 +1,2 @@
-import '../mp_action.dart';
-import '../mp_node.dart';
-import 'widget_props.dart';
-
-MpNode buildListTileNode({
-  required String title,
-  String? subtitle,
-  String? leadingIcon,
-  String? trailingIcon,
-  String? badge,
-  MpAction? action,
-}) {
-  return MpNode(
-    'listTile',
-    props: <String, Object?>{
-      if (action != null) 'action': action,
-      if (badge != null) 'badge': requiredWidgetString(badge, 'badge'),
-      if (leadingIcon != null)
-        'leadingIcon': widgetIconName(leadingIcon, 'leadingIcon'),
-      if (subtitle != null)
-        'subtitle': requiredWidgetString(subtitle, 'subtitle'),
-      'title': requiredWidgetString(title, 'title'),
-      if (trailingIcon != null)
-        'trailingIcon': widgetIconName(trailingIcon, 'trailingIcon'),
-    },
-  );
-}
+// Compatibility shim for unsupported internal imports. Remove in 0.2.0.
+export '../features/controls/list_tile_nodes.dart';

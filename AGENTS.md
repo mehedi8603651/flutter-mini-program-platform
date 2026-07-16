@@ -28,7 +28,7 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.7` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.1.12` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_ui` | `0.1.13` | Pure-Dart authoring API that serializes UI and actions to JSON |
 | `mini_program_sdk` | `0.5.13` | Flutter host runtime, renderer, state, cache, loading, and host integration |
 | `mini_program_tooling` | `0.6.14` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
@@ -142,38 +142,57 @@ The UI package is the publisher-facing pure-Dart authoring DSL. It creates deter
 ```text
 packages/mini_program_ui/
 |-- lib/
-|   |-- mini_program_ui.dart                    # Public export barrel used by mini-program authors
+|   |-- mini_program_ui.dart                    # Only supported public import for mini-program authors
 |   `-- src/
-|       |-- mp.dart                             # Main `Mp` namespace: widgets, state, math, cache, control flow, actions
-|       |-- mp_action.dart                      # Serializable action value and action helpers
-|       |-- mp_node.dart                        # Serializable UI node value and node helpers
-|       |-- mp_program.dart                     # Screen/program document assembly
-|       |-- mp_build_output.dart                # Deterministic build output model/writer support
-|       |-- mp_json.dart                        # Canonical JSON normalization and deterministic encoding
-|       |-- mp_schema.dart                      # Authoring-side schema and value validation
-|       |-- mp_image.dart                       # Image source and image helper models
-|       |-- mp_lazy.dart                        # Lazy chunk authoring models and helpers
-|       |-- mp_skeleton.dart                    # Loading skeleton authoring models
-|       `-- widgets/
-|           |-- widget_props.dart               # Shared widget property normalization and validation
-|           |-- layout_widgets.dart             # Row, column, stack, padding, sizing, and scrolling builders
-|           |-- display_widgets.dart            # General display/container builders
-|           |-- text_widgets.dart               # Text and rich-text style builders
-|           |-- image_widgets.dart              # Image node builders
-|           |-- button_widgets.dart             # Button and interaction builders
-|           |-- chart_widgets.dart              # Single-series chart authoring and strict range validation
-|           |-- list_widgets.dart               # Static and bound list builders
-|           |-- lazy_widgets.dart               # Lazy data/chunk UI builders
-|           |-- skeleton_widgets.dart           # Skeleton placeholder builders
-|           `-- theme_widgets.dart              # Theme and visual configuration builders
-|-- test/                                       # Deterministic serialization and authoring validation tests
+|       |-- mp.dart                             # Stable `Mp` facade; signatures, docs, delegation, compatibility exports only
+|       |-- core/                               # Feature-independent serializable values and validation primitives
+|       |   |-- mp_action.dart                  # Serializable action descriptor
+|       |   |-- mp_node.dart                    # Serializable widget-node descriptor
+|       |   |-- mp_json.dart                    # Deterministic JSON normalization
+|       |   |-- authoring_validation.dart       # Shared strings, keys, paths, and collection validation
+|       |   |-- binding_validation.dart         # Full-binding syntax recognition
+|       |   `-- value_normalization.dart        # Shared range, duration, enum, and finite-number normalization
+|       |-- program/                            # Screen registry, schema, and deterministic build output
+|       |   |-- mp_program.dart                 # Program and screen-document assembly
+|       |   |-- mp_build_output.dart            # Development screen JSON writer
+|       |   `-- mp_schema.dart                  # Authoring schema constants and screen ID validation
+|       |-- features/                           # Node/action implementations grouped by behavior
+|       |   |-- shared/                         # Presentation-only colors, icons, spacing, and style validation
+|       |   |-- layout/                         # Row, column, stack, sizing, padding, flex, and section nodes
+|       |   |-- content/                        # Text, display, image nodes, and image models
+|       |   |-- collections/                    # List, repeat, grid, and wrap nodes
+|       |   |-- controls/                       # Buttons, list tiles, dropdowns, checkbox, and radio nodes
+|       |   |-- forms/                          # Inputs, forms, submit nodes, and `MpOption`
+|       |   |-- charts/                         # Line-chart authoring
+|       |   |-- lifecycle/                      # Initialize, condition, scopes, refresh, and countdown
+|       |   |-- state/                          # Memory-state actions
+|       |   |-- math/                           # Restricted math actions
+|       |   |-- cache/                          # Host-managed cache actions
+|       |   |-- data/                           # Artifact JSON loading and ranked search actions
+|       |   |-- location/                       # Host-controlled current-location action
+|       |   |-- navigation/                     # Navigation and router actions
+|       |   |-- backend/                        # Publisher API actions, nodes, and search
+|       |   |-- auth/                           # Authentication actions and state builder
+|       |   |-- lazy/                           # Lazy section/chunk models and builders
+|       |   |-- skeleton/                       # Skeleton models and builders
+|       |   |-- theme/                          # Lightweight theme node
+|       |   |-- feedback/                       # Toast and dialog actions
+|       |   `-- composition/                    # Sequence, conditional, and scoped action calls
+|       |-- mp_*.dart                           # Temporary legacy re-export shims; remove in 0.2.0
+|       `-- widgets/*.dart                      # Temporary legacy widget re-export shims; remove in 0.2.0
+|-- test/
+|   |-- core/                                   # Dependency boundaries and core behavior
+|   |-- program/                                # Program/build-output behavior
+|   |-- features/                               # Feature and cross-feature serialization/validation
+|   |-- compatibility/                          # Legacy internal import coverage
+|   `-- public_api_test.dart                    # Supported barrel compile surface
 |-- pubspec.yaml                                # Pure-Dart dependencies and package version
 |-- CHANGELOG.md                                # Published and pending authoring API changes
 |-- README.md                                   # Package-facing authoring examples
 `-- analysis_options.yaml                       # Package analyzer configuration
 ```
 
-When adding an authoring API, emit explicit JSON, validate author mistakes early, and add deterministic serialization tests. Do not import Flutter or duplicate runtime behavior here.
+When adding an authoring API, keep `mp.dart` limited to its public signature and delegation. Put implementation and feature-specific validation under the owning feature, reuse `core` only for truly cross-feature rules, emit explicit JSON, and add deterministic serialization tests. Features may depend on core and local public models but must never import the `Mp` facade. Do not import Flutter or duplicate runtime behavior here.
 
 ### `packages/mini_program_sdk`
 
@@ -883,7 +902,7 @@ Most cross-layer actions require this order:
 
 ### Add a New `Mp` Widget
 
-1. Add a pure-Dart node builder under `mini_program_ui/lib/src/widgets/`.
+1. Add a pure-Dart node builder under the owning `mini_program_ui/lib/src/features/<feature>/` library and delegate to it from `Mp`.
 2. Define strict property validation and deterministic JSON tests.
 3. Add SDK parsed-model validation.
 4. Render it in the narrowest appropriate runtime widget part.

@@ -2,11 +2,11 @@
 library;
 
 export 'src/mp.dart';
-export 'src/mp_action.dart';
-export 'src/mp_build_output.dart';
-export 'src/mp_image.dart';
-export 'src/mp_node.dart';
-export 'src/mp_lazy.dart';
-export 'src/mp_program.dart';
-export 'src/mp_schema.dart';
-export 'src/mp_skeleton.dart';
+export 'src/core/mp_action.dart';
+export 'src/core/mp_node.dart';
+export 'src/features/content/image_models.dart';
+export 'src/features/lazy/lazy_nodes.dart';
+export 'src/features/skeleton/skeleton_nodes.dart';
+export 'src/program/mp_build_output.dart';
+export 'src/program/mp_program.dart';
+export 'src/program/mp_schema.dart';

@@ -7,6 +7,19 @@ analyzer, or build_runner dependency. Mini-program authors write `Mp.*`
 source, then `mini_program_tooling` runs `tool/build_mp.dart` and writes
 versioned JSON for the SDK renderer.
 
+## Supported Import
+
+Mini-program source should use only the package barrel:
+
+```dart
+import 'package:mini_program_ui/mini_program_ui.dart';
+```
+
+Files below `lib/src/` are implementation details. The implementation is
+organized into dependency-free core values, program assembly, and
+feature-owned node/action builders. Legacy `src` paths remain as temporary
+compatibility re-exports and are scheduled for removal in `0.2.0`.
+
 ## Program Shape
 
 ```dart

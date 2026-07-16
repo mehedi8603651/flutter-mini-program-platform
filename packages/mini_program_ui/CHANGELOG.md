@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.13
+
+- Reorganize the pure-Dart authoring implementation into core, program, and
+  feature-owned libraries while preserving the existing public API and JSON.
+- Keep `Mp` as a signatures-and-delegation facade and add architecture tests
+  for dependency direction, public exports, and legacy internal import shims.
+- Retain old `lib/src` import paths as compatibility re-exports until `0.2.0`.
+
 ## 0.1.12
 
 - Add strict `Mp.location.getCurrent` authoring for foreground, one-time,
