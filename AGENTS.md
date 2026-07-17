@@ -531,8 +531,24 @@ packages/mini_program_tooling/
 |       |-- mini_program_builder.dart            # Builds fast development output in `mp/.build`
 |       |-- mini_program_artifacts.dart          # Builds/verifies immutable portable artifact bundles
 |       |-- mini_program_partner_handoff.dart    # Reads/writes partner handoff and requested policy
-|       |-- mini_program_embedding_initializer.dart # Generates host integration files
-|       |-- mini_program_host_capability_installer.dart # Installs optional generic native host providers safely
+|       |-- mini_program_embedding_initializer.dart # Public host embedding facade
+|       |-- mini_program_host_capability_installer.dart # Public optional host-capability facade
+|       |-- host_integration/                    # Internal host setup and native capability libraries
+|       |   |-- embedding/
+|       |   |   |-- models.dart                  # Embedding request, result, and stable exception
+|       |   |   |-- initializer.dart             # Ordered embedding validation and file-write orchestration
+|       |   |   |-- pubspec_editor.dart          # Host pubspec metadata and dependency updates
+|       |   |   |-- dart_templates.dart          # Generated Dart integration source templates
+|       |   |   |-- readme_template.dart         # Generated host integration guide
+|       |   |   `-- android_integration.dart     # Existing Android network permission planning
+|       |   `-- capabilities/
+|       |       |-- models.dart                  # Capability request, result, and stable exception
+|       |       `-- location/
+|       |           |-- installer.dart           # Android location installation coordinator
+|       |           |-- source_files.dart        # Kotlin package, ownership, and installed-state checks
+|       |           |-- source_editors.dart      # Host setup, manifest, and MainActivity patching
+|       |           |-- dart_provider_template.dart # Host-owned Dart provider template
+|       |           `-- android_channel_template.dart # Host-owned Kotlin MethodChannel template
 |       |-- mini_program_host_controller.dart    # Starts and controls generated/reference hosts
 |       |-- mini_program_preview_host_initializer.dart # Generates a preview Flutter host
 |       |-- mini_program_preview_controller.dart # Coordinates preview build/server/host lifecycle
@@ -604,6 +620,15 @@ capability policies, and secure API policies. Keep
 `DeliveryRepositoryValidator` as the public facade, keep internal validators as
 normal Dart libraries under `delivery_validation/`, and preserve message order,
 codes, paths, severity, and text when extending validation.
+
+Host integration public classes stay in the two `mini_program_*` facade files.
+Implementation belongs in normal Dart libraries under `host_integration/` and
+must not import the public tooling barrel or either facade. Preserve generated
+file bytes, write order, public result ordering, and existing error text when
+changing embedding. Capability installers may make a host provider available,
+but they must never accept a mini-program permission policy. Generated
+capability adapter files are host-owned after creation and must not be
+overwritten automatically.
 
 ### `packages/mini_program_vscode`
 
