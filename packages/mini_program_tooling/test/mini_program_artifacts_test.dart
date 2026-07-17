@@ -133,6 +133,29 @@ void main() {
       );
     });
 
+    test('identical fixtures produce byte-for-byte bundles', () async {
+      final secondRoot = p.join(tempDirectory.path, 'calculator_copy');
+      await _writeFixture(secondRoot, version: '1.0.0');
+
+      final first = await const MiniProgramArtifactBuilder().build(
+        MiniProgramArtifactBuildRequest(
+          miniProgramRootPath: miniProgramRoot,
+          skipPubGet: true,
+        ),
+      );
+      final second = await const MiniProgramArtifactBuilder().build(
+        MiniProgramArtifactBuildRequest(
+          miniProgramRootPath: secondRoot,
+          skipPubGet: true,
+        ),
+      );
+
+      expect(
+        await _readBundleBytes(second.versionArtifactsPath),
+        await _readBundleBytes(first.versionArtifactsPath),
+      );
+    });
+
     test('packages and verifies the Publisher API contract', () async {
       await _writePublisherBackendContract(miniProgramRoot);
 
@@ -365,6 +388,20 @@ environment:
     }),
   );
   await _writeBuildScript(root, label: 'Calculator');
+}
+
+Future<Map<String, List<int>>> _readBundleBytes(String root) async {
+  final files = await Directory(root)
+      .list(recursive: true, followLinks: false)
+      .where((entity) => entity is File)
+      .cast<File>()
+      .toList();
+  files.sort((left, right) => left.path.compareTo(right.path));
+  return <String, List<int>>{
+    for (final file in files)
+      p.relative(file.path, from: root).replaceAll('\\', '/'): await file
+          .readAsBytes(),
+  };
 }
 
 Future<void> _setVersion(String root, String version) async {

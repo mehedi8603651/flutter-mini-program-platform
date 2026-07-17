@@ -529,7 +529,26 @@ packages/mini_program_tooling/
 |       |-- miniprogram_cli.dart                 # Top-level command parser and dispatcher
 |       |-- mini_program_scaffolder.dart         # Creates a new mini-program source project
 |       |-- mini_program_builder.dart            # Builds fast development output in `mp/.build`
-|       |-- mini_program_artifacts.dart          # Builds/verifies immutable portable artifact bundles
+|       |-- mini_program_artifacts.dart          # Public portable artifact build/verify facade
+|       |-- artifact_pipeline/                   # Internal immutable artifact pipeline libraries
+|       |   |-- models.dart                      # Public requests, results, errors, and error codes
+|       |   |-- build/
+|       |   |   |-- coordinator.dart             # Ordered development-build-to-artifact orchestration
+|       |   |   |-- catalog.dart                 # Existing latest lookup and semantic version discovery
+|       |   |   `-- checksums.dart               # Sorted SHA-256 record generation
+|       |   |-- verify/
+|       |   |   |-- coordinator.dart             # App-level latest, catalog, and version verification
+|       |   |   |-- version.dart                 # One immutable release structure verification
+|       |   |   |-- versions.dart                # Safe semantic version directory discovery
+|       |   |   `-- checksums.dart               # Recorded file, byte count, and hash verification
+|       |   `-- shared/
+|       |       |-- constants.dart               # Artifact layout and local JSON resource limits
+|       |       |-- json_io.dart                 # Canonical JSON reads, writes, and atomic replacement
+|       |       |-- files.dart                   # Sorted traversal, copying, and directory equality
+|       |       |-- paths.dart                   # Portable relative paths and containment checks
+|       |       |-- document_validation.dart     # Manifest, screen, version, and Publisher API validation
+|       |       |-- data_assets.dart             # Referenced local JSON resource validation
+|       |       `-- metrics.dart                 # Internal file-count and byte metrics
 |       |-- mini_program_partner_handoff.dart    # Reads/writes partner handoff and requested policy
 |       |-- mini_program_embedding_initializer.dart # Public host embedding facade
 |       |-- mini_program_host_capability_installer.dart # Public optional host-capability facade
@@ -629,6 +648,14 @@ changing embedding. Capability installers may make a host provider available,
 but they must never accept a mini-program permission policy. Generated
 capability adapter files are host-owned after creation and must not be
 overwritten automatically.
+
+Portable artifact public classes stay in `mini_program_artifacts.dart`; its
+implementation belongs in normal Dart libraries under `artifact_pipeline/`.
+Preserve canonical JSON bytes, checksum record ordering, immutable version
+conflict behavior, atomic `catalog.json`/`latest.json` updates, staging cleanup,
+validation order, error codes/messages/details, and result JSON. Build and
+verification internals must not import the public tooling barrel or artifact
+facade.
 
 ### `packages/mini_program_vscode`
 
