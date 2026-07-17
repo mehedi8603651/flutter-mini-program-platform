@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:mini_program_tooling/mini_program_tooling.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -129,6 +130,51 @@ void main() {
         expect(mainDart, isNot(contains('SelectableText(prettyArgs)')));
       },
     );
+
+    test('keeps generated preview main source byte-stable', () async {
+      final hostRootPath = p.join(
+        tempDir.path,
+        'calculator',
+        '.mini_program',
+        'preview_host',
+      );
+      final initializer = MiniProgramPreviewHostInitializer(
+        shellRunner:
+            (
+              String executable,
+              List<String> arguments, {
+              String? workingDirectory,
+              Map<String, String>? environment,
+            }) async {
+              final resolvedHostRoot = p.join(
+                workingDirectory!,
+                arguments.last,
+              );
+              await Directory(
+                p.join(resolvedHostRoot, 'lib'),
+              ).create(recursive: true);
+              await Directory(
+                p.join(resolvedHostRoot, 'web'),
+              ).create(recursive: true);
+              return ProcessResult(0, 0, '', '');
+            },
+      );
+
+      await initializer.initialize(
+        MiniProgramPreviewHostInitRequest(
+          hostRootPath: hostRootPath,
+          requiredPlatforms: const <String>{'web'},
+        ),
+      );
+
+      final mainBytes = await File(
+        p.join(hostRootPath, 'lib', 'main.dart'),
+      ).readAsBytes();
+      expect(
+        sha256.convert(mainBytes).toString(),
+        '231281e18f4596430445115a0db6bc1acc0981b0b81f12fa9c6347743b3d88a2',
+      );
+    });
 
     test(
       'adds Android platform files when emulator preview is requested',

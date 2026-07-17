@@ -572,6 +572,10 @@ packages/mini_program_tooling/
 |       |-- mini_program_preview_host_initializer.dart # Generates a preview Flutter host
 |       |-- mini_program_preview_controller.dart # Coordinates preview build/server/host lifecycle
 |       |-- mini_program_preview_server.dart     # Serves local static artifacts with development headers
+|       |-- preview_runtime/                     # Internal preview server, generated host, and launch orchestration
+|       |   |-- server/                          # Bundle loading, routes, assets, responses, and server lifecycle
+|       |   |-- host/                            # Host models, project setup, platform files, and main template
+|       |   `-- controller/                      # Watcher, device transport, process cleanup, and coordinator
 |       |-- mini_program_path_resolver.dart      # Resolves workspace/project paths consistently
 |       |-- mini_program_workflow_status.dart    # Computes project workflow status for CLI/editor
 |       |-- miniprogram_doctor.dart              # Environment and project diagnostics
@@ -656,6 +660,14 @@ conflict behavior, atomic `catalog.json`/`latest.json` updates, staging cleanup,
 validation order, error codes/messages/details, and result JSON. Build and
 verification internals must not import the public tooling barrel or artifact
 facade.
+
+Preview public classes stay in the three `mini_program_preview_*` facade files.
+Implementation belongs in normal Dart libraries under `preview_runtime/` and
+must not import the public tooling barrel or preview facades. Preserve generated
+preview-host bytes, HTTP routes and no-store/CORS headers, status transitions,
+watcher debounce/coalescing, Flutter process arguments and cleanup, ADB reverse
+behavior, LAN host selection, diagnostic text, and public dependency-injection
+signatures when changing preview behavior.
 
 ### `packages/mini_program_vscode`
 
