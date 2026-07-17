@@ -542,7 +542,17 @@ packages/mini_program_tooling/
 |       |-- miniprogram_doctor.dart              # Environment and project diagnostics
 |       |-- local_cli_state.dart                 # Ignored local process/port/workflow state
 |       |-- delivery_validation.dart             # Delivery validation result models
-|       |-- delivery_validator.dart              # Validates static delivery content
+|       |-- delivery_validator.dart              # Public delivery-validator facade and ordered orchestration
+|       |-- delivery_validation/                 # Internal feature-owned delivery validation libraries
+|       |   |-- authored_manifests.dart          # Loads repository and standalone authored manifests
+|       |   |-- published_manifests.dart         # Validates latest/versioned static artifact manifests
+|       |   |-- rollout_rules.dart               # Validates rollout files and published-version references
+|       |   |-- capability_policies.dart         # Validates delivery-context capability policies
+|       |   |-- secure_api_policies.dart         # Validates secure API endpoint/source policy files
+|       |   |-- manifest_validation.dart         # Parses manifests and enforces shared semantics
+|       |   |-- json_reader.dart                 # Reads JSON objects with stable file/decode failures
+|       |   |-- validation_context.dart          # Carries normalized roots, filters, and ordered findings
+|       |   `-- shared_validation.dart           # Semver, endpoint, list, and string helpers
 |       |-- delivery_inspector.dart              # Human/JSON inspection of built delivery
 |       |-- mini_program_publisher.dart           # Older publishing orchestration retained for compatibility
 |       |-- mini_program_static_publisher.dart    # Static directory publishing support
@@ -587,6 +597,13 @@ packages/mini_program_tooling/
 ```
 
 All CLI failures should be actionable and have nonzero exit status. Preserve JSON output compatibility when commands are consumed by VS Code or scripts.
+
+Delivery validation executes in a stable order: repository roots, authored
+manifests, an optional external manifest, published manifests, rollout rules,
+capability policies, and secure API policies. Keep
+`DeliveryRepositoryValidator` as the public facade, keep internal validators as
+normal Dart libraries under `delivery_validation/`, and preserve message order,
+codes, paths, severity, and text when extending validation.
 
 ### `packages/mini_program_vscode`
 
