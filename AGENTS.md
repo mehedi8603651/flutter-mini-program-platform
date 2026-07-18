@@ -687,7 +687,17 @@ packages/mini_program_tooling/
 |       |   |-- lifecycle.dart                    # Ordered start, status, and stop orchestration
 |       |   `-- reset.dart                        # Contained tracked-artifact cleanup and directory pruning
 |       |-- publisher_backend_starter.dart        # Creates optional publisher API starter
-|       |-- publisher_backend_contract_controller.dart # Publisher API contract commands
+|       |-- publisher_backend_contract_controller.dart # CLI-internal Publisher API contract workflow facade
+|       |-- publisher_backend_contract/                # Internal contract file and smoke-check libraries
+|       |   |-- models.dart                       # Controller request/result models and injected HTTP factory
+|       |   |-- paths.dart                        # Default and explicit normalized contract paths
+|       |   |-- files.dart                        # Deterministic contract JSON reads and writes
+|       |   |-- operations.dart                   # Ordered init and validate orchestration
+|       |   `-- smoke/
+|       |       |-- headers.dart                  # Stable runtime metadata and optional bearer headers
+|       |       |-- transport.dart                # Relative URI resolution and HTTP method dispatch
+|       |       |-- response.dart                 # Status, JSON, timeout, and reachability mapping
+|       |       `-- coordinator.dart              # Ordered smoke execution and HTTP client disposal
 |       |-- publisher_backend/
 |       |   |-- core_operations.dart              # Shared create/start/stop/validate API workspace operations
 |       |   |-- models.dart                       # Public/internal publisher backend workflow models
@@ -848,6 +858,21 @@ local-before-global workspace discovery, stale workspace rejection, repo
 fallback, backend status mapping, and exact skipped/warning/error behavior.
 Doctor diagnostics are read-only and provider-neutral; they must not initialize
 workspaces, start services, alter policy, or persist state.
+
+Publisher API contract controller types stay available through the historical
+`publisher_backend_contract_controller.dart` library used by the CLI; they are
+not exported from the package barrel. Implementation belongs in normal Dart
+libraries under `publisher_backend_contract/` and must not import the public
+tooling barrel or controller facade. Preserve contract construction before
+path writes, normalized default/explicit paths, deterministic two-space JSON
+and trailing newline, shared-contract parser validation order and errors,
+smoke-case order, one owned HTTP client per smoke run, unconditional disposal,
+relative endpoint resolution, HTTP method/body behavior, stable runtime header
+names and bearer normalization, per-route timeout, empty-body JSON acceptance,
+status-before-JSON failure precedence, route result text/error codes, and
+token-free public output. Do not merge these libraries with
+`publisher_backend/`, which owns mock Publisher API workspace lifecycle rather
+than the artifact contract workflow.
 
 ### `packages/mini_program_vscode`
 
