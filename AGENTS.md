@@ -570,7 +570,20 @@ packages/mini_program_tooling/
 |       |       |-- document_validation.dart     # Manifest, screen, version, and Publisher API validation
 |       |       |-- data_assets.dart             # Referenced local JSON resource validation
 |       |       `-- metrics.dart                 # Internal file-count and byte metrics
-|       |-- mini_program_partner_handoff.dart    # Reads/writes partner handoff and requested policy
+|       |-- mini_program_partner_handoff.dart    # Public partner-handoff file facade and compatibility exports
+|       |-- partner_handoff/                     # Internal handoff contract and requested-policy libraries
+|       |   |-- constants.dart                   # Stable schema versions and document type
+|       |   |-- errors.dart                      # Public stable handoff exception
+|       |   |-- handoff.dart                     # Public normalized handoff model and JSON projection
+|       |   |-- models.dart                      # Public package create request and result
+|       |   |-- validation.dart                  # Document fields, identifier, URL, title, and timestamp rules
+|       |   |-- files.dart                       # Deterministic JSON file reads, writes, and output paths
+|       |   |-- coordinator.dart                 # Package construction and ordered persistence
+|       |   `-- requested_policy/
+|       |       |-- cache.dart                   # Allowed buckets and cache request normalization
+|       |       |-- publisher_api.dart           # Publisher API request contract normalization
+|       |       |-- permissions.dart             # Host-reviewable device permission requests
+|       |       `-- json_values.dart             # Immutable JSON values and sensitive-key rejection
 |       |-- mini_program_embedding_initializer.dart # Public host embedding facade
 |       |-- mini_program_host_capability_installer.dart # Public optional host-capability facade
 |       |-- host_integration/                    # Internal host setup and native capability libraries
@@ -789,6 +802,18 @@ environment, failure formatting, entry-screen validation order, JSON data
 resource traversal and limits, result-map property order, and `skipPubGet`
 behavior. Development output remains `mp/.build`; immutable packaging remains
 owned by `artifact_pipeline/`.
+
+Partner-handoff public model, package request/result, exception, and controller
+types stay available through `mini_program_partner_handoff.dart`.
+Implementation belongs in normal Dart libraries under `partner_handoff/` and
+must not import the public tooling barrel or handoff facade. Preserve schema
+v1/v2 compatibility, schema-v3 field and JSON property order, legacy
+`apiBaseUrl` fallback, artifact URL normalization, constructor and parser
+validation order, exact errors, immutable requested-policy values, sensitive
+cache-key rejection, deterministic pretty JSON with its trailing newline,
+default output naming, and normalized absolute paths. Requested cache,
+Publisher API, and device permissions are publisher input only; host import and
+accepted-policy generation remain the authority boundary under `host_endpoint/`.
 
 ### `packages/mini_program_vscode`
 
