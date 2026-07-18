@@ -1,7 +1,8 @@
-part of '../miniprogram_cli.dart';
+import 'command_imports.dart';
+import 'context.dart';
 
-extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
-  String _formatPublisherBackendScaffoldResult(
+extension CliPublisherBackendOutputHelpers on CliContext {
+  String formatPublisherBackendScaffoldResult(
     PublisherBackendScaffoldResult result,
   ) {
     final lines = <String>[
@@ -26,7 +27,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatPublisherBackendRunResult(PublisherBackendRunResult result) {
+  String formatPublisherBackendRunResult(PublisherBackendRunResult result) {
     final state = result.state;
     return <String>[
       result.alreadyRunning
@@ -36,13 +37,13 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       'Mock API root: ${state.backendRootPath}',
       'PID: ${state.pid}',
       'Health: ${state.healthCheckUrl}',
-      ..._formatPublisherBackendTargetUrls(state.port),
+      ...formatPublisherBackendTargetUrls(state.port),
       'stdout log: ${state.stdoutLogPath}',
       'stderr log: ${state.stderrLogPath}',
     ].join('\n');
   }
 
-  String _formatPublisherBackendStatusResult(
+  String formatPublisherBackendStatusResult(
     PublisherBackendStatusResult result,
   ) {
     if (!result.hasState) {
@@ -59,11 +60,11 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
       if (result.healthStatusCode != null)
         'Health status: ${result.healthStatusCode}',
       if (result.healthError != null) 'Health detail: ${result.healthError}',
-      ..._formatPublisherBackendTargetUrls(state.port),
+      ...formatPublisherBackendTargetUrls(state.port),
     ].join('\n');
   }
 
-  String _formatPublisherBackendStopResult(PublisherBackendStopResult result) {
+  String formatPublisherBackendStopResult(PublisherBackendStopResult result) {
     if (!result.hadState) {
       return 'No Publisher API mock state was found.';
     }
@@ -76,10 +77,10 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
     return 'Publisher API mock was not running.';
   }
 
-  String _formatPublisherBackendUrlsResult(PublisherBackendUrlsResult result) {
+  String formatPublisherBackendUrlsResult(PublisherBackendUrlsResult result) {
     return <String>[
       'Publisher API mock local URLs:',
-      ..._formatPublisherBackendTargetUrls(result.port),
+      ...formatPublisherBackendTargetUrls(result.port),
       '',
       'Artifact contract example:',
       'miniprogram publisher-api contract init --publisher-api-url ${result.desktopBaseUrl} --permission-reason "Load development data." --allow-local-http',
@@ -91,7 +92,7 @@ extension _MiniprogramCliPublisherBackendOutputHelpers on MiniprogramCli {
     ].join('\n');
   }
 
-  List<String> _formatPublisherBackendTargetUrls(int port) {
+  List<String> formatPublisherBackendTargetUrls(int port) {
     return <String>[
       'Desktop/iOS/physical device base URL: http://127.0.0.1:$port',
       'Android emulator base URL: http://10.0.2.2:$port',

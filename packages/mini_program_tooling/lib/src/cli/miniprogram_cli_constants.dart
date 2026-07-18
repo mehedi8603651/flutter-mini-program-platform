@@ -1,10 +1,8 @@
-part of '../miniprogram_cli.dart';
+const List<String> cliSupportedPublishTargets = <String>['local', 'static'];
 
-const List<String> _supportedPublishTargets = <String>['local', 'static'];
+const String miniProgramToolingVersion = '0.6.14';
 
-const String _miniProgramToolingVersion = '0.6.14';
-
-const List<String> _capabilityIds = <String>[
+const List<String> cliCapabilityIds = <String>[
   'publish.static',
   'artifact.build',
   'artifact.verify',

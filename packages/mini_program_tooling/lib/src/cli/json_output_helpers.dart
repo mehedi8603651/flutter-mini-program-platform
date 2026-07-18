@@ -1,10 +1,12 @@
-part of '../miniprogram_cli.dart';
+import 'command_imports.dart';
+import 'context.dart';
+import 'miniprogram_cli_constants.dart';
 
-extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
-  String _prettyJson(Object? value) =>
+extension CliJsonOutputHelpers on CliContext {
+  String prettyJson(Object? value) =>
       const JsonEncoder.withIndent('  ').convert(value);
 
-  Map<String, Object?> _doctorResultJson(MiniprogramDoctorResult result) {
+  Map<String, Object?> doctorResultJson(MiniprogramDoctorResult result) {
     var okCount = 0;
     var warningCount = 0;
     var errorCount = 0;
@@ -44,13 +46,13 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
     };
   }
 
-  Map<String, Object?> _capabilitiesJson() {
+  Map<String, Object?> capabilitiesJson() {
     return <String, Object?>{
       'schemaVersion': 1,
       'command': 'capabilities',
       'packageName': 'mini_program_tooling',
-      'toolingVersion': _miniProgramToolingVersion,
-      'capabilityIds': _capabilityIds,
+      'toolingVersion': miniProgramToolingVersion,
+      'capabilityIds': cliCapabilityIds,
       'features': <String, bool>{
         'publisherApiMock': true,
         'publisherBackendContractInit': true,
@@ -71,7 +73,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
     };
   }
 
-  Map<String, Object?> _envStatusJson(
+  Map<String, Object?> envStatusJson(
     ResolvedLocalCliEnvironmentState? resolved,
   ) {
     if (resolved == null) {
@@ -95,7 +97,7 @@ extension _MiniprogramCliJsonOutputHelpers on MiniprogramCli {
     };
   }
 
-  Map<String, Object?> _publisherBackendStatusJson(
+  Map<String, Object?> publisherBackendStatusJson(
     PublisherBackendStatusResult result,
   ) {
     final state = result.state;

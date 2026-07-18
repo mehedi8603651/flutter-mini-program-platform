@@ -1,6 +1,37 @@
-part of '../miniprogram_cli.dart';
+import 'package:path/path.dart' as p;
 
-extension _MiniprogramCliCoreCommands on MiniprogramCli {
+import 'support.dart';
+
+extension CliCoreCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  MiniProgramScaffolder get _scaffolder => dependencies.scaffolder;
+  MiniProgramBuilder get _builder => dependencies.builder;
+  DeliveryRepositoryValidator get _validator => dependencies.validator;
+  MiniProgramPublisher get _publisher => dependencies.publisher;
+  MiniProgramEmbeddingInitializer get _embeddingInitializer =>
+      dependencies.embeddingInitializer;
+  MiniProgramPreviewController get _previewController =>
+      dependencies.previewController;
+  MiniProgramStaticPublisher get _staticPublisher =>
+      dependencies.staticPublisher;
+  MiniprogramDoctor get _doctor => dependencies.doctor;
+  LocalCliStateStore get _stateStore => dependencies.stateStore;
+  MiniProgramPathResolver get _pathResolver => dependencies.pathResolver;
+
+  Future<int> runCreateCommand(List<String> arguments) => _runCreate(arguments);
+  Future<int> runDoctorCommand(List<String> arguments) => _runDoctor(arguments);
+  int runCapabilitiesCommand(List<String> arguments) =>
+      _runCapabilities(arguments);
+  Future<int> runBuildCommand(List<String> arguments) => _runBuild(arguments);
+  Future<int> runPreviewCommand(List<String> arguments) =>
+      _runPreview(arguments);
+  Future<int> runValidateCommand(List<String> arguments) =>
+      _runValidate(arguments);
+  Future<int> runPublishCommand(List<String> arguments) =>
+      _runPublish(arguments);
+  Future<int> runEmbedCommand(List<String> arguments) => _runEmbed(arguments);
+
   Future<int> _runCreate(List<String> arguments) async {
     final parser = ArgParser()
       ..addFlag(
@@ -64,7 +95,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
     final outputRootPath =
         results.option('output-root') ??
         (repoRootPath == null
-            ? p.join(_currentWorkingDirectory(), miniProgramId)
+            ? p.join(currentWorkingDirectory(), miniProgramId)
             : null);
 
     final result = await _scaffolder.scaffold(
@@ -74,14 +105,14 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         miniProgramId: miniProgramId,
         title: results.option('title'),
         description: results.option('description'),
-        capabilities: _parseCapabilities(results.option('capabilities')!),
+        capabilities: parseCapabilities(results.option('capabilities')!),
         backendTemplate: results.option('with-backend'),
         screenFormat: results.option('screen-format') ?? 'mp',
         force: results.flag('force'),
       ),
     );
 
-    _stdout.writeln(_formatCreateResult(result));
+    _stdout.writeln(formatCreateResult(result));
     return 0;
   }
 
@@ -115,9 +146,9 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       explicitRepoRootPath: results.option('repo-root'),
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(_doctorResultJson(result)));
+      _stdout.writeln(prettyJson(doctorResultJson(result)));
     } else {
-      _stdout.writeln(_formatDoctorResult(result));
+      _stdout.writeln(formatDoctorResult(result));
     }
     return result.hasErrors ? 1 : 0;
   }
@@ -144,11 +175,11 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       );
     }
 
-    final capabilities = _capabilitiesJson();
+    final capabilities = capabilitiesJson();
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(capabilities));
+      _stdout.writeln(prettyJson(capabilities));
     } else {
-      _stdout.writeln(_formatCapabilities(capabilities));
+      _stdout.writeln(formatCapabilities(capabilities));
     }
     return 0;
   }
@@ -185,13 +216,13 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
-    final miniProgramId = await _resolveMiniProgramId(
+    final miniProgramId = await resolveMiniProgramId(
       commandName: 'build',
       positionalArguments: results.rest,
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
-    final cwd = _currentWorkingDirectory();
-    final repoRootHint = await _resolveRepoRootPath(
+    final cwd = currentWorkingDirectory();
+    final repoRootHint = await resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[
         if (results.option('mini-program-root') case final miniProgramRoot?
@@ -216,7 +247,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ),
     );
 
-    _stdout.writeln(_formatBuildResult(result));
+    _stdout.writeln(formatBuildResult(result));
     return 0;
   }
 
@@ -263,12 +294,12 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       );
     }
 
-    final miniProgramId = await _resolveMiniProgramId(
+    final miniProgramId = await resolveMiniProgramId(
       commandName: 'preview',
       positionalArguments: results.rest,
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
-    final repoRootHint = await _resolveRepoRootPath(
+    final repoRootHint = await resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[
         if (results.option('mini-program-root') case final miniProgramRoot?
@@ -281,7 +312,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       requireRepoRoot: false,
     );
     return _previewController.preview(
@@ -328,12 +359,12 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
-    final miniProgramId = await _resolveMiniProgramId(
+    final miniProgramId = await resolveMiniProgramId(
       commandName: 'validate',
       positionalArguments: results.rest,
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
-    final repoRootHint = await _resolveRepoRootPath(
+    final repoRootHint = await resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[
         if (results.option('mini-program-root') case final miniProgramRoot?
@@ -346,10 +377,10 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       requireRepoRoot: false,
     );
-    final backendRootPath = await _resolveBackendRootPath(
+    final backendRootPath = await resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[resolved.miniProgramRootPath],
@@ -402,7 +433,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       )
       ..addOption(
         'target',
-        allowed: _supportedPublishTargets,
+        allowed: cliSupportedPublishTargets,
         help: 'Publish target. Defaults to the active env or local.',
       )
       ..addOption(
@@ -422,24 +453,24 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
-    final activeEnvironment = await _discoverEnvironmentState(
+    final activeEnvironment = await discoverEnvironmentState(
       additionalSearchRoots: <String>[
         if (results.option('mini-program-root') case final miniProgramRoot?
             when miniProgramRoot.trim().isNotEmpty)
           miniProgramRoot,
       ],
     );
-    final target = _resolvePublishTarget(
+    final target = resolvePublishTarget(
       explicitTarget: results.option('target'),
       resolvedEnvironmentState: activeEnvironment,
     );
 
-    final miniProgramId = await _resolveMiniProgramId(
+    final miniProgramId = await resolveMiniProgramId(
       commandName: 'publish',
       positionalArguments: results.rest,
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
-    final repoRootHint = await _resolveRepoRootPath(
+    final repoRootHint = await resolveRepoRootPath(
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[
         if (results.option('mini-program-root') case final miniProgramRoot?
@@ -452,7 +483,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: results.option('mini-program-root'),
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       requireRepoRoot: false,
     );
     if (target == 'static') {
@@ -475,11 +506,11 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
           clean: results.flag('clean'),
         ),
       );
-      _stdout.writeln(_formatStaticPublishResult(result));
+      _stdout.writeln(formatStaticPublishResult(result));
       return 0;
     }
 
-    final backendRootPath = await _resolveBackendRootPath(
+    final backendRootPath = await resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       additionalSearchRoots: <String>[resolved.miniProgramRootPath],
@@ -511,7 +542,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ),
     );
 
-    _stdout.writeln(_formatPublishResult(result));
+    _stdout.writeln(formatPublishResult(result));
     _stdout.writeln(
       'Tracked local publish state: '
       '${_stateStore.publishedArtifactsPath(backendRootPath)}',
@@ -520,12 +551,12 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
   }
 
   Future<int> _runEmbed(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_embedUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(embedUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_embedUsage());
+      _stderr.writeln(embedUsage());
       return 64;
     }
 
@@ -534,7 +565,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
         return _runEmbedInit(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown embed command: ${arguments.first}');
-        _stderr.writeln(_embedUsage());
+        _stderr.writeln(embedUsage());
         return 64;
     }
   }
@@ -586,11 +617,11 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
     }
 
     final projectRootPath =
-        results.option('project-root') ?? _currentWorkingDirectory();
+        results.option('project-root') ?? currentWorkingDirectory();
     final result = await _embeddingInitializer.initialize(
       MiniProgramEmbeddingInitRequest(
         projectRootPath: projectRootPath,
-        repoRootPath: await _resolveRepoRootPath(
+        repoRootPath: await resolveRepoRootPath(
           explicitRepoRootPath: results.option('repo-root'),
           additionalSearchRoots: <String>[projectRootPath],
         ),
@@ -601,7 +632,7 @@ extension _MiniprogramCliCoreCommands on MiniprogramCli {
       ),
     );
 
-    _stdout.writeln(_formatEmbeddingInitResult(result));
+    _stdout.writeln(formatEmbeddingInitResult(result));
     return 0;
   }
 }

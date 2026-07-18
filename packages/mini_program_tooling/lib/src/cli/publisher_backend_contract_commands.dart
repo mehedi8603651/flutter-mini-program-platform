@@ -1,16 +1,26 @@
-part of '../miniprogram_cli.dart';
+import 'support.dart';
 
-extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
+extension CliPublisherBackendContractCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  PublisherBackendContractController get _publisherBackendContractController =>
+      dependencies.publisherBackendContractController;
+
+  Future<int> runPublisherBackendContractCommand(
+    List<String> arguments, {
+    String commandName = 'publisher-backend',
+  }) => _runPublisherBackendContract(arguments, commandName: commandName);
+
   Future<int> _runPublisherBackendContract(
     List<String> arguments, {
     String commandName = 'publisher-backend',
   }) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_publisherBackendContractUsage(commandName: commandName));
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(publisherBackendContractUsage(commandName: commandName));
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_publisherBackendContractUsage(commandName: commandName));
+      _stderr.writeln(publisherBackendContractUsage(commandName: commandName));
       return 64;
     }
 
@@ -40,7 +50,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
           'Unknown $commandName contract command: ${arguments.first}',
         );
         _stderr.writeln(
-          _publisherBackendContractUsage(commandName: commandName),
+          publisherBackendContractUsage(commandName: commandName),
         );
         return 64;
     }
@@ -118,12 +128,10 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         '$qualifiedCommand expected a valid --publisher-api-url, got: $rawBackendBaseUrl',
       );
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
-    final manifestInfo = await _readMiniProgramManifestInfo(
-      miniProgramRootPath,
-    );
+    final manifestInfo = await readMiniProgramManifestInfo(miniProgramRootPath);
     final appId = results.option('app-id')?.trim().isNotEmpty == true
         ? results.option('app-id')!.trim()
         : manifestInfo.appId;
@@ -139,7 +147,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       ),
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(_publisherBackendContractInitJson(result)));
+      _stdout.writeln(prettyJson(_publisherBackendContractInitJson(result)));
     } else {
       _stdout.writeln(_formatPublisherBackendContractInitResult(result));
     }
@@ -185,7 +193,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         '$qualifiedCommand does not accept positional arguments.',
       );
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final result = await _publisherBackendContractController.validate(
@@ -195,7 +203,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
     );
     if (results.flag('json')) {
       _stdout.writeln(
-        _prettyJson(_publisherBackendContractValidateJson(result)),
+        prettyJson(_publisherBackendContractValidateJson(result)),
       );
     } else {
       _stdout.writeln(_formatPublisherBackendContractValidateResult(result));
@@ -258,7 +266,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
         '$qualifiedCommand --timeout-seconds must be positive.',
       );
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final contractPath = _publisherBackendContractController
@@ -279,7 +287,7 @@ extension _MiniprogramCliPublisherBackendContractCommands on MiniprogramCli {
       ),
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(_publisherBackendContractSmokeJson(result)));
+      _stdout.writeln(prettyJson(_publisherBackendContractSmokeJson(result)));
     } else {
       _stdout.writeln(_formatPublisherBackendContractSmokeResult(result));
     }

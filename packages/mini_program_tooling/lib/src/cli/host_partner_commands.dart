@@ -1,13 +1,29 @@
-part of '../miniprogram_cli.dart';
+import 'package:path/path.dart' as p;
 
-extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
+import 'support.dart';
+
+extension CliHostPartnerCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  MiniProgramHostController get _hostController => dependencies.hostController;
+  MiniProgramHostCapabilityInstaller get _hostCapabilityInstaller =>
+      dependencies.hostCapabilityInstaller;
+  MiniProgramPartnerHandoffController get _partnerHandoffController =>
+      dependencies.partnerHandoffController;
+  PublisherBackendContractController get _publisherBackendContractController =>
+      dependencies.publisherBackendContractController;
+
+  Future<int> runPartnerCommand(List<String> arguments) =>
+      _runPartner(arguments);
+  Future<int> runHostCommand(List<String> arguments) => _runHost(arguments);
+
   Future<int> _runPartner(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_partnerUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(partnerUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_partnerUsage());
+      _stderr.writeln(partnerUsage());
       return 64;
     }
 
@@ -16,18 +32,18 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         return _runPartnerPackage(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown partner command: ${arguments.first}');
-        _stderr.writeln(_partnerUsage());
+        _stderr.writeln(partnerUsage());
         return 64;
     }
   }
 
   Future<int> _runHost(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_hostUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(hostUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_hostUsage());
+      _stderr.writeln(hostUsage());
       return 64;
     }
 
@@ -40,18 +56,18 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         return _runHostCapability(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown host command: ${arguments.first}');
-        _stderr.writeln(_hostUsage());
+        _stderr.writeln(hostUsage());
         return 64;
     }
   }
 
   Future<int> _runHostCapability(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_hostCapabilityUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(hostCapabilityUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_hostCapabilityUsage());
+      _stderr.writeln(hostCapabilityUsage());
       return 64;
     }
 
@@ -60,7 +76,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         return _runHostCapabilityInit(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown host capability command: ${arguments.first}');
-        _stderr.writeln(_hostCapabilityUsage());
+        _stderr.writeln(hostCapabilityUsage());
         return 64;
     }
   }
@@ -110,13 +126,13 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     final result = await _hostCapabilityInstaller.initialize(
       MiniProgramHostCapabilityInitRequest(
         projectRootPath:
-            results.option('project-root') ?? _currentWorkingDirectory(),
+            results.option('project-root') ?? currentWorkingDirectory(),
         capability: results.rest.single,
         platform: platform,
       ),
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(result.toJson()));
+      _stdout.writeln(prettyJson(result.toJson()));
       return 0;
     }
     if (result.alreadyInstalled) {
@@ -143,12 +159,12 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
   }
 
   Future<int> _runHostEndpoint(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_hostEndpointUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(hostEndpointUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_hostEndpointUsage());
+      _stderr.writeln(hostEndpointUsage());
       return 64;
     }
 
@@ -159,7 +175,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         return _runHostEndpointImport(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown host endpoint command: ${arguments.first}');
-        _stderr.writeln(_hostEndpointUsage());
+        _stderr.writeln(hostEndpointUsage());
         return 64;
     }
   }
@@ -227,13 +243,13 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     }
 
     final appId = results.rest.single.trim();
-    final apiBaseUrl = _resolvePartnerPackageApiBaseUrl(
+    final apiBaseUrl = resolvePartnerPackageApiBaseUrl(
       explicitApiBaseUrl:
           results.option('artifact-base-url') ?? results.option('api-base-url'),
     );
     final miniProgramRootPath = p.normalize(
       p.absolute(
-        results.option('mini-program-root') ?? _currentWorkingDirectory(),
+        results.option('mini-program-root') ?? currentWorkingDirectory(),
       ),
     );
     final publisherBackendContractPath = p.join(
@@ -263,13 +279,13 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         appId: appId,
         title: results.option('title')?.trim().isNotEmpty == true
             ? results.option('title')!.trim()
-            : _defaultTitleForAppId(appId),
+            : defaultTitleForAppId(appId),
         artifactBaseUri: Uri.parse(apiBaseUrl),
         outputPath: results.option('output'),
         requestedPublisherApi: requestedPublisherApi,
       ),
     );
-    _stdout.writeln(_formatPartnerPackageResult(result));
+    _stdout.writeln(formatPartnerPackageResult(result));
     return 0;
   }
 
@@ -304,12 +320,12 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     }
 
     final projectRootPath =
-        results.option('project-root') ?? _currentWorkingDirectory();
-    await _requireEmbeddedHostProject(projectRootPath);
+        results.option('project-root') ?? currentWorkingDirectory();
+    await requireEmbeddedHostProject(projectRootPath);
     const backendApiBaseUrl = '';
 
     _stdout.writeln(
-      _formatHostRunStart(
+      formatHostRunStart(
         projectRootPath: p.normalize(p.absolute(projectRootPath)),
         deviceId: deviceId,
         environmentName: null,
@@ -391,8 +407,8 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       );
     }
     final projectRootPath =
-        results.option('project-root') ?? _currentWorkingDirectory();
-    await _requireEmbeddedHostProject(projectRootPath);
+        results.option('project-root') ?? currentWorkingDirectory();
+    await requireEmbeddedHostProject(projectRootPath);
     final result = await _hostController.addEndpoint(
       MiniProgramHostEndpointAddRequest(
         projectRootPath: projectRootPath,
@@ -402,7 +418,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
         force: results.flag('force'),
       ),
     );
-    _stdout.writeln(_formatHostEndpointAddResult(result));
+    _stdout.writeln(formatHostEndpointAddResult(result));
     return 0;
   }
 
@@ -446,8 +462,8 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
     final packagePath = results.rest.single;
     final handoff = await _partnerHandoffController.readPackage(packagePath);
     final projectRootPath =
-        results.option('project-root') ?? _currentWorkingDirectory();
-    await _requireEmbeddedHostProject(projectRootPath);
+        results.option('project-root') ?? currentWorkingDirectory();
+    await requireEmbeddedHostProject(projectRootPath);
     final result = await _hostController.addEndpoint(
       MiniProgramHostEndpointAddRequest(
         projectRootPath: projectRootPath,
@@ -463,7 +479,7 @@ extension _MiniprogramCliHostPartnerCommands on MiniprogramCli {
       ),
     );
     _stdout.writeln(
-      _formatHostEndpointImportResult(
+      formatHostEndpointImportResult(
         packagePath: p.normalize(p.absolute(packagePath)),
         handoff: handoff,
         endpointResult: result,

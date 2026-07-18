@@ -1,13 +1,22 @@
-part of '../miniprogram_cli.dart';
+import 'package:path/path.dart' as p;
 
-extension _MiniprogramCliEnvCommands on MiniprogramCli {
+import 'support.dart';
+
+extension CliEnvCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  LocalCliStateStore get _stateStore => dependencies.stateStore;
+  MiniProgramPathResolver get _pathResolver => dependencies.pathResolver;
+
+  Future<int> runEnvCommand(List<String> arguments) => _runEnv(arguments);
+
   Future<int> _runEnv(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_envUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(envUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_envUsage());
+      _stderr.writeln(envUsage());
       return 64;
     }
 
@@ -30,7 +39,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
         return _runEnvStatus(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown env command: ${arguments.first}');
-        _stderr.writeln(_envUsage());
+        _stderr.writeln(envUsage());
         return 64;
     }
   }
@@ -62,7 +71,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       return 0;
     }
 
-    final cwd = _currentWorkingDirectory();
+    final cwd = currentWorkingDirectory();
     final inferredRootFromCwd = await _pathResolver.resolveRepoRoot(
       currentWorkingDirectory: cwd,
     );
@@ -96,7 +105,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
     await _stateStore.writeEnvironmentState(configRootPath, state);
     await _stateStore.writeGlobalEnvironmentState(state);
     _stdout.writeln(
-      _formatEnvStatusResult(
+      formatEnvStatusResult(
         ResolvedLocalCliEnvironmentState(
           rootPath: configRootPath,
           filePath: _stateStore.environmentStatePath(configRootPath),
@@ -129,7 +138,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       return 0;
     }
 
-    final resolved = await _resolveEnvironmentState(
+    final resolved = await resolveEnvironmentState(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
     );
@@ -141,7 +150,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       return 1;
     }
 
-    _stdout.writeln(_formatEnvListResult(resolved));
+    _stdout.writeln(formatEnvListResult(resolved));
     return 0;
   }
 
@@ -170,7 +179,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       );
     }
 
-    final resolved = await _requireEnvironmentState(
+    final resolved = await requireEnvironmentState(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
     );
@@ -189,7 +198,7 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       await _stateStore.writeGlobalEnvironmentState(updatedState);
     }
     _stdout.writeln(
-      _formatEnvStatusResult(
+      formatEnvStatusResult(
         resolved.copyWithState(updatedState),
         switched: true,
       ),
@@ -218,14 +227,14 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       return 0;
     }
 
-    final resolved = await _resolveEnvironmentState(
+    final resolved = await resolveEnvironmentState(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(_envStatusJson(resolved)));
+      _stdout.writeln(prettyJson(envStatusJson(resolved)));
     } else {
-      _stdout.writeln(_formatEnvStatusResult(resolved));
+      _stdout.writeln(formatEnvStatusResult(resolved));
     }
     return resolved == null ? 1 : 0;
   }
@@ -240,20 +249,6 @@ extension _MiniprogramCliEnvCommands on MiniprogramCli {
       'Mini-program artifacts are public static files; build with '
       '`miniprogram artifact build`, verify the result, and use '
       'an optional middle-server API from runtime actions.',
-    );
-  }
-
-  String _resolvePartnerPackageApiBaseUrl({
-    required String? explicitApiBaseUrl,
-  }) {
-    if (explicitApiBaseUrl case final rawValue?
-        when rawValue.trim().isNotEmpty) {
-      return _normalizeAbsoluteUrl(rawValue);
-    }
-
-    throw const FormatException(
-      'partner package requires --artifact-base-url <url>. Mini-program '
-      'artifacts are static files and provider env lookup was removed.',
     );
   }
 }

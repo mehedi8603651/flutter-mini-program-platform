@@ -1,47 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:args/args.dart';
-import 'package:mini_program_contracts/mini_program_contracts.dart';
-import 'package:path/path.dart' as p;
-
-import 'delivery_validation.dart';
-import 'delivery_validator.dart';
-import 'local_backend_controller.dart';
-import 'local_backend_initializer.dart';
-import 'local_cli_state.dart';
-import 'mini_program_builder.dart';
-import 'mini_program_artifacts.dart';
-import 'mini_program_host_controller.dart';
-import 'mini_program_host_capability_installer.dart';
-import 'miniprogram_doctor.dart';
-import 'mini_program_embedding_initializer.dart';
-import 'mini_program_path_resolver.dart';
-import 'mini_program_partner_handoff.dart';
-import 'mini_program_preview_controller.dart';
-import 'mini_program_preview_server.dart';
-import 'mini_program_publisher.dart';
-import 'mini_program_scaffolder.dart';
-import 'mini_program_static_publisher.dart';
-import 'mini_program_workflow_status.dart';
-import 'publisher_backend_contract_controller.dart';
-import 'publisher_backend_starter.dart';
-
-part 'cli/miniprogram_cli_constants.dart';
-part 'cli/core_commands.dart';
-part 'cli/artifact_commands.dart';
-part 'cli/workflow_commands.dart';
-part 'cli/host_partner_commands.dart';
-part 'cli/env_commands.dart';
-part 'cli/backend_commands.dart';
-part 'cli/publisher_backend_commands.dart';
-part 'cli/publisher_backend_contract_commands.dart';
-part 'cli/shared_helpers.dart';
-part 'cli/usage_helpers.dart';
-part 'cli/json_output_helpers.dart';
-part 'cli/result_formatters.dart';
-part 'cli/publisher_backend_output_helpers.dart';
-part 'cli/private_models.dart';
+import 'cli/command_imports.dart';
+import 'cli/context.dart';
+import 'cli/runtime.dart';
 
 class MiniprogramCli {
   MiniprogramCli({
@@ -77,169 +36,36 @@ class MiniprogramCli {
     StringSink? stdoutSink,
     StringSink? stderrSink,
     String? workingDirectory,
-  }) : _scaffolder = scaffolder,
-       _builder = builder,
-       _artifactBuilder = artifactBuilder,
-       _artifactVerifier = artifactVerifier,
-       _validator = validator,
-       _publisher = publisher,
-       _embeddingInitializer = embeddingInitializer,
-       _backendController = backendController,
-       _backendInitializer = backendInitializer,
-       _previewController = previewController,
-       _staticPublisher = staticPublisher,
-       _hostController = hostController ?? MiniProgramHostController(),
-       _hostCapabilityInstaller = hostCapabilityInstaller,
-       _partnerHandoffController = partnerHandoffController,
-       _doctor = doctor,
-       _stateStore = stateStore,
-       _pathResolver = pathResolver,
-       _publisherBackendContractController = publisherBackendContractController,
-       _publisherBackendStarter = publisherBackendStarter,
-       _stdout = stdoutSink ?? stdout,
-       _stderr = stderrSink ?? stderr,
-       _workingDirectory = workingDirectory;
+  }) : _context = CliContext(
+         dependencies: CliDependencies(
+           scaffolder: scaffolder,
+           builder: builder,
+           artifactBuilder: artifactBuilder,
+           artifactVerifier: artifactVerifier,
+           validator: validator,
+           publisher: publisher,
+           embeddingInitializer: embeddingInitializer,
+           backendController: backendController,
+           backendInitializer: backendInitializer,
+           previewController: previewController,
+           staticPublisher: staticPublisher,
+           hostController: hostController ?? MiniProgramHostController(),
+           hostCapabilityInstaller: hostCapabilityInstaller,
+           partnerHandoffController: partnerHandoffController,
+           doctor: doctor,
+           stateStore: stateStore,
+           pathResolver: pathResolver,
+           publisherBackendContractController:
+               publisherBackendContractController,
+           publisherBackendStarter: publisherBackendStarter,
+         ),
+         stdoutSink: stdoutSink ?? stdout,
+         stderrSink: stderrSink ?? stderr,
+         workingDirectory: workingDirectory,
+       );
 
-  final MiniProgramScaffolder _scaffolder;
-  final MiniProgramBuilder _builder;
-  final MiniProgramArtifactBuilder _artifactBuilder;
-  final MiniProgramArtifactVerifier _artifactVerifier;
-  final DeliveryRepositoryValidator _validator;
-  final MiniProgramPublisher _publisher;
-  final MiniProgramEmbeddingInitializer _embeddingInitializer;
-  final LocalBackendController _backendController;
-  final LocalBackendInitializer _backendInitializer;
-  final MiniProgramPreviewController _previewController;
-  final MiniProgramStaticPublisher _staticPublisher;
-  final MiniProgramHostController _hostController;
-  final MiniProgramHostCapabilityInstaller _hostCapabilityInstaller;
-  final MiniProgramPartnerHandoffController _partnerHandoffController;
-  final MiniprogramDoctor _doctor;
-  final LocalCliStateStore _stateStore;
-  final MiniProgramPathResolver _pathResolver;
-  final PublisherBackendContractController _publisherBackendContractController;
-  final PublisherBackendStarter _publisherBackendStarter;
-  final StringSink _stdout;
-  final StringSink _stderr;
-  final String? _workingDirectory;
+  final CliContext _context;
 
-  Future<int> run(List<String> arguments) async {
-    if (arguments.isEmpty ||
-        arguments.first == 'help' ||
-        arguments.first == '--help' ||
-        arguments.first == '-h') {
-      _stdout.writeln(_rootUsage());
-      return 0;
-    }
-
-    try {
-      switch (arguments.first) {
-        case 'create':
-          return await _runCreate(arguments.sublist(1));
-        case 'capabilities':
-          return _runCapabilities(arguments.sublist(1));
-        case 'doctor':
-          return await _runDoctor(arguments.sublist(1));
-        case 'env':
-          return await _runEnv(arguments.sublist(1));
-        case 'build':
-          return await _runBuild(arguments.sublist(1));
-        case 'artifact':
-          return await _runArtifact(arguments.sublist(1));
-        case 'preview':
-          return await _runPreview(arguments.sublist(1));
-        case 'validate':
-          return await _runValidate(arguments.sublist(1));
-        case 'publish':
-          return await _runPublish(arguments.sublist(1));
-        case 'access-key':
-          throw const FormatException(
-            'access-key commands were removed. Mini-program artifacts are '
-            'public static files; use a publisher middle-server for runtime '
-            'auth and business data.',
-          );
-        case 'clo'
-            'ud':
-          throw const FormatException(
-            'provider delivery commands were removed. Build portable '
-            'artifacts with `miniprogram artifact build`, verify them, and '
-            'host the artifacts directory on any static file host.',
-          );
-        case 'workflow':
-          return await _runWorkflow(arguments.sublist(1));
-        case 'partner':
-          return await _runPartner(arguments.sublist(1));
-        case 'host':
-          return await _runHost(arguments.sublist(1));
-        case 'embed':
-          return await _runEmbed(arguments.sublist(1));
-        case 'artifact-host':
-          return await _runBackend(
-            arguments.sublist(1),
-            commandName: 'artifact-host',
-          );
-        case 'backend':
-          return await _runBackend(
-            arguments.sublist(1),
-            commandName: 'backend',
-          );
-        case 'publisher-backend':
-          return await _runPublisherBackend(arguments.sublist(1));
-        case 'publisher-api':
-          return await _runPublisherBackend(
-            arguments.sublist(1),
-            commandName: 'publisher-api',
-          );
-        default:
-          _stderr.writeln('Unknown command: ${arguments.first}');
-          _stderr.writeln(_rootUsage());
-          return 64;
-      }
-    } on FormatException catch (error) {
-      _stderr.writeln(error.message);
-      return 64;
-    } on MiniProgramScaffoldException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramBuildException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramArtifactException catch (error) {
-      _stderr.writeln(error);
-      if (error.details.isNotEmpty) {
-        _stderr.writeln(_prettyJson(error.details));
-      }
-      return 1;
-    } on MiniProgramPreviewException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramPublishException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramHostException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramHostCapabilityException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramPartnerHandoffException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramEmbeddingInitException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on MiniProgramPathResolutionException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on LocalCliStateException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on LocalBackendControlException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    } on PublisherBackendException catch (error) {
-      _stderr.writeln(error.message);
-      return 1;
-    }
-  }
+  Future<int> run(List<String> arguments) =>
+      runMiniprogramCli(_context, arguments);
 }

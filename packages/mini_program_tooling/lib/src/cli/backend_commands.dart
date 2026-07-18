@@ -1,16 +1,28 @@
-part of '../miniprogram_cli.dart';
+import 'support.dart';
 
-extension _MiniprogramCliBackendCommands on MiniprogramCli {
+extension CliBackendCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  LocalBackendController get _backendController =>
+      dependencies.backendController;
+  LocalBackendInitializer get _backendInitializer =>
+      dependencies.backendInitializer;
+
+  Future<int> runBackendCommand(
+    List<String> arguments, {
+    required String commandName,
+  }) => _runBackend(arguments, commandName: commandName);
+
   Future<int> _runBackend(
     List<String> arguments, {
     required String commandName,
   }) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_backendUsage(commandName: commandName));
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(backendUsage(commandName: commandName));
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_backendUsage(commandName: commandName));
+      _stderr.writeln(backendUsage(commandName: commandName));
       return 64;
     }
 
@@ -33,7 +45,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
         );
       default:
         _stderr.writeln('Unknown $commandName command: ${arguments.first}');
-        _stderr.writeln(_backendUsage(commandName: commandName));
+        _stderr.writeln(backendUsage(commandName: commandName));
         return 64;
     }
   }
@@ -78,7 +90,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
         force: results.flag('force'),
       ),
     );
-    _stdout.writeln(_formatBackendInitResult(result));
+    _stdout.writeln(formatBackendInitResult(result));
     return 0;
   }
 
@@ -115,7 +127,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       throw FormatException('$commandName start --port must be 1-65535.');
     }
 
-    final backendRootPath = await _resolveBackendRootPath(
+    final backendRootPath = await resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
@@ -124,7 +136,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       repoRootPath: backendRootPath!,
       port: port,
     );
-    _stdout.writeln(_formatBackendStartResult(result));
+    _stdout.writeln(formatBackendStartResult(result));
     return 0;
   }
 
@@ -152,7 +164,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       return 0;
     }
 
-    final backendRootPath = await _resolveBackendRootPath(
+    final backendRootPath = await resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
@@ -160,7 +172,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
     final result = await _backendController.stop(
       repoRootPath: backendRootPath!,
     );
-    _stdout.writeln(_formatBackendStopResult(result));
+    _stdout.writeln(formatBackendStopResult(result));
     return 0;
   }
 
@@ -189,7 +201,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       return 0;
     }
 
-    final backendRootPath = await _resolveBackendRootPath(
+    final backendRootPath = await resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
@@ -198,11 +210,9 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       repoRootPath: backendRootPath!,
     );
     if (results.flag('json')) {
-      _stdout.writeln(
-        _prettyJson(miniProgramWorkflowStatusBackendJson(result)),
-      );
+      _stdout.writeln(prettyJson(miniProgramWorkflowStatusBackendJson(result)));
     } else {
-      _stdout.writeln(_formatBackendStatusResult(result));
+      _stdout.writeln(formatBackendStatusResult(result));
     }
     return result.healthy ? 0 : 1;
   }
@@ -243,7 +253,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
       );
     }
 
-    final backendRootPath = await _resolveBackendRootPath(
+    final backendRootPath = await resolveBackendRootPath(
       explicitRootPath: results.option('root'),
       explicitRepoRootPath: results.option('repo-root'),
       required: true,
@@ -251,7 +261,7 @@ extension _MiniprogramCliBackendCommands on MiniprogramCli {
     final result = await _backendController.resetLocal(
       repoRootPath: backendRootPath!,
     );
-    _stdout.writeln(_formatBackendResetResult(result));
+    _stdout.writeln(formatBackendResetResult(result));
     return 0;
   }
 }

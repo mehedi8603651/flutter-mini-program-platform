@@ -1,16 +1,27 @@
-part of '../miniprogram_cli.dart';
+import 'publisher_backend_contract_commands.dart';
+import 'support.dart';
 
-extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
+extension CliPublisherBackendCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  PublisherBackendStarter get _publisherBackendStarter =>
+      dependencies.publisherBackendStarter;
+
+  Future<int> runPublisherBackendCommand(
+    List<String> arguments, {
+    String commandName = 'publisher-backend',
+  }) => _runPublisherBackend(arguments, commandName: commandName);
+
   Future<int> _runPublisherBackend(
     List<String> arguments, {
     String commandName = 'publisher-backend',
   }) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_publisherBackendUsage(commandName: commandName));
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(publisherBackendUsage(commandName: commandName));
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_publisherBackendUsage(commandName: commandName));
+      _stderr.writeln(publisherBackendUsage(commandName: commandName));
       return 64;
     }
 
@@ -41,13 +52,13 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
           commandName: commandName,
         );
       case 'contract':
-        return _runPublisherBackendContract(
+        return runPublisherBackendContractCommand(
           arguments.sublist(1),
           commandName: commandName,
         );
       default:
         _stderr.writeln('Unknown $commandName command: ${arguments.first}');
-        _stderr.writeln(_publisherBackendUsage(commandName: commandName));
+        _stderr.writeln(publisherBackendUsage(commandName: commandName));
         return 64;
     }
   }
@@ -103,7 +114,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         '$qualifiedCommand does not accept positional arguments.',
       );
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final result = await _publisherBackendStarter.scaffold(
@@ -115,7 +126,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
         withStarterUi: results.flag('with-starter-ui'),
       ),
     );
-    _stdout.writeln(_formatPublisherBackendScaffoldResult(result));
+    _stdout.writeln(formatPublisherBackendScaffoldResult(result));
     return 0;
   }
 
@@ -150,14 +161,14 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
     if (port == null || port <= 0 || port > 65535) {
       throw FormatException('$qualifiedCommand --port must be 1-65535.');
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final result = await _publisherBackendStarter.run(
       miniProgramRootPath: miniProgramRootPath,
       port: port,
     );
-    _stdout.writeln(_formatPublisherBackendRunResult(result));
+    _stdout.writeln(formatPublisherBackendRunResult(result));
     return 0;
   }
 
@@ -184,16 +195,16 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final result = await _publisherBackendStarter.status(
       miniProgramRootPath: miniProgramRootPath,
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(_publisherBackendStatusJson(result)));
+      _stdout.writeln(prettyJson(publisherBackendStatusJson(result)));
     } else {
-      _stdout.writeln(_formatPublisherBackendStatusResult(result));
+      _stdout.writeln(formatPublisherBackendStatusResult(result));
     }
     return result.healthy ? 0 : 1;
   }
@@ -220,13 +231,13 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       _stdout.writeln(parser.usage);
       return 0;
     }
-    final miniProgramRootPath = await _resolveCurrentMiniProgramRootPath(
+    final miniProgramRootPath = await resolveCurrentMiniProgramRootPath(
       explicitMiniProgramRootPath: results.option('mini-program-root'),
     );
     final result = await _publisherBackendStarter.stop(
       miniProgramRootPath: miniProgramRootPath,
     );
-    _stdout.writeln(_formatPublisherBackendStopResult(result));
+    _stdout.writeln(formatPublisherBackendStopResult(result));
     return 0;
   }
 
@@ -258,7 +269,7 @@ extension _MiniprogramCliPublisherBackendCommands on MiniprogramCli {
       throw FormatException('$qualifiedCommand --port must be 1-65535.');
     }
     _stdout.writeln(
-      _formatPublisherBackendUrlsResult(
+      formatPublisherBackendUrlsResult(
         _publisherBackendStarter.urls(port: port),
       ),
     );

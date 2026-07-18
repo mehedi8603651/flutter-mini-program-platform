@@ -1,19 +1,29 @@
-part of '../miniprogram_cli.dart';
+import 'support.dart';
 
-extension _MiniprogramCliArtifactCommands on MiniprogramCli {
+extension CliArtifactCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  MiniProgramArtifactBuilder get _artifactBuilder =>
+      dependencies.artifactBuilder;
+  MiniProgramArtifactVerifier get _artifactVerifier =>
+      dependencies.artifactVerifier;
+  MiniProgramPathResolver get _pathResolver => dependencies.pathResolver;
+
+  Future<int> runArtifactCommand(List<String> arguments) =>
+      _runArtifact(arguments);
+
   Future<int> _runArtifact(List<String> arguments) async {
     if (arguments.isEmpty ||
         arguments.first == 'help' ||
         arguments.first == '--help' ||
         arguments.first == '-h') {
-      _stdout.writeln(_artifactUsage());
+      _stdout.writeln(artifactUsage());
       return 0;
     }
     return switch (arguments.first) {
       'build' => _runArtifactBuild(arguments.sublist(1)),
       'verify' => _runArtifactVerify(arguments.sublist(1)),
       _ => throw FormatException(
-        'Unknown artifact command: ${arguments.first}\n${_artifactUsage()}',
+        'Unknown artifact command: ${arguments.first}\n${artifactUsage()}',
       ),
     };
   }
@@ -76,8 +86,8 @@ extension _MiniprogramCliArtifactCommands on MiniprogramCli {
     );
     _stdout.writeln(
       results.flag('json')
-          ? _prettyJson(result.toJson())
-          : _formatArtifactBuildResult(result),
+          ? prettyJson(result.toJson())
+          : formatArtifactBuildResult(result),
     );
     return 0;
   }
@@ -128,8 +138,8 @@ extension _MiniprogramCliArtifactCommands on MiniprogramCli {
     );
     _stdout.writeln(
       results.flag('json')
-          ? _prettyJson(result.toJson())
-          : _formatArtifactVerifyResult(result),
+          ? prettyJson(result.toJson())
+          : formatArtifactVerifyResult(result),
     );
     return 0;
   }
@@ -140,12 +150,12 @@ extension _MiniprogramCliArtifactCommands on MiniprogramCli {
     required String? explicitRepoRootPath,
     required String? explicitMiniProgramRootPath,
   }) async {
-    final miniProgramId = await _resolveMiniProgramId(
+    final miniProgramId = await resolveMiniProgramId(
       commandName: commandName,
       positionalArguments: positionalArguments,
       explicitMiniProgramRootPath: explicitMiniProgramRootPath,
     );
-    final repoRootHint = await _resolveRepoRootPath(
+    final repoRootHint = await resolveRepoRootPath(
       explicitRepoRootPath: explicitRepoRootPath,
       additionalSearchRoots: <String>[
         if (explicitMiniProgramRootPath case final miniProgramRoot?
@@ -158,7 +168,7 @@ extension _MiniprogramCliArtifactCommands on MiniprogramCli {
       miniProgramId: miniProgramId,
       repoRootPath: repoRootHint,
       miniProgramRootPath: explicitMiniProgramRootPath,
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       requireRepoRoot: false,
     );
     return _ResolvedArtifactMiniProgram(

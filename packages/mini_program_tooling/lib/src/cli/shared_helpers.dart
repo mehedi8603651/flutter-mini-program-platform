@@ -1,13 +1,21 @@
-part of '../miniprogram_cli.dart';
+import 'package:path/path.dart' as p;
 
-extension _MiniprogramCliSharedHelpers on MiniprogramCli {
-  Set<String> _parseCapabilities(String rawCapabilities) => rawCapabilities
+import 'command_imports.dart';
+import 'context.dart';
+import 'private_models.dart';
+
+extension CliSharedHelpers on CliContext {
+  LocalCliStateStore get _stateStore => dependencies.stateStore;
+  MiniProgramPathResolver get _pathResolver => dependencies.pathResolver;
+  String? get _workingDirectory => workingDirectory;
+
+  Set<String> parseCapabilities(String rawCapabilities) => rawCapabilities
       .split(',')
       .map((value) => value.trim())
       .where((value) => value.isNotEmpty)
       .toSet();
 
-  String _resolvePublishTarget({
+  String resolvePublishTarget({
     required String? explicitTarget,
     required ResolvedLocalCliEnvironmentState? resolvedEnvironmentState,
   }) {
@@ -17,7 +25,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     return 'local';
   }
 
-  String _normalizeAbsoluteUrl(String rawValue) {
+  String normalizeAbsoluteUrl(String rawValue) {
     final trimmedValue = rawValue.trim();
     final uri = Uri.tryParse(trimmedValue);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
@@ -26,7 +34,21 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     return trimmedValue.replaceFirst(RegExp(r'/+$'), '');
   }
 
-  String _defaultTitleForAppId(String appId) {
+  String resolvePartnerPackageApiBaseUrl({
+    required String? explicitApiBaseUrl,
+  }) {
+    if (explicitApiBaseUrl case final rawValue?
+        when rawValue.trim().isNotEmpty) {
+      return normalizeAbsoluteUrl(rawValue);
+    }
+
+    throw const FormatException(
+      'partner package requires --artifact-base-url <url>. Mini-program '
+      'artifacts are static files and provider env lookup was removed.',
+    );
+  }
+
+  String defaultTitleForAppId(String appId) {
     final words = appId
         .trim()
         .split(RegExp(r'[._-]+'))
@@ -40,7 +62,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
         .join(' ');
   }
 
-  Future<_MiniProgramManifestInfo> _readMiniProgramManifestInfo(
+  Future<CliMiniProgramManifestInfo> readMiniProgramManifestInfo(
     String miniProgramRootPath,
   ) async {
     final manifestPath = p.join(miniProgramRootPath, 'manifest.json');
@@ -59,21 +81,21 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
       throw const FormatException('Mini-program manifest is missing id.');
     }
     final title = decoded['title']?.toString().trim();
-    return _MiniProgramManifestInfo(
+    return CliMiniProgramManifestInfo(
       appId: appId,
       title: title?.isNotEmpty == true ? title : null,
     );
   }
 
-  String _currentWorkingDirectory() =>
+  String currentWorkingDirectory() =>
       p.normalize(p.absolute(_workingDirectory ?? Directory.current.path));
 
-  Future<String> _resolveCurrentMiniProgramRootPath({
+  Future<String> resolveCurrentMiniProgramRootPath({
     required String? explicitMiniProgramRootPath,
   }) async {
     final miniProgramId = await _pathResolver.inferMiniProgramId(
       miniProgramRootPath: explicitMiniProgramRootPath,
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
     );
     if (miniProgramId == null || miniProgramId.trim().isEmpty) {
       throw const MiniProgramPathResolutionException(
@@ -84,12 +106,12 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     final resolved = await _pathResolver.resolve(
       miniProgramId: miniProgramId,
       miniProgramRootPath: explicitMiniProgramRootPath,
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
     );
     return resolved.miniProgramRootPath;
   }
 
-  bool _isGroupHelpRequest(List<String> arguments) {
+  bool isGroupHelpRequest(List<String> arguments) {
     if (arguments.length != 1) {
       return false;
     }
@@ -98,7 +120,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
         arguments.single == 'help';
   }
 
-  Future<void> _requireEmbeddedHostProject(String projectRootPath) async {
+  Future<void> requireEmbeddedHostProject(String projectRootPath) async {
     final normalizedRootPath = p.normalize(p.absolute(projectRootPath));
     final pubspec = File(p.join(normalizedRootPath, 'pubspec.yaml'));
     final libDirectory = Directory(p.join(normalizedRootPath, 'lib'));
@@ -110,25 +132,25 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     }
   }
 
-  Future<ResolvedLocalCliEnvironmentState?> _discoverEnvironmentState({
+  Future<ResolvedLocalCliEnvironmentState?> discoverEnvironmentState({
     Iterable<String> additionalSearchRoots = const <String>[],
   }) {
     return _stateStore.discoverEnvironmentState(
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       additionalSearchRoots: additionalSearchRoots,
     );
   }
 
-  Future<ResolvedLocalBackendWorkspaceState?> _discoverBackendWorkspaceState({
+  Future<ResolvedLocalBackendWorkspaceState?> discoverBackendWorkspaceState({
     Iterable<String> additionalSearchRoots = const <String>[],
   }) {
     return _stateStore.discoverBackendWorkspaceState(
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       additionalSearchRoots: additionalSearchRoots,
     );
   }
 
-  Future<ResolvedLocalCliEnvironmentState?> _resolveEnvironmentState({
+  Future<ResolvedLocalCliEnvironmentState?> resolveEnvironmentState({
     String? explicitRootPath,
     String? explicitRepoRootPath,
     Iterable<String> additionalSearchRoots = const <String>[],
@@ -158,7 +180,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
       );
     }
 
-    return _discoverEnvironmentState(
+    return discoverEnvironmentState(
       additionalSearchRoots: <String>[
         ...additionalSearchRoots,
         if (explicitRepoRootPath != null &&
@@ -168,12 +190,12 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     );
   }
 
-  Future<ResolvedLocalCliEnvironmentState> _requireEnvironmentState({
+  Future<ResolvedLocalCliEnvironmentState> requireEnvironmentState({
     String? explicitRootPath,
     String? explicitRepoRootPath,
     Iterable<String> additionalSearchRoots = const <String>[],
   }) async {
-    final resolved = await _resolveEnvironmentState(
+    final resolved = await resolveEnvironmentState(
       explicitRootPath: explicitRootPath,
       explicitRepoRootPath: explicitRepoRootPath,
       additionalSearchRoots: additionalSearchRoots,
@@ -187,12 +209,12 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     return resolved;
   }
 
-  Future<String?> _resolveRepoRootPath({
+  Future<String?> resolveRepoRootPath({
     String? explicitRepoRootPath,
     Iterable<String> additionalSearchRoots = const <String>[],
     bool required = false,
   }) async {
-    final envState = await _discoverEnvironmentState(
+    final envState = await discoverEnvironmentState(
       additionalSearchRoots: <String>[
         ...additionalSearchRoots,
         if (explicitRepoRootPath != null &&
@@ -203,13 +225,13 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     return _pathResolver.resolveRepoRoot(
       explicitRepoRootPath:
           explicitRepoRootPath ?? envState?.state.repoRootPath,
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
       additionalSearchPath: envState?.state.repoRootPath,
       required: required,
     );
   }
 
-  Future<String?> _resolveBackendRootPath({
+  Future<String?> resolveBackendRootPath({
     String? explicitRootPath,
     String? explicitRepoRootPath,
     Iterable<String> additionalSearchRoots = const <String>[],
@@ -217,7 +239,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
   }) async {
     if (explicitRootPath != null && explicitRootPath.trim().isNotEmpty) {
       final normalizedRootPath = p.normalize(p.absolute(explicitRootPath));
-      if (await _looksLikeBackendWorkspaceRoot(normalizedRootPath)) {
+      if (await looksLikeBackendWorkspaceRoot(normalizedRootPath)) {
         return normalizedRootPath;
       }
       throw MiniProgramPathResolutionException(
@@ -226,20 +248,20 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
       );
     }
 
-    final backendWorkspaceState = await _resolveUsableBackendWorkspaceState(
+    final backendWorkspaceState = await resolveUsableBackendWorkspaceState(
       additionalSearchRoots: additionalSearchRoots,
     );
     if (backendWorkspaceState != null) {
       return backendWorkspaceState.state.backendRootPath;
     }
 
-    final repoRootPath = await _resolveRepoRootPath(
+    final repoRootPath = await resolveRepoRootPath(
       explicitRepoRootPath: explicitRepoRootPath,
       additionalSearchRoots: additionalSearchRoots,
       required: false,
     );
     if (repoRootPath != null &&
-        await _looksLikeBackendWorkspaceRoot(repoRootPath)) {
+        await looksLikeBackendWorkspaceRoot(repoRootPath)) {
       return repoRootPath;
     }
 
@@ -253,22 +275,20 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
   }
 
   Future<ResolvedLocalBackendWorkspaceState?>
-  _resolveUsableBackendWorkspaceState({
+  resolveUsableBackendWorkspaceState({
     Iterable<String> additionalSearchRoots = const <String>[],
   }) async {
-    final discovered = await _discoverBackendWorkspaceState(
+    final discovered = await discoverBackendWorkspaceState(
       additionalSearchRoots: additionalSearchRoots,
     );
     if (discovered != null &&
-        await _looksLikeBackendWorkspaceRoot(
-          discovered.state.backendRootPath,
-        )) {
+        await looksLikeBackendWorkspaceRoot(discovered.state.backendRootPath)) {
       return discovered;
     }
 
     final globalState = await _stateStore.readGlobalBackendWorkspaceState();
     if (globalState != null &&
-        await _looksLikeBackendWorkspaceRoot(globalState.backendRootPath)) {
+        await looksLikeBackendWorkspaceRoot(globalState.backendRootPath)) {
       return ResolvedLocalBackendWorkspaceState(
         rootPath: Directory(_stateStore.globalStateDirectoryPath()).parent.path,
         filePath: _stateStore.globalBackendWorkspaceStatePath(),
@@ -280,7 +300,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     return null;
   }
 
-  Future<String> _resolveMiniProgramId({
+  Future<String> resolveMiniProgramId({
     required String commandName,
     required List<String> positionalArguments,
     String? explicitMiniProgramRootPath,
@@ -297,7 +317,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
 
     final inferredMiniProgramId = await _pathResolver.inferMiniProgramId(
       miniProgramRootPath: explicitMiniProgramRootPath,
-      currentWorkingDirectory: _currentWorkingDirectory(),
+      currentWorkingDirectory: currentWorkingDirectory(),
     );
     if (inferredMiniProgramId != null) {
       return inferredMiniProgramId;
@@ -310,7 +330,7 @@ extension _MiniprogramCliSharedHelpers on MiniprogramCli {
     );
   }
 
-  Future<bool> _looksLikeBackendWorkspaceRoot(String rootPath) async {
+  Future<bool> looksLikeBackendWorkspaceRoot(String rootPath) async {
     final normalizedRootPath = p.normalize(p.absolute(rootPath));
     final apiRoot = Directory(p.join(normalizedRootPath, 'backend', 'api'));
     final serverEntrypoint = File(

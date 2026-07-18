@@ -526,7 +526,7 @@ packages/mini_program_tooling/
 |-- lib/
 |   |-- mini_program_tooling.dart                # Public tooling export barrel
 |   `-- src/
-|       |-- miniprogram_cli.dart                 # Top-level command parser and dispatcher
+|       |-- miniprogram_cli.dart                 # Public CLI construction and run compatibility facade
 |       |-- mini_program_scaffolder.dart         # Public mini-program scaffold facade and compatibility exports
 |       |-- scaffolding/                         # Internal source-project validation and generation libraries
 |       |   |-- models.dart                      # Public request/result/error plus normalized internal specification
@@ -735,6 +735,10 @@ packages/mini_program_tooling/
 |       |   `-- generated_files/
 |       |       `-- mock_templates.dart           # Source templates embedded by generated API workspaces
 |       |-- cli/
+|       |   |-- command_imports.dart              # Internal domain/API import surface for CLI libraries
+|       |   |-- context.dart                      # Injected dependencies, sinks, and working directory
+|       |   |-- runtime.dart                      # Root dispatch, aliases, errors, and exit-code mapping
+|       |   |-- support.dart                      # Internal command support export surface
 |       |   |-- core_commands.dart                # Create/build/validate/preview core commands
 |       |   |-- artifact_commands.dart            # `artifact build` and `artifact verify`
 |       |   |-- host_partner_commands.dart        # Partner handoff and host endpoint import commands
@@ -760,6 +764,20 @@ packages/mini_program_tooling/
 ```
 
 All CLI failures should be actionable and have nonzero exit status. Preserve JSON output compatibility when commands are consumed by VS Code or scripts.
+
+`MiniprogramCli` remains the public construction facade and must preserve its
+constructor dependency-injection surface plus `run(List<String>)`. CLI
+implementation belongs in normal Dart libraries under `cli/`; do not add Dart
+`part` files, import the public tooling barrel, or import the public facade from
+those libraries. `CliContext` owns injected domain services, stdout/stderr, and
+the working directory. `runtime.dart` alone owns root command dispatch, aliases,
+removed-command migration errors, exception mapping, and exit codes. Command
+libraries own argument parsing and delegate business behavior to domain
+controllers. Usage, human formatting, and JSON projection remain separate
+support libraries. Preserve root and group help bytes, command/option aliases,
+parser defaults and allowed values, stdout-versus-stderr routing, JSON property
+order, exact failure text, exit codes `0`/`1`/`64`, and constructor injection
+when extending the CLI.
 
 Delivery validation executes in a stable order: repository roots, authored
 manifests, an optional external manifest, published manifests, rollout rules,

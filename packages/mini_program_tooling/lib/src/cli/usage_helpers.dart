@@ -1,7 +1,7 @@
-part of '../miniprogram_cli.dart';
+import 'context.dart';
 
-extension _MiniprogramCliUsageHelpers on MiniprogramCli {
-  String _rootUsage() => '''
+extension CliUsageHelpers on CliContext {
+  String rootUsage() => '''
 Usage: miniprogram <command> [arguments]
 
 Commands:
@@ -41,7 +41,7 @@ Use `miniprogram <command> --help`, `miniprogram <group> --help`, or
 `miniprogram <group> <command> --help` for command-specific options.
 ''';
 
-  String _artifactUsage() => '''
+  String artifactUsage() => '''
 Usage: miniprogram artifact <command> [arguments]
 
 Commands:
@@ -49,14 +49,14 @@ Commands:
   verify [mini-program-id]  Verify structure, identity, and SHA-256 checksums.
 ''';
 
-  String _workflowUsage() => '''
+  String workflowUsage() => '''
 Usage: miniprogram workflow <command> [arguments]
 
 Commands:
   status [--workspace <path>] [--env <env-name>] [--remote] [--json]
 ''';
 
-  String _publisherBackendUsage({String commandName = 'publisher-backend'}) =>
+  String publisherBackendUsage({String commandName = 'publisher-backend'}) =>
       '''
 Usage: miniprogram $commandName <command> [arguments]
 
@@ -71,7 +71,7 @@ Commands:
   contract smoke [--mini-program-root <path>] [--contract <file>] [--auth-token <token>] [--json]
 ''';
 
-  String _publisherBackendContractUsage({
+  String publisherBackendContractUsage({
     String commandName = 'publisher-backend',
   }) =>
       '''
@@ -83,21 +83,21 @@ Commands:
   smoke [--mini-program-root <path>] [--contract <file>] [--auth-token <token>] [--json]
 ''';
 
-  String _partnerUsage() => '''
+  String partnerUsage() => '''
 Usage: miniprogram partner <command> [arguments]
 
 Commands:
   package <mini-program-id> --artifact-base-url <url>
 ''';
 
-  String _embedUsage() => '''
+  String embedUsage() => '''
 Usage: miniprogram embed <command> [arguments]
 
 Commands:
   init [--project-root <path>] [--force]
 ''';
 
-  String _envUsage() => '''
+  String envUsage() => '''
 Usage: miniprogram env <command> [arguments]
 
 Commands:
@@ -107,7 +107,7 @@ Commands:
   status [--json]
 ''';
 
-  String _hostUsage() => '''
+  String hostUsage() => '''
 Usage: miniprogram host <command> [arguments]
 
 Commands:
@@ -117,14 +117,14 @@ Commands:
   capability init location --platform android
 ''';
 
-  String _hostCapabilityUsage() => '''
+  String hostCapabilityUsage() => '''
 Usage: miniprogram host capability <command> [arguments]
 
 Commands:
   init location --platform android [--project-root <path>] [--json]
 ''';
 
-  String _hostEndpointUsage() => '''
+  String hostEndpointUsage() => '''
 Usage: miniprogram host endpoint <command> [arguments]
 
 Commands:
@@ -132,7 +132,7 @@ Commands:
   import <partner-package.json>
 ''';
 
-  String _backendUsage({String commandName = 'artifact-host'}) =>
+  String backendUsage({String commandName = 'artifact-host'}) =>
       '''
 Usage: miniprogram $commandName <command> [arguments]
 

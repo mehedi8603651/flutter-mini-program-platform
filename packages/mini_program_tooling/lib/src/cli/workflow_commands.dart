@@ -1,13 +1,23 @@
-part of '../miniprogram_cli.dart';
+import 'support.dart';
 
-extension _MiniprogramCliWorkflowCommands on MiniprogramCli {
+extension CliWorkflowCommands on CliContext {
+  StringSink get _stdout => stdoutSink;
+  StringSink get _stderr => stderrSink;
+  DeliveryRepositoryValidator get _validator => dependencies.validator;
+  LocalBackendController get _backendController =>
+      dependencies.backendController;
+  LocalCliStateStore get _stateStore => dependencies.stateStore;
+
+  Future<int> runWorkflowCommand(List<String> arguments) =>
+      _runWorkflow(arguments);
+
   Future<int> _runWorkflow(List<String> arguments) async {
-    if (_isGroupHelpRequest(arguments)) {
-      _stdout.writeln(_workflowUsage());
+    if (isGroupHelpRequest(arguments)) {
+      _stdout.writeln(workflowUsage());
       return 0;
     }
     if (arguments.isEmpty) {
-      _stderr.writeln(_workflowUsage());
+      _stderr.writeln(workflowUsage());
       return 64;
     }
 
@@ -16,7 +26,7 @@ extension _MiniprogramCliWorkflowCommands on MiniprogramCli {
         return _runWorkflowStatus(arguments.sublist(1));
       default:
         _stderr.writeln('Unknown workflow command: ${arguments.first}');
-        _stderr.writeln(_workflowUsage());
+        _stderr.writeln(workflowUsage());
         return 64;
     }
   }
@@ -61,16 +71,15 @@ extension _MiniprogramCliWorkflowCommands on MiniprogramCli {
     );
     final result = await controller.inspect(
       MiniProgramWorkflowStatusRequest(
-        workspacePath:
-            results.option('workspace') ?? _currentWorkingDirectory(),
+        workspacePath: results.option('workspace') ?? currentWorkingDirectory(),
         environmentName: results.option('env'),
         remote: results.flag('remote'),
       ),
     );
     if (results.flag('json')) {
-      _stdout.writeln(_prettyJson(result.json));
+      _stdout.writeln(prettyJson(result.json));
     } else {
-      _stdout.writeln(_formatWorkflowStatusResult(result));
+      _stdout.writeln(formatWorkflowStatusResult(result));
     }
     return 0;
   }

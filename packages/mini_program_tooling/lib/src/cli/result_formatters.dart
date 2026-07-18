@@ -1,7 +1,9 @@
-part of '../miniprogram_cli.dart';
+import 'command_imports.dart';
+import 'context.dart';
+import 'miniprogram_cli_constants.dart';
 
-extension _MiniprogramCliResultFormatters on MiniprogramCli {
-  String _formatWorkflowStatusResult(MiniProgramWorkflowStatusResult result) {
+extension CliResultFormatters on CliContext {
+  String formatWorkflowStatusResult(MiniProgramWorkflowStatusResult result) {
     final json = result.json;
     final workspace = json['workspace'] as Map<String, Object?>;
     final environment = json['environment'] as Map<String, Object?>;
@@ -59,7 +61,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatCreateResult(MiniProgramScaffoldResult result) {
+  String formatCreateResult(MiniProgramScaffoldResult result) {
     final lines = <String>[
       'Created mini-program scaffold: ${result.miniProgramId}',
       'Root: ${result.miniProgramRootPath}',
@@ -72,7 +74,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatDoctorResult(MiniprogramDoctorResult result) {
+  String formatDoctorResult(MiniprogramDoctorResult result) {
     final lines = <String>['Miniprogram doctor report:'];
     var okCount = 0;
     var warningCount = 0;
@@ -103,20 +105,20 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatCapabilities(Map<String, Object?> capabilities) {
+  String formatCapabilities(Map<String, Object?> capabilities) {
     final lines = <String>[
       'MiniProgram tooling capabilities.',
       'Version: ${capabilities['toolingVersion']}',
       'Package: ${capabilities['packageName']}',
       'Capabilities:',
     ];
-    for (final capabilityId in _capabilityIds) {
+    for (final capabilityId in cliCapabilityIds) {
       lines.add('- $capabilityId');
     }
     return lines.join('\n');
   }
 
-  String _formatBuildResult(MiniProgramBuildResult result) {
+  String formatBuildResult(MiniProgramBuildResult result) {
     final lines = <String>[
       'Built mini-program: ${result.miniProgramId}',
       'Root: ${result.miniProgramRootPath}',
@@ -130,7 +132,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatArtifactBuildResult(MiniProgramArtifactBuildResult result) {
+  String formatArtifactBuildResult(MiniProgramArtifactBuildResult result) {
     return <String>[
       result.created
           ? 'Created immutable mini-program artifact.'
@@ -147,7 +149,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ].join('\n');
   }
 
-  String _formatArtifactVerifyResult(MiniProgramArtifactVerifyResult result) {
+  String formatArtifactVerifyResult(MiniProgramArtifactVerifyResult result) {
     return <String>[
       'Artifact verification passed.',
       'Mini-program: ${result.miniProgramId}',
@@ -159,7 +161,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ].join('\n');
   }
 
-  String _formatPublishResult(MiniProgramPublishResult result) {
+  String formatPublishResult(MiniProgramPublishResult result) {
     final lines = <String>[
       'Published mini-program: ${result.miniProgramId}',
       'Version: ${result.version}',
@@ -178,7 +180,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatStaticPublishResult(MiniProgramStaticPublishResult result) {
+  String formatStaticPublishResult(MiniProgramStaticPublishResult result) {
     final lines = <String>[
       'Published mini-program to static folder: ${result.miniProgramId}',
       'Version: ${result.version}',
@@ -206,7 +208,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatPartnerPackageResult(MiniProgramPartnerPackageResult result) {
+  String formatPartnerPackageResult(MiniProgramPartnerPackageResult result) {
     return <String>[
       'Created MiniProgram partner handoff package.',
       'Package file: ${result.filePath}',
@@ -219,7 +221,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ].join('\n');
   }
 
-  String _formatHostEndpointAddResult(MiniProgramHostEndpointAddResult result) {
+  String formatHostEndpointAddResult(MiniProgramHostEndpointAddResult result) {
     return <String>[
       result.created
           ? 'Created MiniProgram host endpoint map.'
@@ -241,7 +243,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ].join('\n');
   }
 
-  String _formatHostEndpointImportResult({
+  String formatHostEndpointImportResult({
     required String packagePath,
     required MiniProgramPartnerHandoff handoff,
     required MiniProgramHostEndpointAddResult endpointResult,
@@ -268,7 +270,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ].join('\n');
   }
 
-  String _formatEmbeddingInitResult(MiniProgramEmbeddingInitResult result) {
+  String formatEmbeddingInitResult(MiniProgramEmbeddingInitResult result) {
     final lines = <String>[
       'Initialized embedded mini-program adapter for: ${result.packageName}',
       'Project root: ${result.projectRootPath}',
@@ -281,7 +283,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatHostRunStart({
+  String formatHostRunStart({
     required String projectRootPath,
     required String deviceId,
     required String? environmentName,
@@ -299,7 +301,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ].join('\n');
   }
 
-  String _formatEnvStatusResult(
+  String formatEnvStatusResult(
     ResolvedLocalCliEnvironmentState? resolved, {
     bool initialized = false,
     bool switched = false,
@@ -328,7 +330,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatEnvListResult(ResolvedLocalCliEnvironmentState resolved) {
+  String formatEnvListResult(ResolvedLocalCliEnvironmentState resolved) {
     final lines = <String>[
       'Configured environments:',
       '${resolved.state.activeEnvironment == 'local' ? '*' : '-'} local',
@@ -336,7 +338,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatBackendStartResult(LocalBackendStartResult result) {
+  String formatBackendStartResult(LocalBackendStartResult result) {
     final state = result.state;
     final lines = <String>[
       result.alreadyRunning
@@ -345,7 +347,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       'PID: ${state.pid}',
       'Port: ${state.port}',
       'Health URL: ${state.healthCheckUrl}',
-      ..._formatBackendTargetUrls(state.port),
+      ...formatBackendTargetUrls(state.port),
       'stdout log: ${state.stdoutLogPath}',
       'stderr log: ${state.stderrLogPath}',
     ];
@@ -358,7 +360,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatBackendInitResult(LocalBackendInitResult result) {
+  String formatBackendInitResult(LocalBackendInitResult result) {
     final lines = <String>[
       'Initialized local artifact host workspace.',
       'Artifact workspace root: ${result.backendRootPath}',
@@ -372,7 +374,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return lines.join('\n');
   }
 
-  String _formatBackendStatusResult(LocalBackendStatusResult result) {
+  String formatBackendStatusResult(LocalBackendStatusResult result) {
     if (!result.hasState) {
       return 'Local artifact host is not running. No backend.local.json state was found.';
     }
@@ -387,14 +389,14 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
       if (result.healthStatusCode != null)
         'Health status code: ${result.healthStatusCode}',
       if (result.healthError != null) 'Health detail: ${result.healthError}',
-      ..._formatBackendTargetUrls(state.port),
+      ...formatBackendTargetUrls(state.port),
       'stdout log: ${state.stdoutLogPath}',
       'stderr log: ${state.stderrLogPath}',
     ];
     return lines.join('\n');
   }
 
-  List<String> _formatBackendTargetUrls(int port) {
+  List<String> formatBackendTargetUrls(int port) {
     return <String>[
       'Android emulator URL: http://10.0.2.2:$port/api/',
       'Desktop/Chrome URL: http://127.0.0.1:$port/api/',
@@ -402,7 +404,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     ];
   }
 
-  String _formatBackendStopResult(LocalBackendStopResult result) {
+  String formatBackendStopResult(LocalBackendStopResult result) {
     if (!result.hadState) {
       return 'No local artifact host state was found.';
     }
@@ -415,7 +417,7 @@ extension _MiniprogramCliResultFormatters on MiniprogramCli {
     return 'Local artifact host was not running.';
   }
 
-  String _formatBackendResetResult(LocalBackendResetResult result) {
+  String formatBackendResetResult(LocalBackendResetResult result) {
     final lines = <String>[
       'Removed ${result.removedPaths.length} tracked local artifact path(s).',
     ];
