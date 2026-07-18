@@ -674,7 +674,15 @@ packages/mini_program_tooling/
 |       |-- delivery_inspector.dart              # Human/JSON inspection of built delivery
 |       |-- mini_program_publisher.dart           # Older publishing orchestration retained for compatibility
 |       |-- mini_program_static_publisher.dart    # Static directory publishing support
-|       |-- local_backend_initializer.dart        # Creates local artifact backend workspace
+|       |-- local_backend_initializer.dart        # Public local artifact-host workspace initialization facade
+|       |-- local_backend_initialization/         # Internal template-copy and state initialization pipeline
+|       |   |-- models.dart                       # Public request/result/error plus internal path values
+|       |   |-- dependencies.dart                 # Injected local state store and optional template root
+|       |   |-- paths.dart                        # Default/explicit workspace and backend subtree paths
+|       |   |-- template_discovery.dart           # Explicit or installed-package template resolution
+|       |   |-- template_copy.dart                # Sorted byte-preserving copy and force handling
+|       |   |-- state_persistence.dart            # Ordered local/global workspace state writes
+|       |   `-- coordinator.dart                  # Template validation, copy, state, and result orchestration
 |       |-- local_backend_controller.dart         # Public local artifact-backend lifecycle facade
 |       |-- local_backend/                        # Internal local backend process/runtime libraries
 |       |   |-- models.dart                       # Public callbacks, results, process model, and exception
@@ -795,6 +803,21 @@ health timeouts and messages, state write/clear timing, best-effort ADB reverse
 behavior, tracked reset ordering and containment checks, injected test hooks,
 and exact public errors. Local backend process state and logs remain ignored
 operational files, not portable artifact content.
+
+Local artifact-host initialization request/result/error types and
+`LocalBackendInitializer` stay available through
+`local_backend_initializer.dart`. Implementation belongs in normal Dart
+libraries under `local_backend_initialization/` and must not import the public
+tooling barrel or initializer facade. Preserve explicit/default workspace path
+normalization, explicit-before-installed template discovery, missing-template
+errors, recursive non-link traversal, lexical entity order, byte-preserving
+copies, unchanged-file skips, immediate non-force conflict failure, force
+replacement without reporting overwritten files as created, copy completion
+before state persistence, local-before-global state writes, initialized-time
+preservation, updated-time refresh, state-path inclusion, final created-path
+sorting, exact errors, and constructor dependency injection. Initialization
+may scaffold files and state only; starting/stopping the artifact host remains
+owned by `LocalBackendController`.
 
 Workflow-status public models, `MiniProgramWorkflowStatusController`, and the
 backend JSON helper stay available through `mini_program_workflow_status.dart`.
