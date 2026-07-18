@@ -539,7 +539,17 @@ packages/mini_program_tooling/
 |       |       |-- manifest.dart                # Deterministic manifest JSON template
 |       |       |-- project_files.dart           # Pubspec, README, and ignore-file templates
 |       |       `-- dart_sources.dart            # Program, screen, and build-script templates
-|       |-- mini_program_builder.dart            # Builds fast development output in `mp/.build`
+|       |-- mini_program_builder.dart            # Public development-build facade and compatibility exports
+|       |-- build_pipeline/                      # Internal development-output orchestration libraries
+|       |   |-- models.dart                      # Public build request/result/error plus command/manifest values
+|       |   |-- specification.dart               # Fully normalized internal build specification
+|       |   |-- paths.dart                       # Project, output, screen, asset, and required-file paths
+|       |   |-- manifest.dart                    # Manifest identity, format, and schema validation
+|       |   |-- commands.dart                    # Mp build-script discovery and invocation construction
+|       |   |-- process.dart                     # Injected process execution and stable failure formatting
+|       |   |-- screen_validation.dart           # Built entry-screen JSON identity and shape checks
+|       |   |-- data_assets.dart                 # Referenced local JSON asset traversal, safety, and limits
+|       |   `-- coordinator.dart                 # Ordered validation, execution, and result assembly
 |       |-- mini_program_artifacts.dart          # Public portable artifact build/verify facade
 |       |-- artifact_pipeline/                   # Internal immutable artifact pipeline libraries
 |       |   |-- models.dart                      # Public requests, results, errors, and error codes
@@ -768,6 +778,17 @@ force-overwrite behavior, unrelated files, and mock Publisher API append order.
 The scaffold and `PublisherBackendStarter` share the normal internal
 `publisher_backend/generated_files.dart` library; do not duplicate those
 templates or expose that generator from the public barrel.
+
+Development-build public request, result, error, process-runner, and
+`MiniProgramBuilder` types stay available through `mini_program_builder.dart`.
+Implementation belongs in normal Dart libraries under `build_pipeline/` and
+must not import the public tooling barrel or builder facade. Preserve project
+and manifest validation order, exact errors, repository and standalone paths,
+`dart pub get` timing, build-script discovery, process arguments and
+environment, failure formatting, entry-screen validation order, JSON data
+resource traversal and limits, result-map property order, and `skipPubGet`
+behavior. Development output remains `mp/.build`; immutable packaging remains
+owned by `artifact_pipeline/`.
 
 ### `packages/mini_program_vscode`
 
