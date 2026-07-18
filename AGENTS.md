@@ -672,8 +672,25 @@ packages/mini_program_tooling/
 |       |   |-- validation_context.dart          # Carries normalized roots, filters, and ordered findings
 |       |   `-- shared_validation.dart           # Semver, endpoint, list, and string helpers
 |       |-- delivery_inspector.dart              # Human/JSON inspection of built delivery
-|       |-- mini_program_publisher.dart           # Older publishing orchestration retained for compatibility
-|       |-- mini_program_static_publisher.dart    # Static directory publishing support
+|       |-- mini_program_publisher.dart           # Public legacy backend-workspace publishing facade
+|       |-- mini_program_static_publisher.dart    # Public static-directory compatibility facade
+|       |-- publishing/                           # Internal static and legacy publishing adapters
+|       |   |-- shared/
+|       |   |   `-- errors.dart                   # Stable publish exception shared by both adapters
+|       |   |-- static/
+|       |   |   |-- models.dart                   # Public static publish request/result/file records
+|       |   |   |-- dependencies.dart             # Injected development builder
+|       |   |   |-- cleanup.dart                  # App-scoped clean and output-root containment
+|       |   |   |-- files.dart                    # Sorted recursive file records and portable paths
+|       |   |   |-- instructions.dart             # Stable static-host publishing instructions
+|       |   |   `-- coordinator.dart              # Artifact build, marker writes, and result assembly
+|       |   `-- legacy/
+|       |       |-- models.dart                   # Public legacy request/result/error models
+|       |       |-- dependencies.dart             # Injected builder and delivery validator
+|       |       |-- paths.dart                    # Repository/backend/API-root normalization
+|       |       |-- validation.dart               # Stable pre/post delivery validation stages
+|       |       |-- artifacts.dart                # Completed-build adapter into artifact pipeline
+|       |       `-- coordinator.dart              # Ordered legacy workspace publishing orchestration
 |       |-- local_backend_initializer.dart        # Public local artifact-host workspace initialization facade
 |       |-- local_backend_initialization/         # Internal template-copy and state initialization pipeline
 |       |   |-- models.dart                       # Public request/result/error plus internal path values
@@ -776,6 +793,21 @@ conflict behavior, atomic `catalog.json`/`latest.json` updates, staging cleanup,
 validation order, error codes/messages/details, and result JSON. Build and
 verification internals must not import the public tooling barrel or artifact
 facade.
+
+Static and legacy publishing public APIs stay available through
+`mini_program_static_publisher.dart` and `mini_program_publisher.dart`.
+Implementation belongs in normal Dart libraries under `publishing/` and must
+not import the public tooling barrel or either facade. Both adapters delegate
+portable bundle creation to `artifact_pipeline/`; do not duplicate artifact
+layout, checksums, catalog, or immutable-version behavior in publishing code.
+Preserve static app-scoped clean containment, instruction and `.nojekyll`
+bytes, recursive file-record ordering and portable paths, publish timestamps,
+artifact-error mapping, constructor injection, and result fields. Preserve the
+legacy backend API-root requirement, build-before-validation timing, exact
+pre/post validation calls and failures, completed-build adaptation, direct JSON
+screen counting, result JSON property order, and exact public errors. The
+legacy backend-workspace path remains compatibility behavior; new portable
+workflows should use `miniprogram artifact build`.
 
 Preview public classes stay in the three `mini_program_preview_*` facade files.
 Implementation belongs in normal Dart libraries under `preview_runtime/` and
