@@ -590,7 +590,13 @@ packages/mini_program_tooling/
 |       |-- mini_program_path_resolver.dart      # Resolves workspace/project paths consistently
 |       |-- mini_program_workflow_status.dart    # Computes project workflow status for CLI/editor
 |       |-- miniprogram_doctor.dart              # Environment and project diagnostics
-|       |-- local_cli_state.dart                 # Ignored local process/port/workflow state
+|       |-- local_cli_state.dart                 # Public local-state facade and compatibility model exports
+|       |-- local_state/                         # Internal local CLI persistence libraries
+|       |   |-- models.dart                      # Stable state schemas, resolved values, and persistence exception
+|       |   |-- paths.dart                       # Local/global filenames, normalized roots, and OS defaults
+|       |   |-- json_io.dart                     # Pretty JSON reads/writes with stable failure mapping
+|       |   |-- discovery.dart                   # Ordered upward search and optional global fallback
+|       |   `-- store.dart                       # Backend, artifact, environment, and workspace persistence
 |       |-- delivery_validation.dart             # Delivery validation result models
 |       |-- delivery_validator.dart              # Public delivery-validator facade and ordered orchestration
 |       |-- delivery_validation/                 # Internal feature-owned delivery validation libraries
@@ -688,6 +694,15 @@ preview-host bytes, HTTP routes and no-store/CORS headers, status transitions,
 watcher debounce/coalescing, Flutter process arguments and cleanup, ADB reverse
 behavior, LAN host selection, diagnostic text, and public dependency-injection
 signatures when changing preview behavior.
+
+Local CLI state public models and `LocalCliStateStore` stay available through
+`local_cli_state.dart`. Persistence implementation belongs in normal Dart
+libraries under `local_state/` and must not import the public tooling barrel or
+facade. Preserve `.mini_program` filenames, JSON property order and bytes,
+artifact replacement and sorting, path normalization, local search-root order,
+upward discovery, global fallback precedence, default OS workspace paths, and
+exact persistence error text. These files are local operational state and must
+never contain publisher secrets or become artifact inputs.
 
 ### `packages/mini_program_vscode`
 
