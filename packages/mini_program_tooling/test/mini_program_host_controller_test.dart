@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:mini_program_tooling/mini_program_tooling.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -517,6 +518,71 @@ void main() {
         );
       },
     );
+
+    test('keeps generated host endpoint files byte-stable', () async {
+      final hostRoot = p.join(tempDir.path, 'host_app');
+      await _writeHostProject(hostRoot);
+      final result = await MiniProgramHostController().addEndpoint(
+        MiniProgramHostEndpointAddRequest(
+          projectRootPath: hostRoot,
+          appId: 'weather',
+          title: 'Weather',
+          apiBaseUri: Uri.parse('https://cdn.example.com/weather/'),
+          policySourcePath: p.join(tempDir.path, 'weather.partner.json'),
+          acceptRequestedPolicy: true,
+          requestedCache: const <String, Object?>{
+            'data': <String, Object?>{
+              'enabled': true,
+              'recommendedMaxBytes': 10485760,
+              'recommendedTtlDays': 30,
+            },
+            'state': <String, Object?>{
+              'enabled': true,
+              'recommendedMaxBytes': 1048576,
+              'recommendedTtlDays': 7,
+            },
+          },
+          requestedPublisherApi: const <String, Object?>{
+            'enabled': true,
+            'reason': 'Load weather forecasts.',
+            'contract': 'publisher_backend.json',
+          },
+          requestedPermissions: const <String, Object?>{
+            'location': <String, Object?>{
+              'enabled': true,
+              'reason': 'Load local weather.',
+              'accuracy': 'approximate',
+              'mode': 'whenInUse',
+            },
+          },
+        ),
+      );
+      final digests = <String, String>{
+        'endpoints': sha256
+            .convert(await File(result.filePath).readAsBytes())
+            .toString(),
+        'registry': sha256
+            .convert(await File(result.registryFilePath).readAsBytes())
+            .toString(),
+        'policies': sha256
+            .convert(await File(result.policyFilePath).readAsBytes())
+            .toString(),
+        'resolver': sha256
+            .convert(await File(result.policyResolverFilePath).readAsBytes())
+            .toString(),
+      };
+
+      expect(digests, <String, String>{
+        'endpoints':
+            '5134448dcd845fd14839342fa17da585c500f99174601f421bd8ed1804726772',
+        'registry':
+            'c9352bd447397efb77696c2b2efbcd17fb951c3807a36c6faef7f4d79dbd11c3',
+        'policies':
+            'f198f00ae5bfb85f7463def7b3515773d192c03b2187d5a6c5d687abae9db990',
+        'resolver':
+            'd0857f33b0407ea904e00beb75ee6e50c210438b78d6357b548b0db31e65d9a2',
+      });
+    });
   });
 }
 

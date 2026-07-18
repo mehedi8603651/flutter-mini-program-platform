@@ -31,6 +31,8 @@ CODEX_HANDOFF.md
 **/.metadata
 **/pubspec.lock
 **/build/
+!packages/mini_program_tooling/lib/src/artifact_pipeline/build/
+!packages/mini_program_tooling/lib/src/artifact_pipeline/build/**
 **/.build/
 **/coverage/
 

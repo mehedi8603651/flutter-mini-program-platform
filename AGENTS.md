@@ -568,7 +568,18 @@ packages/mini_program_tooling/
 |       |           |-- source_editors.dart      # Host setup, manifest, and MainActivity patching
 |       |           |-- dart_provider_template.dart # Host-owned Dart provider template
 |       |           `-- android_channel_template.dart # Host-owned Kotlin MethodChannel template
-|       |-- mini_program_host_controller.dart    # Starts and controls generated/reference hosts
+|       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
+|       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
+|       |   |-- models.dart                      # Public run/import requests, results, runner, and exception
+|       |   |-- runner.dart                      # Flutter host-run validation and process invocation
+|       |   |-- coordinator.dart                 # Ordered endpoint-import reads, merges, and writes
+|       |   |-- endpoint_file.dart               # Managed endpoint metadata parsing and Dart generation
+|       |   |-- registry_file.dart               # Registry parsing, naming, and Dart generation
+|       |   |-- policy_document.dart             # Requested/accepted policy merge and validation
+|       |   |-- policy_resolver.dart             # Accepted-policy Dart resolver generation
+|       |   |-- json_values.dart                 # Defensive JSON copy, ordering, and numeric helpers
+|       |   |-- validation.dart                  # Host project, app ID, and endpoint URI validation
+|       |   `-- records.dart                     # Internal endpoint and registry records
 |       |-- mini_program_preview_host_initializer.dart # Generates a preview Flutter host
 |       |-- mini_program_preview_controller.dart # Coordinates preview build/server/host lifecycle
 |       |-- mini_program_preview_server.dart     # Serves local static artifacts with development headers
@@ -652,6 +663,15 @@ changing embedding. Capability installers may make a host provider available,
 but they must never accept a mini-program permission policy. Generated
 capability adapter files are host-owned after creation and must not be
 overwritten automatically.
+
+Host run and endpoint-import public classes stay in
+`mini_program_host_controller.dart`. Implementation belongs in normal Dart
+libraries under `host_endpoint/` and must not import the public tooling barrel
+or controller facade. Preserve generated endpoint, registry, policy JSON, and
+policy-resolver bytes; resolver/registry/endpoint write order; managed-file
+checks; requested-versus-accepted authority; unknown accepted fields; normal
+re-import, `--force`, and `--accept-requested-policy` behavior; and exact public
+errors and process arguments.
 
 Portable artifact public classes stay in `mini_program_artifacts.dart`; its
 implementation belongs in normal Dart libraries under `artifact_pipeline/`.
