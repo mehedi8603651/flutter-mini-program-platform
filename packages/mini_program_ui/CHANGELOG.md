@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+- Establish the feature-oriented authoring architecture as the supported
+  baseline while preserving the public barrel API and serialized JSON output.
+- Remove the temporary legacy `lib/src` compatibility re-exports announced in
+  `0.1.13`; mini-program authors must import `mini_program_ui.dart`.
+
 ## 0.1.13
 
 - Reorganize the pure-Dart authoring implementation into core, program, and

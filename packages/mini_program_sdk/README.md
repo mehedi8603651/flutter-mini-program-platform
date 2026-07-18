@@ -2,6 +2,16 @@
 
 Flutter runtime SDK for rendering mini-program UI from static Mp JSON artifacts.
 
+Host applications should use the supported package barrel:
+
+```dart
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+```
+
+Version `0.6.0` promotes the feature-oriented runtime internals to the stable
+baseline without changing public APIs, historical public import paths, or wire
+formats.
+
 The SDK stays provider-neutral:
 
 - artifact opening uses `MiniProgramEndpoint.public(apiBaseUri: artifactBaseUrl)`

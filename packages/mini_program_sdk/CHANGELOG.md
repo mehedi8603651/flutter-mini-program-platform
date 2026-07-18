@@ -1,3 +1,10 @@
+## 0.6.0
+
+- Establish the feature-oriented runtime architecture completed in `0.5.14`
+  as the new SDK baseline.
+- Preserve public APIs, historical import paths, manifest compatibility,
+  renderer output, state/cache formats, and runtime behavior.
+
 ## 0.5.14
 
 - Refactor validator, action, widget, host lifecycle, navigation, state, router,

@@ -2,6 +2,10 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
+Tooling `0.7.0` generates mini-program projects against
+`mini_program_ui: ^0.2.0` and Flutter host projects against
+`mini_program_sdk: ^0.6.0`.
+
 The CLI supports the current MVP architecture:
 
 - mini-program UI is built into public static artifact files

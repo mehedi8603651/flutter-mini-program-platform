@@ -28,9 +28,9 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.7` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.1.13` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.5.14` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.6.15` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_ui` | `0.2.0` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.0` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.0` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -178,13 +178,10 @@ packages/mini_program_ui/
 |       |   |-- theme/                          # Lightweight theme node
 |       |   |-- feedback/                       # Toast and dialog actions
 |       |   `-- composition/                    # Sequence, conditional, and scoped action calls
-|       |-- mp_*.dart                           # Temporary legacy re-export shims; remove in 0.2.0
-|       `-- widgets/*.dart                      # Temporary legacy widget re-export shims; remove in 0.2.0
 |-- test/
 |   |-- core/                                   # Dependency boundaries and core behavior
 |   |-- program/                                # Program/build-output behavior
 |   |-- features/                               # Feature and cross-feature serialization/validation
-|   |-- compatibility/                          # Legacy internal import coverage
 |   `-- public_api_test.dart                    # Supported barrel compile surface
 |-- pubspec.yaml                                # Pure-Dart dependencies and package version
 |-- CHANGELOG.md                                # Published and pending authoring API changes

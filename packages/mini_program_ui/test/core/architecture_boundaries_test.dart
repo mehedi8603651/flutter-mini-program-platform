@@ -63,4 +63,33 @@ void main() {
     expect(source, isNot(contains('presentation_validation.dart')));
     expect(source, isNot(contains('_actions.dart')));
   });
+
+  test('0.2.0 legacy internal compatibility shims stay removed', () {
+    const removedPaths = <String>[
+      'lib/src/mp_action.dart',
+      'lib/src/mp_build_output.dart',
+      'lib/src/mp_image.dart',
+      'lib/src/mp_json.dart',
+      'lib/src/mp_lazy.dart',
+      'lib/src/mp_node.dart',
+      'lib/src/mp_program.dart',
+      'lib/src/mp_schema.dart',
+      'lib/src/mp_skeleton.dart',
+      'lib/src/widgets/button_widgets.dart',
+      'lib/src/widgets/chart_widgets.dart',
+      'lib/src/widgets/display_widgets.dart',
+      'lib/src/widgets/image_widgets.dart',
+      'lib/src/widgets/layout_widgets.dart',
+      'lib/src/widgets/lazy_widgets.dart',
+      'lib/src/widgets/list_widgets.dart',
+      'lib/src/widgets/skeleton_widgets.dart',
+      'lib/src/widgets/text_widgets.dart',
+      'lib/src/widgets/theme_widgets.dart',
+      'lib/src/widgets/widget_props.dart',
+    ];
+
+    for (final path in removedPaths) {
+      expect(File(path).existsSync(), isFalse, reason: '$path must stay gone.');
+    }
+  });
 }

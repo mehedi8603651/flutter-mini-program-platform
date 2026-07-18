@@ -1,3 +1,11 @@
+## 0.7.0
+
+- Establish the feature-oriented CLI and generation architecture completed in
+  `0.6.15` as the new tooling baseline while preserving commands, aliases,
+  public facades, artifact bytes, and exit behavior.
+- Generate new mini-programs with `mini_program_ui: ^0.2.0` and new host and
+  preview projects with `mini_program_sdk: ^0.6.0`.
+
 ## 0.6.15
 
 - Refactor tooling internals into feature-owned normal Dart libraries across

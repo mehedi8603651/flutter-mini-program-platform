@@ -17,8 +17,8 @@ import 'package:mini_program_ui/mini_program_ui.dart';
 
 Files below `lib/src/` are implementation details. The implementation is
 organized into dependency-free core values, program assembly, and
-feature-owned node/action builders. Legacy `src` paths remain as temporary
-compatibility re-exports and are scheduled for removal in `0.2.0`.
+feature-owned node/action builders. The temporary legacy `src` compatibility
+re-exports were removed in `0.2.0`; direct internal imports are unsupported.
 
 ## Program Shape
 

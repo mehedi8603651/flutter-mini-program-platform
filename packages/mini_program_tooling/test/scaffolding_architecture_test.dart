@@ -77,5 +77,10 @@ void main() {
     expect(facadeSource, isNot(contains('File(')));
     expect(facadeSource, isNot(contains('Directory(')));
     expect(facadeSource, isNot(contains('MpProgram(')));
+
+    final dependencySource = File(
+      path.join(implementationRoot.path, 'dependencies.dart'),
+    ).readAsStringSync();
+    expect(dependencySource, contains('mini_program_ui: ^0.2.0'));
   });
 }
