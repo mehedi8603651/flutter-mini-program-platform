@@ -5,11 +5,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'publisher_backend/generated_files.dart';
+
 part 'publisher_backend/models.dart';
 part 'publisher_backend/models/local_models.dart';
 part 'publisher_backend/internal_models.dart';
-part 'publisher_backend/generated_files.dart';
-part 'publisher_backend/generated_files/mock_templates.dart';
 part 'publisher_backend/starter_helpers.dart';
 part 'publisher_backend/runtime_smoke_helpers.dart';
 part 'publisher_backend/core_operations.dart';

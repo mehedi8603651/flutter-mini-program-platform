@@ -1,4 +1,9 @@
-part of '../publisher_backend_starter.dart';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+
+part 'generated_files/mock_templates.dart';
 
 Map<String, String> buildMockPublisherBackendFiles({
   required String miniProgramRootPath,

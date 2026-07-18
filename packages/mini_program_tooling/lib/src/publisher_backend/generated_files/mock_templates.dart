@@ -1,4 +1,4 @@
-part of '../../publisher_backend_starter.dart';
+part of '../generated_files.dart';
 
 String _mockBackendPubspec(String appId) =>
     '''
