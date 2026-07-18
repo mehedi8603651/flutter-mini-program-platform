@@ -588,7 +588,20 @@ packages/mini_program_tooling/
 |       |   |-- host/                            # Host models, project setup, platform files, and main template
 |       |   `-- controller/                      # Watcher, device transport, process cleanup, and coordinator
 |       |-- mini_program_path_resolver.dart      # Resolves workspace/project paths consistently
-|       |-- mini_program_workflow_status.dart    # Computes project workflow status for CLI/editor
+|       |-- mini_program_workflow_status.dart    # Public workflow-status facade and backend JSON helper
+|       |-- workflow_status/                     # Internal local-first workspace inspection libraries
+|       |   |-- models.dart                      # Public request and result models
+|       |   |-- dependencies.dart                # Injected state, validator, and backend controller
+|       |   |-- coordinator.dart                 # Ordered inspection and stable result-map assembly
+|       |   |-- workspace.dart                   # Workspace existence and type detection
+|       |   |-- mini_program.dart                # Manifest, source, build, partner, and usage status
+|       |   |-- host_app.dart                    # Generated host integration and endpoint status
+|       |   |-- metadata.dart                    # JSON, partner, endpoint, and registry readers
+|       |   |-- backend_usage.dart               # Best-effort authoring/build source feature detection
+|       |   |-- publisher_backend.dart           # Local mock Publisher API starter status
+|       |   |-- environment_backend.dart         # Environment/backend discovery and status projection
+|       |   |-- validation.dart                  # Delivery validation result integration
+|       |   `-- assessment.dart                  # Remote notice, next actions, readiness, and severity
 |       |-- miniprogram_doctor.dart              # Environment and project diagnostics
 |       |-- local_cli_state.dart                 # Public local-state facade and compatibility model exports
 |       |-- local_state/                         # Internal local CLI persistence libraries
@@ -723,6 +736,16 @@ health timeouts and messages, state write/clear timing, best-effort ADB reverse
 behavior, tracked reset ordering and containment checks, injected test hooks,
 and exact public errors. Local backend process state and logs remain ignored
 operational files, not portable artifact content.
+
+Workflow-status public models, `MiniProgramWorkflowStatusController`, and the
+backend JSON helper stay available through `mini_program_workflow_status.dart`.
+Implementation belongs in normal Dart libraries under `workflow_status/` and
+must not import the public tooling barrel or status facade. Preserve inspection
+order, local-before-global discovery, result-map property order, workspace type
+detection, build and entry-screen checks, partner/endpoint/registry ordering,
+best-effort source scanning, validation mutation timing, redaction of legacy
+backend secrets, remote-provider removal messaging, next-action order, severity
+rules, and public dependency-injection signatures.
 
 ### `packages/mini_program_vscode`
 
