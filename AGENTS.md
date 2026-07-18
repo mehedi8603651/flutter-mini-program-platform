@@ -613,7 +613,17 @@ packages/mini_program_tooling/
 |       |-- mini_program_publisher.dart           # Older publishing orchestration retained for compatibility
 |       |-- mini_program_static_publisher.dart    # Static directory publishing support
 |       |-- local_backend_initializer.dart        # Creates local artifact backend workspace
-|       |-- local_backend_controller.dart         # Starts/stops local backend service
+|       |-- local_backend_controller.dart         # Public local artifact-backend lifecycle facade
+|       |-- local_backend/                        # Internal local backend process/runtime libraries
+|       |   |-- models.dart                       # Public callbacks, results, process model, and exception
+|       |   |-- dependencies.dart                 # Injected state, shell, process, health, clock, and ADB hooks
+|       |   |-- service_preparation.dart          # Service path checks and package preparation
+|       |   |-- launcher.dart                     # Byte-stable Windows/Unix launcher scripts
+|       |   |-- process_control.dart              # Process start, liveness, shell, and termination behavior
+|       |   |-- health.dart                       # Health probes, startup/shutdown waits, and log tails
+|       |   |-- adb_reverse.dart                  # Best-effort Android device discovery and port reversal
+|       |   |-- lifecycle.dart                    # Ordered start, status, and stop orchestration
+|       |   `-- reset.dart                        # Contained tracked-artifact cleanup and directory pruning
 |       |-- publisher_backend_starter.dart        # Creates optional publisher API starter
 |       |-- publisher_backend_contract_controller.dart # Publisher API contract commands
 |       |-- publisher_backend/
@@ -703,6 +713,16 @@ artifact replacement and sorting, path normalization, local search-root order,
 upward discovery, global fallback precedence, default OS workspace paths, and
 exact persistence error text. These files are local operational state and must
 never contain publisher secrets or become artifact inputs.
+
+Local artifact-backend public callbacks, result models, exceptions, and
+`LocalBackendController` stay available through `local_backend_controller.dart`.
+Implementation belongs in normal Dart libraries under `local_backend/` and
+must not import the public tooling barrel or controller facade. Preserve path
+validation and package preparation order, launcher bytes and process arguments,
+health timeouts and messages, state write/clear timing, best-effort ADB reverse
+behavior, tracked reset ordering and containment checks, injected test hooks,
+and exact public errors. Local backend process state and logs remain ignored
+operational files, not portable artifact content.
 
 ### `packages/mini_program_vscode`
 
