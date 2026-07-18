@@ -621,7 +621,14 @@ packages/mini_program_tooling/
 |       |   |-- server/                          # Bundle loading, routes, assets, responses, and server lifecycle
 |       |   |-- host/                            # Host models, project setup, platform files, and main template
 |       |   `-- controller/                      # Watcher, device transport, process cleanup, and coordinator
-|       |-- mini_program_path_resolver.dart      # Resolves workspace/project paths consistently
+|       |-- mini_program_path_resolver.dart      # Public workspace/project path-resolution facade
+|       |-- path_resolution/                     # Internal normalized workspace and repository discovery
+|       |   |-- models.dart                      # Public result/exception plus internal candidate values
+|       |   |-- normalization.dart               # Absolute path and working-directory normalization
+|       |   |-- manifest_identity.dart           # Safe manifest ID reads for candidate roots
+|       |   |-- repo_discovery.dart              # Explicit and upward platform-repository discovery
+|       |   |-- mini_program_matching.dart       # Manifest identity matching and repo-managed detection
+|       |   `-- resolver.dart                    # Ordered candidate resolution and checked-path diagnostics
 |       |-- mini_program_workflow_status.dart    # Public workflow-status facade and backend JSON helper
 |       |-- workflow_status/                     # Internal local-first workspace inspection libraries
 |       |   |-- models.dart                      # Public request and result models
@@ -636,7 +643,15 @@ packages/mini_program_tooling/
 |       |   |-- environment_backend.dart         # Environment/backend discovery and status projection
 |       |   |-- validation.dart                  # Delivery validation result integration
 |       |   `-- assessment.dart                  # Remote notice, next actions, readiness, and severity
-|       |-- miniprogram_doctor.dart              # Environment and project diagnostics
+|       |-- miniprogram_doctor.dart              # Public environment/project diagnostics facade
+|       |-- doctor/                              # Internal read-only diagnostic checks and orchestration
+|       |   |-- models.dart                      # Public check status, check, and result models
+|       |   |-- dependencies.dart                # Injected state, path, backend, shell, and working directory
+|       |   |-- command_probes.dart              # Flutter command probing and stable first-line details
+|       |   |-- workspace_checks.dart            # Environment and artifact-workspace discovery
+|       |   |-- repository_checks.dart           # Optional platform-repository resolution diagnostics
+|       |   |-- backend_checks.dart              # Artifact-host structure and runtime health checks
+|       |   `-- coordinator.dart                 # Stable ordered diagnosis assembly
 |       |-- local_cli_state.dart                 # Public local-state facade and compatibility model exports
 |       |-- local_state/                         # Internal local CLI persistence libraries
 |       |   |-- models.dart                      # Stable state schemas, resolved values, and persistence exception
@@ -814,6 +829,25 @@ cache-key rejection, deterministic pretty JSON with its trailing newline,
 default output naming, and normalized absolute paths. Requested cache,
 Publisher API, and device permissions are publisher input only; host import and
 accepted-policy generation remain the authority boundary under `host_endpoint/`.
+
+Workspace-path public result/exception types and `MiniProgramPathResolver` stay
+available through `mini_program_path_resolver.dart`. Implementation belongs in
+normal Dart libraries under `path_resolution/` and must not import the public
+tooling barrel or resolver facade. Preserve absolute normalization, explicit
+mini-program root precedence, explicit repo candidate precedence, current-root
+and `./<id>` fallback order, immediate failure for an invalid explicit
+mini-program root, manifest-ID matching, upward repo discovery order,
+repo-managed detection, checked-path order/text, and exact public errors.
+
+Doctor public callback/check/result types and `MiniprogramDoctor` stay
+available through `miniprogram_doctor.dart`. Implementation belongs in normal
+Dart libraries under `doctor/` and must not import the public tooling barrel or
+doctor facade. Preserve constructor dependency injection, check order, labels,
+statuses, summaries, details, first non-empty command-output line selection,
+local-before-global workspace discovery, stale workspace rejection, repo
+fallback, backend status mapping, and exact skipped/warning/error behavior.
+Doctor diagnostics are read-only and provider-neutral; they must not initialize
+workspaces, start services, alter policy, or persist state.
 
 ### `packages/mini_program_vscode`
 
