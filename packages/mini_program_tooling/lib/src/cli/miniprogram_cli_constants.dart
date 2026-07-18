@@ -1,6 +1,6 @@
 const List<String> cliSupportedPublishTargets = <String>['local', 'static'];
 
-const String miniProgramToolingVersion = '0.6.14';
+const String miniProgramToolingVersion = '0.6.15';
 
 const List<String> cliCapabilityIds = <String>[
   'publish.static',

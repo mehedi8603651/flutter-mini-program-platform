@@ -30,7 +30,7 @@ These versions are the repository's current development/release line. Check each
 | `mini_program_contracts` | `0.3.7` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.1.13` | Pure-Dart authoring API that serializes UI and actions to JSON |
 | `mini_program_sdk` | `0.5.14` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.6.14` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_tooling` | `0.6.15` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -852,9 +852,10 @@ Implementation belongs in normal Dart libraries under `local_backend/` and
 must not import the public tooling barrel or controller facade. Preserve path
 validation and package preparation order, launcher bytes and process arguments,
 health timeouts and messages, state write/clear timing, best-effort ADB reverse
-behavior, tracked reset ordering and containment checks, injected test hooks,
-and exact public errors. Local backend process state and logs remain ignored
-operational files, not portable artifact content.
+behavior, tracked legacy/canonical artifact reset ordering and containment
+checks, injected test hooks, and exact public errors. Local backend process
+state and logs remain ignored operational files, not portable artifact
+content.
 
 Local artifact-host initialization request/result/error types and
 `LocalBackendInitializer` stay available through
@@ -863,13 +864,14 @@ libraries under `local_backend_initialization/` and must not import the public
 tooling barrel or initializer facade. Preserve explicit/default workspace path
 normalization, explicit-before-installed template discovery, missing-template
 errors, recursive non-link traversal, lexical entity order, byte-preserving
-copies, unchanged-file skips, immediate non-force conflict failure, force
-replacement without reporting overwritten files as created, copy completion
-before state persistence, local-before-global state writes, initialized-time
-preservation, updated-time refresh, state-path inclusion, final created-path
-sorting, exact errors, and constructor dependency injection. Initialization
-may scaffold files and state only; starting/stopping the artifact host remains
-owned by `LocalBackendController`.
+copies, exclusion of `.dart_tool`, `build`, `coverage`, `.packages`, and
+`pubspec.lock` generated state, unchanged-file skips, immediate non-force
+conflict failure, force replacement without reporting overwritten files as
+created, copy completion before state persistence, local-before-global state
+writes, initialized-time preservation, updated-time refresh, state-path
+inclusion, final created-path sorting, exact errors, and constructor dependency
+injection. Initialization may scaffold files and state only; starting/stopping
+the artifact host remains owned by `LocalBackendController`.
 
 Workflow-status public models, `MiniProgramWorkflowStatusController`, and the
 backend JSON helper stay available through `mini_program_workflow_status.dart`.

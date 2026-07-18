@@ -18,10 +18,7 @@ $scriptRoot =
 
 $repoRoot = (Resolve-Path (Join-Path $scriptRoot '..')).Path
 $miniProgramRoot = Join-Path $repoRoot "mini_programs\$MiniProgramId"
-$backendRoot = Join-Path $repoRoot 'backend'
-$apiRoot = Join-Path $backendRoot 'api'
-$manifestSource = Join-Path $miniProgramRoot 'manifest.json'
-$screensSource = Join-Path $miniProgramRoot 'mp\.build\screens'
+$cliPath = Join-Path $repoRoot 'packages\mini_program_tooling\bin\miniprogram.dart'
 
 function Assert-ExistingPath {
   param(
@@ -34,63 +31,22 @@ function Assert-ExistingPath {
   }
 }
 
-function Assert-ContainedPath {
-  param(
-    [string]$Path,
-    [string]$Root,
-    [string]$Label
-  )
-
-  $resolvedPath = [System.IO.Path]::GetFullPath($Path)
-  $resolvedRoot = [System.IO.Path]::GetFullPath($Root)
-
-  if (-not $resolvedPath.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "$Label must stay within $resolvedRoot, but resolved to $resolvedPath"
-  }
-}
-
 Assert-ExistingPath -Path $miniProgramRoot -Label 'Mini-program root'
-Assert-ExistingPath -Path $backendRoot -Label 'Static artifact workspace root'
-Assert-ExistingPath -Path $manifestSource -Label 'Manifest source'
-Assert-ExistingPath -Path $screensSource -Label 'Built screens source'
+Assert-ExistingPath -Path $cliPath -Label 'Miniprogram CLI'
 
-$manifest = Get-Content -LiteralPath $manifestSource -Raw | ConvertFrom-Json
-$miniProgramVersion = [string]$manifest.version
-
-if ([string]::IsNullOrWhiteSpace($miniProgramVersion)) {
-  throw "Manifest at $manifestSource does not contain a usable version."
+Push-Location $miniProgramRoot
+try {
+  & dart run $cliPath publish $MiniProgramId `
+    --target local `
+    --repo-root $repoRoot `
+    --root $repoRoot `
+    --mini-program-root $miniProgramRoot
+  $exitCode = $LASTEXITCODE
+}
+finally {
+  Pop-Location
 }
 
-$manifestTargetDir = Join-Path $apiRoot "manifests\$MiniProgramId"
-$versionedManifestDir = Join-Path $manifestTargetDir 'versions'
-$latestManifestTarget = Join-Path $manifestTargetDir 'latest.json'
-$versionedManifestTarget = Join-Path $versionedManifestDir "$miniProgramVersion.json"
-$screenTargetDir = Join-Path $apiRoot "screens\$MiniProgramId\$miniProgramVersion"
-
-Assert-ContainedPath -Path $manifestTargetDir -Root $backendRoot -Label 'Manifest target directory'
-Assert-ContainedPath -Path $screenTargetDir -Root $backendRoot -Label 'Screen target directory'
-
-New-Item -ItemType Directory -Force -Path $manifestTargetDir | Out-Null
-New-Item -ItemType Directory -Force -Path $versionedManifestDir | Out-Null
-New-Item -ItemType Directory -Force -Path $screenTargetDir | Out-Null
-
-Copy-Item -LiteralPath $manifestSource -Destination $latestManifestTarget -Force
-Copy-Item -LiteralPath $manifestSource -Destination $versionedManifestTarget -Force
-
-Get-ChildItem -LiteralPath $screenTargetDir -File -Filter '*.json' |
-  ForEach-Object {
-    Remove-Item -LiteralPath $_.FullName -Force
-  }
-
-$copiedScreens = 0
-Get-ChildItem -LiteralPath $screensSource -File -Filter '*.json' |
-  ForEach-Object {
-    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $screenTargetDir $_.Name) -Force
-    $copiedScreens += 1
-  }
-
-if ($copiedScreens -eq 0) {
-  throw "No built screen JSON files were found in $screensSource"
+if ($exitCode -ne 0) {
+  throw "Local artifact publish failed with exit code $exitCode."
 }
-
-Write-Host "Published $MiniProgramId v$miniProgramVersion to backend\\api with $copiedScreens screen file(s)."

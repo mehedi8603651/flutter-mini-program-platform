@@ -21,6 +21,9 @@ Future<void> copyLocalBackendTemplateTree({
 
   for (final entity in entities) {
     final relativePath = p.relative(entity.path, from: sourceRootPath);
+    if (_isIgnoredLocalBackendTemplatePath(relativePath)) {
+      continue;
+    }
     final destinationPath = p.join(destinationRootPath, relativePath);
 
     if (entity is Directory) {
@@ -59,6 +62,15 @@ Future<void> copyLocalBackendTemplateTree({
 
     await destinationFile.writeAsBytes(sourceBytes, flush: true);
   }
+}
+
+bool _isIgnoredLocalBackendTemplatePath(String relativePath) {
+  final segments = p.split(relativePath);
+  return segments.contains('.dart_tool') ||
+      segments.contains('coverage') ||
+      segments.contains('build') ||
+      p.basename(relativePath) == 'pubspec.lock' ||
+      p.basename(relativePath) == '.packages';
 }
 
 bool localBackendTemplateBytesEqual(List<int> left, List<int> right) {

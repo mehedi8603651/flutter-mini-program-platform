@@ -43,6 +43,32 @@ void main() {
           'pubspec.yaml',
         ),
       ).writeAsString('name: local_backend_service\n');
+      await File(
+        p.join(
+          templateRoot.path,
+          'backend',
+          'local_backend_service',
+          '.dart_tool',
+          'package_config.json',
+        ),
+      ).create(recursive: true);
+      await File(
+        p.join(
+          templateRoot.path,
+          'backend',
+          'local_backend_service',
+          '.dart_tool',
+          'package_config.json',
+        ),
+      ).writeAsString('{"stale":true}');
+      await File(
+        p.join(
+          templateRoot.path,
+          'backend',
+          'local_backend_service',
+          'pubspec.lock',
+        ),
+      ).writeAsString('stale lock');
       stateStore = LocalCliStateStore(
         homeDirectoryPath: p.join(tempDirectory.path, 'home'),
         localAppDataDirectoryPath: p.join(tempDirectory.path, 'local_app_data'),
@@ -108,6 +134,22 @@ void main() {
         expect(
           result.serviceDirectoryPath,
           p.join(backendRoot, 'backend', 'local_backend_service'),
+        );
+        expect(
+          await File(
+            p.join(
+              result.serviceDirectoryPath,
+              '.dart_tool',
+              'package_config.json',
+            ),
+          ).exists(),
+          isFalse,
+        );
+        expect(
+          await File(
+            p.join(result.serviceDirectoryPath, 'pubspec.lock'),
+          ).exists(),
+          isFalse,
         );
       },
     );

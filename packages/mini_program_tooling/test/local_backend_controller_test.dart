@@ -280,6 +280,76 @@ void main() {
       );
     });
 
+    test('resetLocal removes tracked canonical artifact outputs', () async {
+      const stateStore = LocalCliStateStore();
+      const controller = LocalBackendController(enableAdbReverse: false);
+      final appRoot = p.join(
+        repoRoot.path,
+        'backend',
+        'api',
+        'artifacts',
+        'coupon_center',
+      );
+      final versionRoot = p.join(appRoot, '1.0.0');
+      final latestManifestPath = p.join(appRoot, 'latest.json');
+      final versionedManifestPath = p.join(versionRoot, 'manifest.json');
+      final screensDirectoryPath = p.join(versionRoot, 'screens');
+      final catalogPath = p.join(appRoot, 'catalog.json');
+      final rolloutRulePath = p.join(
+        repoRoot.path,
+        'backend',
+        'api',
+        'rollout-rules',
+        'coupon_center.json',
+      );
+
+      await Directory(screensDirectoryPath).create(recursive: true);
+      await Directory(p.join(versionRoot, 'assets')).create(recursive: true);
+      await File(latestManifestPath).writeAsString('{}');
+      await File(versionedManifestPath).writeAsString('{}');
+      await File(p.join(versionRoot, 'release.json')).writeAsString('{}');
+      await File(p.join(versionRoot, 'checksums.json')).writeAsString('{}');
+      await File(
+        p.join(screensDirectoryPath, 'coupon_center_home.json'),
+      ).writeAsString('{}');
+      await File(
+        p.join(versionRoot, 'assets', 'icon.png'),
+      ).writeAsBytes(const <int>[1, 2, 3]);
+      await File(catalogPath).writeAsString('{}');
+      await File(rolloutRulePath).writeAsString('{}');
+      await stateStore.recordPublishedArtifact(
+        repoRoot.path,
+        PublishedLocalArtifactRecord(
+          miniProgramId: 'coupon_center',
+          version: '1.0.0',
+          latestManifestPath: latestManifestPath,
+          versionedManifestPath: versionedManifestPath,
+          screensDirectoryPath: screensDirectoryPath,
+          publishedAtUtc: DateTime.utc(2026, 7, 18).toIso8601String(),
+        ),
+      );
+
+      final result = await controller.resetLocal(repoRootPath: repoRoot.path);
+
+      expect(result.removedPaths, contains(latestManifestPath));
+      expect(result.removedPaths, contains(versionedManifestPath));
+      expect(result.removedPaths, contains(screensDirectoryPath));
+      expect(result.removedPaths, contains(versionRoot));
+      expect(result.removedPaths, contains(catalogPath));
+      expect(await Directory(appRoot).exists(), isFalse);
+      expect(await File(rolloutRulePath).exists(), isTrue);
+      expect(
+        await File(
+          p.join(
+            repoRoot.path,
+            '.mini_program',
+            'published_local_artifacts.json',
+          ),
+        ).exists(),
+        isFalse,
+      );
+    });
+
     test(
       'start configures adb reverse for connected devices when available',
       () async {

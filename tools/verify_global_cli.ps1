@@ -60,17 +60,48 @@ function Invoke-Step {
 
     Write-Step -Name $Name
     Push-Location $Workdir
+    $previousErrorActionPreference = $ErrorActionPreference
     try {
+        # Windows PowerShell converts any native stderr output into an error
+        # record when ErrorActionPreference is Stop. Dart emits informational
+        # activation warnings on stderr, so use the process exit code as the
+        # authoritative success signal for native commands.
+        $ErrorActionPreference = "Continue"
         & $FilePath @Arguments
         $exitCode = $LASTEXITCODE
     }
     finally {
+        $ErrorActionPreference = $previousErrorActionPreference
         Pop-Location
     }
 
     if ($exitCode -ne 0) {
         throw "$Name failed with exit code $exitCode."
     }
+}
+
+function Invoke-MiniprogramStep {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Workdir,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    Invoke-Step `
+        -Name $Name `
+        -Workdir $Workdir `
+        -FilePath "dart" `
+        -Arguments (@(
+            "pub",
+            "global",
+            "run",
+            "mini_program_tooling:miniprogram"
+        ) + $Arguments)
 }
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("miniprogram_cli_verify_" + [System.Guid]::NewGuid().ToString("N"))
@@ -82,7 +113,8 @@ $hostRoot = Join-Path $workspaceRoot "host_app"
 $backendWorkspaceRoot = Join-Path $workspaceRoot "backend_workspace"
 $port = Get-FreeTcpPort
 $backendStarted = $false
-$sourceSnapshotDirectory = Join-Path $RepoRoot "packages\mini_program_tooling\.dart_tool\pub\bin\mini_program_tooling"
+$toolingPackageRoot = Join-Path $RepoRoot "packages\mini_program_tooling"
+$sourceSnapshotDirectory = Join-Path $toolingPackageRoot ".dart_tool\pub\bin\mini_program_tooling"
 
 New-Item -ItemType Directory -Path $pubCache -Force | Out-Null
 New-Item -ItemType Directory -Path $homeRoot -Force | Out-Null
@@ -118,28 +150,24 @@ try {
         throw "Installed miniprogram executable was not found at $miniprogramExecutable"
     }
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Create standalone mini-program" `
         -Workdir $workspaceRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("create", "coupon_center")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Initialize standalone env config" `
         -Workdir $miniProgramRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("env", "init")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Check standalone env status" `
         -Workdir $miniProgramRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("env", "status")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Initialize a standalone artifact host workspace" `
         -Workdir $workspaceRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @(
             "artifact-host",
             "init",
@@ -147,28 +175,24 @@ try {
             $backendWorkspaceRoot
         )
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Run doctor against the standalone workspace" `
         -Workdir $miniProgramRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("doctor")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Build standalone mini-program" `
         -Workdir $miniProgramRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("build", "coupon_center")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Validate standalone mini-program" `
         -Workdir $miniProgramRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("validate", "coupon_center")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Publish standalone mini-program to the local artifact host" `
         -Workdir $miniProgramRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("publish", "coupon_center")
 
     New-Item -ItemType Directory -Path (Join-Path $hostRoot "lib") -Force | Out-Null
@@ -181,16 +205,14 @@ dependencies:
     sdk: flutter
 '@ | Set-Content -Path (Join-Path $hostRoot "pubspec.yaml") -NoNewline
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Generate embedded app adapter" `
         -Workdir $hostRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("embed", "init")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Start local artifact host through the installed CLI" `
         -Workdir $hostRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @(
             "artifact-host",
             "start",
@@ -199,22 +221,19 @@ dependencies:
         )
     $backendStarted = $true
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Check artifact host status through the installed CLI" `
         -Workdir $hostRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("artifact-host", "status")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Run doctor with a healthy artifact host" `
         -Workdir $hostRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("doctor")
 
-    Invoke-Step `
+    Invoke-MiniprogramStep `
         -Name "Stop local artifact host through the installed CLI" `
         -Workdir $hostRoot `
-        -FilePath $miniprogramExecutable `
         -Arguments @("artifact-host", "stop")
     $backendStarted = $false
 
@@ -226,7 +245,7 @@ finally {
         if (Test-Path (Join-Path $pubCache "bin\miniprogram.bat")) {
             if ($backendStarted) {
                 try {
-                    & (Join-Path $pubCache "bin\miniprogram.bat") artifact-host stop --root $backendWorkspaceRoot | Out-Null
+                    & dart pub global run mini_program_tooling:miniprogram artifact-host stop --root $backendWorkspaceRoot | Out-Null
                 }
                 catch {
                     Write-Warning "Cleanup stop failed: $_"
@@ -234,7 +253,7 @@ finally {
             }
 
             try {
-                & (Join-Path $pubCache "bin\miniprogram.bat") artifact-host reset-local --root $backendWorkspaceRoot --yes | Out-Null
+                & dart pub global run mini_program_tooling:miniprogram artifact-host reset-local --root $backendWorkspaceRoot --yes | Out-Null
             }
             catch {
                 Write-Warning "Cleanup reset-local failed: $_"
@@ -265,8 +284,29 @@ finally {
         $env:PUB_CACHE = $previousPubCache
         $env:HOME = $previousHome
         $env:USERPROFILE = $previousUserProfile
-        if (-not $KeepTemp -and (Test-Path $workspaceRoot)) {
-            Remove-Item -LiteralPath $workspaceRoot -Recurse -Force
+        try {
+            # Path activation resolves the source package against the isolated
+            # PUB_CACHE. Restore its package config before deleting that cache.
+            Invoke-Step `
+                -Name "Restore tooling package dependencies after isolated activation" `
+                -Workdir $toolingPackageRoot `
+                -FilePath "dart" `
+                -Arguments @("pub", "get")
+        }
+        finally {
+            if (-not $KeepTemp -and (Test-Path $tempRoot)) {
+                $resolvedTempRoot = [System.IO.Path]::GetFullPath($tempRoot)
+                $resolvedSystemTemp = [System.IO.Path]::GetFullPath(
+                    [System.IO.Path]::GetTempPath()
+                )
+                if (-not $resolvedTempRoot.StartsWith(
+                        $resolvedSystemTemp,
+                        [System.StringComparison]::OrdinalIgnoreCase
+                    )) {
+                    throw "Refusing to remove CLI verification data outside the system temp directory: $resolvedTempRoot"
+                }
+                Remove-Item -LiteralPath $resolvedTempRoot -Recurse -Force
+            }
         }
     }
 }

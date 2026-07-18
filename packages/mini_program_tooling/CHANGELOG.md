@@ -1,3 +1,25 @@
+## 0.6.15
+
+- Refactor tooling internals into feature-owned normal Dart libraries across
+  delivery validation, host integration, artifact construction, preview,
+  policy generation, local state, workflows, scaffolding, development builds,
+  handoffs, diagnostics, Publisher API tooling, publishing, and CLI dispatch.
+- Preserve public APIs, CLI output and exit codes, generated files, process
+  behavior, JSON ordering, and artifact bytes with architecture, public API,
+  and parity coverage.
+- Replace the remaining mock Publisher API `part` libraries with a thin
+  compatibility facade and separately owned workspace, lifecycle, health,
+  process, launcher, state, URL, and template modules.
+- Make `artifact-host reset-local` clean tracked canonical artifact bundles
+  while retaining containment checks and unrelated host configuration.
+- Exclude generated Dart/package state when initializing local artifact-host
+  workspaces so installed templates never retain source-machine cache paths,
+  and align the template and repository samples with canonical `artifacts/`
+  delivery paths.
+- Make installed-CLI release verification invoke the activated package
+  directly so Windows batch wrappers cannot mask command failures, restore the
+  source package configuration afterward, and remove its isolated temp data.
+
 ## 0.6.14
 
 - Add `miniprogram host capability init location --platform android` to

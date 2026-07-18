@@ -20,21 +20,21 @@ separate provider-neutral Publisher API / middle-server.
 
 `profile_center` is published into:
 
-- `api/manifests/profile_center/latest.json`
-- `api/manifests/profile_center/versions/1.1.0.json`
-- `api/manifests/profile_center/versions/1.0.0.json`
-- `api/screens/profile_center/1.1.0/profile_center_home.json`
-- `api/screens/profile_center/1.0.0/profile_center_home.json`
+- `api/artifacts/profile_center/latest.json`
+- `api/artifacts/profile_center/1.1.0/manifest.json`
+- `api/artifacts/profile_center/1.0.0/manifest.json`
+- `api/artifacts/profile_center/1.1.0/screens/profile_center_home.json`
+- `api/artifacts/profile_center/1.0.0/screens/profile_center_home.json`
 - `api/rollout-rules/profile_center.json`
 - `api/capability-policies/profile_center.json`
 
 `feedback_form` is published into:
 
-- `api/manifests/feedback_form/latest.json`
-- `api/manifests/feedback_form/versions/1.1.0.json`
-- `api/manifests/feedback_form/versions/1.0.0.json`
-- `api/screens/feedback_form/1.1.0/feedback_form_home.json`
-- `api/screens/feedback_form/1.0.0/feedback_form_home.json`
+- `api/artifacts/feedback_form/latest.json`
+- `api/artifacts/feedback_form/1.1.0/manifest.json`
+- `api/artifacts/feedback_form/1.0.0/manifest.json`
+- `api/artifacts/feedback_form/1.1.0/screens/feedback_form_home.json`
+- `api/artifacts/feedback_form/1.0.0/screens/feedback_form_home.json`
 - `api/rollout-rules/feedback_form.json`
 - `api/capability-policies/feedback_form.json`
 - `api/secure-api-policies/feedback_submit.json`
@@ -105,16 +105,16 @@ dart run bin\server.dart --port=9135
 Then the local artifact service serves:
 
 - `http://localhost:8080/api/discovery/mini-programs.json`
-- `http://localhost:8080/api/manifests/profile_center/latest.json`
-- `http://localhost:8080/api/manifests/profile_center/versions/1.1.0.json`
-- `http://localhost:8080/api/manifests/profile_center/versions/1.0.0.json`
-- `http://localhost:8080/api/screens/profile_center/1.1.0/profile_center_home.json`
-- `http://localhost:8080/api/screens/profile_center/1.0.0/profile_center_home.json`
-- `http://localhost:8080/api/manifests/feedback_form/latest.json`
-- `http://localhost:8080/api/manifests/feedback_form/versions/1.1.0.json`
-- `http://localhost:8080/api/manifests/feedback_form/versions/1.0.0.json`
-- `http://localhost:8080/api/screens/feedback_form/1.1.0/feedback_form_home.json`
-- `http://localhost:8080/api/screens/feedback_form/1.0.0/feedback_form_home.json`
+- `http://localhost:8080/api/artifacts/profile_center/latest.json`
+- `http://localhost:8080/api/artifacts/profile_center/1.1.0/manifest.json`
+- `http://localhost:8080/api/artifacts/profile_center/1.0.0/manifest.json`
+- `http://localhost:8080/api/artifacts/profile_center/1.1.0/screens/profile_center_home.json`
+- `http://localhost:8080/api/artifacts/profile_center/1.0.0/screens/profile_center_home.json`
+- `http://localhost:8080/api/artifacts/feedback_form/latest.json`
+- `http://localhost:8080/api/artifacts/feedback_form/1.1.0/manifest.json`
+- `http://localhost:8080/api/artifacts/feedback_form/1.0.0/manifest.json`
+- `http://localhost:8080/api/artifacts/feedback_form/1.1.0/screens/feedback_form_home.json`
+- `http://localhost:8080/api/artifacts/feedback_form/1.0.0/screens/feedback_form_home.json`
 - `http://localhost:8080/api/secure/feedback/submit`
 
 ## Discovery catalog route
@@ -163,7 +163,7 @@ artifact-service mode the host sends:
 Example allowed request:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth
+GET /api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth
 ```
 
 That request resolves `latest` to `profile_center` `1.1.0`.
@@ -171,7 +171,7 @@ That request resolves `latest` to `profile_center` `1.1.0`.
 Example older-version lane:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation
+GET /api/artifacts/profile_center/latest.json?hostApp=partner_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation
 ```
 
 That request resolves `latest` to `profile_center` `1.0.0`.
@@ -179,7 +179,7 @@ That request resolves `latest` to `profile_center` `1.0.0`.
 Example rejected request:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics
+GET /api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics
 ```
 
 That rejected request returns `412` because `native_navigation` is missing.
@@ -187,7 +187,7 @@ That rejected request returns `412` because `native_navigation` is missing.
 Example pinned request:
 
 ```text
-GET /api/manifests/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth&pinnedVersion=1.0.0
+GET /api/artifacts/profile_center/latest.json?hostApp=super_app_host&sdkVersion=1.0.0&hostVersion=1.0.0&platform=android&locale=en-US&capabilities=analytics,native_navigation,auth&pinnedVersion=1.0.0
 ```
 
 That request resolves `latest` to the pinned `1.0.0` artifact and returns
