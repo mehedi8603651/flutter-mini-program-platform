@@ -1,57 +1,29 @@
-part of '../publisher_backend_starter.dart';
+import 'dart:io';
 
-extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
-  Future<PublisherBackendScaffoldResult> _scaffoldImpl(
-    PublisherBackendScaffoldRequest request,
-  ) async {
-    if (request.template != 'mock') {
-      throw PublisherBackendException(
-        'Publisher API provider templates were removed. Use your own '
-        'middle server and connect it with '
-        '`miniprogram publisher-api contract init --publisher-api-url <url>`, '
-        'or use `--template mock` for local API testing.',
-      );
-    }
-    if (request.storageMode != _publisherBackendStorageBundled) {
-      throw PublisherBackendException(
-        'publisher-backend scaffold --storage is not supported. The mock '
-        'publisher API uses bundled local JSON only; real storage belongs on '
-        'your external middle server.',
-      );
-    }
-    if (request.withStarterUi) {
-      throw const PublisherBackendException(
-        'publisher-backend scaffold --with-starter-ui was removed. Author '
-        'mini-program UI with provider-neutral backend API endpoints instead.',
-      );
-    }
-    final miniProgramRootPath = await _requireMiniProgramRoot(
-      request.miniProgramRootPath,
-    );
-    final backendRootPath = p.join(miniProgramRootPath, 'backend', 'mock');
-    final createdPaths = <String>[];
-    final files = buildMockPublisherBackendFiles(
-      miniProgramRootPath: miniProgramRootPath,
-    );
-    for (final entry in files.entries) {
-      await _writeManagedFile(
-        filePath: p.join(backendRootPath, entry.key),
-        contents: entry.value,
-        force: request.force,
-        createdPaths: createdPaths,
-      );
-    }
-    createdPaths.sort();
-    return PublisherBackendScaffoldResult(
-      miniProgramRootPath: miniProgramRootPath,
-      backendRootPath: backendRootPath,
-      template: request.template,
-      createdPaths: createdPaths,
-      storageMode: request.storageMode,
-    );
-  }
+import 'package:path/path.dart' as p;
 
-  Future<PublisherBackendRunResult> _runImpl({
+import 'dependencies.dart';
+import 'health.dart';
+import 'launcher.dart';
+import 'models.dart';
+import 'process_control.dart';
+import 'state_store.dart';
+import 'workspace.dart';
+
+class PublisherBackendLifecycle {
+  const PublisherBackendLifecycle(this.dependencies);
+
+  final PublisherBackendDependencies dependencies;
+
+  PublisherBackendHealthMonitor get _health =>
+      PublisherBackendHealthMonitor(dependencies);
+  PublisherBackendProcessControl get _process =>
+      PublisherBackendProcessControl(dependencies);
+  PublisherBackendStateStore get _stateStore =>
+      const PublisherBackendStateStore();
+  PublisherBackendWorkspace get _workspace => const PublisherBackendWorkspace();
+
+  Future<PublisherBackendRunResult> run({
     required String miniProgramRootPath,
     int port = 9090,
   }) async {
@@ -60,10 +32,12 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
         'publisher-backend run --port must be 1-65535.',
       );
     }
-    final rootPath = await _requireMiniProgramRoot(miniProgramRootPath);
+    final rootPath = await _workspace.requireMiniProgramRoot(
+      miniProgramRootPath,
+    );
     final backendRootPath = p.join(rootPath, 'backend', 'mock');
-    await _assertMockBackendPaths(backendRootPath);
-    final previousState = await _readState(rootPath);
+    await _workspace.assertMockBackendPaths(backendRootPath);
+    final previousState = await _stateStore.read(rootPath);
     if (previousState != null) {
       final previousStatus = await status(miniProgramRootPath: rootPath);
       if (previousStatus.processAlive && previousStatus.healthy) {
@@ -79,11 +53,11 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
           '${previousStatus.healthError ?? previousState.healthCheckUrl}',
         );
       }
-      await _clearState(rootPath);
+      await _stateStore.clear(rootPath);
     }
 
     final healthCheckUri = Uri.parse('http://127.0.0.1:$port/health');
-    final preExisting = await _probeHealth(healthCheckUri);
+    final preExisting = await _health.probe(healthCheckUri);
     if (preExisting.healthy) {
       throw PublisherBackendException(
         'A mock Publisher API is already responding at $healthCheckUri, but no '
@@ -91,7 +65,7 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       );
     }
 
-    final stateDirectory = await _ensureStateDirectory(rootPath);
+    final stateDirectory = await _stateStore.ensureStateDirectory(rootPath);
     final stdoutLogPath = p.join(
       stateDirectory.path,
       'publisher_backend.local.out.log',
@@ -108,7 +82,8 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
     );
     await File(stdoutLogPath).writeAsString('');
     await File(stderrLogPath).writeAsString('');
-    await _writeLauncherScript(
+    const launcher = PublisherBackendLauncher();
+    await launcher.writeScript(
       launcherScriptPath: launcherScriptPath,
       backendRootPath: backendRootPath,
       stdoutLogPath: stdoutLogPath,
@@ -116,20 +91,18 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       port: port,
     );
 
-    final startedProcess = await _processStarter(
-      executable: Platform.isWindows ? 'cmd.exe' : 'sh',
-      arguments: Platform.isWindows
-          ? <String>['/c', launcherScriptPath]
-          : <String>[launcherScriptPath],
+    final startedProcess = await dependencies.processStarter(
+      executable: launcher.executable(),
+      arguments: launcher.arguments(launcherScriptPath),
       workingDirectory: stateDirectory.path,
     );
-    final startupHealth = await _waitForHealthCheck(
+    final startupHealth = await _health.waitUntilHealthy(
       healthCheckUri,
       timeout: const Duration(seconds: 20),
     );
     if (!startupHealth.healthy) {
-      await _terminateProcess(startedProcess.pid);
-      final stderrTail = await _readLogTail(stderrLogPath);
+      await _process.terminate(startedProcess.pid);
+      final stderrTail = await _health.readLogTail(stderrLogPath);
       throw PublisherBackendException(
         [
           'Failed to confirm mock Publisher API health at $healthCheckUri.',
@@ -152,17 +125,19 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
       healthCheckUrl: healthCheckUri.toString(),
       stdoutLogPath: stdoutLogPath,
       stderrLogPath: stderrLogPath,
-      startedAtUtc: _clock().toUtc().toIso8601String(),
+      startedAtUtc: dependencies.clock().toUtc().toIso8601String(),
     );
-    await _writeState(rootPath, state);
+    await _stateStore.write(rootPath, state);
     return PublisherBackendRunResult(state: state, alreadyRunning: false);
   }
 
-  Future<PublisherBackendStatusResult> _statusImpl({
+  Future<PublisherBackendStatusResult> status({
     required String miniProgramRootPath,
   }) async {
-    final rootPath = await _requireMiniProgramRoot(miniProgramRootPath);
-    final state = await _readState(rootPath);
+    final rootPath = await _workspace.requireMiniProgramRoot(
+      miniProgramRootPath,
+    );
+    final state = await _stateStore.read(rootPath);
     if (state == null) {
       return const PublisherBackendStatusResult(
         state: null,
@@ -171,8 +146,8 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
         healthy: false,
       );
     }
-    final processAlive = await _isProcessAlive(state.pid);
-    final health = await _probeHealth(Uri.parse(state.healthCheckUrl));
+    final processAlive = await _process.isAlive(state.pid);
+    final health = await _health.probe(Uri.parse(state.healthCheckUrl));
     String? healthError = health.error;
     if (!processAlive && health.healthy) {
       healthError =
@@ -191,11 +166,13 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
     );
   }
 
-  Future<PublisherBackendStopResult> _stopImpl({
+  Future<PublisherBackendStopResult> stop({
     required String miniProgramRootPath,
   }) async {
-    final rootPath = await _requireMiniProgramRoot(miniProgramRootPath);
-    final state = await _readState(rootPath);
+    final rootPath = await _workspace.requireMiniProgramRoot(
+      miniProgramRootPath,
+    );
+    final state = await _stateStore.read(rootPath);
     if (state == null) {
       return const PublisherBackendStopResult(
         hadState: false,
@@ -204,9 +181,9 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
         clearedStaleState: false,
       );
     }
-    final processAlive = await _isProcessAlive(state.pid);
+    final processAlive = await _process.isAlive(state.pid);
     if (!processAlive) {
-      await _clearState(rootPath);
+      await _stateStore.clear(rootPath);
       return const PublisherBackendStopResult(
         hadState: true,
         processWasAlive: false,
@@ -214,8 +191,8 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
         clearedStaleState: true,
       );
     }
-    final stopResult = await _terminateProcess(state.pid);
-    if (stopResult.exitCode != 0 && await _isProcessAlive(state.pid)) {
+    final stopResult = await _process.terminate(state.pid);
+    if (stopResult.exitCode != 0 && await _process.isAlive(state.pid)) {
       final stderrText = '${stopResult.stderr}'.trim();
       throw PublisherBackendException(
         stderrText.isEmpty
@@ -223,25 +200,16 @@ extension _PublisherBackendStarterCoreOperations on PublisherBackendStarter {
             : 'Failed to stop mock Publisher API PID ${state.pid}.\n$stderrText',
       );
     }
-    await _waitForBackendUnavailable(
+    await _health.waitUntilUnavailable(
       Uri.parse(state.healthCheckUrl),
       timeout: const Duration(seconds: 5),
     );
-    await _clearState(rootPath);
+    await _stateStore.clear(rootPath);
     return const PublisherBackendStopResult(
       hadState: true,
       processWasAlive: true,
       stopped: true,
       clearedStaleState: false,
     );
-  }
-
-  PublisherBackendUrlsResult _urlsImpl({int port = 9090}) {
-    if (port <= 0 || port > 65535) {
-      throw const PublisherBackendException(
-        'publisher-backend urls --port must be 1-65535.',
-      );
-    }
-    return PublisherBackendUrlsResult(port: port);
   }
 }

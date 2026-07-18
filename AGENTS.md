@@ -711,7 +711,7 @@ packages/mini_program_tooling/
 |       |   |-- adb_reverse.dart                  # Best-effort Android device discovery and port reversal
 |       |   |-- lifecycle.dart                    # Ordered start, status, and stop orchestration
 |       |   `-- reset.dart                        # Contained tracked-artifact cleanup and directory pruning
-|       |-- publisher_backend_starter.dart        # Creates optional publisher API starter
+|       |-- publisher_backend_starter.dart        # Public mock Publisher API workspace lifecycle facade
 |       |-- publisher_backend_contract_controller.dart # CLI-internal Publisher API contract workflow facade
 |       |-- publisher_backend_contract/                # Internal contract file and smoke-check libraries
 |       |   |-- models.dart                       # Controller request/result models and injected HTTP factory
@@ -724,14 +724,16 @@ packages/mini_program_tooling/
 |       |       |-- response.dart                 # Status, JSON, timeout, and reachability mapping
 |       |       `-- coordinator.dart              # Ordered smoke execution and HTTP client disposal
 |       |-- publisher_backend/
-|       |   |-- core_operations.dart              # Shared create/start/stop/validate API workspace operations
-|       |   |-- models.dart                       # Public/internal publisher backend workflow models
-|       |   |-- internal_models.dart              # Implementation-only operation values
-|       |   |-- starter_helpers.dart              # Workspace starter path, template, and process helpers
-|       |   |-- runtime_smoke_helpers.dart        # Runtime API health/contract smoke helpers
-|       |   |-- models/
-|       |   |   `-- local_models.dart             # Local backend process and endpoint models
-|       |   |-- generated_files.dart              # Shared internal library generating mock middle-server files
+|       |   |-- models.dart                       # Public callbacks, requests, results, state, and exception
+|       |   |-- dependencies.dart                 # Injected shell, process, health, clock, and delay hooks
+|       |   |-- workspace.dart                    # Mock scaffold validation and managed-file writes
+|       |   |-- state_store.dart                  # App-local runtime state JSON persistence
+|       |   |-- launcher.dart                     # Byte-stable Windows/Unix launcher scripts
+|       |   |-- process_control.dart              # PID liveness and termination behavior
+|       |   |-- health.dart                       # Health probes, waits, and log-tail reads
+|       |   |-- lifecycle.dart                    # Ordered run, status, and stop orchestration
+|       |   |-- urls.dart                         # Validated desktop/emulator/USB URL projection
+|       |   |-- generated_files.dart              # Shared mock middle-server file assembly
 |       |   `-- generated_files/
 |       |       `-- mock_templates.dart           # Source templates embedded by generated API workspaces
 |       |-- cli/
@@ -889,6 +891,18 @@ force-overwrite behavior, unrelated files, and mock Publisher API append order.
 The scaffold and `PublisherBackendStarter` share the normal internal
 `publisher_backend/generated_files.dart` library; do not duplicate those
 templates or expose that generator from the public barrel.
+
+Mock Publisher API public callbacks, request/result/state models, exception,
+and `PublisherBackendStarter` stay available through
+`publisher_backend_starter.dart`. Implementation belongs in normal Dart
+libraries under `publisher_backend/` and must not import the public tooling
+barrel or starter facade. Preserve scaffold validation order and exact errors,
+managed-file bytes and created-path ordering, launcher bytes and process
+arguments, app-local state JSON property order, injected shell/process/health/
+clock/delay behavior, health retry timing, log-tail formatting, stale process
+handling, start/status/stop ordering, and URL validation. The mock runtime is a
+local development aid; do not merge it with artifact-owned Publisher API
+contract workflows or expose production provider configuration through it.
 
 Development-build public request, result, error, process-runner, and
 `MiniProgramBuilder` types stay available through `mini_program_builder.dart`.

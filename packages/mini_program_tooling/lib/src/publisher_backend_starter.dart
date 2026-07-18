@@ -1,26 +1,37 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
+import 'publisher_backend/dependencies.dart';
+import 'publisher_backend/lifecycle.dart';
+import 'publisher_backend/models.dart';
+import 'publisher_backend/urls.dart';
+import 'publisher_backend/workspace.dart';
 
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as p;
+export 'publisher_backend/models.dart'
+    show
+        PublisherBackendClock,
+        PublisherBackendDelay,
+        PublisherBackendException,
+        PublisherBackendHealthGetter,
+        PublisherBackendProcessStarter,
+        PublisherBackendRunResult,
+        PublisherBackendScaffoldRequest,
+        PublisherBackendScaffoldResult,
+        PublisherBackendShellRunner,
+        PublisherBackendState,
+        PublisherBackendStatusResult,
+        PublisherBackendStopResult,
+        PublisherBackendUrlsResult,
+        StartedPublisherBackendProcess;
 
-import 'publisher_backend/generated_files.dart';
-
-part 'publisher_backend/models.dart';
-part 'publisher_backend/models/local_models.dart';
-part 'publisher_backend/internal_models.dart';
-part 'publisher_backend/starter_helpers.dart';
-part 'publisher_backend/runtime_smoke_helpers.dart';
-part 'publisher_backend/core_operations.dart';
-
+/// Public compatibility facade for mock Publisher API workspace lifecycle.
 class PublisherBackendStarter {
   const PublisherBackendStarter({
-    PublisherBackendShellRunner shellRunner = _defaultShellRunner,
-    PublisherBackendProcessStarter processStarter = _defaultProcessStarter,
-    PublisherBackendHealthGetter healthGetter = http.get,
-    PublisherBackendClock clock = _defaultClock,
-    PublisherBackendDelay delay = _defaultDelay,
+    PublisherBackendShellRunner shellRunner =
+        defaultPublisherBackendShellRunner,
+    PublisherBackendProcessStarter processStarter =
+        defaultPublisherBackendProcessStarter,
+    PublisherBackendHealthGetter healthGetter =
+        defaultPublisherBackendHealthGetter,
+    PublisherBackendClock clock = defaultPublisherBackendClock,
+    PublisherBackendDelay delay = defaultPublisherBackendDelay,
   }) : _shellRunner = shellRunner,
        _processStarter = processStarter,
        _healthGetter = healthGetter,
@@ -33,55 +44,38 @@ class PublisherBackendStarter {
   final PublisherBackendClock _clock;
   final PublisherBackendDelay _delay;
 
+  PublisherBackendDependencies get _dependencies =>
+      PublisherBackendDependencies(
+        shellRunner: _shellRunner,
+        processStarter: _processStarter,
+        healthGetter: _healthGetter,
+        clock: _clock,
+        delay: _delay,
+      );
+
   Future<PublisherBackendScaffoldResult> scaffold(
     PublisherBackendScaffoldRequest request,
-  ) => _scaffoldImpl(request);
+  ) => const PublisherBackendWorkspace().scaffold(request);
 
   Future<PublisherBackendRunResult> run({
     required String miniProgramRootPath,
     int port = 9090,
-  }) => _runImpl(miniProgramRootPath: miniProgramRootPath, port: port);
+  }) => PublisherBackendLifecycle(
+    _dependencies,
+  ).run(miniProgramRootPath: miniProgramRootPath, port: port);
 
   Future<PublisherBackendStatusResult> status({
     required String miniProgramRootPath,
-  }) => _statusImpl(miniProgramRootPath: miniProgramRootPath);
+  }) => PublisherBackendLifecycle(
+    _dependencies,
+  ).status(miniProgramRootPath: miniProgramRootPath);
 
   Future<PublisherBackendStopResult> stop({
     required String miniProgramRootPath,
-  }) => _stopImpl(miniProgramRootPath: miniProgramRootPath);
+  }) => PublisherBackendLifecycle(
+    _dependencies,
+  ).stop(miniProgramRootPath: miniProgramRootPath);
 
-  PublisherBackendUrlsResult urls({int port = 9090}) => _urlsImpl(port: port);
-
-  static Future<ProcessResult> _defaultShellRunner(
-    String executable,
-    List<String> arguments, {
-    String? workingDirectory,
-  }) {
-    return Process.run(
-      executable,
-      arguments,
-      workingDirectory: workingDirectory,
-      runInShell: true,
-    );
-  }
-
-  static Future<StartedPublisherBackendProcess> _defaultProcessStarter({
-    required String executable,
-    required List<String> arguments,
-    required String workingDirectory,
-  }) async {
-    final process = await Process.start(
-      executable,
-      arguments,
-      workingDirectory: workingDirectory,
-      mode: ProcessStartMode.detached,
-    );
-    return StartedPublisherBackendProcess(pid: process.pid);
-  }
-
-  static DateTime _defaultClock() => DateTime.now();
-
-  static Future<void> _defaultDelay(Duration duration) {
-    return Future<void>.delayed(duration);
-  }
+  PublisherBackendUrlsResult urls({int port = 9090}) =>
+      buildPublisherBackendUrls(port: port);
 }

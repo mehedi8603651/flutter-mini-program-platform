@@ -1,7 +1,8 @@
-part of '../generated_files.dart';
+class MockPublisherBackendTemplates {
+  const MockPublisherBackendTemplates._();
 
-String _mockBackendPubspec(String appId) =>
-    '''
+  static String pubspec(String appId) =>
+      '''
 name: ${appId}_mock_backend
 description: Local mock Publisher API for $appId.
 publish_to: none
@@ -10,8 +11,8 @@ environment:
   sdk: '>=3.9.0 <4.0.0'
 ''';
 
-String _mockBackendReadme(String appId, String title) =>
-    '''
+  static String readme(String appId, String title) =>
+      '''
 # $title mock Publisher API
 
 This is a local-only mock Publisher API for mini-program data calls. It is not
@@ -50,7 +51,7 @@ business rules should live on your Publisher API server, not in the Flutter
 host app or mini_program_sdk.
 ''';
 
-String _mockBackendServerSource() => r'''
+  static String serverSource() => r'''
 import 'dart:convert';
 import 'dart:io';
 
@@ -237,3 +238,4 @@ String? _option(List<String> arguments, String name) {
   return null;
 }
 ''';
+}

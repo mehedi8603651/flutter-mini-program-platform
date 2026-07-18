@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-part 'generated_files/mock_templates.dart';
+import 'generated_files/mock_templates.dart';
 
 Map<String, String> buildMockPublisherBackendFiles({
   required String miniProgramRootPath,
@@ -17,9 +17,9 @@ Map<String, String> buildMockPublisherBackendFiles({
       ? title!.trim()
       : _titleFromAppId(appId);
   return <String, String>{
-    'pubspec.yaml': _mockBackendPubspec(appId),
-    'README.md': _mockBackendReadme(appId, displayTitle),
-    p.join('bin', 'server.dart'): _mockBackendServerSource(),
+    'pubspec.yaml': MockPublisherBackendTemplates.pubspec(appId),
+    'README.md': MockPublisherBackendTemplates.readme(appId, displayTitle),
+    p.join('bin', 'server.dart'): MockPublisherBackendTemplates.serverSource(),
     p.join('data', 'home_bootstrap.json'): _prettyJson(<String, Object?>{
       'title': '$displayTitle Publisher API mock',
       'subtitle': 'Loaded from the publisher-owned mock API.',
