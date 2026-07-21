@@ -158,6 +158,27 @@ JSON data paths are artifact-relative and cannot be remote URLs. Use
 `Mp.repeat` for horizontal collections. `Mp.refreshIndicator` is supported
 only as a screen root.
 
+## Local Text Editing
+
+Use a state-bound field for local drafts and editors that are not submitted as
+a backend form. The SDK keeps its controller synchronized with live state, and
+the host's live-state limits still apply.
+
+```dart
+Mp.stateTextField(
+  stateKey: 'note.body',
+  hint: 'Enter text...',
+  maxLength: 4096,
+  minLines: 8,
+  maxLines: 30,
+  keyboardType: 'multiline',
+  textInputAction: 'newline',
+);
+```
+
+Wrap custom visual content with `Mp.tap` when it needs one semantic action
+without adopting button presentation.
+
 ## Paged Lists
 
 Use `Mp.lazy.chunk` when repeated data is large, dynamic, comes from a

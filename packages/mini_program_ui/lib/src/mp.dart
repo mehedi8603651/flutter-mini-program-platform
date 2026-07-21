@@ -619,6 +619,59 @@ abstract final class Mp {
     keyboardType: keyboardType,
   );
 
+  /// Creates a live-state-controlled single or multiline text field.
+  static MpNode stateTextField({
+    required String stateKey,
+    String? label,
+    String? hint,
+    String initialValue = '',
+    int maxLength = 4096,
+    int minLines = 1,
+    int maxLines = 1,
+    String keyboardType = 'text',
+    String textInputAction = 'done',
+    bool autofocus = false,
+    Duration debounce = Duration.zero,
+    MpAction? onChanged,
+    MpAction? onSubmitted,
+    String textColor = '#FF111827',
+    String hintColor = '#FF6B7280',
+    String cursorColor = '#FF0B7A75',
+    String backgroundColor = '#FFFFFFFF',
+    String borderColor = '#FFD1D5DB',
+    String focusedBorderColor = '#FF0B7A75',
+    num borderWidth = 1,
+    num borderRadius = 8,
+    num fontSize = 15,
+    num paddingHorizontal = 12,
+    num paddingVertical = 10,
+  }) => buildStateTextFieldNode(
+    stateKey: stateKey,
+    label: label,
+    hint: hint,
+    initialValue: initialValue,
+    maxLength: maxLength,
+    minLines: minLines,
+    maxLines: maxLines,
+    keyboardType: keyboardType,
+    textInputAction: textInputAction,
+    autofocus: autofocus,
+    debounce: debounce,
+    onChanged: onChanged,
+    onSubmitted: onSubmitted,
+    textColor: textColor,
+    hintColor: hintColor,
+    cursorColor: cursorColor,
+    backgroundColor: backgroundColor,
+    borderColor: borderColor,
+    focusedBorderColor: focusedBorderColor,
+    borderWidth: borderWidth,
+    borderRadius: borderRadius,
+    fontSize: fontSize,
+    paddingHorizontal: paddingHorizontal,
+    paddingVertical: paddingVertical,
+  );
+
   /// Creates a state-driven backend search input for typeahead results.
   static MpNode searchInput({
     required String stateKey,
@@ -764,6 +817,14 @@ abstract final class Mp {
     required String label,
     required MpAction action,
   }) => buildSecondaryButtonNode(label: label, action: action);
+
+  /// Makes an arbitrary child dispatch an action when tapped.
+  static MpNode tap({
+    required String semanticLabel,
+    required MpAction action,
+    required MpNode child,
+  }) =>
+      buildTapNode(semanticLabel: semanticLabel, action: action, child: child);
 
   /// Creates a styled command button.
   static MpNode button({

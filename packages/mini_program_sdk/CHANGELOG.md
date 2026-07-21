@@ -1,3 +1,15 @@
+## 0.6.2
+
+- Accept the add, delete, edit, and note icon names during strict Mp screen
+  validation, matching the renderer and `mini_program_ui 0.2.1` authoring API.
+
+## 0.6.1
+
+- Render and strictly validate live-state-controlled `stateTextField` nodes,
+  including multiline editing, state synchronization, actions, and styling.
+- Render semantic generic `tap` wrappers through the existing action boundary.
+- Render common add, delete, edit, and note icons.
+
 ## 0.6.0
 
 - Establish the feature-oriented runtime architecture completed in `0.5.14`

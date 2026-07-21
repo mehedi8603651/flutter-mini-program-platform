@@ -33,6 +33,7 @@ void main() {
       'forms/shared.dart',
       'forms/state_builder.dart',
       'forms/state_search_field.dart',
+      'forms/state_text_field.dart',
       'forms/submit.dart',
       'forms/text_input.dart',
       'layout.dart',

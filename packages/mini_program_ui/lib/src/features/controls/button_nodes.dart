@@ -2,6 +2,21 @@ import '../../core/mp_action.dart';
 import '../../core/mp_node.dart';
 import '../shared/presentation_validation.dart';
 
+MpNode buildTapNode({
+  required String semanticLabel,
+  required MpAction action,
+  required MpNode child,
+}) {
+  return MpNode(
+    'tap',
+    props: <String, Object?>{
+      'semanticLabel': requiredWidgetString(semanticLabel, 'semanticLabel'),
+      'action': action,
+    },
+    children: <MpNode>[child],
+  );
+}
+
 MpNode buildPrimaryButtonNode({
   required String label,
   required MpAction action,

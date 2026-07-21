@@ -100,6 +100,10 @@ class MpScreenValidator {
     'bolt',
     'location',
     'menu',
+    'add',
+    'delete',
+    'edit',
+    'note',
     'sunny',
     'cloudy',
     'rain',
@@ -545,6 +549,11 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'tap' => _parseTapNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'iconButton' => _parseIconButtonNode(
         props: props,
         children: parsedChildren,
@@ -562,6 +571,11 @@ class MpScreenValidator {
         path: path,
       ),
       'searchField' => _parseSearchFieldNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'stateTextField' => _parseStateTextFieldNode(
         props: props,
         children: parsedChildren,
         path: path,

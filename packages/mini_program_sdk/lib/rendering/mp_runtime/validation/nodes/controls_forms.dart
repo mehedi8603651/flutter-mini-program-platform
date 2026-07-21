@@ -1,6 +1,30 @@
 part of '../../../mp_screen_renderer.dart';
 
 extension _MpControlFormNodeValidation on MpScreenValidator {
+  _MpNode _parseTapNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'semanticLabel',
+      'action',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'tap', path: path);
+    return _MpNode(
+      type: 'tap',
+      props: <String, dynamic>{
+        'semanticLabel': _requiredString(
+          props,
+          'semanticLabel',
+          path: '$path.props',
+        ),
+        'action': _parseAction(props['action'], path: '$path.props.action'),
+      },
+      children: children,
+    );
+  }
+
   _MpNode _parseButtonNode({
     required String type,
     required Map<String, dynamic> props,
@@ -344,6 +368,166 @@ extension _MpControlFormNodeValidation on MpScreenValidator {
         'showClearButton': _requiredBoolValue(
           props['showClearButton'],
           path: '$path.props.showClearButton',
+        ),
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
+  _MpNode _parseStateTextFieldNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'stateKey',
+      'label',
+      'hint',
+      'initialValue',
+      'maxLength',
+      'minLines',
+      'maxLines',
+      'keyboardType',
+      'textInputAction',
+      'autofocus',
+      'debounceMs',
+      'onChanged',
+      'onSubmitted',
+      'textColor',
+      'hintColor',
+      'cursorColor',
+      'backgroundColor',
+      'borderColor',
+      'focusedBorderColor',
+      'borderWidth',
+      'borderRadius',
+      'fontSize',
+      'paddingHorizontal',
+      'paddingVertical',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final minLines = _boundedIntValue(
+      props['minLines'],
+      path: '$path.props.minLines',
+      minimum: 1,
+      maximum: 100,
+    );
+    final maxLines = _boundedIntValue(
+      props['maxLines'],
+      path: '$path.props.maxLines',
+      minimum: 1,
+      maximum: 100,
+    );
+    if (maxLines < minLines) {
+      _fail(
+        'Mp stateTextField maxLines must be greater than or equal to minLines.',
+        path: '$path.props.maxLines',
+      );
+    }
+    final keyboardType = _requiredStableString(
+      props,
+      'keyboardType',
+      path: '$path.props',
+    );
+    if (!const <String>{
+      'text',
+      'multiline',
+      'email',
+      'number',
+      'phone',
+      'url',
+    }.contains(keyboardType)) {
+      _fail(
+        'Mp stateTextField keyboardType is not supported.',
+        path: '$path.props.keyboardType',
+      );
+    }
+    final textInputAction = _requiredStableString(
+      props,
+      'textInputAction',
+      path: '$path.props',
+    );
+    if (!const <String>{'done', 'next', 'newline'}.contains(textInputAction)) {
+      _fail(
+        'Mp stateTextField textInputAction is not supported.',
+        path: '$path.props.textInputAction',
+      );
+    }
+    return _MpNode(
+      type: 'stateTextField',
+      props: <String, dynamic>{
+        'stateKey': _requiredStateKey(props, 'stateKey', path: '$path.props'),
+        if (props.containsKey('label'))
+          'label': _requiredString(props, 'label', path: '$path.props'),
+        if (props.containsKey('hint'))
+          'hint': _requiredString(props, 'hint', path: '$path.props'),
+        'initialValue': _optionalStringLiteral(
+          props['initialValue'],
+          path: '$path.props.initialValue',
+        ),
+        'maxLength': _boundedIntValue(
+          props['maxLength'],
+          path: '$path.props.maxLength',
+          minimum: 1,
+          maximum: 65536,
+        ),
+        'minLines': minLines,
+        'maxLines': maxLines,
+        'keyboardType': keyboardType,
+        'textInputAction': textInputAction,
+        'autofocus': _requiredBoolValue(
+          props['autofocus'],
+          path: '$path.props.autofocus',
+        ),
+        'debounceMs': _boundedIntValue(
+          props['debounceMs'],
+          path: '$path.props.debounceMs',
+          minimum: 0,
+          maximum: 60000,
+        ),
+        if (props.containsKey('onChanged'))
+          'onChanged': _parseAction(
+            props['onChanged'],
+            path: '$path.props.onChanged',
+          ),
+        if (props.containsKey('onSubmitted'))
+          'onSubmitted': _parseAction(
+            props['onSubmitted'],
+            path: '$path.props.onSubmitted',
+          ),
+        for (final key in const <String>[
+          'textColor',
+          'hintColor',
+          'cursorColor',
+          'backgroundColor',
+          'borderColor',
+          'focusedBorderColor',
+        ])
+          key: _requiredHexColor(props, key, path: '$path.props'),
+        'borderWidth': _requiredNonNegativeNumber(
+          props,
+          'borderWidth',
+          path: '$path.props',
+        ),
+        'borderRadius': _requiredNonNegativeNumber(
+          props,
+          'borderRadius',
+          path: '$path.props',
+        ),
+        'fontSize': _requiredPositiveNumber(
+          props,
+          'fontSize',
+          path: '$path.props',
+        ),
+        'paddingHorizontal': _requiredNonNegativeNumber(
+          props,
+          'paddingHorizontal',
+          path: '$path.props',
+        ),
+        'paddingVertical': _requiredNonNegativeNumber(
+          props,
+          'paddingVertical',
+          path: '$path.props',
         ),
       },
       children: const <_MpNode>[],

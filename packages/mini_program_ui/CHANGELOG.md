@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Add a live-state-controlled `Mp.stateTextField` for reusable single-line and
+  multiline local editing with bounded input, actions, and explicit styling.
+- Add semantic `Mp.tap` action wrapping for arbitrary authored child content.
+- Add common add, delete, edit, and note icon names.
+
 ## 0.2.0
 
 - Establish the feature-oriented authoring architecture as the supported

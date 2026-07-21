@@ -28,8 +28,8 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.7` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.0` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.0` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_ui` | `0.2.1` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.2` | Flutter host runtime, renderer, state, cache, loading, and host integration |
 | `mini_program_tooling` | `0.7.0` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
@@ -451,6 +451,7 @@ packages/mini_program_sdk/
 |   |           |   |-- text_input.dart         # Controlled form text and text-area fields
 |   |           |   |-- backend_search_input.dart # Debounced Publisher API search field
 |   |           |   |-- state_search_field.dart # Controlled local-state search field
+|   |           |   |-- state_text_field.dart   # Styled single/multiline live-state editor
 |   |           |   |-- selection_controls.dart # Dropdown, checkbox, and radio controls
 |   |           |   `-- submit.dart             # Form validation and Publisher API submission
 |   |           |-- backend/
@@ -1260,10 +1261,12 @@ Inputs and controls:
 - `Mp.secondaryButton`: renders the standard lower-emphasis command button.
 - `Mp.button`: renders a fully styled text command button with stable dimensions.
 - `Mp.iconButton`: renders a semantic icon command with explicit size and decoration.
+- `Mp.tap`: makes an arbitrary child subtree a semantic action target without changing its visual structure.
 - `Mp.listTile`: renders a scan-friendly row with title, subtitle, leading/trailing content, and optional action.
 - `Mp.textInput`: edits one single-line form/state value.
 - `Mp.searchInput`: performs debounced Publisher API search and writes bounded result state.
 - `Mp.searchField`: edits live state and dispatches caller-provided local search actions after debounce or submit.
+- `Mp.stateTextField`: edits bounded single-line or multiline live state with optional actions and explicit presentation colors.
 - `Mp.textArea`: edits one multiline form/state value.
 - `Mp.dropdown`: selects one value from validated labeled options.
 - `Mp.checkbox`: edits a boolean form/state value.

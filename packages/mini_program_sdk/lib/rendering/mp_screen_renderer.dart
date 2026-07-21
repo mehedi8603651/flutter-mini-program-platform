@@ -77,6 +77,7 @@ part 'mp_runtime/widgets/forms/form_container.dart';
 part 'mp_runtime/widgets/forms/text_input.dart';
 part 'mp_runtime/widgets/forms/backend_search_input.dart';
 part 'mp_runtime/widgets/forms/state_search_field.dart';
+part 'mp_runtime/widgets/forms/state_text_field.dart';
 part 'mp_runtime/widgets/forms/selection_controls.dart';
 part 'mp_runtime/widgets/forms/submit.dart';
 part 'mp_runtime/widgets/backend/auth_builder.dart';

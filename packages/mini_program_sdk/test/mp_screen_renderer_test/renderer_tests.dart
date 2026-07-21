@@ -42,6 +42,10 @@ void _mpScreenRendererTests() {
                   'close',
                   'refresh',
                   'bolt',
+                  'add',
+                  'delete',
+                  'edit',
+                  'note',
                 ])
                   Mp.icon(name, semanticLabel: '$name icon'),
               ],
@@ -66,7 +70,7 @@ void _mpScreenRendererTests() {
         ),
       );
 
-      expect(find.byType(Icon), findsNWidgets(6));
+      expect(find.byType(Icon), findsNWidgets(10));
     });
 
     testWidgets('condition reacts to bound state without stateBuilder', (
@@ -5595,5 +5599,82 @@ void _mpScreenRendererTests() {
         backendStore.dispose();
       },
     );
+
+    testWidgets('keeps a multiline state text field synchronized', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final stateManager = MpStateManager();
+      stateManager.set('editor.body', 'Initial note');
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.tap(
+                  semanticLabel: 'Open note',
+                  action: Mp.state.set('editor.opened', true),
+                  child: Mp.text('Note title'),
+                ),
+                Mp.stateTextField(
+                  stateKey: 'editor.body',
+                  hint: 'Write your note',
+                  maxLength: 32768,
+                  minLines: 4,
+                  maxLines: 12,
+                  keyboardType: 'multiline',
+                  textInputAction: 'newline',
+                  textColor: '#FFF5F5F5',
+                  hintColor: '#FF999999',
+                  cursorColor: '#FF8EAD7C',
+                  backgroundColor: '#FF121212',
+                  borderColor: '#FF4A4A4A',
+                  focusedBorderColor: '#FF8EAD7C',
+                  onChanged: Mp.state.copy(
+                    from: 'editor.body',
+                    to: 'editor.last_body',
+                    convertTo: 'text',
+                  ),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: stateManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pump();
+
+      final field = find.byType(EditableText);
+      expect(field, findsOneWidget);
+      expect(
+        tester.widget<EditableText>(field).controller.text,
+        'Initial note',
+      );
+
+      await tester.enterText(field, 'Updated\nnote');
+      await tester.pump();
+      expect(stateManager.get<String>('editor.body'), 'Updated\nnote');
+      expect(stateManager.get<String>('editor.last_body'), 'Updated\nnote');
+
+      stateManager.set('editor.body', 'Programmatic update');
+      await tester.pump();
+      expect(
+        tester.widget<EditableText>(field).controller.text,
+        'Programmatic update',
+      );
+
+      await tester.tap(find.text('Note title'));
+      await tester.pump();
+      expect(stateManager.get<bool>('editor.opened'), isTrue);
+
+      backendStore.dispose();
+    });
   });
 }
