@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Add strictly validated `Mp.file.upload`, `Mp.file.download`, and
+  `Mp.file.cancel` authoring actions for Publisher API file transfers.
+- Keep native paths and file bytes outside mini-program JSON and live state.
+
 ## 0.2.1
 
 - Add a live-state-controlled `Mp.stateTextField` for reusable single-line and

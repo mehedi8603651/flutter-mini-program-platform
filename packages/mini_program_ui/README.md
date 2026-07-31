@@ -323,6 +323,44 @@ Mp.location.getCurrent(
 This API does not support background tracking, continuous updates, or precise
 location.
 
+## Publisher File Transfers
+
+File actions use relative routes on the artifact-declared Publisher API. The
+host must accept file policy and install a platform transfer provider. Files
+are streamed by the host; mini-program state receives only progress and
+sanitized result metadata.
+
+```dart
+Mp.file.upload(
+  endpoint: 'files/upload',
+  mimeTypes: const <String>['image/*', 'application/pdf'],
+  multiple: true,
+  metadata: const <String, Object?>{'folderId': 'inbox'},
+  progressState: 'files.progress',
+  targetState: 'files.uploadResult',
+  statusState: 'files.status',
+  errorState: 'files.error',
+);
+
+Mp.file.download(
+  endpoint: 'files/download',
+  request: const <String, Object?>{'fileId': 'file-1'},
+  destination: 'downloads',
+  suggestedName: 'report.pdf',
+  expectedMimeType: 'application/pdf',
+  progressState: 'files.progress',
+  targetState: 'files.downloadResult',
+);
+
+Mp.file.cancel(
+  transferId: '{{state.files.progress.transferId}}',
+  statusState: 'files.status',
+);
+```
+
+Upload and download are network operations, not aliases for local pick/save.
+The publisher server owns file IDs, folders, ACLs, and business metadata.
+
 ## Security Model
 
 `mini_program_ui` only serializes declarative JSON. It does not execute host

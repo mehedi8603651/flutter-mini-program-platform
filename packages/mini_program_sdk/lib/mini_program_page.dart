@@ -38,6 +38,7 @@ class MiniProgramPage extends StatelessWidget {
         capabilityRegistry: resolvedRuntime.capabilityRegistry,
         backendConnector: resolvedRuntime.backendConnector,
         locationProvider: resolvedRuntime.locationProvider,
+        fileTransferProvider: resolvedRuntime.fileTransferProvider,
         authController: resolvedRuntime.authController,
         featureFlagEvaluator: resolvedRuntime.featureFlagEvaluator,
         assetCache: resolvedRuntime.cacheBundle.assetCache,

@@ -124,8 +124,56 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('      return const MiniProgramLocationPolicy();')
     ..writeln('  }')
     ..writeln('}')
+    ..writeln()
+    ..writeln('MiniProgramFilePolicy filePolicyForMiniProgram(')
+    ..writeln('  String appId,')
+    ..writeln(') {')
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final appPolicy = hostJsonObjectOrEmpty(entry.value);
+    final accepted = hostJsonObjectOrEmpty(appPolicy['accepted']);
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final files = permissions['files'] is Map
+        ? hostJsonObjectOrEmpty(permissions['files'])
+        : null;
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return ${files == null ? 'const MiniProgramFilePolicy()' : _hostFilePolicyExpression(files)};',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramFilePolicy();')
+    ..writeln('  }')
+    ..writeln('}')
     ..writeln();
   return buffer.toString();
+}
+
+String _hostFilePolicyExpression(Map<String, Object?> files) {
+  final mimeTypes = (files['allowedMimeTypes'] as List)
+      .map((value) => hostDartString(value.toString()))
+      .join(', ');
+  final destinations = (files['allowedDestinations'] as List)
+      .map((value) => 'MiniProgramFileDownloadDestination.${value.toString()}')
+      .join(', ');
+  final maxFileBytes = files['maxFileBytes'];
+  final args = <String>[
+    'enabled: ${files['enabled'] == true}',
+    'allowUpload: ${files['allowUpload'] == true}',
+    'allowDownload: ${files['allowDownload'] == true}',
+    'allowedMimeTypes: <String>{$mimeTypes}',
+    'allowedDestinations: <MiniProgramFileDownloadDestination>{'
+        '$destinations}',
+    'maxFilesPerUpload: ${files['maxFilesPerUpload']}',
+    'maxConcurrentTransfers: ${files['maxConcurrentTransfers']}',
+    if (maxFileBytes != null) 'maxFileBytes: $maxFileBytes',
+    'minimumFreeBytes: ${files['minimumFreeBytes']}',
+  ];
+  return 'const MiniProgramFilePolicy(${args.join(', ')})';
 }
 
 String _hostLiveStatePolicyExpression(Map<String, Object?> liveState) {

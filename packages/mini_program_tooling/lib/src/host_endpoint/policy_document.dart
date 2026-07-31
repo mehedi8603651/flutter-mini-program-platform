@@ -213,6 +213,29 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
   required bool acceptRequested,
   Map<String, Object?> existing = const <String, Object?>{},
 }) {
+  if (permission == 'files') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostFiles(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'allowUpload': acceptRequested && request['upload'] == true,
+      'allowDownload': acceptRequested && request['download'] == true,
+      'allowedMimeTypes': request['mimeTypes'] is List
+          ? List<Object?>.from(request['mimeTypes']! as List)
+          : const <String>['*/*'],
+      'allowedDestinations': request['destinations'] is List
+          ? List<Object?>.from(request['destinations']! as List)
+          : const <String>['downloads', 'choose', 'temporary'],
+      'maxFileBytes': positiveHostInt(request['recommendedMaxFileBytes']),
+      'maxFilesPerUpload':
+          positiveHostInt(request['recommendedMaxFilesPerUpload']) ?? 10,
+      'maxConcurrentTransfers':
+          positiveHostInt(request['recommendedMaxConcurrentTransfers']) ?? 2,
+      'minimumFreeBytes': 256 * 1024 * 1024,
+    });
+  }
   if (permission != 'location') {
     return deepHostJsonObjectCopy(existing);
   }
@@ -231,6 +254,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
   Map<String, Object?> permissions,
 ) {
   final normalized = deepHostJsonObjectCopy(permissions);
+  final rawFiles = normalized['files'];
+  if (rawFiles != null) {
+    if (rawFiles is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.files must be an object.',
+      );
+    }
+    normalized['files'] = validateAcceptedHostFiles(
+      hostJsonObjectOrEmpty(rawFiles),
+    );
+  }
   final rawLocation = normalized['location'];
   if (rawLocation == null) {
     return sortedHostJsonObject(normalized);
@@ -258,6 +292,107 @@ Map<String, Object?> validateAcceptedHostPermissions(
   }
   normalized['location'] = sortedHostJsonObject(location);
   return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostFiles(Map<String, Object?> value) {
+  final normalized = deepHostJsonObjectCopy(value);
+  for (final key in const <String>{'enabled', 'allowUpload', 'allowDownload'}) {
+    if (normalized[key] is! bool) {
+      throw MiniProgramHostException(
+        'Accepted permissions.files.$key must be a boolean.',
+      );
+    }
+  }
+  final enabled = normalized['enabled']! as bool;
+  final allowUpload = normalized['allowUpload']! as bool;
+  final allowDownload = normalized['allowDownload']! as bool;
+  if (enabled && !allowUpload && !allowDownload) {
+    throw const MiniProgramHostException(
+      'Enabled permissions.files must allow upload or download.',
+    );
+  }
+  normalized['allowedMimeTypes'] = _acceptedHostStringList(
+    normalized['allowedMimeTypes'],
+    name: 'Accepted permissions.files.allowedMimeTypes',
+    maxItems: 32,
+    validate: _isAcceptedHostMimeType,
+  );
+  normalized['allowedDestinations'] = _acceptedHostStringList(
+    normalized['allowedDestinations'],
+    name: 'Accepted permissions.files.allowedDestinations',
+    maxItems: 3,
+    validate: const <String>{'downloads', 'choose', 'temporary'}.contains,
+  );
+  final maxFileBytes = normalized['maxFileBytes'];
+  if (maxFileBytes != null && positiveHostInt(maxFileBytes) == null) {
+    throw const MiniProgramHostException(
+      'Accepted permissions.files.maxFileBytes must be null or a positive integer.',
+    );
+  }
+  normalized['maxFileBytes'] = maxFileBytes == null
+      ? null
+      : positiveHostInt(maxFileBytes);
+  normalized['maxFilesPerUpload'] = _acceptedHostBoundedInt(
+    normalized['maxFilesPerUpload'],
+    name: 'Accepted permissions.files.maxFilesPerUpload',
+    max: 100,
+  );
+  normalized['maxConcurrentTransfers'] = _acceptedHostBoundedInt(
+    normalized['maxConcurrentTransfers'],
+    name: 'Accepted permissions.files.maxConcurrentTransfers',
+    max: 16,
+  );
+  normalized['minimumFreeBytes'] = _acceptedHostBoundedInt(
+    normalized['minimumFreeBytes'],
+    name: 'Accepted permissions.files.minimumFreeBytes',
+    max: 1024 * 1024 * 1024 * 1024,
+  );
+  return sortedHostJsonObject(normalized);
+}
+
+List<String> _acceptedHostStringList(
+  Object? raw, {
+  required String name,
+  required int maxItems,
+  required bool Function(String value) validate,
+}) {
+  if (raw is! List || raw.isEmpty || raw.length > maxItems) {
+    throw MiniProgramHostException('$name must contain 1-$maxItems values.');
+  }
+  final result = <String>[];
+  for (final item in raw) {
+    if (item is! String || !validate(item.trim().toLowerCase())) {
+      throw MiniProgramHostException('$name contains an invalid value.');
+    }
+    final normalized = item.trim().toLowerCase();
+    if (!result.contains(normalized)) {
+      result.add(normalized);
+    }
+  }
+  return result;
+}
+
+bool _isAcceptedHostMimeType(String value) {
+  if (value == '*/*') {
+    return true;
+  }
+  final parts = value.split('/');
+  final token = RegExp(r'^[a-z0-9!#$&^_.+-]+$');
+  return parts.length == 2 &&
+      token.hasMatch(parts.first) &&
+      (parts.last == '*' || token.hasMatch(parts.last));
+}
+
+int _acceptedHostBoundedInt(
+  Object? raw, {
+  required String name,
+  required int max,
+}) {
+  final value = positiveHostInt(raw);
+  if (value == null || value > max) {
+    throw MiniProgramHostException('$name must be an integer from 1 to $max.');
+  }
+  return value;
 }
 
 Map<String, Object?> _acceptedHostPublisherApiFromRequested(

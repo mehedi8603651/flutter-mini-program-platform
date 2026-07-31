@@ -80,6 +80,17 @@ miniprogram host capability init location --platform android --project-root .\co
 
 Provider installation does not grant location to any mini-program.
 
+For host-approved Publisher API uploads and downloads on Android, install the
+generic streaming file provider once and review each app's accepted file
+policy independently:
+
+```powershell
+miniprogram host capability init file --platform android --project-root .\coupon_host
+```
+
+The installer uses Android's document picker and public Downloads storage. It
+does not add broad storage permission or expose native paths to mini-programs.
+
 ## Optional Runtime API
 
 Publisher API Contract V1 is a runtime API standard only; host opening still uses `appId + artifactBaseUrl`.

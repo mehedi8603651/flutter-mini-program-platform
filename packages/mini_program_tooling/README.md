@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.0` generates mini-program projects against
-`mini_program_ui: ^0.2.0` and Flutter host projects against
-`mini_program_sdk: ^0.6.0`.
+Tooling `0.7.1` generates mini-program projects against
+`mini_program_ui: ^0.2.2` and Flutter host projects against
+`mini_program_sdk: ^0.6.3`.
 
 The CLI supports the current MVP architecture:
 
@@ -314,6 +314,12 @@ denied unless the host reviews and manually enables them or imports with
 `--accept-requested-policy`. Policy acceptance alone does not access the
 device.
 
+The same handoff may request Publisher API file transfers under
+`requestedPermissions.files`, including upload/download direction, MIME
+types, download destinations, and recommended limits. New file requests also
+default to denied. The host owns every accepted value and may reduce or reject
+the request.
+
 Install the reusable Android provider once per host app:
 
 ```powershell
@@ -328,6 +334,19 @@ any mini-program. Review each app under
 `lib/mini_program/mini_program_policies.json` separately. Background tracking,
 continuous updates, GPS/fine permission, and app-specific Weather behavior are
 not installed.
+
+Install the generic Android streaming file provider once per host app:
+
+```powershell
+miniprogram host capability init file `
+  --platform android `
+  --project-root .
+```
+
+This installs Android document picking, public Downloads/choose-destination
+support, streaming Publisher API transport, progress, and cancellation. It
+adds no broad storage permission and never enables an app policy. Files, paths,
+and content URIs are not copied into mini-program state.
 
 ### 3. Add An Endpoint Manually
 
@@ -582,6 +601,7 @@ miniprogram env status --json
 | `miniprogram host endpoint import` | Import a partner package into a host. |
 | `miniprogram host endpoint add` | Add an endpoint manually by URL. |
 | `miniprogram host capability init location --platform android` | Install generic one-time approximate Android location support. |
+| `miniprogram host capability init file --platform android` | Install generic Android Publisher API file transfers. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |
 | `miniprogram artifact-host ...` | Manage a local static artifact host. |
 | `miniprogram publisher-api ...` | Work with optional runtime middle-server APIs. |

@@ -7,6 +7,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   final MpStateManager _stateManager = MpStateManager();
   final MiniProgramDataResourceManager _dataResourceManager =
       MiniProgramDataResourceManager();
+  MiniProgramFileTransferManager? _fileTransferManager;
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
@@ -25,6 +26,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   void initState() {
     super.initState();
     _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
+    _fileTransferManager = _managerFor(widget.fileTransferProvider);
     _rebuildRendererRegistry();
     _restartLoad();
   }
@@ -40,6 +42,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.capabilityRegistry != oldWidget.capabilityRegistry ||
         widget.backendConnector != oldWidget.backendConnector ||
         widget.locationProvider != oldWidget.locationProvider ||
+        widget.fileTransferProvider != oldWidget.fileTransferProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
@@ -52,6 +55,10 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         _closeActiveCacheApp();
       }
       _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
+      if (widget.fileTransferProvider != oldWidget.fileTransferProvider) {
+        unawaited(_fileTransferManager?.dispose());
+        _fileTransferManager = _managerFor(widget.fileTransferProvider);
+      }
       _rebuildRendererRegistry();
       _restartLoad();
     }
@@ -64,6 +71,10 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   }
 
   void _restartLoad() {
+    final activeAppId = _manifest?.id;
+    if (activeAppId != null) {
+      unawaited(_fileTransferManager?.cancelAllFor(activeAppId));
+    }
     _closeActiveCacheApp();
     _disposeOwnedBackendConnector();
     _loadGeneration++;
@@ -84,6 +95,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _disposeOwnedBackendConnector();
     _backendStore.dispose();
     _stateManager.dispose();
+    unawaited(_fileTransferManager?.dispose());
     super.dispose();
   }
 
@@ -93,4 +105,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
   @override
   Widget build(BuildContext context) => _buildHost(context);
+
+  MiniProgramFileTransferManager? _managerFor(
+    MiniProgramFileTransferProvider? provider,
+  ) => provider == null ? null : MiniProgramFileTransferManager(provider);
 }

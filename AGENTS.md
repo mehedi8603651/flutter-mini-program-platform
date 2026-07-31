@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.7` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.1` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.2` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.0` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.8` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.2` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.3` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.1` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -68,6 +68,9 @@ These are system invariants, not preferences:
 14. Device location is an optional host capability: a mini-program may request
     one-time approximate foreground access, but runtime authority comes only
     from host-accepted policy and a host-installed provider.
+15. File uploads and downloads are optional streaming host capabilities. They
+    may use only relative routes on the accepted artifact Publisher API and
+    must never expose native paths, content URIs, or raw file bytes to state.
 
 ## Repository Map
 
@@ -118,6 +121,7 @@ packages/mini_program_contracts/
 |   |-- capability.dart                         # Host capability names and capability contracts
 |   |-- error_codes.dart                        # Stable machine-readable error codes used across layers
 |   |-- mini_program_location.dart              # Approximate one-time location enums and JSON-safe result contract
+|   |-- mini_program_file.dart                  # File-transfer progress, direction, and status contracts
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -170,6 +174,7 @@ packages/mini_program_ui/
 |       |   |-- cache/                          # Host-managed cache actions
 |       |   |-- data/                           # Artifact JSON loading and ranked search actions
 |       |   |-- location/                       # Host-controlled current-location action
+|       |   |-- file/                           # Publisher API upload, download, and cancellation actions
 |       |   |-- navigation/                     # Navigation and router actions
 |       |   |-- backend/                        # Publisher API actions, nodes, and search
 |       |   |-- auth/                           # Authentication actions and state builder
@@ -263,6 +268,8 @@ packages/mini_program_sdk/
 |   |   `-- sdk_logger.dart                     # Provider-neutral structured SDK logging hook
 |   |-- location/
 |   |   `-- mini_program_location.dart          # Host provider, accepted policy, and structured provider failures
+|   |-- file/
+|   |   `-- mini_program_file.dart              # Streaming provider, accepted policy, transfer manager, and results
 |   |-- state/
 |   |   |-- mp_state.dart                       # Public state/router import boundary and private part registry
 |   |   |-- live_state/
@@ -411,6 +418,7 @@ packages/mini_program_sdk/
 |   |       |   |-- math.dart                   # Math execution, normalization, and aggregate helpers
 |   |       |   |-- data.dart                   # Artifact JSON resource load and search execution
 |   |       |   |-- location.dart               # Accepted one-time location execution and request deduplication
+|   |       |   |-- file.dart                   # Streaming upload/download execution, progress, and cancellation
 |   |       |   |-- cache.dart                  # App-scoped cache action execution
 |   |       |   |-- feedback_forms_lazy.dart    # Form, lazy-load, toast, and dialog execution
 |   |       |   |-- composition.dart            # Sequence, conditional, and reusable-action calls
@@ -594,12 +602,18 @@ packages/mini_program_tooling/
 |       |   |   `-- android_integration.dart     # Existing Android network permission planning
 |       |   `-- capabilities/
 |       |       |-- models.dart                  # Capability request, result, and stable exception
-|       |       `-- location/
-|       |           |-- installer.dart           # Android location installation coordinator
-|       |           |-- source_files.dart        # Kotlin package, ownership, and installed-state checks
-|       |           |-- source_editors.dart      # Host setup, manifest, and MainActivity patching
-|       |           |-- dart_provider_template.dart # Host-owned Dart provider template
-|       |           `-- android_channel_template.dart # Host-owned Kotlin MethodChannel template
+|       |       |-- location/
+|       |       |   |-- installer.dart           # Android location installation coordinator
+|       |       |   |-- source_files.dart        # Kotlin package, ownership, and installed-state checks
+|       |       |   |-- source_editors.dart      # Host setup, manifest, and MainActivity patching
+|       |       |   |-- dart_provider_template.dart # Host-owned Dart provider template
+|       |       |   `-- android_channel_template.dart # Host-owned Kotlin MethodChannel template
+|       |       `-- file_transfer/
+|       |           |-- installer.dart           # Android file capability installation coordinator
+|       |           |-- source_files.dart        # Host-owned provider/channel discovery and guards
+|       |           |-- source_editors.dart      # Host setup and MainActivity patching
+|       |           |-- dart_provider_template.dart # Dart MethodChannel transfer provider
+|       |           `-- android_channel_template.dart # Picker, MediaStore, and streaming Kotlin adapter
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
 |       |   |-- models.dart                      # Public run/import requests, results, runner, and exception
@@ -1084,9 +1098,10 @@ lib/mini_program/
 |-- mini_program_endpoints.dart                 # Endpoint-import generated artifact routes plus accepted policies
 |-- mini_program_registry.dart                  # Generated app ID to endpoint registry
 |-- mini_program_policies.json                  # Host-owned requested/accepted policy source of truth
-|-- mini_program_policy_resolver.dart           # Generated Dart mapping for accepted cache/state/location policy
+|-- mini_program_policy_resolver.dart           # Generated Dart mapping for accepted cache/state/location/file policy
 |-- mini_program_launcher.dart                  # Generated dynamic and registry-based launch helpers
 |-- app_android_location_provider.dart          # Optional host-owned adapter installed by the location capability command
+|-- app_android_file_transfer_provider.dart     # Optional host-owned streaming file adapter
 `-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
 
@@ -1096,6 +1111,13 @@ only `ACCESS_COARSE_LOCATION`. Run
 `miniprogram host capability init location --platform android` once per host.
 The installer never edits accepted app policy; provider availability and app
 authorization remain separate controls.
+
+Android Publisher API file transfer additionally installs
+`MiniProgramFileTransferChannel.kt`, registers it from `MainActivity`, and
+uses the system document picker plus scoped `MediaStore.Downloads`. Run
+`miniprogram host capability init file --platform android` once per host. The
+installer adds no broad storage permission and does not accept file policy for
+any app.
 
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
@@ -1207,7 +1229,8 @@ The authoring API currently maps to 63 unique SDK runtime node types. There are
 67 distinct public constructors when the five `Mp.skeleton` variants are
 counted separately, and 69 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`, and
-`Mp.location.*` are not widgets and are excluded from these totals.
+`Mp.location.*` and `Mp.file.*` are not widgets and are excluded from these
+totals.
 
 Layout and structure:
 
@@ -1316,6 +1339,8 @@ Important state APIs include:
 - `Mp.timer.countdown` for declarative countdown state.
 - `Mp.location.getCurrent` for explicit one-time approximate foreground
   location through an accepted host policy and installed host provider.
+- `Mp.file.upload`, `Mp.file.download`, and `Mp.file.cancel` for app-isolated,
+  host-accepted Publisher API transfers with bounded progress state.
 
 Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
 
@@ -1340,8 +1365,8 @@ TTL, enabled buckets, and byte limits are enforced consistently by the manager. 
 Partner handoff schema version 3 may request cache for `memory`, `data`,
 `image`, `state`, or `video`, may request Publisher API access when the
 artifact declares it, and may request one-time foreground approximate
-location. Sensitive bucket/key names such as session, login data, token,
-password, and secret are rejected.
+location or streaming file transfers. Sensitive bucket/key names such as
+session, login data, token, password, and secret are rejected.
 
 `lib/mini_program/mini_program_policies.json` contains:
 
@@ -1364,6 +1389,14 @@ password, and secret are rejected.
             "reason": "Load local content for the device area.",
             "accuracy": "approximate",
             "mode": "whenInUse"
+          },
+          "files": {
+            "enabled": true,
+            "reason": "Upload and download account documents.",
+            "upload": true,
+            "download": true,
+            "mimeTypes": ["application/pdf"],
+            "destinations": ["downloads", "choose"]
           }
         }
       },
@@ -1376,6 +1409,17 @@ password, and secret are rejected.
             "enabled": false,
             "accuracy": "approximate",
             "mode": "whenInUse"
+          },
+          "files": {
+            "enabled": false,
+            "allowUpload": false,
+            "allowDownload": false,
+            "allowedMimeTypes": ["application/pdf"],
+            "allowedDestinations": ["downloads", "choose"],
+            "maxFileBytes": null,
+            "maxFilesPerUpload": 10,
+            "maxConcurrentTransfers": 2,
+            "minimumFreeBytes": 268435456
           }
         }
       }
@@ -1388,17 +1432,25 @@ Import behavior:
 
 - Normal import updates `requested` and preserves the host's `accepted` values.
 - `--accept-requested-policy` explicitly copies supported requested cache,
-  Publisher API, and location permission into accepted policy without
+  Publisher API, location, and file permissions into accepted policy without
   replacing unrelated endpoint files.
-- New location requests default to denied. Normal re-import preserves the
-  host decision; `--force` resets location to denied and resets live-state
-  limits to safe defaults.
+- New location and file requests default to denied. Normal re-import preserves
+  host decisions; `--force` resets them to denied and resets live-state limits
+  to safe defaults.
 - Runtime resolver generation reads only `accepted` for enforcement.
 - Unknown accepted fields should be preserved for forward compatibility.
 
 ### Optional Publisher API
 
 Static-only apps need no runtime backend. Apps requiring accounts, synchronized data, payments, notifications, files, or business rules declare one HTTPS middle-server in root `publisher_backend.json` and call relative endpoints through approved `Mp.backend.*` actions.
+
+Large file transfers do not pass through the JSON-buffered backend connector.
+`Mp.file.*` resolves the same accepted relative Publisher API route and safe
+headers, then delegates streaming I/O to `MiniProgramFileTransferProvider`.
+Providers own native picker/storage integration, enforce limits while
+streaming, delete partial downloads, and return only sanitized metadata. The
+publisher server remains responsible for file IDs, ACLs, folders, and business
+rules.
 
 ```text
 Mini-program runtime action

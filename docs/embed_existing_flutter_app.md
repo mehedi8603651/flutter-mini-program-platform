@@ -80,6 +80,22 @@ location for any mini-program. The same provider supports any accepted app
 that needs explicit, one-time approximate foreground location; it contains no
 Weather-specific behavior.
 
+## Optional Android Publisher File Transfers
+
+A handoff may request `requestedPermissions.files`. Import defaults the
+accepted file policy to denied unless the host explicitly accepts it. Install
+the reusable Android provider once:
+
+```powershell
+miniprogram host capability init file `
+  --platform android `
+  --project-root D:\my_host_app
+```
+
+The generated host-owned adapter uses Android document picking and streaming
+HTTP against validated relative Publisher API routes. It adds no broad storage
+permission and does not expose paths or content URIs to mini-program state.
+
 ## 4. Launch From UI
 
 Import the public barrel and use the generated registry launcher:

@@ -6,6 +6,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart'
 
 import '../cache/runtime_cache.dart';
 import '../location/mini_program_location.dart';
+import '../file/mini_program_file.dart';
 import '../state/mp_state.dart';
 import 'http_mini_program_source.dart';
 import 'mini_program_delivery_context.dart';

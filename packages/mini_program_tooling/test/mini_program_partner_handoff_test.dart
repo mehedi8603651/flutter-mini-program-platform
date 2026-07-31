@@ -165,6 +165,43 @@ void main() {
       },
     );
 
+    test('writes and reads a streaming file permission request', () async {
+      const controller = MiniProgramPartnerHandoffController();
+      final outputPath = p.join(tempDir.path, 'drive-files.partner.json');
+      await controller.createPackage(
+        MiniProgramPartnerPackageRequest(
+          appId: 'drive',
+          title: 'Drive',
+          artifactBaseUri: Uri.parse('https://cdn.example.com/drive/'),
+          outputPath: outputPath,
+          generatedAtUtc: DateTime.utc(2026, 8, 1),
+          requestedPermissions: const <String, Object?>{
+            'files': <String, Object?>{
+              'enabled': true,
+              'reason': 'Upload and download files from your drive.',
+              'upload': true,
+              'download': true,
+              'mimeTypes': <String>['*/*'],
+              'destinations': <String>['downloads', 'choose'],
+              'recommendedMaxConcurrentTransfers': 3,
+              'recommendedMaxFilesPerUpload': 20,
+            },
+          },
+        ),
+      );
+      final handoff = await controller.readPackage(outputPath);
+      expect(handoff.requestedPermissions['files'], <String, Object?>{
+        'enabled': true,
+        'reason': 'Upload and download files from your drive.',
+        'upload': true,
+        'download': true,
+        'mimeTypes': <String>['*/*'],
+        'destinations': <String>['downloads', 'choose'],
+        'recommendedMaxFilesPerUpload': 20,
+        'recommendedMaxConcurrentTransfers': 3,
+      });
+    });
+
     test('rejects malformed or unsupported permission requests', () async {
       for (final permissions in <Map<String, Object?>>[
         <String, Object?>{
@@ -184,6 +221,23 @@ void main() {
             'reason': '',
             'accuracy': 'approximate',
             'mode': 'always',
+          },
+        },
+        <String, Object?>{
+          'files': <String, Object?>{
+            'enabled': true,
+            'reason': 'Files',
+            'upload': false,
+            'download': false,
+          },
+        },
+        <String, Object?>{
+          'files': <String, Object?>{
+            'enabled': true,
+            'reason': 'Files',
+            'upload': true,
+            'download': false,
+            'mimeTypes': <String>['invalid'],
           },
         },
       ]) {

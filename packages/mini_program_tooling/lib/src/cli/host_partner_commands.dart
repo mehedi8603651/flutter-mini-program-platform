@@ -106,7 +106,8 @@ extension CliHostPartnerCommands on CliContext {
     final results = parser.parse(arguments);
     if (results.flag('help')) {
       _stdout.writeln(
-        'Usage: miniprogram host capability init location --platform android [options]',
+        'Usage: miniprogram host capability init <location|file> '
+        '--platform android [options]',
       );
       _stdout.writeln(parser.usage);
       return 0;
@@ -135,14 +136,14 @@ extension CliHostPartnerCommands on CliContext {
       _stdout.writeln(prettyJson(result.toJson()));
       return 0;
     }
+    final isLocation = result.capability == 'location';
+    final label = isLocation
+        ? 'Android one-time approximate location support'
+        : 'Android streaming file transfer support';
     if (result.alreadyInstalled) {
-      _stdout.writeln(
-        'Android one-time approximate location support is already installed.',
-      );
+      _stdout.writeln('$label is already installed.');
     } else {
-      _stdout.writeln(
-        'Installed Android one-time approximate location support.',
-      );
+      _stdout.writeln('Installed $label.');
       for (final path in result.createdPaths) {
         _stdout.writeln('Created: $path');
       }
@@ -153,7 +154,7 @@ extension CliHostPartnerCommands on CliContext {
     _stdout.writeln(
       'No mini-program permission was accepted. Review '
       'lib/mini_program/mini_program_policies.json before enabling location '
-      'for an app.',
+      'or files for an app.',
     );
     return 0;
   }

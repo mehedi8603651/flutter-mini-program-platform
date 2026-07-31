@@ -3,6 +3,34 @@ part of '../../mini_program_backend_connector.dart';
 typedef MiniProgramBackendHttpClientFactory = http.Client Function();
 
 @immutable
+class MiniProgramResolvedBackendTransfer {
+  const MiniProgramResolvedBackendTransfer({
+    required this.candidateUris,
+    required this.method,
+    required this.headers,
+    required this.timeout,
+  });
+
+  final List<Uri> candidateUris;
+  final String method;
+  final Map<String, String> headers;
+  final Duration timeout;
+}
+
+class MiniProgramBackendTransferResolutionException implements Exception {
+  const MiniProgramBackendTransferResolutionException({
+    required this.errorCode,
+    required this.message,
+  });
+
+  final String errorCode;
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+@immutable
 class MiniProgramBackendEndpoint {
   const MiniProgramBackendEndpoint({
     required this.baseUri,

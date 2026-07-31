@@ -31,6 +31,12 @@ abstract final class CapabilityIds {
   /// Host can provide an explicitly requested one-time current location.
   static const CapabilityId locationCurrent = 'location.current';
 
+  /// Host can stream a user-selected file to an accepted Publisher API.
+  static const CapabilityId fileUpload = 'file.upload';
+
+  /// Host can stream a Publisher API response to user-visible storage.
+  static const CapabilityId fileDownload = 'file.download';
+
   /// Stable ordering used by scaffolds and human-readable output.
   static const List<CapabilityId> standardValues = <CapabilityId>[
     auth,
@@ -41,6 +47,8 @@ abstract final class CapabilityIds {
     documentPdf,
     browserWebview,
     locationCurrent,
+    fileUpload,
+    fileDownload,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

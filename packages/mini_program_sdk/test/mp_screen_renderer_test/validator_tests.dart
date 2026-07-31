@@ -151,6 +151,63 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts file actions and rejects unsafe transfer endpoints', () {
+      final valid = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.primaryButton(
+              label: 'Files',
+              action: Mp.action.sequence(<MpAction>[
+                Mp.file.upload(
+                  endpoint: 'files/upload',
+                  progressState: 'files.progress',
+                  targetState: 'files.upload',
+                ),
+                Mp.file.download(
+                  endpoint: 'files/download',
+                  progressState: 'files.progress',
+                  targetState: 'files.download',
+                ),
+                Mp.file.cancel(
+                  transferId: '{{state.files.progress.transferId}}',
+                ),
+              ]),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      const MpScreenValidator().validate(
+        valid,
+        expectedScreenId: 'coupon_home',
+      );
+
+      final invalid = _uiGeneratedScreen();
+      final root = invalid['root']! as Map<String, dynamic>;
+      (root['children']! as List<dynamic>).add(<String, dynamic>{
+        'type': 'button',
+        'props': <String, dynamic>{
+          'label': 'Upload',
+          'action': <String, dynamic>{
+            'type': 'file.upload',
+            'props': <String, dynamic>{
+              'endpoint': 'https://untrusted.example/upload',
+              'mimeTypes': <String>['*/*'],
+              'fieldName': 'file',
+              'progressState': 'files.progress',
+              'targetState': 'files.result',
+            },
+          },
+        },
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          invalid,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+    });
+
     test('accepts generated condition, ifElse, and countdown primitives', () {
       final screen = _jsonMap(
         MpProgram(

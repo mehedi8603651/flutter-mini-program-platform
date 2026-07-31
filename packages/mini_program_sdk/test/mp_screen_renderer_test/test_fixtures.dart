@@ -767,6 +767,8 @@ Future<Object?> _runMpAction(
   MiniProgramBackendStore? backendStore,
   MiniProgramLocationProvider? locationProvider,
   MiniProgramLocationPolicy locationPolicy = const MiniProgramLocationPolicy(),
+  MiniProgramFileTransferManager? fileTransferManager,
+  MiniProgramFilePolicy filePolicy = const MiniProgramFilePolicy(),
   String? miniProgramVersion,
   MiniProgramDataResourceManager? dataResourceManager,
   MiniProgramJsonAssetSource? jsonAssetSource,
@@ -785,6 +787,8 @@ Future<Object?> _runMpAction(
         backendConnector: backendConnector,
         locationProvider: locationProvider,
         locationPolicy: locationPolicy,
+        fileTransferManager: fileTransferManager,
+        filePolicy: filePolicy,
         cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
         cachePolicy: cachePolicy,
         miniProgramVersion: miniProgramVersion,
@@ -932,6 +936,87 @@ class _FailingLocationProvider implements MiniProgramLocationProvider {
     required MiniProgramLocationAccuracy accuracy,
     required Duration timeout,
   }) async => throw error;
+}
+
+class _TestFileBackendConnector
+    implements MiniProgramBackendConnector, MiniProgramBackendTransferResolver {
+  MiniProgramBackendRequest? resolvedRequest;
+
+  @override
+  Future<MiniProgramBackendResult> call(
+    MiniProgramBackendRequest request,
+  ) async => MiniProgramBackendResult.success();
+
+  @override
+  MiniProgramResolvedBackendTransfer resolveTransfer(
+    MiniProgramBackendRequest request,
+  ) {
+    resolvedRequest = request;
+    return MiniProgramResolvedBackendTransfer(
+      candidateUris: <Uri>[
+        Uri.parse('https://api.example.com/${request.endpoint}'),
+      ],
+      method: request.method,
+      headers: const <String, String>{'x-app': 'coupon'},
+      timeout: const Duration(seconds: 20),
+    );
+  }
+}
+
+class _TestFileTransferProvider implements MiniProgramFileTransferProvider {
+  _TestFileTransferProvider({this.downloadDestinationOverride});
+
+  final String? downloadDestinationOverride;
+  MiniProgramFileUploadRequest? uploadRequest;
+  MiniProgramFileDownloadRequest? downloadRequest;
+  final Set<String> cancelled = <String>{};
+
+  @override
+  Future<MiniProgramFileTransferResult> upload(
+    MiniProgramFileUploadRequest request, {
+    required MiniProgramFileProgressCallback onProgress,
+  }) async {
+    uploadRequest = request;
+    onProgress(
+      MiniProgramFileTransferProgress(
+        transferId: request.transferId,
+        direction: MiniProgramFileTransferDirection.upload,
+        status: MiniProgramFileTransferStatus.running,
+        bytesTransferred: 10,
+        totalBytes: 20,
+        fileName: 'report.pdf',
+      ),
+    );
+    return MiniProgramFileTransferResult(
+      transferId: request.transferId,
+      direction: MiniProgramFileTransferDirection.upload,
+      statusCode: 201,
+      bytesTransferred: 20,
+      fileName: 'report.pdf',
+      mimeType: 'application/pdf',
+      data: const <String, dynamic>{'fileId': 'remote-1'},
+    );
+  }
+
+  @override
+  Future<MiniProgramFileTransferResult> download(
+    MiniProgramFileDownloadRequest request, {
+    required MiniProgramFileProgressCallback onProgress,
+  }) async {
+    downloadRequest = request;
+    return MiniProgramFileTransferResult(
+      transferId: request.transferId,
+      direction: MiniProgramFileTransferDirection.download,
+      statusCode: 200,
+      bytesTransferred: 32,
+      fileName: request.suggestedName ?? 'download.bin',
+      mimeType: request.expectedMimeType ?? 'application/octet-stream',
+      destination: downloadDestinationOverride ?? request.destination.name,
+    );
+  }
+
+  @override
+  Future<bool> cancel(String transferId) async => cancelled.add(transferId);
 }
 
 class _AuthConnector implements MiniProgramBackendConnector {

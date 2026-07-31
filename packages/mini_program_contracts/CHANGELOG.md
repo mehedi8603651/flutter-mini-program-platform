@@ -1,3 +1,9 @@
+## 0.3.8
+
+- Add stable `file.upload`, `file.download`, and `file.cancel` action names.
+- Add provider-neutral file transfer progress contracts, capability IDs, and
+  stable policy, picker, storage, transfer, cancellation, and result errors.
+
 ## 0.3.7
 
 - Add provider-neutral one-time approximate location result contracts.

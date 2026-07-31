@@ -438,6 +438,86 @@ void main() {
     });
 
     test(
+      'file permission defaults denied and explicit acceptance is generated',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeHostProject(hostRoot);
+        final controller = MiniProgramHostController();
+        final request = MiniProgramHostEndpointAddRequest(
+          projectRootPath: hostRoot,
+          appId: 'drive',
+          title: 'Drive',
+          apiBaseUri: Uri.parse('https://cdn.example.com/drive/'),
+          requestedPermissions: const <String, Object?>{
+            'files': <String, Object?>{
+              'enabled': true,
+              'reason': 'Upload and download drive files.',
+              'upload': true,
+              'download': true,
+              'mimeTypes': <String>['application/pdf', 'image/*'],
+              'destinations': <String>['downloads', 'choose'],
+              'recommendedMaxFilesPerUpload': 5,
+              'recommendedMaxConcurrentTransfers': 2,
+            },
+          },
+        );
+        final initial = await controller.addEndpoint(request);
+        var policies =
+            jsonDecode(await File(initial.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        var drive =
+            (policies['apps'] as Map<String, dynamic>)['drive']
+                as Map<String, dynamic>;
+        var files =
+            (((drive['accepted'] as Map<String, dynamic>)['permissions']
+                    as Map<String, dynamic>)['files'])
+                as Map<String, dynamic>;
+        expect(files['enabled'], isFalse);
+        expect(files['allowUpload'], isFalse);
+        expect(files['maxFileBytes'], isNull);
+
+        await controller.addEndpoint(
+          MiniProgramHostEndpointAddRequest(
+            projectRootPath: request.projectRootPath,
+            appId: request.appId,
+            title: request.title,
+            apiBaseUri: request.apiBaseUri,
+            requestedPermissions: request.requestedPermissions,
+            acceptRequestedPolicy: true,
+          ),
+        );
+        policies =
+            jsonDecode(await File(initial.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        drive =
+            (policies['apps'] as Map<String, dynamic>)['drive']
+                as Map<String, dynamic>;
+        files =
+            (((drive['accepted'] as Map<String, dynamic>)['permissions']
+                    as Map<String, dynamic>)['files'])
+                as Map<String, dynamic>;
+        expect(files['enabled'], isTrue);
+        expect(files['allowUpload'], isTrue);
+        expect(files['allowDownload'], isTrue);
+        expect(files['allowedMimeTypes'], <dynamic>[
+          'application/pdf',
+          'image/*',
+        ]);
+
+        final endpoints = await File(initial.filePath).readAsString();
+        expect(endpoints, contains('filePolicy: filePolicyForMiniProgram('));
+        final resolver = await File(
+          initial.policyResolverFilePath,
+        ).readAsString();
+        expect(
+          resolver,
+          contains('MiniProgramFilePolicy filePolicyForMiniProgram'),
+        );
+        expect(resolver, contains('allowDownload: true'));
+      },
+    );
+
+    test(
       'force regenerates accepted policy from current requested policy',
       () async {
         final hostRoot = p.join(tempDir.path, 'host_app');
@@ -574,13 +654,13 @@ void main() {
 
       expect(digests, <String, String>{
         'endpoints':
-            '5134448dcd845fd14839342fa17da585c500f99174601f421bd8ed1804726772',
+            'ed8fec7bd4a4011153027ea812a669b7692b086b6db863ee96bc40f79ddb2bf1',
         'registry':
             'c9352bd447397efb77696c2b2efbcd17fb951c3807a36c6faef7f4d79dbd11c3',
         'policies':
             'f198f00ae5bfb85f7463def7b3515773d192c03b2187d5a6c5d687abae9db990',
         'resolver':
-            'd0857f33b0407ea904e00beb75ee6e50c210438b78d6357b548b0db31e65d9a2',
+            'eedfe1af08c524afacee4bc94bd1eea17ed2fea9fb3fa4ffd3b99a31ae10a625',
       });
     });
   });

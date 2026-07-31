@@ -52,4 +52,17 @@ abstract final class MiniProgramErrorCodes {
   static const String locationRequestInProgress =
       'location_request_in_progress';
   static const String locationInvalidResult = 'location_invalid_result';
+  static const String fileNotAccepted = 'file_not_accepted';
+  static const String fileTransferUnavailable = 'file_transfer_unavailable';
+  static const String filePickerCancelled = 'file_picker_cancelled';
+  static const String fileTypeNotAccepted = 'file_type_not_accepted';
+  static const String fileTooLarge = 'file_too_large';
+  static const String fileInsufficientStorage = 'file_insufficient_storage';
+  static const String fileUploadFailed = 'file_upload_failed';
+  static const String fileDownloadFailed = 'file_download_failed';
+  static const String fileTransferCancelled = 'file_transfer_cancelled';
+  static const String fileTransferNotFound = 'file_transfer_not_found';
+  static const String fileTransferLimitExceeded =
+      'file_transfer_limit_exceeded';
+  static const String fileInvalidResult = 'file_invalid_result';
 }

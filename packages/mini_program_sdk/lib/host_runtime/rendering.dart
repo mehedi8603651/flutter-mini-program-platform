@@ -47,6 +47,8 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           backendConnector: _activeBackendConnector,
           locationProvider: widget.locationProvider,
           locationPolicy: _locationPolicyFor(manifest.id),
+          fileTransferManager: _fileTransferManager,
+          filePolicy: _filePolicyFor(manifest.id),
           authController: widget.authController,
           cacheManager: _cacheManager,
           cachePolicy: _activeCachePolicy ?? _cachePolicyFor(manifest.id),

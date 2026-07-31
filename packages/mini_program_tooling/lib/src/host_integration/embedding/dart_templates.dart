@@ -57,7 +57,7 @@ class AppHostBridge implements HostBridge {
     } catch (error, stackTrace) {
       debugPrint(
         '[$logPrefix][ERROR] Failed to open native route "\${payload.route}". '
-        'error=\$error\n\$stackTrace',
+        'error=\$error\\n\$stackTrace',
       );
       return HostActionResult.failed(
         actionName: ActionNames.openNativeScreen,
@@ -222,12 +222,14 @@ import 'mini_program_runtime_setup.dart';
 Future<MiniProgramConfig> buildHostMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
   MiniProgramLocationProvider? locationProvider,
+  MiniProgramFileTransferProvider? fileTransferProvider,
   Map<String, MiniProgramEndpoint>? endpoints,
   MiniProgramCacheBundle? cacheBundle,
 }) async {
   return buildMiniProgramConfig(
     openNativeRoute: openNativeRoute,
     locationProvider: locationProvider,
+    fileTransferProvider: fileTransferProvider,
     endpoints: endpoints ?? buildMiniProgramEndpoints(),
     cacheBundle: cacheBundle,
   );
@@ -293,6 +295,10 @@ MiniProgramPublisherApiPolicy publisherApiPolicyForMiniProgram(String appId) {
 MiniProgramLocationPolicy locationPolicyForMiniProgram(String appId) {
   return const MiniProgramLocationPolicy();
 }
+
+MiniProgramFilePolicy filePolicyForMiniProgram(String appId) {
+  return const MiniProgramFilePolicy();
+}
 ''';
 }
 
@@ -336,6 +342,7 @@ const int _configuredBackendPort = int.fromEnvironment(
 MiniProgramConfig buildMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
   MiniProgramLocationProvider? locationProvider,
+  MiniProgramFileTransferProvider? fileTransferProvider,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
   MiniProgramCacheBundle? cacheBundle,
@@ -347,6 +354,8 @@ MiniProgramConfig buildMiniProgramConfig({
     CapabilityIds.analytics,
     if (openNativeRoute != null) CapabilityIds.nativeNavigation,
     if (locationProvider != null) CapabilityIds.locationCurrent,
+    if (fileTransferProvider != null) CapabilityIds.fileUpload,
+    if (fileTransferProvider != null) CapabilityIds.fileDownload,
   };
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,
@@ -365,6 +374,7 @@ MiniProgramConfig buildMiniProgramConfig({
     source: source,
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
     locationProvider: locationProvider,
+    fileTransferProvider: fileTransferProvider,
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,

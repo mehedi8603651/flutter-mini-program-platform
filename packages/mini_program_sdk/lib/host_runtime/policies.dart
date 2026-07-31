@@ -28,4 +28,12 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     }
     return const MiniProgramLocationPolicy();
   }
+
+  MiniProgramFilePolicy _filePolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramFilePolicyProvider) {
+      return (source as MiniProgramFilePolicyProvider).filePolicyFor(appId);
+    }
+    return const MiniProgramFilePolicy();
+  }
 }

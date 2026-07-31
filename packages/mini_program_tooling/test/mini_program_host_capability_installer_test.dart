@@ -112,6 +112,84 @@ void main() {
     expect(nativeSource, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
   });
 
+  test('installs Android streaming file transfer support', () async {
+    final result = await const MiniProgramHostCapabilityInstaller().initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'file',
+        platform: 'android',
+      ),
+    );
+    expect(result.createdPaths, hasLength(2));
+    expect(result.updatedPaths, hasLength(2));
+
+    final provider = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'app_android_file_transfer_provider.dart',
+      ),
+    ).readAsString();
+    expect(provider, contains('class AppAndroidFileTransferProvider'));
+    expect(provider, contains("'mini_program/files'"));
+    expect(provider, contains('MiniProgramFileUploadRequest'));
+
+    final setup = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_host_setup.dart',
+      ),
+    ).readAsString();
+    expect(setup, contains('resolvedFileTransferProvider'));
+    expect(
+      setup,
+      contains('fileTransferProvider: resolvedFileTransferProvider'),
+    );
+
+    final mainActivity = await _mainActivityFile(hostRootPath).readAsString();
+    expect(
+      mainActivity,
+      contains('MiniProgramFileTransferChannel.register(flutterEngine)'),
+    );
+    final native = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'kotlin',
+        'com',
+        'example',
+        'host_app',
+        'MiniProgramFileTransferChannel.kt',
+      ),
+    ).readAsString();
+    expect(native, contains('Intent.ACTION_OPEN_DOCUMENT'));
+    expect(native, contains('Intent.ACTION_CREATE_DOCUMENT'));
+    expect(native, contains('multipart/form-data'));
+    expect(native, contains('MediaStore.Downloads'));
+    expect(native, contains('acceptedMimeTypes.none'));
+    expect(native, contains('formValue(value)'));
+    expect(native, contains('context.contentResolver.delete(uri, null, null)'));
+    expect(native, contains(r'''substringBefore('/')}/'''));
+    expect(native, isNot(contains(r'''substringBefore('/')}\/''')));
+    expect(native, isNot(contains('READ_EXTERNAL_STORAGE')));
+    expect(native, isNot(contains('WRITE_EXTERNAL_STORAGE')));
+
+    final second = await const MiniProgramHostCapabilityInstaller().initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'file',
+        platform: 'android',
+      ),
+    );
+    expect(second.alreadyInstalled, isTrue);
+  });
+
   test('is idempotent after a successful installation', () async {
     const installer = MiniProgramHostCapabilityInstaller();
     final request = MiniProgramHostCapabilityInitRequest(
@@ -312,8 +390,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.5.13
-  mini_program_contracts: ^0.3.7
+  mini_program_sdk: ^0.6.3
+  mini_program_contracts: ^0.3.8
 ''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),

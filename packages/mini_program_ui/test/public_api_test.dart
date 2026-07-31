@@ -9,6 +9,7 @@ void main() {
       MpBackendActions(),
       MpCacheActions(),
       MpDataActions(),
+      MpFileActions(),
       MpLocationActions(),
       MpMathActions(),
       MpNavigationActions(),
@@ -29,7 +30,7 @@ void main() {
     final document = MpScreenDocument(screenId: 'home', root: node);
     final buildWriter = writeMpBuildOutput;
 
-    expect(namespaces, hasLength(14));
+    expect(namespaces, hasLength(15));
     expect(option.toJson(), <String, Object?>{'label': 'One', 'value': 'one'});
     expect(action.type, 'state.clear');
     expect(Mp.cache.data, isA<MpCacheBucketActions>());

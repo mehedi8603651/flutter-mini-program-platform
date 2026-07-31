@@ -135,6 +135,7 @@ void main() {
       );
       expect(hostBridge, isNot(contains('MiniProgramRoutes')));
       expect(hostBridge, isNot(contains('navigatorKey')));
+      expect(hostBridge, contains(r"'error=$error\n$stackTrace'"));
       expect(launcher, contains('Future<T?> openAppMiniProgram<T>('));
       expect(launcher, contains('Future<T?> openRegisteredMiniProgram<T>('));
       expect(
@@ -174,8 +175,8 @@ void main() {
       expect(barrel, contains("export 'mini_program_registry.dart';"));
       expect(barrel, contains("export 'mini_program_runtime_setup.dart';"));
       expect(barrel, isNot(contains("export 'mini_program_routes.dart';")));
-      expect(updatedPubspec, contains('mini_program_sdk: ^0.6.0'));
-      expect(updatedPubspec, contains('mini_program_contracts: ^0.3.7'));
+      expect(updatedPubspec, contains('mini_program_sdk: ^0.6.3'));
+      expect(updatedPubspec, contains('mini_program_contracts: ^0.3.8'));
       expect(updatedPubspec, isNot(contains('mini_program_legacy_stac:')));
       expect(
         hostSetup,
@@ -198,8 +199,8 @@ void main() {
       expect(policyResolver, contains('locationPolicyForMiniProgram'));
       expect(policies, contains('"schemaVersion": 1'));
       expect(policies, contains('"apps": {}'));
-      expect(readme, contains('mini_program_sdk: ^0.6.0'));
-      expect(readme, contains('mini_program_contracts: ^0.3.7'));
+      expect(readme, contains('mini_program_sdk: ^0.6.3'));
+      expect(readme, contains('mini_program_contracts: ^0.3.8'));
       expect(readme, contains('MiniProgramScope('));
       expect(readme, contains("import 'mini_program/mini_program.dart';"));
       expect(readme, contains('buildHostMiniProgramConfig()'));
@@ -208,6 +209,7 @@ void main() {
       expect(readme, contains('MiniProgramConfig` is immutable'));
       expect(readme, contains('publisher_backend.json'));
       expect(readme, contains('miniprogram host endpoint import'));
+      expect(readme, contains('host capability init file --platform android'));
       expect(readme, contains('automatically uses the generated endpoint map'));
       expect(readme, contains('State management still stays app-owned'));
       expect(readme, contains('Riverpod, Provider, Bloc, GetX'));

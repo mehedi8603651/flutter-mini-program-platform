@@ -323,6 +323,16 @@ The installer updates recognized Android host files and
 `mini_program_host_setup.dart`, but does not accept policy for any app. The SDK
 never grants location merely because provider support is installed.
 
+For an app that requests Publisher API file transfer, review
+`permissions.files`, then install the generic Android provider once:
+
+```powershell
+miniprogram host capability init file --platform android --project-root .
+```
+
+Installation supplies native transfer support but never enables an app's
+accepted policy.
+
 `embed init --force` refreshes scaffold-generated files while preserving host
 setup, bridge, policies, and endpoint-import generated output.
 

@@ -6,6 +6,7 @@ import 'cache/runtime_cache.dart';
 import 'feature_flag_evaluator.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
+import 'file/mini_program_file.dart';
 import 'location/mini_program_location.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
@@ -57,6 +58,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.backendConnector,
     this.locationProvider,
     this.locationPolicy = const MiniProgramLocationPolicy(),
+    this.fileTransferManager,
+    this.filePolicy = const MiniProgramFilePolicy(),
     this.authController,
     required this.cacheManager,
     required this.cachePolicy,
@@ -83,6 +86,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramLocationPolicy locationPolicy;
+  final MiniProgramFileTransferManager? fileTransferManager;
+  final MiniProgramFilePolicy filePolicy;
   final MiniProgramAuthController? authController;
   final MiniProgramCacheManager cacheManager;
   final MiniProgramCachePolicy cachePolicy;
@@ -120,6 +125,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         backendConnector != oldWidget.backendConnector ||
         locationProvider != oldWidget.locationProvider ||
         locationPolicy != oldWidget.locationPolicy ||
+        fileTransferManager != oldWidget.fileTransferManager ||
+        filePolicy != oldWidget.filePolicy ||
         authController != oldWidget.authController ||
         cacheManager != oldWidget.cacheManager ||
         cachePolicy != oldWidget.cachePolicy ||

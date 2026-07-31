@@ -98,3 +98,17 @@ final config = MiniProgramConfig(
 
 Missing providers and denied policy fail with stable location error codes;
 they do not fall through to host bridge actions.
+
+## Optional Publisher File Transfers
+
+`file.upload`, `file.download`, and `file.cancel` use a separate streaming host
+provider because the normal Publisher API connector is intentionally bounded
+to JSON responses. The SDK still resolves only relative routes against the
+validated artifact Publisher API and applies delivery and auth headers.
+
+Hosts accept a per-app `MiniProgramFilePolicy` and install one
+`MiniProgramFileTransferProvider`. Transfers are app-isolated, cancellable,
+and constrained by accepted MIME types, destinations, concurrency, free-space
+reserve, and an optional maximum file size. Live state contains only bounded
+progress and sanitized result metadata; providers must never return native
+paths or content URIs.

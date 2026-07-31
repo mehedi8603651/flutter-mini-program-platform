@@ -38,6 +38,7 @@ void main() {
       'composition.dart',
       'data.dart',
       'feedback_forms_lazy.dart',
+      'file.dart',
       'location.dart',
       'math.dart',
       'navigation.dart',

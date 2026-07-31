@@ -276,6 +276,36 @@ The partner handoff must request `permissions.location`, and the host must both
 accept it and install a `MiniProgramLocationProvider`. Always retain a useful
 manual or offline fallback when location is denied or unavailable.
 
+## Publisher File Transfers
+
+Use `Mp.file.upload`, `Mp.file.download`, and `Mp.file.cancel` for large files.
+Endpoints must be relative paths on the artifact-declared Publisher API. The
+host streams bytes outside the JSON connector and writes only progress and
+sanitized metadata to live state.
+
+```dart
+Mp.file.upload(
+  endpoint: 'files/upload',
+  mimeTypes: const <String>['application/pdf'],
+  progressState: 'files.progress',
+  targetState: 'files.result',
+  errorState: 'files.error',
+);
+
+Mp.file.download(
+  endpoint: 'files/download',
+  request: const <String, Object?>{'fileId': 'file-1'},
+  destination: 'downloads',
+  suggestedName: 'document.pdf',
+  progressState: 'files.progress',
+  targetState: 'files.result',
+);
+```
+
+The partner handoff must request `permissions.files`; the host must accept its
+directions, MIME types, destinations, and limits and install a platform file
+provider. Native paths and content URIs are never available to mini-programs.
+
 ## Build, Validate, Publish
 
 Normal flow:

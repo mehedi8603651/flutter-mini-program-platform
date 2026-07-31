@@ -18,6 +18,7 @@ import 'features/controls/list_tile_nodes.dart';
 import 'features/controls/selection_nodes.dart';
 import 'features/data/data_actions.dart';
 import 'features/feedback/feedback_actions.dart';
+import 'features/file/file_actions.dart';
 import 'features/forms/form_models.dart';
 import 'features/forms/form_nodes.dart';
 import 'features/layout/layout_nodes.dart';
@@ -42,6 +43,7 @@ export 'features/data/data_actions.dart' show MpDataActions;
 export 'features/forms/form_models.dart' show MpOption;
 export 'features/lifecycle/timer_nodes.dart' show MpTimer;
 export 'features/location/location_actions.dart' show MpLocationActions;
+export 'features/file/file_actions.dart' show MpFileActions;
 export 'features/math/math_actions.dart' show MpMathActions;
 export 'features/navigation/navigation_actions.dart' show MpNavigationActions;
 export 'features/navigation/router_actions.dart' show MpRouterActions;
@@ -75,6 +77,9 @@ abstract final class Mp {
 
   /// Host-controlled one-time location actions.
   static const location = MpLocationActions();
+
+  /// Publisher file upload, download, and cancellation actions.
+  static const file = MpFileActions();
 
   /// Lifecycle-owned timer nodes.
   static const timer = MpTimer();

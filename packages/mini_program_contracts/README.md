@@ -17,6 +17,7 @@ runtime/tooling packages.
 - mini-program screen navigation payloads
 - SDK semver compatibility helpers
 - stable error codes and feature flag keys
+- provider-neutral file-transfer progress, capability, and error contracts
 
 ## Who should depend on it
 

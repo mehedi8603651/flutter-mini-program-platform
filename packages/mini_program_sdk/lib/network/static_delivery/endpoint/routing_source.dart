@@ -8,6 +8,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramLiveStatePolicyProvider,
         MiniProgramPublisherApiPolicyProvider,
         MiniProgramLocationPolicyProvider,
+        MiniProgramFilePolicyProvider,
         MiniProgramDeliveryContextProvider,
         MiniProgramPublisherBackendContractSource,
         MiniProgramJsonAssetSource {
@@ -105,5 +106,10 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramLocationPolicy locationPolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).locationPolicy;
+  }
+
+  @override
+  MiniProgramFilePolicy filePolicyFor(String miniProgramId) {
+    return _endpointFor(miniProgramId).filePolicy;
   }
 }

@@ -103,6 +103,16 @@ miniprogram host capability init location --platform android
 The command does not accept location policy for any mini-program. Continue to
 review each app in `mini_program_policies.json`.
 
+For Android apps that request Publisher API uploads or downloads, install the
+generic streaming provider once:
+
+```bash
+miniprogram host capability init file --platform android
+```
+
+This also leaves every app denied until its `permissions.files` policy is
+reviewed and accepted.
+
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
 An optional `publisher_backend.json` declares the mini-program's Publisher API,
 while `mini_program_policies.json` records whether the host accepts it. Provider

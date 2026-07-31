@@ -2750,6 +2750,179 @@ void _mpScreenRendererTests() {
     });
 
     testWidgets(
+      'file upload streams through the host provider and writes metadata only',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('files.error', <String, dynamic>{'code': 'stale'});
+        final connector = _TestFileBackendConnector();
+        final provider = _TestFileTransferProvider();
+        final manager = MiniProgramFileTransferManager(provider);
+        final result =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.file.upload(
+                      endpoint: 'files/upload',
+                      mimeTypes: const <String>['application/pdf'],
+                      multiple: true,
+                      metadata: const <String, Object?>{'folderId': 'inbox'},
+                      progressState: 'files.progress',
+                      targetState: 'files.result',
+                      statusState: 'files.status',
+                      errorState: 'files.error',
+                      requestId: 'upload-one',
+                    ),
+                  ),
+                  stateManager: state,
+                  backendConnector: connector,
+                  fileTransferManager: manager,
+                  filePolicy: const MiniProgramFilePolicy(
+                    enabled: true,
+                    allowUpload: true,
+                    allowedMimeTypes: <String>{'application/pdf'},
+                    maxFileBytes: 15,
+                    maxFilesPerUpload: 2,
+                  ),
+                )
+                as HostActionResult;
+
+        expect(result.isSuccess, isTrue);
+        expect(result.requestId, 'upload-one');
+        expect(result.data['data'], containsPair('fileId', 'remote-1'));
+        expect(state.get<String>('files.status'), 'success');
+        expect(state.contains('files.error'), isFalse);
+        expect(
+          state.get<Map<String, dynamic>>('files.progress'),
+          containsPair('status', 'completed'),
+        );
+        expect(
+          state.get<Map<String, dynamic>>('files.result'),
+          isNot(contains('path')),
+        );
+        expect(provider.uploadRequest?.metadata, <String, dynamic>{
+          'folderId': 'inbox',
+        });
+        expect(provider.uploadRequest?.multiple, isTrue);
+        expect(provider.uploadRequest?.maxFiles, 2);
+        expect(provider.uploadRequest?.maxFileBytes, 15);
+        expect(connector.resolvedRequest?.endpoint, 'files/upload');
+        await manager.dispose();
+        state.dispose();
+      },
+    );
+
+    testWidgets(
+      'file download enforces host policy and preserves previous target',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('files.result', <String, dynamic>{'existing': true});
+        final action = _jsonAction(
+          Mp.file.download(
+            endpoint: 'files/download',
+            expectedMimeType: 'application/pdf',
+            progressState: 'files.progress',
+            targetState: 'files.result',
+            statusState: 'files.status',
+            errorState: 'files.error',
+          ),
+        );
+        final denied =
+            await _runMpAction(tester, action, stateManager: state)
+                as HostActionResult;
+        expect(denied.errorCode, MiniProgramErrorCodes.fileNotAccepted);
+        expect(
+          state.get<Map<String, dynamic>>('files.result'),
+          <String, dynamic>{'existing': true},
+        );
+
+        final provider = _TestFileTransferProvider();
+        final manager = MiniProgramFileTransferManager(provider);
+        final rejected =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  backendConnector: _TestFileBackendConnector(),
+                  fileTransferManager: manager,
+                  filePolicy: const MiniProgramFilePolicy(
+                    enabled: true,
+                    allowDownload: true,
+                    allowedMimeTypes: <String>{'image/*'},
+                  ),
+                )
+                as HostActionResult;
+        expect(rejected.errorCode, MiniProgramErrorCodes.fileTypeNotAccepted);
+        expect(
+          state.get<Map<String, dynamic>>('files.result'),
+          <String, dynamic>{'existing': true},
+        );
+
+        final accepted =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  backendConnector: _TestFileBackendConnector(),
+                  fileTransferManager: manager,
+                  filePolicy: const MiniProgramFilePolicy(
+                    enabled: true,
+                    allowDownload: true,
+                    allowedMimeTypes: <String>{'application/pdf'},
+                    allowedDestinations: <MiniProgramFileDownloadDestination>{
+                      MiniProgramFileDownloadDestination.downloads,
+                    },
+                  ),
+                )
+                as HostActionResult;
+        expect(accepted.isSuccess, isTrue);
+        expect(accepted.data['destination'], 'downloads');
+
+        await manager.dispose();
+        state.dispose();
+      },
+    );
+
+    testWidgets(
+      'file download rejects a provider destination mismatch',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('files.result', <String, dynamic>{'existing': true});
+        final provider = _TestFileTransferProvider(
+          downloadDestinationOverride: 'choose',
+        );
+        final manager = MiniProgramFileTransferManager(provider);
+        final result =
+            await _runMpAction(
+                  tester,
+                  _jsonAction(
+                    Mp.file.download(
+                      endpoint: 'files/download',
+                      progressState: 'files.progress',
+                      targetState: 'files.result',
+                      errorState: 'files.error',
+                    ),
+                  ),
+                  stateManager: state,
+                  backendConnector: _TestFileBackendConnector(),
+                  fileTransferManager: manager,
+                  filePolicy: const MiniProgramFilePolicy(
+                    enabled: true,
+                    allowDownload: true,
+                  ),
+                )
+                as HostActionResult;
+
+        expect(result.errorCode, MiniProgramErrorCodes.fileInvalidResult);
+        expect(
+          state.get<Map<String, dynamic>>('files.result'),
+          <String, dynamic>{'existing': true},
+        );
+        await manager.dispose();
+        state.dispose();
+      },
+    );
+
+    testWidgets(
       'math evaluate covers parser precedence functions and bindings',
       (tester) async {
         final state = MpStateManager()..set('input.x', 9);

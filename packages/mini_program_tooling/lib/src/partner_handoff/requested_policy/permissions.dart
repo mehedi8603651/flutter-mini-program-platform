@@ -11,11 +11,15 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
   }
   final normalized = <String, Object?>{};
   for (final entry in raw.entries) {
-    if (entry.key != 'location') {
+    if (entry.key != 'location' && entry.key != 'files') {
       throw MiniProgramPartnerHandoffException(
         'MiniProgram partner handoff requestedPermissions contains an '
         'unsupported permission: ${entry.key}.',
       );
+    }
+    if (entry.key == 'files') {
+      normalized['files'] = _normalizeRequestedFiles(entry.value);
+      continue;
     }
     final value = entry.value;
     if (value is! Map) {
@@ -68,4 +72,155 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         });
   }
   return Map<String, Object?>.unmodifiable(normalized);
+}
+
+Map<String, Object?> _normalizeRequestedFiles(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.files must be an object.',
+    );
+  }
+  const allowedKeys = <String>{
+    'enabled',
+    'reason',
+    'upload',
+    'download',
+    'mimeTypes',
+    'destinations',
+    'recommendedMaxFileBytes',
+    'recommendedMaxFilesPerUpload',
+    'recommendedMaxConcurrentTransfers',
+  };
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.files contains an '
+        'unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  final upload = raw['upload'];
+  final download = raw['download'];
+  final reason = raw['reason'];
+  if (enabled is! bool || upload is! bool || download is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.files enabled, upload, and download must be booleans.',
+    );
+  }
+  if (enabled && !upload && !download) {
+    throw const MiniProgramPartnerHandoffException(
+      'Enabled requestedPermissions.files must request upload or download.',
+    );
+  }
+  if (reason is! String || reason.trim().isEmpty || reason.length > 256) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.files.reason must be 1-256 characters.',
+    );
+  }
+  final mimeTypes = _requestedStringList(
+    raw['mimeTypes'] ?? const <String>['*/*'],
+    name: 'requestedPermissions.files.mimeTypes',
+    maxItems: 32,
+    validate: _isMimeType,
+  );
+  final destinations = _requestedStringList(
+    raw['destinations'] ?? const <String>['downloads', 'choose', 'temporary'],
+    name: 'requestedPermissions.files.destinations',
+    maxItems: 3,
+    validate: const <String>{'downloads', 'choose', 'temporary'}.contains,
+  );
+  final maxFileBytes = _optionalPositiveInt(
+    raw['recommendedMaxFileBytes'],
+    'requestedPermissions.files.recommendedMaxFileBytes',
+  );
+  final maxFiles = _positiveIntOrDefault(
+    raw['recommendedMaxFilesPerUpload'],
+    10,
+    'requestedPermissions.files.recommendedMaxFilesPerUpload',
+    max: 100,
+  );
+  final maxConcurrent = _positiveIntOrDefault(
+    raw['recommendedMaxConcurrentTransfers'],
+    2,
+    'requestedPermissions.files.recommendedMaxConcurrentTransfers',
+    max: 16,
+  );
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': reason.trim(),
+    'upload': upload,
+    'download': download,
+    'mimeTypes': List<String>.unmodifiable(mimeTypes),
+    'destinations': List<String>.unmodifiable(destinations),
+    if (maxFileBytes != null) 'recommendedMaxFileBytes': maxFileBytes,
+    'recommendedMaxFilesPerUpload': maxFiles,
+    'recommendedMaxConcurrentTransfers': maxConcurrent,
+  });
+}
+
+List<String> _requestedStringList(
+  Object? raw, {
+  required String name,
+  required int maxItems,
+  required bool Function(String value) validate,
+}) {
+  if (raw is! List || raw.isEmpty || raw.length > maxItems) {
+    throw MiniProgramPartnerHandoffException(
+      '$name must contain 1-$maxItems values.',
+    );
+  }
+  final result = <String>[];
+  for (final value in raw) {
+    if (value is! String || !validate(value.trim().toLowerCase())) {
+      throw MiniProgramPartnerHandoffException(
+        '$name contains an invalid value.',
+      );
+    }
+    final normalized = value.trim().toLowerCase();
+    if (!result.contains(normalized)) {
+      result.add(normalized);
+    }
+  }
+  return result;
+}
+
+bool _isMimeType(String value) {
+  if (value == '*/*') {
+    return true;
+  }
+  final parts = value.split('/');
+  final token = RegExp(r'^[a-z0-9!#$&^_.+-]+$');
+  return parts.length == 2 &&
+      token.hasMatch(parts.first) &&
+      (parts.last == '*' || token.hasMatch(parts.last));
+}
+
+int? _optionalPositiveInt(Object? value, String name) {
+  if (value == null) {
+    return null;
+  }
+  if (value is! int || value <= 0) {
+    throw MiniProgramPartnerHandoffException(
+      '$name must be a positive integer.',
+    );
+  }
+  return value;
+}
+
+int _positiveIntOrDefault(
+  Object? value,
+  int fallback,
+  String name, {
+  required int max,
+}) {
+  if (value == null) {
+    return fallback;
+  }
+  if (value is! int || value <= 0 || value > max) {
+    throw MiniProgramPartnerHandoffException(
+      '$name must be an integer from 1 to $max.',
+    );
+  }
+  return value;
 }

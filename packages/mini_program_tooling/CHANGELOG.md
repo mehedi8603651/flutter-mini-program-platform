@@ -1,3 +1,15 @@
+## 0.7.1
+
+- Import requested file-transfer policy and generate host-accepted per-app
+  upload, download, MIME, destination, concurrency, storage, and optional size
+  limits with safe default denial.
+- Add `miniprogram host capability init file --platform android` to install a
+  host-owned document picker and streaming Publisher API adapter without an
+  extra Flutter plugin or broad storage permission.
+- Generate mini-programs against UI `0.2.2` and hosts/preview hosts against
+  contracts `0.3.8` and SDK `0.6.3`.
+- Correct generated host bridge newline escaping.
+
 ## 0.7.0
 
 - Establish the feature-oriented CLI and generation architecture completed in

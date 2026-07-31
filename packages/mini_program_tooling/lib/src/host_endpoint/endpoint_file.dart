@@ -84,6 +84,7 @@ String buildHostEndpointFile(
         '      publisherApiPolicy: publisherApiPolicyForMiniProgram($mapKey),',
       )
       ..writeln('      locationPolicy: locationPolicyForMiniProgram($mapKey),')
+      ..writeln('      filePolicy: filePolicyForMiniProgram($mapKey),')
       ..writeln('      requestTimeout: const Duration(seconds: 20),');
     buffer.writeln('    ),');
   }

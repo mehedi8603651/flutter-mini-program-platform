@@ -26,6 +26,11 @@ void main() {
           )
           .toList(),
       <String>[
+        'capabilities/file_transfer/android_channel_template.dart',
+        'capabilities/file_transfer/dart_provider_template.dart',
+        'capabilities/file_transfer/installer.dart',
+        'capabilities/file_transfer/source_editors.dart',
+        'capabilities/file_transfer/source_files.dart',
         'capabilities/location/android_channel_template.dart',
         'capabilities/location/dart_provider_template.dart',
         'capabilities/location/installer.dart',

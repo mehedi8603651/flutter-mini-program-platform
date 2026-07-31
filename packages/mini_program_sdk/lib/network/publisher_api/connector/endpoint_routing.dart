@@ -1,7 +1,9 @@
 part of '../../mini_program_backend_connector.dart';
 
 class EndpointRoutingMiniProgramBackendConnector
-    implements DisposableMiniProgramBackendConnector {
+    implements
+        DisposableMiniProgramBackendConnector,
+        MiniProgramBackendTransferResolver {
   EndpointRoutingMiniProgramBackendConnector({
     required Map<String, MiniProgramBackendEndpoint> backends,
     required MiniProgramDeliveryContext deliveryContext,
@@ -18,6 +20,45 @@ class EndpointRoutingMiniProgramBackendConnector
 
   http.Client? _client;
   bool _disposed = false;
+
+  @override
+  MiniProgramResolvedBackendTransfer resolveTransfer(
+    MiniProgramBackendRequest request,
+  ) {
+    if (_disposed) {
+      throw const MiniProgramBackendTransferResolutionException(
+        errorCode: 'publisher_backend_disposed',
+        message: 'Mini-program backend connector has been disposed.',
+      );
+    }
+    final appId = request.miniProgramId.trim();
+    final backend = _backends[appId];
+    if (backend == null) {
+      throw MiniProgramBackendTransferResolutionException(
+        errorCode: 'publisher_backend_not_configured',
+        message: 'No Publisher API is configured for mini-program "$appId".',
+      );
+    }
+    final method = _normalizeMethod(request.method);
+    final endpoint = _normalizeRelativeEndpoint(request.endpoint);
+    if (endpoint == null) {
+      throw const MiniProgramBackendTransferResolutionException(
+        errorCode: 'invalid_backend_endpoint',
+        message:
+            'File transfer endpoint must be a relative Publisher API path.',
+      );
+    }
+    final uri = _resolve(backend.baseUri, endpoint);
+    final safeHeaders = _normalizeRequestHeaders(request.headers);
+    return MiniProgramResolvedBackendTransfer(
+      candidateUris: List<Uri>.unmodifiable(_candidateUris(uri, backend)),
+      method: method,
+      headers: Map<String, String>.unmodifiable(
+        _requestHeaders(appId, backend, safeHeaders),
+      ),
+      timeout: backend.requestTimeout,
+    );
+  }
 
   @override
   Future<MiniProgramBackendResult> call(

@@ -22,6 +22,7 @@ class MiniProgramEndpoint {
     this.liveStatePolicy = const MiniProgramLiveStatePolicy(),
     this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
     this.locationPolicy = const MiniProgramLocationPolicy(),
+    this.filePolicy = const MiniProgramFilePolicy(),
   });
 
   /// Creates a public/static mini-program endpoint.
@@ -37,6 +38,7 @@ class MiniProgramEndpoint {
     this.liveStatePolicy = const MiniProgramLiveStatePolicy(),
     this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
     this.locationPolicy = const MiniProgramLocationPolicy(),
+    this.filePolicy = const MiniProgramFilePolicy(),
   });
 
   final Uri apiBaseUri;
@@ -47,4 +49,5 @@ class MiniProgramEndpoint {
   final MiniProgramLiveStatePolicy liveStatePolicy;
   final MiniProgramPublisherApiPolicy publisherApiPolicy;
   final MiniProgramLocationPolicy locationPolicy;
+  final MiniProgramFilePolicy filePolicy;
 }

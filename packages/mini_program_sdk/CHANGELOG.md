@@ -1,3 +1,12 @@
+## 0.6.3
+
+- Add host-policy-controlled streaming Publisher API uploads and downloads
+  through a provider-neutral `MiniProgramFileTransferProvider`.
+- Add app-isolated transfer identity, progress, cancellation, MIME and
+  destination enforcement, bounded result metadata, and stable failures.
+- Reuse validated artifact Publisher API endpoint resolution and authorization
+  without exposing native paths, content URIs, or file bytes to live state.
+
 ## 0.6.2
 
 - Accept the add, delete, edit, and note icon names during strict Mp screen

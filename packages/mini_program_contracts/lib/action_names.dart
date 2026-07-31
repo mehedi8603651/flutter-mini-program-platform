@@ -10,4 +10,7 @@ abstract final class ActionNames {
   static const String popToMiniProgramRoot = 'popToMiniProgramRoot';
   static const String popToMiniProgramScreen = 'popToMiniProgramScreen';
   static const String locationGetCurrent = 'location.getCurrent';
+  static const String fileUpload = 'file.upload';
+  static const String fileDownload = 'file.download';
+  static const String fileCancel = 'file.cancel';
 }

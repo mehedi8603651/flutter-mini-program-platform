@@ -5,6 +5,7 @@ import 'cache/mini_program_cache_bundle.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
+import 'file/mini_program_file.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
 import 'network/mini_program_backend_connector.dart';
@@ -24,6 +25,7 @@ class MiniProgramRuntime {
     required this.cacheBundle,
     this.backendConnector,
     this.locationProvider,
+    this.fileTransferProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -38,6 +40,7 @@ class MiniProgramRuntime {
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
+  final MiniProgramFileTransferProvider? fileTransferProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -53,6 +56,7 @@ class MiniProgramRuntime {
     CapabilityRegistry? capabilityRegistry,
     MiniProgramBackendConnector? backendConnector,
     MiniProgramLocationProvider? locationProvider,
+    MiniProgramFileTransferProvider? fileTransferProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
     FeatureFlagEvaluator? featureFlagEvaluator,
@@ -68,6 +72,7 @@ class MiniProgramRuntime {
       capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
       backendConnector: backendConnector ?? this.backendConnector,
       locationProvider: locationProvider ?? this.locationProvider,
+      fileTransferProvider: fileTransferProvider ?? this.fileTransferProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
           disposeAuthController ?? this.disposeAuthController,
@@ -132,6 +137,8 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.capabilityRegistry != oldWidget.runtime.capabilityRegistry ||
         runtime.backendConnector != oldWidget.runtime.backendConnector ||
         runtime.locationProvider != oldWidget.runtime.locationProvider ||
+        runtime.fileTransferProvider !=
+            oldWidget.runtime.fileTransferProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=
             oldWidget.runtime.disposeAuthController ||
