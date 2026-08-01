@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
+import '../shared_media/android_registry_template.dart';
 import 'android_channel_template.dart';
 import 'dart_provider_template.dart';
 import 'source_editors.dart';
@@ -75,6 +76,9 @@ initializeMiniProgramHostFileCapability(
   final nativeChannelFile = File(
     p.join(mainActivityFile.parent.path, 'MiniProgramFileTransferChannel.kt'),
   );
+  final mediaRegistryFile = File(
+    p.join(mainActivityFile.parent.path, 'MiniProgramHostMediaRegistry.kt'),
+  );
   final dartProviderFile = File(
     p.join(integrationRootPath, 'app_android_file_transfer_provider.dart'),
   );
@@ -86,10 +90,18 @@ initializeMiniProgramHostFileCapability(
   final nativeChannelSource = await readFileCapabilityFileIfExists(
     nativeChannelFile,
   );
+  final mediaRegistrySource = await readFileCapabilityFileIfExists(
+    mediaRegistryFile,
+  );
   validateFileCapabilityOwnedFile(
     file: dartProviderFile,
     source: dartProviderSource,
     requiredMarker: 'class AppAndroidFileTransferProvider',
+  );
+  validateFileCapabilityOwnedFile(
+    file: mediaRegistryFile,
+    source: mediaRegistrySource,
+    requiredMarker: 'object MiniProgramHostMediaRegistry',
   );
   validateFileCapabilityOwnedFile(
     file: nativeChannelFile,
@@ -117,6 +129,11 @@ initializeMiniProgramHostFileCapability(
   }
   if (nativeChannelSource == null) {
     writes[nativeChannelFile.path] = buildAndroidFileTransferChannelSource(
+      packageName,
+    );
+  }
+  if (mediaRegistrySource == null) {
+    writes[mediaRegistryFile.path] = buildAndroidHostMediaRegistrySource(
       packageName,
     );
   }

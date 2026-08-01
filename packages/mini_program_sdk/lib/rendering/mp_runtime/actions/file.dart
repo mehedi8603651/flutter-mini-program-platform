@@ -75,6 +75,50 @@ abstract final class _MpFileActionHandler {
             'The host does not provide Publisher API file transfers on this platform.',
       );
     }
+    final mediaRefs = direction == MiniProgramFileTransferDirection.upload
+        ? List<String>.unmodifiable(
+            (props['mediaRefs'] as List<dynamic>? ?? const <dynamic>[])
+                .cast<String>(),
+          )
+        : const <String>[];
+    if (mediaRefs.length > policy.maxFilesPerUpload ||
+        (mediaRefs.length > 1 && !_boolProp(props, 'multiple'))) {
+      return _failure(
+        state: state,
+        props: props,
+        actionName: actionName,
+        requestId: requestId,
+        code: MiniProgramErrorCodes.fileTransferLimitExceeded,
+        message: 'The selected media exceeds the accepted upload file count.',
+        data: <String, dynamic>{'maxFilesPerUpload': policy.maxFilesPerUpload},
+      );
+    }
+    if (mediaRefs.isNotEmpty) {
+      final mediaManager = scope.mediaManager;
+      if (mediaManager == null) {
+        return _failure(
+          state: state,
+          props: props,
+          actionName: actionName,
+          requestId: requestId,
+          code: MiniProgramErrorCodes.mediaUnavailable,
+          message: 'The host does not provide temporary media access.',
+        );
+      }
+      try {
+        mediaManager.requireOwned(scope.miniProgramId, mediaRefs);
+      } on MiniProgramMediaException catch (error) {
+        return _failure(
+          state: state,
+          props: props,
+          actionName: actionName,
+          requestId: requestId,
+          code: error.errorCode,
+          message: error.message,
+          data: Map<String, dynamic>.from(error.details),
+        );
+      }
+    }
     final transferResolver = connector as MiniProgramBackendTransferResolver;
     if (manager.activeCountFor(scope.miniProgramId) >=
         policy.maxConcurrentTransfers) {
@@ -165,6 +209,7 @@ abstract final class _MpFileActionHandler {
                 maxFileBytes: policy.maxFileBytes,
                 minimumFreeBytes: policy.minimumFreeBytes,
                 maxConcurrentTransfers: policy.maxConcurrentTransfers,
+                mediaRefs: mediaRefs,
               ),
               onProgress: progress.add,
             )

@@ -2,12 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'cache/mini_program_cache_bundle.dart';
+import 'camera/mini_program_camera.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'file/mini_program_file.dart';
+import 'flashlight/mini_program_flashlight.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
+import 'media/mini_program_media.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
@@ -26,6 +29,9 @@ class MiniProgramRuntime {
     this.backendConnector,
     this.locationProvider,
     this.fileTransferProvider,
+    this.cameraProvider,
+    this.mediaProvider,
+    this.flashlightProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -41,6 +47,9 @@ class MiniProgramRuntime {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
+  final MiniProgramCameraProvider? cameraProvider;
+  final MiniProgramMediaProvider? mediaProvider;
+  final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -57,6 +66,9 @@ class MiniProgramRuntime {
     MiniProgramBackendConnector? backendConnector,
     MiniProgramLocationProvider? locationProvider,
     MiniProgramFileTransferProvider? fileTransferProvider,
+    MiniProgramCameraProvider? cameraProvider,
+    MiniProgramMediaProvider? mediaProvider,
+    MiniProgramFlashlightProvider? flashlightProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
     FeatureFlagEvaluator? featureFlagEvaluator,
@@ -73,6 +85,9 @@ class MiniProgramRuntime {
       backendConnector: backendConnector ?? this.backendConnector,
       locationProvider: locationProvider ?? this.locationProvider,
       fileTransferProvider: fileTransferProvider ?? this.fileTransferProvider,
+      cameraProvider: cameraProvider ?? this.cameraProvider,
+      mediaProvider: mediaProvider ?? this.mediaProvider,
+      flashlightProvider: flashlightProvider ?? this.flashlightProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
           disposeAuthController ?? this.disposeAuthController,
@@ -139,6 +154,9 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.locationProvider != oldWidget.runtime.locationProvider ||
         runtime.fileTransferProvider !=
             oldWidget.runtime.fileTransferProvider ||
+        runtime.cameraProvider != oldWidget.runtime.cameraProvider ||
+        runtime.mediaProvider != oldWidget.runtime.mediaProvider ||
+        runtime.flashlightProvider != oldWidget.runtime.flashlightProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=
             oldWidget.runtime.disposeAuthController ||

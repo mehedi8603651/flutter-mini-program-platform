@@ -81,6 +81,6 @@ void main() {
     final dependencySource = File(
       path.join(implementationRoot.path, 'dependencies.dart'),
     ).readAsStringSync();
-    expect(dependencySource, contains('mini_program_ui: ^0.2.2'));
+    expect(dependencySource, contains('mini_program_ui: ^0.2.3'));
   });
 }

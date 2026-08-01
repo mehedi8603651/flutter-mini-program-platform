@@ -1,3 +1,14 @@
+## 0.7.2
+
+- Import requested camera and flashlight permissions and generate safe-denied
+  host policy plus accepted runtime policy resolvers.
+- Add Android capability installers for delegated system-camera capture using
+  Activity Result and FileProvider, and flashlight control using CameraManager.
+- Generate a shared app-owned Android media registry so camera output can be
+  previewed, uploaded through the file provider, and explicitly released.
+- Generate mini-programs against UI `0.2.3` and hosts/preview hosts against
+  contracts `0.3.9` and SDK `0.6.4`.
+
 ## 0.7.1
 
 - Import requested file-transfer policy and generate host-accepted per-app

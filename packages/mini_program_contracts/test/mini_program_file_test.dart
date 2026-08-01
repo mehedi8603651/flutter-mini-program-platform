@@ -6,8 +6,10 @@ void main() {
     expect(ActionNames.fileUpload, 'file.upload');
     expect(ActionNames.fileDownload, 'file.download');
     expect(ActionNames.fileCancel, 'file.cancel');
+    expect(ActionNames.mediaRelease, 'media.release');
     expect(CapabilityIds.standardValues, contains(CapabilityIds.fileUpload));
     expect(CapabilityIds.standardValues, contains(CapabilityIds.fileDownload));
+    expect(CapabilityIds.standardValues, contains(CapabilityIds.mediaPreview));
   });
 
   test('file progress validates and serializes a bounded state projection', () {

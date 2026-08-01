@@ -27,7 +27,10 @@ void _registerCoreAndPreviewTests() {
       expect(output, contains('host endpoint import <partner-package.json>'));
       expect(
         output,
-        contains('host capability init <location|file> --platform android'),
+        contains(
+          'host capability init <location|file|camera|flashlight> '
+          '--platform android',
+        ),
       );
       expect(output, contains('publisher-api scaffold --template mock'));
       expect(output, contains('publisher-api contract init|validate|smoke'));
@@ -185,7 +188,7 @@ void _registerCoreAndPreviewTests() {
 
       expect(exitCode, 0);
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['toolingVersion'], '0.7.1');
+      expect(json['toolingVersion'], '0.7.2');
       final capabilities = (json['capabilityIds'] as List).cast<String>();
       expect(capabilities, contains('publish.static'));
       expect(capabilities, contains('publisher_api.mock.scaffold'));

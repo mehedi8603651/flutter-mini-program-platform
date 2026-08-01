@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.8` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.2` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.3` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.1` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.9` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.3` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.4` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.2` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -71,6 +71,13 @@ These are system invariants, not preferences:
 15. File uploads and downloads are optional streaming host capabilities. They
     may use only relative routes on the accepted artifact Publisher API and
     must never expose native paths, content URIs, or raw file bytes to state.
+16. Temporary host media uses opaque app-owned references. Preview bytes stay
+    inside the trusted renderer, uploads revalidate ownership, and explicit or
+    lifecycle release removes the native resource.
+16. Camera and flashlight are separate optional host capabilities. Camera may
+    delegate still-photo capture to the system camera and expose only opaque
+    metadata; flashlight ownership is app-scoped and must be released when the
+    mini-program leaves the foreground.
 
 ## Repository Map
 
@@ -122,6 +129,8 @@ packages/mini_program_contracts/
 |   |-- error_codes.dart                        # Stable machine-readable error codes used across layers
 |   |-- mini_program_location.dart              # Approximate one-time location enums and JSON-safe result contract
 |   |-- mini_program_file.dart                  # File-transfer progress, direction, and status contracts
+|   |-- mini_program_camera.dart                # Opaque delegated-camera photo result contract
+|   |-- mini_program_flashlight.dart            # JSON-safe flashlight availability and enabled status
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -175,6 +184,9 @@ packages/mini_program_ui/
 |       |   |-- data/                           # Artifact JSON loading and ranked search actions
 |       |   |-- location/                       # Host-controlled current-location action
 |       |   |-- file/                           # Publisher API upload, download, and cancellation actions
+|       |   |-- camera/                         # Delegated system-camera capture and cancellation actions
+|       |   |-- flashlight/                     # Foreground flashlight control and status actions
+|       |   |-- media/                          # Temporary host-media release actions
 |       |   |-- navigation/                     # Navigation and router actions
 |       |   |-- backend/                        # Publisher API actions, nodes, and search
 |       |   |-- auth/                           # Authentication actions and state builder
@@ -208,7 +220,7 @@ packages/mini_program_sdk/
 |   |-- host_runtime/
 |   |   |-- host_state.dart                     # Private State fields plus Flutter lifecycle and build/setState delegates
 |   |   |-- loading.dart                        # Generation-safe initial manifest, screen, renderer, cache, and auth loading
-|   |   |-- policies.dart                       # Cache, live-state, and location policy lookup from the active source
+|   |   |-- policies.dart                       # Cache, live-state, location, file, camera, and flashlight policy lookup
 |   |   |-- publisher_backend.dart              # Artifact Publisher API connector creation, ownership, and disposal
 |   |   |-- cache_lifecycle.dart                # Active app cache close and policy cleanup
 |   |   |-- navigation.dart                     # Legacy screen actions, Mp router stack operations, and screen loading
@@ -270,6 +282,12 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_location.dart          # Host provider, accepted policy, and structured provider failures
 |   |-- file/
 |   |   `-- mini_program_file.dart              # Streaming provider, accepted policy, transfer manager, and results
+|   |-- camera/
+|   |   `-- mini_program_camera.dart            # Delegated photo provider, accepted policy, ownership, and cleanup
+|   |-- media/
+|   |   `-- mini_program_media.dart             # Opaque ownership registry, bounded previews, and release
+|   |-- flashlight/
+|   |   `-- mini_program_flashlight.dart        # Torch provider, accepted policy, app ownership, and cleanup
 |   |-- state/
 |   |   |-- mp_state.dart                       # Public state/router import boundary and private part registry
 |   |   |-- live_state/
@@ -614,6 +632,9 @@ packages/mini_program_tooling/
 |       |           |-- source_editors.dart      # Host setup and MainActivity patching
 |       |           |-- dart_provider_template.dart # Dart MethodChannel transfer provider
 |       |           `-- android_channel_template.dart # Picker, MediaStore, and streaming Kotlin adapter
+|       |       |-- camera/                      # System-camera, Activity Result, and FileProvider installer modules
+|       |       |-- shared_media/                # App-owned native media registry template shared by camera/files
+|       |       `-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
 |       |   |-- models.dart                      # Public run/import requests, results, runner, and exception
@@ -1098,10 +1119,12 @@ lib/mini_program/
 |-- mini_program_endpoints.dart                 # Endpoint-import generated artifact routes plus accepted policies
 |-- mini_program_registry.dart                  # Generated app ID to endpoint registry
 |-- mini_program_policies.json                  # Host-owned requested/accepted policy source of truth
-|-- mini_program_policy_resolver.dart           # Generated Dart mapping for accepted cache/state/location/file policy
+|-- mini_program_policy_resolver.dart           # Generated Dart mapping for accepted cache/state/device policy
 |-- mini_program_launcher.dart                  # Generated dynamic and registry-based launch helpers
 |-- app_android_location_provider.dart          # Optional host-owned adapter installed by the location capability command
 |-- app_android_file_transfer_provider.dart     # Optional host-owned streaming file adapter
+|-- app_android_camera_provider.dart            # Optional host-owned delegated system-camera adapter
+|-- app_android_flashlight_provider.dart        # Optional host-owned CameraManager torch adapter
 `-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
 
@@ -1118,6 +1141,15 @@ uses the system document picker plus scoped `MediaStore.Downloads`. Run
 `miniprogram host capability init file --platform android` once per host. The
 installer adds no broad storage permission and does not accept file policy for
 any app.
+
+Android camera capture installs `MiniProgramCameraChannel.kt`, a private
+FileProvider cache path, and a Dart provider, then uses the system camera via
+Activity Result. It upgrades a standard `FlutterActivity` host to
+`FlutterFragmentActivity`; no CameraX dependency or Flutter camera plugin is
+added. Android flashlight installs `MiniProgramFlashlightChannel.kt` and uses
+CameraManager/TorchCallback with runtime CAMERA permission. Run the respective
+`host capability init camera|flashlight --platform android` command once per
+host. Both accepted app policies remain denied until host review.
 
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
@@ -1228,9 +1260,9 @@ Rules:
 The authoring API currently maps to 63 unique SDK runtime node types. There are
 67 distinct public constructors when the five `Mp.skeleton` variants are
 counted separately, and 69 public builder entry points when the two aliases are
-also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`, and
-`Mp.location.*` and `Mp.file.*` are not widgets and are excluded from these
-totals.
+also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
+`Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, and `Mp.flashlight.*` are not
+widgets and are excluded from these totals.
 
 Layout and structure:
 
@@ -1341,6 +1373,13 @@ Important state APIs include:
   location through an accepted host policy and installed host provider.
 - `Mp.file.upload`, `Mp.file.download`, and `Mp.file.cancel` for app-isolated,
   host-accepted Publisher API transfers with bounded progress state.
+- `Mp.camera.capturePhoto` and `Mp.camera.cancel` for delegated system-camera
+  capture with opaque media metadata and host-owned temporary-file cleanup.
+- `MpImageSource.hostMedia`, `Mp.file.upload(mediaRefs: ...)`, and
+  `Mp.media.release` for previewing, streaming, and cleaning app-owned
+  temporary media without exposing native paths or bytes to state.
+- `Mp.flashlight.turnOn`, `turnOff`, `toggle`, and `getStatus` for foreground,
+  app-owned torch control under separate accepted host policy.
 
 Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
 
@@ -1432,11 +1471,11 @@ Import behavior:
 
 - Normal import updates `requested` and preserves the host's `accepted` values.
 - `--accept-requested-policy` explicitly copies supported requested cache,
-  Publisher API, location, and file permissions into accepted policy without
-  replacing unrelated endpoint files.
-- New location and file requests default to denied. Normal re-import preserves
-  host decisions; `--force` resets them to denied and resets live-state limits
-  to safe defaults.
+  Publisher API, location, file, camera, and flashlight permissions into
+  accepted policy without replacing unrelated endpoint files.
+- New location, file, camera, and flashlight requests default to denied.
+  Normal re-import preserves host decisions; `--force` resets them to denied
+  and resets live-state limits to safe defaults.
 - Runtime resolver generation reads only `accepted` for enforcement.
 - Unknown accepted fields should be preserved for forward compatibility.
 

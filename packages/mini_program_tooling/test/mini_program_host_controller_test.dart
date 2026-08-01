@@ -438,6 +438,79 @@ void main() {
     });
 
     test(
+      'camera and flashlight default denied and generate accepted policies',
+      () async {
+        final hostRoot = p.join(tempDir.path, 'host_app');
+        await _writeHostProject(hostRoot);
+        final controller = MiniProgramHostController();
+        final request = MiniProgramHostEndpointAddRequest(
+          projectRootPath: hostRoot,
+          appId: 'camera_tools',
+          apiBaseUri: Uri.parse('https://cdn.example.com/camera_tools/'),
+          requestedPermissions: const <String, Object?>{
+            'camera': <String, Object?>{
+              'enabled': true,
+              'reason': 'Capture photos.',
+              'capturePhoto': true,
+            },
+            'flashlight': <String, Object?>{
+              'enabled': true,
+              'reason': 'Control the flashlight.',
+            },
+          },
+        );
+        final result = await controller.addEndpoint(request);
+        var policies =
+            jsonDecode(await File(result.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        var app =
+            (policies['apps'] as Map<String, dynamic>)['camera_tools']
+                as Map<String, dynamic>;
+        var permissions =
+            (app['accepted'] as Map<String, dynamic>)['permissions']
+                as Map<String, dynamic>;
+        expect(permissions['camera'], <String, dynamic>{
+          'allowPhotoCapture': false,
+          'enabled': false,
+        });
+        expect(permissions['flashlight'], <String, dynamic>{'enabled': false});
+
+        await controller.addEndpoint(
+          MiniProgramHostEndpointAddRequest(
+            projectRootPath: request.projectRootPath,
+            appId: request.appId,
+            apiBaseUri: request.apiBaseUri,
+            requestedPermissions: request.requestedPermissions,
+            acceptRequestedPolicy: true,
+          ),
+        );
+        policies =
+            jsonDecode(await File(result.policyFilePath).readAsString())
+                as Map<String, dynamic>;
+        app =
+            (policies['apps'] as Map<String, dynamic>)['camera_tools']
+                as Map<String, dynamic>;
+        permissions =
+            (app['accepted'] as Map<String, dynamic>)['permissions']
+                as Map<String, dynamic>;
+        expect(permissions['camera'], containsPair('allowPhotoCapture', true));
+        expect(permissions['flashlight'], containsPair('enabled', true));
+
+        final endpoints = await File(result.filePath).readAsString();
+        expect(endpoints, contains('cameraPolicy: cameraPolicyForMiniProgram'));
+        expect(
+          endpoints,
+          contains('flashlightPolicy: flashlightPolicyForMiniProgram'),
+        );
+        final resolver = await File(
+          result.policyResolverFilePath,
+        ).readAsString();
+        expect(resolver, contains('MiniProgramCameraPolicy'));
+        expect(resolver, contains('MiniProgramFlashlightPolicy'));
+      },
+    );
+
+    test(
       'file permission defaults denied and explicit acceptance is generated',
       () async {
         final hostRoot = p.join(tempDir.path, 'host_app');
@@ -654,13 +727,13 @@ void main() {
 
       expect(digests, <String, String>{
         'endpoints':
-            'ed8fec7bd4a4011153027ea812a669b7692b086b6db863ee96bc40f79ddb2bf1',
+            '9e10f7f020bfdb7d176b6a0cf839c7114900d2603da919c2c9e3d55636dea3c6',
         'registry':
             'c9352bd447397efb77696c2b2efbcd17fb951c3807a36c6faef7f4d79dbd11c3',
         'policies':
             'f198f00ae5bfb85f7463def7b3515773d192c03b2187d5a6c5d687abae9db990',
         'resolver':
-            'eedfe1af08c524afacee4bc94bd1eea17ed2fea9fb3fa4ffd3b99a31ae10a625',
+            'cbfdb48c182e4bad28a918b39fd08db0e1c9647a3cc07b8fd57eba0afe51a35e',
       });
     });
   });

@@ -132,6 +132,7 @@ class MpScreenValidator {
     'network',
     'asset',
     'base64',
+    'hostMedia',
   };
   static const Set<String> _imageFitNames = <String>{
     'cover',
@@ -697,6 +698,17 @@ class MpScreenValidator {
       'file.upload' => _parseFileUploadAction(type, props, path),
       'file.download' => _parseFileDownloadAction(type, props, path),
       'file.cancel' => _parseFileCancelAction(type, props, path),
+      'camera.capturePhoto' => _parseCameraCapturePhotoAction(
+        type,
+        props,
+        path,
+      ),
+      'camera.cancel' => _parseCameraCancelAction(type, props, path),
+      'flashlight.turnOn' ||
+      'flashlight.turnOff' ||
+      'flashlight.toggle' ||
+      'flashlight.getStatus' => _parseFlashlightAction(type, props, path),
+      'media.release' => _parseMediaReleaseAction(type, props, path),
       'cache.set' => _parseCacheSetAction(type, props, path),
       'cache.get' => _parseCacheGetAction(type, props, path),
       'cache.has' => _parseCacheHasAction(type, props, path),

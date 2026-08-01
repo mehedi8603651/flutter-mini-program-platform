@@ -107,19 +107,20 @@ String patchFileTransferMainActivity(String source) {
     fallbackAfter: 'import io.flutter.embedding.android.FlutterActivity',
   );
   final classMatch = RegExp(
-    r'class\s+MainActivity\s*:\s*FlutterActivity\(\)',
+    r'class\s+MainActivity\s*:\s*(FlutterActivity|FlutterFragmentActivity)\(\)',
   ).firstMatch(updated);
   if (classMatch == null) {
     throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt must define `class MainActivity : FlutterActivity()` '
-      'for automatic file capability installation.',
+      'MainActivity.kt must extend FlutterActivity or '
+      'FlutterFragmentActivity for automatic file capability installation.',
     );
   }
+  final activityBase = classMatch.group(1)!;
   final classTail = updated.substring(classMatch.end);
   final firstContentIndex = classTail.indexOf(RegExp(r'\S'));
   if (firstContentIndex == -1) {
     final replacement =
-        'class MainActivity : FlutterActivity() {$newline'
+        'class MainActivity : $activityBase() {$newline'
         '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
         '        super.configureFlutterEngine(flutterEngine)$newline'
         '        MiniProgramFileTransferChannel.register(flutterEngine)$newline'

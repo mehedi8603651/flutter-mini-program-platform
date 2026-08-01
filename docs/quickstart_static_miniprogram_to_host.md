@@ -333,6 +333,25 @@ miniprogram host capability init file --platform android --project-root .
 Installation supplies native transfer support but never enables an app's
 accepted policy.
 
+For an app that requests still-photo capture or flashlight control, review
+`permissions.camera` and `permissions.flashlight`, then install the reusable
+Android providers:
+
+```powershell
+miniprogram host capability init camera --platform android --project-root .
+miniprogram host capability init flashlight --platform android --project-root .
+```
+
+The camera installer uses Android's system camera, Activity Result API, and a
+host-private FileProvider cache. It upgrades a standard `FlutterActivity` host
+to `FlutterFragmentActivity` so Activity Result registration is lifecycle
+safe. The flashlight installer uses CameraManager and TorchCallback. Neither
+command accepts policy for any mini-program.
+Camera and file providers share app-owned opaque media references. A captured
+photo can be rendered with `MpImageSource.hostMedia`, supplied to
+`Mp.file.upload(mediaRefs: ...)`, and removed with `Mp.media.release` without
+placing native paths or bytes in state.
+
 `embed init --force` refreshes scaffold-generated files while preserving host
 setup, bridge, policies, and endpoint-import generated output.
 

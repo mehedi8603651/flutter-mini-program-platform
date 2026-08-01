@@ -769,6 +769,12 @@ Future<Object?> _runMpAction(
   MiniProgramLocationPolicy locationPolicy = const MiniProgramLocationPolicy(),
   MiniProgramFileTransferManager? fileTransferManager,
   MiniProgramFilePolicy filePolicy = const MiniProgramFilePolicy(),
+  MiniProgramCameraManager? cameraManager,
+  MiniProgramMediaManager? mediaManager,
+  MiniProgramCameraPolicy cameraPolicy = const MiniProgramCameraPolicy(),
+  MiniProgramFlashlightManager? flashlightManager,
+  MiniProgramFlashlightPolicy flashlightPolicy =
+      const MiniProgramFlashlightPolicy(),
   String? miniProgramVersion,
   MiniProgramDataResourceManager? dataResourceManager,
   MiniProgramJsonAssetSource? jsonAssetSource,
@@ -789,6 +795,11 @@ Future<Object?> _runMpAction(
         locationPolicy: locationPolicy,
         fileTransferManager: fileTransferManager,
         filePolicy: filePolicy,
+        cameraManager: cameraManager,
+        mediaManager: mediaManager,
+        cameraPolicy: cameraPolicy,
+        flashlightManager: flashlightManager,
+        flashlightPolicy: flashlightPolicy,
         cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
         cachePolicy: cachePolicy,
         miniProgramVersion: miniProgramVersion,
@@ -869,6 +880,7 @@ Widget _scopedApp({
   MiniProgramOpenScreenHandler? openMiniProgramScreen,
   MpStateManager? stateManager,
   MpRouter? router,
+  MiniProgramMediaManager? mediaManager,
   Map<String, dynamic> routeParams = const <String, dynamic>{},
 }) {
   return MaterialApp(
@@ -888,6 +900,7 @@ Widget _scopedApp({
       stateManager: stateManager,
       router: router,
       routeParams: routeParams,
+      mediaManager: mediaManager,
       featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
       logger: const DebugPrintSdkLogger(),
       openMiniProgramScreen:
@@ -936,6 +949,72 @@ class _FailingLocationProvider implements MiniProgramLocationProvider {
     required MiniProgramLocationAccuracy accuracy,
     required Duration timeout,
   }) async => throw error;
+}
+
+class _ResultCameraProvider implements MiniProgramCameraProvider {
+  final List<String> released = <String>[];
+
+  @override
+  Future<MiniProgramCameraPhotoResult> capturePhoto(
+    MiniProgramCameraCaptureRequest request,
+  ) async => MiniProgramCameraPhotoResult(
+    captureId: request.captureId,
+    mediaRef: 'camera-media-1',
+    fileName: 'photo.jpg',
+    mimeType: 'image/jpeg',
+    bytes: 1024,
+    width: request.maxWidth ?? 1280,
+    height: request.maxHeight ?? 720,
+    capturedAtUtc: DateTime.utc(2026, 8, 1),
+  );
+
+  @override
+  Future<bool> cancel(String captureId) async => true;
+
+  @override
+  Future<void> release(String mediaRef) async => released.add(mediaRef);
+}
+
+class _ResultFlashlightProvider implements MiniProgramFlashlightProvider {
+  bool enabled = false;
+
+  @override
+  Future<MiniProgramFlashlightStatus> getStatus() async =>
+      MiniProgramFlashlightStatus(available: true, enabled: enabled);
+
+  @override
+  Future<MiniProgramFlashlightStatus> setEnabled(bool value) async {
+    enabled = value;
+    return MiniProgramFlashlightStatus(available: true, enabled: enabled);
+  }
+}
+
+class _TestMediaProvider implements MiniProgramMediaProvider {
+  final List<String> released = <String>[];
+  int previewCalls = 0;
+
+  @override
+  Future<MiniProgramMediaPreviewResult> loadPreview(
+    MiniProgramMediaPreviewRequest request,
+  ) async {
+    previewCalls++;
+    return MiniProgramMediaPreviewResult(
+      mediaRef: request.mediaRef,
+      mimeType: 'image/png',
+      bytes: Uint8List.fromList(
+        base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+          'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<bool> releaseMedia(MiniProgramMediaReleaseRequest request) async {
+    released.add('${request.miniProgramId}:${request.mediaRef}');
+    return true;
+  }
 }
 
 class _TestFileBackendConnector

@@ -1,3 +1,12 @@
+## 0.6.4
+
+- Add host-policy-controlled, provider-neutral delegated system-camera photo
+  capture with cancellation, opaque metadata, and temporary-media cleanup.
+- Add host-policy-controlled flashlight management with app ownership,
+  status reporting, lifecycle shutdown, and stable failures.
+- Add an app-isolated temporary media registry for bounded host previews,
+  reference-based file uploads, explicit release, and lifecycle cleanup.
+
 ## 0.6.3
 
 - Add host-policy-controlled streaming Publisher API uploads and downloads

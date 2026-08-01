@@ -107,7 +107,15 @@ extension _MpContentNodeValidation on MpScreenValidator {
     _validateNoChildren(children, path: '$path.children');
     final source =
         _optionalImageSource(props, 'source', path: '$path.props') ?? 'auto';
-    if (!_MpBindingResolver.containsBinding(src)) {
+    if (source == 'hostMedia') {
+      _validateHostMediaReference(src, path: '$path.props.src');
+      if (props.containsKey('headers')) {
+        _fail(
+          'Mp hostMedia images do not support request headers.',
+          path: '$path.props.headers',
+        );
+      }
+    } else if (!_MpBindingResolver.containsBinding(src)) {
       _validateImageSourceSrc(src, source: source, path: '$path.props.src');
     }
     return _MpNode(

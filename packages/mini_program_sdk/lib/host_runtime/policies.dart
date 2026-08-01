@@ -36,4 +36,21 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     }
     return const MiniProgramFilePolicy();
   }
+
+  MiniProgramCameraPolicy _cameraPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramCameraPolicyProvider) {
+      return (source as MiniProgramCameraPolicyProvider).cameraPolicyFor(appId);
+    }
+    return const MiniProgramCameraPolicy();
+  }
+
+  MiniProgramFlashlightPolicy _flashlightPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramFlashlightPolicyProvider) {
+      return (source as MiniProgramFlashlightPolicyProvider)
+          .flashlightPolicyFor(appId);
+    }
+    return const MiniProgramFlashlightPolicy();
+  }
 }

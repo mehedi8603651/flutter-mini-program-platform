@@ -186,6 +186,20 @@ abstract final class _MpActionDispatcher {
         'file.upload' => _MpFileActionHandler._upload(scope, props),
         'file.download' => _MpFileActionHandler._download(scope, props),
         'file.cancel' => _MpFileActionHandler._cancel(scope, props),
+        'camera.capturePhoto' => _MpCameraActionHandler._capturePhoto(
+          scope,
+          props,
+        ),
+        'camera.cancel' => _MpCameraActionHandler._cancel(scope, props),
+        'flashlight.turnOn' ||
+        'flashlight.turnOff' ||
+        'flashlight.toggle' ||
+        'flashlight.getStatus' => _MpFlashlightActionHandler._run(
+          scope,
+          action.type,
+          props,
+        ),
+        'media.release' => _MpMediaActionHandler._release(scope, props),
         'cache.set' => _MpCacheActionHandler._cacheSet(scope, props),
         'cache.get' => _MpCacheActionHandler._cacheGet(scope, props),
         'cache.has' => _MpCacheActionHandler._cacheHas(scope, props),

@@ -6,6 +6,7 @@ import 'features/backend/backend_actions.dart';
 import 'features/backend/backend_nodes.dart';
 import 'features/backend/search.dart';
 import 'features/cache/cache_actions.dart';
+import 'features/camera/camera_actions.dart';
 import 'features/charts/chart_nodes.dart';
 import 'features/collections/collection_nodes.dart';
 import 'features/composition/action_actions.dart';
@@ -19,6 +20,7 @@ import 'features/controls/selection_nodes.dart';
 import 'features/data/data_actions.dart';
 import 'features/feedback/feedback_actions.dart';
 import 'features/file/file_actions.dart';
+import 'features/flashlight/flashlight_actions.dart';
 import 'features/forms/form_models.dart';
 import 'features/forms/form_nodes.dart';
 import 'features/layout/layout_nodes.dart';
@@ -27,6 +29,7 @@ import 'features/lifecycle/lifecycle_nodes.dart';
 import 'features/lifecycle/timer_nodes.dart';
 import 'features/location/location_actions.dart';
 import 'features/math/math_actions.dart';
+import 'features/media/media_actions.dart';
 import 'features/navigation/navigation_actions.dart';
 import 'features/navigation/router_actions.dart';
 import 'features/skeleton/skeleton_nodes.dart';
@@ -38,13 +41,16 @@ export 'features/backend/backend_actions.dart' show MpBackendActions;
 export 'features/backend/search.dart' show MpSearch;
 export 'features/cache/cache_actions.dart'
     show MpCacheActions, MpCacheBucketActions;
+export 'features/camera/camera_actions.dart' show MpCameraActions;
 export 'features/composition/action_actions.dart' show MpActionActions;
 export 'features/data/data_actions.dart' show MpDataActions;
 export 'features/forms/form_models.dart' show MpOption;
 export 'features/lifecycle/timer_nodes.dart' show MpTimer;
 export 'features/location/location_actions.dart' show MpLocationActions;
 export 'features/file/file_actions.dart' show MpFileActions;
+export 'features/flashlight/flashlight_actions.dart' show MpFlashlightActions;
 export 'features/math/math_actions.dart' show MpMathActions;
+export 'features/media/media_actions.dart' show MpMediaActions;
 export 'features/navigation/navigation_actions.dart' show MpNavigationActions;
 export 'features/navigation/router_actions.dart' show MpRouterActions;
 export 'features/state/state_actions.dart' show MpStateActions;
@@ -80,6 +86,15 @@ abstract final class Mp {
 
   /// Publisher file upload, download, and cancellation actions.
   static const file = MpFileActions();
+
+  /// Host-controlled still-photo capture actions.
+  static const camera = MpCameraActions();
+
+  /// App-owned temporary host media actions.
+  static const media = MpMediaActions();
+
+  /// Host-controlled foreground flashlight actions.
+  static const flashlight = MpFlashlightActions();
 
   /// Lifecycle-owned timer nodes.
   static const timer = MpTimer();

@@ -236,6 +236,25 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'minimumFreeBytes': 256 * 1024 * 1024,
     });
   }
+  if (permission == 'camera') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostCamera(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'allowPhotoCapture': acceptRequested && request['capturePhoto'] == true,
+    });
+  }
+  if (permission == 'flashlight') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostFlashlight(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+    });
+  }
   if (permission != 'location') {
     return deepHostJsonObjectCopy(existing);
   }
@@ -266,31 +285,82 @@ Map<String, Object?> validateAcceptedHostPermissions(
     );
   }
   final rawLocation = normalized['location'];
-  if (rawLocation == null) {
-    return sortedHostJsonObject(normalized);
+  if (rawLocation != null) {
+    if (rawLocation is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location must be an object.',
+      );
+    }
+    final location = deepHostJsonObjectCopy(hostJsonObjectOrEmpty(rawLocation));
+    if (location['enabled'] is! bool) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location.enabled must be a boolean.',
+      );
+    }
+    if (location['accuracy'] != 'approximate') {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location.accuracy must be "approximate".',
+      );
+    }
+    if (location['mode'] != 'whenInUse') {
+      throw const MiniProgramHostException(
+        'Accepted permissions.location.mode must be "whenInUse".',
+      );
+    }
+    normalized['location'] = sortedHostJsonObject(location);
   }
-  if (rawLocation is! Map) {
-    throw const MiniProgramHostException(
-      'Accepted permissions.location must be an object.',
+  final rawCamera = normalized['camera'];
+  if (rawCamera != null) {
+    if (rawCamera is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.camera must be an object.',
+      );
+    }
+    normalized['camera'] = validateAcceptedHostCamera(
+      hostJsonObjectOrEmpty(rawCamera),
     );
   }
-  final location = deepHostJsonObjectCopy(hostJsonObjectOrEmpty(rawLocation));
-  if (location['enabled'] is! bool) {
-    throw const MiniProgramHostException(
-      'Accepted permissions.location.enabled must be a boolean.',
+  final rawFlashlight = normalized['flashlight'];
+  if (rawFlashlight != null) {
+    if (rawFlashlight is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.flashlight must be an object.',
+      );
+    }
+    normalized['flashlight'] = validateAcceptedHostFlashlight(
+      hostJsonObjectOrEmpty(rawFlashlight),
     );
   }
-  if (location['accuracy'] != 'approximate') {
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostCamera(Map<String, Object?> value) {
+  final normalized = deepHostJsonObjectCopy(value);
+  for (final key in const <String>{'enabled', 'allowPhotoCapture'}) {
+    if (normalized[key] is! bool) {
+      throw MiniProgramHostException(
+        'Accepted permissions.camera.$key must be a boolean.',
+      );
+    }
+  }
+  if (normalized['enabled'] == true &&
+      normalized['allowPhotoCapture'] != true) {
     throw const MiniProgramHostException(
-      'Accepted permissions.location.accuracy must be "approximate".',
+      'Enabled permissions.camera must allow photo capture.',
     );
   }
-  if (location['mode'] != 'whenInUse') {
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostFlashlight(
+  Map<String, Object?> value,
+) {
+  final normalized = deepHostJsonObjectCopy(value);
+  if (normalized['enabled'] is! bool) {
     throw const MiniProgramHostException(
-      'Accepted permissions.location.mode must be "whenInUse".',
+      'Accepted permissions.flashlight.enabled must be a boolean.',
     );
   }
-  normalized['location'] = sortedHostJsonObject(location);
   return sortedHostJsonObject(normalized);
 }
 

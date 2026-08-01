@@ -120,7 +120,7 @@ void main() {
         platform: 'android',
       ),
     );
-    expect(result.createdPaths, hasLength(2));
+    expect(result.createdPaths, hasLength(3));
     expect(result.updatedPaths, hasLength(2));
 
     final provider = await File(
@@ -134,6 +134,7 @@ void main() {
     expect(provider, contains('class AppAndroidFileTransferProvider'));
     expect(provider, contains("'mini_program/files'"));
     expect(provider, contains('MiniProgramFileUploadRequest'));
+    expect(provider, contains("'mediaRefs': request.mediaRefs"));
 
     final setup = await File(
       p.join(
@@ -175,6 +176,7 @@ void main() {
     expect(native, contains('acceptedMimeTypes.none'));
     expect(native, contains('formValue(value)'));
     expect(native, contains('context.contentResolver.delete(uri, null, null)'));
+    expect(native, contains('MiniProgramHostMediaRegistry.findOwned'));
     expect(native, contains(r'''substringBefore('/')}/'''));
     expect(native, isNot(contains(r'''substringBefore('/')}\/''')));
     expect(native, isNot(contains('READ_EXTERNAL_STORAGE')));
@@ -189,6 +191,207 @@ void main() {
     );
     expect(second.alreadyInstalled, isTrue);
   });
+
+  test('installs delegated Android system-camera support', () async {
+    const installer = MiniProgramHostCapabilityInstaller();
+    final request = MiniProgramHostCapabilityInitRequest(
+      projectRootPath: hostRootPath,
+      capability: 'camera',
+      platform: 'android',
+    );
+    final result = await installer.initialize(request);
+    expect(result.createdPaths, hasLength(4));
+    expect(result.updatedPaths, hasLength(3));
+
+    final setup = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_host_setup.dart',
+      ),
+    ).readAsString();
+    expect(setup, contains('AppAndroidCameraProvider'));
+    expect(setup, contains('cameraProvider: resolvedCameraProvider'));
+    expect(setup, contains('mediaProvider: resolvedMediaProvider'));
+
+    final manifest = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'AndroidManifest.xml',
+      ),
+    ).readAsString();
+    expect(manifest, contains('androidx.core.content.FileProvider'));
+    expect(manifest, contains(r'${applicationId}.mini_program_camera_files'));
+    expect(manifest, isNot(contains('android.permission.CAMERA')));
+
+    final paths = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'res',
+        'xml',
+        'mini_program_camera_paths.xml',
+      ),
+    ).readAsString();
+    expect(paths, contains('<cache-path'));
+    final native = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'kotlin',
+        'com',
+        'example',
+        'host_app',
+        'MiniProgramCameraChannel.kt',
+      ),
+    ).readAsString();
+    expect(native, contains('ActivityResultContracts.TakePicture'));
+    expect(native, contains('ActivityResultContracts.RequestPermission'));
+    expect(native, contains('Manifest.permission.CAMERA'));
+    expect(native, contains('requestedPermissions'));
+    expect(native, contains('camera_permission_denied'));
+    expect(native, contains('FileProvider.getUriForFile'));
+    expect(native, contains('mediaRef'));
+    expect(native, contains('MiniProgramHostMediaRegistry.register'));
+    expect(native, contains('"loadPreview"'));
+    expect(native, isNot(contains('CameraX')));
+    final registry = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'kotlin',
+        'com',
+        'example',
+        'host_app',
+        'MiniProgramHostMediaRegistry.kt',
+      ),
+    ).readAsString();
+    expect(registry, contains('object MiniProgramHostMediaRegistry'));
+    expect(registry, contains('findOwned'));
+    final activity = await _mainActivityFile(hostRootPath).readAsString();
+    expect(activity, contains('FlutterFragmentActivity'));
+    expect(activity, isNot(contains('class MainActivity : FlutterActivity')));
+    expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+  });
+
+  test('installs Android CameraManager flashlight support', () async {
+    const installer = MiniProgramHostCapabilityInstaller();
+    final request = MiniProgramHostCapabilityInitRequest(
+      projectRootPath: hostRootPath,
+      capability: 'flashlight',
+      platform: 'android',
+    );
+    final result = await installer.initialize(request);
+    expect(result.createdPaths, hasLength(2));
+    expect(result.updatedPaths, hasLength(4));
+
+    final manifest = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'AndroidManifest.xml',
+      ),
+    ).readAsString();
+    expect(manifest, contains('android.permission.CAMERA'));
+    expect(manifest, contains('android.hardware.camera.flash'));
+    expect(manifest, contains('android:required="false"'));
+
+    final native = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'kotlin',
+        'com',
+        'example',
+        'host_app',
+        'MiniProgramFlashlightChannel.kt',
+      ),
+    ).readAsString();
+    expect(native, contains('CameraManager.TorchCallback'));
+    expect(native, contains('setTorchMode'));
+    expect(native, contains('turnOffBestEffort'));
+    expect(native, isNot(contains('CameraX')));
+
+    final runtimeSetup = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    ).readAsString();
+    expect(
+      runtimeSetup,
+      contains('MiniProgramFlashlightProvider? flashlightProvider'),
+    );
+    expect(runtimeSetup, contains('CapabilityIds.flashlightControl'));
+    expect(runtimeSetup, contains('flashlightProvider: flashlightProvider,'));
+    expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+  });
+
+  test(
+    'installs other Android capabilities after camera upgrades the activity',
+    () async {
+      const installer = MiniProgramHostCapabilityInstaller();
+      for (final capability in <String>[
+        'camera',
+        'flashlight',
+        'location',
+        'file',
+      ]) {
+        final result = await installer.initialize(
+          MiniProgramHostCapabilityInitRequest(
+            projectRootPath: hostRootPath,
+            capability: capability,
+            platform: 'android',
+          ),
+        );
+        expect(result.alreadyInstalled, isFalse, reason: capability);
+      }
+
+      final activity = await _mainActivityFile(hostRootPath).readAsString();
+      expect(
+        activity,
+        contains('class MainActivity : FlutterFragmentActivity()'),
+      );
+      expect(
+        activity,
+        contains('MiniProgramCameraChannel.register(flutterEngine)'),
+      );
+      expect(
+        activity,
+        contains('MiniProgramFlashlightChannel.register(flutterEngine)'),
+      );
+      expect(
+        activity,
+        contains('MiniProgramLocationChannel.register(flutterEngine)'),
+      );
+      expect(
+        activity,
+        contains('MiniProgramFileTransferChannel.register(flutterEngine)'),
+      );
+    },
+  );
 
   test('is idempotent after a successful installation', () async {
     const installer = MiniProgramHostCapabilityInstaller();
@@ -301,7 +504,7 @@ class MainActivity : FlutterActivity() {
       installer.initialize(
         MiniProgramHostCapabilityInitRequest(
           projectRootPath: hostRootPath,
-          capability: 'camera',
+          capability: 'microphone',
           platform: 'android',
         ),
       ),
@@ -390,12 +593,30 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.6.3
-  mini_program_contracts: ^0.3.8
+  mini_program_sdk: ^0.6.4
+  mini_program_contracts: ^0.3.9
 ''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),
-  ).writeAsString('// Generated runtime setup.\n');
+  ).writeAsString('''
+import 'package:mini_program_contracts/mini_program_contracts.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+MiniProgramConfig buildMiniProgramConfig({
+  Map<String, MiniProgramEndpoint> endpoints =
+      const <String, MiniProgramEndpoint>{},
+}) {
+  final supportedCapabilities = <CapabilityId>{
+    CapabilityIds.analytics,
+  };
+  return MiniProgramConfig(
+    sdkVersion: '1.0.0',
+    source: EndpointRoutingMiniProgramSource(endpoints: endpoints),
+    hostBridge: const _TestHostBridge(),
+    capabilityRegistry: CapabilityRegistry(supportedCapabilities),
+  );
+}
+''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_host_setup.dart'),
   ).writeAsString('''

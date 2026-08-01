@@ -10,7 +10,10 @@ enum MpImageSource {
   asset('asset'),
 
   /// Load the image from raw base64 or a data URI.
-  base64('base64');
+  base64('base64'),
+
+  /// Render an app-owned opaque temporary host media reference.
+  hostMedia('hostMedia');
 
   const MpImageSource(this.wireName);
 

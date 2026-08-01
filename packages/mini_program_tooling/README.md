@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.1` generates mini-program projects against
-`mini_program_ui: ^0.2.2` and Flutter host projects against
-`mini_program_sdk: ^0.6.3`.
+Tooling `0.7.2` generates mini-program projects against
+`mini_program_ui: ^0.2.3` and Flutter host projects against
+`mini_program_sdk: ^0.6.4`.
 
 The CLI supports the current MVP architecture:
 
@@ -348,6 +348,20 @@ support, streaming Publisher API transport, progress, and cancellation. It
 adds no broad storage permission and never enables an app policy. Files, paths,
 and content URIs are not copied into mini-program state.
 
+Install delegated system-camera capture and flashlight control independently:
+
+```powershell
+miniprogram host capability init camera --platform android --project-root .
+miniprogram host capability init flashlight --platform android --project-root .
+```
+
+Camera uses Activity Result plus FileProvider private cache and does not add
+CameraX. Flashlight uses CameraManager plus TorchCallback. Both commands are
+idempotent and leave every mini-program denied until its accepted permission
+is reviewed. Camera and file installers share an app-owned native media
+registry, allowing captured photos to be previewed and streamed into uploads
+without exposing a path or reopening the document picker.
+
 ### 3. Add An Endpoint Manually
 
 Use when you know the `artifactBaseUrl` and do not have a partner JSON file.
@@ -602,6 +616,8 @@ miniprogram env status --json
 | `miniprogram host endpoint add` | Add an endpoint manually by URL. |
 | `miniprogram host capability init location --platform android` | Install generic one-time approximate Android location support. |
 | `miniprogram host capability init file --platform android` | Install generic Android Publisher API file transfers. |
+| `miniprogram host capability init camera --platform android` | Install delegated Android system-camera photo capture. |
+| `miniprogram host capability init flashlight --platform android` | Install Android CameraManager flashlight control. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |
 | `miniprogram artifact-host ...` | Manage a local static artifact host. |
 | `miniprogram publisher-api ...` | Work with optional runtime middle-server APIs. |

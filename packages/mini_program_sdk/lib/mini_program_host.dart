@@ -6,6 +6,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
 
 import 'cache/asset_cache.dart';
+import 'camera/mini_program_camera.dart';
 import 'cache/manifest_cache.dart';
 import 'cache/runtime_cache.dart';
 import 'cache/screen_cache.dart';
@@ -13,9 +14,11 @@ import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'file/mini_program_file.dart';
+import 'flashlight/mini_program_flashlight.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
+import 'media/mini_program_media.dart';
 import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
 import 'network/asset_resolver.dart';
@@ -56,6 +59,9 @@ class MiniProgramHost extends StatefulWidget {
     this.backendConnector,
     this.locationProvider,
     this.fileTransferProvider,
+    this.cameraProvider,
+    this.mediaProvider,
+    this.flashlightProvider,
     this.authController,
     this.assetCache,
     this.manifestCache,
@@ -76,6 +82,9 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
+  final MiniProgramCameraProvider? cameraProvider;
+  final MiniProgramMediaProvider? mediaProvider;
+  final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramAuthController? authController;
   final AssetCache? assetCache;
   final ManifestCache? manifestCache;

@@ -76,6 +76,62 @@ void main() {
         },
       );
     });
+
+    test('accepts camera and flashlight actions with strict properties', () {
+      for (final action in <Map<String, dynamic>>[
+        <String, dynamic>{
+          'type': 'camera.capturePhoto',
+          'props': <String, dynamic>{
+            'maxWidth': 1920,
+            'maxHeight': 1080,
+            'quality': 90,
+            'targetState': 'camera.photo',
+          },
+        },
+        <String, dynamic>{
+          'type': 'flashlight.getStatus',
+          'props': <String, dynamic>{'targetState': 'torch.status'},
+        },
+      ]) {
+        expect(
+          () => const MpScreenValidator().validate(
+            _screen(
+              _node(
+                'primaryButton',
+                props: <String, dynamic>{'label': 'Run', 'action': action},
+              ),
+            ),
+            expectedScreenId: 'compatibility_home',
+          ),
+          returnsNormally,
+        );
+      }
+    });
+
+    test('rejects invalid camera quality at its exact property path', () {
+      _expectValidationFailure(
+        _screen(
+          _node(
+            'primaryButton',
+            props: <String, dynamic>{
+              'label': 'Capture',
+              'action': <String, dynamic>{
+                'type': 'camera.capturePhoto',
+                'props': <String, dynamic>{
+                  'quality': 101,
+                  'targetState': 'camera.photo',
+                },
+              },
+            },
+          ),
+        ),
+        message:
+            'Invalid Mp screen JSON: Mp integer value must be between 1 and 100.',
+        details: <String, dynamic>{
+          'path': r'$.root.props.action.props.quality',
+        },
+      );
+    });
   });
 }
 

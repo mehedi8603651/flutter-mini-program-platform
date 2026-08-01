@@ -109,13 +109,14 @@ void main() {
       }
     }
 
-    expect(owners, hasLength(87));
+    expect(owners, hasLength(88));
     expect(_ownerName(owners, '_validateObjectKeys'), 'structure.dart');
     expect(_ownerName(owners, '_requiredString'), 'strings.dart');
     expect(_ownerName(owners, '_boundedNumber'), 'numbers.dart');
     expect(_ownerName(owners, '_requiredHexColor'), 'presentation.dart');
     expect(_ownerName(owners, '_parseThemeTypography'), 'theme.dart');
     expect(_ownerName(owners, '_validateBase64Image'), 'media.dart');
+    expect(_ownerName(owners, '_validateHostMediaReference'), 'media.dart');
     expect(_ownerName(owners, '_parseOptions'), 'collections_forms.dart');
     expect(_ownerName(owners, '_validateCacheValue'), 'state_cache.dart');
     expect(_ownerName(owners, '_fail'), 'failures.dart');

@@ -85,6 +85,10 @@ String buildHostEndpointFile(
       )
       ..writeln('      locationPolicy: locationPolicyForMiniProgram($mapKey),')
       ..writeln('      filePolicy: filePolicyForMiniProgram($mapKey),')
+      ..writeln('      cameraPolicy: cameraPolicyForMiniProgram($mapKey),')
+      ..writeln(
+        '      flashlightPolicy: flashlightPolicyForMiniProgram($mapKey),',
+      )
       ..writeln('      requestTimeout: const Duration(seconds: 20),');
     buffer.writeln('    ),');
   }

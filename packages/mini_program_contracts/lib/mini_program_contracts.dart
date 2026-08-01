@@ -28,6 +28,12 @@ export 'mini_program_location.dart';
 // Provider-neutral file transfer values.
 export 'mini_program_file.dart';
 
+// Provider-neutral camera capture values.
+export 'mini_program_camera.dart';
+
+// Provider-neutral flashlight status values.
+export 'mini_program_flashlight.dart';
+
 // Provider-neutral Publisher API contract models.
 export 'publisher_backend_contract.dart';
 

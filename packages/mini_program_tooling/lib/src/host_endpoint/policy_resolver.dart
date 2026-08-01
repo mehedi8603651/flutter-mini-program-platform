@@ -149,6 +149,61 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('      return const MiniProgramFilePolicy();')
     ..writeln('  }')
     ..writeln('}')
+    ..writeln()
+    ..writeln('MiniProgramCameraPolicy cameraPolicyForMiniProgram(')
+    ..writeln('  String appId,')
+    ..writeln(') {')
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final camera = permissions['camera'] is Map
+        ? hostJsonObjectOrEmpty(permissions['camera'])
+        : const <String, Object?>{'enabled': false, 'allowPhotoCapture': false};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramCameraPolicy('
+        'enabled: ${camera['enabled'] == true}, '
+        'allowPhotoCapture: ${camera['allowPhotoCapture'] == true});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramCameraPolicy();')
+    ..writeln('  }')
+    ..writeln('}')
+    ..writeln()
+    ..writeln('MiniProgramFlashlightPolicy flashlightPolicyForMiniProgram(')
+    ..writeln('  String appId,')
+    ..writeln(') {')
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final flashlight = permissions['flashlight'] is Map
+        ? hostJsonObjectOrEmpty(permissions['flashlight'])
+        : const <String, Object?>{'enabled': false};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramFlashlightPolicy('
+        'enabled: ${flashlight['enabled'] == true});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramFlashlightPolicy();')
+    ..writeln('  }')
+    ..writeln('}')
     ..writeln();
   return buffer.toString();
 }

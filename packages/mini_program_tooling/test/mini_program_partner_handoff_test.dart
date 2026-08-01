@@ -202,6 +202,40 @@ void main() {
       });
     });
 
+    test('writes camera and flashlight permission requests', () async {
+      const controller = MiniProgramPartnerHandoffController();
+      final outputPath = p.join(tempDir.path, 'camera.partner.json');
+      await controller.createPackage(
+        MiniProgramPartnerPackageRequest(
+          appId: 'camera_tools',
+          title: 'Camera Tools',
+          artifactBaseUri: Uri.parse('https://cdn.example.com/camera_tools/'),
+          outputPath: outputPath,
+          generatedAtUtc: DateTime.utc(2026, 8, 1),
+          requestedPermissions: const <String, Object?>{
+            'camera': <String, Object?>{
+              'enabled': true,
+              'reason': 'Capture a photo selected by the user.',
+              'capturePhoto': true,
+            },
+            'flashlight': <String, Object?>{
+              'enabled': true,
+              'reason': 'Control the flashlight while this screen is open.',
+            },
+          },
+        ),
+      );
+      final handoff = await controller.readPackage(outputPath);
+      expect(
+        handoff.requestedPermissions['camera'],
+        containsPair('capturePhoto', true),
+      );
+      expect(
+        handoff.requestedPermissions['flashlight'],
+        containsPair('enabled', true),
+      );
+    });
+
     test('rejects malformed or unsupported permission requests', () async {
       for (final permissions in <Map<String, Object?>>[
         <String, Object?>{

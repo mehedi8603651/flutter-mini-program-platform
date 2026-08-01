@@ -120,6 +120,21 @@ void _validateImageSourceSrc(
       _validateBase64Image(src, path: path);
     case 'asset' || 'auto':
       return;
+    case 'hostMedia':
+      _validateHostMediaReference(src, path: path);
+  }
+}
+
+void _validateHostMediaReference(String value, {required String path}) {
+  if (value.length > 512) {
+    _fail('Mp hostMedia reference exceeds 512 characters.', path: path);
+  }
+  if (_MpBindingResolver.containsBinding(value) &&
+      !_MpBindingResolver.isSingleBindingExpression(value)) {
+    _fail(
+      'Mp hostMedia src must be a literal or full binding expression.',
+      path: path,
+    );
   }
 }
 

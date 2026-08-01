@@ -37,6 +37,15 @@ abstract final class CapabilityIds {
   /// Host can stream a Publisher API response to user-visible storage.
   static const CapabilityId fileDownload = 'file.download';
 
+  /// Host can delegate one-time still-photo capture to the device camera UI.
+  static const CapabilityId cameraCapturePhoto = 'camera.capture_photo';
+
+  /// Host can render app-owned opaque temporary media references.
+  static const CapabilityId mediaPreview = 'media.preview';
+
+  /// Host can control the device torch while a mini-program is foregrounded.
+  static const CapabilityId flashlightControl = 'flashlight.control';
+
   /// Stable ordering used by scaffolds and human-readable output.
   static const List<CapabilityId> standardValues = <CapabilityId>[
     auth,
@@ -49,6 +58,9 @@ abstract final class CapabilityIds {
     locationCurrent,
     fileUpload,
     fileDownload,
+    cameraCapturePhoto,
+    mediaPreview,
+    flashlightControl,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

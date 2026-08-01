@@ -65,4 +65,26 @@ abstract final class MiniProgramErrorCodes {
   static const String fileTransferLimitExceeded =
       'file_transfer_limit_exceeded';
   static const String fileInvalidResult = 'file_invalid_result';
+  static const String cameraNotAccepted = 'camera_not_accepted';
+  static const String cameraUnavailable = 'camera_unavailable';
+  static const String cameraPermissionDenied = 'camera_permission_denied';
+  static const String cameraPermissionDeniedPermanently =
+      'camera_permission_denied_permanently';
+  static const String cameraCaptureCancelled = 'camera_capture_cancelled';
+  static const String cameraRequestInProgress = 'camera_request_in_progress';
+  static const String cameraInvalidResult = 'camera_invalid_result';
+  static const String cameraStorageUnavailable = 'camera_storage_unavailable';
+  static const String mediaUnavailable = 'media_unavailable';
+  static const String mediaNotFound = 'media_not_found';
+  static const String mediaNotOwned = 'media_not_owned';
+  static const String mediaPreviewTooLarge = 'media_preview_too_large';
+  static const String mediaInvalidResult = 'media_invalid_result';
+  static const String flashlightNotAccepted = 'flashlight_not_accepted';
+  static const String flashlightUnavailable = 'flashlight_unavailable';
+  static const String flashlightPermissionDenied =
+      'flashlight_permission_denied';
+  static const String flashlightPermissionDeniedPermanently =
+      'flashlight_permission_denied_permanently';
+  static const String flashlightInUse = 'flashlight_in_use';
+  static const String flashlightOperationFailed = 'flashlight_operation_failed';
 }

@@ -323,6 +323,42 @@ Mp.location.getCurrent(
 This API does not support background tracking, continuous updates, or precise
 location.
 
+## Camera And Flashlight
+
+Camera capture delegates to the Android system camera. Bounds are optional;
+when omitted, the camera's native output size is retained. The host returns an
+opaque media reference and metadata rather than a path, URI, or image bytes.
+
+```dart
+Mp.camera.capturePhoto(
+  quality: 95,
+  maxWidth: 1920,
+  targetState: 'camera.photo',
+  statusState: 'camera.status',
+  errorState: 'camera.error',
+);
+
+Mp.camera.cancel(statusState: 'camera.status');
+
+Mp.flashlight.toggle(
+  targetState: 'flashlight.status',
+  errorState: 'flashlight.error',
+);
+```
+
+Camera and flashlight are separate host permissions. Camera does not provide a
+live camera feed, video recording, or arbitrary camera access. A captured
+photo can be rendered through the trusted host media provider without exposing
+its path or bytes to mini-program state:
+
+```dart
+Mp.image(
+  src: '{{state.camera.photo.mediaRef}}',
+  source: MpImageSource.hostMedia,
+  alt: 'Captured photo',
+);
+```
+
 ## Publisher File Transfers
 
 File actions use relative routes on the artifact-declared Publisher API. The
@@ -334,6 +370,7 @@ sanitized result metadata.
 Mp.file.upload(
   endpoint: 'files/upload',
   mimeTypes: const <String>['image/*', 'application/pdf'],
+  mediaRefs: const <String>['{{state.camera.photo.mediaRef}}'],
   multiple: true,
   metadata: const <String, Object?>{'folderId': 'inbox'},
   progressState: 'files.progress',
@@ -356,10 +393,19 @@ Mp.file.cancel(
   transferId: '{{state.files.progress.transferId}}',
   statusState: 'files.status',
 );
+
+Mp.media.release(
+  mediaRef: '{{state.camera.photo.mediaRef}}',
+  statusState: 'camera.status',
+);
 ```
 
 Upload and download are network operations, not aliases for local pick/save.
 The publisher server owns file IDs, folders, ACLs, and business metadata.
+When `mediaRefs` is empty, upload opens the platform document picker. When it
+is present, the host streams already-owned temporary media. Release media only
+after upload succeeds or when the user discards it; host lifecycle cleanup is
+the final fallback.
 
 ## Security Model
 

@@ -1,3 +1,12 @@
+## 0.3.9
+
+- Add stable system-camera photo capture and cancellation action names,
+  capability IDs, opaque photo metadata, and camera failure codes.
+- Add stable flashlight control action names, capability IDs, status metadata,
+  and flashlight failure codes.
+- Add the `media.release` action, `media.preview` capability, and stable
+  temporary-media ownership, preview, and cleanup errors.
+
 ## 0.3.8
 
 - Add stable `file.upload`, `file.download`, and `file.cancel` action names.

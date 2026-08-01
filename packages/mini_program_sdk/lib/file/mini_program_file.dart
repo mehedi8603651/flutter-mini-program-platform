@@ -105,6 +105,7 @@ class MiniProgramFileUploadRequest {
     required this.maxFileBytes,
     required this.minimumFreeBytes,
     required this.maxConcurrentTransfers,
+    this.mediaRefs = const <String>[],
   });
 
   final String transferId;
@@ -118,6 +119,7 @@ class MiniProgramFileUploadRequest {
   final int? maxFileBytes;
   final int minimumFreeBytes;
   final int maxConcurrentTransfers;
+  final List<String> mediaRefs;
 }
 
 /// Download request passed only to a trusted host file provider.

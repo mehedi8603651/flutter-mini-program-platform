@@ -9,6 +9,7 @@ extension _MpFileActionValidation on MpScreenValidator {
     _validateObjectKeys(props, const <String>{
       'endpoint',
       'mimeTypes',
+      'mediaRefs',
       'multiple',
       'fieldName',
       'metadata',
@@ -28,6 +29,7 @@ extension _MpFileActionValidation on MpScreenValidator {
       props: <String, dynamic>{
         'endpoint': _fileEndpoint(props, path),
         'mimeTypes': _fileMimeTypes(props['mimeTypes'], path),
+        'mediaRefs': _fileMediaRefs(props['mediaRefs'], path),
         'multiple':
             _optionalBool(props['multiple'], path: '$path.props.multiple') ??
             false,
@@ -213,6 +215,29 @@ extension _MpFileActionValidation on MpScreenValidator {
       final normalized = _fileMimeType(item, '$path.props.mimeTypes[$index]');
       if (!result.contains(normalized)) {
         result.add(normalized);
+      }
+    }
+    return result;
+  }
+
+  List<String> _fileMediaRefs(Object? value, String path) {
+    if (value == null) {
+      return const <String>[];
+    }
+    if (value is! List || value.length > 32) {
+      _fail(
+        'Mp file.upload mediaRefs must contain at most 32 values.',
+        path: '$path.props.mediaRefs',
+      );
+    }
+    final result = <String>[];
+    for (var index = 0; index < value.length; index++) {
+      final mediaRef = _fileStringOrBinding(
+        value[index],
+        path: '$path.props.mediaRefs[$index]',
+      );
+      if (!result.contains(mediaRef)) {
+        result.add(mediaRef);
       }
     }
     return result;

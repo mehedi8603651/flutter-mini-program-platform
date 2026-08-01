@@ -720,6 +720,46 @@ void _mpScreenRendererTests() {
       backendStore.dispose();
     });
 
+    testWidgets('renders app-owned host media without exposing native paths', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager()..set('photo.ref', 'camera-media-1');
+      final provider = _TestMediaProvider();
+      final mediaManager = MiniProgramMediaManager(provider)
+        ..register(miniProgramId: 'coupon', mediaRef: 'camera-media-1');
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.image(
+              src: '{{state.photo.ref}}',
+              source: MpImageSource.hostMedia,
+              width: 120,
+              height: 80,
+              alt: 'Captured photo',
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          mediaManager: mediaManager,
+          screenJson: screenJson,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.text('Image unavailable'), findsNothing);
+      expect(provider.previewCalls, 1);
+      await mediaManager.dispose();
+      backendStore.dispose();
+      state.dispose();
+    });
+
     testWidgets('renders theme-aware skeleton components', (tester) async {
       final backendStore = MiniProgramBackendStore();
       final screenJson = _jsonMap(
@@ -2749,6 +2789,96 @@ void _mpScreenRendererTests() {
       state.dispose();
     });
 
+    testWidgets('camera action enforces policy and writes opaque metadata', (
+      tester,
+    ) async {
+      final state = MpStateManager()
+        ..set('camera.photo', <String, dynamic>{'old': true});
+      final action = _jsonAction(
+        Mp.camera.capturePhoto(
+          maxWidth: 1920,
+          maxHeight: 1080,
+          targetState: 'camera.photo',
+          statusState: 'camera.status',
+          errorState: 'camera.error',
+          requestId: 'photo-one',
+        ),
+      );
+      final denied =
+          await _runMpAction(tester, action, stateManager: state)
+              as HostActionResult;
+      expect(denied.errorCode, MiniProgramErrorCodes.cameraNotAccepted);
+      expect(state.get<Map<String, dynamic>>('camera.photo'), <String, dynamic>{
+        'old': true,
+      });
+
+      final provider = _ResultCameraProvider();
+      final manager = MiniProgramCameraManager(provider);
+      final success =
+          await _runMpAction(
+                tester,
+                action,
+                stateManager: state,
+                cameraManager: manager,
+                cameraPolicy: const MiniProgramCameraPolicy(
+                  enabled: true,
+                  allowPhotoCapture: true,
+                ),
+              )
+              as HostActionResult;
+      expect(success.isSuccess, isTrue);
+      expect(success.requestId, 'photo-one');
+      final photo = state.get<Map<String, dynamic>>('camera.photo')!;
+      expect(photo['mediaRef'], 'camera-media-1');
+      expect(photo, isNot(contains('path')));
+      expect(photo, isNot(contains('uri')));
+      expect(state.get<String>('camera.status'), 'success');
+      await manager.dispose();
+      state.dispose();
+    });
+
+    testWidgets('flashlight actions enforce policy and update status', (
+      tester,
+    ) async {
+      final state = MpStateManager();
+      final denied =
+          await _runMpAction(
+                tester,
+                _jsonAction(Mp.flashlight.turnOn(targetState: 'torch.value')),
+                stateManager: state,
+              )
+              as HostActionResult;
+      expect(denied.errorCode, MiniProgramErrorCodes.flashlightNotAccepted);
+
+      final provider = _ResultFlashlightProvider();
+      final manager = MiniProgramFlashlightManager(provider);
+      final success =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.flashlight.turnOn(
+                    targetState: 'torch.value',
+                    statusState: 'torch.status',
+                  ),
+                ),
+                stateManager: state,
+                flashlightManager: manager,
+                flashlightPolicy: const MiniProgramFlashlightPolicy(
+                  enabled: true,
+                ),
+              )
+              as HostActionResult;
+      expect(success.isSuccess, isTrue);
+      expect(state.get<Map<String, dynamic>>('torch.value'), <String, dynamic>{
+        'available': true,
+        'enabled': true,
+      });
+      await manager.releaseFor('coupon');
+      expect(provider.enabled, isFalse);
+      await manager.dispose();
+      state.dispose();
+    });
+
     testWidgets(
       'file upload streams through the host provider and writes metadata only',
       (tester) async {
@@ -2757,6 +2887,9 @@ void _mpScreenRendererTests() {
         final connector = _TestFileBackendConnector();
         final provider = _TestFileTransferProvider();
         final manager = MiniProgramFileTransferManager(provider);
+        final mediaProvider = _TestMediaProvider();
+        final mediaManager = MiniProgramMediaManager(mediaProvider)
+          ..register(miniProgramId: 'coupon', mediaRef: 'camera-media-1');
         final result =
             await _runMpAction(
                   tester,
@@ -2765,6 +2898,7 @@ void _mpScreenRendererTests() {
                       endpoint: 'files/upload',
                       mimeTypes: const <String>['application/pdf'],
                       multiple: true,
+                      mediaRefs: const <String>['camera-media-1'],
                       metadata: const <String, Object?>{'folderId': 'inbox'},
                       progressState: 'files.progress',
                       targetState: 'files.result',
@@ -2776,6 +2910,7 @@ void _mpScreenRendererTests() {
                   stateManager: state,
                   backendConnector: connector,
                   fileTransferManager: manager,
+                  mediaManager: mediaManager,
                   filePolicy: const MiniProgramFilePolicy(
                     enabled: true,
                     allowUpload: true,
@@ -2803,13 +2938,49 @@ void _mpScreenRendererTests() {
           'folderId': 'inbox',
         });
         expect(provider.uploadRequest?.multiple, isTrue);
+        expect(provider.uploadRequest?.mediaRefs, <String>['camera-media-1']);
         expect(provider.uploadRequest?.maxFiles, 2);
         expect(provider.uploadRequest?.maxFileBytes, 15);
         expect(connector.resolvedRequest?.endpoint, 'files/upload');
         await manager.dispose();
+        await mediaManager.dispose();
         state.dispose();
       },
     );
+
+    testWidgets('media release clears an app-owned temporary reference', (
+      tester,
+    ) async {
+      final state = MpStateManager();
+      final provider = _TestMediaProvider();
+      final manager = MiniProgramMediaManager(provider)
+        ..register(miniProgramId: 'coupon', mediaRef: 'camera-media-1');
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.media.release(
+                    mediaRef: 'camera-media-1',
+                    targetState: 'media.release',
+                    statusState: 'media.status',
+                    errorState: 'media.error',
+                  ),
+                ),
+                stateManager: state,
+                mediaManager: manager,
+              )
+              as HostActionResult;
+
+      expect(result.isSuccess, isTrue);
+      expect(state.get<String>('media.status'), 'success');
+      expect(
+        state.get<Map<String, dynamic>>('media.release'),
+        containsPair('released', true),
+      );
+      expect(provider.released, <String>['coupon:camera-media-1']);
+      await manager.dispose();
+      state.dispose();
+    });
 
     testWidgets(
       'file download enforces host policy and preserves previous target',
@@ -2882,45 +3053,43 @@ void _mpScreenRendererTests() {
       },
     );
 
-    testWidgets(
-      'file download rejects a provider destination mismatch',
-      (tester) async {
-        final state = MpStateManager()
-          ..set('files.result', <String, dynamic>{'existing': true});
-        final provider = _TestFileTransferProvider(
-          downloadDestinationOverride: 'choose',
-        );
-        final manager = MiniProgramFileTransferManager(provider);
-        final result =
-            await _runMpAction(
-                  tester,
-                  _jsonAction(
-                    Mp.file.download(
-                      endpoint: 'files/download',
-                      progressState: 'files.progress',
-                      targetState: 'files.result',
-                      errorState: 'files.error',
-                    ),
+    testWidgets('file download rejects a provider destination mismatch', (
+      tester,
+    ) async {
+      final state = MpStateManager()
+        ..set('files.result', <String, dynamic>{'existing': true});
+      final provider = _TestFileTransferProvider(
+        downloadDestinationOverride: 'choose',
+      );
+      final manager = MiniProgramFileTransferManager(provider);
+      final result =
+          await _runMpAction(
+                tester,
+                _jsonAction(
+                  Mp.file.download(
+                    endpoint: 'files/download',
+                    progressState: 'files.progress',
+                    targetState: 'files.result',
+                    errorState: 'files.error',
                   ),
-                  stateManager: state,
-                  backendConnector: _TestFileBackendConnector(),
-                  fileTransferManager: manager,
-                  filePolicy: const MiniProgramFilePolicy(
-                    enabled: true,
-                    allowDownload: true,
-                  ),
-                )
-                as HostActionResult;
+                ),
+                stateManager: state,
+                backendConnector: _TestFileBackendConnector(),
+                fileTransferManager: manager,
+                filePolicy: const MiniProgramFilePolicy(
+                  enabled: true,
+                  allowDownload: true,
+                ),
+              )
+              as HostActionResult;
 
-        expect(result.errorCode, MiniProgramErrorCodes.fileInvalidResult);
-        expect(
-          state.get<Map<String, dynamic>>('files.result'),
-          <String, dynamic>{'existing': true},
-        );
-        await manager.dispose();
-        state.dispose();
-      },
-    );
+      expect(result.errorCode, MiniProgramErrorCodes.fileInvalidResult);
+      expect(state.get<Map<String, dynamic>>('files.result'), <String, dynamic>{
+        'existing': true,
+      });
+      await manager.dispose();
+      state.dispose();
+    });
 
     testWidgets(
       'math evaluate covers parser precedence functions and bindings',

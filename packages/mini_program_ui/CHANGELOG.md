@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3
+
+- Add `Mp.camera.capturePhoto` and `Mp.camera.cancel` with optional bounded
+  dimensions and host-private opaque media references.
+- Add `Mp.flashlight.turnOn`, `turnOff`, `toggle`, and `getStatus` actions.
+- Add app-owned temporary media composition through `MpImageSource.hostMedia`,
+  `Mp.file.upload(mediaRefs: ...)`, and `Mp.media.release`.
+
 ## 0.2.2
 
 - Add strictly validated `Mp.file.upload`, `Mp.file.download`, and

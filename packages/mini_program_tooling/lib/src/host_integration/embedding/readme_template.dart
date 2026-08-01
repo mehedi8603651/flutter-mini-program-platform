@@ -113,6 +113,18 @@ miniprogram host capability init file --platform android
 This also leaves every app denied until its `permissions.files` policy is
 reviewed and accepted.
 
+For Android apps that request still-photo capture or flashlight control,
+install each native provider once:
+
+```bash
+miniprogram host capability init camera --platform android
+miniprogram host capability init flashlight --platform android
+```
+
+Camera uses the system camera through Activity Result and a private
+FileProvider cache. Flashlight uses CameraManager and TorchCallback. Provider
+installation does not accept either app policy.
+
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
 An optional `publisher_backend.json` declares the mini-program's Publisher API,
 while `mini_program_policies.json` records whether the host accepts it. Provider

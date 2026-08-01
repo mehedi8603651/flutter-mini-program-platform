@@ -13,4 +13,11 @@ abstract final class ActionNames {
   static const String fileUpload = 'file.upload';
   static const String fileDownload = 'file.download';
   static const String fileCancel = 'file.cancel';
+  static const String cameraCapturePhoto = 'camera.capturePhoto';
+  static const String cameraCancel = 'camera.cancel';
+  static const String mediaRelease = 'media.release';
+  static const String flashlightTurnOn = 'flashlight.turnOn';
+  static const String flashlightTurnOff = 'flashlight.turnOff';
+  static const String flashlightToggle = 'flashlight.toggle';
+  static const String flashlightGetStatus = 'flashlight.getStatus';
 }

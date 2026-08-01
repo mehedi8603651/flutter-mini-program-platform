@@ -9,6 +9,8 @@ class EndpointRoutingMiniProgramSource
         MiniProgramPublisherApiPolicyProvider,
         MiniProgramLocationPolicyProvider,
         MiniProgramFilePolicyProvider,
+        MiniProgramCameraPolicyProvider,
+        MiniProgramFlashlightPolicyProvider,
         MiniProgramDeliveryContextProvider,
         MiniProgramPublisherBackendContractSource,
         MiniProgramJsonAssetSource {
@@ -111,5 +113,15 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramFilePolicy filePolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).filePolicy;
+  }
+
+  @override
+  MiniProgramCameraPolicy cameraPolicyFor(String miniProgramId) {
+    return _endpointFor(miniProgramId).cameraPolicy;
+  }
+
+  @override
+  MiniProgramFlashlightPolicy flashlightPolicyFor(String miniProgramId) {
+    return _endpointFor(miniProgramId).flashlightPolicy;
   }
 }

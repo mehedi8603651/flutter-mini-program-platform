@@ -26,17 +26,28 @@ void main() {
           )
           .toList(),
       <String>[
+        'capabilities/camera/android_channel_template.dart',
+        'capabilities/camera/dart_provider_template.dart',
+        'capabilities/camera/installer.dart',
+        'capabilities/camera/source_editors.dart',
+        'capabilities/camera/source_files.dart',
         'capabilities/file_transfer/android_channel_template.dart',
         'capabilities/file_transfer/dart_provider_template.dart',
         'capabilities/file_transfer/installer.dart',
         'capabilities/file_transfer/source_editors.dart',
         'capabilities/file_transfer/source_files.dart',
+        'capabilities/flashlight/android_channel_template.dart',
+        'capabilities/flashlight/dart_provider_template.dart',
+        'capabilities/flashlight/installer.dart',
+        'capabilities/flashlight/source_editors.dart',
+        'capabilities/flashlight/source_files.dart',
         'capabilities/location/android_channel_template.dart',
         'capabilities/location/dart_provider_template.dart',
         'capabilities/location/installer.dart',
         'capabilities/location/source_editors.dart',
         'capabilities/location/source_files.dart',
         'capabilities/models.dart',
+        'capabilities/shared_media/android_registry_template.dart',
         'embedding/android_integration.dart',
         'embedding/dart_templates.dart',
         'embedding/initializer.dart',
@@ -100,7 +111,7 @@ void main() {
       ),
     );
     expect(embeddingFacade.readAsLinesSync().length, lessThan(50));
-    expect(capabilityFacade.readAsLinesSync().length, lessThan(50));
+    expect(capabilityFacade.readAsLinesSync().length, lessThan(60));
     expect(
       embeddingFacade.readAsStringSync(),
       contains('initializeMiniProgramEmbedding(request)'),

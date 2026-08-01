@@ -99,6 +99,24 @@ final config = MiniProgramConfig(
 Missing providers and denied policy fail with stable location error codes;
 they do not fall through to host bridge actions.
 
+## Optional Camera And Flashlight
+
+`camera.capturePhoto` delegates still-photo capture to a host
+`MiniProgramCameraProvider`. The SDK enforces accepted camera policy, one
+host-wide capture at a time, logical cancellation, opaque media references,
+and temporary-media cleanup when the mini-program closes.
+
+Captured media can be registered with `MiniProgramMediaManager`, rendered by
+`hostMedia` images through a bounded trusted preview, supplied to file uploads
+as opaque references, and released explicitly with `media.release`. Ownership
+is checked again in both the SDK and native provider. Native paths, content
+URIs, and raw bytes never enter live state.
+
+Flashlight actions use `MiniProgramFlashlightProvider` under a separate
+`MiniProgramFlashlightPolicy`. The manager prevents cross-app control and turns
+the torch off when its owning mini-program closes. Neither capability exposes
+camera identifiers, native paths, content URIs, or bytes to live state.
+
 ## Optional Publisher File Transfers
 
 `file.upload`, `file.download`, and `file.cancel` use a separate streaming host

@@ -11,7 +11,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
   }
   final normalized = <String, Object?>{};
   for (final entry in raw.entries) {
-    if (entry.key != 'location' && entry.key != 'files') {
+    if (entry.key != 'location' &&
+        entry.key != 'files' &&
+        entry.key != 'camera' &&
+        entry.key != 'flashlight') {
       throw MiniProgramPartnerHandoffException(
         'MiniProgram partner handoff requestedPermissions contains an '
         'unsupported permission: ${entry.key}.',
@@ -19,6 +22,14 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'files') {
       normalized['files'] = _normalizeRequestedFiles(entry.value);
+      continue;
+    }
+    if (entry.key == 'camera') {
+      normalized['camera'] = _normalizeRequestedCamera(entry.value);
+      continue;
+    }
+    if (entry.key == 'flashlight') {
+      normalized['flashlight'] = _normalizeRequestedFlashlight(entry.value);
       continue;
     }
     final value = entry.value;
@@ -72,6 +83,79 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         });
   }
   return Map<String, Object?>.unmodifiable(normalized);
+}
+
+Map<String, Object?> _normalizeRequestedCamera(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.camera must be an object.',
+    );
+  }
+  const allowedKeys = <String>{'enabled', 'reason', 'capturePhoto'};
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.camera contains an '
+        'unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  final capturePhoto = raw['capturePhoto'];
+  final reason = raw['reason'];
+  if (enabled is! bool || capturePhoto is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.camera enabled and capturePhoto must be booleans.',
+    );
+  }
+  if (enabled && !capturePhoto) {
+    throw const MiniProgramPartnerHandoffException(
+      'Enabled requestedPermissions.camera must request photo capture.',
+    );
+  }
+  _validateRequestedPermissionReason(reason, 'camera');
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': (reason! as String).trim(),
+    'capturePhoto': capturePhoto,
+  });
+}
+
+Map<String, Object?> _normalizeRequestedFlashlight(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.flashlight must be an object.',
+    );
+  }
+  const allowedKeys = <String>{'enabled', 'reason'};
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.flashlight contains '
+        'an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  final reason = raw['reason'];
+  if (enabled is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.flashlight.enabled must be a boolean.',
+    );
+  }
+  _validateRequestedPermissionReason(reason, 'flashlight');
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': (reason! as String).trim(),
+  });
+}
+
+void _validateRequestedPermissionReason(Object? reason, String permission) {
+  if (reason is! String || reason.trim().isEmpty || reason.length > 256) {
+    throw MiniProgramPartnerHandoffException(
+      'requestedPermissions.$permission.reason must be 1-256 characters.',
+    );
+  }
 }
 
 Map<String, Object?> _normalizeRequestedFiles(Object? raw) {

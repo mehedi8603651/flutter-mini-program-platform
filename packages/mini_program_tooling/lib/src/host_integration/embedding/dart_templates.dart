@@ -223,6 +223,9 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
   MiniProgramLocationProvider? locationProvider,
   MiniProgramFileTransferProvider? fileTransferProvider,
+  MiniProgramCameraProvider? cameraProvider,
+  MiniProgramMediaProvider? mediaProvider,
+  MiniProgramFlashlightProvider? flashlightProvider,
   Map<String, MiniProgramEndpoint>? endpoints,
   MiniProgramCacheBundle? cacheBundle,
 }) async {
@@ -230,6 +233,9 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     openNativeRoute: openNativeRoute,
     locationProvider: locationProvider,
     fileTransferProvider: fileTransferProvider,
+    cameraProvider: cameraProvider,
+    mediaProvider: mediaProvider,
+    flashlightProvider: flashlightProvider,
     endpoints: endpoints ?? buildMiniProgramEndpoints(),
     cacheBundle: cacheBundle,
   );
@@ -299,6 +305,14 @@ MiniProgramLocationPolicy locationPolicyForMiniProgram(String appId) {
 MiniProgramFilePolicy filePolicyForMiniProgram(String appId) {
   return const MiniProgramFilePolicy();
 }
+
+MiniProgramCameraPolicy cameraPolicyForMiniProgram(String appId) {
+  return const MiniProgramCameraPolicy();
+}
+
+MiniProgramFlashlightPolicy flashlightPolicyForMiniProgram(String appId) {
+  return const MiniProgramFlashlightPolicy();
+}
 ''';
 }
 
@@ -343,6 +357,9 @@ MiniProgramConfig buildMiniProgramConfig({
   AppNativeRouteOpener? openNativeRoute,
   MiniProgramLocationProvider? locationProvider,
   MiniProgramFileTransferProvider? fileTransferProvider,
+  MiniProgramCameraProvider? cameraProvider,
+  MiniProgramMediaProvider? mediaProvider,
+  MiniProgramFlashlightProvider? flashlightProvider,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
   MiniProgramCacheBundle? cacheBundle,
@@ -356,6 +373,9 @@ MiniProgramConfig buildMiniProgramConfig({
     if (locationProvider != null) CapabilityIds.locationCurrent,
     if (fileTransferProvider != null) CapabilityIds.fileUpload,
     if (fileTransferProvider != null) CapabilityIds.fileDownload,
+    if (cameraProvider != null) CapabilityIds.cameraCapturePhoto,
+    if (mediaProvider != null) CapabilityIds.mediaPreview,
+    if (flashlightProvider != null) CapabilityIds.flashlightControl,
   };
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,
@@ -375,6 +395,9 @@ MiniProgramConfig buildMiniProgramConfig({
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),
     locationProvider: locationProvider,
     fileTransferProvider: fileTransferProvider,
+    cameraProvider: cameraProvider,
+    mediaProvider: mediaProvider,
+    flashlightProvider: flashlightProvider,
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,

@@ -3,11 +3,14 @@ import 'package:flutter/widgets.dart';
 import 'capability_registry.dart';
 import 'auth/mini_program_auth.dart';
 import 'cache/runtime_cache.dart';
+import 'camera/mini_program_camera.dart';
 import 'feature_flag_evaluator.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
 import 'file/mini_program_file.dart';
+import 'flashlight/mini_program_flashlight.dart';
 import 'location/mini_program_location.dart';
+import 'media/mini_program_media.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
@@ -60,6 +63,11 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.locationPolicy = const MiniProgramLocationPolicy(),
     this.fileTransferManager,
     this.filePolicy = const MiniProgramFilePolicy(),
+    this.cameraManager,
+    this.mediaManager,
+    this.cameraPolicy = const MiniProgramCameraPolicy(),
+    this.flashlightManager,
+    this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.authController,
     required this.cacheManager,
     required this.cachePolicy,
@@ -88,6 +96,11 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramLocationPolicy locationPolicy;
   final MiniProgramFileTransferManager? fileTransferManager;
   final MiniProgramFilePolicy filePolicy;
+  final MiniProgramCameraManager? cameraManager;
+  final MiniProgramMediaManager? mediaManager;
+  final MiniProgramCameraPolicy cameraPolicy;
+  final MiniProgramFlashlightManager? flashlightManager;
+  final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramAuthController? authController;
   final MiniProgramCacheManager cacheManager;
   final MiniProgramCachePolicy cachePolicy;
@@ -127,6 +140,11 @@ class MiniProgramSdkScope extends InheritedWidget {
         locationPolicy != oldWidget.locationPolicy ||
         fileTransferManager != oldWidget.fileTransferManager ||
         filePolicy != oldWidget.filePolicy ||
+        cameraManager != oldWidget.cameraManager ||
+        mediaManager != oldWidget.mediaManager ||
+        cameraPolicy != oldWidget.cameraPolicy ||
+        flashlightManager != oldWidget.flashlightManager ||
+        flashlightPolicy != oldWidget.flashlightPolicy ||
         authController != oldWidget.authController ||
         cacheManager != oldWidget.cacheManager ||
         cachePolicy != oldWidget.cachePolicy ||

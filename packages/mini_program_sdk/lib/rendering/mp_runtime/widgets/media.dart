@@ -51,6 +51,13 @@ class _MpImage extends StatelessWidget {
           image = _imageErrorFallback(context);
         }
         break;
+      case 'hostMedia':
+        image = _MpHostMediaImage(
+          mediaRef: src,
+          node: node,
+          bindings: bindings,
+        );
+        break;
       default:
         image = _imageErrorFallback(context);
         break;
@@ -146,6 +153,116 @@ class _MpImage extends StatelessWidget {
       return Text(label);
     }
     return const Text('Image unavailable');
+  }
+}
+
+class _MpHostMediaImage extends StatefulWidget {
+  const _MpHostMediaImage({
+    required this.mediaRef,
+    required this.node,
+    required this.bindings,
+  });
+
+  final String mediaRef;
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  State<_MpHostMediaImage> createState() => _MpHostMediaImageState();
+}
+
+class _MpHostMediaImageState extends State<_MpHostMediaImage> {
+  MiniProgramMediaManager? _manager;
+  String? _miniProgramId;
+  String? _mediaRef;
+  Future<MiniProgramMediaPreviewResult>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _resolvePreview();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MpHostMediaImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.mediaRef != oldWidget.mediaRef) {
+      _resolvePreview();
+    }
+  }
+
+  void _resolvePreview() {
+    final scope = MiniProgramSdkScope.maybeOf(context);
+    final manager = scope?.mediaManager;
+    final miniProgramId = scope?.miniProgramId;
+    if (_manager == manager &&
+        _miniProgramId == miniProgramId &&
+        _mediaRef == widget.mediaRef &&
+        _future != null &&
+        widget.mediaRef.isNotEmpty) {
+      return;
+    }
+    _manager = manager;
+    _miniProgramId = miniProgramId;
+    _mediaRef = widget.mediaRef;
+    _future = manager == null || miniProgramId == null
+        ? null
+        : Future<MiniProgramMediaPreviewResult>.sync(
+            () => manager.loadPreview(
+              miniProgramId: miniProgramId,
+              mediaRef: widget.mediaRef,
+            ),
+          );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final future = _future;
+    if (future == null) {
+      return _errorFallback();
+    }
+    return FutureBuilder<MiniProgramMediaPreviewResult>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _errorFallback();
+        }
+        final result = snapshot.data;
+        if (result == null) {
+          return _loadingFallback();
+        }
+        return Image.memory(
+          result.bytes,
+          fit: _mpBoxFit(_string(widget.node, 'fit')),
+          semanticLabel: _semanticLabel,
+          errorBuilder: (context, error, stackTrace) => _errorFallback(),
+        );
+      },
+    );
+  }
+
+  String? get _semanticLabel {
+    final label =
+        widget.node.props['semanticLabel'] ?? widget.node.props['alt'];
+    return label == null
+        ? null
+        : widget.bindings.resolveString(label as String);
+  }
+
+  Widget _loadingFallback() {
+    final placeholder = widget.node.props['placeholder'] as _MpNode?;
+    return placeholder == null
+        ? const SizedBox.shrink()
+        : _MpNodeView(node: placeholder, bindings: widget.bindings);
+  }
+
+  Widget _errorFallback() {
+    final error = widget.node.props['error'] as _MpNode?;
+    if (error != null) {
+      return _MpNodeView(node: error, bindings: widget.bindings);
+    }
+    final label = _semanticLabel;
+    return Text(label == null || label.isEmpty ? 'Image unavailable' : label);
   }
 }
 

@@ -9,6 +9,7 @@ void main() {
             .upload(
               endpoint: 'files/upload',
               mimeTypes: const <String>['image/*', 'application/pdf'],
+              mediaRefs: const <String>['{{state.files.captured.mediaRef}}'],
               multiple: true,
               fieldName: 'documents',
               metadata: const <String, Object?>{'folderId': 'inbox'},
@@ -26,6 +27,7 @@ void main() {
             'errorState': 'files.error',
             'fieldName': 'documents',
             'metadata': <String, Object?>{'folderId': 'inbox'},
+            'mediaRefs': <String>['{{state.files.captured.mediaRef}}'],
             'mimeTypes': <String>['image/*', 'application/pdf'],
             'multiple': true,
             'progressState': 'files.progress',
@@ -85,6 +87,15 @@ void main() {
       expect(
         () => Mp.file.upload(
           endpoint: 'https://evil.example/upload',
+          progressState: 'files.progress',
+          targetState: 'files.result',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => Mp.file.upload(
+          endpoint: 'upload',
+          mediaRefs: const <String>['prefix-{{state.files.mediaRef}}'],
           progressState: 'files.progress',
           targetState: 'files.result',
         ),

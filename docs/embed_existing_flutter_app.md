@@ -96,6 +96,29 @@ The generated host-owned adapter uses Android document picking and streaming
 HTTP against validated relative Publisher API routes. It adds no broad storage
 permission and does not expose paths or content URIs to mini-program state.
 
+## Optional Android Camera And Flashlight
+
+Handoffs may independently request `requestedPermissions.camera` and
+`requestedPermissions.flashlight`. Both accepted policies default to denied.
+Install the reusable native adapters once per host:
+
+```powershell
+miniprogram host capability init camera `
+  --platform android `
+  --project-root D:\my_host_app
+
+miniprogram host capability init flashlight `
+  --platform android `
+  --project-root D:\my_host_app
+```
+
+Camera capture opens the system camera through Activity Result and stores the
+temporary result under a private FileProvider cache. Flashlight control uses
+CameraManager and TorchCallback. No CameraX or Flutter camera plugin is added.
+The camera and file adapters share app-owned opaque media references for
+preview and Publisher API upload. `Mp.media.release` removes media after
+upload or discard, while host lifecycle cleanup is the fallback.
+
 ## 4. Launch From UI
 
 Import the public barrel and use the generated registry launcher:

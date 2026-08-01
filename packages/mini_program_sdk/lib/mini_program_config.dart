@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 
 import 'cache/mini_program_cache_bundle.dart';
+import 'camera/mini_program_camera.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'file/mini_program_file.dart';
+import 'flashlight/mini_program_flashlight.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
+import 'media/mini_program_media.dart';
 import 'mini_program_runtime.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
@@ -23,6 +26,9 @@ class MiniProgramConfig {
     this.backendConnector,
     this.locationProvider,
     this.fileTransferProvider,
+    this.cameraProvider,
+    this.mediaProvider,
+    this.flashlightProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -44,6 +50,9 @@ class MiniProgramConfig {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
+  final MiniProgramCameraProvider? cameraProvider;
+  final MiniProgramMediaProvider? mediaProvider;
+  final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -61,6 +70,9 @@ class MiniProgramConfig {
       backendConnector: backendConnector,
       locationProvider: locationProvider,
       fileTransferProvider: fileTransferProvider,
+      cameraProvider: cameraProvider,
+      mediaProvider: mediaProvider,
+      flashlightProvider: flashlightProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,
       featureFlagEvaluator: featureFlagEvaluator,

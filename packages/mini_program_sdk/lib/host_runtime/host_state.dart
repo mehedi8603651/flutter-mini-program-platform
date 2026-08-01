@@ -8,6 +8,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   final MiniProgramDataResourceManager _dataResourceManager =
       MiniProgramDataResourceManager();
   MiniProgramFileTransferManager? _fileTransferManager;
+  MiniProgramMediaManager? _mediaManager;
+  MiniProgramCameraManager? _cameraManager;
+  MiniProgramFlashlightManager? _flashlightManager;
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
@@ -27,6 +30,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     super.initState();
     _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
     _fileTransferManager = _managerFor(widget.fileTransferProvider);
+    _mediaManager = _mediaManagerFor(widget.mediaProvider);
+    _cameraManager = _cameraManagerFor(widget.cameraProvider, _mediaManager);
+    _flashlightManager = _flashlightManagerFor(widget.flashlightProvider);
     _rebuildRendererRegistry();
     _restartLoad();
   }
@@ -43,6 +49,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.backendConnector != oldWidget.backendConnector ||
         widget.locationProvider != oldWidget.locationProvider ||
         widget.fileTransferProvider != oldWidget.fileTransferProvider ||
+        widget.cameraProvider != oldWidget.cameraProvider ||
+        widget.mediaProvider != oldWidget.mediaProvider ||
+        widget.flashlightProvider != oldWidget.flashlightProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
@@ -59,6 +68,22 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         unawaited(_fileTransferManager?.dispose());
         _fileTransferManager = _managerFor(widget.fileTransferProvider);
       }
+      if (widget.cameraProvider != oldWidget.cameraProvider ||
+          widget.mediaProvider != oldWidget.mediaProvider) {
+        unawaited(_cameraManager?.dispose());
+        if (widget.mediaProvider != oldWidget.mediaProvider) {
+          unawaited(_mediaManager?.dispose());
+          _mediaManager = _mediaManagerFor(widget.mediaProvider);
+        }
+        _cameraManager = _cameraManagerFor(
+          widget.cameraProvider,
+          _mediaManager,
+        );
+      }
+      if (widget.flashlightProvider != oldWidget.flashlightProvider) {
+        unawaited(_flashlightManager?.dispose());
+        _flashlightManager = _flashlightManagerFor(widget.flashlightProvider);
+      }
       _rebuildRendererRegistry();
       _restartLoad();
     }
@@ -74,6 +99,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     final activeAppId = _manifest?.id;
     if (activeAppId != null) {
       unawaited(_fileTransferManager?.cancelAllFor(activeAppId));
+      unawaited(_cameraManager?.releaseAllFor(activeAppId));
+      unawaited(_mediaManager?.releaseAllFor(activeAppId));
+      unawaited(_flashlightManager?.releaseFor(activeAppId));
     }
     _closeActiveCacheApp();
     _disposeOwnedBackendConnector();
@@ -96,6 +124,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _backendStore.dispose();
     _stateManager.dispose();
     unawaited(_fileTransferManager?.dispose());
+    unawaited(_cameraManager?.dispose());
+    unawaited(_mediaManager?.dispose());
+    unawaited(_flashlightManager?.dispose());
     super.dispose();
   }
 
@@ -109,4 +140,19 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   MiniProgramFileTransferManager? _managerFor(
     MiniProgramFileTransferProvider? provider,
   ) => provider == null ? null : MiniProgramFileTransferManager(provider);
+
+  MiniProgramCameraManager? _cameraManagerFor(
+    MiniProgramCameraProvider? provider,
+    MiniProgramMediaManager? mediaManager,
+  ) => provider == null
+      ? null
+      : MiniProgramCameraManager(provider, mediaManager: mediaManager);
+
+  MiniProgramMediaManager? _mediaManagerFor(
+    MiniProgramMediaProvider? provider,
+  ) => provider == null ? null : MiniProgramMediaManager(provider);
+
+  MiniProgramFlashlightManager? _flashlightManagerFor(
+    MiniProgramFlashlightProvider? provider,
+  ) => provider == null ? null : MiniProgramFlashlightManager(provider);
 }

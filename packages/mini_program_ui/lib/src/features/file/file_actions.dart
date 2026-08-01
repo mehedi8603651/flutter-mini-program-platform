@@ -1,4 +1,5 @@
 import '../../core/authoring_validation.dart';
+import '../../core/binding_validation.dart';
 import '../../core/mp_action.dart';
 import '../../core/value_normalization.dart';
 
@@ -11,6 +12,7 @@ final class MpFileActions {
   MpAction upload({
     required String endpoint,
     List<String> mimeTypes = const <String>['*/*'],
+    List<String> mediaRefs = const <String>[],
     bool multiple = false,
     String fieldName = 'file',
     Map<String, Object?> metadata = const <String, Object?>{},
@@ -24,6 +26,7 @@ final class MpFileActions {
     props: <String, Object?>{
       'endpoint': _relativeEndpoint(endpoint),
       'mimeTypes': _mimeTypes(mimeTypes),
+      if (mediaRefs.isNotEmpty) 'mediaRefs': _mediaRefs(mediaRefs),
       if (multiple) 'multiple': true,
       'fieldName': requiredFieldName(fieldName, 'fieldName'),
       if (metadata.isNotEmpty) 'metadata': metadata,
@@ -101,6 +104,30 @@ final class MpFileActions {
         'requestId': stableAuthoringString(requestId, 'requestId'),
     },
   );
+}
+
+List<String> _mediaRefs(List<String> values) {
+  if (values.isEmpty || values.length > 32) {
+    throw ArgumentError.value(
+      values,
+      'mediaRefs',
+      'Provide from 1 to 32 media references.',
+    );
+  }
+  return values
+      .map((value) {
+        final normalized = requiredAuthoringString(value, 'mediaRefs');
+        if (normalized.length > 512 ||
+            (normalized.contains('{{') && !isFullBinding(normalized))) {
+          throw ArgumentError.value(
+            value,
+            'mediaRefs',
+            'Media references must be at most 512 characters and use only full bindings.',
+          );
+        }
+        return normalized;
+      })
+      .toList(growable: false);
 }
 
 String _relativeEndpoint(String value) {

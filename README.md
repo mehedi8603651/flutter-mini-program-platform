@@ -91,6 +91,21 @@ miniprogram host capability init file --platform android --project-root .\coupon
 The installer uses Android's document picker and public Downloads storage. It
 does not add broad storage permission or expose native paths to mini-programs.
 
+For host-approved system-camera capture and flashlight control, install each
+generic Android provider once and review each app's accepted policy:
+
+```powershell
+miniprogram host capability init camera --platform android --project-root .\coupon_host
+miniprogram host capability init flashlight --platform android --project-root .\coupon_host
+```
+
+Camera uses the system camera plus FileProvider private cache. Flashlight uses
+CameraManager and requests Android camera permission only when it is enabled.
+Installing providers does not grant either capability to a mini-program.
+The camera/file adapters share an app-owned temporary media registry, so a
+captured photo can be previewed and uploaded by opaque reference before it is
+released. Native paths and bytes never enter mini-program state.
+
 ## Optional Runtime API
 
 Publisher API Contract V1 is a runtime API standard only; host opening still uses `appId + artifactBaseUrl`.
