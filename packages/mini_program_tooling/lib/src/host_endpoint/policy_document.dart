@@ -255,6 +255,16 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'enabled': acceptRequested && request['enabled'] == true,
     });
   }
+  if (permission == 'qrScanner') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostQrScanner(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'allowTorch': acceptRequested && request['allowTorch'] == true,
+    });
+  }
   if (permission != 'location') {
     return deepHostJsonObjectCopy(existing);
   }
@@ -331,6 +341,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
       hostJsonObjectOrEmpty(rawFlashlight),
     );
   }
+  final rawQrScanner = normalized['qrScanner'];
+  if (rawQrScanner != null) {
+    if (rawQrScanner is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.qrScanner must be an object.',
+      );
+    }
+    normalized['qrScanner'] = validateAcceptedHostQrScanner(
+      hostJsonObjectOrEmpty(rawQrScanner),
+    );
+  }
   return sortedHostJsonObject(normalized);
 }
 
@@ -360,6 +381,18 @@ Map<String, Object?> validateAcceptedHostFlashlight(
     throw const MiniProgramHostException(
       'Accepted permissions.flashlight.enabled must be a boolean.',
     );
+  }
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostQrScanner(Map<String, Object?> value) {
+  final normalized = deepHostJsonObjectCopy(value);
+  for (final key in const <String>{'enabled', 'allowTorch'}) {
+    if (normalized[key] is! bool) {
+      throw MiniProgramHostException(
+        'Accepted permissions.qrScanner.$key must be a boolean.',
+      );
+    }
   }
   return sortedHostJsonObject(normalized);
 }

@@ -1,7 +1,7 @@
 import 'package:path/path.dart' as path;
 
-const String previewSdkConstraint = '^0.6.4';
-const String previewContractsConstraint = '^0.3.9';
+const String previewSdkConstraint = '^0.6.5';
+const String previewContractsConstraint = '^0.3.10';
 const String previewHttpConstraint = '^1.5.0';
 const String previewHostProjectName = 'mini_program_preview_host';
 

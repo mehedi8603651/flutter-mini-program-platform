@@ -125,6 +125,17 @@ Camera uses the system camera through Activity Result and a private
 FileProvider cache. Flashlight uses CameraManager and TorchCallback. Provider
 installation does not accept either app policy.
 
+For Android apps that request QR scanning, install the scanner once:
+
+```bash
+miniprogram host capability init qr --platform android
+```
+
+The generated provider uses CameraX and bundled ML Kit QR-only detection.
+It owns its torch while scanning, returns inert data, never opens scanned
+URLs, and leaves every mini-program denied until its `permissions.qrScanner`
+policy is accepted.
+
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
 An optional `publisher_backend.json` declares the mini-program's Publisher API,
 while `mini_program_policies.json` records whether the host accepts it. Provider

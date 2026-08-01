@@ -87,4 +87,16 @@ abstract final class MiniProgramErrorCodes {
       'flashlight_permission_denied_permanently';
   static const String flashlightInUse = 'flashlight_in_use';
   static const String flashlightOperationFailed = 'flashlight_operation_failed';
+  static const String qrNotAccepted = 'qr_not_accepted';
+  static const String qrUnavailable = 'qr_unavailable';
+  static const String qrPermissionDenied = 'qr_permission_denied';
+  static const String qrPermissionDeniedPermanently =
+      'qr_permission_denied_permanently';
+  static const String qrRequestInProgress = 'qr_request_in_progress';
+  static const String qrCameraInUse = 'qr_camera_in_use';
+  static const String qrScanCancelled = 'qr_scan_cancelled';
+  static const String qrTimeout = 'qr_timeout';
+  static const String qrInvalidResult = 'qr_invalid_result';
+  static const String qrUserGestureRequired = 'qr_user_gesture_required';
+  static const String qrOperationFailed = 'qr_operation_failed';
 }

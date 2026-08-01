@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.2` generates mini-program projects against
-`mini_program_ui: ^0.2.3` and Flutter host projects against
-`mini_program_sdk: ^0.6.4`.
+Tooling `0.7.3` generates mini-program projects against
+`mini_program_ui: ^0.2.4` and Flutter host projects against
+`mini_program_sdk: ^0.6.5`.
 
 The CLI supports the current MVP architecture:
 
@@ -362,6 +362,19 @@ is reviewed. Camera and file installers share an app-owned native media
 registry, allowing captured photos to be previewed and streamed into uploads
 without exposing a path or reopening the document picker.
 
+A handoff may request `requestedPermissions.qrScanner` with `allowTorch`.
+Import keeps a new accepted QR policy denied unless the host explicitly
+accepts it. Install the reusable Android scanner once per host:
+
+```powershell
+miniprogram host capability init qr --platform android --project-root .
+```
+
+The installer adds the camera permission, CameraX preview/analysis, bundled ML
+Kit QR-only detection, a host-owned MethodChannel adapter, and generated host
+setup wiring. It is idempotent and does not accept policy for any app. The
+scanner controls its own torch and never opens scanned URLs.
+
 ### 3. Add An Endpoint Manually
 
 Use when you know the `artifactBaseUrl` and do not have a partner JSON file.
@@ -618,6 +631,7 @@ miniprogram env status --json
 | `miniprogram host capability init file --platform android` | Install generic Android Publisher API file transfers. |
 | `miniprogram host capability init camera --platform android` | Install delegated Android system-camera photo capture. |
 | `miniprogram host capability init flashlight --platform android` | Install Android CameraManager flashlight control. |
+| `miniprogram host capability init qr --platform android` | Install Android CameraX and bundled ML Kit QR-only scanning. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |
 | `miniprogram artifact-host ...` | Manage a local static artifact host. |
 | `miniprogram publisher-api ...` | Work with optional runtime middle-server APIs. |

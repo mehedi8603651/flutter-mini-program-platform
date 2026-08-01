@@ -89,6 +89,7 @@ String buildHostEndpointFile(
       ..writeln(
         '      flashlightPolicy: flashlightPolicyForMiniProgram($mapKey),',
       )
+      ..writeln('      qrPolicy: qrPolicyForMiniProgram($mapKey),')
       ..writeln('      requestTimeout: const Duration(seconds: 20),');
     buffer.writeln('    ),');
   }

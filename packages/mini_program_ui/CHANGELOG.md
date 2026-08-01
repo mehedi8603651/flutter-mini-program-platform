@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Add cross-platform `Mp.qr.generate` rendering and host-controlled
+  `Mp.qr.scan` authoring with bounded values, timeouts, and state targets.
+
 ## 0.2.3
 
 - Add `Mp.camera.capturePhoto` and `Mp.camera.cancel` with optional bounded

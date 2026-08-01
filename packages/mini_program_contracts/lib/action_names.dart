@@ -20,4 +20,5 @@ abstract final class ActionNames {
   static const String flashlightTurnOff = 'flashlight.turnOff';
   static const String flashlightToggle = 'flashlight.toggle';
   static const String flashlightGetStatus = 'flashlight.getStatus';
+  static const String qrScan = 'qr.scan';
 }

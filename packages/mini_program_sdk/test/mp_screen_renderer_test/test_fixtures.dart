@@ -775,6 +775,9 @@ Future<Object?> _runMpAction(
   MiniProgramFlashlightManager? flashlightManager,
   MiniProgramFlashlightPolicy flashlightPolicy =
       const MiniProgramFlashlightPolicy(),
+  MiniProgramQrManager? qrManager,
+  MiniProgramQrPolicy qrPolicy = const MiniProgramQrPolicy(),
+  bool userGesture = false,
   String? miniProgramVersion,
   MiniProgramDataResourceManager? dataResourceManager,
   MiniProgramJsonAssetSource? jsonAssetSource,
@@ -800,6 +803,8 @@ Future<Object?> _runMpAction(
         cameraPolicy: cameraPolicy,
         flashlightManager: flashlightManager,
         flashlightPolicy: flashlightPolicy,
+        qrManager: qrManager,
+        qrPolicy: qrPolicy,
         cacheManager: cacheManager ?? MiniProgramCacheManager.inMemory(),
         cachePolicy: cachePolicy,
         miniProgramVersion: miniProgramVersion,
@@ -828,7 +833,11 @@ Future<Object?> _runMpAction(
   await tester.pump();
   try {
     return await tester.runAsync<Object?>(
-      () => const MpActionRunner().run(actionContext, actionJson),
+      () => const MpActionRunner().run(
+        actionContext,
+        actionJson,
+        userGesture: userGesture,
+      ),
     );
   } finally {
     if (ownsBackendStore) {
@@ -987,6 +996,23 @@ class _ResultFlashlightProvider implements MiniProgramFlashlightProvider {
     enabled = value;
     return MiniProgramFlashlightStatus(available: true, enabled: enabled);
   }
+}
+
+class _ResultQrProvider implements MiniProgramQrScannerProvider {
+  MiniProgramQrScanRequest? request;
+
+  @override
+  Future<MiniProgramQrScanResult> scan(MiniProgramQrScanRequest request) async {
+    this.request = request;
+    return MiniProgramQrScanResult(
+      rawValue: 'https://example.com/qr',
+      valueType: 'url',
+      scannedAtUtc: DateTime.utc(2026, 8, 1),
+    );
+  }
+
+  @override
+  Future<bool> cancel(String scanId) async => true;
 }
 
 class _TestMediaProvider implements MiniProgramMediaProvider {

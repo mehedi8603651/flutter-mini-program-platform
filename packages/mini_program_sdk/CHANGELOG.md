@@ -1,3 +1,8 @@
+## 0.6.5
+
+- Add cross-platform QR rendering plus provider-neutral, host-policy-controlled
+  QR scanning with explicit-user-gesture enforcement and inert results.
+
 ## 0.6.4
 
 - Add host-policy-controlled, provider-neutral delegated system-camera photo

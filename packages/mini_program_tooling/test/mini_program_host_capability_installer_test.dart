@@ -349,6 +349,86 @@ void main() {
     expect((await installer.initialize(request)).alreadyInstalled, isTrue);
   });
 
+  test('installs Android CameraX and ML Kit QR-only support', () async {
+    const installer = MiniProgramHostCapabilityInstaller();
+    final request = MiniProgramHostCapabilityInitRequest(
+      projectRootPath: hostRootPath,
+      capability: 'qr',
+      platform: 'android',
+    );
+    final result = await installer.initialize(request);
+    expect(result.createdPaths, hasLength(3));
+    expect(result.updatedPaths, hasLength(5));
+
+    final setup = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_host_setup.dart',
+      ),
+    ).readAsString();
+    expect(setup, contains('AppAndroidQrScannerProvider'));
+    expect(setup, contains('qrScannerProvider: resolvedQrScannerProvider'));
+
+    final runtime = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    ).readAsString();
+    expect(runtime, contains('CapabilityIds.qrScanner'));
+    expect(runtime, contains('qrScannerProvider: qrScannerProvider'));
+
+    final manifest = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'AndroidManifest.xml',
+      ),
+    ).readAsString();
+    expect(manifest, contains('android.permission.CAMERA'));
+    expect(manifest, contains('MiniProgramQrScannerActivity'));
+    expect(manifest, contains('@android:style/Theme.Material.NoActionBar'));
+
+    final nativeRoot = p.join(
+      hostRootPath,
+      'android',
+      'app',
+      'src',
+      'main',
+      'kotlin',
+      'com',
+      'example',
+      'host_app',
+    );
+    final channel = await File(
+      p.join(nativeRoot, 'MiniProgramQrScannerChannel.kt'),
+    ).readAsString();
+    final scanner = await File(
+      p.join(nativeRoot, 'MiniProgramQrScannerActivity.kt'),
+    ).readAsString();
+    expect(channel, contains('class MiniProgramQrScannerChannel'));
+    expect(channel, contains('qr_permission_denied_permanently'));
+    expect(channel, contains('MiniProgramQrScannerActivity.cancel'));
+    expect(scanner, contains('Barcode.FORMAT_QR_CODE'));
+    expect(scanner, contains('ProcessCameraProvider'));
+    expect(scanner, contains('enableTorch'));
+    expect(scanner, isNot(contains('ACTION_VIEW')));
+
+    final gradle = await File(
+      p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
+    ).readAsString();
+    expect(gradle, contains('camera-camera2:1.4.2'));
+    expect(gradle, contains('barcode-scanning:17.3.0'));
+    expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+  });
+
   test(
     'installs other Android capabilities after camera upgrades the activity',
     () async {
@@ -358,6 +438,7 @@ void main() {
         'flashlight',
         'location',
         'file',
+        'qr',
       ]) {
         final result = await installer.initialize(
           MiniProgramHostCapabilityInitRequest(
@@ -389,6 +470,10 @@ void main() {
       expect(
         activity,
         contains('MiniProgramFileTransferChannel.register(flutterEngine)'),
+      );
+      expect(
+        activity,
+        contains('MiniProgramQrScannerChannel.register(flutterEngine)'),
       );
     },
   );
@@ -593,8 +678,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.6.4
-  mini_program_contracts: ^0.3.9
+  mini_program_sdk: ^0.6.5
+  mini_program_contracts: ^0.3.10
 ''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),
@@ -658,6 +743,23 @@ class MainActivity : FlutterActivity()
         <activity android:name=".MainActivity"/>
     </application>
 </manifest>
+''');
+  final gradleFile = File(
+    p.join(rootPath, 'android', 'app', 'build.gradle.kts'),
+  );
+  await gradleFile.parent.create(recursive: true);
+  await gradleFile.writeAsString('''
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.example.host_app"
+}
+
+dependencies {
+}
 ''');
 }
 

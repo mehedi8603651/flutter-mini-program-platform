@@ -14,6 +14,7 @@ import 'mini_program_runtime.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
+import 'qr/mini_program_qr.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
@@ -29,6 +30,7 @@ class MiniProgramConfig {
     this.cameraProvider,
     this.mediaProvider,
     this.flashlightProvider,
+    this.qrScannerProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -53,6 +55,7 @@ class MiniProgramConfig {
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
+  final MiniProgramQrScannerProvider? qrScannerProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -73,6 +76,7 @@ class MiniProgramConfig {
       cameraProvider: cameraProvider,
       mediaProvider: mediaProvider,
       flashlightProvider: flashlightProvider,
+      qrScannerProvider: qrScannerProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,
       featureFlagEvaluator: featureFlagEvaluator,

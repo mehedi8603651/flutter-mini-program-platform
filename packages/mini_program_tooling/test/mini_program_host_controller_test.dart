@@ -438,7 +438,7 @@ void main() {
     });
 
     test(
-      'camera and flashlight default denied and generate accepted policies',
+      'camera flashlight and QR default denied and generate accepted policies',
       () async {
         final hostRoot = p.join(tempDir.path, 'host_app');
         await _writeHostProject(hostRoot);
@@ -457,6 +457,11 @@ void main() {
               'enabled': true,
               'reason': 'Control the flashlight.',
             },
+            'qrScanner': <String, Object?>{
+              'enabled': true,
+              'reason': 'Scan QR codes.',
+              'allowTorch': true,
+            },
           },
         );
         final result = await controller.addEndpoint(request);
@@ -474,6 +479,10 @@ void main() {
           'enabled': false,
         });
         expect(permissions['flashlight'], <String, dynamic>{'enabled': false});
+        expect(permissions['qrScanner'], <String, dynamic>{
+          'allowTorch': false,
+          'enabled': false,
+        });
 
         await controller.addEndpoint(
           MiniProgramHostEndpointAddRequest(
@@ -495,6 +504,10 @@ void main() {
                 as Map<String, dynamic>;
         expect(permissions['camera'], containsPair('allowPhotoCapture', true));
         expect(permissions['flashlight'], containsPair('enabled', true));
+        expect(permissions['qrScanner'], <String, dynamic>{
+          'allowTorch': true,
+          'enabled': true,
+        });
 
         final endpoints = await File(result.filePath).readAsString();
         expect(endpoints, contains('cameraPolicy: cameraPolicyForMiniProgram'));
@@ -502,11 +515,13 @@ void main() {
           endpoints,
           contains('flashlightPolicy: flashlightPolicyForMiniProgram'),
         );
+        expect(endpoints, contains('qrPolicy: qrPolicyForMiniProgram'));
         final resolver = await File(
           result.policyResolverFilePath,
         ).readAsString();
         expect(resolver, contains('MiniProgramCameraPolicy'));
         expect(resolver, contains('MiniProgramFlashlightPolicy'));
+        expect(resolver, contains('MiniProgramQrPolicy'));
       },
     );
 
@@ -727,13 +742,13 @@ void main() {
 
       expect(digests, <String, String>{
         'endpoints':
-            '9e10f7f020bfdb7d176b6a0cf839c7114900d2603da919c2c9e3d55636dea3c6',
+            'c6a5c348067a4f75597bf70edb7b4cae125f012857a9a77e5e3ee0107f17130f',
         'registry':
             'c9352bd447397efb77696c2b2efbcd17fb951c3807a36c6faef7f4d79dbd11c3',
         'policies':
             'f198f00ae5bfb85f7463def7b3515773d192c03b2187d5a6c5d687abae9db990',
         'resolver':
-            'cbfdb48c182e4bad28a918b39fd08db0e1c9647a3cc07b8fd57eba0afe51a35e',
+            'bdafcf9dd2355bee9358f564212ef7760ceb63422c385161554e1997d2f19cc1',
       });
     });
   });

@@ -48,6 +48,7 @@ void main() {
       'lifecycle/refresh_viewport.dart',
       'lifecycle/state_scope.dart',
       'media.dart',
+      'qr.dart',
       'shared.dart',
       'theme.dart',
     });

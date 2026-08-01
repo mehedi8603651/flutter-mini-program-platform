@@ -46,6 +46,9 @@ abstract final class CapabilityIds {
   /// Host can control the device torch while a mini-program is foregrounded.
   static const CapabilityId flashlightControl = 'flashlight.control';
 
+  /// Host can scan QR codes through an explicitly installed scanner UI.
+  static const CapabilityId qrScanner = 'qr.scanner';
+
   /// Stable ordering used by scaffolds and human-readable output.
   static const List<CapabilityId> standardValues = <CapabilityId>[
     auth,
@@ -61,6 +64,7 @@ abstract final class CapabilityIds {
     cameraCapturePhoto,
     mediaPreview,
     flashlightControl,
+    qrScanner,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

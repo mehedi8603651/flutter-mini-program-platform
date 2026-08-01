@@ -511,7 +511,12 @@ class _MpEmptyState extends StatelessWidget {
                 primary: false,
                 theme: bindings.theme,
                 onTap: () => unawaited(
-                  _MpActionDispatcher.dispatch(context, action, bindings),
+                  _MpActionDispatcher.dispatch(
+                    context,
+                    action,
+                    bindings,
+                    const _MpActionCallContext(userGesture: true),
+                  ),
                 ),
               ),
             ],

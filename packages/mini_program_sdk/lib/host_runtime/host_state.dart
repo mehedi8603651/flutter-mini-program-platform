@@ -11,6 +11,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   MiniProgramMediaManager? _mediaManager;
   MiniProgramCameraManager? _cameraManager;
   MiniProgramFlashlightManager? _flashlightManager;
+  MiniProgramQrManager? _qrManager;
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
@@ -33,6 +34,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _mediaManager = _mediaManagerFor(widget.mediaProvider);
     _cameraManager = _cameraManagerFor(widget.cameraProvider, _mediaManager);
     _flashlightManager = _flashlightManagerFor(widget.flashlightProvider);
+    _qrManager = _qrManagerFor(widget.qrScannerProvider);
     _rebuildRendererRegistry();
     _restartLoad();
   }
@@ -52,6 +54,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.cameraProvider != oldWidget.cameraProvider ||
         widget.mediaProvider != oldWidget.mediaProvider ||
         widget.flashlightProvider != oldWidget.flashlightProvider ||
+        widget.qrScannerProvider != oldWidget.qrScannerProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
@@ -84,6 +87,10 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         unawaited(_flashlightManager?.dispose());
         _flashlightManager = _flashlightManagerFor(widget.flashlightProvider);
       }
+      if (widget.qrScannerProvider != oldWidget.qrScannerProvider) {
+        unawaited(_qrManager?.dispose());
+        _qrManager = _qrManagerFor(widget.qrScannerProvider);
+      }
       _rebuildRendererRegistry();
       _restartLoad();
     }
@@ -102,6 +109,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       unawaited(_cameraManager?.releaseAllFor(activeAppId));
       unawaited(_mediaManager?.releaseAllFor(activeAppId));
       unawaited(_flashlightManager?.releaseFor(activeAppId));
+      unawaited(_qrManager?.releaseFor(activeAppId));
     }
     _closeActiveCacheApp();
     _disposeOwnedBackendConnector();
@@ -127,6 +135,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     unawaited(_cameraManager?.dispose());
     unawaited(_mediaManager?.dispose());
     unawaited(_flashlightManager?.dispose());
+    unawaited(_qrManager?.dispose());
     super.dispose();
   }
 
@@ -155,4 +164,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   MiniProgramFlashlightManager? _flashlightManagerFor(
     MiniProgramFlashlightProvider? provider,
   ) => provider == null ? null : MiniProgramFlashlightManager(provider);
+
+  MiniProgramQrManager? _qrManagerFor(MiniProgramQrScannerProvider? provider) =>
+      provider == null ? null : MiniProgramQrManager(provider);
 }

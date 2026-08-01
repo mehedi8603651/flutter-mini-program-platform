@@ -117,6 +117,20 @@ Flashlight actions use `MiniProgramFlashlightProvider` under a separate
 the torch off when its owning mini-program closes. Neither capability exposes
 camera identifiers, native paths, content URIs, or bytes to live state.
 
+## Optional QR Scanning
+
+`qrCode` nodes render locally on every supported Flutter platform. `qr.scan`
+uses a host-installed `MiniProgramQrScannerProvider` and an accepted
+`MiniProgramQrPolicy`; it is rejected unless dispatched from an explicit user
+gesture. The manager permits one scanner session at a time and cancels it when
+the mini-program closes.
+
+Providers return `MiniProgramQrScanResult` as inert structured data. The SDK
+validates its size, type, format, and UTC timestamp, but deliberately does not
+open URLs, join Wi-Fi, add contacts, or execute any scanned content. Scanner
+torch controls belong to the scanner session and are separate from
+`MiniProgramFlashlightProvider`.
+
 ## Optional Publisher File Transfers
 
 `file.upload`, `file.download`, and `file.cancel` use a separate streaming host

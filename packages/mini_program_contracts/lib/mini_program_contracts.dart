@@ -34,6 +34,9 @@ export 'mini_program_camera.dart';
 // Provider-neutral flashlight status values.
 export 'mini_program_flashlight.dart';
 
+// Provider-neutral QR scan values.
+export 'mini_program_qr.dart';
+
 // Provider-neutral Publisher API contract models.
 export 'publisher_backend_contract.dart';
 

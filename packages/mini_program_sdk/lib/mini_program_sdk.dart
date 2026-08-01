@@ -38,6 +38,7 @@ export 'network/mini_program_source.dart';
 export 'network/mini_program_source_exception.dart';
 export 'network/published_mini_program_catalog_client.dart';
 export 'observability/sdk_logger.dart';
+export 'qr/mini_program_qr.dart';
 export 'rendering/mini_program_backend_binding_resolver.dart';
 export 'rendering/mini_program_screen_renderer.dart';
 export 'rendering/mp_screen_renderer.dart';

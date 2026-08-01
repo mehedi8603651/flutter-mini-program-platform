@@ -11,6 +11,7 @@ class MpActionRunner {
     Map<String, dynamic> actionJson, {
     Map<String, dynamic>? item,
     Map<String, dynamic>? form,
+    bool userGesture = false,
   }) {
     final action = const MpScreenValidator()._parseAction(
       actionJson,
@@ -24,19 +25,25 @@ class MpActionRunner {
         item: item,
         form: form,
       ),
+      _MpActionCallContext(userGesture: userGesture),
     );
   }
 }
 
 class _MpActionCallContext {
-  const _MpActionCallContext({this.stack = const <String>[]});
+  const _MpActionCallContext({
+    this.stack = const <String>[],
+    this.userGesture = false,
+  });
 
   static const int maxDepth = 16;
 
   final List<String> stack;
+  final bool userGesture;
 
   _MpActionCallContext push(String name) => _MpActionCallContext(
     stack: List<String>.unmodifiable(<String>[...stack, name]),
+    userGesture: userGesture,
   );
 }
 
@@ -200,6 +207,11 @@ abstract final class _MpActionDispatcher {
           props,
         ),
         'media.release' => _MpMediaActionHandler._release(scope, props),
+        'qr.scan' => _MpQrActionHandler._scan(
+          scope,
+          props,
+          userGesture: callContext.userGesture,
+        ),
         'cache.set' => _MpCacheActionHandler._cacheSet(scope, props),
         'cache.get' => _MpCacheActionHandler._cacheGet(scope, props),
         'cache.has' => _MpCacheActionHandler._cacheHas(scope, props),

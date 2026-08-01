@@ -30,6 +30,7 @@ import 'features/lifecycle/timer_nodes.dart';
 import 'features/location/location_actions.dart';
 import 'features/math/math_actions.dart';
 import 'features/media/media_actions.dart';
+import 'features/qr/qr.dart';
 import 'features/navigation/navigation_actions.dart';
 import 'features/navigation/router_actions.dart';
 import 'features/skeleton/skeleton_nodes.dart';
@@ -49,6 +50,7 @@ export 'features/lifecycle/timer_nodes.dart' show MpTimer;
 export 'features/location/location_actions.dart' show MpLocationActions;
 export 'features/file/file_actions.dart' show MpFileActions;
 export 'features/flashlight/flashlight_actions.dart' show MpFlashlightActions;
+export 'features/qr/qr.dart' show MpQr;
 export 'features/math/math_actions.dart' show MpMathActions;
 export 'features/media/media_actions.dart' show MpMediaActions;
 export 'features/navigation/navigation_actions.dart' show MpNavigationActions;
@@ -95,6 +97,9 @@ abstract final class Mp {
 
   /// Host-controlled foreground flashlight actions.
   static const flashlight = MpFlashlightActions();
+
+  /// QR code generation and host-controlled scanning.
+  static const qr = MpQr();
 
   /// Lifecycle-owned timer nodes.
   static const timer = MpTimer();

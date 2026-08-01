@@ -165,6 +165,7 @@ class _MpButtonState extends State<_MpButton> {
               context,
               widget.node.props['action'] as _MpAction,
               widget.bindings,
+              const _MpActionCallContext(userGesture: true),
             ),
           ),
           child: SizedBox(
@@ -249,6 +250,7 @@ class _MpIconButtonState extends State<_MpIconButton> {
             context,
             node.props['action'] as _MpAction,
             widget.bindings,
+            const _MpActionCallContext(userGesture: true),
           ),
         ),
         child: SizedBox.square(
@@ -432,7 +434,12 @@ class _MpActionTap extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => unawaited(
-            _MpActionDispatcher.dispatch(context, action, bindings),
+            _MpActionDispatcher.dispatch(
+              context,
+              action,
+              bindings,
+              const _MpActionCallContext(userGesture: true),
+            ),
           ),
           child: child,
         ),

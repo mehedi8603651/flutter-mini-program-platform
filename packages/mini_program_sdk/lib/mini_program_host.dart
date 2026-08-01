@@ -27,6 +27,7 @@ import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
 import 'network/mini_program_source_exception.dart';
 import 'observability/sdk_logger.dart';
+import 'qr/mini_program_qr.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 import 'sdk_context.dart';
 import 'state/mp_state.dart';
@@ -62,6 +63,7 @@ class MiniProgramHost extends StatefulWidget {
     this.cameraProvider,
     this.mediaProvider,
     this.flashlightProvider,
+    this.qrScannerProvider,
     this.authController,
     this.assetCache,
     this.manifestCache,
@@ -85,6 +87,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
+  final MiniProgramQrScannerProvider? qrScannerProvider;
   final MiniProgramAuthController? authController;
   final AssetCache? assetCache;
   final ManifestCache? manifestCache;

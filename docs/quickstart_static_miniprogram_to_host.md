@@ -352,6 +352,17 @@ photo can be rendered with `MpImageSource.hostMedia`, supplied to
 `Mp.file.upload(mediaRefs: ...)`, and removed with `Mp.media.release` without
 placing native paths or bytes in state.
 
+For an app that requests QR scanning, review
+`permissions.qrScanner`, then install the reusable Android scanner:
+
+```powershell
+miniprogram host capability init qr --platform android --project-root .
+```
+
+The installer adds CameraX and bundled ML Kit QR-only detection. The scanner
+owns its torch while open and returns inert data; it never opens scanned URLs.
+`Mp.qr.generate` remains a local renderer node and needs no host permission.
+
 `embed init --force` refreshes scaffold-generated files while preserving host
 setup, bridge, policies, and endpoint-import generated output.
 

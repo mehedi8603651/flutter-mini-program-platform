@@ -359,6 +359,36 @@ Mp.image(
 );
 ```
 
+## QR Codes
+
+QR generation is a cross-platform renderer node and requires no host
+permission. Scanning requires a trusted host provider, accepted
+`permissions.qrScanner` policy, and an explicit user gesture.
+
+```dart
+Mp.qr.generate(
+  value: '{{state.share.url}}',
+  size: 240,
+  errorCorrection: 'medium',
+  semanticLabel: 'Share link QR code',
+);
+
+Mp.button(
+  text: 'Scan QR code',
+  action: Mp.qr.scan(
+    allowTorch: true,
+    timeout: const Duration(seconds: 60),
+    targetState: 'qr.result',
+    statusState: 'qr.status',
+    errorState: 'qr.error',
+  ),
+);
+```
+
+The scan target contains `rawValue`, `format`, `valueType`, and
+`scannedAtUtc`. Treat `rawValue` as untrusted text. The runtime never opens a
+scanned URL or performs another action automatically.
+
 ## Publisher File Transfers
 
 File actions use relative routes on the artifact-declared Publisher API. The

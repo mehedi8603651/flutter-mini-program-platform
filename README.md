@@ -106,6 +106,18 @@ The camera/file adapters share an app-owned temporary media registry, so a
 captured photo can be previewed and uploaded by opaque reference before it is
 released. Native paths and bytes never enter mini-program state.
 
+For host-approved QR scanning, install the Android scanner once and review
+each app's accepted `permissions.qrScanner` policy:
+
+```powershell
+miniprogram host capability init qr --platform android --project-root .\coupon_host
+```
+
+The scanner uses CameraX with bundled ML Kit QR-only detection and owns its
+torch while open. Scanned values are returned as inert data and are never
+opened as URLs or executed automatically. QR generation needs no host
+capability.
+
 ## Optional Runtime API
 
 Publisher API Contract V1 is a runtime API standard only; host opening still uses `appId + artifactBaseUrl`.

@@ -1,3 +1,10 @@
+## 0.7.3
+
+- Import host-owned `qrScanner` policy and add an idempotent Android QR
+  capability installer using CameraX and bundled ML Kit QR-only detection.
+- Generate mini-programs against UI `0.2.4` and hosts/preview hosts against
+  contracts `0.3.10` and SDK `0.6.5`.
+
 ## 0.7.2
 
 - Import requested camera and flashlight permissions and generate safe-denied

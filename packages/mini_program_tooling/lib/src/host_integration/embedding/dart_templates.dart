@@ -226,6 +226,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramCameraProvider? cameraProvider,
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
+  MiniProgramQrScannerProvider? qrScannerProvider,
   Map<String, MiniProgramEndpoint>? endpoints,
   MiniProgramCacheBundle? cacheBundle,
 }) async {
@@ -236,6 +237,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     cameraProvider: cameraProvider,
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
+    qrScannerProvider: qrScannerProvider,
     endpoints: endpoints ?? buildMiniProgramEndpoints(),
     cacheBundle: cacheBundle,
   );
@@ -313,6 +315,10 @@ MiniProgramCameraPolicy cameraPolicyForMiniProgram(String appId) {
 MiniProgramFlashlightPolicy flashlightPolicyForMiniProgram(String appId) {
   return const MiniProgramFlashlightPolicy();
 }
+
+MiniProgramQrPolicy qrPolicyForMiniProgram(String appId) {
+  return const MiniProgramQrPolicy();
+}
 ''';
 }
 
@@ -360,6 +366,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramCameraProvider? cameraProvider,
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
+  MiniProgramQrScannerProvider? qrScannerProvider,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
   MiniProgramCacheBundle? cacheBundle,
@@ -376,6 +383,7 @@ MiniProgramConfig buildMiniProgramConfig({
     if (cameraProvider != null) CapabilityIds.cameraCapturePhoto,
     if (mediaProvider != null) CapabilityIds.mediaPreview,
     if (flashlightProvider != null) CapabilityIds.flashlightControl,
+    if (qrScannerProvider != null) CapabilityIds.qrScanner,
   };
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,
@@ -398,6 +406,7 @@ MiniProgramConfig buildMiniProgramConfig({
     cameraProvider: cameraProvider,
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
+    qrScannerProvider: qrScannerProvider,
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,

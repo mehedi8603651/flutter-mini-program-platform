@@ -1,3 +1,8 @@
+## 0.3.10
+
+- Add stable QR scan action and capability identifiers, inert scan-result
+  metadata, and policy, permission, lifecycle, timeout, and result errors.
+
 ## 0.3.9
 
 - Add stable system-camera photo capture and cancellation action names,

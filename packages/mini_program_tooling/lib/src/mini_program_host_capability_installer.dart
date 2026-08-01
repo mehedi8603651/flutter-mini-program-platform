@@ -6,6 +6,7 @@ import 'host_integration/capabilities/camera/installer.dart'
     as camera_capability;
 import 'host_integration/capabilities/flashlight/installer.dart'
     as flashlight_capability;
+import 'host_integration/capabilities/qr/installer.dart' as qr_capability;
 import 'host_integration/capabilities/models.dart';
 
 export 'host_integration/capabilities/models.dart'
@@ -27,6 +28,7 @@ class MiniProgramHostCapabilityInstaller {
   static const String cameraCapability = camera_capability.cameraCapability;
   static const String flashlightCapability =
       flashlight_capability.flashlightCapability;
+  static const String qrCapability = qr_capability.qrCapability;
   static const String androidPlatform = location_capability.androidPlatform;
 
   Future<MiniProgramHostCapabilityInitResult> initialize(
@@ -44,10 +46,13 @@ class MiniProgramHostCapabilityInstaller {
         flashlight_capability.initializeMiniProgramHostFlashlightCapability(
           request,
         ),
+      qrCapability => qr_capability.initializeMiniProgramHostQrCapability(
+        request,
+      ),
       _ => throw MiniProgramHostCapabilityException(
         'Unsupported host capability "${request.capability}". Supported '
         'capabilities: $locationCapability, $fileCapability, '
-        '$cameraCapability, $flashlightCapability.',
+        '$cameraCapability, $flashlightCapability, $qrCapability.',
       ),
     };
   }

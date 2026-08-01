@@ -204,6 +204,32 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('      return const MiniProgramFlashlightPolicy();')
     ..writeln('  }')
     ..writeln('}')
+    ..writeln()
+    ..writeln('MiniProgramQrPolicy qrPolicyForMiniProgram(String appId) {')
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final qrScanner = permissions['qrScanner'] is Map
+        ? hostJsonObjectOrEmpty(permissions['qrScanner'])
+        : const <String, Object?>{'enabled': false, 'allowTorch': false};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramQrPolicy('
+        'enabled: ${qrScanner['enabled'] == true}, '
+        'allowTorch: ${qrScanner['allowTorch'] == true});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramQrPolicy();')
+    ..writeln('  }')
+    ..writeln('}')
     ..writeln();
   return buffer.toString();
 }

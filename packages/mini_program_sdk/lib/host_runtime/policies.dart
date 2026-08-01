@@ -53,4 +53,12 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     }
     return const MiniProgramFlashlightPolicy();
   }
+
+  MiniProgramQrPolicy _qrPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramQrPolicyProvider) {
+      return (source as MiniProgramQrPolicyProvider).qrPolicyFor(appId);
+    }
+    return const MiniProgramQrPolicy();
+  }
 }

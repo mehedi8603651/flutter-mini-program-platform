@@ -49,6 +49,7 @@ class _MpNodeView extends StatelessWidget {
         height: (node.props['height'] as num?)?.toDouble(),
       ),
       'image' => _MpImage(node: node, bindings: bindings),
+      'qrCode' => _MpQrCode(node: node, bindings: bindings),
       'lazy' => _MpLazySection(node: node, bindings: bindings),
       'lazyChunk' => _MpLazyChunk(node: node, bindings: bindings),
       'initialize' => _MpInitialize(node: node, bindings: bindings),

@@ -54,6 +54,8 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           cameraPolicy: _cameraPolicyFor(manifest.id),
           flashlightManager: _flashlightManager,
           flashlightPolicy: _flashlightPolicyFor(manifest.id),
+          qrManager: _qrManager,
+          qrPolicy: _qrPolicyFor(manifest.id),
           authController: widget.authController,
           cacheManager: _cacheManager,
           cachePolicy: _activeCachePolicy ?? _cachePolicyFor(manifest.id),

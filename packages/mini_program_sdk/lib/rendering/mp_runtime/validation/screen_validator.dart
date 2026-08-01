@@ -327,6 +327,11 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'qrCode' => _parseQrCodeNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'lazy' => _parseLazyNode(
         props: props,
         children: parsedChildren,
@@ -709,6 +714,7 @@ class MpScreenValidator {
       'flashlight.toggle' ||
       'flashlight.getStatus' => _parseFlashlightAction(type, props, path),
       'media.release' => _parseMediaReleaseAction(type, props, path),
+      'qr.scan' => _parseQrScanAction(type, props, path),
       'cache.set' => _parseCacheSetAction(type, props, path),
       'cache.get' => _parseCacheGetAction(type, props, path),
       'cache.has' => _parseCacheHasAction(type, props, path),

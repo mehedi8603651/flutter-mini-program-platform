@@ -1,6 +1,83 @@
 part of '../../../mp_screen_renderer.dart';
 
 extension _MpThemeChartNodeValidation on MpScreenValidator {
+  _MpNode _parseQrCodeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'value',
+      'size',
+      'padding',
+      'errorCorrection',
+      'foregroundColor',
+      'backgroundColor',
+      'semanticLabel',
+    }, path: '$path.props');
+    _validateNoChildren(children, path: '$path.children');
+    final value = _requiredString(props, 'value', path: '$path.props');
+    final size = _boundedNumber(
+      props['size'],
+      path: '$path.props.size',
+      minimum: 96,
+      maximum: 600,
+    );
+    final padding = _boundedNumber(
+      props['padding'],
+      path: '$path.props.padding',
+      minimum: 0,
+      maximum: 64,
+    );
+    if (padding * 2 >= size) {
+      _fail(
+        'Mp QR padding must leave space for the QR code.',
+        path: '$path.props.padding',
+      );
+    }
+    final errorCorrection = _requiredStableString(
+      props,
+      'errorCorrection',
+      path: '$path.props',
+    );
+    if (!const <String>{
+      'low',
+      'medium',
+      'quartile',
+      'high',
+    }.contains(errorCorrection)) {
+      _fail(
+        'Mp QR errorCorrection is unsupported.',
+        path: '$path.props.errorCorrection',
+      );
+    }
+    return _MpNode(
+      type: 'qrCode',
+      props: <String, dynamic>{
+        'backgroundColor': _requiredHexColor(
+          props,
+          'backgroundColor',
+          path: '$path.props',
+        ),
+        'errorCorrection': errorCorrection,
+        'foregroundColor': _requiredHexColor(
+          props,
+          'foregroundColor',
+          path: '$path.props',
+        ),
+        'padding': padding,
+        'semanticLabel': _requiredString(
+          props,
+          'semanticLabel',
+          path: '$path.props',
+        ),
+        'size': size,
+        'value': value,
+      },
+      children: const <_MpNode>[],
+    );
+  }
+
   _MpNode _parseThemeNode({
     required Map<String, dynamic> props,
     required List<_MpNode> children,

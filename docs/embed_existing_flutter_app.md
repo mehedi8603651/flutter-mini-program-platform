@@ -119,6 +119,23 @@ The camera and file adapters share app-owned opaque media references for
 preview and Publisher API upload. `Mp.media.release` removes media after
 upload or discard, while host lifecycle cleanup is the fallback.
 
+## Optional Android QR Scanner
+
+A handoff may request `requestedPermissions.qrScanner` and may recommend
+scanner-local torch support. New accepted policy defaults to denied. Install
+the reusable scanner once per host:
+
+```powershell
+miniprogram host capability init qr `
+  --platform android `
+  --project-root D:\my_host_app
+```
+
+The generated Android adapter uses CameraX preview and analysis with bundled
+ML Kit configured for QR codes only. Scanner torch state belongs to that
+scanner session and is independent of `Mp.flashlight`. Results are inert data;
+the host and SDK never automatically open scanned URLs or execute content.
+
 ## 4. Launch From UI
 
 Import the public barrel and use the generated registry launcher:

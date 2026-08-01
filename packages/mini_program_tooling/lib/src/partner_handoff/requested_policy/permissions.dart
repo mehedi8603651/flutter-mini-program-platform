@@ -14,7 +14,8 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     if (entry.key != 'location' &&
         entry.key != 'files' &&
         entry.key != 'camera' &&
-        entry.key != 'flashlight') {
+        entry.key != 'flashlight' &&
+        entry.key != 'qrScanner') {
       throw MiniProgramPartnerHandoffException(
         'MiniProgram partner handoff requestedPermissions contains an '
         'unsupported permission: ${entry.key}.',
@@ -30,6 +31,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'flashlight') {
       normalized['flashlight'] = _normalizeRequestedFlashlight(entry.value);
+      continue;
+    }
+    if (entry.key == 'qrScanner') {
+      normalized['qrScanner'] = _normalizeRequestedQrScanner(entry.value);
       continue;
     }
     final value = entry.value;
@@ -83,6 +88,37 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         });
   }
   return Map<String, Object?>.unmodifiable(normalized);
+}
+
+Map<String, Object?> _normalizeRequestedQrScanner(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.qrScanner must be an object.',
+    );
+  }
+  const allowedKeys = <String>{'enabled', 'reason', 'allowTorch'};
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.qrScanner contains '
+        'an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  final allowTorch = raw['allowTorch'];
+  final reason = raw['reason'];
+  if (enabled is! bool || allowTorch is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.qrScanner enabled and allowTorch must be booleans.',
+    );
+  }
+  _validateRequestedPermissionReason(reason, 'qrScanner');
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': (reason! as String).trim(),
+    'allowTorch': allowTorch,
+  });
 }
 
 Map<String, Object?> _normalizeRequestedCamera(Object? raw) {

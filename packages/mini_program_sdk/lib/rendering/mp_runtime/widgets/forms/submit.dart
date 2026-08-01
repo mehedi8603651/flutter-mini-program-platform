@@ -81,6 +81,7 @@ class _MpFormSubmitButtonState extends State<_MpFormSubmitButton> {
       context,
       action,
       formBindings,
+      const _MpActionCallContext(userGesture: true),
     );
     if (!mounted) {
       form.setSubmitting(false);
@@ -92,7 +93,12 @@ class _MpFormSubmitButtonState extends State<_MpFormSubmitButton> {
         ? widget.node.props['onSuccess'] as _MpAction?
         : widget.node.props['onError'] as _MpAction?;
     if (nextAction != null) {
-      await _MpActionDispatcher.dispatch(context, nextAction, formBindings);
+      await _MpActionDispatcher.dispatch(
+        context,
+        nextAction,
+        formBindings,
+        const _MpActionCallContext(userGesture: true),
+      );
     }
     if (!success) {
       final message = result is MiniProgramBackendResult

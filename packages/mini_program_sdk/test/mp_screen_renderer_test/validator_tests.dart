@@ -151,6 +151,53 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts QR generation and rejects malformed QR scan actions', () {
+      final valid = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.column(
+              children: <MpNode>[
+                Mp.qr.generate(value: '{{state.qr.value}}'),
+                Mp.primaryButton(
+                  label: 'Scan',
+                  action: Mp.qr.scan(targetState: 'qr.result'),
+                ),
+              ],
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      const MpScreenValidator().validate(
+        valid,
+        expectedScreenId: 'coupon_home',
+      );
+
+      final invalid = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'primaryButton',
+          'props': <String, dynamic>{
+            'label': 'Scan',
+            'action': <String, dynamic>{
+              'type': 'qr.scan',
+              'props': <String, dynamic>{
+                'allowTorch': 'yes',
+                'targetState': 'qr.result',
+                'timeoutMs': 0,
+              },
+            },
+          },
+          'children': <Object?>[],
+        };
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          invalid,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+    });
+
     test('accepts file actions and rejects unsafe transfer endpoints', () {
       final valid = _jsonMap(
         MpProgram(

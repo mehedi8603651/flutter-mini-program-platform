@@ -6018,5 +6018,95 @@ void _mpScreenRendererTests() {
 
       backendStore.dispose();
     });
+
+    testWidgets('renders generated QR values without a host capability', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.qr.generate(
+              value: 'https://example.com/qr',
+              size: 180,
+              semanticLabel: 'Example QR code',
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(backendStore: backendStore, screenJson: screenJson),
+      );
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Example QR code'), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
+      backendStore.dispose();
+    });
+
+    testWidgets(
+      'QR scan requires a gesture and applies accepted torch policy',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('qr.result', <String, dynamic>{'old': true});
+        final provider = _ResultQrProvider();
+        final manager = MiniProgramQrManager(provider);
+        final action = _jsonAction(
+          Mp.qr.scan(
+            targetState: 'qr.result',
+            statusState: 'qr.status',
+            errorState: 'qr.error',
+            requestId: 'scan-one',
+          ),
+        );
+
+        final automatic =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  qrManager: manager,
+                  qrPolicy: const MiniProgramQrPolicy(
+                    enabled: true,
+                    allowTorch: true,
+                  ),
+                )
+                as HostActionResult;
+        expect(
+          automatic.errorCode,
+          MiniProgramErrorCodes.qrUserGestureRequired,
+        );
+        expect(provider.request, isNull);
+        expect(state.get<Map<String, dynamic>>('qr.result'), <String, dynamic>{
+          'old': true,
+        });
+
+        final success =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  qrManager: manager,
+                  qrPolicy: const MiniProgramQrPolicy(
+                    enabled: true,
+                    allowTorch: false,
+                  ),
+                  userGesture: true,
+                )
+                as HostActionResult;
+        expect(success.isSuccess, isTrue);
+        expect(success.requestId, 'scan-one');
+        expect(provider.request?.allowTorch, isFalse);
+        expect(state.get<String>('qr.status'), 'success');
+        expect(state.contains('qr.error'), isFalse);
+        expect(
+          state.get<Map<String, dynamic>>('qr.result')?['rawValue'],
+          'https://example.com/qr',
+        );
+        await manager.dispose();
+        state.dispose();
+      },
+    );
   });
 }

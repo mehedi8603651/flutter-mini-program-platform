@@ -202,7 +202,7 @@ void main() {
       });
     });
 
-    test('writes camera and flashlight permission requests', () async {
+    test('writes camera flashlight and QR permission requests', () async {
       const controller = MiniProgramPartnerHandoffController();
       final outputPath = p.join(tempDir.path, 'camera.partner.json');
       await controller.createPackage(
@@ -222,6 +222,11 @@ void main() {
               'enabled': true,
               'reason': 'Control the flashlight while this screen is open.',
             },
+            'qrScanner': <String, Object?>{
+              'enabled': true,
+              'reason': 'Scan a QR code selected by the user.',
+              'allowTorch': true,
+            },
           },
         ),
       );
@@ -234,12 +239,24 @@ void main() {
         handoff.requestedPermissions['flashlight'],
         containsPair('enabled', true),
       );
+      expect(handoff.requestedPermissions['qrScanner'], <String, Object?>{
+        'enabled': true,
+        'reason': 'Scan a QR code selected by the user.',
+        'allowTorch': true,
+      });
     });
 
     test('rejects malformed or unsupported permission requests', () async {
       for (final permissions in <Map<String, Object?>>[
         <String, Object?>{
           'camera': <String, Object?>{'enabled': true},
+        },
+        <String, Object?>{
+          'qrScanner': <String, Object?>{
+            'enabled': true,
+            'reason': 'Scan QR codes.',
+            'allowTorch': 'yes',
+          },
         },
         <String, Object?>{
           'location': <String, Object?>{

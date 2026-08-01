@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.9` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.3` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.4` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.2` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.10` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.4` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.5` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.3` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -74,10 +74,14 @@ These are system invariants, not preferences:
 16. Temporary host media uses opaque app-owned references. Preview bytes stay
     inside the trusted renderer, uploads revalidate ownership, and explicit or
     lifecycle release removes the native resource.
-16. Camera and flashlight are separate optional host capabilities. Camera may
+17. Camera and flashlight are separate optional host capabilities. Camera may
     delegate still-photo capture to the system camera and expose only opaque
     metadata; flashlight ownership is app-scoped and must be released when the
     mini-program leaves the foreground.
+18. QR generation is local rendering. QR scanning is a separate optional host
+    capability that requires accepted policy and an explicit user gesture;
+    scan values remain inert and scanner-local torch state is not shared with
+    the standalone flashlight capability.
 
 ## Repository Map
 
@@ -131,6 +135,7 @@ packages/mini_program_contracts/
 |   |-- mini_program_file.dart                  # File-transfer progress, direction, and status contracts
 |   |-- mini_program_camera.dart                # Opaque delegated-camera photo result contract
 |   |-- mini_program_flashlight.dart            # JSON-safe flashlight availability and enabled status
+|   |-- mini_program_qr.dart                    # Inert, bounded QR scan result metadata
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -187,6 +192,7 @@ packages/mini_program_ui/
 |       |   |-- camera/                         # Delegated system-camera capture and cancellation actions
 |       |   |-- flashlight/                     # Foreground flashlight control and status actions
 |       |   |-- media/                          # Temporary host-media release actions
+|       |   |-- qr/                             # Local QR rendering and host-controlled scan actions
 |       |   |-- navigation/                     # Navigation and router actions
 |       |   |-- backend/                        # Publisher API actions, nodes, and search
 |       |   |-- auth/                           # Authentication actions and state builder
@@ -220,7 +226,7 @@ packages/mini_program_sdk/
 |   |-- host_runtime/
 |   |   |-- host_state.dart                     # Private State fields plus Flutter lifecycle and build/setState delegates
 |   |   |-- loading.dart                        # Generation-safe initial manifest, screen, renderer, cache, and auth loading
-|   |   |-- policies.dart                       # Cache, live-state, location, file, camera, and flashlight policy lookup
+|   |   |-- policies.dart                       # Cache, state, location, file, camera, flashlight, and QR policy lookup
 |   |   |-- publisher_backend.dart              # Artifact Publisher API connector creation, ownership, and disposal
 |   |   |-- cache_lifecycle.dart                # Active app cache close and policy cleanup
 |   |   |-- navigation.dart                     # Legacy screen actions, Mp router stack operations, and screen loading
@@ -288,6 +294,8 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_media.dart             # Opaque ownership registry, bounded previews, and release
 |   |-- flashlight/
 |   |   `-- mini_program_flashlight.dart        # Torch provider, accepted policy, app ownership, and cleanup
+|   |-- qr/
+|   |   `-- mini_program_qr.dart                # QR provider, accepted policy, scan ownership, and result validation
 |   |-- state/
 |   |   |-- mp_state.dart                       # Public state/router import boundary and private part registry
 |   |   |-- live_state/
@@ -437,6 +445,10 @@ packages/mini_program_sdk/
 |   |       |   |-- data.dart                   # Artifact JSON resource load and search execution
 |   |       |   |-- location.dart               # Accepted one-time location execution and request deduplication
 |   |       |   |-- file.dart                   # Streaming upload/download execution, progress, and cancellation
+|   |       |   |-- camera.dart                 # Delegated still-photo capture and cancellation
+|   |       |   |-- flashlight.dart             # App-owned torch control and status execution
+|   |       |   |-- media.dart                  # Temporary host-media release execution
+|   |       |   |-- qr.dart                     # Gesture-gated accepted QR scanning and state projection
 |   |       |   |-- cache.dart                  # App-scoped cache action execution
 |   |       |   |-- feedback_forms_lazy.dart    # Form, lazy-load, toast, and dialog execution
 |   |       |   |-- composition.dart            # Sequence, conditional, and reusable-action calls
@@ -465,6 +477,7 @@ packages/mini_program_sdk/
 |   |           |-- collections.dart            # List, repeat, grid, wrap, and repeated-item bindings
 |   |           |-- content.dart                # Text, cards, alerts, skeletons, badges, and display content
 |   |           |-- media.dart                  # Images, box fit, icon rendering, glyphs, and const icon table
+|   |           |-- qr.dart                     # Cross-platform QR encoding, painting, fallback, and semantics
 |   |           |-- controls.dart               # Tap/styled/icon buttons, list-tile actions, and action wrappers
 |   |           |-- feedback.dart               # SDK-owned toast and dialog views
 |   |           |-- charts/
@@ -634,7 +647,8 @@ packages/mini_program_tooling/
 |       |           `-- android_channel_template.dart # Picker, MediaStore, and streaming Kotlin adapter
 |       |       |-- camera/                      # System-camera, Activity Result, and FileProvider installer modules
 |       |       |-- shared_media/                # App-owned native media registry template shared by camera/files
-|       |       `-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
+|       |       |-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
+|       |       `-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
 |       |   |-- models.dart                      # Public run/import requests, results, runner, and exception
@@ -1125,6 +1139,7 @@ lib/mini_program/
 |-- app_android_file_transfer_provider.dart     # Optional host-owned streaming file adapter
 |-- app_android_camera_provider.dart            # Optional host-owned delegated system-camera adapter
 |-- app_android_flashlight_provider.dart        # Optional host-owned CameraManager torch adapter
+|-- app_android_qr_scanner_provider.dart        # Optional host-owned QR-only CameraX/ML Kit adapter
 `-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
 
@@ -1150,6 +1165,14 @@ added. Android flashlight installs `MiniProgramFlashlightChannel.kt` and uses
 CameraManager/TorchCallback with runtime CAMERA permission. Run the respective
 `host capability init camera|flashlight --platform android` command once per
 host. Both accepted app policies remain denied until host review.
+
+Android QR scanning installs `MiniProgramQrScannerChannel.kt`, a dedicated
+CameraX scanner activity, bundled ML Kit barcode detection configured for QR
+only, and a Dart provider. Run
+`miniprogram host capability init qr --platform android` once per host. The
+scanner owns its torch while open, requires an explicit user gesture, returns
+inert data, and never automatically opens URLs. Provider installation does not
+accept `permissions.qrScanner` for any mini-program.
 
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
@@ -1257,11 +1280,12 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 63 unique SDK runtime node types. There are
-67 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 69 public builder entry points when the two aliases are
+The authoring API currently maps to 64 unique SDK runtime node types. There are
+68 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 70 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
-`Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, and `Mp.flashlight.*` are not
+`Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
+`Mp.qr.scan` are not
 widgets and are excluded from these totals.
 
 Layout and structure:
@@ -1380,6 +1404,8 @@ Important state APIs include:
   temporary media without exposing native paths or bytes to state.
 - `Mp.flashlight.turnOn`, `turnOff`, `toggle`, and `getStatus` for foreground,
   app-owned torch control under separate accepted host policy.
+- `Mp.qr.generate` for bounded cross-platform QR rendering and `Mp.qr.scan`
+  for gesture-gated, host-accepted QR-only scanning with inert results.
 
 Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
 
@@ -1471,9 +1497,9 @@ Import behavior:
 
 - Normal import updates `requested` and preserves the host's `accepted` values.
 - `--accept-requested-policy` explicitly copies supported requested cache,
-  Publisher API, location, file, camera, and flashlight permissions into
+  Publisher API, location, file, camera, flashlight, and QR scanner permissions into
   accepted policy without replacing unrelated endpoint files.
-- New location, file, camera, and flashlight requests default to denied.
+- New location, file, camera, flashlight, and QR scanner requests default to denied.
   Normal re-import preserves host decisions; `--force` resets them to denied
   and resets live-state limits to safe defaults.
 - Runtime resolver generation reads only `accepted` for enforcement.
