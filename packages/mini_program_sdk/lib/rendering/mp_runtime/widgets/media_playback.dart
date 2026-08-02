@@ -16,6 +16,9 @@ class _MpVideoViewState extends State<_MpVideoView> {
   String? _loadKey;
   String? _errorMessage;
   MiniProgramMediaPlaybackStatus? _lastStatus;
+  bool _readyDispatched = false;
+  bool _endedDispatched = false;
+  bool _errorDispatched = false;
   int _generation = 0;
 
   @override
@@ -44,6 +47,9 @@ class _MpVideoViewState extends State<_MpVideoView> {
     if (previous != null) previous.removeListener(_handleSessionChanged);
     _session = null;
     _errorMessage = null;
+    _readyDispatched = false;
+    _endedDispatched = false;
+    _errorDispatched = false;
     if (mounted) setState(() {});
     if (scope == null) {
       _setFailure('Mini-program media scope is unavailable.');
@@ -83,8 +89,19 @@ class _MpVideoViewState extends State<_MpVideoView> {
       _session = session;
       _lastStatus = session.snapshot.status;
       session.addListener(_handleSessionChanged);
+      if (session.snapshot.status == MiniProgramMediaPlaybackStatus.error) {
+        _writeFailure(
+          scope,
+          MiniProgramErrorCodes.mediaPlaybackFailed,
+          'Video playback failed.',
+        );
+        return;
+      }
       _writeSuccess(scope, session.snapshot.status.name);
       setState(() {});
+      if (_isReadyStatus(session.snapshot.status)) {
+        _dispatchLifecycleAction(scope, 'onReady', generation);
+      }
     } on MiniProgramMediaPlaybackException catch (error) {
       if (!mounted || generation != _generation) return;
       _writeFailure(scope, error.errorCode, error.message);
@@ -112,12 +129,42 @@ class _MpVideoViewState extends State<_MpVideoView> {
     final scope = _scope;
     if (!mounted || session == null || scope == null) return;
     final status = session.snapshot.status;
-    if (_lastStatus != status) {
+    final previousStatus = _lastStatus;
+    if (previousStatus != status) {
       _lastStatus = status;
+      if (status == MiniProgramMediaPlaybackStatus.error) {
+        _writeFailure(
+          scope,
+          MiniProgramErrorCodes.mediaPlaybackFailed,
+          'Video playback failed.',
+        );
+        return;
+      }
+      _errorMessage = null;
       _writeSuccess(scope, status.name);
+      if (_isReadyStatus(status)) {
+        _dispatchLifecycleAction(scope, 'onReady', _generation);
+      }
+      if (status == MiniProgramMediaPlaybackStatus.completed &&
+          !_endedDispatched) {
+        _endedDispatched = true;
+        _dispatchLifecycleAction(scope, 'onEnded', _generation);
+      } else if (status != MiniProgramMediaPlaybackStatus.completed) {
+        _endedDispatched = false;
+      }
+      _errorDispatched = false;
     }
     setState(() {});
   }
+
+  bool _isReadyStatus(MiniProgramMediaPlaybackStatus status) =>
+      switch (status) {
+        MiniProgramMediaPlaybackStatus.ready ||
+        MiniProgramMediaPlaybackStatus.playing ||
+        MiniProgramMediaPlaybackStatus.paused ||
+        MiniProgramMediaPlaybackStatus.completed => true,
+        _ => false,
+      };
 
   void _writeStatus(MiniProgramSdkScope scope, String status) {
     final key = widget.node.props['statusState'] as String?;
@@ -144,7 +191,51 @@ class _MpVideoViewState extends State<_MpVideoView> {
         });
       }
     });
+    if (!_errorDispatched) {
+      _errorDispatched = true;
+      _dispatchLifecycleAction(scope, 'onError', _generation);
+    }
     _setFailure(message);
+  }
+
+  void _dispatchLifecycleAction(
+    MiniProgramSdkScope scope,
+    String property,
+    int generation,
+  ) {
+    if (property == 'onReady') {
+      if (_readyDispatched) return;
+      _readyDispatched = true;
+    }
+    final action = widget.node.props[property] as _MpAction?;
+    if (action == null) return;
+    unawaited(_runLifecycleAction(scope, action, property, generation));
+  }
+
+  Future<void> _runLifecycleAction(
+    MiniProgramSdkScope scope,
+    _MpAction action,
+    String property,
+    int generation,
+  ) async {
+    final result = await _MpActionDispatcher.dispatch(
+      context,
+      action,
+      widget.bindings.copyWith(scope: scope),
+    );
+    if (!mounted || generation != _generation) return;
+    if (result is HostActionResult && !result.isSuccess) {
+      scope.logger.warn(
+        'Mp video lifecycle action failed.',
+        context: <String, Object?>{
+          'miniProgramId': scope.miniProgramId,
+          'playerId': _string(widget.node, 'playerId'),
+          'event': property,
+          'action': result.actionName,
+          'errorCode': result.errorCode,
+        },
+      );
+    }
   }
 
   void _setFailure(String message) {

@@ -5,9 +5,13 @@ void main() {
   test('media playback identifiers remain stable', () {
     expect(ActionNames.audioPlay, 'audio.play');
     expect(ActionNames.audioPreload, 'audio.preload');
+    expect(ActionNames.audioSetVolume, 'audio.setVolume');
+    expect(ActionNames.audioSetSpeed, 'audio.setSpeed');
     expect(ActionNames.audioRelease, 'audio.release');
     expect(ActionNames.videoPlay, 'video.play');
     expect(ActionNames.videoSetMuted, 'video.setMuted');
+    expect(ActionNames.videoEnterFullscreen, 'video.enterFullscreen');
+    expect(ActionNames.videoExitFullscreen, 'video.exitFullscreen');
     expect(ActionNames.videoRelease, 'video.release');
     expect(CapabilityIds.mediaAudio, 'media.audio');
     expect(CapabilityIds.mediaVideo, 'media.video');
@@ -67,5 +71,11 @@ void main() {
       MiniProgramErrorCodes.mediaRequestInProgress,
       'media_request_in_progress',
     );
+    expect(MiniProgramErrorCodes.mediaCacheFailed, 'media_cache_failed');
+    expect(
+      MiniProgramErrorCodes.mediaFullscreenUnavailable,
+      'media_fullscreen_unavailable',
+    );
+    expect(MiniProgramErrorCodes.mediaInterrupted, 'media_interrupted');
   });
 }

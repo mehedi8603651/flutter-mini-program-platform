@@ -385,11 +385,13 @@ miniprogram host capability init audio --platform android --project-root .
 miniprogram host capability init video --platform android --project-root .
 ```
 
-Both commands install the same idempotent `video_player` adapter. It provides
-headless streamed audio and inline MP4/HLS video through Android Media3 while
-the host policy still enables each mini-program and media kind separately.
-Phase 1 passes temporary-cache limits to the provider but does not add durable
-offline media downloads.
+Both commands install the same idempotent native Media3/ExoPlayer adapter. It
+provides headless streamed audio, inline MP4/HLS video, native fullscreen,
+audio focus, becoming-noisy handling, and host-lifecycle pausing. Temporary
+mode uses app- and kind-isolated LRU range/HLS-segment caches constrained by
+the accepted byte and TTL policy. It does not add background playback or
+permanent offline downloads. Re-run either command to migrate an unmodified
+generated Phase 1 provider; custom host-owned providers remain untouched.
 
 ### 3. Add An Endpoint Manually
 
@@ -648,6 +650,8 @@ miniprogram env status --json
 | `miniprogram host capability init camera --platform android` | Install delegated Android system-camera photo capture. |
 | `miniprogram host capability init flashlight --platform android` | Install Android CameraManager flashlight control. |
 | `miniprogram host capability init qr --platform android` | Install Android CameraX and bundled ML Kit QR-only scanning. |
+| `miniprogram host capability init audio --platform android` | Install shared Android Media3 audio/video playback. |
+| `miniprogram host capability init video --platform android` | Install shared Android Media3 audio/video playback. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |
 | `miniprogram artifact-host ...` | Manage a local static artifact host. |
 | `miniprogram publisher-api ...` | Work with optional runtime middle-server APIs. |

@@ -409,14 +409,17 @@ Mp.videoView(
   source: MpVideoSource.asset('video/product-demo.mp4'),
   poster: 'images/product-poster.webp',
   controls: true,
+  onReady: Mp.state.set('video.ready', true),
+  onEnded: Mp.state.increment('video.completedCount'),
+  onError: Mp.state.set('video.failed', true),
   semanticLabel: 'Product demonstration',
 );
 ```
 
-Use `Mp.audio.pause/seek/stop/getStatus/release` and
-`Mp.video.play/pause/seek/stop/setMuted/setVolume/setSpeed/getStatus/release`
-for explicit controls. Temporary cache is only a request; host-accepted media
-and cache policy remains authoritative.
+Use `Mp.audio.pause/seek/stop/setVolume/setSpeed/getStatus/release` and
+`Mp.video.play/pause/seek/stop/setMuted/setVolume/setSpeed/enterFullscreen/
+exitFullscreen/getStatus/release` for explicit controls. Temporary cache is
+only a request; host-accepted media and cache policy remains authoritative.
 
 ## Publisher File Transfers
 

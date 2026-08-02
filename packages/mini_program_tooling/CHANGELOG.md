@@ -3,7 +3,12 @@
 - Import requested audio/video playback permissions with safe default denial
   and generate accepted media playback plus audio/video cache policy.
 - Add idempotent Android `audio` and `video` capability initialization backed
-  by one host-owned `video_player` adapter for headless audio and inline video.
+  by one host-owned Media3/ExoPlayer adapter for headless audio and inline
+  video.
+- Add native MP4/audio range and HLS-segment LRU/TTL caching, audio-focus and
+  becoming-noisy handling, foreground lifecycle pausing, and fullscreen video.
+- Migrate the unmodified generated Phase 1 `video_player` provider on the next
+  audio/video capability initialization while preserving custom host files.
 - Generate mini-programs against UI `0.2.5` and hosts/preview hosts against
   contracts `0.3.11` and SDK `0.6.6`.
 

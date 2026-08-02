@@ -7,6 +7,8 @@
   `Mp.video` controls with strict source, player, volume, speed, and cache-mode
   validation.
 - Add the host-managed `audio` cache bucket alongside existing video policy.
+- Add `Mp.audio.setVolume`/`setSpeed`, video enter/exit-fullscreen actions,
+  and optional `onReady`, `onEnded`, and `onError` video lifecycle actions.
 
 ## 0.2.4
 

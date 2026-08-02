@@ -15,6 +15,9 @@ extension _MpMediaPlaybackNodeValidation on MpScreenValidator {
       'fit',
       'loop',
       'muted',
+      'onEnded',
+      'onError',
+      'onReady',
       'playerId',
       'poster',
       'posterSource',
@@ -52,6 +55,21 @@ extension _MpMediaPlaybackNodeValidation on MpScreenValidator {
         'fit': _optionalImageFit(props, 'fit', path: '$path.props') ?? 'cover',
         'loop': _requiredBoolValue(props['loop'], path: '$path.props.loop'),
         'muted': _requiredBoolValue(props['muted'], path: '$path.props.muted'),
+        if (props.containsKey('onEnded'))
+          'onEnded': _parseAction(
+            props['onEnded'],
+            path: '$path.props.onEnded',
+          ),
+        if (props.containsKey('onError'))
+          'onError': _parseAction(
+            props['onError'],
+            path: '$path.props.onError',
+          ),
+        if (props.containsKey('onReady'))
+          'onReady': _parseAction(
+            props['onReady'],
+            path: '$path.props.onReady',
+          ),
         'playerId': _parseMediaPlayerId(props, path),
         if (props.containsKey('poster'))
           'poster': _requiredString(props, 'poster', path: '$path.props'),

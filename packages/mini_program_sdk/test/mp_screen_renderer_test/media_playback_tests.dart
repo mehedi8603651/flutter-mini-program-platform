@@ -121,6 +121,130 @@ void _mpMediaPlaybackTests() {
       expect(state.get('audio.runtime'), 'error');
     });
 
+    testWidgets('phase two audio and fullscreen controls reach the session', (
+      tester,
+    ) async {
+      final provider = _TestPlaybackProvider();
+      final manager = MiniProgramMediaPlaybackManager(provider);
+      await manager.load(_testPlaybackRequest(sourceKey: 'audio'));
+
+      final volumeResult = await _runMpAction(
+        tester,
+        Mp.audio.setVolume(audioId: 'player', volume: 0.35).toJson(),
+        miniProgramId: 'media-app',
+        mediaPlaybackManager: manager,
+        mediaPlaybackPolicy: const MiniProgramMediaPlaybackPolicy(
+          audioEnabled: true,
+        ),
+      );
+      final speedResult = await _runMpAction(
+        tester,
+        Mp.audio.setSpeed(audioId: 'player', speed: 1.5).toJson(),
+        miniProgramId: 'media-app',
+        mediaPlaybackManager: manager,
+        mediaPlaybackPolicy: const MiniProgramMediaPlaybackPolicy(
+          audioEnabled: true,
+        ),
+      );
+      expect((volumeResult! as HostActionResult).isSuccess, isTrue);
+      expect((speedResult! as HostActionResult).isSuccess, isTrue);
+      expect(provider.lastSession?.volume, 0.35);
+      expect(provider.lastSession?.speed, 1.5);
+
+      await manager.releaseAllFor('media-app');
+      await manager.load(
+        _testPlaybackRequest(
+          sourceKey: 'video',
+          kind: MiniProgramMediaPlaybackKind.video,
+        ),
+      );
+      final fullscreenResult = await _runMpAction(
+        tester,
+        Mp.video.enterFullscreen(playerId: 'player').toJson(),
+        miniProgramId: 'media-app',
+        mediaPlaybackManager: manager,
+        mediaPlaybackPolicy: const MiniProgramMediaPlaybackPolicy(
+          videoEnabled: true,
+        ),
+      );
+      expect((fullscreenResult! as HostActionResult).isSuccess, isTrue);
+      expect(provider.lastSession?.fullscreen, isTrue);
+      await manager.dispose();
+    });
+
+    test(
+      'app lifecycle pause affects only sessions owned by that app',
+      () async {
+        final provider = _TestPlaybackProvider();
+        final manager = MiniProgramMediaPlaybackManager(provider);
+        await manager.load(_testPlaybackRequest(sourceKey: 'first'));
+        final session = provider.lastSession!;
+        await session.play();
+
+        await manager.pauseAllFor('other-app');
+        expect(session.status, MiniProgramMediaPlaybackStatus.playing);
+        await manager.pauseAllFor('media-app');
+        expect(session.status, MiniProgramMediaPlaybackStatus.paused);
+        await manager.dispose();
+      },
+    );
+
+    testWidgets('video lifecycle actions run once per status transition', (
+      tester,
+    ) async {
+      final provider = _TestPlaybackProvider();
+      final manager = MiniProgramMediaPlaybackManager(provider);
+      final state = MpStateManager()..set('events.ended', 0);
+      final backendStore = MiniProgramBackendStore();
+      final root = Mp.videoView(
+        playerId: 'demo',
+        source: MpVideoSource.asset('video/demo.mp4'),
+        errorState: 'video.error',
+        onReady: Mp.state.set('events.ready', true),
+        onEnded: Mp.state.increment('events.ended'),
+        onError: Mp.state.set('events.error', true),
+      ).toJson();
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          mediaPlaybackManager: manager,
+          mediaPlaybackPolicy: const MiniProgramMediaPlaybackPolicy(
+            videoEnabled: true,
+          ),
+          mediaAssetSource: const _TestMediaAssetSource(),
+          miniProgramVersion: '1.0.0',
+          screenJson: <String, dynamic>{
+            'schemaVersion': 1,
+            'screenId': 'coupon_home',
+            'root': root,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(state.get('events.ready'), isTrue);
+
+      provider.lastSession!.status = MiniProgramMediaPlaybackStatus.completed;
+      provider.lastSession!.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(state.get('events.ended'), 1);
+
+      provider.lastSession!.status = MiniProgramMediaPlaybackStatus.error;
+      provider.lastSession!.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(state.get('events.error'), isTrue);
+      expect(
+        (state.get('video.error')! as Map)['code'],
+        MiniProgramErrorCodes.mediaPlaybackFailed,
+      );
+      provider.lastSession!.notifyListeners();
+      await tester.pumpAndSettle();
+      expect(state.get('events.ended'), 1);
+
+      await manager.dispose();
+      backendStore.dispose();
+    });
+
     test('release invalidates an in-flight player load', () async {
       final provider = _DelayedPlaybackProvider();
       final manager = MiniProgramMediaPlaybackManager(provider);
@@ -152,10 +276,11 @@ void _mpMediaPlaybackTests() {
 
 MiniProgramMediaPlaybackRequest _testPlaybackRequest({
   required String sourceKey,
+  MiniProgramMediaPlaybackKind kind = MiniProgramMediaPlaybackKind.audio,
 }) => MiniProgramMediaPlaybackRequest(
   miniProgramId: 'media-app',
   playerId: 'player',
-  kind: MiniProgramMediaPlaybackKind.audio,
+  kind: kind,
   sourceKey: sourceKey,
   source: MiniProgramResolvedPlaybackSource(
     candidateUris: <Uri>[Uri.parse('https://assets.example/audio.mp3')],
@@ -171,6 +296,7 @@ MiniProgramMediaPlaybackRequest _testPlaybackRequest({
 class _TestPlaybackProvider implements MiniProgramMediaPlaybackProvider {
   int created = 0;
   MiniProgramMediaPlaybackRequest? lastRequest;
+  _TestPlaybackSession? lastSession;
 
   @override
   Future<MiniProgramMediaPlaybackSession> createSession(
@@ -178,16 +304,25 @@ class _TestPlaybackProvider implements MiniProgramMediaPlaybackProvider {
   ) async {
     created++;
     lastRequest = request;
-    return _TestPlaybackSession(request);
+    return lastSession = _TestPlaybackSession(request);
   }
 }
 
 class _TestPlaybackSession extends ChangeNotifier
-    implements MiniProgramMediaPlaybackSession {
-  _TestPlaybackSession(this.request);
+    implements
+        MiniProgramMediaPlaybackSession,
+        MiniProgramFullscreenMediaPlaybackSession {
+  _TestPlaybackSession(this.request)
+    : volume = request.volume,
+      speed = request.speed,
+      muted = request.muted;
 
   final MiniProgramMediaPlaybackRequest request;
   var status = MiniProgramMediaPlaybackStatus.ready;
+  double volume;
+  double speed;
+  bool muted;
+  bool fullscreen = false;
   bool disposed = false;
 
   @override
@@ -199,9 +334,9 @@ class _TestPlaybackSession extends ChangeNotifier
         playerId: request.playerId,
         kind: request.kind,
         status: status,
-        volume: request.volume,
-        speed: request.speed,
-        muted: request.muted,
+        volume: volume,
+        speed: speed,
+        muted: muted,
       );
 
   @override
@@ -233,13 +368,28 @@ class _TestPlaybackSession extends ChangeNotifier
   }
 
   @override
-  Future<void> setMuted(bool muted) async {}
+  Future<void> setMuted(bool value) async {
+    muted = value;
+    notifyListeners();
+  }
 
   @override
-  Future<void> setVolume(double volume) async {}
+  Future<void> setVolume(double value) async {
+    volume = value;
+    notifyListeners();
+  }
 
   @override
-  Future<void> setSpeed(double speed) async {}
+  Future<void> setSpeed(double value) async {
+    speed = value;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> enterFullscreen() async => fullscreen = true;
+
+  @override
+  Future<void> exitFullscreen() async => fullscreen = false;
 
   @override
   Future<void> dispose() async {

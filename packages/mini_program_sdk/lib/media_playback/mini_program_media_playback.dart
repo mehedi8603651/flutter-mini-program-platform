@@ -111,6 +111,15 @@ abstract interface class MiniProgramMediaPlaybackSession implements Listenable {
   Future<void> dispose();
 }
 
+/// Optional session surface for providers that support native fullscreen video.
+///
+/// Keeping this separate preserves source compatibility for Phase 1 provider
+/// implementations while allowing the runtime to expose fullscreen actions.
+abstract interface class MiniProgramFullscreenMediaPlaybackSession {
+  Future<void> enterFullscreen();
+  Future<void> exitFullscreen();
+}
+
 /// Platform adapter for foreground streamed media playback.
 abstract interface class MiniProgramMediaPlaybackProvider {
   Future<MiniProgramMediaPlaybackSession> createSession(
@@ -229,6 +238,18 @@ class MiniProgramMediaPlaybackManager {
     for (final key in keys) {
       _generations[key] = (_generations[key] ?? 0) + 1;
       await _sessions.remove(key)?.dispose();
+    }
+  }
+
+  /// Pauses all active foreground sessions owned by [appId].
+  Future<void> pauseAllFor(String appId) async {
+    final prefix = '$appId\u0000';
+    final sessions = _sessions.entries
+        .where((entry) => entry.key.startsWith(prefix))
+        .map((entry) => entry.value)
+        .toList(growable: false);
+    for (final session in sessions) {
+      await session.pause();
     }
   }
 

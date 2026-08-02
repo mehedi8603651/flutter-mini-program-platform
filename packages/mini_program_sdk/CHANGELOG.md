@@ -6,6 +6,9 @@
   and release sessions during mini-program lifecycle cleanup.
 - Add an `audio` runtime cache bucket and per-kind temporary-cache policy while
   leaving native buffering implementation under host provider control.
+- Add optional fullscreen sessions, audio volume/speed dispatch, video
+  lifecycle callbacks, and app-background pausing while keeping providers
+  source-compatible with Phase 1.
 
 ## 0.6.5
 

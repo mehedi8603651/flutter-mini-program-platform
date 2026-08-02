@@ -69,6 +69,42 @@ void main() {
     );
   });
 
+  test('phase two controls and video lifecycle actions serialize', () {
+    expect(
+      Mp.audio.setVolume(audioId: 'lesson', volume: 0.4).toJson(),
+      <String, Object?>{
+        'type': 'audio.setVolume',
+        'props': <String, Object?>{'playerId': 'lesson', 'volume': 0.4},
+      },
+    );
+    expect(
+      Mp.audio.setSpeed(audioId: 'lesson', speed: 1.25).toJson(),
+      <String, Object?>{
+        'type': 'audio.setSpeed',
+        'props': <String, Object?>{'playerId': 'lesson', 'speed': 1.25},
+      },
+    );
+    expect(
+      Mp.video.enterFullscreen(playerId: 'demo').toJson()['type'],
+      'video.enterFullscreen',
+    );
+    expect(
+      Mp.video.exitFullscreen(playerId: 'demo').toJson()['type'],
+      'video.exitFullscreen',
+    );
+    final node = Mp.videoView(
+      playerId: 'demo',
+      source: MpVideoSource.asset('video/demo.mp4'),
+      onReady: Mp.state.set('events.ready', true),
+      onEnded: Mp.state.increment('events.ended'),
+      onError: Mp.state.set('events.error', true),
+    ).toJson();
+    final props = Map<String, Object?>.from(node['props']! as Map);
+    expect((props['onReady']! as Map)['type'], 'state.set');
+    expect((props['onEnded']! as Map)['type'], 'state.increment');
+    expect((props['onError']! as Map)['type'], 'state.set');
+  });
+
   test('media playback rejects arbitrary URLs and unsafe controls', () {
     expect(
       () => MpVideoSource.asset('https://example.com/video.mp4'),
@@ -80,6 +116,14 @@ void main() {
     );
     expect(
       () => Mp.video.setSpeed(playerId: 'demo', speed: 4),
+      throwsArgumentError,
+    );
+    expect(
+      () => Mp.audio.setVolume(audioId: 'demo', volume: -0.1),
+      throwsArgumentError,
+    );
+    expect(
+      () => Mp.audio.setSpeed(audioId: 'demo', speed: 3.1),
       throwsArgumentError,
     );
   });

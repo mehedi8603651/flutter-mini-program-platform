@@ -725,6 +725,8 @@ class MpScreenValidator {
       'audio.pause' ||
       'audio.seek' ||
       'audio.stop' ||
+      'audio.setVolume' ||
+      'audio.setSpeed' ||
       'audio.getStatus' ||
       'audio.release' ||
       'video.play' ||
@@ -734,6 +736,8 @@ class MpScreenValidator {
       'video.setMuted' ||
       'video.setVolume' ||
       'video.setSpeed' ||
+      'video.enterFullscreen' ||
+      'video.exitFullscreen' ||
       'video.getStatus' ||
       'video.release' => _parseMediaPlaybackAction(type, props, path),
       'cache.set' => _parseCacheSetAction(type, props, path),

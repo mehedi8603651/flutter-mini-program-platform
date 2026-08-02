@@ -144,7 +144,8 @@ miniprogram host capability init audio --platform android
 miniprogram host capability init video --platform android
 ```
 
-The generated `video_player` adapter supports headless audio and inline video.
+The generated Android Media3 adapter supports headless audio, inline video,
+HLS playback, bounded temporary caching, and fullscreen controls.
 Audio, video, and temporary cache policy remain denied per mini-program until
 the host accepts the corresponding request.
 

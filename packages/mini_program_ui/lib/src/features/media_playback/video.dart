@@ -85,6 +85,20 @@ final class MpVideoActions {
     );
   }
 
+  MpAction enterFullscreen({required String playerId, String? requestId}) =>
+      buildMediaControlAction(
+        'video.enterFullscreen',
+        playerId,
+        requestId: requestId,
+      );
+
+  MpAction exitFullscreen({required String playerId, String? requestId}) =>
+      buildMediaControlAction(
+        'video.exitFullscreen',
+        playerId,
+        requestId: requestId,
+      );
+
   MpAction getStatus({
     required String playerId,
     required String targetState,
@@ -118,6 +132,9 @@ MpNode buildVideoViewNode({
   MpImageFit fit = MpImageFit.contain,
   String? statusState,
   String? errorState,
+  MpAction? onReady,
+  MpAction? onEnded,
+  MpAction? onError,
   String semanticLabel = 'Video player',
 }) {
   final normalizedVolume = finiteNumber(volume, 'volume').toDouble();
@@ -160,6 +177,9 @@ MpNode buildVideoViewNode({
         'statusState': requiredStateKey(statusState, 'statusState'),
       if (errorState != null)
         'errorState': requiredStateKey(errorState, 'errorState'),
+      if (onReady != null) 'onReady': onReady.toJson(),
+      if (onEnded != null) 'onEnded': onEnded.toJson(),
+      if (onError != null) 'onError': onError.toJson(),
     },
   );
 }

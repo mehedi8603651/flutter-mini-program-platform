@@ -85,11 +85,9 @@ These are system invariants, not preferences:
 19. Audio and video playback may resolve only artifact-relative assets or
     relative routes on the accepted Publisher API. Media URLs, authorization
     headers, native paths, and buffered bytes must never enter mini-program
-    state; playback sessions and temporary cache ownership are app-scoped.
-19. Audio and video playback accept only artifact-relative or relative
-    Publisher API sources. The host independently accepts audio/video policy,
-    owns the playback provider and buffering, and never exposes resolved URLs,
-    authorization headers, native paths, or media bytes to live state.
+    state; playback sessions and temporary cache ownership are app-scoped. The
+    host independently accepts each media kind and owns playback, buffering,
+    audio focus, foreground lifecycle, fullscreen, and cache enforcement.
 
 ## Repository Map
 
@@ -662,7 +660,7 @@ packages/mini_program_tooling/
 |       |       |-- shared_media/                # App-owned native media registry template shared by camera/files
 |       |       |-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
 |       |       |-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
-|       |       `-- media_playback/              # Shared Android audio/video provider template and idempotent installer
+|       |       `-- media_playback/              # Media3 Dart/Kotlin templates, Gradle/MainActivity editors, ownership checks, and installer
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
 |       |   |-- models.dart                      # Public run/import requests, results, runner, and exception
@@ -1421,10 +1419,13 @@ Important state APIs include:
   app-owned torch control under separate accepted host policy.
 - `Mp.qr.generate` for bounded cross-platform QR rendering and `Mp.qr.scan`
   for gesture-gated, host-accepted QR-only scanning with inert results.
-- `Mp.audio.play`, `preload`, `pause`, `seek`, `stop`, `getStatus`, and
-  `release` for app-scoped headless audio playback.
+- `Mp.audio.play`, `preload`, `pause`, `seek`, `stop`, `setVolume`,
+  `setSpeed`, `getStatus`, and `release` for app-scoped headless audio
+  playback.
 - `Mp.video.play`, `pause`, `seek`, `stop`, `setMuted`, `setVolume`,
-  `setSpeed`, `getStatus`, and `release` for controlling an `Mp.videoView`.
+  `setSpeed`, `enterFullscreen`, `exitFullscreen`, `getStatus`, and `release`
+  for controlling an `Mp.videoView`; the node may dispatch `onReady`,
+  `onEnded`, and `onError` actions once per lifecycle transition.
 
 Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
 

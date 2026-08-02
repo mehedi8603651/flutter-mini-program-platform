@@ -2,6 +2,8 @@
 
 - Add stable streamed audio and inline video action names, playback capability
   identifiers, normalized status snapshots, and media failure codes.
+- Add audio volume/speed controls, video fullscreen controls, and stable
+  cache, fullscreen, and interruption errors for Media Playback Phase 2.
 
 ## 0.3.10
 

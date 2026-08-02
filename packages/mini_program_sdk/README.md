@@ -154,6 +154,10 @@ and releases every session when its mini-program closes.
 
 Hosts decide audio and video independently through
 `MiniProgramMediaPlaybackPolicy`. A `temporary` cache request also requires the
-matching accepted audio/video cache policy. Phase 1 treats cache parameters as
-provider hints; persistent HLS segment download and offline playback are not
-part of this release.
+matching accepted audio/video cache policy. Providers receive app- and
+kind-scoped byte and TTL limits. The generated Android Media3 adapter enforces
+them with LRU range/HLS-segment cache directories, clears expired entries when
+opening a cache, participates in audio focus, pauses when audio becomes noisy
+or the host leaves the foreground, and supports native fullscreen video.
+Permanent offline downloads and background playback are not part of this
+release.

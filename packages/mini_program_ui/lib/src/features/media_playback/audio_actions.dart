@@ -65,6 +65,48 @@ final class MpAudioActions {
   MpAction stop({required String audioId, String? requestId}) =>
       buildMediaControlAction('audio.stop', audioId, requestId: requestId);
 
+  MpAction setVolume({
+    required String audioId,
+    required double volume,
+    String? requestId,
+  }) {
+    final normalized = finiteNumber(volume, 'volume').toDouble();
+    if (normalized < 0 || normalized > 1) {
+      throw ArgumentError.value(
+        volume,
+        'volume',
+        'Volume must be from 0 to 1.',
+      );
+    }
+    return buildMediaControlAction(
+      'audio.setVolume',
+      audioId,
+      requestId: requestId,
+      extra: <String, Object?>{'volume': normalized},
+    );
+  }
+
+  MpAction setSpeed({
+    required String audioId,
+    required double speed,
+    String? requestId,
+  }) {
+    final normalized = finiteNumber(speed, 'speed').toDouble();
+    if (normalized < 0.25 || normalized > 3) {
+      throw ArgumentError.value(
+        speed,
+        'speed',
+        'Speed must be from 0.25 to 3.',
+      );
+    }
+    return buildMediaControlAction(
+      'audio.setSpeed',
+      audioId,
+      requestId: requestId,
+      extra: <String, Object?>{'speed': normalized},
+    );
+  }
+
   MpAction getStatus({
     required String audioId,
     required String targetState,

@@ -25,6 +25,8 @@ abstract final class ActionNames {
   static const String audioPause = 'audio.pause';
   static const String audioSeek = 'audio.seek';
   static const String audioStop = 'audio.stop';
+  static const String audioSetVolume = 'audio.setVolume';
+  static const String audioSetSpeed = 'audio.setSpeed';
   static const String audioGetStatus = 'audio.getStatus';
   static const String audioPreload = 'audio.preload';
   static const String audioRelease = 'audio.release';
@@ -35,6 +37,8 @@ abstract final class ActionNames {
   static const String videoSetMuted = 'video.setMuted';
   static const String videoSetVolume = 'video.setVolume';
   static const String videoSetSpeed = 'video.setSpeed';
+  static const String videoEnterFullscreen = 'video.enterFullscreen';
+  static const String videoExitFullscreen = 'video.exitFullscreen';
   static const String videoGetStatus = 'video.getStatus';
   static const String videoRelease = 'video.release';
 }

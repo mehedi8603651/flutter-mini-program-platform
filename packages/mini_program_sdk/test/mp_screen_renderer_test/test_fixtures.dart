@@ -897,6 +897,11 @@ Widget _scopedApp({
   MpStateManager? stateManager,
   MpRouter? router,
   MiniProgramMediaManager? mediaManager,
+  MiniProgramMediaPlaybackManager? mediaPlaybackManager,
+  MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy =
+      const MiniProgramMediaPlaybackPolicy(),
+  MiniProgramMediaAssetSource? mediaAssetSource,
+  String? miniProgramVersion,
   Map<String, dynamic> routeParams = const <String, dynamic>{},
 }) {
   return MaterialApp(
@@ -917,6 +922,10 @@ Widget _scopedApp({
       router: router,
       routeParams: routeParams,
       mediaManager: mediaManager,
+      mediaPlaybackManager: mediaPlaybackManager,
+      mediaPlaybackPolicy: mediaPlaybackPolicy,
+      mediaAssetSource: mediaAssetSource,
+      miniProgramVersion: miniProgramVersion,
       featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
       logger: const DebugPrintSdkLogger(),
       openMiniProgramScreen:

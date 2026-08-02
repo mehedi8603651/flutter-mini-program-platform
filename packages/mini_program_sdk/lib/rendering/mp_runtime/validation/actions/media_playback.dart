@@ -27,8 +27,14 @@ extension _MpMediaPlaybackActionValidation on MpScreenValidator {
     if (seekAction) allowed.add('positionMs');
     if (getStatus) allowed.add('targetState');
     if (type == ActionNames.videoSetMuted) allowed.add('muted');
-    if (type == ActionNames.videoSetVolume) allowed.add('volume');
-    if (type == ActionNames.videoSetSpeed) allowed.add('speed');
+    if (type == ActionNames.videoSetVolume ||
+        type == ActionNames.audioSetVolume) {
+      allowed.add('volume');
+    }
+    if (type == ActionNames.videoSetSpeed ||
+        type == ActionNames.audioSetSpeed) {
+      allowed.add('speed');
+    }
     _validateObjectKeys(props, allowed, path: '$path.props');
     return _MpAction(
       type: type,
@@ -78,14 +84,17 @@ extension _MpMediaPlaybackActionValidation on MpScreenValidator {
             props['muted'],
             path: '$path.props.muted',
           ),
-        if (sourceAction || type == ActionNames.videoSetVolume)
+        if (sourceAction ||
+            type == ActionNames.videoSetVolume ||
+            type == ActionNames.audioSetVolume)
           'volume': _boundedNumber(
             props['volume'],
             path: '$path.props.volume',
             minimum: 0,
             maximum: 1,
           ),
-        if (type == ActionNames.videoSetSpeed)
+        if (type == ActionNames.videoSetSpeed ||
+            type == ActionNames.audioSetSpeed)
           'speed': _boundedNumber(
             props['speed'],
             path: '$path.props.speed',

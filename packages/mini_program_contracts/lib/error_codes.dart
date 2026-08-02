@@ -109,6 +109,10 @@ abstract final class MiniProgramErrorCodes {
   static const String mediaTimeout = 'media_timeout';
   static const String mediaPlayerNotFound = 'media_player_not_found';
   static const String mediaCacheUnavailable = 'media_cache_unavailable';
+  static const String mediaCacheFailed = 'media_cache_failed';
+  static const String mediaFullscreenUnavailable =
+      'media_fullscreen_unavailable';
+  static const String mediaInterrupted = 'media_interrupted';
   static const String mediaPlaybackFailed = 'media_playback_failed';
   static const String mediaRequestInProgress = 'media_request_in_progress';
 }

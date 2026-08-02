@@ -147,42 +147,118 @@ String patchMediaPlaybackRuntimeSetup(String source) {
   return updated;
 }
 
-String patchMediaPlaybackPubspec(String source) {
-  if (RegExp(r'^\s{2}video_player\s*:', multiLine: true).hasMatch(source)) {
-    return source;
-  }
-  final normalized = source.replaceAll('\r\n', '\n');
-  final lines = normalized.split('\n');
-  final dependencies = lines.indexWhere(
-    (line) => line.trim() == 'dependencies:',
+String patchMediaPlaybackMainActivity(String source) => _patchMainActivity(
+  source,
+  'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
+);
+
+String patchMediaPlaybackGradle(String source, {required bool kotlinDsl}) {
+  if (source.contains('mini-program-media-playback-capability')) return source;
+  final quote = kotlinDsl ? '"' : "'";
+  final callStart = kotlinDsl ? 'implementation(' : 'implementation ';
+  final callEnd = kotlinDsl ? ')' : '';
+  return '$source\n// mini-program-media-playback-capability\ndependencies {\n'
+      '    $callStart${quote}androidx.media3:media3-exoplayer:1.5.1$quote$callEnd\n'
+      '    $callStart${quote}androidx.media3:media3-exoplayer-hls:1.5.1$quote$callEnd\n'
+      '    $callStart${quote}androidx.media3:media3-ui:1.5.1$quote$callEnd\n'
+      '    $callStart${quote}androidx.media3:media3-datasource:1.5.1$quote$callEnd\n'
+      '    $callStart${quote}androidx.media3:media3-database:1.5.1$quote$callEnd\n'
+      '}\n';
+}
+
+String _patchMainActivity(String source, String registration) {
+  if (source.contains(registration)) return source;
+  final newline = _newlineFor(source);
+  var updated = _ensureImport(
+    source,
+    'import io.flutter.embedding.engine.FlutterEngine',
+    before: 'import io.flutter.plugin',
+    fallbackAfter: 'import io.flutter.embedding.android.FlutterActivity',
   );
-  if (dependencies == -1) {
+  final match = RegExp(
+    r'class\s+MainActivity\s*:\s*(FlutterActivity|FlutterFragmentActivity)\(\)',
+  ).firstMatch(updated);
+  if (match == null) {
     throw const MiniProgramHostCapabilityException(
-      'Host pubspec.yaml does not contain a dependencies section.',
+      'MainActivity.kt must extend FlutterActivity or FlutterFragmentActivity.',
     );
   }
-  var insertAt = dependencies + 1;
-  while (insertAt < lines.length &&
-      !RegExp(r'^[A-Za-z_][A-Za-z0-9_]*:\s*$').hasMatch(lines[insertAt])) {
-    insertAt++;
+  if (updated.contains('override fun configureFlutterEngine(')) {
+    const superCall = 'super.configureFlutterEngine(flutterEngine)';
+    final index = updated.indexOf(superCall, match.end);
+    if (index == -1) {
+      throw const MiniProgramHostCapabilityException(
+        'MainActivity.configureFlutterEngine must call super first.',
+      );
+    }
+    return updated.replaceRange(
+      index + superCall.length,
+      index + superCall.length,
+      '$newline        $registration',
+    );
   }
-  lines.insert(insertAt, '  video_player: ^2.10.0');
-  return lines.join('\n');
+  final tail = updated.substring(match.end);
+  final first = tail.indexOf(RegExp(r'\S'));
+  if (first == -1) {
+    return updated.replaceRange(
+      match.start,
+      updated.length,
+      'class MainActivity : ${match.group(1)}() {$newline'
+      '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
+      '        super.configureFlutterEngine(flutterEngine)$newline'
+      '        $registration$newline'
+      '    }$newline'
+      '}',
+    );
+  }
+  if (tail[first] != '{') {
+    throw const MiniProgramHostCapabilityException(
+      'MainActivity.kt uses an unsupported custom declaration.',
+    );
+  }
+  final end = updated.lastIndexOf('}');
+  return updated.replaceRange(
+    end,
+    end,
+    '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
+    '        super.configureFlutterEngine(flutterEngine)$newline'
+    '        $registration$newline'
+    '    }$newline$newline',
+  );
 }
 
 String _ensureImport(
   String source,
   String statement, {
-  required String before,
+  String? before,
+  String? fallbackAfter,
 }) {
   if (source.contains(statement)) return source;
-  final index = source.indexOf(before);
-  if (index == -1) {
-    throw const MiniProgramHostCapabilityException(
-      'Could not safely update the host import block.',
+  final newline = _newlineFor(source);
+  if (before != null && source.contains(before)) {
+    final index = source.indexOf(before);
+    return source.replaceRange(index, index, '$statement$newline');
+  }
+  if (fallbackAfter != null && source.contains(fallbackAfter)) {
+    return source.replaceFirst(
+      fallbackAfter,
+      '$fallbackAfter$newline$statement',
     );
   }
-  return source.replaceRange(index, index, '$statement${_newlineFor(source)}');
+  final imports = RegExp(
+    r'^import .+?;?\s*$',
+    multiLine: true,
+  ).allMatches(source);
+  if (imports.isEmpty) {
+    throw const MiniProgramHostCapabilityException(
+      'Could not safely update the import block.',
+    );
+  }
+  return source.replaceRange(
+    imports.last.end,
+    imports.last.end,
+    '$newline$statement',
+  );
 }
 
 String _newlineFor(String source) => source.contains('\r\n') ? '\r\n' : '\n';

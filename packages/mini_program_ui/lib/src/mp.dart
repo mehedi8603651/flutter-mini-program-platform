@@ -648,6 +648,9 @@ abstract final class Mp {
     MpImageFit fit = MpImageFit.contain,
     String? statusState,
     String? errorState,
+    MpAction? onReady,
+    MpAction? onEnded,
+    MpAction? onError,
     String semanticLabel = 'Video player',
   }) => buildVideoViewNode(
     playerId: playerId,
@@ -665,6 +668,9 @@ abstract final class Mp {
     fit: fit,
     statusState: statusState,
     errorState: errorState,
+    onReady: onReady,
+    onEnded: onEnded,
+    onError: onError,
     semanticLabel: semanticLabel,
   );
 

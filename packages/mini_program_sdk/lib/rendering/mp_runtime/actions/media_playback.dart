@@ -75,12 +75,34 @@ abstract final class _MpMediaPlaybackActionHandler {
             ActionNames.videoSetMuted => session.setMuted(
               _boolProp(props, 'muted'),
             ),
-            ActionNames.videoSetVolume => session.setVolume(
+            ActionNames.videoSetVolume ||
+            ActionNames.audioSetVolume => session.setVolume(
               _numProp(props, 'volume', fallback: 1).toDouble(),
             ),
-            ActionNames.videoSetSpeed => session.setSpeed(
+            ActionNames.videoSetSpeed ||
+            ActionNames.audioSetSpeed => session.setSpeed(
               _numProp(props, 'speed', fallback: 1).toDouble(),
             ),
+            ActionNames.videoEnterFullscreen =>
+              session is MiniProgramFullscreenMediaPlaybackSession
+                  ? (session as MiniProgramFullscreenMediaPlaybackSession)
+                        .enterFullscreen()
+                  : throw const MiniProgramMediaPlaybackException(
+                      errorCode:
+                          MiniProgramErrorCodes.mediaFullscreenUnavailable,
+                      message:
+                          'The host playback provider does not support fullscreen video.',
+                    ),
+            ActionNames.videoExitFullscreen =>
+              session is MiniProgramFullscreenMediaPlaybackSession
+                  ? (session as MiniProgramFullscreenMediaPlaybackSession)
+                        .exitFullscreen()
+                  : throw const MiniProgramMediaPlaybackException(
+                      errorCode:
+                          MiniProgramErrorCodes.mediaFullscreenUnavailable,
+                      message:
+                          'The host playback provider does not support fullscreen video.',
+                    ),
             ActionNames.audioGetStatus ||
             ActionNames.videoGetStatus => Future<void>.value(),
             _ => throw const MiniProgramMediaPlaybackException(

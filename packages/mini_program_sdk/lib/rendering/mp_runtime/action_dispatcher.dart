@@ -217,6 +217,8 @@ abstract final class _MpActionDispatcher {
         'audio.pause' ||
         'audio.seek' ||
         'audio.stop' ||
+        'audio.setVolume' ||
+        'audio.setSpeed' ||
         'audio.getStatus' ||
         'audio.release' ||
         'video.play' ||
@@ -226,6 +228,8 @@ abstract final class _MpActionDispatcher {
         'video.setMuted' ||
         'video.setVolume' ||
         'video.setSpeed' ||
+        'video.enterFullscreen' ||
+        'video.exitFullscreen' ||
         'video.getStatus' ||
         'video.release' => _MpMediaPlaybackActionHandler._run(
           scope,

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:mini_program_tooling/mini_program_tooling.dart';
+import 'package:mini_program_tooling/src/host_integration/capabilities/media_playback/dart_provider_template.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -449,13 +450,47 @@ void main() {
       ),
     ).readAsString();
     expect(provider, contains('class AppAndroidMediaPlaybackProvider'));
-    expect(provider, contains('VideoPlayerController.networkUrl'));
-    expect(provider, contains('MiniProgramMediaPlaybackStatus.buffering'));
+    expect(provider, contains("'mini_program/media_playback'"));
+    expect(provider, contains('AndroidView('));
+    expect(provider, contains('MiniProgramFullscreenMediaPlaybackSession'));
+    expect(provider, contains('MiniProgramMediaPlaybackSnapshot.fromJson'));
+    expect(provider, contains("'value': ?value"));
+    expect(provider, isNot(contains("if (value != null) 'value': value")));
 
     final pubspec = await File(
       p.join(hostRootPath, 'pubspec.yaml'),
     ).readAsString();
-    expect(pubspec, contains('video_player: ^2.10.0'));
+    expect(pubspec, isNot(contains('video_player:')));
+    final activity = await _mainActivityFile(hostRootPath).readAsString();
+    expect(
+      activity,
+      contains('MiniProgramMediaPlaybackPlugin.register(flutterEngine)'),
+    );
+    final native = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'kotlin',
+        'com',
+        'example',
+        'host_app',
+        'MiniProgramMediaPlaybackPlugin.kt',
+      ),
+    ).readAsString();
+    expect(native, contains('class MiniProgramMediaPlaybackPlugin'));
+    expect(native, contains('ExoPlayer.Builder'));
+    expect(native, contains('SimpleCache'));
+    expect(native, contains('setHandleAudioBecomingNoisy(true)'));
+    expect(native, contains('enterFullscreen'));
+    final gradle = await File(
+      p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
+    ).readAsString();
+    expect(gradle, contains('media3-exoplayer:1.5.1'));
+    expect(gradle, contains('media3-exoplayer-hls:1.5.1'));
+    expect(gradle, contains('media3-ui:1.5.1'));
     final setup = await File(
       p.join(
         hostRootPath,
@@ -490,6 +525,63 @@ void main() {
     );
     expect(second.alreadyInstalled, isTrue);
   });
+
+  test('migrates the generated phase one playback provider', () async {
+    final provider = File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'app_android_media_playback_provider.dart',
+      ),
+    );
+    await provider.writeAsString(legacyAndroidMediaPlaybackProviderSource);
+
+    await const MiniProgramHostCapabilityInstaller().initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'video',
+        platform: 'android',
+      ),
+    );
+
+    final migrated = await provider.readAsString();
+    expect(migrated, contains("'mini_program/media_playback'"));
+    expect(migrated, contains('AndroidView('));
+    expect(migrated, isNot(contains('package:video_player/video_player.dart')));
+  });
+
+  test(
+    'preserves a custom playback provider across repeated installs',
+    () async {
+      final provider = File(
+        p.join(
+          hostRootPath,
+          'lib',
+          'mini_program',
+          'app_android_media_playback_provider.dart',
+        ),
+      );
+      const custom = '''
+class AppAndroidMediaPlaybackProvider {
+  const AppAndroidMediaPlaybackProvider();
+  void keepHostBehavior() {}
+}
+''';
+      await provider.writeAsString(custom);
+      const installer = MiniProgramHostCapabilityInstaller();
+      final request = MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'audio',
+        platform: 'android',
+      );
+
+      await installer.initialize(request);
+      expect(await provider.readAsString(), custom);
+      expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+      expect(await provider.readAsString(), custom);
+    },
+  );
 
   test(
     'installs other Android capabilities after camera upgrades the activity',

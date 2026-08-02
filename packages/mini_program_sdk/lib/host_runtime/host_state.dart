@@ -1,6 +1,7 @@
 part of '../mini_program_host.dart';
 
-class _MiniProgramHostState extends State<MiniProgramHost> {
+class _MiniProgramHostState extends State<MiniProgramHost>
+    with WidgetsBindingObserver {
   final ManifestLoader _manifestLoader = const ManifestLoader();
   final AssetResolver _assetResolver = AssetResolver();
   final MiniProgramBackendStore _backendStore = MiniProgramBackendStore();
@@ -30,6 +31,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
     _fileTransferManager = _managerFor(widget.fileTransferProvider);
     _mediaManager = _mediaManagerFor(widget.mediaProvider);
@@ -139,6 +141,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _closeActiveCacheApp();
     _disposeOwnedBackendConnector();
     _backendStore.dispose();
@@ -150,6 +153,20 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     unawaited(_qrManager?.dispose());
     unawaited(_mediaPlaybackManager?.dispose());
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.inactive &&
+        state != AppLifecycleState.hidden &&
+        state != AppLifecycleState.paused &&
+        state != AppLifecycleState.detached) {
+      return;
+    }
+    final appId = _manifest?.id;
+    if (appId != null) {
+      unawaited(_mediaPlaybackManager?.pauseAllFor(appId));
+    }
   }
 
   void _updateState(VoidCallback updates) {
