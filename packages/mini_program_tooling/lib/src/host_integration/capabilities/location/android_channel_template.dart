@@ -30,10 +30,10 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Host-owned channel for one-time approximate foreground location.
+ * Tooling-generated channel for one-time approximate foreground location.
  *
- * Created by `miniprogram host capability init location`. Tooling will not
- * overwrite this file after installation.
+ * Created by `miniprogram host capability init location`. Keep custom host
+ * native code outside the mini_program/generated directory.
  */
 internal class MiniProgramLocationChannel :
     FlutterPlugin,

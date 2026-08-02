@@ -1,3 +1,19 @@
+## 0.7.6
+
+- Place generated Android capability sources under one dedicated
+  `mini_program/generated/` tree, grouped by capability, with an ownership
+  guide that keeps host-native code outside the generated boundary.
+- Reduce `MainActivity.kt` integration to one stable
+  `MiniProgramNativeSetup.register(...)` call and generate deterministic
+  capability registration in `MiniProgramNativeSetup.kt`.
+- Move QR and Media3 dependencies into a dedicated generated Gradle script
+  referenced by one stable app-Gradle apply block.
+- Generate that dependency script with Groovy syntax for both Groovy and
+  Kotlin DSL hosts, avoiding Android release-lint crashes on applied Kotlin
+  scripts, and migrate the earlier generated `.gradle.kts` file atomically.
+- Atomically migrate recognized legacy root Kotlin sources and inline Gradle
+  blocks while preserving custom host code and refusing ambiguous conflicts.
+
 ## 0.7.5
 
 - Reconcile location, file transfer, camera, flashlight, QR, and media

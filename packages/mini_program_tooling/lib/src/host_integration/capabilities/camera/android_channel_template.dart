@@ -31,7 +31,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Host-owned system-camera channel created by
+ * Tooling-generated system-camera channel created by
  * `miniprogram host capability init camera`.
  *
  * Captured files remain in the host cache. Flutter receives only an opaque

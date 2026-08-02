@@ -61,7 +61,10 @@ bool isAndroidCameraInstalled({
       manifestSource.contains('.mini_program_camera_files') &&
       (pathsSource?.contains('mini_program_camera') ?? false) &&
       mainActivitySource.contains('FlutterFragmentActivity') &&
-      mainActivitySource.contains('MiniProgramCameraChannel.register') &&
+      (mainActivitySource.contains('MiniProgramCameraChannel.register') ||
+          mainActivitySource.contains(
+            'MiniProgramNativeSetup.register(flutterEngine)',
+          )) &&
       (nativeChannelSource?.contains('class MiniProgramCameraChannel') ??
           false);
 }

@@ -2,6 +2,11 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/generated_source.dart';
+import '../android/integration_editor.dart';
+import '../android/integration_paths.dart';
+import '../android/main_activity_editor.dart';
+import '../android/native_setup.dart';
 import '../file_transaction.dart';
 import '../models.dart';
 import 'android_channel_template.dart';
@@ -106,8 +111,17 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
 
   final mainActivityFile = mainActivityFiles.single;
   final packageName = await readLocationKotlinPackage(mainActivityFile);
-  final nativeChannelFile = File(
-    p.join(mainActivityFile.parent.path, 'MiniProgramLocationChannel.kt'),
+  final mainActivitySource = await mainActivityFile.readAsString();
+  final hasDirectNativeChannel = mainActivitySource.contains(
+    'mini_program/location',
+  );
+  final paths = AndroidNativeIntegrationPaths(mainActivityFile);
+  final nativeChannelFile = paths.generatedFile(
+    'location',
+    'MiniProgramLocationChannel.kt',
+  );
+  final legacyNativeChannelFile = paths.legacyFile(
+    'MiniProgramLocationChannel.kt',
   );
   final dartProviderFile = File(
     p.join(integrationRootPath, 'app_android_location_provider.dart'),
@@ -115,9 +129,16 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
 
   final hostSetupSource = await hostSetupFile.readAsString();
   final manifestSource = await manifestFile.readAsString();
-  final mainActivitySource = await mainActivityFile.readAsString();
   final dartProviderSource = await readLocationFileIfExists(dartProviderFile);
-  final nativeChannelSource = await readLocationFileIfExists(nativeChannelFile);
+  final nativeMigration = hasDirectNativeChannel
+      ? null
+      : await resolveAndroidGeneratedSource(
+          generatedFile: nativeChannelFile,
+          legacyFile: legacyNativeChannelFile,
+          requiredMarker: 'class MiniProgramLocationChannel',
+          buildSource: () => buildAndroidLocationChannelSource(packageName),
+        );
+  final nativeChannelSource = nativeMigration?.source;
 
   validateLocationOwnedFile(
     file: dartProviderFile,
@@ -138,7 +159,8 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
     nativeChannelSource: nativeChannelSource,
   );
 
-  final writes = <String, String>{};
+  final writes = <String, String>{...?nativeMigration?.writes};
+  final deletes = <String>{...?nativeMigration?.deletes};
   if (dartProviderSource == null) {
     writes[dartProviderFile.path] = androidLocationProviderSource;
   }
@@ -153,18 +175,30 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
     writes[manifestFile.path] = patchedManifest;
   }
 
-  final hasDirectNativeChannel = mainActivitySource.contains(
-    'mini_program/location',
-  );
   if (!hasDirectNativeChannel) {
-    if (nativeChannelSource == null) {
-      writes[nativeChannelFile.path] = buildAndroidLocationChannelSource(
-        packageName,
+    final nativeIntegration = await buildAndroidNativeIntegrationEdit(
+      mainActivityFile: mainActivityFile,
+      packageName: packageName,
+      mainActivitySource: mainActivitySource,
+      registration: 'MiniProgramLocationChannel.register(flutterEngine)',
+    );
+    writes.addAll(nativeIntegration.writes);
+  } else if (await paths.setupFile.exists()) {
+    final currentSetup = await paths.setupFile.readAsString();
+    final nextSetup = removeAndroidNativeSetupRegistration(
+      source: currentSetup,
+      registration: 'MiniProgramLocationChannel.register(flutterEngine)',
+    );
+    if (nextSetup == null) {
+      deletes.add(paths.setupFile.path);
+      final nextMainActivity = removeAndroidNativeSetupFromMainActivity(
+        mainActivitySource,
       );
-    }
-    final patchedMainActivity = patchLocationMainActivity(mainActivitySource);
-    if (patchedMainActivity != mainActivitySource) {
-      writes[mainActivityFile.path] = patchedMainActivity;
+      if (nextMainActivity != mainActivitySource) {
+        writes[mainActivityFile.path] = nextMainActivity;
+      }
+    } else if (nextSetup != currentSetup) {
+      writes[paths.setupFile.path] = nextSetup;
     }
   }
 
@@ -181,5 +215,6 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
     capability: capability,
     platform: platform,
     writes: writes,
+    deletes: deletes,
   );
 }

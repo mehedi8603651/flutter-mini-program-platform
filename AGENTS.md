@@ -30,7 +30,7 @@ These versions are the repository's current development/release line. Check each
 | `mini_program_contracts` | `0.3.11` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.2.5` | Pure-Dart authoring API that serializes UI and actions to JSON |
 | `mini_program_sdk` | `0.6.6` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.5` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_tooling` | `0.7.6` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -646,8 +646,12 @@ packages/mini_program_tooling/
 |       |       |-- dispatch.dart                # Thin capability-name routing shared by the public facade
 |       |       |-- file_transaction.dart        # Staged writes, atomic promotion, and rollback for one installation
 |       |       |-- android/
-|       |       |   |-- main_activity_editor.dart # Shared sorted registration block and legacy migration
-|       |       |   `-- gradle_editor.dart        # Shared QR/Media3 dependency block and legacy migration
+|       |       |   |-- integration_paths.dart    # Dedicated generated Kotlin tree and ownership guide paths
+|       |       |   |-- integration_editor.dart   # Setup/MainActivity write planning
+|       |       |   |-- generated_source.dart     # Safe legacy-root source migration planning
+|       |       |   |-- native_setup.dart         # Deterministic generated capability registry
+|       |       |   |-- main_activity_editor.dart # Single setup call and legacy direct-registration migration
+|       |       |   `-- gradle_editor.dart        # Dedicated QR/Media3 Gradle script and legacy migration
 |       |       |-- location/
 |       |       |   |-- installer.dart           # Android location installation coordinator
 |       |       |   |-- source_files.dart        # Kotlin package, ownership, and installed-state checks
@@ -1170,16 +1174,27 @@ lib/mini_program/
 `-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
 
+Android capability commands place tooling-owned Kotlin sources under the host
+package's `mini_program/generated/<capability>/` directory. Shared native code
+lives under `mini_program/generated/shared/`, and
+`MiniProgramNativeSetup.kt` owns deterministic registration. `MainActivity.kt`
+remains host-owned and contains only one managed
+`MiniProgramNativeSetup.register(flutterEngine)` call. Keep custom host-native
+files outside `mini_program/generated/`. QR and Media3 dependencies are
+generated under `android/app/mini_program/` and applied once by the app Gradle
+file. Recognized older root sources and inline dependency blocks migrate in the
+same rollback-capable transaction; ambiguous files stop installation.
+
 Android one-time approximate location additionally installs
-`MiniProgramLocationChannel.kt`, registers it from `MainActivity`, and adds
+`MiniProgramLocationChannel.kt` in the generated location directory and adds
 only `ACCESS_COARSE_LOCATION`. Run
 `miniprogram host capability init location --platform android` once per host.
 The installer never edits accepted app policy; provider availability and app
 authorization remain separate controls.
 
 Android Publisher API file transfer additionally installs
-`MiniProgramFileTransferChannel.kt`, registers it from `MainActivity`, and
-uses the system document picker plus scoped `MediaStore.Downloads`. Run
+`MiniProgramFileTransferChannel.kt` in the generated file directory and uses
+the system document picker plus scoped `MediaStore.Downloads`. Run
 `miniprogram host capability init file --platform android` once per host. The
 installer adds no broad storage permission and does not accept file policy for
 any app.

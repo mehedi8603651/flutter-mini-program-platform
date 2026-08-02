@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:mini_program_tooling/mini_program_tooling.dart';
+import 'package:mini_program_tooling/src/host_integration/capabilities/android/generated_source.dart';
 import 'package:mini_program_tooling/src/host_integration/capabilities/android/gradle_editor.dart';
 import 'package:mini_program_tooling/src/host_integration/capabilities/android/main_activity_editor.dart';
+import 'package:mini_program_tooling/src/host_integration/capabilities/android/native_setup.dart';
 import 'package:mini_program_tooling/src/host_integration/capabilities/file_transaction.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -43,8 +45,33 @@ void main() {
       expect(output, contains('FlutterFragmentActivity'));
       expect(_occurrences(output, androidCapabilityRegistrationStart), 1);
       expect(_occurrences(output, androidCapabilityRegistrationEnd), 1);
+      expect(_occurrences(output, androidNativeSetupRegistration), 1);
       for (final registration in androidCapabilityRegistrations) {
-        expect(_occurrences(output, registration), 1, reason: registration);
+        expect(_occurrences(output, registration), 0, reason: registration);
+      }
+    });
+
+    test('generated setup output is stable across capability order', () {
+      final orders = <List<String>>[
+        androidCapabilityRegistrations,
+        androidCapabilityRegistrations.reversed.toList(),
+      ];
+      final outputs = <String>[];
+      for (final order in orders) {
+        String? setup;
+        for (final registration in order) {
+          setup = buildAndroidNativeSetupSource(
+            packageName: 'com.example.host',
+            mainActivitySource: _mainActivityFixture,
+            currentSource: setup,
+            registration: registration,
+          );
+        }
+        outputs.add(setup!);
+      }
+      expect(outputs.last, outputs.first);
+      for (final registration in androidCapabilityRegistrations) {
+        expect(_occurrences(outputs.first, registration), 1);
       }
     });
 
@@ -62,57 +89,74 @@ void main() {
       );
 
       expect(_occurrences(migrated, androidCapabilityRegistrationStart), 1);
-      expect(
-        hasManagedAndroidCapabilityRegistration(
-          migrated,
-          'MiniProgramLocationChannel.register(flutterEngine)',
-        ),
-        isTrue,
-      );
-      expect(
-        hasManagedAndroidCapabilityRegistration(
-          migrated,
-          'MiniProgramQrScannerChannel.register(flutterEngine)',
-        ),
-        isTrue,
-      );
+      expect(hasManagedAndroidNativeSetupRegistration(migrated), isTrue);
+      expect(migrated, isNot(contains('MiniProgramLocationChannel.register')));
+      expect(migrated, isNot(contains('MiniProgramQrScannerChannel.register')));
     });
 
     test('Gradle output is stable and keeps host dependencies', () {
-      final qrThenMedia = patchAndroidCapabilityDependencies(
-        patchAndroidCapabilityDependencies(
-          _gradleFixture,
-          capability: androidQrDependencyCapability,
-          kotlinDsl: true,
-        ),
+      final qr = buildAndroidCapabilityGradleEdit(
+        _gradleFixture,
+        generatedSource: null,
+        capability: androidQrDependencyCapability,
+        kotlinDsl: true,
+      );
+      final qrThenMedia = buildAndroidCapabilityGradleEdit(
+        qr.appGradleSource,
+        generatedSource: qr.generatedGradleSource,
         capability: androidMediaPlaybackDependencyCapability,
         kotlinDsl: true,
       );
-      final mediaThenQr = patchAndroidCapabilityDependencies(
-        patchAndroidCapabilityDependencies(
-          _gradleFixture,
-          capability: androidMediaPlaybackDependencyCapability,
-          kotlinDsl: true,
-        ),
+      final media = buildAndroidCapabilityGradleEdit(
+        _gradleFixture,
+        generatedSource: null,
+        capability: androidMediaPlaybackDependencyCapability,
+        kotlinDsl: true,
+      );
+      final mediaThenQr = buildAndroidCapabilityGradleEdit(
+        media.appGradleSource,
+        generatedSource: media.generatedGradleSource,
         capability: androidQrDependencyCapability,
         kotlinDsl: true,
       );
 
-      expect(mediaThenQr, qrThenMedia);
-      expect(qrThenMedia, contains('implementation("host:owned:1.0")'));
-      expect(_occurrences(qrThenMedia, androidCapabilityDependenciesStart), 1);
-      expect(_occurrences(qrThenMedia, 'camera-camera2:1.4.2'), 1);
-      expect(_occurrences(qrThenMedia, 'media3-exoplayer:1.5.1'), 1);
+      expect(mediaThenQr.appGradleSource, qrThenMedia.appGradleSource);
+      expect(
+        mediaThenQr.generatedGradleSource,
+        qrThenMedia.generatedGradleSource,
+      );
+      expect(
+        qrThenMedia.appGradleSource,
+        contains('implementation("host:owned:1.0")'),
+      );
+      expect(
+        _occurrences(
+          qrThenMedia.appGradleSource,
+          androidCapabilityDependenciesStart,
+        ),
+        1,
+      );
+      expect(
+        _occurrences(qrThenMedia.generatedGradleSource, 'camera-camera2:1.4.2'),
+        1,
+      );
+      expect(
+        _occurrences(
+          qrThenMedia.generatedGradleSource,
+          'media3-exoplayer:1.5.1',
+        ),
+        1,
+      );
       expect(
         hasManagedAndroidCapabilityDependencies(
-          qrThenMedia,
+          qrThenMedia.generatedGradleSource,
           androidQrDependencyCapability,
         ),
         isTrue,
       );
       expect(
         hasManagedAndroidCapabilityDependencies(
-          qrThenMedia,
+          qrThenMedia.generatedGradleSource,
           androidMediaPlaybackDependencyCapability,
         ),
         isTrue,
@@ -137,30 +181,46 @@ dependencies {
 }
 ''';
 
-      final migrated = patchAndroidCapabilityDependencies(
+      final migrated = buildAndroidCapabilityGradleEdit(
         legacy,
+        generatedSource: null,
         capability: androidQrDependencyCapability,
         kotlinDsl: true,
       );
 
-      expect(migrated, isNot(contains('mini-program-qr-capability')));
       expect(
-        migrated,
+        migrated.appGradleSource,
+        isNot(contains('mini-program-qr-capability')),
+      );
+      expect(
+        migrated.appGradleSource,
         isNot(contains('mini-program-media-playback-capability')),
       );
-      expect(_occurrences(migrated, androidCapabilityDependenciesStart), 1);
-      expect(_occurrences(migrated, 'camera-camera2:1.4.2'), 1);
-      expect(_occurrences(migrated, 'media3-exoplayer:1.5.1'), 1);
+      expect(
+        _occurrences(
+          migrated.appGradleSource,
+          androidCapabilityDependenciesStart,
+        ),
+        1,
+      );
+      expect(
+        _occurrences(migrated.generatedGradleSource, 'camera-camera2:1.4.2'),
+        1,
+      );
+      expect(
+        _occurrences(migrated.generatedGradleSource, 'media3-exoplayer:1.5.1'),
+        1,
+      );
       expect(
         hasManagedAndroidCapabilityDependencies(
-          migrated,
+          migrated.generatedGradleSource,
           androidQrDependencyCapability,
         ),
         isTrue,
       );
       expect(
         hasManagedAndroidCapabilityDependencies(
-          migrated,
+          migrated.generatedGradleSource,
           androidMediaPlaybackDependencyCapability,
         ),
         isTrue,
@@ -211,6 +271,79 @@ dependencies {
       );
       expect(await existing.readAsString(), 'host-owned');
       expect(await outside.exists(), isFalse);
+    });
+
+    test(
+      'moves a recognized legacy native source in one transaction',
+      () async {
+        final root = await Directory.systemTemp.createTemp(
+          'mini_program_native_source_migration_',
+        );
+        addTearDown(() => root.delete(recursive: true));
+        final legacy = File(p.join(root.path, 'MiniProgramLocationChannel.kt'));
+        final generated = File(
+          p.join(
+            root.path,
+            'mini_program',
+            'generated',
+            'location',
+            'MiniProgramLocationChannel.kt',
+          ),
+        );
+        const source =
+            'package com.example.host\n\n'
+            'internal class MiniProgramLocationChannel\n';
+        await legacy.writeAsString(source);
+
+        final migration = await resolveAndroidGeneratedSource(
+          generatedFile: generated,
+          legacyFile: legacy,
+          requiredMarker: 'class MiniProgramLocationChannel',
+          buildSource: () => throw StateError('legacy source should be reused'),
+        );
+        await writeCapabilityFiles(
+          projectRootPath: root.path,
+          capability: 'location',
+          platform: 'android',
+          writes: migration.writes,
+          deletes: migration.deletes,
+        );
+
+        expect(await legacy.exists(), isFalse);
+        expect(await generated.readAsString(), source);
+      },
+    );
+
+    test('refuses an unrecognized legacy native source', () async {
+      final root = await Directory.systemTemp.createTemp(
+        'mini_program_native_source_conflict_',
+      );
+      addTearDown(() => root.delete(recursive: true));
+      final legacy = File(p.join(root.path, 'MiniProgramLocationChannel.kt'));
+      final generated = File(
+        p.join(
+          root.path,
+          'mini_program',
+          'generated',
+          'location',
+          'MiniProgramLocationChannel.kt',
+        ),
+      );
+      await legacy.writeAsString(
+        'package com.example.host\n// custom host code\n',
+      );
+
+      await expectLater(
+        resolveAndroidGeneratedSource(
+          generatedFile: generated,
+          legacyFile: legacy,
+          requiredMarker: 'class MiniProgramLocationChannel',
+          buildSource: () => 'generated',
+        ),
+        throwsA(isA<MiniProgramHostCapabilityException>()),
+      );
+      expect(await legacy.exists(), isTrue);
+      expect(await generated.exists(), isFalse);
     });
   });
 }

@@ -51,7 +51,10 @@ bool isAndroidLocationInstalled({
   );
   final hasNativeChannel =
       mainActivitySource.contains('mini_program/location') ||
-      (mainActivitySource.contains('MiniProgramLocationChannel.register') &&
+      ((mainActivitySource.contains('MiniProgramLocationChannel.register') ||
+              mainActivitySource.contains(
+                'MiniProgramNativeSetup.register(flutterEngine)',
+              )) &&
           (nativeChannelSource?.contains('class MiniProgramLocationChannel') ??
               false));
   return hasProvider && hasHostProvider && hasPermission && hasNativeChannel;

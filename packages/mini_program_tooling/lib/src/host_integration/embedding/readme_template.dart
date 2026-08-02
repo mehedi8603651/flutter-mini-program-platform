@@ -149,6 +149,12 @@ HLS playback, bounded temporary caching, and fullscreen controls.
 Audio, video, and temporary cache policy remain denied per mini-program until
 the host accepts the corresponding request.
 
+Native capability commands keep tooling-owned Kotlin under
+`MainActivity`'s package in `mini_program/generated/`. `MainActivity.kt`
+contains one stable `MiniProgramNativeSetup.register(...)` call. Keep custom
+host-native files outside that generated directory. QR and Media3 dependencies
+are isolated in `android/app/mini_program/mini_program_capabilities.gradle`.
+
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
 An optional `publisher_backend.json` declares the mini-program's Publisher API,
 while `mini_program_policies.json` records whether the host accepts it. Provider

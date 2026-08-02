@@ -2,7 +2,7 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.5` generates mini-program projects against
+Tooling `0.7.6` generates mini-program projects against
 `mini_program_ui: ^0.2.5` and Flutter host projects against
 `mini_program_sdk: ^0.6.6`.
 
@@ -393,14 +393,32 @@ the accepted byte and TTL policy. It does not add background playback or
 permanent offline downloads. Re-run either command to migrate an unmodified
 generated Phase 1 provider; custom host-owned providers remain untouched.
 
-All Android capability installers share one generated registration block in
-`MainActivity.kt` and one generated Gradle dependency block. Installation is
-order-independent across location, files, camera, flashlight, QR, and media
-playback. Re-running any capability migrates recognized older generated
-registrations, preserves unrelated host code, and commits all planned files
-together with rollback on a failed write. Host-owned provider implementations
-are never overwritten unless they exactly match a recognized generated
-migration source.
+All Android capability installers use this ownership boundary beneath the
+host's Kotlin package:
+
+```text
+MainActivity.kt                         # Host-owned; one generated setup call
+mini_program/
+|-- README.md                           # Generated ownership guide
+`-- generated/                          # Tooling-owned; do not add host code
+    |-- MiniProgramNativeSetup.kt       # Deterministic capability registry
+    |-- location/
+    |-- file/
+    |-- camera/
+    |-- flashlight/
+    |-- qr/
+    |-- media_playback/
+    `-- shared/
+```
+
+QR and Media3 dependencies live in
+`android/app/mini_program/mini_program_capabilities.gradle`, applied by
+one stable block in the app Gradle file. Installation is order-independent
+across location, files, camera, flashlight, QR, and media playback. Re-running
+any capability atomically migrates recognized older generated sources and
+inline dependency blocks, preserves unrelated host code, and rolls back a
+failed multi-file update. Ambiguous or unrecognized legacy native files are
+rejected for manual review instead of being overwritten.
 
 ### 3. Add An Endpoint Manually
 

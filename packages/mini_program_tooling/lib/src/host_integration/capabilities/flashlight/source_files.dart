@@ -64,7 +64,10 @@ bool isAndroidFlashlightInstalled({
       runtimeSetupSource.contains('CapabilityIds.flashlightControl') &&
       runtimeSetupSource.contains('flashlightProvider: flashlightProvider,') &&
       manifestSource.contains('android.permission.CAMERA') &&
-      mainActivitySource.contains('MiniProgramFlashlightChannel.register') &&
+      (mainActivitySource.contains('MiniProgramFlashlightChannel.register') ||
+          mainActivitySource.contains(
+            'MiniProgramNativeSetup.register(flutterEngine)',
+          )) &&
       (nativeChannelSource?.contains('class MiniProgramFlashlightChannel') ??
           false);
 }

@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/generated_source.dart';
+import '../android/gradle_editor.dart';
+import '../android/integration_editor.dart';
 import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
@@ -81,19 +84,71 @@ initializeMiniProgramHostMediaPlaybackCapability(
   }
   final mainActivity = activities.single;
   final packageName = await readMediaPlaybackKotlinPackage(mainActivity);
+  final mainSource = await mainActivity.readAsString();
+  final nativeIntegration = await buildAndroidNativeIntegrationEdit(
+    mainActivityFile: mainActivity,
+    packageName: packageName,
+    mainActivitySource: mainSource,
+    registration: 'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
+  );
   final provider = File(
     p.join(integrationRoot, 'app_android_media_playback_provider.dart'),
   );
-  final nativePlugin = File(
-    p.join(mainActivity.parent.path, 'MiniProgramMediaPlaybackPlugin.kt'),
+  final nativePlugin = nativeIntegration.paths.generatedFile(
+    'media_playback',
+    'MiniProgramMediaPlaybackPlugin.kt',
   );
 
   final hostSource = await hostSetup.readAsString();
   final runtimeSource = await runtimeSetup.readAsString();
-  final mainSource = await mainActivity.readAsString();
   final gradleSource = await gradle.readAsString();
+  final kotlinDsl = p.extension(gradle.path) == '.kts';
+  final generatedGradle = File(
+    p.join(
+      gradle.parent.path,
+      'mini_program',
+      'mini_program_capabilities.gradle',
+    ),
+  );
+  final legacyGeneratedGradle = File(
+    p.join(
+      gradle.parent.path,
+      'mini_program',
+      'mini_program_capabilities.gradle.kts',
+    ),
+  );
+  final currentGeneratedGradleSource = await readMediaPlaybackFileIfExists(
+    generatedGradle,
+  );
+  final legacyGeneratedGradleSource = await readMediaPlaybackFileIfExists(
+    legacyGeneratedGradle,
+  );
+  for (final source in <String?>[
+    currentGeneratedGradleSource,
+    legacyGeneratedGradleSource,
+  ]) {
+    if (source != null &&
+        !source.contains(androidCapabilityGradleGeneratedMarker)) {
+      throw const MiniProgramHostCapabilityException(
+        'Refusing to migrate the Android mini-program dependency script '
+        'because it is not a recognized tooling-generated file.',
+      );
+    }
+  }
+  final generatedGradleSource = <String>[
+    if (currentGeneratedGradleSource != null) currentGeneratedGradleSource,
+    if (legacyGeneratedGradleSource != null) legacyGeneratedGradleSource,
+  ].join('\n');
   final providerSource = await readMediaPlaybackFileIfExists(provider);
-  final nativeSource = await readMediaPlaybackFileIfExists(nativePlugin);
+  final nativeMigration = await resolveAndroidGeneratedSource(
+    generatedFile: nativePlugin,
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramMediaPlaybackPlugin.kt',
+    ),
+    requiredMarker: 'class MiniProgramMediaPlaybackPlugin',
+    buildSource: () => buildAndroidMediaPlaybackPluginSource(packageName),
+  );
+  final nativeSource = nativeMigration.source;
   validateMediaPlaybackOwnedFile(
     file: provider,
     source: providerSource,
@@ -108,28 +163,40 @@ initializeMiniProgramHostMediaPlaybackCapability(
     hostSetupSource: hostSource,
     runtimeSetupSource: runtimeSource,
     mainActivitySource: mainSource,
-    gradleSource: gradleSource,
+    gradleSource: generatedGradleSource.isEmpty
+        ? gradleSource
+        : generatedGradleSource,
     dartProviderSource: providerSource,
     nativePluginSource: nativeSource,
   );
 
   final patchedHost = patchMediaPlaybackHostSetup(hostSource);
   final patchedRuntime = patchMediaPlaybackRuntimeSetup(runtimeSource);
-  final patchedActivity = patchMediaPlaybackMainActivity(mainSource);
-  final patchedGradle = patchMediaPlaybackGradle(
+  final gradleEdit = buildAndroidCapabilityGradleEdit(
     gradleSource,
-    kotlinDsl: p.extension(gradle.path) == '.kts',
+    generatedSource: generatedGradleSource.isEmpty
+        ? null
+        : generatedGradleSource,
+    capability: androidMediaPlaybackDependencyCapability,
+    kotlinDsl: kotlinDsl,
   );
   final writes = <String, String>{
     if (providerSource == null ||
         isLegacyGeneratedMediaPlaybackProvider(providerSource))
       provider.path: androidMediaPlaybackProviderSource,
-    if (nativeSource == null)
-      nativePlugin.path: buildAndroidMediaPlaybackPluginSource(packageName),
+    ...nativeMigration.writes,
+    ...nativeIntegration.writes,
     if (patchedHost != hostSource) hostSetup.path: patchedHost,
     if (patchedRuntime != runtimeSource) runtimeSetup.path: patchedRuntime,
-    if (patchedActivity != mainSource) mainActivity.path: patchedActivity,
-    if (patchedGradle != gradleSource) gradle.path: patchedGradle,
+    if (gradleEdit.appGradleSource != gradleSource)
+      gradle.path: gradleEdit.appGradleSource,
+    if (gradleEdit.generatedGradleSource != currentGeneratedGradleSource ||
+        legacyGeneratedGradleSource != null)
+      generatedGradle.path: gradleEdit.generatedGradleSource,
+  };
+  final deletes = <String>{
+    ...nativeMigration.deletes,
+    if (legacyGeneratedGradleSource != null) legacyGeneratedGradle.path,
   };
   if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
@@ -142,5 +209,6 @@ initializeMiniProgramHostMediaPlaybackCapability(
     capability: capability,
     platform: platform,
     writes: writes,
+    deletes: deletes,
   );
 }

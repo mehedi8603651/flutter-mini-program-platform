@@ -5,7 +5,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Shared host-owned registry for opaque temporary media references.
+ * Shared tooling-generated registry for opaque temporary media references.
  *
  * Native locations never cross the Flutter channel. Camera producers register
  * entries here; preview and file-transfer consumers resolve only same-app refs.

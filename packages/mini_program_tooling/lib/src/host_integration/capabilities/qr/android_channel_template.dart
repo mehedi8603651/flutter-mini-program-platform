@@ -15,7 +15,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 
-/** Host-owned QR scanner bridge installed by mini_program_tooling. */
+/** Tooling-generated QR scanner bridge. */
 internal class MiniProgramQrScannerChannel :
     FlutterPlugin,
     ActivityAware,

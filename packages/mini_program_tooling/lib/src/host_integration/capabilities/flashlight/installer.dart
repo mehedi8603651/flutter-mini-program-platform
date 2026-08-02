@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/generated_source.dart';
+import '../android/integration_editor.dart';
 import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
@@ -67,8 +69,16 @@ initializeMiniProgramHostFlashlightCapability(
   }
   final mainActivity = activities.single;
   final packageName = await readFlashlightKotlinPackage(mainActivity);
-  final nativeChannel = File(
-    p.join(mainActivity.parent.path, 'MiniProgramFlashlightChannel.kt'),
+  final mainSource = await mainActivity.readAsString();
+  final nativeIntegration = await buildAndroidNativeIntegrationEdit(
+    mainActivityFile: mainActivity,
+    packageName: packageName,
+    mainActivitySource: mainSource,
+    registration: 'MiniProgramFlashlightChannel.register(flutterEngine)',
+  );
+  final nativeChannel = nativeIntegration.paths.generatedFile(
+    'flashlight',
+    'MiniProgramFlashlightChannel.kt',
   );
   final dartProvider = File(
     p.join(integrationRoot, 'app_android_flashlight_provider.dart'),
@@ -76,9 +86,16 @@ initializeMiniProgramHostFlashlightCapability(
   final hostSetupSource = await hostSetup.readAsString();
   final runtimeSetupSource = await runtimeSetup.readAsString();
   final manifestSource = await manifest.readAsString();
-  final mainSource = await mainActivity.readAsString();
   final dartSource = await readFlashlightFileIfExists(dartProvider);
-  final nativeSource = await readFlashlightFileIfExists(nativeChannel);
+  final nativeMigration = await resolveAndroidGeneratedSource(
+    generatedFile: nativeChannel,
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramFlashlightChannel.kt',
+    ),
+    requiredMarker: 'class MiniProgramFlashlightChannel',
+    buildSource: () => buildAndroidFlashlightChannelSource(packageName),
+  );
+  final nativeSource = nativeMigration.source;
   validateFlashlightOwnedFile(
     file: dartProvider,
     source: dartSource,
@@ -99,22 +116,19 @@ initializeMiniProgramHostFlashlightCapability(
   );
   final writes = <String, String>{
     if (dartSource == null) dartProvider.path: androidFlashlightProviderSource,
-    if (nativeSource == null)
-      nativeChannel.path: buildAndroidFlashlightChannelSource(packageName),
+    ...nativeMigration.writes,
+    ...nativeIntegration.writes,
   };
+  final deletes = <String>{...nativeMigration.deletes};
   final patchedSetup = patchFlashlightHostSetup(hostSetupSource);
   final patchedRuntimeSetup = patchFlashlightRuntimeSetup(runtimeSetupSource);
   final patchedManifest = patchFlashlightAndroidManifest(manifestSource);
-  final patchedActivity = patchFlashlightMainActivity(mainSource);
   if (patchedSetup != hostSetupSource) writes[hostSetup.path] = patchedSetup;
   if (patchedRuntimeSetup != runtimeSetupSource) {
     writes[runtimeSetup.path] = patchedRuntimeSetup;
   }
   if (patchedManifest != manifestSource) {
     writes[manifest.path] = patchedManifest;
-  }
-  if (patchedActivity != mainSource) {
-    writes[mainActivity.path] = patchedActivity;
   }
   if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
@@ -127,5 +141,6 @@ initializeMiniProgramHostFlashlightCapability(
     capability: capability,
     platform: platform,
     writes: writes,
+    deletes: deletes,
   );
 }

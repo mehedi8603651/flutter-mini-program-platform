@@ -9,8 +9,9 @@ Future<MiniProgramHostCapabilityInitResult> writeCapabilityFiles({
   required String capability,
   required String platform,
   required Map<String, String> writes,
+  Set<String> deletes = const <String>{},
 }) async {
-  if (writes.isEmpty) {
+  if (writes.isEmpty && deletes.isEmpty) {
     return MiniProgramHostCapabilityInitResult(
       projectRootPath: projectRootPath,
       capability: capability,
@@ -22,6 +23,18 @@ Future<MiniProgramHostCapabilityInitResult> writeCapabilityFiles({
   final root = p.normalize(p.absolute(projectRootPath));
   final entries = writes.entries.toList()
     ..sort((left, right) => left.key.compareTo(right.key));
+  final deletePaths =
+      deletes.map((path) => p.normalize(p.absolute(path))).toList()..sort();
+  final writePaths = <String>{
+    for (final entry in entries) p.normalize(p.absolute(entry.key)),
+  };
+  final overlap = deletePaths.where(writePaths.contains).toList();
+  if (overlap.isNotEmpty) {
+    throw MiniProgramHostCapabilityException(
+      'Refusing to write and remove the same generated capability path: '
+      '${overlap.first}',
+    );
+  }
   for (final entry in entries) {
     final target = p.normalize(p.absolute(entry.key));
     if (target != root && !p.isWithin(root, target)) {
@@ -38,12 +51,28 @@ Future<MiniProgramHostCapabilityInitResult> writeCapabilityFiles({
       );
     }
   }
+  for (final target in deletePaths) {
+    if (target != root && !p.isWithin(root, target)) {
+      throw MiniProgramHostCapabilityException(
+        'Refusing to remove generated capability files outside the Flutter '
+        'host root: $target',
+      );
+    }
+    final type = await FileSystemEntity.type(target, followLinks: false);
+    if (type != FileSystemEntityType.notFound &&
+        type != FileSystemEntityType.file) {
+      throw MiniProgramHostCapabilityException(
+        'Refusing to remove the non-file host path $target.',
+      );
+    }
+  }
 
   final nonce = '${pid}_${DateTime.now().microsecondsSinceEpoch}';
   final staged = <String, File>{};
   final backups = <String, File>{};
   final promoted = <String>[];
   final existed = <String, bool>{};
+  final deleted = <String>[];
   try {
     for (var index = 0; index < entries.length; index += 1) {
       final target = File(entries[index].key);
@@ -53,13 +82,23 @@ Future<MiniProgramHostCapabilityInitResult> writeCapabilityFiles({
       await temporary.writeAsString(entries[index].value, flush: true);
       staged[target.path] = temporary;
     }
-    for (var index = 0; index < entries.length; index += 1) {
-      final target = File(entries[index].key);
-      if (existed[target.path]!) {
+    final backupPaths = <String>[
+      ...entries
+          .where((entry) => existed[entry.key]!)
+          .map((entry) => entry.key),
+      ...deletePaths.where((path) => File(path).existsSync()),
+    ];
+    for (var index = 0; index < backupPaths.length; index += 1) {
+      final target = File(backupPaths[index]);
+      if (await target.exists()) {
         final backup = File('${target.path}.miniprogram_$nonce.$index.bak');
         await target.rename(backup.path);
         backups[target.path] = backup;
+        if (deletePaths.contains(target.path)) deleted.add(target.path);
       }
+    }
+    for (var index = 0; index < entries.length; index += 1) {
+      final target = File(entries[index].key);
       await staged[target.path]!.rename(target.path);
       promoted.add(target.path);
     }
@@ -116,6 +155,7 @@ Future<MiniProgramHostCapabilityInitResult> writeCapabilityFiles({
   final updated = <String>[
     for (final entry in entries)
       if (existed[entry.key]!) entry.key,
+    ...deleted,
   ];
   return MiniProgramHostCapabilityInitResult(
     projectRootPath: projectRootPath,

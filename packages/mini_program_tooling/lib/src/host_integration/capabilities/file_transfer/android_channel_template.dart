@@ -43,7 +43,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Host-owned Android document picker and streaming Publisher API transport.
+ * Tooling-generated Android document picker and Publisher API transport.
  *
  * Created by `miniprogram host capability init file`. Tooling will not
  * overwrite this file after installation.

@@ -1,41 +1,38 @@
 part of '../miniprogram_cli_test.dart';
 
 void _registerCoreAndPreviewTests() {
-  test(
-    'root help shows static artifact and runtime API commands only',
-    () async {
-      final stdoutBuffer = StringBuffer();
-      final stderrBuffer = StringBuffer();
-      final exitCode = await MiniprogramCli(
-        stateStore: stateStore,
-        stdoutSink: stdoutBuffer,
-        stderrSink: stderrBuffer,
-        workingDirectory: tempDir.path,
-      ).run(<String>['--help']);
+  test('root help shows static artifact and runtime API commands only', () async {
+    final stdoutBuffer = StringBuffer();
+    final stderrBuffer = StringBuffer();
+    final exitCode = await MiniprogramCli(
+      stateStore: stateStore,
+      stdoutSink: stdoutBuffer,
+      stderrSink: stderrBuffer,
+      workingDirectory: tempDir.path,
+    ).run(<String>['--help']);
 
-      expect(exitCode, 0);
-      expect(stderrBuffer.toString(), isEmpty);
-      final output = stdoutBuffer.toString();
-      expect(output, contains('create <mini-program-id> [--screen-format mp]'));
-      expect(output, contains('artifact build [mini-program-id]'));
-      expect(output, contains('artifact verify [mini-program-id]'));
-      expect(
-        output,
-        contains('publish [mini-program-id] [--target local|static]'),
-      );
-      expect(output, contains('partner package <mini-program-id>'));
-      expect(output, contains('host endpoint import <partner-package.json>'));
-      expect(
-        output,
-        contains(
-          'host capability init <location|file|camera|flashlight|qr|audio|video> '
-          '--platform android',
-        ),
-      );
-      expect(output, contains('publisher-api scaffold --template mock'));
-      expect(output, contains('publisher-api contract init|validate|smoke'));
-    },
-  );
+    expect(exitCode, 0);
+    expect(stderrBuffer.toString(), isEmpty);
+    final output = stdoutBuffer.toString();
+    expect(output, contains('create <mini-program-id> [--screen-format mp]'));
+    expect(output, contains('artifact build [mini-program-id]'));
+    expect(output, contains('artifact verify [mini-program-id]'));
+    expect(
+      output,
+      contains('publish [mini-program-id] [--target local|static]'),
+    );
+    expect(output, contains('partner package <mini-program-id>'));
+    expect(output, contains('host endpoint import <partner-package.json>'));
+    expect(
+      output,
+      contains(
+        'host capability init <location|file|camera|flashlight|qr|audio|video> '
+        '--platform android',
+      ),
+    );
+    expect(output, contains('publisher-api scaffold --template mock'));
+    expect(output, contains('publisher-api contract init|validate|smoke'));
+  });
 
   test(
     'host capability init forwards generic Android location setup',
@@ -188,7 +185,7 @@ void _registerCoreAndPreviewTests() {
 
       expect(exitCode, 0);
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['toolingVersion'], '0.7.5');
+      expect(json['toolingVersion'], '0.7.6');
       final capabilities = (json['capabilityIds'] as List).cast<String>();
       expect(capabilities, contains('publish.static'));
       expect(capabilities, contains('publisher_api.mock.scaffold'));

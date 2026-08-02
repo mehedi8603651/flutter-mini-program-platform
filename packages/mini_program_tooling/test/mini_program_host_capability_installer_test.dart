@@ -33,7 +33,7 @@ void main() {
     );
 
     expect(result.alreadyInstalled, isFalse);
-    expect(result.createdPaths, hasLength(2));
+    expect(result.createdPaths, hasLength(4));
     expect(result.updatedPaths, hasLength(3));
 
     final providerSource = await File(
@@ -87,10 +87,29 @@ void main() {
     expect(mainActivitySource, contains('configureFlutterEngine'));
     expect(
       mainActivitySource,
+      contains('MiniProgramNativeSetup.register(flutterEngine)'),
+    );
+    final nativeSetupSource = await _nativeSetupFile(
+      hostRootPath,
+    ).readAsString();
+    expect(
+      nativeSetupSource,
       contains('MiniProgramLocationChannel.register(flutterEngine)'),
     );
 
-    final nativeSource = await File(
+    final nativeSource = await _nativeGeneratedFile(
+      hostRootPath,
+      'location',
+      'MiniProgramLocationChannel.kt',
+    ).readAsString();
+    expect(nativeSource, contains('class MiniProgramLocationChannel'));
+    expect(nativeSource, contains('LocationManager.NETWORK_PROVIDER'));
+    expect(nativeSource, contains('location_permission_denied_permanently'));
+    expect(nativeSource, contains('location_timeout'));
+    expect(nativeSource, isNot(contains('LocationManager.GPS_PROVIDER')));
+    expect(nativeSource, isNot(contains('ACCESS_FINE_LOCATION')));
+    expect(nativeSource, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
+    final ownershipGuide = await File(
       p.join(
         hostRootPath,
         'android',
@@ -101,16 +120,12 @@ void main() {
         'com',
         'example',
         'host_app',
-        'MiniProgramLocationChannel.kt',
+        'mini_program',
+        'README.md',
       ),
     ).readAsString();
-    expect(nativeSource, contains('class MiniProgramLocationChannel'));
-    expect(nativeSource, contains('LocationManager.NETWORK_PROVIDER'));
-    expect(nativeSource, contains('location_permission_denied_permanently'));
-    expect(nativeSource, contains('location_timeout'));
-    expect(nativeSource, isNot(contains('LocationManager.GPS_PROVIDER')));
-    expect(nativeSource, isNot(contains('ACCESS_FINE_LOCATION')));
-    expect(nativeSource, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
+    expect(ownershipGuide, contains('generated/'));
+    expect(ownershipGuide, contains('Do not place host'));
   });
 
   test('installs Android streaming file transfer support', () async {
@@ -121,7 +136,7 @@ void main() {
         platform: 'android',
       ),
     );
-    expect(result.createdPaths, hasLength(3));
+    expect(result.createdPaths, hasLength(5));
     expect(result.updatedPaths, hasLength(2));
 
     final provider = await File(
@@ -154,21 +169,16 @@ void main() {
     final mainActivity = await _mainActivityFile(hostRootPath).readAsString();
     expect(
       mainActivity,
+      contains('MiniProgramNativeSetup.register(flutterEngine)'),
+    );
+    expect(
+      await _nativeSetupFile(hostRootPath).readAsString(),
       contains('MiniProgramFileTransferChannel.register(flutterEngine)'),
     );
-    final native = await File(
-      p.join(
-        hostRootPath,
-        'android',
-        'app',
-        'src',
-        'main',
-        'kotlin',
-        'com',
-        'example',
-        'host_app',
-        'MiniProgramFileTransferChannel.kt',
-      ),
+    final native = await _nativeGeneratedFile(
+      hostRootPath,
+      'file',
+      'MiniProgramFileTransferChannel.kt',
     ).readAsString();
     expect(native, contains('Intent.ACTION_OPEN_DOCUMENT'));
     expect(native, contains('Intent.ACTION_CREATE_DOCUMENT'));
@@ -201,7 +211,7 @@ void main() {
       platform: 'android',
     );
     final result = await installer.initialize(request);
-    expect(result.createdPaths, hasLength(4));
+    expect(result.createdPaths, hasLength(6));
     expect(result.updatedPaths, hasLength(3));
 
     final setup = await File(
@@ -243,19 +253,10 @@ void main() {
       ),
     ).readAsString();
     expect(paths, contains('<cache-path'));
-    final native = await File(
-      p.join(
-        hostRootPath,
-        'android',
-        'app',
-        'src',
-        'main',
-        'kotlin',
-        'com',
-        'example',
-        'host_app',
-        'MiniProgramCameraChannel.kt',
-      ),
+    final native = await _nativeGeneratedFile(
+      hostRootPath,
+      'camera',
+      'MiniProgramCameraChannel.kt',
     ).readAsString();
     expect(native, contains('ActivityResultContracts.TakePicture'));
     expect(native, contains('ActivityResultContracts.RequestPermission'));
@@ -267,19 +268,10 @@ void main() {
     expect(native, contains('MiniProgramHostMediaRegistry.register'));
     expect(native, contains('"loadPreview"'));
     expect(native, isNot(contains('CameraX')));
-    final registry = await File(
-      p.join(
-        hostRootPath,
-        'android',
-        'app',
-        'src',
-        'main',
-        'kotlin',
-        'com',
-        'example',
-        'host_app',
-        'MiniProgramHostMediaRegistry.kt',
-      ),
+    final registry = await _nativeGeneratedFile(
+      hostRootPath,
+      'shared',
+      'MiniProgramHostMediaRegistry.kt',
     ).readAsString();
     expect(registry, contains('object MiniProgramHostMediaRegistry'));
     expect(registry, contains('findOwned'));
@@ -297,7 +289,7 @@ void main() {
       platform: 'android',
     );
     final result = await installer.initialize(request);
-    expect(result.createdPaths, hasLength(2));
+    expect(result.createdPaths, hasLength(4));
     expect(result.updatedPaths, hasLength(4));
 
     final manifest = await File(
@@ -314,19 +306,10 @@ void main() {
     expect(manifest, contains('android.hardware.camera.flash'));
     expect(manifest, contains('android:required="false"'));
 
-    final native = await File(
-      p.join(
-        hostRootPath,
-        'android',
-        'app',
-        'src',
-        'main',
-        'kotlin',
-        'com',
-        'example',
-        'host_app',
-        'MiniProgramFlashlightChannel.kt',
-      ),
+    final native = await _nativeGeneratedFile(
+      hostRootPath,
+      'flashlight',
+      'MiniProgramFlashlightChannel.kt',
     ).readAsString();
     expect(native, contains('CameraManager.TorchCallback'));
     expect(native, contains('setTorchMode'));
@@ -358,7 +341,7 @@ void main() {
       platform: 'android',
     );
     final result = await installer.initialize(request);
-    expect(result.createdPaths, hasLength(3));
+    expect(result.createdPaths, hasLength(6));
     expect(result.updatedPaths, hasLength(5));
 
     final setup = await File(
@@ -397,22 +380,15 @@ void main() {
     expect(manifest, contains('MiniProgramQrScannerActivity'));
     expect(manifest, contains('@android:style/Theme.Material.NoActionBar'));
 
-    final nativeRoot = p.join(
+    final channel = await _nativeGeneratedFile(
       hostRootPath,
-      'android',
-      'app',
-      'src',
-      'main',
-      'kotlin',
-      'com',
-      'example',
-      'host_app',
-    );
-    final channel = await File(
-      p.join(nativeRoot, 'MiniProgramQrScannerChannel.kt'),
+      'qr',
+      'MiniProgramQrScannerChannel.kt',
     ).readAsString();
-    final scanner = await File(
-      p.join(nativeRoot, 'MiniProgramQrScannerActivity.kt'),
+    final scanner = await _nativeGeneratedFile(
+      hostRootPath,
+      'qr',
+      'MiniProgramQrScannerActivity.kt',
     ).readAsString();
     expect(channel, contains('class MiniProgramQrScannerChannel'));
     expect(channel, contains('qr_permission_denied_permanently'));
@@ -425,8 +401,13 @@ void main() {
     final gradle = await File(
       p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
     ).readAsString();
-    expect(gradle, contains('camera-camera2:1.4.2'));
-    expect(gradle, contains('barcode-scanning:17.3.0'));
+    expect(gradle, contains('mini_program_capabilities.gradle'));
+    expect(gradle, isNot(contains('mini_program_capabilities.gradle.kts')));
+    final capabilityGradle = await _nativeCapabilityGradleFile(
+      hostRootPath,
+    ).readAsString();
+    expect(capabilityGradle, contains('camera-camera2:1.4.2'));
+    expect(capabilityGradle, contains('barcode-scanning:17.3.0'));
     expect((await installer.initialize(request)).alreadyInstalled, isTrue);
   });
 
@@ -464,21 +445,16 @@ void main() {
     final activity = await _mainActivityFile(hostRootPath).readAsString();
     expect(
       activity,
+      contains('MiniProgramNativeSetup.register(flutterEngine)'),
+    );
+    expect(
+      await _nativeSetupFile(hostRootPath).readAsString(),
       contains('MiniProgramMediaPlaybackPlugin.register(flutterEngine)'),
     );
-    final native = await File(
-      p.join(
-        hostRootPath,
-        'android',
-        'app',
-        'src',
-        'main',
-        'kotlin',
-        'com',
-        'example',
-        'host_app',
-        'MiniProgramMediaPlaybackPlugin.kt',
-      ),
+    final native = await _nativeGeneratedFile(
+      hostRootPath,
+      'media_playback',
+      'MiniProgramMediaPlaybackPlugin.kt',
     ).readAsString();
     expect(native, contains('class MiniProgramMediaPlaybackPlugin'));
     expect(native, contains('ExoPlayer.Builder'));
@@ -488,9 +464,14 @@ void main() {
     final gradle = await File(
       p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
     ).readAsString();
-    expect(gradle, contains('media3-exoplayer:1.5.1'));
-    expect(gradle, contains('media3-exoplayer-hls:1.5.1'));
-    expect(gradle, contains('media3-ui:1.5.1'));
+    expect(gradle, contains('mini_program_capabilities.gradle'));
+    expect(gradle, isNot(contains('mini_program_capabilities.gradle.kts')));
+    final capabilityGradle = await _nativeCapabilityGradleFile(
+      hostRootPath,
+    ).readAsString();
+    expect(capabilityGradle, contains('media3-exoplayer:1.5.1'));
+    expect(capabilityGradle, contains('media3-exoplayer-hls:1.5.1'));
+    expect(capabilityGradle, contains('media3-ui:1.5.1'));
     final setup = await File(
       p.join(
         hostRootPath,
@@ -524,6 +505,63 @@ void main() {
       ),
     );
     expect(second.alreadyInstalled, isTrue);
+  });
+
+  test('migrates the generated Kotlin dependency script to Groovy', () async {
+    final appGradle = File(
+      p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
+    );
+    await appGradle.writeAsString('''
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.example.host_app"
+}
+
+// <mini-program-native-dependencies>
+apply(from = "mini_program/mini_program_capabilities.gradle.kts")
+// </mini-program-native-dependencies>
+''');
+    final legacyScript = File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'mini_program',
+        'mini_program_capabilities.gradle.kts',
+      ),
+    );
+    await legacyScript.parent.create(recursive: true);
+    await legacyScript.writeAsString('''
+// Generated by mini_program_tooling. Do not edit.
+// capabilities: qr
+dependencies {
+    add("implementation", "androidx.camera:camera-camera2:1.4.2")
+}
+''');
+
+    await const MiniProgramHostCapabilityInstaller().initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'video',
+        platform: 'android',
+      ),
+    );
+
+    final nextAppGradle = await appGradle.readAsString();
+    expect(nextAppGradle, contains('mini_program_capabilities.gradle"'));
+    expect(nextAppGradle, isNot(contains('.gradle.kts')));
+    expect(await legacyScript.exists(), isFalse);
+    final generatedScript = await _nativeCapabilityGradleFile(
+      hostRootPath,
+    ).readAsString();
+    expect(generatedScript, contains('// capabilities: media-playback, qr'));
+    expect(generatedScript, contains('camera-camera2:1.4.2'));
+    expect(generatedScript, contains('media3-exoplayer:1.5.1'));
+    expect(generatedScript, isNot(contains('add("implementation"')));
   });
 
   test('migrates the generated phase one playback provider', () async {
@@ -612,27 +650,7 @@ class AppAndroidMediaPlaybackProvider {
       );
       expect(
         activity,
-        contains('MiniProgramCameraChannel.register(flutterEngine)'),
-      );
-      expect(
-        activity,
-        contains('MiniProgramFlashlightChannel.register(flutterEngine)'),
-      );
-      expect(
-        activity,
-        contains('MiniProgramLocationChannel.register(flutterEngine)'),
-      );
-      expect(
-        activity,
-        contains('MiniProgramFileTransferChannel.register(flutterEngine)'),
-      );
-      expect(
-        activity,
-        contains('MiniProgramQrScannerChannel.register(flutterEngine)'),
-      );
-      expect(
-        activity,
-        contains('MiniProgramMediaPlaybackPlugin.register(flutterEngine)'),
+        contains('MiniProgramNativeSetup.register(flutterEngine)'),
       );
       expect(
         _occurrences(activity, '// <mini-program-native-capabilities>'),
@@ -642,6 +660,7 @@ class AppAndroidMediaPlaybackProvider {
         _occurrences(activity, '// </mini-program-native-capabilities>'),
         1,
       );
+      final nativeSetup = await _nativeSetupFile(hostRootPath).readAsString();
       for (final registration in <String>[
         'MiniProgramCameraChannel.register(flutterEngine)',
         'MiniProgramFlashlightChannel.register(flutterEngine)',
@@ -650,15 +669,22 @@ class AppAndroidMediaPlaybackProvider {
         'MiniProgramQrScannerChannel.register(flutterEngine)',
         'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
       ]) {
-        expect(_occurrences(activity, registration), 1, reason: registration);
+        expect(
+          _occurrences(nativeSetup, registration),
+          1,
+          reason: registration,
+        );
       }
 
       final gradle = await File(
         p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
       ).readAsString();
       expect(_occurrences(gradle, '// <mini-program-native-dependencies>'), 1);
-      expect(_occurrences(gradle, 'camera-camera2:1.4.2'), 1);
-      expect(_occurrences(gradle, 'media3-exoplayer:1.5.1'), 1);
+      final capabilityGradle = await _nativeCapabilityGradleFile(
+        hostRootPath,
+      ).readAsString();
+      expect(_occurrences(capabilityGradle, 'camera-camera2:1.4.2'), 1);
+      expect(_occurrences(capabilityGradle, 'media3-exoplayer:1.5.1'), 1);
     },
   );
 
@@ -696,6 +722,8 @@ class AppAndroidMediaPlaybackProvider {
     final activity = await _mainActivityFile(hostRootPath).readAsString();
     expect(activity, contains('FlutterFragmentActivity'));
     expect(_occurrences(activity, '// <mini-program-native-capabilities>'), 1);
+    expect(_occurrences(activity, 'MiniProgramNativeSetup.register'), 1);
+    final nativeSetup = await _nativeSetupFile(hostRootPath).readAsString();
     for (final registration in <String>[
       'MiniProgramLocationChannel.register(flutterEngine)',
       'MiniProgramFileTransferChannel.register(flutterEngine)',
@@ -704,7 +732,7 @@ class AppAndroidMediaPlaybackProvider {
       'MiniProgramQrScannerChannel.register(flutterEngine)',
       'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
     ]) {
-      expect(_occurrences(activity, registration), 1, reason: registration);
+      expect(_occurrences(nativeSetup, registration), 1, reason: registration);
     }
 
     final manifest = await File(
@@ -728,8 +756,11 @@ class AppAndroidMediaPlaybackProvider {
       p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
     ).readAsString();
     expect(_occurrences(gradle, '// <mini-program-native-dependencies>'), 1);
-    expect(_occurrences(gradle, 'barcode-scanning:17.3.0'), 1);
-    expect(_occurrences(gradle, 'media3-exoplayer-hls:1.5.1'), 1);
+    final capabilityGradle = await _nativeCapabilityGradleFile(
+      hostRootPath,
+    ).readAsString();
+    expect(_occurrences(capabilityGradle, 'barcode-scanning:17.3.0'), 1);
+    expect(_occurrences(capabilityGradle, 'media3-exoplayer-hls:1.5.1'), 1);
   });
 
   test('is idempotent after a successful installation', () async {
@@ -792,6 +823,10 @@ class MainActivity : FlutterActivity() {
     expect(mainSource, contains('registerExistingHostChannel(flutterEngine)'));
     expect(
       mainSource,
+      contains('MiniProgramNativeSetup.register(flutterEngine)'),
+    );
+    expect(
+      await _nativeSetupFile(hostRootPath).readAsString(),
       contains('MiniProgramLocationChannel.register(flutterEngine)'),
     );
     expect(await setupFile.readAsString(), contains('void keepHostHook() {}'));
@@ -805,19 +840,10 @@ class MainActivity : FlutterActivity() {
       platform: 'android',
     );
     await installer.initialize(request);
-    final nativeFile = File(
-      p.join(
-        hostRootPath,
-        'android',
-        'app',
-        'src',
-        'main',
-        'kotlin',
-        'com',
-        'example',
-        'host_app',
-        'MiniProgramLocationChannel.kt',
-      ),
+    final nativeFile = _nativeGeneratedFile(
+      hostRootPath,
+      'location',
+      'MiniProgramLocationChannel.kt',
     );
     await nativeFile.delete();
     final mainActivity = _mainActivityFile(hostRootPath);
@@ -825,16 +851,30 @@ class MainActivity : FlutterActivity() {
 package com.example.host_app
 
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
     private val channelName = "mini_program/location"
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        // <mini-program-native-capabilities>
+        MiniProgramNativeSetup.register(flutterEngine)
+        // </mini-program-native-capabilities>
+    }
 }
 ''');
 
     final result = await installer.initialize(request);
 
-    expect(result.alreadyInstalled, isTrue);
+    expect(result.alreadyInstalled, isFalse);
     expect(await nativeFile.exists(), isFalse);
+    expect(await _nativeSetupFile(hostRootPath).exists(), isFalse);
+    expect(
+      await mainActivity.readAsString(),
+      isNot(contains('MiniProgramNativeSetup.register')),
+    );
+    expect((await installer.initialize(request)).alreadyInstalled, isTrue);
   });
 
   test('rejects unsupported capability or platform', () async {
@@ -1032,6 +1072,38 @@ File _mainActivityFile(String rootPath) => File(
   ),
 );
 
+File _nativeSetupFile(String rootPath) =>
+    _nativeGeneratedFile(rootPath, null, 'MiniProgramNativeSetup.kt');
+
+File _nativeGeneratedFile(String rootPath, String? feature, String fileName) {
+  final segments = <String>[
+    rootPath,
+    'android',
+    'app',
+    'src',
+    'main',
+    'kotlin',
+    'com',
+    'example',
+    'host_app',
+    'mini_program',
+    'generated',
+    if (feature != null) feature,
+    fileName,
+  ];
+  return File(p.joinAll(segments));
+}
+
+File _nativeCapabilityGradleFile(String rootPath) => File(
+  p.join(
+    rootPath,
+    'android',
+    'app',
+    'mini_program',
+    'mini_program_capabilities.gradle',
+  ),
+);
+
 Future<Map<String, String>> _readInstalledFiles(String rootPath) async {
   final paths = <String>[
     p.join(
@@ -1053,7 +1125,24 @@ Future<Map<String, String>> _readInstalledFiles(String rootPath) async {
       'com',
       'example',
       'host_app',
+      'mini_program',
+      'generated',
+      'location',
       'MiniProgramLocationChannel.kt',
+    ),
+    _nativeSetupFile(rootPath).path,
+    p.join(
+      rootPath,
+      'android',
+      'app',
+      'src',
+      'main',
+      'kotlin',
+      'com',
+      'example',
+      'host_app',
+      'mini_program',
+      'README.md',
     ),
   ];
   return <String, String>{

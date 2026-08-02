@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/generated_source.dart';
+import '../android/integration_editor.dart';
 import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
@@ -74,26 +76,46 @@ initializeMiniProgramHostFileCapability(
   }
   final mainActivityFile = mainActivityFiles.single;
   final packageName = await readFileKotlinPackage(mainActivityFile);
-  final nativeChannelFile = File(
-    p.join(mainActivityFile.parent.path, 'MiniProgramFileTransferChannel.kt'),
+  final mainActivitySource = await mainActivityFile.readAsString();
+  final nativeIntegration = await buildAndroidNativeIntegrationEdit(
+    mainActivityFile: mainActivityFile,
+    packageName: packageName,
+    mainActivitySource: mainActivitySource,
+    registration: 'MiniProgramFileTransferChannel.register(flutterEngine)',
   );
-  final mediaRegistryFile = File(
-    p.join(mainActivityFile.parent.path, 'MiniProgramHostMediaRegistry.kt'),
+  final nativeChannelFile = nativeIntegration.paths.generatedFile(
+    'file',
+    'MiniProgramFileTransferChannel.kt',
+  );
+  final mediaRegistryFile = nativeIntegration.paths.generatedFile(
+    'shared',
+    'MiniProgramHostMediaRegistry.kt',
   );
   final dartProviderFile = File(
     p.join(integrationRootPath, 'app_android_file_transfer_provider.dart'),
   );
   final hostSetupSource = await hostSetupFile.readAsString();
-  final mainActivitySource = await mainActivityFile.readAsString();
   final dartProviderSource = await readFileCapabilityFileIfExists(
     dartProviderFile,
   );
-  final nativeChannelSource = await readFileCapabilityFileIfExists(
-    nativeChannelFile,
+  final nativeMigration = await resolveAndroidGeneratedSource(
+    generatedFile: nativeChannelFile,
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramFileTransferChannel.kt',
+    ),
+    requiredMarker: 'class MiniProgramFileTransferChannel',
+    buildSource: () => buildAndroidFileTransferChannelSource(packageName),
   );
-  final mediaRegistrySource = await readFileCapabilityFileIfExists(
-    mediaRegistryFile,
+  final mediaRegistryMigration = await resolveAndroidGeneratedSource(
+    generatedFile: mediaRegistryFile,
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramHostMediaRegistry.kt',
+    ),
+    requiredMarker: 'object MiniProgramHostMediaRegistry',
+    buildSource: () => buildAndroidHostMediaRegistrySource(packageName),
   );
+  final nativeChannelSource = nativeMigration.source;
+  final mediaRegistrySource = mediaRegistryMigration.source;
   validateFileCapabilityOwnedFile(
     file: dartProviderFile,
     source: dartProviderSource,
@@ -116,27 +138,21 @@ initializeMiniProgramHostFileCapability(
     nativeChannelSource: nativeChannelSource,
   );
 
-  final writes = <String, String>{};
+  final writes = <String, String>{
+    ...nativeMigration.writes,
+    ...mediaRegistryMigration.writes,
+    ...nativeIntegration.writes,
+  };
+  final deletes = <String>{
+    ...nativeMigration.deletes,
+    ...mediaRegistryMigration.deletes,
+  };
   if (dartProviderSource == null) {
     writes[dartProviderFile.path] = androidFileTransferProviderSource;
-  }
-  if (nativeChannelSource == null) {
-    writes[nativeChannelFile.path] = buildAndroidFileTransferChannelSource(
-      packageName,
-    );
-  }
-  if (mediaRegistrySource == null) {
-    writes[mediaRegistryFile.path] = buildAndroidHostMediaRegistrySource(
-      packageName,
-    );
   }
   final patchedHostSetup = patchFileTransferHostSetup(hostSetupSource);
   if (patchedHostSetup != hostSetupSource) {
     writes[hostSetupFile.path] = patchedHostSetup;
-  }
-  final patchedMainActivity = patchFileTransferMainActivity(mainActivitySource);
-  if (patchedMainActivity != mainActivitySource) {
-    writes[mainActivityFile.path] = patchedMainActivity;
   }
   if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
@@ -149,5 +165,6 @@ initializeMiniProgramHostFileCapability(
     capability: capability,
     platform: platform,
     writes: writes,
+    deletes: deletes,
   );
 }

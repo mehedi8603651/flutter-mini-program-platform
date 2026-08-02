@@ -4,6 +4,8 @@ const String androidCapabilityRegistrationStart =
     '// <mini-program-native-capabilities>';
 const String androidCapabilityRegistrationEnd =
     '// </mini-program-native-capabilities>';
+const String androidNativeSetupRegistration =
+    'MiniProgramNativeSetup.register(flutterEngine)';
 
 const List<String> androidCapabilityRegistrations = <String>[
   'MiniProgramLocationChannel.register(flutterEngine)',
@@ -26,11 +28,8 @@ String patchAndroidMainActivityRegistration(
   }
   _validateManagedBlock(source);
   final newline = source.contains('\r\n') ? '\r\n' : '\n';
-  final registrations = <String>{
-    for (final candidate in androidCapabilityRegistrations)
-      if (source.contains(candidate)) candidate,
-    registration,
-  };
+  final registrations = readAndroidMainActivityRegistrations(source)
+    ..add(registration);
 
   var updated = _removeManagedBlock(source);
   for (final candidate in androidCapabilityRegistrations) {
@@ -42,6 +41,13 @@ String patchAndroidMainActivityRegistration(
       '',
     );
   }
+  updated = updated.replaceAll(
+    RegExp(
+      '^[ \\t]*${RegExp.escape(androidNativeSetupRegistration)}[ \\t]*(?:\\r?\\n)?',
+      multiLine: true,
+    ),
+    '',
+  );
 
   final needsFragmentActivity =
       requiresFragmentActivity ||
@@ -79,7 +85,7 @@ String patchAndroidMainActivityRegistration(
   ).firstMatch(updated)!;
   final tail = updated.substring(refreshedClass.end);
   final firstContent = tail.indexOf(RegExp(r'\S'));
-  final block = _registrationBlock(registrations, newline);
+  final block = _registrationBlock(newline);
   if (firstContent == -1) {
     return updated.replaceRange(
       refreshedClass.start,
@@ -153,11 +159,36 @@ bool hasManagedAndroidCapabilityRegistration(
       source.substring(start, end).contains(registration);
 }
 
-String _registrationBlock(Set<String> registrations, String newline) {
-  final ordered = androidCapabilityRegistrations.where(registrations.contains);
+bool hasManagedAndroidNativeSetupRegistration(String source) {
+  final start = source.indexOf(androidCapabilityRegistrationStart);
+  final end = source.indexOf(androidCapabilityRegistrationEnd, start + 1);
+  return start != -1 &&
+      end > start &&
+      source.substring(start, end).contains(androidNativeSetupRegistration);
+}
+
+String removeAndroidNativeSetupFromMainActivity(String source) {
+  _validateManagedBlock(source);
+  var updated = _removeManagedBlock(source);
+  updated = updated.replaceAll(
+    RegExp(
+      '^[ \\t]*${RegExp.escape(androidNativeSetupRegistration)}[ \\t]*(?:\\r?\\n)?',
+      multiLine: true,
+    ),
+    '',
+  );
+  return updated;
+}
+
+Set<String> readAndroidMainActivityRegistrations(String source) => <String>{
+  for (final registration in androidCapabilityRegistrations)
+    if (source.contains(registration)) registration,
+};
+
+String _registrationBlock(String newline) {
   return <String>[
     '        $androidCapabilityRegistrationStart',
-    for (final registration in ordered) '        $registration',
+    '        $androidNativeSetupRegistration',
     '        $androidCapabilityRegistrationEnd',
   ].join(newline);
 }

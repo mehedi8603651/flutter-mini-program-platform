@@ -22,7 +22,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 
-/** Host-owned CameraManager torch adapter. */
+/** Tooling-generated CameraManager torch adapter. */
 internal class MiniProgramFlashlightChannel :
     FlutterPlugin,
     ActivityAware,

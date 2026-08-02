@@ -62,7 +62,10 @@ bool isAndroidQrInstalled({
       hostSetupSource.contains('AppAndroidQrScannerProvider') &&
       runtimeSetupSource.contains('CapabilityIds.qrScanner') &&
       manifestSource.contains('.MiniProgramQrScannerActivity') &&
-      mainActivitySource.contains('MiniProgramQrScannerChannel.register') &&
+      (mainActivitySource.contains('MiniProgramQrScannerChannel.register') ||
+          mainActivitySource.contains(
+            'MiniProgramNativeSetup.register(flutterEngine)',
+          )) &&
       hasManagedAndroidCapabilityDependencies(
         gradleSource,
         androidQrDependencyCapability,

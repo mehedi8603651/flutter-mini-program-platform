@@ -40,7 +40,7 @@ import java.lang.ref.WeakReference
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Host-owned Media3 bridge installed by mini_program_tooling. */
+/** Tooling-generated Media3 bridge. */
 @UnstableApi
 internal class MiniProgramMediaPlaybackPlugin :
     FlutterPlugin,

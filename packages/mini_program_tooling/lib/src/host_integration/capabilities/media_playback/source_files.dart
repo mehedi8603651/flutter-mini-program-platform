@@ -76,9 +76,12 @@ bool isAndroidMediaPlaybackInstalled({
       hostSetupSource.contains('AppAndroidMediaPlaybackProvider') &&
       runtimeSetupSource.contains('CapabilityIds.mediaAudio') &&
       runtimeSetupSource.contains('CapabilityIds.mediaVideo') &&
-      mainActivitySource.contains(
-        'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
-      ) &&
+      (mainActivitySource.contains(
+            'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
+          ) ||
+          mainActivitySource.contains(
+            'MiniProgramNativeSetup.register(flutterEngine)',
+          )) &&
       hasManagedAndroidCapabilityDependencies(
         gradleSource,
         androidMediaPlaybackDependencyCapability,

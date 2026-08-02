@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/generated_source.dart';
+import '../android/integration_editor.dart';
 import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
@@ -71,11 +73,21 @@ initializeMiniProgramHostCameraCapability(
   }
   final mainActivity = activities.single;
   final packageName = await readCameraKotlinPackage(mainActivity);
-  final nativeChannel = File(
-    p.join(mainActivity.parent.path, 'MiniProgramCameraChannel.kt'),
+  final mainSource = await mainActivity.readAsString();
+  final nativeIntegration = await buildAndroidNativeIntegrationEdit(
+    mainActivityFile: mainActivity,
+    packageName: packageName,
+    mainActivitySource: mainSource,
+    registration: 'MiniProgramCameraChannel.register(flutterEngine)',
+    requiresFragmentActivity: true,
   );
-  final mediaRegistry = File(
-    p.join(mainActivity.parent.path, 'MiniProgramHostMediaRegistry.kt'),
+  final nativeChannel = nativeIntegration.paths.generatedFile(
+    'camera',
+    'MiniProgramCameraChannel.kt',
+  );
+  final mediaRegistry = nativeIntegration.paths.generatedFile(
+    'shared',
+    'MiniProgramHostMediaRegistry.kt',
   );
   final dartProvider = File(
     p.join(integrationRoot, 'app_android_camera_provider.dart'),
@@ -94,10 +106,25 @@ initializeMiniProgramHostCameraCapability(
   );
   final hostSetupSource = await hostSetup.readAsString();
   final manifestSource = await manifest.readAsString();
-  final mainSource = await mainActivity.readAsString();
   final dartSource = await readCameraFileIfExists(dartProvider);
-  final nativeSource = await readCameraFileIfExists(nativeChannel);
-  final mediaRegistrySource = await readCameraFileIfExists(mediaRegistry);
+  final nativeMigration = await resolveAndroidGeneratedSource(
+    generatedFile: nativeChannel,
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramCameraChannel.kt',
+    ),
+    requiredMarker: 'class MiniProgramCameraChannel',
+    buildSource: () => buildAndroidCameraChannelSource(packageName),
+  );
+  final mediaRegistryMigration = await resolveAndroidGeneratedSource(
+    generatedFile: mediaRegistry,
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramHostMediaRegistry.kt',
+    ),
+    requiredMarker: 'object MiniProgramHostMediaRegistry',
+    buildSource: () => buildAndroidHostMediaRegistrySource(packageName),
+  );
+  final nativeSource = nativeMigration.source;
+  final mediaRegistrySource = mediaRegistryMigration.source;
   final pathsSource = await readCameraFileIfExists(pathsFile);
   validateCameraOwnedFile(
     file: dartProvider,
@@ -129,21 +156,20 @@ initializeMiniProgramHostCameraCapability(
   );
   final writes = <String, String>{
     if (dartSource == null) dartProvider.path: androidCameraProviderSource,
-    if (nativeSource == null)
-      nativeChannel.path: buildAndroidCameraChannelSource(packageName),
-    if (mediaRegistrySource == null)
-      mediaRegistry.path: buildAndroidHostMediaRegistrySource(packageName),
+    ...nativeMigration.writes,
+    ...mediaRegistryMigration.writes,
+    ...nativeIntegration.writes,
     if (pathsSource == null) pathsFile.path: androidCameraPathsSource,
+  };
+  final deletes = <String>{
+    ...nativeMigration.deletes,
+    ...mediaRegistryMigration.deletes,
   };
   final patchedSetup = patchCameraHostSetup(hostSetupSource);
   final patchedManifest = patchCameraAndroidManifest(manifestSource);
-  final patchedActivity = patchCameraMainActivity(mainSource);
   if (patchedSetup != hostSetupSource) writes[hostSetup.path] = patchedSetup;
   if (patchedManifest != manifestSource) {
     writes[manifest.path] = patchedManifest;
-  }
-  if (patchedActivity != mainSource) {
-    writes[mainActivity.path] = patchedActivity;
   }
   if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
@@ -156,5 +182,6 @@ initializeMiniProgramHostCameraCapability(
     capability: capability,
     platform: platform,
     writes: writes,
+    deletes: deletes,
   );
 }

@@ -26,8 +26,12 @@ void main() {
           )
           .toList(),
       <String>[
+        'capabilities/android/generated_source.dart',
         'capabilities/android/gradle_editor.dart',
+        'capabilities/android/integration_editor.dart',
+        'capabilities/android/integration_paths.dart',
         'capabilities/android/main_activity_editor.dart',
+        'capabilities/android/native_setup.dart',
         'capabilities/camera/android_channel_template.dart',
         'capabilities/camera/dart_provider_template.dart',
         'capabilities/camera/installer.dart',

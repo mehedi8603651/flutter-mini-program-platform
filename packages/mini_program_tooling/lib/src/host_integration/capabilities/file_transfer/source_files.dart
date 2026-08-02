@@ -49,7 +49,12 @@ bool isAndroidFileCapabilityInstalled({
       hostSetupSource.contains('fileTransferProvider:');
   final hasNativeChannel =
       mainActivitySource.contains('mini_program/files') ||
-      (mainActivitySource.contains('MiniProgramFileTransferChannel.register') &&
+      ((mainActivitySource.contains(
+                'MiniProgramFileTransferChannel.register',
+              ) ||
+              mainActivitySource.contains(
+                'MiniProgramNativeSetup.register(flutterEngine)',
+              )) &&
           (nativeChannelSource?.contains(
                 'class MiniProgramFileTransferChannel',
               ) ??
