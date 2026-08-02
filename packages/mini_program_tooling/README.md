@@ -2,7 +2,7 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.4` generates mini-program projects against
+Tooling `0.7.5` generates mini-program projects against
 `mini_program_ui: ^0.2.5` and Flutter host projects against
 `mini_program_sdk: ^0.6.6`.
 
@@ -392,6 +392,15 @@ mode uses app- and kind-isolated LRU range/HLS-segment caches constrained by
 the accepted byte and TTL policy. It does not add background playback or
 permanent offline downloads. Re-run either command to migrate an unmodified
 generated Phase 1 provider; custom host-owned providers remain untouched.
+
+All Android capability installers share one generated registration block in
+`MainActivity.kt` and one generated Gradle dependency block. Installation is
+order-independent across location, files, camera, flashlight, QR, and media
+playback. Re-running any capability migrates recognized older generated
+registrations, preserves unrelated host code, and commits all planned files
+together with rollback on a failed write. Host-owned provider implementations
+are never overwritten unless they exactly match a recognized generated
+migration source.
 
 ### 3. Add An Endpoint Manually
 

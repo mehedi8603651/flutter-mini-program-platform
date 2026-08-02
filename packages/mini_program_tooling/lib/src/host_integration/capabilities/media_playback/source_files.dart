@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/gradle_editor.dart';
 import '../models.dart';
 import 'dart_provider_template.dart';
 
@@ -78,7 +79,10 @@ bool isAndroidMediaPlaybackInstalled({
       mainActivitySource.contains(
         'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
       ) &&
-      gradleSource.contains('mini-program-media-playback-capability') &&
+      hasManagedAndroidCapabilityDependencies(
+        gradleSource,
+        androidMediaPlaybackDependencyCapability,
+      ) &&
       (nativePluginSource?.contains('class MiniProgramMediaPlaybackPlugin') ??
           false);
 }

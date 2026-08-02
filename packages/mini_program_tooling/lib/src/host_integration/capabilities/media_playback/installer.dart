@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
 import 'android_plugin_template.dart';
@@ -103,22 +104,14 @@ initializeMiniProgramHostMediaPlaybackCapability(
     source: nativeSource,
     requiredMarker: 'class MiniProgramMediaPlaybackPlugin',
   );
-  if (isAndroidMediaPlaybackInstalled(
+  final installed = isAndroidMediaPlaybackInstalled(
     hostSetupSource: hostSource,
     runtimeSetupSource: runtimeSource,
     mainActivitySource: mainSource,
     gradleSource: gradleSource,
     dartProviderSource: providerSource,
     nativePluginSource: nativeSource,
-  )) {
-    return MiniProgramHostCapabilityInitResult(
-      projectRootPath: rootPath,
-      capability: capability,
-      platform: platform,
-      createdPaths: const <String>[],
-      updatedPaths: const <String>[],
-    );
-  }
+  );
 
   final patchedHost = patchMediaPlaybackHostSetup(hostSource);
   final patchedRuntime = patchMediaPlaybackRuntimeSetup(runtimeSource);
@@ -138,28 +131,16 @@ initializeMiniProgramHostMediaPlaybackCapability(
     if (patchedActivity != mainSource) mainActivity.path: patchedActivity,
     if (patchedGradle != gradleSource) gradle.path: patchedGradle,
   };
-  if (writes.isEmpty) {
+  if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
       'Android media playback is partially configured and could not be '
       'updated safely.',
     );
   }
-  final created = <String>[];
-  final updated = <String>[];
-  for (final entry in writes.entries) {
-    final file = File(entry.key);
-    final existed = await file.exists();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(entry.value);
-    (existed ? updated : created).add(file.path);
-  }
-  created.sort();
-  updated.sort();
-  return MiniProgramHostCapabilityInitResult(
+  return writeCapabilityFiles(
     projectRootPath: rootPath,
     capability: capability,
     platform: platform,
-    createdPaths: List<String>.unmodifiable(created),
-    updatedPaths: List<String>.unmodifiable(updated),
+    writes: writes,
   );
 }

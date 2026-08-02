@@ -30,7 +30,7 @@ These versions are the repository's current development/release line. Check each
 | `mini_program_contracts` | `0.3.11` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.2.5` | Pure-Dart authoring API that serializes UI and actions to JSON |
 | `mini_program_sdk` | `0.6.6` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.4` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_tooling` | `0.7.5` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -644,6 +644,10 @@ packages/mini_program_tooling/
 |       |   `-- capabilities/
 |       |       |-- models.dart                  # Capability request, result, and stable exception
 |       |       |-- dispatch.dart                # Thin capability-name routing shared by the public facade
+|       |       |-- file_transaction.dart        # Staged writes, atomic promotion, and rollback for one installation
+|       |       |-- android/
+|       |       |   |-- main_activity_editor.dart # Shared sorted registration block and legacy migration
+|       |       |   `-- gradle_editor.dart        # Shared QR/Media3 dependency block and legacy migration
 |       |       |-- location/
 |       |       |   |-- installer.dart           # Android location installation coordinator
 |       |       |   |-- source_files.dart        # Kotlin package, ownership, and installed-state checks
@@ -855,6 +859,17 @@ changing embedding. Capability installers may make a host provider available,
 but they must never accept a mini-program permission policy. Generated
 capability adapter files are host-owned after creation and must not be
 overwritten automatically.
+
+Android native capability installation is order-independent. Location, file,
+camera, flashlight, QR, and media playback registrations must go through the
+shared `capabilities/android/main_activity_editor.dart`; QR and Media3 native
+dependencies must go through `capabilities/android/gradle_editor.dart`.
+Feature installers own provider/channel templates and feature-specific Dart or
+manifest edits, but must commit the complete write plan through
+`file_transaction.dart`. Do not append new standalone generated registration
+or Gradle blocks. Recognized legacy generated blocks may be migrated, while
+malformed managed blocks and unrecognized host-owned files must fail before
+any file is changed.
 
 Host run and endpoint-import public classes stay in
 `mini_program_host_controller.dart`. Implementation belongs in normal Dart

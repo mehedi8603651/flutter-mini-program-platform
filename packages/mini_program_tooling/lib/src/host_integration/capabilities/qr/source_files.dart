@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../android/gradle_editor.dart';
 import '../models.dart';
 
 Future<String> readQrKotlinPackage(File mainActivityFile) async {
@@ -62,7 +63,10 @@ bool isAndroidQrInstalled({
       runtimeSetupSource.contains('CapabilityIds.qrScanner') &&
       manifestSource.contains('.MiniProgramQrScannerActivity') &&
       mainActivitySource.contains('MiniProgramQrScannerChannel.register') &&
-      gradleSource.contains('mini-program-qr-capability') &&
+      hasManagedAndroidCapabilityDependencies(
+        gradleSource,
+        androidQrDependencyCapability,
+      ) &&
       (nativeChannelSource?.contains('class MiniProgramQrScannerChannel') ??
           false) &&
       (scannerActivitySource?.contains('class MiniProgramQrScannerActivity') ??

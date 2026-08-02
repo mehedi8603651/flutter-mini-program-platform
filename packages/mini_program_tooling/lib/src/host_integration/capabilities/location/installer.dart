@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../file_transaction.dart';
 import '../models.dart';
 import 'android_channel_template.dart';
 import 'dart_provider_template.dart';
@@ -129,21 +130,13 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
     requiredMarker: 'class MiniProgramLocationChannel',
   );
 
-  if (isAndroidLocationInstalled(
+  final installed = isAndroidLocationInstalled(
     hostSetupSource: hostSetupSource,
     manifestSource: manifestSource,
     mainActivitySource: mainActivitySource,
     dartProviderSource: dartProviderSource,
     nativeChannelSource: nativeChannelSource,
-  )) {
-    return MiniProgramHostCapabilityInitResult(
-      projectRootPath: projectRootPath,
-      capability: capability,
-      platform: platform,
-      createdPaths: const <String>[],
-      updatedPaths: const <String>[],
-    );
-  }
+  );
 
   final writes = <String, String>{};
   if (dartProviderSource == null) {
@@ -175,7 +168,7 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
     }
   }
 
-  if (writes.isEmpty) {
+  if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
       'Android location capability is only partially configured, and the '
       'installer could not determine a safe update. Review the host setup, '
@@ -183,23 +176,10 @@ Future<MiniProgramHostCapabilityInitResult> initializeMiniProgramHostCapability(
     );
   }
 
-  final createdPaths = <String>[];
-  final updatedPaths = <String>[];
-  for (final entry in writes.entries) {
-    final file = File(entry.key);
-    final existed = await file.exists();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(entry.value);
-    (existed ? updatedPaths : createdPaths).add(file.path);
-  }
-  createdPaths.sort();
-  updatedPaths.sort();
-
-  return MiniProgramHostCapabilityInitResult(
+  return writeCapabilityFiles(
     projectRootPath: projectRootPath,
     capability: capability,
     platform: platform,
-    createdPaths: List<String>.unmodifiable(createdPaths),
-    updatedPaths: List<String>.unmodifiable(updatedPaths),
+    writes: writes,
   );
 }

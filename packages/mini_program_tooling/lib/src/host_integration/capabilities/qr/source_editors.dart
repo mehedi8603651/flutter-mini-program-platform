@@ -1,3 +1,5 @@
+import '../android/gradle_editor.dart';
+import '../android/main_activity_editor.dart';
 import '../models.dart';
 
 String patchQrHostSetup(String source) {
@@ -174,82 +176,17 @@ String patchQrAndroidManifest(String source, String packageName) {
   return updated;
 }
 
-String patchQrMainActivity(String source) => _patchMainActivity(
-  source,
-  'MiniProgramQrScannerChannel.register(flutterEngine)',
-);
+String patchQrMainActivity(String source) =>
+    patchAndroidMainActivityRegistration(
+      source,
+      registration: 'MiniProgramQrScannerChannel.register(flutterEngine)',
+    );
 
 String patchQrGradle(String source, {required bool kotlinDsl}) {
-  if (source.contains('mini-program-qr-capability')) return source;
-  final quote = kotlinDsl ? '"' : "'";
-  final callStart = kotlinDsl ? 'implementation(' : 'implementation ';
-  final callEnd = kotlinDsl ? ')' : '';
-  return '$source\n// mini-program-qr-capability\ndependencies {\n'
-      '    $callStart${quote}androidx.camera:camera-camera2:1.4.2$quote$callEnd\n'
-      '    $callStart${quote}androidx.camera:camera-lifecycle:1.4.2$quote$callEnd\n'
-      '    $callStart${quote}androidx.camera:camera-view:1.4.2$quote$callEnd\n'
-      '    $callStart${quote}com.google.mlkit:barcode-scanning:17.3.0$quote$callEnd\n'
-      '}\n';
-}
-
-String _patchMainActivity(String source, String registration) {
-  if (source.contains(registration)) return source;
-  final newline = _newlineFor(source);
-  var updated = _ensureImport(
+  return patchAndroidCapabilityDependencies(
     source,
-    'import io.flutter.embedding.engine.FlutterEngine',
-    before: 'import io.flutter.plugin',
-    fallbackAfter: 'import io.flutter.embedding.android.FlutterActivity',
-  );
-  final match = RegExp(
-    r'class\s+MainActivity\s*:\s*(FlutterActivity|FlutterFragmentActivity)\(\)',
-  ).firstMatch(updated);
-  if (match == null) {
-    throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt must extend FlutterActivity or FlutterFragmentActivity.',
-    );
-  }
-  if (updated.contains('override fun configureFlutterEngine(')) {
-    const superCall = 'super.configureFlutterEngine(flutterEngine)';
-    final index = updated.indexOf(superCall, match.end);
-    if (index == -1) {
-      throw const MiniProgramHostCapabilityException(
-        'MainActivity.configureFlutterEngine must call super first.',
-      );
-    }
-    return updated.replaceRange(
-      index + superCall.length,
-      index + superCall.length,
-      '$newline        $registration',
-    );
-  }
-  final tail = updated.substring(match.end);
-  final first = tail.indexOf(RegExp(r'\S'));
-  if (first == -1) {
-    return updated.replaceRange(
-      match.start,
-      updated.length,
-      'class MainActivity : ${match.group(1)}() {$newline'
-      '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
-      '        super.configureFlutterEngine(flutterEngine)$newline'
-      '        $registration$newline'
-      '    }$newline'
-      '}',
-    );
-  }
-  if (tail[first] != '{') {
-    throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt uses an unsupported custom declaration.',
-    );
-  }
-  final end = updated.lastIndexOf('}');
-  return updated.replaceRange(
-    end,
-    end,
-    '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
-    '        super.configureFlutterEngine(flutterEngine)$newline'
-    '        $registration$newline'
-    '    }$newline$newline',
+    capability: androidQrDependencyCapability,
+    kotlinDsl: kotlinDsl,
   );
 }
 

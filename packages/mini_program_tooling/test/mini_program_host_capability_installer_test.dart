@@ -584,7 +584,7 @@ class AppAndroidMediaPlaybackProvider {
   );
 
   test(
-    'installs other Android capabilities after camera upgrades the activity',
+    'reconciles every Android native capability after camera upgrades activity',
     () async {
       const installer = MiniProgramHostCapabilityInstaller();
       for (final capability in <String>[
@@ -593,6 +593,7 @@ class AppAndroidMediaPlaybackProvider {
         'location',
         'file',
         'qr',
+        'video',
       ]) {
         final result = await installer.initialize(
           MiniProgramHostCapabilityInitRequest(
@@ -629,8 +630,107 @@ class AppAndroidMediaPlaybackProvider {
         activity,
         contains('MiniProgramQrScannerChannel.register(flutterEngine)'),
       );
+      expect(
+        activity,
+        contains('MiniProgramMediaPlaybackPlugin.register(flutterEngine)'),
+      );
+      expect(
+        _occurrences(activity, '// <mini-program-native-capabilities>'),
+        1,
+      );
+      expect(
+        _occurrences(activity, '// </mini-program-native-capabilities>'),
+        1,
+      );
+      for (final registration in <String>[
+        'MiniProgramCameraChannel.register(flutterEngine)',
+        'MiniProgramFlashlightChannel.register(flutterEngine)',
+        'MiniProgramLocationChannel.register(flutterEngine)',
+        'MiniProgramFileTransferChannel.register(flutterEngine)',
+        'MiniProgramQrScannerChannel.register(flutterEngine)',
+        'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
+      ]) {
+        expect(_occurrences(activity, registration), 1, reason: registration);
+      }
+
+      final gradle = await File(
+        p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
+      ).readAsString();
+      expect(_occurrences(gradle, '// <mini-program-native-dependencies>'), 1);
+      expect(_occurrences(gradle, 'camera-camera2:1.4.2'), 1);
+      expect(_occurrences(gradle, 'media3-exoplayer:1.5.1'), 1);
     },
   );
+
+  test('reconciles every Android native capability with camera last', () async {
+    const installer = MiniProgramHostCapabilityInstaller();
+    const capabilities = <String>[
+      'video',
+      'qr',
+      'file',
+      'location',
+      'flashlight',
+      'camera',
+    ];
+    for (final capability in capabilities) {
+      final result = await installer.initialize(
+        MiniProgramHostCapabilityInitRequest(
+          projectRootPath: hostRootPath,
+          capability: capability,
+          platform: 'android',
+        ),
+      );
+      expect(result.alreadyInstalled, isFalse, reason: capability);
+    }
+    for (final capability in capabilities.reversed) {
+      final result = await installer.initialize(
+        MiniProgramHostCapabilityInitRequest(
+          projectRootPath: hostRootPath,
+          capability: capability,
+          platform: 'android',
+        ),
+      );
+      expect(result.alreadyInstalled, isTrue, reason: capability);
+    }
+
+    final activity = await _mainActivityFile(hostRootPath).readAsString();
+    expect(activity, contains('FlutterFragmentActivity'));
+    expect(_occurrences(activity, '// <mini-program-native-capabilities>'), 1);
+    for (final registration in <String>[
+      'MiniProgramLocationChannel.register(flutterEngine)',
+      'MiniProgramFileTransferChannel.register(flutterEngine)',
+      'MiniProgramCameraChannel.register(flutterEngine)',
+      'MiniProgramFlashlightChannel.register(flutterEngine)',
+      'MiniProgramQrScannerChannel.register(flutterEngine)',
+      'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
+    ]) {
+      expect(_occurrences(activity, registration), 1, reason: registration);
+    }
+
+    final manifest = await File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'AndroidManifest.xml',
+      ),
+    ).readAsString();
+    expect(_occurrences(manifest, 'android.permission.CAMERA'), 1);
+    expect(
+      _occurrences(manifest, 'android.permission.ACCESS_COARSE_LOCATION'),
+      1,
+    );
+    expect(_occurrences(manifest, 'MiniProgramQrScannerActivity'), 1);
+
+    final gradle = await File(
+      p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
+    ).readAsString();
+    expect(_occurrences(gradle, '// <mini-program-native-dependencies>'), 1);
+    expect(_occurrences(gradle, 'barcode-scanning:17.3.0'), 1);
+    expect(_occurrences(gradle, 'media3-exoplayer-hls:1.5.1'), 1);
+  });
 
   test('is idempotent after a successful installation', () async {
     const installer = MiniProgramHostCapabilityInstaller();
@@ -959,4 +1059,15 @@ Future<Map<String, String>> _readInstalledFiles(String rootPath) async {
   return <String, String>{
     for (final path in paths) path: await File(path).readAsString(),
   };
+}
+
+int _occurrences(String source, String value) {
+  var count = 0;
+  var offset = 0;
+  while (true) {
+    final index = source.indexOf(value, offset);
+    if (index == -1) return count;
+    count += 1;
+    offset = index + value.length;
+  }
 }

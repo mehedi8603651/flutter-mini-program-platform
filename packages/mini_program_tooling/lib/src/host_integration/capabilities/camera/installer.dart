@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
 import '../shared_media/android_registry_template.dart';
@@ -118,22 +119,14 @@ initializeMiniProgramHostCameraCapability(
     source: pathsSource,
     requiredMarker: 'mini_program_camera',
   );
-  if (isAndroidCameraInstalled(
+  final installed = isAndroidCameraInstalled(
     hostSetupSource: hostSetupSource,
     manifestSource: manifestSource,
     mainActivitySource: mainSource,
     dartProviderSource: dartSource,
     nativeChannelSource: nativeSource,
     pathsSource: pathsSource,
-  )) {
-    return MiniProgramHostCapabilityInitResult(
-      projectRootPath: rootPath,
-      capability: capability,
-      platform: platform,
-      createdPaths: const <String>[],
-      updatedPaths: const <String>[],
-    );
-  }
+  );
   final writes = <String, String>{
     if (dartSource == null) dartProvider.path: androidCameraProviderSource,
     if (nativeSource == null)
@@ -152,42 +145,16 @@ initializeMiniProgramHostCameraCapability(
   if (patchedActivity != mainSource) {
     writes[mainActivity.path] = patchedActivity;
   }
-  return _writeCameraCapabilityFiles(
-    writes,
-    projectRootPath: rootPath,
-    capability: capability,
-    platform: platform,
-  );
-}
-
-Future<MiniProgramHostCapabilityInitResult> _writeCameraCapabilityFiles(
-  Map<String, String> writes, {
-  required String projectRootPath,
-  required String capability,
-  required String platform,
-}) async {
-  if (writes.isEmpty) {
+  if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
       'Android camera support is partially configured and could not be '
       'updated safely.',
     );
   }
-  final created = <String>[];
-  final updated = <String>[];
-  for (final entry in writes.entries) {
-    final file = File(entry.key);
-    final existed = await file.exists();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(entry.value);
-    (existed ? updated : created).add(file.path);
-  }
-  created.sort();
-  updated.sort();
-  return MiniProgramHostCapabilityInitResult(
-    projectRootPath: projectRootPath,
+  return writeCapabilityFiles(
+    projectRootPath: rootPath,
     capability: capability,
     platform: platform,
-    createdPaths: List<String>.unmodifiable(created),
-    updatedPaths: List<String>.unmodifiable(updated),
+    writes: writes,
   );
 }

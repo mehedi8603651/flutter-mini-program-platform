@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
 import 'android_channel_template.dart';
@@ -88,22 +89,14 @@ initializeMiniProgramHostFlashlightCapability(
     source: nativeSource,
     requiredMarker: 'class MiniProgramFlashlightChannel',
   );
-  if (isAndroidFlashlightInstalled(
+  final installed = isAndroidFlashlightInstalled(
     hostSetupSource: hostSetupSource,
     runtimeSetupSource: runtimeSetupSource,
     manifestSource: manifestSource,
     mainActivitySource: mainSource,
     dartProviderSource: dartSource,
     nativeChannelSource: nativeSource,
-  )) {
-    return MiniProgramHostCapabilityInitResult(
-      projectRootPath: rootPath,
-      capability: capability,
-      platform: platform,
-      createdPaths: const <String>[],
-      updatedPaths: const <String>[],
-    );
-  }
+  );
   final writes = <String, String>{
     if (dartSource == null) dartProvider.path: androidFlashlightProviderSource,
     if (nativeSource == null)
@@ -123,28 +116,16 @@ initializeMiniProgramHostFlashlightCapability(
   if (patchedActivity != mainSource) {
     writes[mainActivity.path] = patchedActivity;
   }
-  if (writes.isEmpty) {
+  if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
       'Android flashlight support is partially configured and could not be '
       'updated safely.',
     );
   }
-  final created = <String>[];
-  final updated = <String>[];
-  for (final entry in writes.entries) {
-    final file = File(entry.key);
-    final existed = await file.exists();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(entry.value);
-    (existed ? updated : created).add(file.path);
-  }
-  created.sort();
-  updated.sort();
-  return MiniProgramHostCapabilityInitResult(
+  return writeCapabilityFiles(
     projectRootPath: rootPath,
     capability: capability,
     platform: platform,
-    createdPaths: List<String>.unmodifiable(created),
-    updatedPaths: List<String>.unmodifiable(updated),
+    writes: writes,
   );
 }

@@ -1,3 +1,4 @@
+import '../android/main_activity_editor.dart';
 import '../models.dart';
 
 String patchFlashlightHostSetup(String source) {
@@ -176,71 +177,11 @@ String patchFlashlightAndroidManifest(String source) {
   return updated;
 }
 
-String patchFlashlightMainActivity(String source) {
-  const registration = 'MiniProgramFlashlightChannel.register(flutterEngine)';
-  if (source.contains(registration)) return source;
-  final newline = _newlineFor(source);
-  var updated = _ensureImport(
-    source,
-    'import io.flutter.embedding.engine.FlutterEngine',
-    before: 'import io.flutter.plugin',
-    fallbackAfter: 'import io.flutter.embedding.android.FlutterActivity',
-  );
-  final classMatch = RegExp(
-    r'class\s+MainActivity\s*:\s*(FlutterActivity|FlutterFragmentActivity)\(\)',
-  ).firstMatch(updated);
-  if (classMatch == null) {
-    throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt must extend FlutterActivity or '
-      'FlutterFragmentActivity for automatic flashlight capability '
-      'installation.',
+String patchFlashlightMainActivity(String source) =>
+    patchAndroidMainActivityRegistration(
+      source,
+      registration: 'MiniProgramFlashlightChannel.register(flutterEngine)',
     );
-  }
-  final activityBase = classMatch.group(1)!;
-  final classTail = updated.substring(classMatch.end);
-  final firstContentIndex = classTail.indexOf(RegExp(r'\S'));
-  if (firstContentIndex == -1) {
-    final replacement =
-        'class MainActivity : $activityBase() {$newline'
-        '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
-        '        super.configureFlutterEngine(flutterEngine)$newline'
-        '        $registration$newline'
-        '    }$newline'
-        '}';
-    return updated.replaceRange(classMatch.start, updated.length, replacement);
-  }
-  if (classTail[firstContentIndex] != '{') {
-    throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt uses an unsupported custom class declaration.',
-    );
-  }
-  if (updated.contains('override fun configureFlutterEngine(')) {
-    const superCall = 'super.configureFlutterEngine(flutterEngine)';
-    final superIndex = updated.indexOf(superCall, classMatch.end);
-    if (superIndex == -1) {
-      throw const MiniProgramHostCapabilityException(
-        'MainActivity.configureFlutterEngine must call super first.',
-      );
-    }
-    return updated.replaceRange(
-      superIndex + superCall.length,
-      superIndex + superCall.length,
-      '$newline        $registration',
-    );
-  }
-  final classEnd = updated.lastIndexOf('}');
-  if (classEnd == -1) {
-    throw const MiniProgramHostCapabilityException(
-      'Could not locate the end of MainActivity.kt.',
-    );
-  }
-  final method =
-      '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
-      '        super.configureFlutterEngine(flutterEngine)$newline'
-      '        $registration$newline'
-      '    }$newline$newline';
-  return updated.replaceRange(classEnd, classEnd, method);
-}
 
 String _insertAfterManifestRoot(
   String source,

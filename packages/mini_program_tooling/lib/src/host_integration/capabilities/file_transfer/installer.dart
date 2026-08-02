@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
 import '../shared_media/android_registry_template.dart';
@@ -108,20 +109,12 @@ initializeMiniProgramHostFileCapability(
     source: nativeChannelSource,
     requiredMarker: 'class MiniProgramFileTransferChannel',
   );
-  if (isAndroidFileCapabilityInstalled(
+  final installed = isAndroidFileCapabilityInstalled(
     hostSetupSource: hostSetupSource,
     mainActivitySource: mainActivitySource,
     dartProviderSource: dartProviderSource,
     nativeChannelSource: nativeChannelSource,
-  )) {
-    return MiniProgramHostCapabilityInitResult(
-      projectRootPath: projectRootPath,
-      capability: capability,
-      platform: platform,
-      createdPaths: const <String>[],
-      updatedPaths: const <String>[],
-    );
-  }
+  );
 
   final writes = <String, String>{};
   if (dartProviderSource == null) {
@@ -145,28 +138,16 @@ initializeMiniProgramHostFileCapability(
   if (patchedMainActivity != mainActivitySource) {
     writes[mainActivityFile.path] = patchedMainActivity;
   }
-  if (writes.isEmpty) {
+  if (writes.isEmpty && !installed) {
     throw const MiniProgramHostCapabilityException(
       'Android file transfer support is only partially configured and could '
       'not be updated safely.',
     );
   }
-  final createdPaths = <String>[];
-  final updatedPaths = <String>[];
-  for (final entry in writes.entries) {
-    final file = File(entry.key);
-    final existed = await file.exists();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(entry.value);
-    (existed ? updatedPaths : createdPaths).add(file.path);
-  }
-  createdPaths.sort();
-  updatedPaths.sort();
-  return MiniProgramHostCapabilityInitResult(
+  return writeCapabilityFiles(
     projectRootPath: projectRootPath,
     capability: capability,
     platform: platform,
-    createdPaths: List<String>.unmodifiable(createdPaths),
-    updatedPaths: List<String>.unmodifiable(updatedPaths),
+    writes: writes,
   );
 }

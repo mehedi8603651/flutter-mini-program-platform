@@ -1,3 +1,4 @@
+import '../android/main_activity_editor.dart';
 import '../models.dart';
 
 String patchLocationHostSetup(String source) {
@@ -127,79 +128,11 @@ String patchLocationAndroidManifest(String source) {
   );
 }
 
-String patchLocationMainActivity(String source) {
-  if (source.contains('MiniProgramLocationChannel.register')) {
-    return source;
-  }
-  final newline = _newlineFor(source);
-  var updated = _ensureImport(
-    source,
-    'import io.flutter.embedding.engine.FlutterEngine',
-    before: 'import io.flutter.plugin',
-    fallbackAfter: 'import io.flutter.embedding.android.FlutterActivity',
-  );
-
-  final classMatch = RegExp(
-    r'class\s+MainActivity\s*:\s*(FlutterActivity|FlutterFragmentActivity)\(\)',
-  ).firstMatch(updated);
-  if (classMatch == null) {
-    throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt must extend FlutterActivity or '
-      'FlutterFragmentActivity for automatic location capability '
-      'installation.',
+String patchLocationMainActivity(String source) =>
+    patchAndroidMainActivityRegistration(
+      source,
+      registration: 'MiniProgramLocationChannel.register(flutterEngine)',
     );
-  }
-  final activityBase = classMatch.group(1)!;
-  final classTail = updated.substring(classMatch.end);
-  final firstContentIndex = classTail.indexOf(RegExp(r'\S'));
-  if (firstContentIndex == -1) {
-    final replacement =
-        'class MainActivity : $activityBase() {$newline'
-        '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
-        '        super.configureFlutterEngine(flutterEngine)$newline'
-        '        MiniProgramLocationChannel.register(flutterEngine)$newline'
-        '    }$newline'
-        '}';
-    return updated.replaceRange(classMatch.start, updated.length, replacement);
-  }
-  if (classTail[firstContentIndex] != '{') {
-    throw const MiniProgramHostCapabilityException(
-      'MainActivity.kt uses an unsupported custom class declaration. Add '
-      '`MiniProgramLocationChannel.register(flutterEngine)` manually.',
-    );
-  }
-
-  if (updated.contains('override fun configureFlutterEngine(')) {
-    const superCall = 'super.configureFlutterEngine(flutterEngine)';
-    final superIndex = updated.indexOf(superCall, classMatch.end);
-    if (superIndex == -1) {
-      throw const MiniProgramHostCapabilityException(
-        'MainActivity.configureFlutterEngine must call '
-        'super.configureFlutterEngine(flutterEngine) before the location '
-        'channel can be installed automatically.',
-      );
-    }
-    final insertAt = superIndex + superCall.length;
-    return updated.replaceRange(
-      insertAt,
-      insertAt,
-      '$newline        MiniProgramLocationChannel.register(flutterEngine)',
-    );
-  }
-
-  final classEnd = updated.lastIndexOf('}');
-  if (classEnd == -1 || classEnd < classMatch.end) {
-    throw const MiniProgramHostCapabilityException(
-      'Could not safely locate the end of MainActivity.kt.',
-    );
-  }
-  final method =
-      '    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {$newline'
-      '        super.configureFlutterEngine(flutterEngine)$newline'
-      '        MiniProgramLocationChannel.register(flutterEngine)$newline'
-      '    }$newline';
-  return updated.replaceRange(classEnd, classEnd, '$method$newline');
-}
 
 String _ensureImport(
   String source,

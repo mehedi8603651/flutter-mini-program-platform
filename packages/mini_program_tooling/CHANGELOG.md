@@ -1,3 +1,15 @@
+## 0.7.5
+
+- Reconcile location, file transfer, camera, flashlight, QR, and media
+  playback registrations through one deterministic managed block in
+  `MainActivity.kt`, independent of capability installation order.
+- Reconcile QR CameraX/ML Kit and Media3 dependencies through one managed
+  Gradle block while migrating recognized legacy generated marker blocks.
+- Commit each native capability installation as one rollback-capable file
+  transaction and reject malformed managed blocks before modifying host files.
+- Preserve custom host code and host-owned provider implementations while
+  making older generated integrations migrate on the next capability rerun.
+
 ## 0.7.4
 
 - Import requested audio/video playback permissions with safe default denial
