@@ -37,6 +37,9 @@ export 'mini_program_flashlight.dart';
 // Provider-neutral QR scan values.
 export 'mini_program_qr.dart';
 
+// Provider-neutral streamed media playback values.
+export 'mini_program_playback.dart';
+
 // Provider-neutral Publisher API contract models.
 export 'publisher_backend_contract.dart';
 

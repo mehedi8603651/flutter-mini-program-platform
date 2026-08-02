@@ -51,6 +51,11 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           filePolicy: _filePolicyFor(manifest.id),
           cameraManager: _cameraManager,
           mediaManager: _mediaManager,
+          mediaPlaybackManager: _mediaPlaybackManager,
+          mediaPlaybackPolicy: _mediaPlaybackPolicyFor(manifest.id),
+          mediaAssetSource: widget.source is MiniProgramMediaAssetSource
+              ? widget.source as MiniProgramMediaAssetSource
+              : null,
           cameraPolicy: _cameraPolicyFor(manifest.id),
           flashlightManager: _flashlightManager,
           flashlightPolicy: _flashlightPolicyFor(manifest.id),

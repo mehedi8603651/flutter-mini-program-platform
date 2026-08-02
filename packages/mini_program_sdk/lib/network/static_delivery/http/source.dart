@@ -9,6 +9,7 @@ class HttpMiniProgramSource
     implements
         DisposableMiniProgramSource,
         MiniProgramJsonAssetSource,
+        MiniProgramMediaAssetSource,
         MiniProgramPublisherBackendContractSource,
         MiniProgramDeliveryContextProvider {
   HttpMiniProgramSource({
@@ -98,6 +99,21 @@ class HttpMiniProgramSource
       resourceLabel: 'JSON data asset',
     );
   }
+
+  @override
+  MiniProgramResolvedMediaAsset resolveMediaAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) => MiniProgramResolvedMediaAsset(
+    candidateUris: List<Uri>.unmodifiable(
+      _candidateUris(
+        _resolve('artifacts/$miniProgramId/$version/assets/$assetPath'),
+      ),
+    ),
+    headers: Map<String, String>.unmodifiable(headers),
+    timeout: requestTimeout,
+  );
 
   @override
   Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({

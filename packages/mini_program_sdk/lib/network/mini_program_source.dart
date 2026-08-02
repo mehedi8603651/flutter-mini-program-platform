@@ -22,6 +22,28 @@ abstract interface class MiniProgramJsonAssetSource {
   });
 }
 
+/// Resolved immutable artifact media visible only to a trusted host provider.
+class MiniProgramResolvedMediaAsset {
+  const MiniProgramResolvedMediaAsset({
+    required this.candidateUris,
+    this.headers = const <String, String>{},
+    this.timeout = const Duration(seconds: 10),
+  });
+
+  final List<Uri> candidateUris;
+  final Map<String, String> headers;
+  final Duration timeout;
+}
+
+/// Optional source capability for streamable files under artifact assets.
+abstract interface class MiniProgramMediaAssetSource {
+  MiniProgramResolvedMediaAsset resolveMediaAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  });
+}
+
 /// Optional source capability for an artifact-owned Publisher API contract.
 abstract interface class MiniProgramPublisherBackendContractSource {
   Future<MiniProgramPublisherBackendContract?> loadPublisherBackendContract({

@@ -192,6 +192,46 @@ void main() {
         throwsA(isA<MiniProgramBuildException>()),
       );
     });
+
+    test('validates statically referenced media assets', () async {
+      final root = p.join(tempDir.path, 'media');
+      await _writeMpMiniProgramFixture(
+        root,
+        miniProgramId: 'media',
+        mediaAsset: 'video/demo.mp4',
+      );
+      await Directory(p.join(root, 'assets', 'video')).create(recursive: true);
+      await File(
+        p.join(root, 'assets', 'video', 'demo.mp4'),
+      ).writeAsBytes(const <int>[0, 1, 2, 3]);
+
+      final result = await const MiniProgramBuilder().build(
+        MiniProgramBuildRequest(miniProgramRootPath: root, skipPubGet: true),
+      );
+      expect(await File(result.entryScreenJsonPath).exists(), isTrue);
+    });
+
+    test('rejects a missing referenced media asset', () async {
+      final root = p.join(tempDir.path, 'missing_media');
+      await _writeMpMiniProgramFixture(
+        root,
+        miniProgramId: 'missing_media',
+        mediaAsset: 'video/demo.mp4',
+      );
+
+      await expectLater(
+        const MiniProgramBuilder().build(
+          MiniProgramBuildRequest(miniProgramRootPath: root, skipPubGet: true),
+        ),
+        throwsA(
+          isA<MiniProgramBuildException>().having(
+            (error) => error.message,
+            'message',
+            contains('Referenced media asset was not found'),
+          ),
+        ),
+      );
+    });
   });
 }
 
@@ -201,6 +241,7 @@ Future<void> _writeMpMiniProgramFixture(
   String screenFormat = 'mp',
   String? generatedScreenId,
   String? jsonAsset,
+  String? mediaAsset,
 }) async {
   await Directory(p.join(root, 'tool')).create(recursive: true);
   await File(p.join(root, 'pubspec.yaml')).writeAsString('''
@@ -226,6 +267,7 @@ environment:
     _fakeMpBuildScriptSource(
       screenId: generatedScreenId ?? '${miniProgramId}_home',
       jsonAsset: jsonAsset,
+      mediaAsset: mediaAsset,
     ),
   );
 }
@@ -233,8 +275,27 @@ environment:
 String _fakeMpBuildScriptSource({
   required String screenId,
   String? jsonAsset,
-}) =>
-    '''
+  String? mediaAsset,
+}) {
+  final rootType = mediaAsset != null
+      ? 'videoView'
+      : jsonAsset == null
+      ? 'text'
+      : 'button';
+  final props = mediaAsset != null
+      ? "'aspectRatio': 1.7777777777777777, 'autoplay': false, "
+            "'cacheMode': 'streaming', 'controls': true, 'fit': 'contain', "
+            "'loop': false, 'muted': false, 'playerId': 'demo', "
+            "'semanticLabel': 'Demo', 'source': <String, Object?>{"
+            "'kind': 'asset', 'asset': '$mediaAsset'}, 'speed': 1.0, "
+            "'volume': 1.0,"
+      : jsonAsset == null
+      ? "'data': 'Hello',"
+      : "'label': 'Load', 'action': <String, Object?>{"
+            "'type': 'data.loadJsonAsset', 'props': <String, Object?>{"
+            "'id': 'locations', 'asset': '$jsonAsset', 'ttlMs': 1000, "
+            "'forceRefresh': false}},";
+  return '''
 import 'dart:convert';
 import 'dart:io';
 
@@ -248,9 +309,9 @@ Future<void> main(List<String> arguments) async {
       'schemaVersion': 1,
       'screenId': '$screenId',
       'root': <String, Object?>{
-        'type': '${jsonAsset == null ? 'text' : 'button'}',
+        'type': '$rootType',
         'props': <String, Object?>{
-          ${jsonAsset == null ? "'data': 'Hello'," : "'label': 'Load', 'action': <String, Object?>{'type': 'data.loadJsonAsset', 'props': <String, Object?>{'id': 'locations', 'asset': '$jsonAsset', 'ttlMs': 1000, 'forceRefresh': false}},"}
+          $props
         },
         'children': <Object?>[],
       },
@@ -258,3 +319,4 @@ Future<void> main(List<String> arguments) async {
   );
 }
 ''';
+}

@@ -7,6 +7,7 @@ const Set<String> _allowedMiniProgramCacheBuckets = <String>{
   'data',
   'image',
   'state',
+  'audio',
   'video',
 };
 

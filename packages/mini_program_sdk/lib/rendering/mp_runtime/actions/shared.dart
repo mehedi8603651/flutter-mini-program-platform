@@ -91,6 +91,7 @@ MiniProgramCacheBucket _cacheBucketFromName(String name) {
     'data' => MiniProgramCacheBucket.data,
     'image' => MiniProgramCacheBucket.image,
     'state' => MiniProgramCacheBucket.state,
+    'audio' => MiniProgramCacheBucket.audio,
     'video' => MiniProgramCacheBucket.video,
     _ => throw const FormatException('Unsupported Mp cache bucket.'),
   };

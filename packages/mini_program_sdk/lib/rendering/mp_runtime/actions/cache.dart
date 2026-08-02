@@ -6,6 +6,7 @@ const List<MiniProgramCacheBucket> _miniProgramCacheActionBuckets =
       MiniProgramCacheBucket.data,
       MiniProgramCacheBucket.image,
       MiniProgramCacheBucket.state,
+      MiniProgramCacheBucket.audio,
       MiniProgramCacheBucket.video,
     ];
 

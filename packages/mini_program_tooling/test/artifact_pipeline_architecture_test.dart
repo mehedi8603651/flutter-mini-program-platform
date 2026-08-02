@@ -35,6 +35,7 @@ void main() {
         'shared/document_validation.dart',
         'shared/files.dart',
         'shared/json_io.dart',
+        'shared/media_assets.dart',
         'shared/metrics.dart',
         'shared/paths.dart',
         'verify/checksums.dart',

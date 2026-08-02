@@ -429,6 +429,68 @@ void main() {
     expect((await installer.initialize(request)).alreadyInstalled, isTrue);
   });
 
+  test('installs shared Android audio and video playback support', () async {
+    const installer = MiniProgramHostCapabilityInstaller();
+    final result = await installer.initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'video',
+        platform: 'android',
+      ),
+    );
+
+    expect(result.alreadyInstalled, isFalse);
+    final provider = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'app_android_media_playback_provider.dart',
+      ),
+    ).readAsString();
+    expect(provider, contains('class AppAndroidMediaPlaybackProvider'));
+    expect(provider, contains('VideoPlayerController.networkUrl'));
+    expect(provider, contains('MiniProgramMediaPlaybackStatus.buffering'));
+
+    final pubspec = await File(
+      p.join(hostRootPath, 'pubspec.yaml'),
+    ).readAsString();
+    expect(pubspec, contains('video_player: ^2.10.0'));
+    final setup = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_host_setup.dart',
+      ),
+    ).readAsString();
+    expect(setup, contains('resolvedMediaPlaybackProvider'));
+    expect(
+      setup,
+      contains('mediaPlaybackProvider: resolvedMediaPlaybackProvider'),
+    );
+    final runtime = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    ).readAsString();
+    expect(runtime, contains('CapabilityIds.mediaAudio'));
+    expect(runtime, contains('CapabilityIds.mediaVideo'));
+    expect(runtime, contains('mediaPlaybackProvider: mediaPlaybackProvider'));
+
+    final second = await installer.initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'audio',
+        platform: 'android',
+      ),
+    );
+    expect(second.alreadyInstalled, isTrue);
+  });
+
   test(
     'installs other Android capabilities after camera upgrades the activity',
     () async {
@@ -678,8 +740,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.6.5
-  mini_program_contracts: ^0.3.10
+  mini_program_sdk: ^0.6.6
+  mini_program_contracts: ^0.3.11
 ''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),

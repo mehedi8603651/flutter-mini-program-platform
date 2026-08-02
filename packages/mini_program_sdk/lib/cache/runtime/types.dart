@@ -2,7 +2,15 @@ part of '../runtime_cache.dart';
 
 typedef MiniProgramCacheClock = DateTime Function();
 
-enum MiniProgramCacheBucket { memory, data, image, video, session, state }
+enum MiniProgramCacheBucket {
+  memory,
+  data,
+  image,
+  audio,
+  video,
+  session,
+  state,
+}
 
 enum MiniProgramCacheStorage {
   disabled,

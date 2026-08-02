@@ -51,6 +51,7 @@ class MiniProgramCacheUsage {
       MiniProgramCacheBucket.data,
       MiniProgramCacheBucket.image,
       MiniProgramCacheBucket.state,
+      MiniProgramCacheBucket.audio,
       MiniProgramCacheBucket.video,
     ];
     final visible = <String, dynamic>{};

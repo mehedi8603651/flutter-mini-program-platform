@@ -61,4 +61,13 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     }
     return const MiniProgramQrPolicy();
   }
+
+  MiniProgramMediaPlaybackPolicy _mediaPlaybackPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramMediaPlaybackPolicyProvider) {
+      return (source as MiniProgramMediaPlaybackPolicyProvider)
+          .mediaPlaybackPolicyFor(appId);
+    }
+    return const MiniProgramMediaPlaybackPolicy();
+  }
 }

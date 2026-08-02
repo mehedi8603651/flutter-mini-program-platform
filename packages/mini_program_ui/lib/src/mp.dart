@@ -30,6 +30,9 @@ import 'features/lifecycle/timer_nodes.dart';
 import 'features/location/location_actions.dart';
 import 'features/math/math_actions.dart';
 import 'features/media/media_actions.dart';
+import 'features/media_playback/audio_actions.dart';
+import 'features/media_playback/media_sources.dart';
+import 'features/media_playback/video.dart';
 import 'features/qr/qr.dart';
 import 'features/navigation/navigation_actions.dart';
 import 'features/navigation/router_actions.dart';
@@ -53,6 +56,10 @@ export 'features/flashlight/flashlight_actions.dart' show MpFlashlightActions;
 export 'features/qr/qr.dart' show MpQr;
 export 'features/math/math_actions.dart' show MpMathActions;
 export 'features/media/media_actions.dart' show MpMediaActions;
+export 'features/media_playback/audio_actions.dart' show MpAudioActions;
+export 'features/media_playback/media_sources.dart'
+    show MpAudioSource, MpVideoSource;
+export 'features/media_playback/video.dart' show MpVideoActions;
 export 'features/navigation/navigation_actions.dart' show MpNavigationActions;
 export 'features/navigation/router_actions.dart' show MpRouterActions;
 export 'features/state/state_actions.dart' show MpStateActions;
@@ -94,6 +101,12 @@ abstract final class Mp {
 
   /// App-owned temporary host media actions.
   static const media = MpMediaActions();
+
+  /// Headless foreground audio playback actions.
+  static const audio = MpAudioActions();
+
+  /// Inline video playback actions.
+  static const video = MpVideoActions();
 
   /// Host-controlled foreground flashlight actions.
   static const flashlight = MpFlashlightActions();
@@ -616,6 +629,43 @@ abstract final class Mp {
     cacheKey: cacheKey,
     fadeInDuration: fadeInDuration,
     alt: alt,
+  );
+
+  /// Creates an inline host-controlled video surface.
+  static MpNode videoView({
+    required String playerId,
+    required MpVideoSource source,
+    String? poster,
+    MpImageSource posterSource = MpImageSource.auto,
+    bool controls = true,
+    bool autoplay = false,
+    bool loop = false,
+    bool muted = false,
+    double volume = 1,
+    double speed = 1,
+    String cacheMode = 'streaming',
+    double aspectRatio = 16 / 9,
+    MpImageFit fit = MpImageFit.contain,
+    String? statusState,
+    String? errorState,
+    String semanticLabel = 'Video player',
+  }) => buildVideoViewNode(
+    playerId: playerId,
+    source: source,
+    poster: poster,
+    posterSource: posterSource,
+    controls: controls,
+    autoplay: autoplay,
+    loop: loop,
+    muted: muted,
+    volume: volume,
+    speed: speed,
+    cacheMode: cacheMode,
+    aspectRatio: aspectRatio,
+    fit: fit,
+    statusState: statusState,
+    errorState: errorState,
+    semanticLabel: semanticLabel,
   );
 
   /// Creates a simple card container.

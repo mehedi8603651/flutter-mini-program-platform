@@ -265,6 +265,15 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'allowTorch': acceptRequested && request['allowTorch'] == true,
     });
   }
+  if (permission == 'audioPlayback' || permission == 'videoPlayback') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostPlaybackPermission(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+    }, permission);
+  }
   if (permission != 'location') {
     return deepHostJsonObjectCopy(existing);
   }
@@ -350,6 +359,32 @@ Map<String, Object?> validateAcceptedHostPermissions(
     }
     normalized['qrScanner'] = validateAcceptedHostQrScanner(
       hostJsonObjectOrEmpty(rawQrScanner),
+    );
+  }
+  for (final permission in const <String>['audioPlayback', 'videoPlayback']) {
+    final raw = normalized[permission];
+    if (raw == null) continue;
+    if (raw is! Map) {
+      throw MiniProgramHostException(
+        'Accepted permissions.$permission must be an object.',
+      );
+    }
+    normalized[permission] = validateAcceptedHostPlaybackPermission(
+      hostJsonObjectOrEmpty(raw),
+      permission,
+    );
+  }
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostPlaybackPermission(
+  Map<String, Object?> value,
+  String permission,
+) {
+  final normalized = deepHostJsonObjectCopy(value);
+  if (normalized['enabled'] is! bool) {
+    throw MiniProgramHostException(
+      'Accepted permissions.$permission.enabled must be a boolean.',
     );
   }
   return sortedHostJsonObject(normalized);

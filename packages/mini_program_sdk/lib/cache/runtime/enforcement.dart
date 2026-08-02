@@ -90,10 +90,11 @@ int _cachePriorityRank(MiniProgramCachePriority priority) {
 int _cacheBucketCleanupRank(MiniProgramCacheBucket bucket) {
   return switch (bucket) {
     MiniProgramCacheBucket.video => 0,
-    MiniProgramCacheBucket.image => 1,
-    MiniProgramCacheBucket.data => 2,
-    MiniProgramCacheBucket.state => 3,
-    MiniProgramCacheBucket.memory => 4,
-    MiniProgramCacheBucket.session => 5,
+    MiniProgramCacheBucket.audio => 1,
+    MiniProgramCacheBucket.image => 2,
+    MiniProgramCacheBucket.data => 3,
+    MiniProgramCacheBucket.state => 4,
+    MiniProgramCacheBucket.memory => 5,
+    MiniProgramCacheBucket.session => 6,
   };
 }

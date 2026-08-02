@@ -389,6 +389,35 @@ The scan target contains `rawValue`, `format`, `valueType`, and
 `scannedAtUtc`. Treat `rawValue` as untrusted text. The runtime never opens a
 scanned URL or performs another action automatically.
 
+## Streamed Audio And Inline Video
+
+Media sources are either immutable artifact assets or relative Publisher API
+routes. Arbitrary URLs and device files are rejected. Audio is headless;
+video is rendered inline in the authored layout.
+
+```dart
+Mp.audio.play(
+  audioId: 'answer-sound',
+  source: MpAudioSource.publisher(endpoint: 'media/answer-sound'),
+  cacheMode: 'temporary',
+  statusState: 'audio.status',
+  errorState: 'audio.error',
+);
+
+Mp.videoView(
+  playerId: 'product-demo',
+  source: MpVideoSource.asset('video/product-demo.mp4'),
+  poster: 'images/product-poster.webp',
+  controls: true,
+  semanticLabel: 'Product demonstration',
+);
+```
+
+Use `Mp.audio.pause/seek/stop/getStatus/release` and
+`Mp.video.play/pause/seek/stop/setMuted/setVolume/setSpeed/getStatus/release`
+for explicit controls. Temporary cache is only a request; host-accepted media
+and cache policy remains authoritative.
+
 ## Publisher File Transfers
 
 File actions use relative routes on the artifact-declared Publisher API. The

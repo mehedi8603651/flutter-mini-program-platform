@@ -246,6 +246,40 @@ void main() {
       });
     });
 
+    test('writes audio and video playback permission requests', () async {
+      const controller = MiniProgramPartnerHandoffController();
+      final outputPath = p.join(tempDir.path, 'media.partner.json');
+      await controller.createPackage(
+        MiniProgramPartnerPackageRequest(
+          appId: 'course',
+          title: 'Course',
+          artifactBaseUri: Uri.parse('https://cdn.example.com/course/'),
+          outputPath: outputPath,
+          generatedAtUtc: DateTime.utc(2026, 8, 2),
+          requestedPermissions: const <String, Object?>{
+            'audioPlayback': <String, Object?>{
+              'enabled': true,
+              'reason': 'Play lesson narration.',
+            },
+            'videoPlayback': <String, Object?>{
+              'enabled': true,
+              'reason': 'Play lesson videos.',
+            },
+          },
+        ),
+      );
+
+      final handoff = await controller.readPackage(outputPath);
+      expect(handoff.requestedPermissions['audioPlayback'], <String, Object?>{
+        'enabled': true,
+        'reason': 'Play lesson narration.',
+      });
+      expect(handoff.requestedPermissions['videoPlayback'], <String, Object?>{
+        'enabled': true,
+        'reason': 'Play lesson videos.',
+      });
+    });
+
     test('rejects malformed or unsupported permission requests', () async {
       for (final permissions in <Map<String, Object?>>[
         <String, Object?>{
@@ -289,6 +323,15 @@ void main() {
             'upload': true,
             'download': false,
             'mimeTypes': <String>['invalid'],
+          },
+        },
+        <String, Object?>{
+          'audioPlayback': <String, Object?>{'enabled': true, 'reason': ''},
+        },
+        <String, Object?>{
+          'videoPlayback': <String, Object?>{
+            'enabled': 'yes',
+            'reason': 'Play videos.',
           },
         },
       ]) {

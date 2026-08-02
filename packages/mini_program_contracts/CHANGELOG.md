@@ -1,3 +1,8 @@
+## 0.3.11
+
+- Add stable streamed audio and inline video action names, playback capability
+  identifiers, normalized status snapshots, and media failure codes.
+
 ## 0.3.10
 
 - Add stable QR scan action and capability identifiers, inert scan-result

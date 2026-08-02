@@ -9,6 +9,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       MiniProgramDataResourceManager();
   MiniProgramFileTransferManager? _fileTransferManager;
   MiniProgramMediaManager? _mediaManager;
+  MiniProgramMediaPlaybackManager? _mediaPlaybackManager;
   MiniProgramCameraManager? _cameraManager;
   MiniProgramFlashlightManager? _flashlightManager;
   MiniProgramQrManager? _qrManager;
@@ -32,6 +33,9 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
     _fileTransferManager = _managerFor(widget.fileTransferProvider);
     _mediaManager = _mediaManagerFor(widget.mediaProvider);
+    _mediaPlaybackManager = _mediaPlaybackManagerFor(
+      widget.mediaPlaybackProvider,
+    );
     _cameraManager = _cameraManagerFor(widget.cameraProvider, _mediaManager);
     _flashlightManager = _flashlightManagerFor(widget.flashlightProvider);
     _qrManager = _qrManagerFor(widget.qrScannerProvider);
@@ -53,6 +57,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         widget.fileTransferProvider != oldWidget.fileTransferProvider ||
         widget.cameraProvider != oldWidget.cameraProvider ||
         widget.mediaProvider != oldWidget.mediaProvider ||
+        widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider ||
         widget.flashlightProvider != oldWidget.flashlightProvider ||
         widget.qrScannerProvider != oldWidget.qrScannerProvider ||
         widget.authController != oldWidget.authController ||
@@ -91,6 +96,12 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
         unawaited(_qrManager?.dispose());
         _qrManager = _qrManagerFor(widget.qrScannerProvider);
       }
+      if (widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider) {
+        unawaited(_mediaPlaybackManager?.dispose());
+        _mediaPlaybackManager = _mediaPlaybackManagerFor(
+          widget.mediaPlaybackProvider,
+        );
+      }
       _rebuildRendererRegistry();
       _restartLoad();
     }
@@ -110,6 +121,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
       unawaited(_mediaManager?.releaseAllFor(activeAppId));
       unawaited(_flashlightManager?.releaseFor(activeAppId));
       unawaited(_qrManager?.releaseFor(activeAppId));
+      unawaited(_mediaPlaybackManager?.releaseAllFor(activeAppId));
     }
     _closeActiveCacheApp();
     _disposeOwnedBackendConnector();
@@ -136,6 +148,7 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
     unawaited(_mediaManager?.dispose());
     unawaited(_flashlightManager?.dispose());
     unawaited(_qrManager?.dispose());
+    unawaited(_mediaPlaybackManager?.dispose());
     super.dispose();
   }
 
@@ -167,4 +180,8 @@ class _MiniProgramHostState extends State<MiniProgramHost> {
 
   MiniProgramQrManager? _qrManagerFor(MiniProgramQrScannerProvider? provider) =>
       provider == null ? null : MiniProgramQrManager(provider);
+
+  MiniProgramMediaPlaybackManager? _mediaPlaybackManagerFor(
+    MiniProgramMediaPlaybackProvider? provider,
+  ) => provider == null ? null : MiniProgramMediaPlaybackManager(provider);
 }

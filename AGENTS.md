@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.10` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.4` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.5` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.3` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.11` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.5` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.6` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.4` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -82,6 +82,14 @@ These are system invariants, not preferences:
     capability that requires accepted policy and an explicit user gesture;
     scan values remain inert and scanner-local torch state is not shared with
     the standalone flashlight capability.
+19. Audio and video playback may resolve only artifact-relative assets or
+    relative routes on the accepted Publisher API. Media URLs, authorization
+    headers, native paths, and buffered bytes must never enter mini-program
+    state; playback sessions and temporary cache ownership are app-scoped.
+19. Audio and video playback accept only artifact-relative or relative
+    Publisher API sources. The host independently accepts audio/video policy,
+    owns the playback provider and buffering, and never exposes resolved URLs,
+    authorization headers, native paths, or media bytes to live state.
 
 ## Repository Map
 
@@ -136,6 +144,7 @@ packages/mini_program_contracts/
 |   |-- mini_program_camera.dart                # Opaque delegated-camera photo result contract
 |   |-- mini_program_flashlight.dart            # JSON-safe flashlight availability and enabled status
 |   |-- mini_program_qr.dart                    # Inert, bounded QR scan result metadata
+|   |-- mini_program_playback.dart              # Playback kind, status, and bounded session snapshot
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -193,6 +202,7 @@ packages/mini_program_ui/
 |       |   |-- flashlight/                     # Foreground flashlight control and status actions
 |       |   |-- media/                          # Temporary host-media release actions
 |       |   |-- qr/                             # Local QR rendering and host-controlled scan actions
+|       |   |-- media_playback/                 # Trusted media sources, headless audio actions, and inline video
 |       |   |-- navigation/                     # Navigation and router actions
 |       |   |-- backend/                        # Publisher API actions, nodes, and search
 |       |   |-- auth/                           # Authentication actions and state builder
@@ -226,7 +236,7 @@ packages/mini_program_sdk/
 |   |-- host_runtime/
 |   |   |-- host_state.dart                     # Private State fields plus Flutter lifecycle and build/setState delegates
 |   |   |-- loading.dart                        # Generation-safe initial manifest, screen, renderer, cache, and auth loading
-|   |   |-- policies.dart                       # Cache, state, location, file, camera, flashlight, and QR policy lookup
+|   |   |-- policies.dart                       # Cache, state, device capability, and media-playback policy lookup
 |   |   |-- publisher_backend.dart              # Artifact Publisher API connector creation, ownership, and disposal
 |   |   |-- cache_lifecycle.dart                # Active app cache close and policy cleanup
 |   |   |-- navigation.dart                     # Legacy screen actions, Mp router stack operations, and screen loading
@@ -296,6 +306,8 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_flashlight.dart        # Torch provider, accepted policy, app ownership, and cleanup
 |   |-- qr/
 |   |   `-- mini_program_qr.dart                # QR provider, accepted policy, scan ownership, and result validation
+|   |-- media_playback/
+|   |   `-- mini_program_media_playback.dart    # Provider-neutral audio/video sessions, policy, and app lifecycle manager
 |   |-- state/
 |   |   |-- mp_state.dart                       # Public state/router import boundary and private part registry
 |   |   |-- live_state/
@@ -633,6 +645,7 @@ packages/mini_program_tooling/
 |       |   |   `-- android_integration.dart     # Existing Android network permission planning
 |       |   `-- capabilities/
 |       |       |-- models.dart                  # Capability request, result, and stable exception
+|       |       |-- dispatch.dart                # Thin capability-name routing shared by the public facade
 |       |       |-- location/
 |       |       |   |-- installer.dart           # Android location installation coordinator
 |       |       |   |-- source_files.dart        # Kotlin package, ownership, and installed-state checks
@@ -648,7 +661,8 @@ packages/mini_program_tooling/
 |       |       |-- camera/                      # System-camera, Activity Result, and FileProvider installer modules
 |       |       |-- shared_media/                # App-owned native media registry template shared by camera/files
 |       |       |-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
-|       |       `-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
+|       |       |-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
+|       |       `-- media_playback/              # Shared Android audio/video provider template and idempotent installer
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
 |       |   |-- models.dart                      # Public run/import requests, results, runner, and exception
@@ -1280,13 +1294,13 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 64 unique SDK runtime node types. There are
-68 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 70 public builder entry points when the two aliases are
+The authoring API currently maps to 65 unique SDK runtime node types. There are
+69 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 71 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
-`Mp.qr.scan` are not
-widgets and are excluded from these totals.
+`Mp.qr.scan`, `Mp.audio.*`, and `Mp.video.*` are not widgets and are excluded
+from these totals.
 
 Layout and structure:
 
@@ -1328,6 +1342,7 @@ Display and visualization:
 - `Mp.chip`: renders a compact label that may optionally dispatch an action.
 - `Mp.badge`: renders a small tone-aware status label.
 - `Mp.lineChart`: renders one ordinal numeric series from bound data with points, grid, area, labels, and tooltips.
+- `Mp.videoView`: renders one policy-controlled inline video surface whose source is an artifact asset or accepted Publisher API route.
 - `Mp.skeleton.box`: renders a rectangular loading placeholder.
 - `Mp.skeleton.text`: renders a text-line loading placeholder.
 - `Mp.skeleton.circle`: renders a circular loading placeholder.
@@ -1406,6 +1421,10 @@ Important state APIs include:
   app-owned torch control under separate accepted host policy.
 - `Mp.qr.generate` for bounded cross-platform QR rendering and `Mp.qr.scan`
   for gesture-gated, host-accepted QR-only scanning with inert results.
+- `Mp.audio.play`, `preload`, `pause`, `seek`, `stop`, `getStatus`, and
+  `release` for app-scoped headless audio playback.
+- `Mp.video.play`, `pause`, `seek`, `stop`, `setMuted`, `setVolume`,
+  `setSpeed`, `getStatus`, and `release` for controlling an `Mp.videoView`.
 
 Live state is memory-only and centrally limited by host policy. Defaults are 2 MiB total JSON, 1,000 recursive entries, 256 KiB per top-level namespace, and depth 32. Persistent app data belongs in an accepted cache bucket.
 
@@ -1415,7 +1434,10 @@ The core-Dart math engine supports bounded expression evaluation, comparison, ra
 
 ### Cache
 
-Mini-program-visible cache buckets are `memory`, `data`, `image`, `state`, and `video`. A calculator history, quiz history, preferences, and resumable UI state normally use `state`.
+Mini-program-visible cache buckets are `memory`, `data`, `image`, `state`,
+`audio`, and `video`. A calculator history, quiz history, preferences, and
+resumable UI state normally use `state`. Audio/video buckets are host-owned
+temporary media budgets, not general file storage or an offline-download API.
 
 Host backends can use:
 
@@ -1428,10 +1450,11 @@ TTL, enabled buckets, and byte limits are enforced consistently by the manager. 
 ### Host-Owned Policy
 
 Partner handoff schema version 3 may request cache for `memory`, `data`,
-`image`, `state`, or `video`, may request Publisher API access when the
-artifact declares it, and may request one-time foreground approximate
-location or streaming file transfers. Sensitive bucket/key names such as
-session, login data, token, password, and secret are rejected.
+`image`, `state`, `audio`, or `video`, may request Publisher API access when
+the artifact declares it, and may request one-time foreground approximate
+location, streaming file transfers, or audio/video playback. Sensitive
+bucket/key names such as session, login data, token, password, and secret are
+rejected.
 
 `lib/mini_program/mini_program_policies.json` contains:
 

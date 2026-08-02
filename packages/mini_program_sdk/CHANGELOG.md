@@ -1,3 +1,12 @@
+## 0.6.6
+
+- Add provider-neutral, app-scoped streamed audio and inline video playback
+  sessions with strict artifact/Publisher API source resolution.
+- Enforce host-accepted audio/video policy, expose bounded playback status,
+  and release sessions during mini-program lifecycle cleanup.
+- Add an `audio` runtime cache bucket and per-kind temporary-cache policy while
+  leaving native buffering implementation under host provider control.
+
 ## 0.6.5
 
 - Add cross-platform QR rendering plus provider-neutral, host-policy-controlled

@@ -12,9 +12,11 @@ class EndpointRoutingMiniProgramSource
         MiniProgramCameraPolicyProvider,
         MiniProgramFlashlightPolicyProvider,
         MiniProgramQrPolicyProvider,
+        MiniProgramMediaPlaybackPolicyProvider,
         MiniProgramDeliveryContextProvider,
         MiniProgramPublisherBackendContractSource,
-        MiniProgramJsonAssetSource {
+        MiniProgramJsonAssetSource,
+        MiniProgramMediaAssetSource {
   EndpointRoutingMiniProgramSource({
     required Map<String, MiniProgramEndpoint> endpoints,
     required MiniProgramDeliveryContext deliveryContext,
@@ -64,6 +66,27 @@ class EndpointRoutingMiniProgramSource
     required String assetPath,
   }) {
     return _loadRoutedJsonAsset(
+      miniProgramId: miniProgramId,
+      version: version,
+      assetPath: assetPath,
+    );
+  }
+
+  @override
+  MiniProgramResolvedMediaAsset resolveMediaAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) {
+    final source = _sourceFor(miniProgramId);
+    if (source is! MiniProgramMediaAssetSource) {
+      throw MiniProgramSourceException(
+        message: 'The configured source cannot stream artifact media.',
+        errorCode: MiniProgramErrorCodes.mediaInvalidSource,
+        details: <String, dynamic>{'miniProgramId': miniProgramId},
+      );
+    }
+    return (source as MiniProgramMediaAssetSource).resolveMediaAsset(
       miniProgramId: miniProgramId,
       version: version,
       assetPath: assetPath,
@@ -129,5 +152,10 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramQrPolicy qrPolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).qrPolicy;
+  }
+
+  @override
+  MiniProgramMediaPlaybackPolicy mediaPlaybackPolicyFor(String miniProgramId) {
+    return _endpointFor(miniProgramId).mediaPlaybackPolicy;
   }
 }

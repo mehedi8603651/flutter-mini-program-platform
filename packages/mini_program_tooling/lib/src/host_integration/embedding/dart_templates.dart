@@ -227,6 +227,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
+  MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
   Map<String, MiniProgramEndpoint>? endpoints,
   MiniProgramCacheBundle? cacheBundle,
 }) async {
@@ -238,6 +239,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
+    mediaPlaybackProvider: mediaPlaybackProvider,
     endpoints: endpoints ?? buildMiniProgramEndpoints(),
     cacheBundle: cacheBundle,
   );
@@ -319,6 +321,10 @@ MiniProgramFlashlightPolicy flashlightPolicyForMiniProgram(String appId) {
 MiniProgramQrPolicy qrPolicyForMiniProgram(String appId) {
   return const MiniProgramQrPolicy();
 }
+
+MiniProgramMediaPlaybackPolicy mediaPlaybackPolicyForMiniProgram(String appId) {
+  return const MiniProgramMediaPlaybackPolicy();
+}
 ''';
 }
 
@@ -367,6 +373,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
+  MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
   MiniProgramCacheBundle? cacheBundle,
@@ -384,6 +391,8 @@ MiniProgramConfig buildMiniProgramConfig({
     if (mediaProvider != null) CapabilityIds.mediaPreview,
     if (flashlightProvider != null) CapabilityIds.flashlightControl,
     if (qrScannerProvider != null) CapabilityIds.qrScanner,
+    if (mediaPlaybackProvider != null) CapabilityIds.mediaAudio,
+    if (mediaPlaybackProvider != null) CapabilityIds.mediaVideo,
   };
   final deliveryContext = MiniProgramDeliveryContext(
     hostApp: _hostAppId,
@@ -407,6 +416,7 @@ MiniProgramConfig buildMiniProgramConfig({
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
+    mediaPlaybackProvider: mediaPlaybackProvider,
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     authController: MiniProgramAuthController.secure(),
     disposeAuthController: true,

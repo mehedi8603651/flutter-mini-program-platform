@@ -640,6 +640,11 @@ class MpScreenValidator {
         depth: depth,
         state: state,
       ),
+      'videoView' => _parseVideoViewNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       _ => _unsupportedNode(type, path: path),
     };
   }
@@ -715,6 +720,22 @@ class MpScreenValidator {
       'flashlight.getStatus' => _parseFlashlightAction(type, props, path),
       'media.release' => _parseMediaReleaseAction(type, props, path),
       'qr.scan' => _parseQrScanAction(type, props, path),
+      'audio.play' ||
+      'audio.preload' ||
+      'audio.pause' ||
+      'audio.seek' ||
+      'audio.stop' ||
+      'audio.getStatus' ||
+      'audio.release' ||
+      'video.play' ||
+      'video.pause' ||
+      'video.seek' ||
+      'video.stop' ||
+      'video.setMuted' ||
+      'video.setVolume' ||
+      'video.setSpeed' ||
+      'video.getStatus' ||
+      'video.release' => _parseMediaPlaybackAction(type, props, path),
       'cache.set' => _parseCacheSetAction(type, props, path),
       'cache.get' => _parseCacheGetAction(type, props, path),
       'cache.has' => _parseCacheHasAction(type, props, path),

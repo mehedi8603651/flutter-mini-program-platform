@@ -99,4 +99,16 @@ abstract final class MiniProgramErrorCodes {
   static const String qrInvalidResult = 'qr_invalid_result';
   static const String qrUserGestureRequired = 'qr_user_gesture_required';
   static const String qrOperationFailed = 'qr_operation_failed';
+  static const String mediaNotAccepted = 'media_not_accepted';
+  static const String mediaProviderUnavailable = 'media_provider_unavailable';
+  static const String mediaInvalidSource = 'media_invalid_source';
+  static const String mediaSourceExpired = 'media_source_expired';
+  static const String mediaUnsupportedFormat = 'media_unsupported_format';
+  static const String mediaLoadFailed = 'media_load_failed';
+  static const String mediaNetworkError = 'media_network_error';
+  static const String mediaTimeout = 'media_timeout';
+  static const String mediaPlayerNotFound = 'media_player_not_found';
+  static const String mediaCacheUnavailable = 'media_cache_unavailable';
+  static const String mediaPlaybackFailed = 'media_playback_failed';
+  static const String mediaRequestInProgress = 'media_request_in_progress';
 }

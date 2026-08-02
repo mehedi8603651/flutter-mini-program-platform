@@ -13,9 +13,11 @@ import 'package:mini_program_ui/mini_program_ui.dart';
 
 part 'mp_screen_renderer_test/validator_tests.dart';
 part 'mp_screen_renderer_test/renderer_tests.dart';
+part 'mp_screen_renderer_test/media_playback_tests.dart';
 part 'mp_screen_renderer_test/test_fixtures.dart';
 
 void main() {
   _mpScreenValidatorTests();
   _mpScreenRendererTests();
+  _mpMediaPlaybackTests();
 }

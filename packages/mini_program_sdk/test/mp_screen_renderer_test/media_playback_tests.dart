@@ -1,0 +1,275 @@
+part of '../mp_screen_renderer_test.dart';
+
+void _mpMediaPlaybackTests() {
+  group('media playback', () {
+    test('validator accepts inline video and rejects arbitrary URLs', () {
+      const validator = MpScreenValidator();
+      expect(
+        () => validator.validate(<String, dynamic>{
+          'schemaVersion': 1,
+          'screenId': 'media',
+          'root': <String, dynamic>{
+            'type': 'videoView',
+            'props': <String, dynamic>{
+              'aspectRatio': 16 / 9,
+              'autoplay': false,
+              'cacheMode': 'streaming',
+              'controls': true,
+              'fit': 'contain',
+              'loop': false,
+              'muted': false,
+              'playerId': 'demo',
+              'semanticLabel': 'Product demo',
+              'source': <String, dynamic>{
+                'kind': 'asset',
+                'asset': 'media/demo.mp4',
+              },
+              'speed': 1,
+              'volume': 1,
+            },
+            'children': <Object?>[],
+          },
+        }, expectedScreenId: 'media'),
+        returnsNormally,
+      );
+      expect(
+        () => validator.validate(<String, dynamic>{
+          'schemaVersion': 1,
+          'screenId': 'media',
+          'root': <String, dynamic>{
+            'type': 'videoView',
+            'props': <String, dynamic>{
+              'aspectRatio': 1,
+              'autoplay': false,
+              'cacheMode': 'streaming',
+              'controls': true,
+              'fit': 'contain',
+              'loop': false,
+              'muted': false,
+              'playerId': 'demo',
+              'semanticLabel': 'Demo',
+              'source': <String, dynamic>{
+                'kind': 'asset',
+                'asset': 'https://example.com/demo.mp4',
+              },
+              'speed': 1,
+              'volume': 1,
+            },
+            'children': <Object?>[],
+          },
+        }, expectedScreenId: 'media'),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+    });
+
+    testWidgets('audio action resolves a trusted source and updates status', (
+      tester,
+    ) async {
+      final provider = _TestPlaybackProvider();
+      final manager = MiniProgramMediaPlaybackManager(provider);
+      final state = MpStateManager();
+      final result = await _runMpAction(
+        tester,
+        Mp.audio
+            .play(
+              audioId: 'notice',
+              source: MpAudioSource.asset('audio/notice.mp3'),
+              statusState: 'audio.status',
+              errorState: 'audio.error',
+            )
+            .toJson(),
+        miniProgramVersion: '1.0.0',
+        stateManager: state,
+        mediaPlaybackManager: manager,
+        mediaPlaybackPolicy: const MiniProgramMediaPlaybackPolicy(
+          audioEnabled: true,
+        ),
+        mediaAssetSource: const _TestMediaAssetSource(),
+      );
+
+      expect(result, isA<HostActionResult>());
+      expect((result! as HostActionResult).isSuccess, isTrue);
+      expect(state.get('audio.status'), 'success');
+      expect(provider.created, 1);
+      expect(
+        provider.lastRequest?.source.candidateUris.single.toString(),
+        'https://assets.example/audio/notice.mp3',
+      );
+      await manager.dispose();
+    });
+
+    testWidgets('host policy denial preserves target state', (tester) async {
+      final state = MpStateManager()..set('audio.status', 'old');
+      final result = await _runMpAction(
+        tester,
+        Mp.audio
+            .play(
+              audioId: 'notice',
+              source: MpAudioSource.asset('audio/notice.mp3'),
+              statusState: 'audio.runtime',
+              errorState: 'audio.error',
+            )
+            .toJson(),
+        stateManager: state,
+      );
+
+      expect(
+        (result! as HostActionResult).errorCode,
+        MiniProgramErrorCodes.mediaNotAccepted,
+      );
+      expect(state.get('audio.status'), 'old');
+      expect(state.get('audio.runtime'), 'error');
+    });
+
+    test('release invalidates an in-flight player load', () async {
+      final provider = _DelayedPlaybackProvider();
+      final manager = MiniProgramMediaPlaybackManager(provider);
+      final load = manager.load(_testPlaybackRequest(sourceKey: 'first'));
+      await provider.started.future;
+
+      expect(await manager.release('media-app', 'player'), isTrue);
+      final session = _TestPlaybackSession(
+        _testPlaybackRequest(sourceKey: 'first'),
+      );
+      provider.completer.complete(session);
+
+      await expectLater(
+        load,
+        throwsA(
+          isA<MiniProgramMediaPlaybackException>().having(
+            (error) => error.errorCode,
+            'errorCode',
+            MiniProgramErrorCodes.mediaSourceExpired,
+          ),
+        ),
+      );
+      expect(session.disposed, isTrue);
+      expect(manager.sessionFor('media-app', 'player'), isNull);
+      await manager.dispose();
+    });
+  });
+}
+
+MiniProgramMediaPlaybackRequest _testPlaybackRequest({
+  required String sourceKey,
+}) => MiniProgramMediaPlaybackRequest(
+  miniProgramId: 'media-app',
+  playerId: 'player',
+  kind: MiniProgramMediaPlaybackKind.audio,
+  sourceKey: sourceKey,
+  source: MiniProgramResolvedPlaybackSource(
+    candidateUris: <Uri>[Uri.parse('https://assets.example/audio.mp3')],
+  ),
+  cacheMode: MiniProgramMediaCacheMode.streaming,
+  autoplay: false,
+  loop: false,
+  volume: 1,
+  speed: 1,
+  muted: false,
+);
+
+class _TestPlaybackProvider implements MiniProgramMediaPlaybackProvider {
+  int created = 0;
+  MiniProgramMediaPlaybackRequest? lastRequest;
+
+  @override
+  Future<MiniProgramMediaPlaybackSession> createSession(
+    MiniProgramMediaPlaybackRequest request,
+  ) async {
+    created++;
+    lastRequest = request;
+    return _TestPlaybackSession(request);
+  }
+}
+
+class _TestPlaybackSession extends ChangeNotifier
+    implements MiniProgramMediaPlaybackSession {
+  _TestPlaybackSession(this.request);
+
+  final MiniProgramMediaPlaybackRequest request;
+  var status = MiniProgramMediaPlaybackStatus.ready;
+  bool disposed = false;
+
+  @override
+  String get sourceKey => request.sourceKey;
+
+  @override
+  MiniProgramMediaPlaybackSnapshot get snapshot =>
+      MiniProgramMediaPlaybackSnapshot(
+        playerId: request.playerId,
+        kind: request.kind,
+        status: status,
+        volume: request.volume,
+        speed: request.speed,
+        muted: request.muted,
+      );
+
+  @override
+  Widget buildVideoView({
+    required BoxFit fit,
+    required bool controls,
+    required String semanticLabel,
+  }) => const SizedBox.shrink();
+
+  @override
+  Future<void> play() async {
+    status = MiniProgramMediaPlaybackStatus.playing;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> pause() async {
+    status = MiniProgramMediaPlaybackStatus.paused;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> seek(Duration position) async {}
+
+  @override
+  Future<void> stop() async {
+    status = MiniProgramMediaPlaybackStatus.ready;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setMuted(bool muted) async {}
+
+  @override
+  Future<void> setVolume(double volume) async {}
+
+  @override
+  Future<void> setSpeed(double speed) async {}
+
+  @override
+  Future<void> dispose() async {
+    disposed = true;
+    super.dispose();
+  }
+}
+
+class _DelayedPlaybackProvider implements MiniProgramMediaPlaybackProvider {
+  final started = Completer<void>();
+  final completer = Completer<MiniProgramMediaPlaybackSession>();
+
+  @override
+  Future<MiniProgramMediaPlaybackSession> createSession(
+    MiniProgramMediaPlaybackRequest request,
+  ) {
+    started.complete();
+    return completer.future;
+  }
+}
+
+class _TestMediaAssetSource implements MiniProgramMediaAssetSource {
+  const _TestMediaAssetSource();
+
+  @override
+  MiniProgramResolvedMediaAsset resolveMediaAsset({
+    required String miniProgramId,
+    required String version,
+    required String assetPath,
+  }) => MiniProgramResolvedMediaAsset(
+    candidateUris: <Uri>[Uri.parse('https://assets.example/$assetPath')],
+  );
+}

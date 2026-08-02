@@ -136,6 +136,18 @@ It owns its torch while scanning, returns inert data, never opens scanned
 URLs, and leaves every mini-program denied until its `permissions.qrScanner`
 policy is accepted.
 
+For Android apps that request streamed audio or inline video, install the
+shared playback provider once using either command:
+
+```bash
+miniprogram host capability init audio --platform android
+miniprogram host capability init video --platform android
+```
+
+The generated `video_player` adapter supports headless audio and inline video.
+Audio, video, and temporary cache policy remain denied per mini-program until
+the host accepts the corresponding request.
+
 Rule: host UI opens by `appId`; endpoint config owns static artifact URLs.
 An optional `publisher_backend.json` declares the mini-program's Publisher API,
 while `mini_program_policies.json` records whether the host accepts it. Provider

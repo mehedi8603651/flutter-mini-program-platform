@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.5
+
+- Add trusted artifact and Publisher API audio/video source models.
+- Add headless `Mp.audio` playback actions, inline `Mp.videoView`, and
+  `Mp.video` controls with strict source, player, volume, speed, and cache-mode
+  validation.
+- Add the host-managed `audio` cache bucket alongside existing video policy.
+
 ## 0.2.4
 
 - Add cross-platform `Mp.qr.generate` rendering and host-controlled

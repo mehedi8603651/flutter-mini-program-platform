@@ -26,6 +26,7 @@ class MiniProgramEndpoint {
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
 
   /// Creates a public/static mini-program endpoint.
@@ -45,6 +46,7 @@ class MiniProgramEndpoint {
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
 
   final Uri apiBaseUri;
@@ -59,4 +61,5 @@ class MiniProgramEndpoint {
   final MiniProgramCameraPolicy cameraPolicy;
   final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramQrPolicy qrPolicy;
+  final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
 }

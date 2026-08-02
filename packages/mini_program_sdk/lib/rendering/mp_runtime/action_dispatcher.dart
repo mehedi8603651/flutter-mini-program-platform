@@ -212,6 +212,26 @@ abstract final class _MpActionDispatcher {
           props,
           userGesture: callContext.userGesture,
         ),
+        'audio.play' ||
+        'audio.preload' ||
+        'audio.pause' ||
+        'audio.seek' ||
+        'audio.stop' ||
+        'audio.getStatus' ||
+        'audio.release' ||
+        'video.play' ||
+        'video.pause' ||
+        'video.seek' ||
+        'video.stop' ||
+        'video.setMuted' ||
+        'video.setVolume' ||
+        'video.setSpeed' ||
+        'video.getStatus' ||
+        'video.release' => _MpMediaPlaybackActionHandler._run(
+          scope,
+          action.type,
+          props,
+        ),
         'cache.set' => _MpCacheActionHandler._cacheSet(scope, props),
         'cache.get' => _MpCacheActionHandler._cacheGet(scope, props),
         'cache.has' => _MpCacheActionHandler._cacheHas(scope, props),

@@ -144,3 +144,16 @@ and constrained by accepted MIME types, destinations, concurrency, free-space
 reserve, and an optional maximum file size. Live state contains only bounded
 progress and sanitized result metadata; providers must never return native
 paths or content URIs.
+
+## Optional Media Playback
+
+`MiniProgramMediaPlaybackProvider` supplies app-scoped foreground audio and
+inline video sessions. The SDK resolves only artifact assets or relative
+Publisher API routes, keeps URLs and authorization headers outside live state,
+and releases every session when its mini-program closes.
+
+Hosts decide audio and video independently through
+`MiniProgramMediaPlaybackPolicy`. A `temporary` cache request also requires the
+matching accepted audio/video cache policy. Phase 1 treats cache parameters as
+provider hints; persistent HLS segment download and offline playback are not
+part of this release.

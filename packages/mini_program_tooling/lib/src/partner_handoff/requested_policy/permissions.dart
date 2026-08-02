@@ -15,7 +15,9 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'files' &&
         entry.key != 'camera' &&
         entry.key != 'flashlight' &&
-        entry.key != 'qrScanner') {
+        entry.key != 'qrScanner' &&
+        entry.key != 'audioPlayback' &&
+        entry.key != 'videoPlayback') {
       throw MiniProgramPartnerHandoffException(
         'MiniProgram partner handoff requestedPermissions contains an '
         'unsupported permission: ${entry.key}.',
@@ -35,6 +37,13 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'qrScanner') {
       normalized['qrScanner'] = _normalizeRequestedQrScanner(entry.value);
+      continue;
+    }
+    if (entry.key == 'audioPlayback' || entry.key == 'videoPlayback') {
+      normalized[entry.key as String] = _normalizeRequestedPlayback(
+        entry.value,
+        entry.key as String,
+      );
       continue;
     }
     final value = entry.value;
@@ -88,6 +97,38 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         });
   }
   return Map<String, Object?>.unmodifiable(normalized);
+}
+
+Map<String, Object?> _normalizeRequestedPlayback(
+  Object? raw,
+  String permission,
+) {
+  if (raw is! Map) {
+    throw MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.$permission must be an object.',
+    );
+  }
+  const allowedKeys = <String>{'enabled', 'reason'};
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.$permission '
+        'contains an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  if (enabled is! bool) {
+    throw MiniProgramPartnerHandoffException(
+      'requestedPermissions.$permission.enabled must be a boolean.',
+    );
+  }
+  final reason = raw['reason'];
+  _validateRequestedPermissionReason(reason, permission);
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': (reason! as String).trim(),
+  });
 }
 
 Map<String, Object?> _normalizeRequestedQrScanner(Object? raw) {

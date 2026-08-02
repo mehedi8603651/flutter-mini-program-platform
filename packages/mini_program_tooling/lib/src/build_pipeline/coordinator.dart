@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'commands.dart';
 import 'data_assets.dart';
 import 'manifest.dart';
+import 'media_assets.dart';
 import 'models.dart';
 import 'paths.dart';
 import 'process.dart';
@@ -54,6 +55,10 @@ Future<MiniProgramBuildResult> buildMiniProgramDevelopmentOutput(
       screenSchemaVersion: manifest.screenSchemaVersion,
     );
     await validateMiniProgramBuildJsonDataAssets(
+      screensDirectoryPath: paths.screensDirectoryPath,
+      assetsDirectoryPath: paths.assetsDirectoryPath,
+    );
+    await validateMiniProgramBuildMediaAssets(
       screensDirectoryPath: paths.screensDirectoryPath,
       assetsDirectoryPath: paths.assetsDirectoryPath,
     );

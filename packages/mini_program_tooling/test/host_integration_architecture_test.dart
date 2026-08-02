@@ -31,6 +31,7 @@ void main() {
         'capabilities/camera/installer.dart',
         'capabilities/camera/source_editors.dart',
         'capabilities/camera/source_files.dart',
+        'capabilities/dispatch.dart',
         'capabilities/file_transfer/android_channel_template.dart',
         'capabilities/file_transfer/dart_provider_template.dart',
         'capabilities/file_transfer/installer.dart',
@@ -46,6 +47,9 @@ void main() {
         'capabilities/location/installer.dart',
         'capabilities/location/source_editors.dart',
         'capabilities/location/source_files.dart',
+        'capabilities/media_playback/dart_provider_template.dart',
+        'capabilities/media_playback/installer.dart',
+        'capabilities/media_playback/source_editors.dart',
         'capabilities/models.dart',
         'capabilities/qr/android_channel_template.dart',
         'capabilities/qr/dart_provider_template.dart',
@@ -123,9 +127,7 @@ void main() {
     );
     expect(
       capabilityFacade.readAsStringSync(),
-      contains(
-        'location_capability.initializeMiniProgramHostCapability(request)',
-      ),
+      contains('capabilities.dispatchHostCapability(request)'),
     );
   });
 }

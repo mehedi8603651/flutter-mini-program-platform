@@ -9,6 +9,7 @@ const Set<String> _allowedCacheBuckets = <String>{
   'data',
   'image',
   'state',
+  'audio',
   'video',
 };
 
@@ -30,6 +31,9 @@ final class MpCacheActions {
 
   /// Mini-program UI state cache, such as calculator history or selected tabs.
   MpCacheBucketActions get state => const MpCacheBucketActions._('state');
+
+  /// Audio metadata or audio-related cache controlled by host policy.
+  MpCacheBucketActions get audio => const MpCacheBucketActions._('audio');
 
   /// Video metadata or video-related cache controlled by host policy.
   MpCacheBucketActions get video => const MpCacheBucketActions._('video');
@@ -202,7 +206,7 @@ String _cacheBucket(String value) {
     throw ArgumentError.value(
       value,
       'bucket',
-      'Mp cache bucket must be memory, data, image, state, or video.',
+      'Mp cache bucket must be memory, data, image, state, audio, or video.',
     );
   }
   return normalized;

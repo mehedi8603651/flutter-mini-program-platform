@@ -204,6 +204,7 @@ const Set<MiniProgramCacheBucket> _defaultPersistentBuckets =
     <MiniProgramCacheBucket>{
       MiniProgramCacheBucket.data,
       MiniProgramCacheBucket.image,
+      MiniProgramCacheBucket.audio,
       MiniProgramCacheBucket.state,
       MiniProgramCacheBucket.video,
     };

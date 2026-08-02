@@ -6,6 +6,7 @@ const Set<String> allowedPartnerHandoffCacheBuckets = <String>{
   'data',
   'image',
   'state',
+  'audio',
   'video',
 };
 

@@ -50,6 +50,7 @@ class _MpNodeView extends StatelessWidget {
       ),
       'image' => _MpImage(node: node, bindings: bindings),
       'qrCode' => _MpQrCode(node: node, bindings: bindings),
+      'videoView' => _MpVideoView(node: node, bindings: bindings),
       'lazy' => _MpLazySection(node: node, bindings: bindings),
       'lazyChunk' => _MpLazyChunk(node: node, bindings: bindings),
       'initialize' => _MpInitialize(node: node, bindings: bindings),

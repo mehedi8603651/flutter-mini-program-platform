@@ -67,6 +67,7 @@ class MiniProgramCacheMetadata {
     required this.totalBytes,
     required this.dataBytes,
     required this.imageBytes,
+    this.audioBytes = 0,
     required this.videoBytes,
     required this.sessionBytes,
     required this.stateBytes,
@@ -79,6 +80,7 @@ class MiniProgramCacheMetadata {
   final int totalBytes;
   final int dataBytes;
   final int imageBytes;
+  final int audioBytes;
   final int videoBytes;
   final int sessionBytes;
   final int stateBytes;
@@ -90,6 +92,7 @@ class MiniProgramCacheMetadata {
     int? totalBytes,
     int? dataBytes,
     int? imageBytes,
+    int? audioBytes,
     int? videoBytes,
     int? sessionBytes,
     int? stateBytes,
@@ -102,6 +105,7 @@ class MiniProgramCacheMetadata {
       totalBytes: totalBytes ?? this.totalBytes,
       dataBytes: dataBytes ?? this.dataBytes,
       imageBytes: imageBytes ?? this.imageBytes,
+      audioBytes: audioBytes ?? this.audioBytes,
       videoBytes: videoBytes ?? this.videoBytes,
       sessionBytes: sessionBytes ?? this.sessionBytes,
       stateBytes: stateBytes ?? this.stateBytes,

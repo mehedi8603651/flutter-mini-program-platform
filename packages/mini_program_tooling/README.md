@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.3` generates mini-program projects against
-`mini_program_ui: ^0.2.4` and Flutter host projects against
-`mini_program_sdk: ^0.6.5`.
+Tooling `0.7.4` generates mini-program projects against
+`mini_program_ui: ^0.2.5` and Flutter host projects against
+`mini_program_sdk: ^0.6.6`.
 
 The CLI supports the current MVP architecture:
 
@@ -374,6 +374,22 @@ The installer adds the camera permission, CameraX preview/analysis, bundled ML
 Kit QR-only detection, a host-owned MethodChannel adapter, and generated host
 setup wiring. It is idempotent and does not accept policy for any app. The
 scanner controls its own torch and never opens scanned URLs.
+
+A handoff may independently request `requestedPermissions.audioPlayback` and
+`requestedPermissions.videoPlayback`, plus `requestedCache.audio` or
+`requestedCache.video`. All new permissions default to denied. Install the
+shared Android playback adapter using either command:
+
+```powershell
+miniprogram host capability init audio --platform android --project-root .
+miniprogram host capability init video --platform android --project-root .
+```
+
+Both commands install the same idempotent `video_player` adapter. It provides
+headless streamed audio and inline MP4/HLS video through Android Media3 while
+the host policy still enables each mini-program and media kind separately.
+Phase 1 passes temporary-cache limits to the provider but does not add durable
+offline media downloads.
 
 ### 3. Add An Endpoint Manually
 

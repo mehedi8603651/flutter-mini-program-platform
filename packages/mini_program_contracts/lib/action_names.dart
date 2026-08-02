@@ -21,4 +21,20 @@ abstract final class ActionNames {
   static const String flashlightToggle = 'flashlight.toggle';
   static const String flashlightGetStatus = 'flashlight.getStatus';
   static const String qrScan = 'qr.scan';
+  static const String audioPlay = 'audio.play';
+  static const String audioPause = 'audio.pause';
+  static const String audioSeek = 'audio.seek';
+  static const String audioStop = 'audio.stop';
+  static const String audioGetStatus = 'audio.getStatus';
+  static const String audioPreload = 'audio.preload';
+  static const String audioRelease = 'audio.release';
+  static const String videoPlay = 'video.play';
+  static const String videoPause = 'video.pause';
+  static const String videoSeek = 'video.seek';
+  static const String videoStop = 'video.stop';
+  static const String videoSetMuted = 'video.setMuted';
+  static const String videoSetVolume = 'video.setVolume';
+  static const String videoSetSpeed = 'video.setSpeed';
+  static const String videoGetStatus = 'video.getStatus';
+  static const String videoRelease = 'video.release';
 }

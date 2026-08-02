@@ -10,6 +10,7 @@ import 'flashlight/mini_program_flashlight.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
 import 'media/mini_program_media.dart';
+import 'media_playback/mini_program_media_playback.dart';
 import 'mini_program_runtime.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
@@ -29,6 +30,7 @@ class MiniProgramConfig {
     this.fileTransferProvider,
     this.cameraProvider,
     this.mediaProvider,
+    this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
     this.authController,
@@ -54,6 +56,7 @@ class MiniProgramConfig {
   final MiniProgramFileTransferProvider? fileTransferProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramMediaProvider? mediaProvider;
+  final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
   final MiniProgramAuthController? authController;
@@ -75,6 +78,7 @@ class MiniProgramConfig {
       fileTransferProvider: fileTransferProvider,
       cameraProvider: cameraProvider,
       mediaProvider: mediaProvider,
+      mediaPlaybackProvider: mediaPlaybackProvider,
       flashlightProvider: flashlightProvider,
       qrScannerProvider: qrScannerProvider,
       authController: authController,

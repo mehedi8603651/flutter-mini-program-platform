@@ -28,7 +28,7 @@ void _registerCoreAndPreviewTests() {
       expect(
         output,
         contains(
-          'host capability init <location|file|camera|flashlight|qr> '
+          'host capability init <location|file|camera|flashlight|qr|audio|video> '
           '--platform android',
         ),
       );
@@ -188,7 +188,7 @@ void _registerCoreAndPreviewTests() {
 
       expect(exitCode, 0);
       final json = jsonDecode(stdoutBuffer.toString()) as Map<String, dynamic>;
-      expect(json['toolingVersion'], '0.7.3');
+      expect(json['toolingVersion'], '0.7.4');
       final capabilities = (json['capabilityIds'] as List).cast<String>();
       expect(capabilities, contains('publish.static'));
       expect(capabilities, contains('publisher_api.mock.scaffold'));

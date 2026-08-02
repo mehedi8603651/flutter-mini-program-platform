@@ -19,6 +19,7 @@ Future<void> _openCacheApp(
         totalBytes: 0,
         dataBytes: 0,
         imageBytes: 0,
+        audioBytes: 0,
         videoBytes: 0,
         sessionBytes: 0,
         stateBytes: 0,

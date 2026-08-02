@@ -16,6 +16,7 @@ export 'data/mini_program_data_resource.dart';
 export 'host_bridge.dart';
 export 'location/mini_program_location.dart';
 export 'media/mini_program_media.dart';
+export 'media_playback/mini_program_media_playback.dart';
 export 'manifest_loader.dart';
 export 'mini_program_config.dart';
 export 'mini_program_controller.dart';

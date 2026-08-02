@@ -1,3 +1,12 @@
+## 0.7.4
+
+- Import requested audio/video playback permissions with safe default denial
+  and generate accepted media playback plus audio/video cache policy.
+- Add idempotent Android `audio` and `video` capability initialization backed
+  by one host-owned `video_player` adapter for headless audio and inline video.
+- Generate mini-programs against UI `0.2.5` and hosts/preview hosts against
+  contracts `0.3.11` and SDK `0.6.6`.
+
 ## 0.7.3
 
 - Import host-owned `qrScanner` policy and add an idempotent Android QR

@@ -6,6 +6,7 @@ const List<String> hostPolicyCacheBucketOrder = <String>[
   'data',
   'image',
   'state',
+  'audio',
   'video',
 ];
 
@@ -230,6 +231,48 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('      return const MiniProgramQrPolicy();')
     ..writeln('  }')
     ..writeln('}')
+    ..writeln()
+    ..writeln(
+      'MiniProgramMediaPlaybackPolicy mediaPlaybackPolicyForMiniProgram(',
+    )
+    ..writeln('  String appId,')
+    ..writeln(') {')
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final cache = hostJsonObjectOrEmpty(accepted['cache']);
+    final audio = permissions['audioPlayback'] is Map
+        ? hostJsonObjectOrEmpty(permissions['audioPlayback'])
+        : const <String, Object?>{'enabled': false};
+    final video = permissions['videoPlayback'] is Map
+        ? hostJsonObjectOrEmpty(permissions['videoPlayback'])
+        : const <String, Object?>{'enabled': false};
+    final audioCache = cache['audio'] is Map
+        ? hostJsonObjectOrEmpty(cache['audio'])
+        : const <String, Object?>{'enabled': false};
+    final videoCache = cache['video'] is Map
+        ? hostJsonObjectOrEmpty(cache['video'])
+        : const <String, Object?>{'enabled': false};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramMediaPlaybackPolicy('
+        'audioEnabled: ${audio['enabled'] == true}, '
+        'videoEnabled: ${video['enabled'] == true}, '
+        'audioTemporaryCacheEnabled: ${audioCache['enabled'] == true}, '
+        'videoTemporaryCacheEnabled: ${videoCache['enabled'] == true});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramMediaPlaybackPolicy();')
+    ..writeln('  }')
+    ..writeln('}')
     ..writeln();
   return buffer.toString();
 }
@@ -321,6 +364,7 @@ String? _hostCacheMaxField(String bucket) {
     'data' => 'maxDataBytes',
     'image' => 'maxImageBytes',
     'state' => 'maxStateBytes',
+    'audio' => 'maxAudioBytes',
     'video' => 'maxVideoBytes',
     _ => null,
   };
@@ -332,6 +376,7 @@ String? _hostCacheTtlField(String bucket) {
     'data' => 'dataTtl',
     'image' => 'imageTtl',
     'state' => 'stateInactiveTtl',
+    'audio' => 'audioTtl',
     'video' => 'videoTtl',
     _ => null,
   };

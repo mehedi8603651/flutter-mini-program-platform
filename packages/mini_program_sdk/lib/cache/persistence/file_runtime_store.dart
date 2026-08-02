@@ -231,5 +231,6 @@ class FileMiniProgramCacheStore implements MiniProgramIndexedCacheStore {
 const Set<MiniProgramCacheBucket> _defaultPersistentBuckets =
     <MiniProgramCacheBucket>{
       MiniProgramCacheBucket.data,
+      MiniProgramCacheBucket.audio,
       MiniProgramCacheBucket.state,
     };

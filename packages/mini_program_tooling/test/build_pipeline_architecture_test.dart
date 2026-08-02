@@ -30,6 +30,7 @@ void main() {
         'coordinator.dart',
         'data_assets.dart',
         'manifest.dart',
+        'media_assets.dart',
         'models.dart',
         'paths.dart',
         'process.dart',

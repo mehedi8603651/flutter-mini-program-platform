@@ -11,6 +11,7 @@ import 'file/mini_program_file.dart';
 import 'flashlight/mini_program_flashlight.dart';
 import 'location/mini_program_location.dart';
 import 'media/mini_program_media.dart';
+import 'media_playback/mini_program_media_playback.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
@@ -66,6 +67,9 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.filePolicy = const MiniProgramFilePolicy(),
     this.cameraManager,
     this.mediaManager,
+    this.mediaPlaybackManager,
+    this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
+    this.mediaAssetSource,
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightManager,
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
@@ -101,6 +105,9 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramFilePolicy filePolicy;
   final MiniProgramCameraManager? cameraManager;
   final MiniProgramMediaManager? mediaManager;
+  final MiniProgramMediaPlaybackManager? mediaPlaybackManager;
+  final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
+  final MiniProgramMediaAssetSource? mediaAssetSource;
   final MiniProgramCameraPolicy cameraPolicy;
   final MiniProgramFlashlightManager? flashlightManager;
   final MiniProgramFlashlightPolicy flashlightPolicy;
@@ -147,6 +154,9 @@ class MiniProgramSdkScope extends InheritedWidget {
         filePolicy != oldWidget.filePolicy ||
         cameraManager != oldWidget.cameraManager ||
         mediaManager != oldWidget.mediaManager ||
+        mediaPlaybackManager != oldWidget.mediaPlaybackManager ||
+        mediaPlaybackPolicy != oldWidget.mediaPlaybackPolicy ||
+        mediaAssetSource != oldWidget.mediaAssetSource ||
         cameraPolicy != oldWidget.cameraPolicy ||
         flashlightManager != oldWidget.flashlightManager ||
         flashlightPolicy != oldWidget.flashlightPolicy ||

@@ -10,6 +10,7 @@ import '../shared/data_assets.dart';
 import '../shared/document_validation.dart';
 import '../shared/files.dart';
 import '../shared/json_io.dart';
+import '../shared/media_assets.dart';
 import '../shared/paths.dart';
 import 'catalog.dart';
 import 'checksums.dart';
@@ -151,6 +152,10 @@ Future<MiniProgramArtifactBuildResult> buildPortableMiniProgramArtifact(
       );
     }
     await validateReferencedArtifactJsonAssets(
+      screenFiles: screenFiles,
+      assetsRoot: assetsTarget,
+    );
+    await validateReferencedArtifactMediaAssets(
       screenFiles: screenFiles,
       assetsRoot: assetsTarget,
     );

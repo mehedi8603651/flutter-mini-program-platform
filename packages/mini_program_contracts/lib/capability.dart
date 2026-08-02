@@ -22,6 +22,9 @@ abstract final class CapabilityIds {
   /// Host opted into video playback feature support.
   static const CapabilityId mediaVideo = 'media.video';
 
+  /// Host opted into foreground streamed audio playback support.
+  static const CapabilityId mediaAudio = 'media.audio';
+
   /// Host opted into PDF or document viewing feature support.
   static const CapabilityId documentPdf = 'document.pdf';
 
@@ -56,6 +59,7 @@ abstract final class CapabilityIds {
     secureApi,
     nativeNavigation,
     mediaVideo,
+    mediaAudio,
     documentPdf,
     browserWebview,
     locationCurrent,

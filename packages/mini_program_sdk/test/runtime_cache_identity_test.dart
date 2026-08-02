@@ -147,6 +147,7 @@ void main() {
       'data',
       'image',
       'state',
+      'audio',
       'video',
     ]);
     expect(json.toString(), isNot(contains('session')));
@@ -169,7 +170,7 @@ void main() {
     expect(manager.store, same(store));
     expect(cache.appId, 'public_api');
     expect(const MiniProgramCachePolicy(), isA<MiniProgramCachePolicy>());
-    expect(MiniProgramCacheBucket.values, hasLength(6));
+    expect(MiniProgramCacheBucket.values, hasLength(7));
     expect(MiniProgramCacheStorage.values, hasLength(5));
     expect(MiniProgramCachePriority.values, hasLength(4));
   });

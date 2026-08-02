@@ -462,6 +462,14 @@ void main() {
               'reason': 'Scan QR codes.',
               'allowTorch': true,
             },
+            'audioPlayback': <String, Object?>{
+              'enabled': true,
+              'reason': 'Play lesson audio.',
+            },
+            'videoPlayback': <String, Object?>{
+              'enabled': true,
+              'reason': 'Play product videos.',
+            },
           },
         );
         final result = await controller.addEndpoint(request);
@@ -481,6 +489,12 @@ void main() {
         expect(permissions['flashlight'], <String, dynamic>{'enabled': false});
         expect(permissions['qrScanner'], <String, dynamic>{
           'allowTorch': false,
+          'enabled': false,
+        });
+        expect(permissions['audioPlayback'], <String, dynamic>{
+          'enabled': false,
+        });
+        expect(permissions['videoPlayback'], <String, dynamic>{
           'enabled': false,
         });
 
@@ -508,6 +522,8 @@ void main() {
           'allowTorch': true,
           'enabled': true,
         });
+        expect(permissions['audioPlayback'], containsPair('enabled', true));
+        expect(permissions['videoPlayback'], containsPair('enabled', true));
 
         final endpoints = await File(result.filePath).readAsString();
         expect(endpoints, contains('cameraPolicy: cameraPolicyForMiniProgram'));
@@ -516,12 +532,17 @@ void main() {
           contains('flashlightPolicy: flashlightPolicyForMiniProgram'),
         );
         expect(endpoints, contains('qrPolicy: qrPolicyForMiniProgram'));
+        expect(
+          endpoints,
+          contains('mediaPlaybackPolicy: mediaPlaybackPolicyForMiniProgram'),
+        );
         final resolver = await File(
           result.policyResolverFilePath,
         ).readAsString();
         expect(resolver, contains('MiniProgramCameraPolicy'));
         expect(resolver, contains('MiniProgramFlashlightPolicy'));
         expect(resolver, contains('MiniProgramQrPolicy'));
+        expect(resolver, contains('MiniProgramMediaPlaybackPolicy'));
       },
     );
 
@@ -742,13 +763,13 @@ void main() {
 
       expect(digests, <String, String>{
         'endpoints':
-            'c6a5c348067a4f75597bf70edb7b4cae125f012857a9a77e5e3ee0107f17130f',
+            'ec577604c380ffe5a4dee3a89dbb78d192048de1a1759b4728d100038df186f7',
         'registry':
             'c9352bd447397efb77696c2b2efbcd17fb951c3807a36c6faef7f4d79dbd11c3',
         'policies':
             'f198f00ae5bfb85f7463def7b3515773d192c03b2187d5a6c5d687abae9db990',
         'resolver':
-            'bdafcf9dd2355bee9358f564212ef7760ceb63422c385161554e1997d2f19cc1',
+            '53cb8152c9e115610bbb794b37908e30837f0bc43495d5c14c98b81ee48fbba2',
       });
     });
   });

@@ -11,6 +11,7 @@ import 'flashlight/mini_program_flashlight.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
 import 'media/mini_program_media.dart';
+import 'media_playback/mini_program_media_playback.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
@@ -32,6 +33,7 @@ class MiniProgramRuntime {
     this.fileTransferProvider,
     this.cameraProvider,
     this.mediaProvider,
+    this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
     this.authController,
@@ -51,6 +53,7 @@ class MiniProgramRuntime {
   final MiniProgramFileTransferProvider? fileTransferProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramMediaProvider? mediaProvider;
+  final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
   final MiniProgramAuthController? authController;
@@ -71,6 +74,7 @@ class MiniProgramRuntime {
     MiniProgramFileTransferProvider? fileTransferProvider,
     MiniProgramCameraProvider? cameraProvider,
     MiniProgramMediaProvider? mediaProvider,
+    MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
     MiniProgramFlashlightProvider? flashlightProvider,
     MiniProgramQrScannerProvider? qrScannerProvider,
     MiniProgramAuthController? authController,
@@ -91,6 +95,8 @@ class MiniProgramRuntime {
       fileTransferProvider: fileTransferProvider ?? this.fileTransferProvider,
       cameraProvider: cameraProvider ?? this.cameraProvider,
       mediaProvider: mediaProvider ?? this.mediaProvider,
+      mediaPlaybackProvider:
+          mediaPlaybackProvider ?? this.mediaPlaybackProvider,
       flashlightProvider: flashlightProvider ?? this.flashlightProvider,
       qrScannerProvider: qrScannerProvider ?? this.qrScannerProvider,
       authController: authController ?? this.authController,
@@ -161,6 +167,8 @@ class MiniProgramRuntimeScope extends InheritedWidget {
             oldWidget.runtime.fileTransferProvider ||
         runtime.cameraProvider != oldWidget.runtime.cameraProvider ||
         runtime.mediaProvider != oldWidget.runtime.mediaProvider ||
+        runtime.mediaPlaybackProvider !=
+            oldWidget.runtime.mediaPlaybackProvider ||
         runtime.flashlightProvider != oldWidget.runtime.flashlightProvider ||
         runtime.qrScannerProvider != oldWidget.runtime.qrScannerProvider ||
         runtime.authController != oldWidget.runtime.authController ||

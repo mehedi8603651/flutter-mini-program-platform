@@ -44,6 +44,7 @@ void main() {
       'location.dart',
       'math.dart',
       'media.dart',
+      'media_playback.dart',
       'navigation.dart',
       'qr.dart',
       'shared.dart',
