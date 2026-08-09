@@ -107,7 +107,7 @@ extension CliHostPartnerCommands on CliContext {
     if (results.flag('help')) {
       _stdout.writeln(
         'Usage: miniprogram host capability init '
-        '<location|file|camera|flashlight|qr|share|audio|video> '
+        '<location|file|camera|flashlight|display-brightness|qr|share|audio|video> '
         '--platform android [options]',
       );
       _stdout.writeln(parser.usage);
@@ -142,6 +142,7 @@ extension CliHostPartnerCommands on CliContext {
       'file' => 'Android streaming file transfer support',
       'camera' => 'Android delegated system-camera support',
       'flashlight' => 'Android CameraManager flashlight support',
+      'display-brightness' => 'Android temporary window brightness support',
       'qr' => 'Android CameraX and ML Kit QR scanner support',
       'share' => 'Android system share chooser support',
       'audio' => 'Android streamed audio playback support',

@@ -14,6 +14,7 @@ import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'file/mini_program_file.dart';
+import 'display/mini_program_display.dart';
 import 'flashlight/mini_program_flashlight.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
@@ -62,6 +63,7 @@ class MiniProgramHost extends StatefulWidget {
     this.backendConnector,
     this.locationProvider,
     this.fileTransferProvider,
+    this.displayBrightnessProvider,
     this.cameraProvider,
     this.mediaProvider,
     this.mediaPlaybackProvider,
@@ -88,6 +90,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
+  final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;

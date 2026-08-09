@@ -37,6 +37,15 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     return const MiniProgramFilePolicy();
   }
 
+  MiniProgramDisplayBrightnessPolicy _displayBrightnessPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramDisplayBrightnessPolicyProvider) {
+      return (source as MiniProgramDisplayBrightnessPolicyProvider)
+          .displayBrightnessPolicyFor(appId);
+    }
+    return const MiniProgramDisplayBrightnessPolicy();
+  }
+
   MiniProgramCameraPolicy _cameraPolicyFor(String appId) {
     final source = widget.source;
     if (source is MiniProgramCameraPolicyProvider) {

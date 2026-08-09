@@ -92,6 +92,9 @@ String buildHostEndpointFile(
       ..writeln('      qrPolicy: qrPolicyForMiniProgram($mapKey),')
       ..writeln('      sharePolicy: sharePolicyForMiniProgram($mapKey),')
       ..writeln(
+        '      displayBrightnessPolicy: displayBrightnessPolicyForMiniProgram($mapKey),',
+      )
+      ..writeln(
         '      mediaPlaybackPolicy: mediaPlaybackPolicyForMiniProgram($mapKey),',
       )
       ..writeln('      requestTimeout: const Duration(seconds: 20),');

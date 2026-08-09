@@ -14,6 +14,7 @@ const List<String> androidCapabilityRegistrations = <String>[
   'MiniProgramFlashlightChannel.register(flutterEngine)',
   'MiniProgramQrScannerChannel.register(flutterEngine)',
   'MiniProgramShareChannel.register(flutterEngine)',
+  'MiniProgramDisplayBrightnessChannel.register(flutterEngine)',
   'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
 ];
 

@@ -95,6 +95,80 @@ void main() {
     expect(repeated.alreadyInstalled, isTrue);
   });
 
+  test('installs lifecycle-owned Android display brightness support', () async {
+    final installer = const MiniProgramHostCapabilityInstaller();
+    final request = MiniProgramHostCapabilityInitRequest(
+      projectRootPath: hostRootPath,
+      capability: 'display-brightness',
+      platform: 'android',
+    );
+
+    final result = await installer.initialize(request);
+    expect(result.alreadyInstalled, isFalse);
+
+    final providerSource = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'app_android_display_brightness_provider.dart',
+      ),
+    ).readAsString();
+    expect(
+      providerSource,
+      contains('class AppAndroidDisplayBrightnessProvider'),
+    );
+    expect(providerSource, contains("'mini_program/display_brightness'"));
+
+    final hostSetupSource = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_host_setup.dart',
+      ),
+    ).readAsString();
+    expect(hostSetupSource, contains('resolvedDisplayBrightnessProvider'));
+    expect(
+      hostSetupSource,
+      contains('displayBrightnessProvider: resolvedDisplayBrightnessProvider'),
+    );
+
+    final runtimeSetupSource = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    ).readAsString();
+    expect(runtimeSetupSource, contains('CapabilityIds.displayBrightness'));
+    expect(
+      runtimeSetupSource,
+      contains('displayBrightnessProvider: displayBrightnessProvider'),
+    );
+
+    final channelSource = await _nativeGeneratedFile(
+      hostRootPath,
+      'display_brightness',
+      'MiniProgramDisplayBrightnessChannel.kt',
+    ).readAsString();
+    expect(channelSource, contains('attributes.screenBrightness = level'));
+    expect(channelSource, contains('BRIGHTNESS_OVERRIDE_NONE'));
+    expect(channelSource, isNot(contains('Settings.System')));
+
+    final nativeSetupSource = await _nativeSetupFile(
+      hostRootPath,
+    ).readAsString();
+    expect(
+      nativeSetupSource,
+      contains('MiniProgramDisplayBrightnessChannel.register(flutterEngine)'),
+    );
+
+    final repeated = await installer.initialize(request);
+    expect(repeated.alreadyInstalled, isTrue);
+  });
+
   test('installs generic Android one-time location support', () async {
     final result = await const MiniProgramHostCapabilityInstaller().initialize(
       MiniProgramHostCapabilityInitRequest(
@@ -1044,8 +1118,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.6.7
-  mini_program_contracts: ^0.3.12
+  mini_program_sdk: ^0.6.8
+  mini_program_contracts: ^0.3.13
 ''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),

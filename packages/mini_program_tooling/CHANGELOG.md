@@ -1,3 +1,12 @@
+## 0.7.8
+
+- Import temporary display-brightness requests with safe default denial and
+  generate accepted per-app maximum levels for host endpoints.
+- Add idempotent Android display-brightness capability installation backed by
+  a window-only override with automatic restoration and no Android permission.
+- Generate mini-programs against UI `0.2.7` and hosts/preview hosts against
+  contracts `0.3.13` and SDK `0.6.8`.
+
 ## 0.7.7
 
 - Import requested system-share policy with safe default denial and generate

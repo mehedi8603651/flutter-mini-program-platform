@@ -18,6 +18,7 @@ import 'features/controls/button_nodes.dart';
 import 'features/controls/list_tile_nodes.dart';
 import 'features/controls/selection_nodes.dart';
 import 'features/data/data_actions.dart';
+import 'features/display/display_nodes.dart';
 import 'features/feedback/feedback_actions.dart';
 import 'features/file/file_actions.dart';
 import 'features/flashlight/flashlight_actions.dart';
@@ -49,6 +50,7 @@ export 'features/cache/cache_actions.dart'
 export 'features/camera/camera_actions.dart' show MpCameraActions;
 export 'features/composition/action_actions.dart' show MpActionActions;
 export 'features/data/data_actions.dart' show MpDataActions;
+export 'features/display/display_nodes.dart' show MpDisplay;
 export 'features/forms/form_models.dart' show MpOption;
 export 'features/lifecycle/timer_nodes.dart' show MpTimer;
 export 'features/location/location_actions.dart' show MpLocationActions;
@@ -91,6 +93,9 @@ abstract final class Mp {
 
   /// Artifact-local JSON data actions.
   static const data = MpDataActions();
+
+  /// Host-controlled, lifecycle-owned display behavior.
+  static const display = MpDisplay();
 
   /// Host-controlled one-time location actions.
   static const location = MpLocationActions();

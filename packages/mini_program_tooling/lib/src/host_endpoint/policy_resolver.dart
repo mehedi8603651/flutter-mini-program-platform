@@ -270,6 +270,36 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('}')
     ..writeln()
     ..writeln(
+      'MiniProgramDisplayBrightnessPolicy displayBrightnessPolicyForMiniProgram(',
+    )
+    ..writeln('  String appId,')
+    ..writeln(') {')
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final brightness = permissions['displayBrightness'] is Map
+        ? hostJsonObjectOrEmpty(permissions['displayBrightness'])
+        : const <String, Object?>{'enabled': false, 'maxLevel': 1.0};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramDisplayBrightnessPolicy('
+        'enabled: ${brightness['enabled'] == true}, '
+        'maxLevel: ${brightness['maxLevel']});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramDisplayBrightnessPolicy();')
+    ..writeln('  }')
+    ..writeln('}')
+    ..writeln()
+    ..writeln(
       'MiniProgramMediaPlaybackPolicy mediaPlaybackPolicyForMiniProgram(',
     )
     ..writeln('  String appId,')

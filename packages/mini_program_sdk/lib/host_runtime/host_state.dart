@@ -9,6 +9,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   final MiniProgramDataResourceManager _dataResourceManager =
       MiniProgramDataResourceManager();
   MiniProgramFileTransferManager? _fileTransferManager;
+  MiniProgramDisplayBrightnessManager? _displayBrightnessManager;
   MiniProgramMediaManager? _mediaManager;
   MiniProgramMediaPlaybackManager? _mediaPlaybackManager;
   MiniProgramCameraManager? _cameraManager;
@@ -35,6 +36,9 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     WidgetsBinding.instance.addObserver(this);
     _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
     _fileTransferManager = _managerFor(widget.fileTransferProvider);
+    _displayBrightnessManager = _displayBrightnessManagerFor(
+      widget.displayBrightnessProvider,
+    );
     _mediaManager = _mediaManagerFor(widget.mediaProvider);
     _mediaPlaybackManager = _mediaPlaybackManagerFor(
       widget.mediaPlaybackProvider,
@@ -59,6 +63,8 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         widget.backendConnector != oldWidget.backendConnector ||
         widget.locationProvider != oldWidget.locationProvider ||
         widget.fileTransferProvider != oldWidget.fileTransferProvider ||
+        widget.displayBrightnessProvider !=
+            oldWidget.displayBrightnessProvider ||
         widget.cameraProvider != oldWidget.cameraProvider ||
         widget.mediaProvider != oldWidget.mediaProvider ||
         widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider ||
@@ -80,6 +86,13 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       if (widget.fileTransferProvider != oldWidget.fileTransferProvider) {
         unawaited(_fileTransferManager?.dispose());
         _fileTransferManager = _managerFor(widget.fileTransferProvider);
+      }
+      if (widget.displayBrightnessProvider !=
+          oldWidget.displayBrightnessProvider) {
+        unawaited(_displayBrightnessManager?.dispose());
+        _displayBrightnessManager = _displayBrightnessManagerFor(
+          widget.displayBrightnessProvider,
+        );
       }
       if (widget.cameraProvider != oldWidget.cameraProvider ||
           widget.mediaProvider != oldWidget.mediaProvider) {
@@ -126,6 +139,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     final activeAppId = _manifest?.id;
     if (activeAppId != null) {
       unawaited(_fileTransferManager?.cancelAllFor(activeAppId));
+      unawaited(_displayBrightnessManager?.releaseAllFor(activeAppId));
       unawaited(_cameraManager?.releaseAllFor(activeAppId));
       unawaited(_mediaManager?.releaseAllFor(activeAppId));
       unawaited(_flashlightManager?.releaseFor(activeAppId));
@@ -154,6 +168,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     _backendStore.dispose();
     _stateManager.dispose();
     unawaited(_fileTransferManager?.dispose());
+    unawaited(_displayBrightnessManager?.dispose());
     unawaited(_cameraManager?.dispose());
     unawaited(_mediaManager?.dispose());
     unawaited(_flashlightManager?.dispose());
@@ -165,12 +180,17 @@ class _MiniProgramHostState extends State<MiniProgramHost>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_displayBrightnessManager?.resume());
+      return;
+    }
     if (state != AppLifecycleState.inactive &&
         state != AppLifecycleState.hidden &&
         state != AppLifecycleState.paused &&
         state != AppLifecycleState.detached) {
       return;
     }
+    unawaited(_displayBrightnessManager?.suspend());
     final appId = _manifest?.id;
     if (appId != null) {
       unawaited(_mediaPlaybackManager?.pauseAllFor(appId));
@@ -194,6 +214,10 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   ) => provider == null
       ? null
       : MiniProgramCameraManager(provider, mediaManager: mediaManager);
+
+  MiniProgramDisplayBrightnessManager? _displayBrightnessManagerFor(
+    MiniProgramDisplayBrightnessProvider? provider,
+  ) => provider == null ? null : MiniProgramDisplayBrightnessManager(provider);
 
   MiniProgramMediaManager? _mediaManagerFor(
     MiniProgramMediaProvider? provider,

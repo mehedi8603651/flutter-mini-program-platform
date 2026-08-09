@@ -9,6 +9,7 @@ import '../camera/mini_program_camera.dart';
 import '../flashlight/mini_program_flashlight.dart';
 import '../location/mini_program_location.dart';
 import '../file/mini_program_file.dart';
+import '../display/mini_program_display.dart';
 import '../state/mp_state.dart';
 import '../qr/mini_program_qr.dart';
 import '../share/mini_program_share.dart';

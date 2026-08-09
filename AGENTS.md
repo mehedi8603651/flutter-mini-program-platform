@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.12` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.6` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.7` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.7` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.13` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.7` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.8` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.8` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -93,6 +93,10 @@ These are system invariants, not preferences:
     URL, and app-owned opaque media references. The host owns accepted content
     types and limits; native paths, content URIs, bytes, and claims that the
     user completed sharing never enter mini-program state.
+21. Temporary display brightness is an optional host capability owned by a
+    mounted mini-program subtree. The host clamps the requested level and must
+    restore normal system-controlled brightness on unmount, backgrounding,
+    app changes, and host disposal; it never writes global brightness settings.
 
 ## Repository Map
 
@@ -196,6 +200,7 @@ packages/mini_program_ui/
 |       |   |-- forms/                          # Inputs, forms, submit nodes, and `MpOption`
 |       |   |-- charts/                         # Line-chart authoring
 |       |   |-- lifecycle/                      # Initialize, condition, scopes, refresh, and countdown
+|       |   |-- display/                        # Lifecycle-owned temporary host-window brightness
 |       |   |-- state/                          # Memory-state actions
 |       |   |-- math/                           # Restricted math actions
 |       |   |-- cache/                          # Host-managed cache actions
@@ -313,6 +318,8 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_qr.dart                # QR provider, accepted policy, scan ownership, and result validation
 |   |-- share/
 |   |   `-- mini_program_share.dart             # Share provider, accepted content policy, and concurrency guard
+|   |-- display/
+|   |   `-- mini_program_display.dart           # Brightness provider, accepted policy, nesting, and restoration
 |   |-- media_playback/
 |   |   `-- mini_program_media_playback.dart    # Provider-neutral audio/video sessions, policy, and app lifecycle manager
 |   |-- state/
@@ -679,6 +686,7 @@ packages/mini_program_tooling/
 |       |       |-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
 |       |       |-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
 |       |       |-- share/                       # Android chooser, media registry, and host wiring installer
+|       |       |-- display_brightness/          # Window brightness MethodChannel and host wiring installer
 |       |       `-- media_playback/              # Media3 Dart/Kotlin templates, Gradle/MainActivity editors, ownership checks, and installer
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
@@ -1182,6 +1190,7 @@ lib/mini_program/
 |-- app_android_camera_provider.dart            # Optional host-owned delegated system-camera adapter
 |-- app_android_flashlight_provider.dart        # Optional host-owned CameraManager torch adapter
 |-- app_android_qr_scanner_provider.dart        # Optional host-owned QR-only CameraX/ML Kit adapter
+|-- app_android_display_brightness_provider.dart # Optional host-owned window-brightness adapter
 `-- app_host_bridge.dart                        # Host-owned capability implementation; created once and preserved
 ```
 
@@ -1233,6 +1242,14 @@ once per host. It uses Android's chooser, adds no permission or dependency,
 revalidates opaque media ownership, grants only temporary URI access to the
 selected receiving app, and reports only that the chooser opened. Provider
 installation does not accept `permissions.share` for any mini-program.
+
+Android temporary display brightness installs
+`MiniProgramDisplayBrightnessChannel.kt` and a host-owned Dart provider. Run
+`miniprogram host capability init display-brightness --platform android` once
+per host. It modifies only the active activity window, adds no Android
+permission or dependency, and restores system-controlled brightness whenever
+the owning scope ends or the host leaves the foreground. Installation does not
+accept `permissions.displayBrightness` for any mini-program.
 
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
@@ -1340,9 +1357,9 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 65 unique SDK runtime node types. There are
-69 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 71 public builder entry points when the two aliases are
+The authoring API currently maps to 66 unique SDK runtime node types. There are
+70 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 72 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
 `Mp.qr.scan`, `Mp.audio.*`, and `Mp.video.*` are not widgets and are excluded
@@ -1429,6 +1446,9 @@ Dynamic data and lifecycle:
 - `Mp.backendBuilder`: loads one Publisher API request and renders its loading, success, empty, or error content.
 - `Mp.pagedBackendBuilder`: renders Publisher API pagination while preserving loaded items during additional-page failures.
 - `Mp.refreshIndicator`: supplies root-level pull-to-refresh, prevents concurrent refreshes, and preserves existing content on failure.
+- `Mp.display.brightnessScope`: temporarily raises or lowers host-window
+  brightness while its child is mounted, under host policy with automatic
+  restoration.
 
 Aliases do not add runtime node types:
 
@@ -1469,6 +1489,8 @@ Important state APIs include:
   for gesture-gated, host-accepted QR-only scanning with inert results.
 - `Mp.share.open` for gesture-gated host sharing of bounded text, one HTTPS
   URL, and app-owned opaque media references.
+- `Mp.display.brightnessScope` for lifecycle-owned, host-clamped temporary
+  window brightness around QR codes and other inspectable content.
 - `Mp.audio.play`, `preload`, `pause`, `seek`, `stop`, `setVolume`,
   `setSpeed`, `getStatus`, and `release` for app-scoped headless audio
   playback.

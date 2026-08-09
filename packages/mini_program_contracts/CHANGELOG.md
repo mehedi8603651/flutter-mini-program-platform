@@ -1,3 +1,8 @@
+## 0.3.13
+
+- Add the `display.brightness` capability and stable temporary window-
+  brightness policy, availability, validation, and operation failure codes.
+
 ## 0.3.12
 
 - Add the stable `share.open` action, `share.system` capability, chooser-opened

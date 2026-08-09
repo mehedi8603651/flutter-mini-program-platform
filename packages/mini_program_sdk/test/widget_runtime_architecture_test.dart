@@ -42,6 +42,7 @@ void main() {
       'lazy/models.dart',
       'lazy/section.dart',
       'lifecycle/condition_scopes.dart',
+      'lifecycle/brightness_scope.dart',
       'lifecycle/countdown.dart',
       'lifecycle/identity.dart',
       'lifecycle/initialize.dart',

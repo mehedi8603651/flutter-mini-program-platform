@@ -13,6 +13,7 @@ export 'file/mini_program_file.dart';
 export 'camera/mini_program_camera.dart';
 export 'flashlight/mini_program_flashlight.dart';
 export 'data/mini_program_data_resource.dart';
+export 'display/mini_program_display.dart';
 export 'host_bridge.dart';
 export 'location/mini_program_location.dart';
 export 'media/mini_program_media.dart';

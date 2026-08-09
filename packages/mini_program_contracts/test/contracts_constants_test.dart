@@ -13,6 +13,7 @@ void main() {
       expect(CapabilityIds.mediaVideo, 'media.video');
       expect(CapabilityIds.documentPdf, 'document.pdf');
       expect(CapabilityIds.browserWebview, 'browser.webview');
+      expect(CapabilityIds.displayBrightness, 'display.brightness');
       expect(Capability.auth.wireValue, 'auth');
       expect(Capability.analytics.wireValue, 'analytics');
       expect(Capability.secureApi.wireValue, 'secure_api');
@@ -120,6 +121,22 @@ void main() {
       );
       expect(MiniProgramErrorCodes.dataInvalidQuery, 'data_invalid_query');
       expect(MiniProgramErrorCodes.dataSearchFailed, 'data_search_failed');
+      expect(
+        MiniProgramErrorCodes.displayBrightnessNotAccepted,
+        'display_brightness_not_accepted',
+      );
+      expect(
+        MiniProgramErrorCodes.displayBrightnessUnavailable,
+        'display_brightness_unavailable',
+      );
+      expect(
+        MiniProgramErrorCodes.displayBrightnessInvalidLevel,
+        'display_brightness_invalid_level',
+      );
+      expect(
+        MiniProgramErrorCodes.displayBrightnessOperationFailed,
+        'display_brightness_operation_failed',
+      );
     });
 
     test('Publisher API header and error values stay stable', () {

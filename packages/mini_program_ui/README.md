@@ -415,6 +415,27 @@ such as delegated camera results. The result is
 target or completed sharing. Native paths, content URIs, and raw bytes are
 never accepted.
 
+## Temporary Display Brightness
+
+Use a lifecycle scope around content such as an on-screen QR code. The host
+may deny or clamp the request and always owns restoration.
+
+```dart
+Mp.display.brightnessScope(
+  level: 1,
+  statusState: 'invite.brightness_status',
+  errorState: 'invite.brightness_error',
+  child: Mp.qr.generate(
+    value: '{{state.invite.url}}',
+    size: 240,
+    semanticLabel: 'Friend invitation QR code',
+  ),
+);
+```
+
+Do not pair this node with a manual brightness-off action. The SDK releases
+the override when the child unmounts or the host leaves the foreground.
+
 ## Streamed Audio And Inline Video
 
 Media sources are either immutable artifact assets or relative Publisher API

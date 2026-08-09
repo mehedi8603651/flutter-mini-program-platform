@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.7
+
+- Add lifecycle-owned `Mp.display.brightnessScope` authoring for temporary,
+  host-controlled window brightness with automatic restoration.
+
 ## 0.2.6
 
 - Add `Mp.share.open` for user-initiated system sharing of bounded text,

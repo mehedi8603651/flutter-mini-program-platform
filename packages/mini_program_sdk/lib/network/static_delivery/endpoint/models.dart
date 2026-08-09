@@ -23,6 +23,7 @@ class MiniProgramEndpoint {
     this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
     this.locationPolicy = const MiniProgramLocationPolicy(),
     this.filePolicy = const MiniProgramFilePolicy(),
+    this.displayBrightnessPolicy = const MiniProgramDisplayBrightnessPolicy(),
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
@@ -44,6 +45,7 @@ class MiniProgramEndpoint {
     this.publisherApiPolicy = const MiniProgramPublisherApiPolicy(),
     this.locationPolicy = const MiniProgramLocationPolicy(),
     this.filePolicy = const MiniProgramFilePolicy(),
+    this.displayBrightnessPolicy = const MiniProgramDisplayBrightnessPolicy(),
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
@@ -60,6 +62,7 @@ class MiniProgramEndpoint {
   final MiniProgramPublisherApiPolicy publisherApiPolicy;
   final MiniProgramLocationPolicy locationPolicy;
   final MiniProgramFilePolicy filePolicy;
+  final MiniProgramDisplayBrightnessPolicy displayBrightnessPolicy;
   final MiniProgramCameraPolicy cameraPolicy;
   final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramQrPolicy qrPolicy;

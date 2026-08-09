@@ -9,6 +9,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramPublisherApiPolicyProvider,
         MiniProgramLocationPolicyProvider,
         MiniProgramFilePolicyProvider,
+        MiniProgramDisplayBrightnessPolicyProvider,
         MiniProgramCameraPolicyProvider,
         MiniProgramFlashlightPolicyProvider,
         MiniProgramQrPolicyProvider,
@@ -138,6 +139,13 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramFilePolicy filePolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).filePolicy;
+  }
+
+  @override
+  MiniProgramDisplayBrightnessPolicy displayBrightnessPolicyFor(
+    String miniProgramId,
+  ) {
+    return _endpointFor(miniProgramId).displayBrightnessPolicy;
   }
 
   @override

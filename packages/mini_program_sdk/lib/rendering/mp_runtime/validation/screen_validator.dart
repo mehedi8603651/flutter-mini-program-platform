@@ -370,6 +370,11 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'brightnessScope' => _parseBrightnessScopeNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'actionScope' => _parseActionScopeNode(
         props: props,
         children: parsedChildren,

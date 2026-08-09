@@ -779,6 +779,9 @@ Future<Object?> _runMpAction(
   MiniProgramQrPolicy qrPolicy = const MiniProgramQrPolicy(),
   MiniProgramShareManager? shareManager,
   MiniProgramSharePolicy sharePolicy = const MiniProgramSharePolicy(),
+  MiniProgramDisplayBrightnessManager? displayBrightnessManager,
+  MiniProgramDisplayBrightnessPolicy displayBrightnessPolicy =
+      const MiniProgramDisplayBrightnessPolicy(),
   MiniProgramMediaPlaybackManager? mediaPlaybackManager,
   MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy =
       const MiniProgramMediaPlaybackPolicy(),
@@ -813,6 +816,8 @@ Future<Object?> _runMpAction(
         qrPolicy: qrPolicy,
         shareManager: shareManager,
         sharePolicy: sharePolicy,
+        displayBrightnessManager: displayBrightnessManager,
+        displayBrightnessPolicy: displayBrightnessPolicy,
         mediaPlaybackManager: mediaPlaybackManager,
         mediaPlaybackPolicy: mediaPlaybackPolicy,
         mediaAssetSource: mediaAssetSource,
@@ -905,6 +910,9 @@ Widget _scopedApp({
   MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy =
       const MiniProgramMediaPlaybackPolicy(),
   MiniProgramMediaAssetSource? mediaAssetSource,
+  MiniProgramDisplayBrightnessManager? displayBrightnessManager,
+  MiniProgramDisplayBrightnessPolicy displayBrightnessPolicy =
+      const MiniProgramDisplayBrightnessPolicy(),
   String? miniProgramVersion,
   Map<String, dynamic> routeParams = const <String, dynamic>{},
 }) {
@@ -929,6 +937,8 @@ Widget _scopedApp({
       mediaPlaybackManager: mediaPlaybackManager,
       mediaPlaybackPolicy: mediaPlaybackPolicy,
       mediaAssetSource: mediaAssetSource,
+      displayBrightnessManager: displayBrightnessManager,
+      displayBrightnessPolicy: displayBrightnessPolicy,
       miniProgramVersion: miniProgramVersion,
       featureFlagEvaluator: const AllowAllFeatureFlagEvaluator(),
       logger: const DebugPrintSdkLogger(),
@@ -1204,6 +1214,22 @@ class _FutureBackendConnector implements MiniProgramBackendConnector {
   ) async {
     calls.add(request);
     return _responses.removeFirst();
+  }
+}
+
+class _ResultDisplayBrightnessProvider
+    implements MiniProgramDisplayBrightnessProvider {
+  final List<double> levels = <double>[];
+  int restoreCount = 0;
+
+  @override
+  Future<void> restoreBrightness() async {
+    restoreCount++;
+  }
+
+  @override
+  Future<void> setBrightness(double level) async {
+    levels.add(level);
   }
 }
 

@@ -1,3 +1,8 @@
+## 0.6.8
+
+- Add host-policy-controlled, lifecycle-owned temporary display brightness
+  scopes that restore the host setting on unmount and app backgrounding.
+
 ## 0.6.7
 
 - Add provider-neutral, host-policy-controlled system sharing with explicit

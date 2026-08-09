@@ -17,6 +17,7 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'flashlight' &&
         entry.key != 'qrScanner' &&
         entry.key != 'share' &&
+        entry.key != 'displayBrightness' &&
         entry.key != 'audioPlayback' &&
         entry.key != 'videoPlayback') {
       throw MiniProgramPartnerHandoffException(
@@ -42,6 +43,12 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'share') {
       normalized['share'] = _normalizeRequestedShare(entry.value);
+      continue;
+    }
+    if (entry.key == 'displayBrightness') {
+      normalized['displayBrightness'] = _normalizeRequestedDisplayBrightness(
+        entry.value,
+      );
       continue;
     }
     if (entry.key == 'audioPlayback' || entry.key == 'videoPlayback') {
@@ -102,6 +109,42 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         });
   }
   return Map<String, Object?>.unmodifiable(normalized);
+}
+
+Map<String, Object?> _normalizeRequestedDisplayBrightness(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.displayBrightness must be an object.',
+    );
+  }
+  const allowedKeys = <String>{'enabled', 'reason', 'recommendedMaxLevel'};
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.displayBrightness '
+        'contains an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  final reason = raw['reason'];
+  final maxLevel = raw['recommendedMaxLevel'] ?? 1;
+  if (enabled is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.displayBrightness.enabled must be a boolean.',
+    );
+  }
+  _validateRequestedPermissionReason(reason, 'displayBrightness');
+  if (maxLevel is! num || !maxLevel.isFinite || maxLevel <= 0 || maxLevel > 1) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.displayBrightness.recommendedMaxLevel must be over 0 and at most 1.',
+    );
+  }
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': (reason! as String).trim(),
+    'recommendedMaxLevel': maxLevel.toDouble(),
+  });
 }
 
 Map<String, Object?> _normalizeRequestedShare(Object? raw) {

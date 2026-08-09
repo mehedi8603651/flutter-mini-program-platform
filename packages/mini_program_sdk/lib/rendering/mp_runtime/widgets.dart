@@ -57,6 +57,7 @@ class _MpNodeView extends StatelessWidget {
       'condition' => _MpCondition(node: node, bindings: bindings),
       'countdown' => _MpCountdown(node: node, bindings: bindings),
       'stateScope' => _MpStateScope(node: node, bindings: bindings),
+      'brightnessScope' => _MpBrightnessScope(node: node, bindings: bindings),
       'actionScope' => _MpActionScope(node: node, bindings: bindings),
       'skeleton' => _MpSkeleton(node: node, bindings: bindings),
       'card' => _MpCard(node: node, bindings: bindings),

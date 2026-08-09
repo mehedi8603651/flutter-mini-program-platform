@@ -8,6 +8,7 @@ import 'feature_flag_evaluator.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
 import 'file/mini_program_file.dart';
+import 'display/mini_program_display.dart';
 import 'flashlight/mini_program_flashlight.dart';
 import 'location/mini_program_location.dart';
 import 'media/mini_program_media.dart';
@@ -65,6 +66,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.locationProvider,
     this.locationPolicy = const MiniProgramLocationPolicy(),
     this.fileTransferManager,
+    this.displayBrightnessManager,
+    this.displayBrightnessPolicy = const MiniProgramDisplayBrightnessPolicy(),
     this.filePolicy = const MiniProgramFilePolicy(),
     this.cameraManager,
     this.mediaManager,
@@ -105,6 +108,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramLocationPolicy locationPolicy;
   final MiniProgramFileTransferManager? fileTransferManager;
+  final MiniProgramDisplayBrightnessManager? displayBrightnessManager;
+  final MiniProgramDisplayBrightnessPolicy displayBrightnessPolicy;
   final MiniProgramFilePolicy filePolicy;
   final MiniProgramCameraManager? cameraManager;
   final MiniProgramMediaManager? mediaManager;
@@ -156,6 +161,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         locationProvider != oldWidget.locationProvider ||
         locationPolicy != oldWidget.locationPolicy ||
         fileTransferManager != oldWidget.fileTransferManager ||
+        displayBrightnessManager != oldWidget.displayBrightnessManager ||
+        displayBrightnessPolicy != oldWidget.displayBrightnessPolicy ||
         filePolicy != oldWidget.filePolicy ||
         cameraManager != oldWidget.cameraManager ||
         mediaManager != oldWidget.mediaManager ||

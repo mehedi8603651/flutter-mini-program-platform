@@ -129,6 +129,18 @@ Mini-programs may share bounded text, one absolute HTTPS URL, and app-owned
 opaque media references. The provider exposes no paths or content URIs and
 reports only that Android opened the chooser, not that sharing completed.
 
+For host-approved temporary display brightness, install the window adapter
+once and review each app's accepted `permissions.displayBrightness` policy:
+
+```powershell
+miniprogram host capability init display-brightness --platform android --project-root .\coupon_host
+```
+
+`Mp.display.brightnessScope` applies only while its child remains mounted. The
+host clamps the requested level and restores system-controlled brightness on
+unmount, backgrounding, app changes, and host disposal. No Android permission
+or global brightness setting is used.
+
 ## Optional Runtime API
 
 Publisher API Contract V1 is a runtime API standard only; host opening still uses `appId + artifactBaseUrl`.

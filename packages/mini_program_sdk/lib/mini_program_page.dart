@@ -39,6 +39,7 @@ class MiniProgramPage extends StatelessWidget {
         backendConnector: resolvedRuntime.backendConnector,
         locationProvider: resolvedRuntime.locationProvider,
         fileTransferProvider: resolvedRuntime.fileTransferProvider,
+        displayBrightnessProvider: resolvedRuntime.displayBrightnessProvider,
         cameraProvider: resolvedRuntime.cameraProvider,
         mediaProvider: resolvedRuntime.mediaProvider,
         mediaPlaybackProvider: resolvedRuntime.mediaPlaybackProvider,

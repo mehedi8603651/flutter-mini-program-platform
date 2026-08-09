@@ -7,6 +7,7 @@ import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
 import 'file/mini_program_file.dart';
+import 'display/mini_program_display.dart';
 import 'flashlight/mini_program_flashlight.dart';
 import 'host_bridge.dart';
 import 'location/mini_program_location.dart';
@@ -32,6 +33,7 @@ class MiniProgramRuntime {
     this.backendConnector,
     this.locationProvider,
     this.fileTransferProvider,
+    this.displayBrightnessProvider,
     this.cameraProvider,
     this.mediaProvider,
     this.mediaPlaybackProvider,
@@ -53,6 +55,7 @@ class MiniProgramRuntime {
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
+  final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
@@ -75,6 +78,7 @@ class MiniProgramRuntime {
     MiniProgramBackendConnector? backendConnector,
     MiniProgramLocationProvider? locationProvider,
     MiniProgramFileTransferProvider? fileTransferProvider,
+    MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
     MiniProgramCameraProvider? cameraProvider,
     MiniProgramMediaProvider? mediaProvider,
     MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -97,6 +101,8 @@ class MiniProgramRuntime {
       backendConnector: backendConnector ?? this.backendConnector,
       locationProvider: locationProvider ?? this.locationProvider,
       fileTransferProvider: fileTransferProvider ?? this.fileTransferProvider,
+      displayBrightnessProvider:
+          displayBrightnessProvider ?? this.displayBrightnessProvider,
       cameraProvider: cameraProvider ?? this.cameraProvider,
       mediaProvider: mediaProvider ?? this.mediaProvider,
       mediaPlaybackProvider:
@@ -170,6 +176,8 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.locationProvider != oldWidget.runtime.locationProvider ||
         runtime.fileTransferProvider !=
             oldWidget.runtime.fileTransferProvider ||
+        runtime.displayBrightnessProvider !=
+            oldWidget.runtime.displayBrightnessProvider ||
         runtime.cameraProvider != oldWidget.runtime.cameraProvider ||
         runtime.mediaProvider != oldWidget.runtime.mediaProvider ||
         runtime.mediaPlaybackProvider !=

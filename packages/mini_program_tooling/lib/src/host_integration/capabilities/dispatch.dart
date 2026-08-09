@@ -1,6 +1,7 @@
 import 'camera/installer.dart' as camera;
 import 'file_transfer/installer.dart' as file;
 import 'flashlight/installer.dart' as flashlight;
+import 'display_brightness/installer.dart' as display_brightness;
 import 'location/installer.dart' as location;
 import 'media_playback/installer.dart' as media_playback;
 import 'models.dart';
@@ -11,6 +12,8 @@ const String locationCapability = location.locationCapability;
 const String fileCapability = file.fileCapability;
 const String cameraCapability = camera.cameraCapability;
 const String flashlightCapability = flashlight.flashlightCapability;
+const String displayBrightnessCapability =
+    display_brightness.displayBrightnessCapability;
 const String qrCapability = qr.qrCapability;
 const String shareCapability = share.shareCapability;
 const String audioCapability = media_playback.audioCapability;
@@ -25,6 +28,10 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
   cameraCapability => camera.initializeMiniProgramHostCameraCapability(request),
   flashlightCapability =>
     flashlight.initializeMiniProgramHostFlashlightCapability(request),
+  displayBrightnessCapability =>
+    display_brightness.initializeMiniProgramHostDisplayBrightnessCapability(
+      request,
+    ),
   qrCapability => qr.initializeMiniProgramHostQrCapability(request),
   shareCapability => share.initializeMiniProgramHostShareCapability(request),
   audioCapability || videoCapability =>
@@ -32,7 +39,7 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
   _ => throw MiniProgramHostCapabilityException(
     'Unsupported host capability "${request.capability}". Supported '
     'capabilities: $locationCapability, $fileCapability, $cameraCapability, '
-    '$flashlightCapability, $qrCapability, $shareCapability, '
+    '$flashlightCapability, $displayBrightnessCapability, $qrCapability, $shareCapability, '
     '$audioCapability, $videoCapability.',
   ),
 };

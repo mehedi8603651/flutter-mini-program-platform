@@ -55,6 +55,9 @@ abstract final class CapabilityIds {
   /// Host can open the platform share chooser for accepted inert content.
   static const CapabilityId systemShare = 'share.system';
 
+  /// Host can temporarily override the active mini-program window brightness.
+  static const CapabilityId displayBrightness = 'display.brightness';
+
   /// Stable ordering used by scaffolds and human-readable output.
   static const List<CapabilityId> standardValues = <CapabilityId>[
     auth,
@@ -73,6 +76,7 @@ abstract final class CapabilityIds {
     flashlightControl,
     qrScanner,
     systemShare,
+    displayBrightness,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

@@ -228,6 +228,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
   MiniProgramShareProvider? shareProvider,
+  MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
   Map<String, MiniProgramEndpoint>? endpoints,
   MiniProgramCacheBundle? cacheBundle,
@@ -241,6 +242,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
     shareProvider: shareProvider,
+    displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,
     endpoints: endpoints ?? buildMiniProgramEndpoints(),
     cacheBundle: cacheBundle,
@@ -328,6 +330,12 @@ MiniProgramSharePolicy sharePolicyForMiniProgram(String appId) {
   return const MiniProgramSharePolicy();
 }
 
+MiniProgramDisplayBrightnessPolicy displayBrightnessPolicyForMiniProgram(
+  String appId,
+) {
+  return const MiniProgramDisplayBrightnessPolicy();
+}
+
 MiniProgramMediaPlaybackPolicy mediaPlaybackPolicyForMiniProgram(String appId) {
   return const MiniProgramMediaPlaybackPolicy();
 }
@@ -380,6 +388,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
   MiniProgramShareProvider? shareProvider,
+  MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
   Map<String, MiniProgramEndpoint> endpoints =
       const <String, MiniProgramEndpoint>{},
@@ -399,6 +408,7 @@ MiniProgramConfig buildMiniProgramConfig({
     if (flashlightProvider != null) CapabilityIds.flashlightControl,
     if (qrScannerProvider != null) CapabilityIds.qrScanner,
     if (shareProvider != null) CapabilityIds.systemShare,
+    if (displayBrightnessProvider != null) CapabilityIds.displayBrightness,
     if (mediaPlaybackProvider != null) CapabilityIds.mediaAudio,
     if (mediaPlaybackProvider != null) CapabilityIds.mediaVideo,
   };
@@ -425,6 +435,7 @@ MiniProgramConfig buildMiniProgramConfig({
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
     shareProvider: shareProvider,
+    displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,
     capabilityRegistry: CapabilityRegistry(supportedCapabilities),
     authController: MiniProgramAuthController.secure(),

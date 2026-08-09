@@ -108,6 +108,14 @@ abstract final class MiniProgramErrorCodes {
   static const String shareTooManyItems = 'share_too_many_items';
   static const String shareRequestInProgress = 'share_request_in_progress';
   static const String shareOperationFailed = 'share_operation_failed';
+  static const String displayBrightnessNotAccepted =
+      'display_brightness_not_accepted';
+  static const String displayBrightnessUnavailable =
+      'display_brightness_unavailable';
+  static const String displayBrightnessInvalidLevel =
+      'display_brightness_invalid_level';
+  static const String displayBrightnessOperationFailed =
+      'display_brightness_operation_failed';
   static const String mediaNotAccepted = 'media_not_accepted';
   static const String mediaProviderUnavailable = 'media_provider_unavailable';
   static const String mediaInvalidSource = 'media_invalid_source';

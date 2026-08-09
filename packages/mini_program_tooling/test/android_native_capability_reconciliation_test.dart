@@ -20,8 +20,10 @@ void main() {
           androidCapabilityRegistrations[1],
           androidCapabilityRegistrations[5],
           androidCapabilityRegistrations[0],
+          androidCapabilityRegistrations[7],
           androidCapabilityRegistrations[3],
           androidCapabilityRegistrations[2],
+          androidCapabilityRegistrations[6],
         ],
       ];
       final outputs = <String>[];

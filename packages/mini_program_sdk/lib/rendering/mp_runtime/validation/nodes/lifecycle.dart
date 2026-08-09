@@ -186,6 +186,49 @@ extension _MpLifecycleNodeValidation on MpScreenValidator {
     );
   }
 
+  _MpNode _parseBrightnessScopeNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'level',
+      'statusState',
+      'errorState',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'brightnessScope', path: path);
+    final level = _requiredPositiveNumber(
+      props,
+      'level',
+      path: '$path.props',
+    ).toDouble();
+    if (level > 1) {
+      _fail(
+        'Mp brightnessScope level cannot exceed 1.',
+        path: '$path.props.level',
+      );
+    }
+    return _MpNode(
+      type: 'brightnessScope',
+      props: <String, dynamic>{
+        'level': level,
+        if (props.containsKey('statusState'))
+          'statusState': _requiredStateKey(
+            props,
+            'statusState',
+            path: '$path.props',
+          ),
+        if (props.containsKey('errorState'))
+          'errorState': _requiredStateKey(
+            props,
+            'errorState',
+            path: '$path.props',
+          ),
+      },
+      children: children,
+    );
+  }
+
   _MpNode _parseConditionNode({
     required Map<String, dynamic> props,
     required List<_MpNode> children,

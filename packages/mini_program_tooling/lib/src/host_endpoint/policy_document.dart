@@ -279,6 +279,18 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
           positiveHostInt(request['recommendedMaxMediaItems']) ?? 10,
     });
   }
+  if (permission == 'displayBrightness') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostDisplayBrightness(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'maxLevel': request['recommendedMaxLevel'] is num
+          ? (request['recommendedMaxLevel']! as num).toDouble()
+          : 1.0,
+    });
+  }
   if (permission == 'audioPlayback' || permission == 'videoPlayback') {
     final request = requested is Map
         ? hostJsonObjectOrEmpty(requested)
@@ -386,6 +398,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
       hostJsonObjectOrEmpty(rawShare),
     );
   }
+  final rawDisplayBrightness = normalized['displayBrightness'];
+  if (rawDisplayBrightness != null) {
+    if (rawDisplayBrightness is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.displayBrightness must be an object.',
+      );
+    }
+    normalized['displayBrightness'] = validateAcceptedHostDisplayBrightness(
+      hostJsonObjectOrEmpty(rawDisplayBrightness),
+    );
+  }
   for (final permission in const <String>['audioPlayback', 'videoPlayback']) {
     final raw = normalized[permission];
     if (raw == null) continue;
@@ -486,6 +509,25 @@ Map<String, Object?> validateAcceptedHostShare(Map<String, Object?> value) {
     );
   }
   normalized['maxMediaItems'] = maxMediaItems;
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostDisplayBrightness(
+  Map<String, Object?> value,
+) {
+  final normalized = deepHostJsonObjectCopy(value);
+  if (normalized['enabled'] is! bool) {
+    throw const MiniProgramHostException(
+      'Accepted permissions.displayBrightness.enabled must be a boolean.',
+    );
+  }
+  final maxLevel = normalized['maxLevel'];
+  if (maxLevel is! num || !maxLevel.isFinite || maxLevel <= 0 || maxLevel > 1) {
+    throw const MiniProgramHostException(
+      'Accepted permissions.displayBrightness.maxLevel must be over 0 and at most 1.',
+    );
+  }
+  normalized['maxLevel'] = maxLevel.toDouble();
   return sortedHostJsonObject(normalized);
 }
 

@@ -6171,5 +6171,52 @@ void _mpScreenRendererTests() {
         state.dispose();
       },
     );
+
+    testWidgets('brightness scope clamps, mounts, and restores safely', (
+      tester,
+    ) async {
+      final backendStore = MiniProgramBackendStore();
+      final state = MpStateManager();
+      final provider = _ResultDisplayBrightnessProvider();
+      final manager = MiniProgramDisplayBrightnessManager(provider);
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.display.brightnessScope(
+              level: 1,
+              statusState: 'display.status',
+              errorState: 'display.error',
+              child: Mp.text('Visible QR'),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      await tester.pumpWidget(
+        _scopedApp(
+          backendStore: backendStore,
+          stateManager: state,
+          screenJson: screenJson,
+          displayBrightnessManager: manager,
+          displayBrightnessPolicy: const MiniProgramDisplayBrightnessPolicy(
+            enabled: true,
+            maxLevel: 0.8,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Visible QR'), findsOneWidget);
+      expect(provider.levels, <double>[0.8]);
+      expect(state.get<String>('display.status'), 'active');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      expect(provider.restoreCount, 1);
+
+      backendStore.dispose();
+      state.dispose();
+      await manager.dispose();
+    });
   });
 }

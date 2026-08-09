@@ -48,6 +48,8 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           locationProvider: widget.locationProvider,
           locationPolicy: _locationPolicyFor(manifest.id),
           fileTransferManager: _fileTransferManager,
+          displayBrightnessManager: _displayBrightnessManager,
+          displayBrightnessPolicy: _displayBrightnessPolicyFor(manifest.id),
           filePolicy: _filePolicyFor(manifest.id),
           cameraManager: _cameraManager,
           mediaManager: _mediaManager,

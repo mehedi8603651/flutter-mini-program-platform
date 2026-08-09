@@ -16,6 +16,8 @@ class MiniProgramHostCapabilityInstaller {
   static const String fileCapability = capabilities.fileCapability;
   static const String cameraCapability = capabilities.cameraCapability;
   static const String flashlightCapability = capabilities.flashlightCapability;
+  static const String displayBrightnessCapability =
+      capabilities.displayBrightnessCapability;
   static const String qrCapability = capabilities.qrCapability;
   static const String shareCapability = capabilities.shareCapability;
   static const String audioCapability = capabilities.audioCapability;

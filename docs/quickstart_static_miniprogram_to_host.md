@@ -363,6 +363,17 @@ The installer adds CameraX and bundled ML Kit QR-only detection. The scanner
 owns its torch while open and returns inert data; it never opens scanned URLs.
 `Mp.qr.generate` remains a local renderer node and needs no host permission.
 
+For an app that requests temporary display brightness, review
+`permissions.displayBrightness`, then install the reusable Android adapter:
+
+```powershell
+miniprogram host capability init display-brightness --platform android --project-root .
+```
+
+The adapter changes only the active host window, requires no Android
+permission, and restores system-controlled brightness automatically when the
+owning `Mp.display.brightnessScope` unmounts or the host backgrounds.
+
 `embed init --force` refreshes scaffold-generated files while preserving host
 setup, bridge, policies, and endpoint-import generated output.
 

@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.7` generates mini-program projects against
-`mini_program_ui: ^0.2.6` and Flutter host projects against
-`mini_program_sdk: ^0.6.7`.
+Tooling `0.7.8` generates mini-program projects against
+`mini_program_ui: ^0.2.7` and Flutter host projects against
+`mini_program_sdk: ^0.6.8`.
 
 The CLI supports the current MVP architecture:
 
@@ -389,6 +389,18 @@ media, grants receiving apps temporary URI access through Android's chooser,
 and never exposes those URIs to mini-program state. A successful result means
 only that the chooser opened.
 
+A handoff may request `requestedPermissions.displayBrightness` with a reason
+and recommended maximum level. New requests default to denied. Install the
+Android window adapter once per host:
+
+```powershell
+miniprogram host capability init display-brightness --platform android --project-root .
+```
+
+The installer adds no permission or dependency. It applies brightness only to
+the active activity window and restores the system-controlled value whenever
+the owning mini-program scope ends or the app leaves the foreground.
+
 A handoff may independently request `requestedPermissions.audioPlayback` and
 `requestedPermissions.videoPlayback`, plus `requestedCache.audio` or
 `requestedCache.video`. All new permissions default to denied. Install the
@@ -693,6 +705,7 @@ miniprogram env status --json
 | `miniprogram host capability init flashlight --platform android` | Install Android CameraManager flashlight control. |
 | `miniprogram host capability init qr --platform android` | Install Android CameraX and bundled ML Kit QR-only scanning. |
 | `miniprogram host capability init share --platform android` | Install Android system chooser sharing for accepted apps. |
+| `miniprogram host capability init display-brightness --platform android` | Install lifecycle-owned Android window brightness for accepted apps. |
 | `miniprogram host capability init audio --platform android` | Install shared Android Media3 audio/video playback. |
 | `miniprogram host capability init video --platform android` | Install shared Android Media3 audio/video playback. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |
