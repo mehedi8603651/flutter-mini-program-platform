@@ -8,7 +8,7 @@ import 'models.dart';
 import 'pubspec_editor.dart';
 import 'readme_template.dart';
 
-const String _miniProgramSdkConstraint = '^0.6.8';
+const String _miniProgramSdkConstraint = '^0.6.9';
 const String _miniProgramContractsConstraint = '^0.3.13';
 
 Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(

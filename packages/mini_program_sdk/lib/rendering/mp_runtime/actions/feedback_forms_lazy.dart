@@ -34,12 +34,15 @@ abstract final class _MpFeedbackFormLazyActionHandler {
     final message = _stringProp(props, 'message');
     final durationMs = _intProp(props, 'durationMs', fallback: 2400);
     final entry = OverlayEntry(
-      builder: (context) => Positioned(
-        left: 20,
-        right: 20,
-        bottom: 28,
-        child: _MpToastView(message: message),
-      ),
+      builder: (context) {
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+        return Positioned(
+          left: 20,
+          right: 20,
+          bottom: bottomInset + 20,
+          child: IgnorePointer(child: _MpToastView(message: message)),
+        );
+      },
     );
     overlay.insert(entry);
     await Future<void>.delayed(Duration(milliseconds: durationMs));

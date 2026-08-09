@@ -11,6 +11,10 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 The `0.6.x` line uses feature-oriented runtime internals while preserving
 public APIs, historical public import paths, and wire formats.
 
+New screens can use a root `Mp.page` plus `Mp.topBar` to opt into explicit
+safe-area ownership and stable fixed headers. Existing artifacts retain the
+legacy outer padding and scrolling behavior.
+
 The SDK stays provider-neutral:
 
 - artifact opening uses `MiniProgramEndpoint.public(apiBaseUri: artifactBaseUrl)`

@@ -19,6 +19,7 @@ Future<AndroidGeneratedSourceMigration> resolveAndroidGeneratedSource({
   required File legacyFile,
   required String requiredMarker,
   required String Function() buildSource,
+  String? toolingGeneratedMarker,
 }) async {
   final generatedSource = await _readIfExists(generatedFile);
   final legacySource = generatedFile.path == legacyFile.path
@@ -36,9 +37,15 @@ Future<AndroidGeneratedSourceMigration> resolveAndroidGeneratedSource({
         'Reconcile them before retrying.',
       );
     }
+    final canUpgrade =
+        toolingGeneratedMarker != null &&
+        generatedSource.contains(toolingGeneratedMarker);
+    final upgradedSource = canUpgrade ? buildSource() : generatedSource;
     return AndroidGeneratedSourceMigration(
-      source: generatedSource,
-      writes: const <String, String>{},
+      source: upgradedSource,
+      writes: _normalized(upgradedSource) == _normalized(generatedSource)
+          ? const <String, String>{}
+          : <String, String>{generatedFile.path: upgradedSource},
       deletes: legacySource == null
           ? const <String>{}
           : <String>{legacyFile.path},

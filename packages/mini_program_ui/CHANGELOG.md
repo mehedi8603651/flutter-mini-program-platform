@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.8
+
+- Add root-only `Mp.page` authoring for explicit safe-area and background
+  ownership without the SDK's legacy compatibility padding.
+- Add `Mp.topBar` with bounded leading, title, and action regions so compact
+  headers remain stable across narrow Android screens.
+
 ## 0.2.7
 
 - Add lifecycle-owned `Mp.display.brightnessScope` authoring for temporary,

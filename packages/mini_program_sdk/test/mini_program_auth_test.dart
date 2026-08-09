@@ -259,6 +259,18 @@ void main() {
 
       await tester.tap(find.text('Open auth'));
       await tester.pumpAndSettle();
+      expect(find.byTooltip('Show password'), findsOneWidget);
+      var passwordField = tester.widget<EditableText>(
+        find.byType(EditableText).at(1),
+      );
+      expect(passwordField.obscureText, isTrue);
+      await tester.tap(find.byTooltip('Show password'));
+      await tester.pump();
+      passwordField = tester.widget<EditableText>(
+        find.byType(EditableText).at(1),
+      );
+      expect(passwordField.obscureText, isFalse);
+      expect(find.byTooltip('Hide password'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
       await tester.pumpAndSettle();
 
@@ -275,6 +287,44 @@ void main() {
 
       expect(controller.snapshot('coupon').authenticated, isTrue);
       expect(controller.session('coupon')?.idToken, 'id-token');
+    });
+
+    testWidgets('remains scrollable above a compact keyboard viewport', (
+      tester,
+    ) async {
+      final controller = MiniProgramAuthController(
+        store: InMemoryMiniProgramAuthStore(),
+        clock: _fixedNow,
+      );
+      await tester.binding.setSurfaceSize(const Size(320, 480));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+      addTearDown(() async {
+        tester.view.resetViewInsets();
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () => showMiniProgramEmailAuthSheet(
+                context: context,
+                controller: controller,
+                connector: _AuthConnector((_) => _authResult()),
+                miniProgramId: 'coupon',
+              ),
+              child: const Text('Open auth'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open auth'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SingleChildScrollView), findsWidgets);
+      await tester.ensureVisible(find.byType(TextFormField).at(1));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
     });
   });
 }

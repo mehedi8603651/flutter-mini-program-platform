@@ -18,7 +18,13 @@ class _MpToastView extends StatelessWidget {
           child: Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 14),
+            style: const TextStyle(
+              inherit: false,
+              color: Color(0xFFFFFFFF),
+              decoration: TextDecoration.none,
+              fontSize: 14,
+              height: 1.25,
+            ),
           ),
         ),
       ),

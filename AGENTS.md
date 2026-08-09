@@ -28,9 +28,9 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.13` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.7` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.8` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.8` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_ui` | `0.2.8` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.9` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.9` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -193,7 +193,7 @@ packages/mini_program_ui/
 |       |   `-- mp_schema.dart                  # Authoring schema constants and screen ID validation
 |       |-- features/                           # Node/action implementations grouped by behavior
 |       |   |-- shared/                         # Presentation-only colors, icons, spacing, and style validation
-|       |   |-- layout/                         # Row, column, stack, sizing, padding, flex, and section nodes
+|       |   |-- layout/                         # Page/top bar, row, column, stack, sizing, padding, flex, and section nodes
 |       |   |-- content/                        # Text, display, image nodes, and image models
 |       |   |-- collections/                    # List, repeat, grid, and wrap nodes
 |       |   |-- controls/                       # Buttons, list tiles, dropdowns, checkbox, and radio nodes
@@ -1357,9 +1357,9 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 66 unique SDK runtime node types. There are
-70 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 72 public builder entry points when the two aliases are
+The authoring API currently maps to 68 unique SDK runtime node types. There are
+72 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 74 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
 `Mp.qr.scan`, `Mp.audio.*`, and `Mp.video.*` are not widgets and are excluded
@@ -1367,6 +1367,8 @@ from these totals.
 
 Layout and structure:
 
+- `Mp.page`: owns a screen's safe area and background without legacy outer padding; it is valid only at the root.
+- `Mp.topBar`: reserves bounded leading, title, and action regions for stable compact screen headers.
 - `Mp.column`: lays out children vertically in source order.
 - `Mp.row`: lays out children horizontally in source order.
 - `Mp.sizedBox`: reserves a validated fixed width, height, or both.

@@ -1,3 +1,15 @@
+## 0.7.9
+
+- Generate Android Media3 fullscreen playback in an opaque immersive window
+  that hides system bars, prevents underlying host content from leaking, and
+  restores the host orientation after dismissal.
+- Upgrade recognized Tooling-owned Media3 Kotlin sources when a newer
+  generator template is installed, while preserving unmarked custom files.
+- Select portrait or landscape from the active video dimensions and retain
+  fit-preserving letterboxing rather than cropping course or product media.
+- Generate mini-programs against UI `0.2.8` and hosts/preview hosts against
+  contracts `0.3.13` and SDK `0.6.9`.
+
 ## 0.7.8
 
 - Import temporary display-brightness requests with safe default denial and

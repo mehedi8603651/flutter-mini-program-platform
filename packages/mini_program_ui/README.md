@@ -49,20 +49,44 @@ Future<void> main(List<String> arguments) {
 
 ```dart
 MpNode buildCouponHome() {
-  return Mp.column(
-    children: <MpNode>[
-      Mp.heading('Coupon Center'),
-      Mp.text('Portable rewards for host apps.'),
-      Mp.image(src: 'https://example.com/reward.png'),
-      Mp.card(child: Mp.text('SDK-owned component styling')),
-      Mp.primaryButton(
-        label: 'Open details',
-        action: Mp.navigation.openScreen('coupon_details'),
-      ),
-    ],
+  return Mp.page(
+    child: Mp.column(
+      children: <MpNode>[
+        Mp.topBar(
+          leading: Mp.icon('coupon', semanticLabel: 'Coupons'),
+          title: Mp.heading('Coupon Center'),
+          actions: <MpNode>[
+            Mp.iconButton(
+              'refresh',
+              semanticLabel: 'Refresh coupons',
+              action: Mp.backend.refresh(requestId: 'coupon-list'),
+            ),
+          ],
+        ),
+        Mp.expanded(
+          child: Mp.scrollView(
+            child: Mp.column(
+              children: <MpNode>[
+                Mp.text('Portable rewards for host apps.'),
+                Mp.image(src: 'https://example.com/reward.png'),
+                Mp.card(child: Mp.text('SDK-owned component styling')),
+                Mp.primaryButton(
+                  label: 'Open details',
+                  action: Mp.navigation.openScreen('coupon_details'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }
 ```
+
+Use `Mp.page` for new full-screen mini-program screens. It owns the safe area
+and avoids legacy outer scroll padding. Keep `Mp.topBar` outside the expanded
+scrolling body so headers do not move or compress when the keyboard opens.
 
 ## Auth
 

@@ -147,6 +147,7 @@ initializeMiniProgramHostMediaPlaybackCapability(
     ),
     requiredMarker: 'class MiniProgramMediaPlaybackPlugin',
     buildSource: () => buildAndroidMediaPlaybackPluginSource(packageName),
+    toolingGeneratedMarker: 'Media3 bridge',
   );
   final nativeSource = nativeMigration.source;
   validateMediaPlaybackOwnedFile(

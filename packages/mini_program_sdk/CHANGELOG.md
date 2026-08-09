@@ -1,3 +1,12 @@
+## 0.6.9
+
+- Render and strictly validate root `page` and reusable `topBar` nodes while
+  retaining legacy root padding for existing artifacts.
+- Prevent inherited text decoration from leaking into SDK toast messages and
+  keep transient feedback above the software keyboard.
+- Add password visibility controls and a keyboard-aware, scrollable email
+  authentication sheet for compact Android viewports.
+
 ## 0.6.8
 
 - Add host-policy-controlled, lifecycle-owned temporary display brightness

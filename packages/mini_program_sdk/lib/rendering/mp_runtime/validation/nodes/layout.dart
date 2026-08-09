@@ -1,6 +1,99 @@
 part of '../../../mp_screen_renderer.dart';
 
 extension _MpLayoutNodeValidation on MpScreenValidator {
+  _MpNode _parsePageNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    if (path != r'$.root') {
+      _fail('Mp page is supported only as the screen root.', path: path);
+    }
+    _validateObjectKeys(props, const <String>{
+      'backgroundColor',
+      'safeArea',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'page', path: path);
+    return _MpNode(
+      type: 'page',
+      props: <String, dynamic>{
+        if (props.containsKey('backgroundColor'))
+          'backgroundColor': _requiredHexColor(
+            props,
+            'backgroundColor',
+            path: '$path.props',
+          ),
+        'safeArea':
+            _optionalBool(props['safeArea'], path: '$path.props.safeArea') ??
+            true,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseTopBarNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'actionCount',
+      'backgroundColor',
+      'hasLeading',
+      'height',
+      'paddingHorizontal',
+      'spacing',
+    }, path: '$path.props');
+    final actionCount = _boundedIntValue(
+      props['actionCount'],
+      path: '$path.props.actionCount',
+      minimum: 0,
+      maximum: 4,
+    );
+    final hasLeading =
+        _optionalBool(props['hasLeading'], path: '$path.props.hasLeading') ??
+        false;
+    final expectedChildren = 1 + actionCount + (hasLeading ? 1 : 0);
+    if (children.length != expectedChildren) {
+      _fail(
+        'Mp topBar children do not match its leading/title/action metadata.',
+        path: '$path.children',
+      );
+    }
+    return _MpNode(
+      type: 'topBar',
+      props: <String, dynamic>{
+        'actionCount': actionCount,
+        if (props.containsKey('backgroundColor'))
+          'backgroundColor': _requiredHexColor(
+            props,
+            'backgroundColor',
+            path: '$path.props',
+          ),
+        'hasLeading': hasLeading,
+        'height': _boundedNumber(
+          props['height'],
+          path: '$path.props.height',
+          minimum: 48,
+          maximum: 120,
+        ),
+        'paddingHorizontal': _boundedNumber(
+          props['paddingHorizontal'],
+          path: '$path.props.paddingHorizontal',
+          minimum: 0,
+          maximum: 48,
+        ),
+        'spacing': _boundedNumber(
+          props['spacing'],
+          path: '$path.props.spacing',
+          minimum: 0,
+          maximum: 24,
+        ),
+      },
+      children: children,
+    );
+  }
+
   _MpNode _parseSimpleContainer({
     required String type,
     required Map<String, dynamic> props,

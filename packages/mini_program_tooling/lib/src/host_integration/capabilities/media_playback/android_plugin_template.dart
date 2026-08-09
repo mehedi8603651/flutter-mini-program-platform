@@ -4,11 +4,19 @@ String buildAndroidMediaPlaybackPluginSource(String packageName) =>
 import android.app.Application
 import android.app.Dialog
 import android.content.Context
+import android.content.pm.ActivityInfo
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -330,6 +338,10 @@ private class NativeSession(
     private var inlineView = WeakReference<PlayerView>(null)
     private var fullscreenDialog: Dialog? = null
     private var fullscreenView: PlayerView? = null
+    private var fullscreenActivity = WeakReference<Activity>(null)
+    private var previousRequestedOrientation =
+        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private var fullscreenOrientationApplied = false
     private val resultCompleted = AtomicBoolean(false)
 
     private val progressTick = object : Runnable {
@@ -494,30 +506,102 @@ private class NativeSession(
         val view = PlayerView(activity).apply {
             useController = true
             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            setBackgroundColor(Color.BLACK)
             player = this@NativeSession.player
+        }
+        val root = FrameLayout(activity).apply {
+            setBackgroundColor(Color.BLACK)
+            addView(
+                view,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
         }
         val dialog = Dialog(
             activity,
             android.R.style.Theme_Black_NoTitleBar_Fullscreen,
         )
-        dialog.setContentView(view)
+        dialog.setContentView(root)
         dialog.setOnDismissListener {
             view.player = null
+            restoreFullscreenOrientation()
             fullscreenView = null
             fullscreenDialog = null
             inlineView.get()?.player = player
         }
         dialog.show()
-        dialog.window?.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-        )
-        dialog.window?.decorView?.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        dialog.window?.let { window ->
+            window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+            window.statusBarColor = Color.BLACK
+            window.navigationBarColor = Color.BLACK
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            window.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                window.attributes = window.attributes.apply {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+            }
+            hideSystemBars(window.decorView, window)
+            root.post { hideSystemBars(window.decorView, window) }
+        }
+        applyFullscreenOrientation(activity)
         fullscreenView = view
         fullscreenDialog = dialog
+    }
+
+    private fun hideSystemBars(decorView: View, window: android.view.Window) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.apply {
+                hide(WindowInsets.Type.systemBars())
+                systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+            return
+        }
+        @Suppress("DEPRECATION")
+        decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+    }
+
+    private fun applyFullscreenOrientation(activity: Activity) {
+        fullscreenActivity = WeakReference(activity)
+        previousRequestedOrientation = activity.requestedOrientation
+        val videoSize = player.videoSize
+        val preferred = when {
+            videoSize.width > videoSize.height ->
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            videoSize.height > videoSize.width ->
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }
+        if (activity.requestedOrientation != preferred) {
+            activity.requestedOrientation = preferred
+        }
+        fullscreenOrientationApplied = true
+    }
+
+    private fun restoreFullscreenOrientation() {
+        if (!fullscreenOrientationApplied) return
+        fullscreenOrientationApplied = false
+        fullscreenActivity.get()?.let { activity ->
+            if (!activity.isFinishing) {
+                activity.requestedOrientation = previousRequestedOrientation
+            }
+        }
+        fullscreenActivity.clear()
+        previousRequestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
     fun exitFullscreen() {

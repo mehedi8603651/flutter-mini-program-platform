@@ -430,6 +430,16 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'page' => _parsePageNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'topBar' => _parseTopBarNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'scrollView' => _parseScrollViewNode(
         props: props,
         children: parsedChildren,

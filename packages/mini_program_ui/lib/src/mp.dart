@@ -470,6 +470,40 @@ abstract final class Mp {
     bottom: bottom,
   );
 
+  /// Creates a full-bleed screen root with explicit safe-area ownership.
+  ///
+  /// Use this as the screen root when the mini-program provides its own
+  /// scrolling and spacing. Legacy roots retain the SDK's compatibility
+  /// padding.
+  static MpNode page({
+    required MpNode child,
+    String? backgroundColor,
+    bool safeArea = true,
+  }) => buildPageNode(
+    child: child,
+    backgroundColor: backgroundColor,
+    safeArea: safeArea,
+  );
+
+  /// Creates a compact responsive top bar with a flexible title slot.
+  static MpNode topBar({
+    required MpNode title,
+    MpNode? leading,
+    List<MpNode> actions = const <MpNode>[],
+    num height = 64,
+    num paddingHorizontal = 12,
+    num spacing = 8,
+    String? backgroundColor,
+  }) => buildTopBarNode(
+    title: title,
+    leading: leading,
+    actions: actions,
+    height: height,
+    paddingHorizontal: paddingHorizontal,
+    spacing: spacing,
+    backgroundColor: backgroundColor,
+  );
+
   /// Shows or hides [child] while optionally preserving layout/state.
   static MpNode visibility({
     required MpNode child,

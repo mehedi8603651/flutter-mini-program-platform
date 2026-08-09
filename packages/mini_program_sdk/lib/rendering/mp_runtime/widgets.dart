@@ -16,6 +16,9 @@ class _MpScreenView extends StatelessWidget {
         child: _MpRefreshViewport(node: screen.root, bindings: bindings),
       );
     }
+    if (screen.root.type == 'page') {
+      return _MpNodeView(node: screen.root, bindings: bindings);
+    }
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -77,6 +80,8 @@ class _MpNodeView extends StatelessWidget {
       'expanded' => _MpNodeView(node: node.children.single, bindings: bindings),
       'flexible' => _MpNodeView(node: node.children.single, bindings: bindings),
       'container' => _MpContainer(node: node, bindings: bindings),
+      'page' => _MpPage(node: node, bindings: bindings),
+      'topBar' => _MpTopBar(node: node, bindings: bindings),
       'scrollView' => _MpScrollView(node: node, bindings: bindings),
       'listView' => _MpListView(node: node, bindings: bindings),
       'repeat' => _MpRepeat(node: node, bindings: bindings),

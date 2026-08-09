@@ -2,6 +2,58 @@ part of '../mp_screen_renderer_test.dart';
 
 void _mpScreenRendererTests() {
   group('MpScreenRenderer', () {
+    testWidgets('page owns full-bleed layout and topBar stays responsive', (
+      tester,
+    ) async {
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.page(
+              backgroundColor: '#FF000000',
+              child: Mp.topBar(
+                leading: Mp.icon('arrowBack', semanticLabel: 'Back'),
+                title: Mp.text(
+                  'A deliberately long editor title',
+                  maxLines: 1,
+                  overflow: 'ellipsis',
+                ),
+                actions: <MpNode>[
+                  Mp.button(
+                    label: 'SAVE',
+                    action: Mp.toast(message: 'Saved'),
+                    height: 44,
+                  ),
+                ],
+                backgroundColor: '#FF303030',
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      await tester.binding.setSurfaceSize(const Size(280, 480));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => const MpScreenRenderer().render(
+              MiniProgramRenderRequest(
+                context: context,
+                manifest: _mpManifest,
+                screenId: 'coupon_home',
+                screenJson: screenJson,
+                logger: DebugPrintSdkLogger(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(find.text('SAVE'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(tester.getTopLeft(find.byType(ColoredBox).last).dx, 0);
+    });
+
     testWidgets('renders basic Mp nodes with Flutter widgets', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -5777,6 +5829,9 @@ void _mpScreenRendererTests() {
       await tester.tap(find.text('Show toast'));
       await tester.pump();
       expect(find.text('Saved'), findsOneWidget);
+      final toast = tester.widget<Text>(find.text('Saved'));
+      expect(toast.style?.inherit, isFalse);
+      expect(toast.style?.decoration, TextDecoration.none);
       await tester.pump(const Duration(milliseconds: 1));
       await tester.pump();
 

@@ -51,6 +51,7 @@ class _MiniProgramEmailAuthSheetState
 
   late MiniProgramEmailAuthMode _mode = widget.initialMode;
   bool _submitting = false;
+  bool _passwordVisible = false;
   String? _error;
 
   @override
@@ -105,93 +106,139 @@ class _MiniProgramEmailAuthSheetState
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(24, 20, 24, bottomInset + 24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SegmentedButton<MiniProgramEmailAuthMode>(
-              segments: const [
-                ButtonSegment(
-                  value: MiniProgramEmailAuthMode.signIn,
-                  label: Text('Sign in'),
-                ),
-                ButtonSegment(
-                  value: MiniProgramEmailAuthMode.signUp,
-                  label: Text('Sign up'),
-                ),
-              ],
-              selected: <MiniProgramEmailAuthMode>{_mode},
-              onSelectionChanged: _submitting
-                  ? null
-                  : (values) {
-                      setState(() {
-                        _mode = values.single;
-                        _error = null;
-                      });
-                    },
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _emailController,
-              enabled: !_submitting,
-              keyboardType: TextInputType.emailAddress,
-              autofillHints: const [AutofillHints.email],
-              decoration: const InputDecoration(labelText: 'Email'),
-              validator: (value) {
-                final email = value?.trim() ?? '';
-                if (email.isEmpty) {
-                  return 'Email is required.';
-                }
-                if (!email.contains('@')) {
-                  return 'Enter a valid email.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _passwordController,
-              enabled: !_submitting,
-              obscureText: true,
-              autofillHints: const [AutofillHints.password],
-              decoration: const InputDecoration(labelText: 'Password'),
-              validator: (value) {
-                if ((value ?? '').isEmpty) {
-                  return 'Password is required.';
-                }
-                if ((value ?? '').length < 6) {
-                  return 'Use at least 6 characters.';
-                }
-                return null;
-              },
-              onFieldSubmitted: (_) => _submit(),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      _mode == MiniProgramEmailAuthMode.signUp
-                          ? 'Create account'
-                          : 'Sign in',
+    final availableHeight = MediaQuery.sizeOf(context).height - bottomInset;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: availableHeight),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: AutofillGroup(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SegmentedButton<MiniProgramEmailAuthMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: MiniProgramEmailAuthMode.signIn,
+                              label: Text('Sign in'),
+                            ),
+                            ButtonSegment(
+                              value: MiniProgramEmailAuthMode.signUp,
+                              label: Text('Sign up'),
+                            ),
+                          ],
+                          selected: <MiniProgramEmailAuthMode>{_mode},
+                          onSelectionChanged: _submitting
+                              ? null
+                              : (values) {
+                                  setState(() {
+                                    _mode = values.single;
+                                    _error = null;
+                                  });
+                                },
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          controller: _emailController,
+                          enabled: !_submitting,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          scrollPadding: const EdgeInsets.only(bottom: 120),
+                          decoration: const InputDecoration(labelText: 'Email'),
+                          validator: (value) {
+                            final email = value?.trim() ?? '';
+                            if (email.isEmpty) {
+                              return 'Email is required.';
+                            }
+                            if (!email.contains('@')) {
+                              return 'Enter a valid email.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _passwordController,
+                          enabled: !_submitting,
+                          obscureText: !_passwordVisible,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          scrollPadding: const EdgeInsets.only(bottom: 120),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            suffixIcon: IconButton(
+                              tooltip: _passwordVisible
+                                  ? 'Hide password'
+                                  : 'Show password',
+                              onPressed: _submitting
+                                  ? null
+                                  : () => setState(
+                                      () =>
+                                          _passwordVisible = !_passwordVisible,
+                                    ),
+                              icon: Icon(
+                                _passwordVisible
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                            ),
+                          ),
+                          validator: (value) {
+                            if ((value ?? '').isEmpty) {
+                              return 'Password is required.';
+                            }
+                            if ((value ?? '').length < 6) {
+                              return 'Use at least 6 characters.';
+                            }
+                            return null;
+                          },
+                          onFieldSubmitted: (_) => _submit(),
+                        ),
+                        if (_error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        FilledButton(
+                          onPressed: _submitting ? null : _submit,
+                          child: _submitting
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _mode == MiniProgramEmailAuthMode.signUp
+                                      ? 'Create account'
+                                      : 'Sign in',
+                                ),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

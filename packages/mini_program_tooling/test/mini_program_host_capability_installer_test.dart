@@ -597,16 +597,21 @@ void main() {
       await _nativeSetupFile(hostRootPath).readAsString(),
       contains('MiniProgramMediaPlaybackPlugin.register(flutterEngine)'),
     );
-    final native = await _nativeGeneratedFile(
+    final nativeFile = _nativeGeneratedFile(
       hostRootPath,
       'media_playback',
       'MiniProgramMediaPlaybackPlugin.kt',
-    ).readAsString();
+    );
+    final native = await nativeFile.readAsString();
     expect(native, contains('class MiniProgramMediaPlaybackPlugin'));
     expect(native, contains('ExoPlayer.Builder'));
     expect(native, contains('SimpleCache'));
     expect(native, contains('setHandleAudioBecomingNoisy(true)'));
     expect(native, contains('enterFullscreen'));
+    expect(native, contains('WindowInsets.Type.systemBars()'));
+    expect(native, contains('SCREEN_ORIENTATION_SENSOR_LANDSCAPE'));
+    expect(native, contains('restoreFullscreenOrientation'));
+    expect(native, contains('ColorDrawable(Color.BLACK)'));
     final gradle = await File(
       p.join(hostRootPath, 'android', 'app', 'build.gradle.kts'),
     ).readAsString();
@@ -651,6 +656,38 @@ void main() {
       ),
     );
     expect(second.alreadyInstalled, isTrue);
+
+    await nativeFile.writeAsString(
+      native
+          .replaceFirst(
+            '/** Tooling-generated Media3 bridge. */',
+            '/** Host-owned Media3 bridge installed by '
+                'mini_program_tooling. */',
+          )
+          .replaceFirst('import android.view.WindowInsets\n', ''),
+    );
+    final upgraded = await installer.initialize(
+      MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'video',
+        platform: 'android',
+      ),
+    );
+    expect(upgraded.alreadyInstalled, isFalse);
+    expect(
+      await nativeFile.readAsString(),
+      contains('import android.view.WindowInsets'),
+    );
+    expect(
+      (await installer.initialize(
+        MiniProgramHostCapabilityInitRequest(
+          projectRootPath: hostRootPath,
+          capability: 'video',
+          platform: 'android',
+        ),
+      )).alreadyInstalled,
+      isTrue,
+    );
   });
 
   test('migrates the generated Kotlin dependency script to Groovy', () async {
@@ -1118,7 +1155,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.6.8
+  mini_program_sdk: ^0.6.9
   mini_program_contracts: ^0.3.13
 ''');
   await File(
