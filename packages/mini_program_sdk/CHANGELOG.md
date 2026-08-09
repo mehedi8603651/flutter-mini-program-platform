@@ -1,3 +1,9 @@
+## 0.6.10
+
+- Render page-inherited responsive breakpoints, local-width layout variants,
+  centered constrained content, and adaptive grids without storing viewport
+  information in mini-program state.
+
 ## 0.6.9
 
 - Render and strictly validate root `page` and reusable `topBar` nodes while

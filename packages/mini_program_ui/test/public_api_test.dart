@@ -22,6 +22,7 @@ void main() {
     ];
 
     const option = MpOption(value: 'one', label: 'One');
+    const breakpoints = MpResponsiveBreakpoints();
     final action = MpAction('state.clear');
     final node = MpNode('text', props: <String, Object?>{'data': 'Hello'});
     final program = MpProgram(
@@ -32,6 +33,7 @@ void main() {
 
     expect(namespaces, hasLength(15));
     expect(option.toJson(), <String, Object?>{'label': 'One', 'value': 'one'});
+    expect(breakpoints.mediumMinWidth, 600);
     expect(action.type, 'state.clear');
     expect(Mp.cache.data, isA<MpCacheBucketActions>());
     expect(program.buildScreensJson(), contains('home'));

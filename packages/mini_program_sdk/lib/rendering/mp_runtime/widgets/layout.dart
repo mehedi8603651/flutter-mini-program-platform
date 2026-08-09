@@ -1,5 +1,39 @@
 part of '../../mp_screen_renderer.dart';
 
+const _defaultMpResponsiveBreakpoints = _MpResponsiveBreakpoints(
+  mediumMinWidth: 600,
+  expandedMinWidth: 840,
+);
+
+class _MpResponsiveBreakpoints {
+  const _MpResponsiveBreakpoints({
+    required this.mediumMinWidth,
+    required this.expandedMinWidth,
+  });
+
+  final double mediumMinWidth;
+  final double expandedMinWidth;
+}
+
+class _MpResponsiveScope extends InheritedWidget {
+  const _MpResponsiveScope({required this.breakpoints, required super.child});
+
+  final _MpResponsiveBreakpoints breakpoints;
+
+  static _MpResponsiveBreakpoints of(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<_MpResponsiveScope>()
+            ?.breakpoints ??
+        _defaultMpResponsiveBreakpoints;
+  }
+
+  @override
+  bool updateShouldNotify(_MpResponsiveScope oldWidget) {
+    return breakpoints.mediumMinWidth != oldWidget.breakpoints.mediumMinWidth ||
+        breakpoints.expandedMinWidth != oldWidget.breakpoints.expandedMinWidth;
+  }
+}
+
 class _MpPage extends StatelessWidget {
   const _MpPage({required this.node, required this.bindings});
 
@@ -9,6 +43,16 @@ class _MpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget child = _MpNodeView(node: node.children.single, bindings: bindings);
+    final rawBreakpoints = node.props['breakpoints'] as Map<String, dynamic>?;
+    final breakpoints = rawBreakpoints == null
+        ? _defaultMpResponsiveBreakpoints
+        : _MpResponsiveBreakpoints(
+            mediumMinWidth: (rawBreakpoints['mediumMinWidth'] as num)
+                .toDouble(),
+            expandedMinWidth: (rawBreakpoints['expandedMinWidth'] as num)
+                .toDouble(),
+          );
+    child = _MpResponsiveScope(breakpoints: breakpoints, child: child);
     if (_bool(node, 'safeArea')) {
       child = SafeArea(child: child);
     }
@@ -19,6 +63,63 @@ class _MpPage extends StatelessWidget {
         fallback: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: child,
+    );
+  }
+}
+
+class _MpResponsive extends StatelessWidget {
+  const _MpResponsive({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    final breakpoints = _MpResponsiveScope.of(context);
+    final compact = node.children.first;
+    var index = 1;
+    final medium = _bool(node, 'hasMedium') ? node.children[index++] : compact;
+    final expanded = _bool(node, 'hasExpanded') ? node.children[index] : medium;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final selected = width >= breakpoints.expandedMinWidth
+            ? expanded
+            : width >= breakpoints.mediumMinWidth
+            ? medium
+            : compact;
+        return _MpNodeView(node: selected, bindings: bindings);
+      },
+    );
+  }
+}
+
+class _MpConstrainedContent extends StatelessWidget {
+  const _MpConstrainedContent({required this.node, required this.bindings});
+
+  final _MpNode node;
+  final _MpRenderBindings bindings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: _double(node, 'paddingHorizontal', fallback: 16),
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: _double(node, 'maxWidth', fallback: 1200),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: _MpNodeView(node: node.children.single, bindings: bindings),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ extension _MpLayoutNodeValidation on MpScreenValidator {
     }
     _validateObjectKeys(props, const <String>{
       'backgroundColor',
+      'breakpoints',
       'safeArea',
     }, path: '$path.props');
     _validateSingleChild(children, nodeType: 'page', path: path);
@@ -23,12 +24,114 @@ extension _MpLayoutNodeValidation on MpScreenValidator {
             'backgroundColor',
             path: '$path.props',
           ),
+        if (props.containsKey('breakpoints'))
+          'breakpoints': _parseResponsiveBreakpoints(
+            props['breakpoints'],
+            path: '$path.props.breakpoints',
+          ),
         'safeArea':
             _optionalBool(props['safeArea'], path: '$path.props.safeArea') ??
             true,
       },
       children: children,
     );
+  }
+
+  _MpNode _parseResponsiveNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'hasExpanded',
+      'hasMedium',
+    }, path: '$path.props');
+    final hasExpanded = _requiredBoolValue(
+      props['hasExpanded'],
+      path: '$path.props.hasExpanded',
+    );
+    final hasMedium = _requiredBoolValue(
+      props['hasMedium'],
+      path: '$path.props.hasMedium',
+    );
+    final expectedChildren = 1 + (hasMedium ? 1 : 0) + (hasExpanded ? 1 : 0);
+    if (children.length != expectedChildren) {
+      _fail(
+        'Mp responsive children do not match its variant metadata.',
+        path: '$path.children',
+      );
+    }
+    return _MpNode(
+      type: 'responsive',
+      props: <String, dynamic>{
+        'hasExpanded': hasExpanded,
+        'hasMedium': hasMedium,
+      },
+      children: children,
+    );
+  }
+
+  _MpNode _parseConstrainedContentNode({
+    required Map<String, dynamic> props,
+    required List<_MpNode> children,
+    required String path,
+  }) {
+    _validateObjectKeys(props, const <String>{
+      'maxWidth',
+      'paddingHorizontal',
+    }, path: '$path.props');
+    _validateSingleChild(children, nodeType: 'constrainedContent', path: path);
+    return _MpNode(
+      type: 'constrainedContent',
+      props: <String, dynamic>{
+        'maxWidth': _boundedNumber(
+          props['maxWidth'],
+          path: '$path.props.maxWidth',
+          minimum: 1,
+          maximum: 10000,
+        ),
+        'paddingHorizontal': _boundedNumber(
+          props['paddingHorizontal'],
+          path: '$path.props.paddingHorizontal',
+          minimum: 0,
+          maximum: 256,
+        ),
+      },
+      children: children,
+    );
+  }
+
+  Map<String, dynamic> _parseResponsiveBreakpoints(
+    Object? value, {
+    required String path,
+  }) {
+    final breakpoints = _optionalMap(value, path: path);
+    _validateObjectKeys(breakpoints, const <String>{
+      'expandedMinWidth',
+      'mediumMinWidth',
+    }, path: path);
+    final mediumMinWidth = _boundedNumber(
+      breakpoints['mediumMinWidth'],
+      path: '$path.mediumMinWidth',
+      minimum: 1,
+      maximum: 10000,
+    );
+    final expandedMinWidth = _boundedNumber(
+      breakpoints['expandedMinWidth'],
+      path: '$path.expandedMinWidth',
+      minimum: 1,
+      maximum: 10000,
+    );
+    if (mediumMinWidth >= expandedMinWidth) {
+      _fail(
+        'Mp expandedMinWidth must be greater than mediumMinWidth.',
+        path: '$path.expandedMinWidth',
+      );
+    }
+    return <String, dynamic>{
+      'expandedMinWidth': expandedMinWidth,
+      'mediumMinWidth': mediumMinWidth,
+    };
   }
 
   _MpNode _parseTopBarNode({

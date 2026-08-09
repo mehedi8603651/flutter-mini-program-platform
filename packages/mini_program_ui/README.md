@@ -88,6 +88,39 @@ Use `Mp.page` for new full-screen mini-program screens. It owns the safe area
 and avoids legacy outer scroll padding. Keep `Mp.topBar` outside the expanded
 scrolling body so headers do not move or compress when the keyboard opens.
 
+Configure responsive thresholds once at the screen root. Values are Flutter
+logical pixels and may be adjusted for the mini-program's content:
+
+```dart
+Mp.page(
+  breakpoints: const MpResponsiveBreakpoints(
+    mediumMinWidth: 600,
+    expandedMinWidth: 840,
+  ),
+  child: Mp.constrainedContent(
+    maxWidth: 1200,
+    child: Mp.responsive(
+      compact: compactLayout,
+      medium: tabletLayout,
+      expanded: largeLayout,
+    ),
+  ),
+);
+```
+
+Missing medium or expanded variants fall back toward the compact layout. For
+collections that only need more columns, prefer one adaptive grid instead of
+duplicating the complete screen:
+
+```dart
+Mp.grid(
+  minItemWidth: 180,
+  maxColumns: 4,
+  spacing: 12,
+  children: cards,
+);
+```
+
 ## Auth
 
 ```dart

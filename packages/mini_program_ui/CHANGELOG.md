@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.9
+
+- Add page-level responsive breakpoints, width-selected `Mp.responsive`
+  variants, centered `Mp.constrainedContent`, and adaptive grid sizing while
+  preserving existing fixed-column grid JSON.
+
 ## 0.2.8
 
 - Add root-only `Mp.page` authoring for explicit safe-area and background

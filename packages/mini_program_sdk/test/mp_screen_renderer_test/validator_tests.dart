@@ -22,6 +22,66 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts responsive layout and adaptive grid metadata', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.page(
+              breakpoints: const MpResponsiveBreakpoints(
+                mediumMinWidth: 640,
+                expandedMinWidth: 960,
+              ),
+              child: Mp.constrainedContent(
+                maxWidth: 1080,
+                child: Mp.responsive(
+                  compact: Mp.grid(
+                    columns: 1,
+                    children: <MpNode>[Mp.text('Compact')],
+                  ),
+                  medium: Mp.grid(
+                    minItemWidth: 180,
+                    maxColumns: 3,
+                    children: <MpNode>[Mp.text('Medium')],
+                  ),
+                ),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+
+      const MpScreenValidator().validate(
+        screen,
+        expectedScreenId: 'coupon_home',
+      );
+    });
+
+    test('rejects reversed responsive breakpoints', () {
+      final screen = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.page(child: Mp.text('Home')),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      final root = Map<String, dynamic>.from(screen['root'] as Map);
+      final props = Map<String, dynamic>.from(root['props'] as Map);
+      props['breakpoints'] = <String, dynamic>{
+        'mediumMinWidth': 840,
+        'expandedMinWidth': 600,
+      };
+      root['props'] = props;
+      screen['root'] = root;
+
+      expect(
+        () => const MpScreenValidator().validate(
+          screen,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+    });
+
     test('rejects page below the screen root', () {
       final screen = _jsonMap(
         MpProgram(

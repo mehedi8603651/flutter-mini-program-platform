@@ -25,6 +25,7 @@ import 'features/flashlight/flashlight_actions.dart';
 import 'features/forms/form_models.dart';
 import 'features/forms/form_nodes.dart';
 import 'features/layout/layout_nodes.dart';
+import 'features/layout/responsive_models.dart';
 import 'features/lazy/lazy_nodes.dart';
 import 'features/lifecycle/lifecycle_nodes.dart';
 import 'features/lifecycle/timer_nodes.dart';
@@ -54,6 +55,7 @@ export 'features/display/display_nodes.dart' show MpDisplay;
 export 'features/forms/form_models.dart' show MpOption;
 export 'features/lifecycle/timer_nodes.dart' show MpTimer;
 export 'features/location/location_actions.dart' show MpLocationActions;
+export 'features/layout/responsive_models.dart' show MpResponsiveBreakpoints;
 export 'features/file/file_actions.dart' show MpFileActions;
 export 'features/flashlight/flashlight_actions.dart' show MpFlashlightActions;
 export 'features/qr/qr.dart' show MpQr;
@@ -479,10 +481,34 @@ abstract final class Mp {
     required MpNode child,
     String? backgroundColor,
     bool safeArea = true,
+    MpResponsiveBreakpoints? breakpoints,
   }) => buildPageNode(
     child: child,
     backgroundColor: backgroundColor,
     safeArea: safeArea,
+    breakpoints: breakpoints,
+  );
+
+  /// Selects a layout from the width available to this subtree.
+  ///
+  /// Missing medium and expanded variants fall back toward [compact]. Width
+  /// thresholds come from the nearest Mp.page or the platform defaults.
+  static MpNode responsive({
+    required MpNode compact,
+    MpNode? medium,
+    MpNode? expanded,
+  }) =>
+      buildResponsiveNode(compact: compact, medium: medium, expanded: expanded);
+
+  /// Centers content and prevents it from stretching excessively.
+  static MpNode constrainedContent({
+    required MpNode child,
+    num maxWidth = 1200,
+    num paddingHorizontal = 16,
+  }) => buildConstrainedContentNode(
+    child: child,
+    maxWidth: maxWidth,
+    paddingHorizontal: paddingHorizontal,
   );
 
   /// Creates a compact responsive top bar with a flexible title slot.
@@ -603,12 +629,20 @@ abstract final class Mp {
     semanticLabel: semanticLabel,
   );
 
-  /// Creates a fixed-column grid.
+  /// Creates a fixed-column or width-adaptive grid.
   static MpNode grid({
     required List<MpNode> children,
-    int columns = 2,
+    int? columns,
+    num? minItemWidth,
+    int? maxColumns,
     num spacing = 8,
-  }) => buildGridNode(children: children, columns: columns, spacing: spacing);
+  }) => buildGridNode(
+    children: children,
+    columns: columns,
+    minItemWidth: minItemWidth,
+    maxColumns: maxColumns,
+    spacing: spacing,
+  );
 
   /// Creates a wrapping layout for chips, badges, and compact content.
   static MpNode wrap({

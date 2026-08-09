@@ -28,8 +28,8 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.13` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.8` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.9` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_ui` | `0.2.9` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.10` | Flutter host runtime, renderer, state, cache, loading, and host integration |
 | `mini_program_tooling` | `0.7.9` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
@@ -193,7 +193,7 @@ packages/mini_program_ui/
 |       |   `-- mp_schema.dart                  # Authoring schema constants and screen ID validation
 |       |-- features/                           # Node/action implementations grouped by behavior
 |       |   |-- shared/                         # Presentation-only colors, icons, spacing, and style validation
-|       |   |-- layout/                         # Page/top bar, row, column, stack, sizing, padding, flex, and section nodes
+|       |   |-- layout/                         # Page breakpoints, responsive variants, width constraints, and core layout nodes
 |       |   |-- content/                        # Text, display, image nodes, and image models
 |       |   |-- collections/                    # List, repeat, grid, and wrap nodes
 |       |   |-- controls/                       # Buttons, list tiles, dropdowns, checkbox, and radio nodes
@@ -1357,9 +1357,9 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 68 unique SDK runtime node types. There are
-72 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 74 public builder entry points when the two aliases are
+The authoring API currently maps to 70 unique SDK runtime node types. There are
+74 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 76 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
 `Mp.qr.scan`, `Mp.audio.*`, and `Mp.video.*` are not widgets and are excluded
@@ -1368,6 +1368,8 @@ from these totals.
 Layout and structure:
 
 - `Mp.page`: owns a screen's safe area and background without legacy outer padding; it is valid only at the root.
+- `Mp.responsive`: selects compact, medium, or expanded content from local available width and inherited page breakpoints.
+- `Mp.constrainedContent`: centers content under a maximum logical width with bounded horizontal padding.
 - `Mp.topBar`: reserves bounded leading, title, and action regions for stable compact screen headers.
 - `Mp.column`: lays out children vertically in source order.
 - `Mp.row`: lays out children horizontally in source order.
@@ -1388,7 +1390,7 @@ Layout and structure:
 - `Mp.stack`: overlays children in paint order.
 - `Mp.positioned`: places a child by stack edges; it is meaningful as a direct stack child.
 - `Mp.divider`: draws a horizontal separator with configurable thickness and color.
-- `Mp.grid`: lays out static children in a fixed-column grid.
+- `Mp.grid`: lays out static children with fixed columns or bounded adaptive columns derived from minimum item width.
 - `Mp.wrap`: flows children onto additional horizontal or vertical runs when space is exhausted.
 - `Mp.card`: gives one child the platform's standard framed card treatment.
 - `Mp.section`: groups a title, optional subtitle/action, and one content child.

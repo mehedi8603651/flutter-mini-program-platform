@@ -98,13 +98,22 @@ class _MpGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns = _int(node, 'columns', fallback: 2);
     final spacing = _double(node, 'spacing', fallback: 8);
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : 360.0;
+        final minItemWidth = _optionalDouble(node, 'minItemWidth');
+        final columns = minItemWidth == null
+            ? _int(node, 'columns', fallback: 2)
+            : math.max(
+                1,
+                math.min(
+                  _int(node, 'maxColumns', fallback: 6),
+                  ((maxWidth + spacing) / (minItemWidth + spacing)).floor(),
+                ),
+              );
         final itemWidth = (maxWidth - (spacing * (columns - 1))) / columns;
         return Wrap(
           spacing: spacing,

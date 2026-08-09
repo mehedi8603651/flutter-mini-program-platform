@@ -15,6 +15,12 @@ New screens can use a root `Mp.page` plus `Mp.topBar` to opt into explicit
 safe-area ownership and stable fixed headers. Existing artifacts retain the
 legacy outer padding and scrolling behavior.
 
+`Mp.page` may also provide logical-pixel responsive breakpoints inherited by
+`Mp.responsive` descendants. Selection uses each node's available layout
+width, while `Mp.constrainedContent` and adaptive `Mp.grid` keep tablet,
+foldable, landscape, and resizable-window layouts bounded without exposing
+viewport dimensions through live state.
+
 The SDK stays provider-neutral:
 
 - artifact opening uses `MiniProgramEndpoint.public(apiBaseUri: artifactBaseUrl)`

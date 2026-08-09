@@ -54,6 +54,131 @@ void _mpScreenRendererTests() {
       expect(tester.getTopLeft(find.byType(ColoredBox).last).dx, 0);
     });
 
+    testWidgets('responsive uses page breakpoints and variant fallbacks', (
+      tester,
+    ) async {
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.page(
+              safeArea: false,
+              breakpoints: const MpResponsiveBreakpoints(
+                mediumMinWidth: 500,
+                expandedMinWidth: 800,
+              ),
+              child: Mp.responsive(
+                compact: Mp.text('Compact layout'),
+                expanded: Mp.text('Expanded layout'),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.binding.setSurfaceSize(const Size(400, 600));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => const MpScreenRenderer().render(
+              MiniProgramRenderRequest(
+                context: context,
+                manifest: _mpManifest,
+                screenId: 'coupon_home',
+                screenJson: screenJson,
+                logger: DebugPrintSdkLogger(),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Compact layout'), findsOneWidget);
+
+      await tester.binding.setSurfaceSize(const Size(650, 600));
+      await tester.pump();
+      expect(find.text('Compact layout'), findsOneWidget);
+      expect(find.text('Expanded layout'), findsNothing);
+
+      await tester.binding.setSurfaceSize(const Size(900, 600));
+      await tester.pump();
+      expect(find.text('Expanded layout'), findsOneWidget);
+      expect(find.text('Compact layout'), findsNothing);
+    });
+
+    testWidgets('constrained content and adaptive grid follow local width', (
+      tester,
+    ) async {
+      final screenJson = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.page(
+              safeArea: false,
+              child: Mp.constrainedContent(
+                maxWidth: 800,
+                paddingHorizontal: 16,
+                child: Mp.grid(
+                  minItemWidth: 180,
+                  maxColumns: 4,
+                  spacing: 8,
+                  children: <MpNode>[
+                    Mp.text('Tile A'),
+                    Mp.text('Tile B'),
+                    Mp.text('Tile C'),
+                    Mp.text('Tile D'),
+                  ],
+                ),
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(500, 600));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => const MpScreenRenderer().render(
+              MiniProgramRenderRequest(
+                context: context,
+                manifest: _mpManifest,
+                screenId: 'coupon_home',
+                screenJson: screenJson,
+                logger: DebugPrintSdkLogger(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.getTopLeft(find.text('Tile A')).dy,
+        tester.getTopLeft(find.text('Tile B')).dy,
+      );
+      expect(
+        tester.getTopLeft(find.text('Tile C')).dy,
+        greaterThan(tester.getTopLeft(find.text('Tile A')).dy),
+      );
+
+      await tester.binding.setSurfaceSize(const Size(900, 600));
+      await tester.pump();
+      expect(
+        tester
+            .getSize(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is ConstrainedBox &&
+                    widget.constraints.maxWidth == 800,
+              ),
+            )
+            .width,
+        800,
+      );
+      expect(
+        tester.getTopLeft(find.text('Tile A')).dy,
+        tester.getTopLeft(find.text('Tile D')).dy,
+      );
+    });
+
     testWidgets('renders basic Mp nodes with Flutter widgets', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

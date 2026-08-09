@@ -66,13 +66,29 @@ MpNode buildRepeatNode({
 
 MpNode buildGridNode({
   required List<MpNode> children,
-  int columns = 2,
+  int? columns,
+  num? minItemWidth,
+  int? maxColumns,
   num spacing = 8,
 }) {
+  if (minItemWidth == null && maxColumns != null) {
+    throw ArgumentError(
+      'Mp.grid maxColumns requires minItemWidth for adaptive layout.',
+    );
+  }
+  if (minItemWidth != null && columns != null) {
+    throw ArgumentError(
+      'Mp.grid cannot combine fixed columns with minItemWidth.',
+    );
+  }
+  final adaptive = minItemWidth != null;
   return MpNode(
     'grid',
     props: <String, Object?>{
-      'columns': gridColumnCount(columns),
+      if (!adaptive) 'columns': gridColumnCount(columns ?? 2),
+      if (adaptive) 'maxColumns': gridColumnCount(maxColumns ?? 6),
+      if (adaptive)
+        'minItemWidth': positiveWidgetNumber(minItemWidth, 'minItemWidth'),
       'spacing': nonNegativeWidgetNumber(spacing, 'spacing'),
     },
     children: requiredWidgetList(children, 'children'),

@@ -435,6 +435,16 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'responsive' => _parseResponsiveNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
+      'constrainedContent' => _parseConstrainedContentNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'topBar' => _parseTopBarNode(
         props: props,
         children: parsedChildren,

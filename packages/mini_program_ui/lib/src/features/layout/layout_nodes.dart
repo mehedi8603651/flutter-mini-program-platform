@@ -1,6 +1,7 @@
 import '../../core/mp_action.dart';
 import '../../core/mp_node.dart';
 import '../shared/presentation_validation.dart';
+import 'responsive_models.dart';
 
 MpNode buildColumnNode({required List<MpNode> children}) {
   return MpNode('column', children: children);
@@ -14,13 +15,65 @@ MpNode buildPageNode({
   required MpNode child,
   String? backgroundColor,
   bool safeArea = true,
+  MpResponsiveBreakpoints? breakpoints,
 }) {
   return MpNode(
     'page',
     props: <String, Object?>{
       if (backgroundColor != null)
         'backgroundColor': widgetColor(backgroundColor, 'backgroundColor'),
+      if (breakpoints != null) 'breakpoints': breakpoints.toJson(),
       'safeArea': safeArea,
+    },
+    children: <MpNode>[child],
+  );
+}
+
+MpNode buildResponsiveNode({
+  required MpNode compact,
+  MpNode? medium,
+  MpNode? expanded,
+}) {
+  return MpNode(
+    'responsive',
+    props: <String, Object?>{
+      'hasExpanded': expanded != null,
+      'hasMedium': medium != null,
+    },
+    children: <MpNode>[
+      compact,
+      if (medium != null) medium,
+      if (expanded != null) expanded,
+    ],
+  );
+}
+
+MpNode buildConstrainedContentNode({
+  required MpNode child,
+  num maxWidth = 1200,
+  num paddingHorizontal = 16,
+}) {
+  if (!maxWidth.isFinite || maxWidth <= 0 || maxWidth > 10000) {
+    throw ArgumentError.value(
+      maxWidth,
+      'maxWidth',
+      'Content maxWidth must be finite and between 1 and 10000.',
+    );
+  }
+  if (!paddingHorizontal.isFinite ||
+      paddingHorizontal < 0 ||
+      paddingHorizontal > 256) {
+    throw ArgumentError.value(
+      paddingHorizontal,
+      'paddingHorizontal',
+      'Horizontal padding must be finite and between 0 and 256.',
+    );
+  }
+  return MpNode(
+    'constrainedContent',
+    props: <String, Object?>{
+      'maxWidth': maxWidth,
+      'paddingHorizontal': paddingHorizontal,
     },
     children: <MpNode>[child],
   );

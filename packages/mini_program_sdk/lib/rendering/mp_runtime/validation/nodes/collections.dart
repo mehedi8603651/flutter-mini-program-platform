@@ -107,18 +107,48 @@ extension _MpCollectionNodeValidation on MpScreenValidator {
   }) {
     _validateObjectKeys(props, const <String>{
       'columns',
+      'maxColumns',
+      'minItemWidth',
       'spacing',
     }, path: '$path.props');
     _validateNonEmptyChildren(children, nodeType: 'grid', path: path);
+    final adaptive = props.containsKey('minItemWidth');
+    if (adaptive && props.containsKey('columns')) {
+      _fail(
+        'Mp grid cannot combine columns with minItemWidth.',
+        path: '$path.props',
+      );
+    }
+    if (!adaptive && props.containsKey('maxColumns')) {
+      _fail(
+        'Mp grid maxColumns requires minItemWidth.',
+        path: '$path.props.maxColumns',
+      );
+    }
     return _MpNode(
       type: 'grid',
       props: <String, dynamic>{
-        'columns':
-            _optionalGridColumns(
-              props['columns'],
-              path: '$path.props.columns',
-            ) ??
-            2,
+        if (!adaptive)
+          'columns':
+              _optionalGridColumns(
+                props['columns'],
+                path: '$path.props.columns',
+              ) ??
+              2,
+        if (adaptive)
+          'maxColumns':
+              _optionalGridColumns(
+                props['maxColumns'],
+                path: '$path.props.maxColumns',
+              ) ??
+              6,
+        if (adaptive)
+          'minItemWidth': _boundedNumber(
+            props['minItemWidth'],
+            path: '$path.props.minItemWidth',
+            minimum: 1,
+            maximum: 10000,
+          ),
         'spacing':
             _optionalNonNegativeNumberValue(
               props['spacing'],
