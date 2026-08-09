@@ -136,6 +136,18 @@ It owns its torch while scanning, returns inert data, never opens scanned
 URLs, and leaves every mini-program denied until its `permissions.qrScanner`
 policy is accepted.
 
+For Android apps that request system sharing, install the chooser adapter
+once:
+
+```bash
+miniprogram host capability init share --platform android
+```
+
+The adapter adds no Android permission or dependency. It shares bounded text,
+HTTPS URLs, and app-owned opaque media through Android's chooser, reports only
+that the chooser opened, and leaves every mini-program denied until its
+`permissions.share` policy is accepted.
+
 For Android apps that request streamed audio or inline video, install the
 shared playback provider once using either command:
 

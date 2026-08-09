@@ -52,6 +52,9 @@ abstract final class CapabilityIds {
   /// Host can scan QR codes through an explicitly installed scanner UI.
   static const CapabilityId qrScanner = 'qr.scanner';
 
+  /// Host can open the platform share chooser for accepted inert content.
+  static const CapabilityId systemShare = 'share.system';
+
   /// Stable ordering used by scaffolds and human-readable output.
   static const List<CapabilityId> standardValues = <CapabilityId>[
     auth,
@@ -69,6 +72,7 @@ abstract final class CapabilityIds {
     mediaPreview,
     flashlightControl,
     qrScanner,
+    systemShare,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

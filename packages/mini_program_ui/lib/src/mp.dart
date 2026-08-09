@@ -34,6 +34,7 @@ import 'features/media_playback/audio_actions.dart';
 import 'features/media_playback/media_sources.dart';
 import 'features/media_playback/video.dart';
 import 'features/qr/qr.dart';
+import 'features/share/share_actions.dart';
 import 'features/navigation/navigation_actions.dart';
 import 'features/navigation/router_actions.dart';
 import 'features/skeleton/skeleton_nodes.dart';
@@ -54,6 +55,7 @@ export 'features/location/location_actions.dart' show MpLocationActions;
 export 'features/file/file_actions.dart' show MpFileActions;
 export 'features/flashlight/flashlight_actions.dart' show MpFlashlightActions;
 export 'features/qr/qr.dart' show MpQr;
+export 'features/share/share_actions.dart' show MpShareActions;
 export 'features/math/math_actions.dart' show MpMathActions;
 export 'features/media/media_actions.dart' show MpMediaActions;
 export 'features/media_playback/audio_actions.dart' show MpAudioActions;
@@ -113,6 +115,9 @@ abstract final class Mp {
 
   /// QR code generation and host-controlled scanning.
   static const qr = MpQr();
+
+  /// Host-controlled platform sharing actions.
+  static const share = MpShareActions();
 
   /// Lifecycle-owned timer nodes.
   static const timer = MpTimer();

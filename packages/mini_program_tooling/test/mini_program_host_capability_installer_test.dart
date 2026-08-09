@@ -23,6 +23,78 @@ void main() {
     }
   });
 
+  test('installs Android system sharing with opaque media support', () async {
+    final installer = const MiniProgramHostCapabilityInstaller();
+    final request = MiniProgramHostCapabilityInitRequest(
+      projectRootPath: hostRootPath,
+      capability: 'share',
+      platform: 'android',
+    );
+
+    final result = await installer.initialize(request);
+    expect(result.alreadyInstalled, isFalse);
+
+    final providerSource = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'app_android_share_provider.dart',
+      ),
+    ).readAsString();
+    expect(providerSource, contains('class AppAndroidShareProvider'));
+    expect(providerSource, contains("'mini_program/share'"));
+
+    final hostSetupSource = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_host_setup.dart',
+      ),
+    ).readAsString();
+    expect(hostSetupSource, contains('resolvedShareProvider'));
+    expect(hostSetupSource, contains('shareProvider: resolvedShareProvider'));
+
+    final runtimeSetupSource = await File(
+      p.join(
+        hostRootPath,
+        'lib',
+        'mini_program',
+        'mini_program_runtime_setup.dart',
+      ),
+    ).readAsString();
+    expect(runtimeSetupSource, contains('CapabilityIds.systemShare'));
+    expect(runtimeSetupSource, contains('shareProvider: shareProvider'));
+
+    final channelSource = await _nativeGeneratedFile(
+      hostRootPath,
+      'share',
+      'MiniProgramShareChannel.kt',
+    ).readAsString();
+    expect(channelSource, contains('Intent.createChooser'));
+    expect(channelSource, contains('FLAG_GRANT_READ_URI_PERMISSION'));
+    expect(channelSource, contains('findOwned(appId, mediaRef)'));
+
+    final registrySource = await _nativeGeneratedFile(
+      hostRootPath,
+      'shared',
+      'MiniProgramHostMediaRegistry.kt',
+    ).readAsString();
+    expect(registrySource, contains('object MiniProgramHostMediaRegistry'));
+
+    final nativeSetupSource = await _nativeSetupFile(
+      hostRootPath,
+    ).readAsString();
+    expect(
+      nativeSetupSource,
+      contains('MiniProgramShareChannel.register(flutterEngine)'),
+    );
+
+    final repeated = await installer.initialize(request);
+    expect(repeated.alreadyInstalled, isTrue);
+  });
+
   test('installs generic Android one-time location support', () async {
     final result = await const MiniProgramHostCapabilityInstaller().initialize(
       MiniProgramHostCapabilityInitRequest(
@@ -972,8 +1044,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  mini_program_sdk: ^0.6.6
-  mini_program_contracts: ^0.3.11
+  mini_program_sdk: ^0.6.7
+  mini_program_contracts: ^0.3.12
 ''');
   await File(
     p.join(rootPath, 'lib', 'mini_program', 'mini_program_runtime_setup.dart'),

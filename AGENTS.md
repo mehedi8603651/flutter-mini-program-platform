@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.11` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.5` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.6` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.6` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.12` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.6` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.7` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.7` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -88,6 +88,11 @@ These are system invariants, not preferences:
     state; playback sessions and temporary cache ownership are app-scoped. The
     host independently accepts each media kind and owns playback, buffering,
     audio focus, foreground lifecycle, fullscreen, and cache enforcement.
+20. System sharing is an optional host capability invoked only by an explicit
+    user gesture. Mini-programs may provide bounded text, one absolute HTTPS
+    URL, and app-owned opaque media references. The host owns accepted content
+    types and limits; native paths, content URIs, bytes, and claims that the
+    user completed sharing never enter mini-program state.
 
 ## Repository Map
 
@@ -143,6 +148,7 @@ packages/mini_program_contracts/
 |   |-- mini_program_flashlight.dart            # JSON-safe flashlight availability and enabled status
 |   |-- mini_program_qr.dart                    # Inert, bounded QR scan result metadata
 |   |-- mini_program_playback.dart              # Playback kind, status, and bounded session snapshot
+|   |-- mini_program_share.dart                 # System chooser-opened result contract
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -200,6 +206,7 @@ packages/mini_program_ui/
 |       |   |-- flashlight/                     # Foreground flashlight control and status actions
 |       |   |-- media/                          # Temporary host-media release actions
 |       |   |-- qr/                             # Local QR rendering and host-controlled scan actions
+|       |   |-- share/                          # Gesture-gated system-share actions
 |       |   |-- media_playback/                 # Trusted media sources, headless audio actions, and inline video
 |       |   |-- navigation/                     # Navigation and router actions
 |       |   |-- backend/                        # Publisher API actions, nodes, and search
@@ -304,6 +311,8 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_flashlight.dart        # Torch provider, accepted policy, app ownership, and cleanup
 |   |-- qr/
 |   |   `-- mini_program_qr.dart                # QR provider, accepted policy, scan ownership, and result validation
+|   |-- share/
+|   |   `-- mini_program_share.dart             # Share provider, accepted content policy, and concurrency guard
 |   |-- media_playback/
 |   |   `-- mini_program_media_playback.dart    # Provider-neutral audio/video sessions, policy, and app lifecycle manager
 |   |-- state/
@@ -459,6 +468,7 @@ packages/mini_program_sdk/
 |   |       |   |-- flashlight.dart             # App-owned torch control and status execution
 |   |       |   |-- media.dart                  # Temporary host-media release execution
 |   |       |   |-- qr.dart                     # Gesture-gated accepted QR scanning and state projection
+|   |       |   |-- share.dart                  # Gesture-gated text, URL, and owned-media sharing
 |   |       |   |-- cache.dart                  # App-scoped cache action execution
 |   |       |   |-- feedback_forms_lazy.dart    # Form, lazy-load, toast, and dialog execution
 |   |       |   |-- composition.dart            # Sequence, conditional, and reusable-action calls
@@ -668,6 +678,7 @@ packages/mini_program_tooling/
 |       |       |-- shared_media/                # App-owned native media registry template shared by camera/files
 |       |       |-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
 |       |       |-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
+|       |       |-- share/                       # Android chooser, media registry, and host wiring installer
 |       |       `-- media_playback/              # Media3 Dart/Kotlin templates, Gradle/MainActivity editors, ownership checks, and installer
 |       |-- mini_program_host_controller.dart    # Public host run/endpoint-import facade
 |       |-- host_endpoint/                       # Internal host routing and accepted-policy generation
@@ -1216,6 +1227,13 @@ scanner owns its torch while open, requires an explicit user gesture, returns
 inert data, and never automatically opens URLs. Provider installation does not
 accept `permissions.qrScanner` for any mini-program.
 
+Android system sharing installs `MiniProgramShareChannel.kt` and a host-owned
+Dart provider. Run `miniprogram host capability init share --platform android`
+once per host. It uses Android's chooser, adds no permission or dependency,
+revalidates opaque media ownership, grants only temporary URI access to the
+selected receiving app, and reports only that the chooser opened. Provider
+installation does not accept `permissions.share` for any mini-program.
+
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
 `mini_program_policies.json`, and endpoint-import generated output. Read
@@ -1449,6 +1467,8 @@ Important state APIs include:
   app-owned torch control under separate accepted host policy.
 - `Mp.qr.generate` for bounded cross-platform QR rendering and `Mp.qr.scan`
   for gesture-gated, host-accepted QR-only scanning with inert results.
+- `Mp.share.open` for gesture-gated host sharing of bounded text, one HTTPS
+  URL, and app-owned opaque media references.
 - `Mp.audio.play`, `preload`, `pause`, `seek`, `stop`, `setVolume`,
   `setSpeed`, `getStatus`, and `release` for app-scoped headless audio
   playback.
@@ -1551,9 +1571,9 @@ Import behavior:
 
 - Normal import updates `requested` and preserves the host's `accepted` values.
 - `--accept-requested-policy` explicitly copies supported requested cache,
-  Publisher API, location, file, camera, flashlight, and QR scanner permissions into
+  Publisher API, location, file, camera, flashlight, QR scanner, and share permissions into
   accepted policy without replacing unrelated endpoint files.
-- New location, file, camera, flashlight, and QR scanner requests default to denied.
+- New location, file, camera, flashlight, QR scanner, and share requests default to denied.
   Normal re-import preserves host decisions; `--force` resets them to denied
   and resets live-state limits to safe defaults.
 - Runtime resolver generation reads only `accepted` for enforcement.

@@ -26,6 +26,7 @@ class MiniProgramEndpoint {
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
 
@@ -46,6 +47,7 @@ class MiniProgramEndpoint {
     this.cameraPolicy = const MiniProgramCameraPolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
 
@@ -61,5 +63,6 @@ class MiniProgramEndpoint {
   final MiniProgramCameraPolicy cameraPolicy;
   final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramQrPolicy qrPolicy;
+  final MiniProgramSharePolicy sharePolicy;
   final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
 }

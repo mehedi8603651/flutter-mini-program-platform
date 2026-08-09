@@ -1,3 +1,9 @@
+## 0.3.12
+
+- Add the stable `share.open` action, `share.system` capability, chooser-opened
+  result contract, and host-policy, gesture, content, ownership, concurrency,
+  availability, and operation failure codes.
+
 ## 0.3.11
 
 - Add stable streamed audio and inline video action names, playback capability

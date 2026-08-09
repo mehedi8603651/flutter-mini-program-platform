@@ -265,6 +265,20 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'allowTorch': acceptRequested && request['allowTorch'] == true,
     });
   }
+  if (permission == 'share') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostShare(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'allowText': acceptRequested && request['text'] == true,
+      'allowUrls': acceptRequested && request['urls'] == true,
+      'allowMedia': acceptRequested && request['media'] == true,
+      'maxMediaItems':
+          positiveHostInt(request['recommendedMaxMediaItems']) ?? 10,
+    });
+  }
   if (permission == 'audioPlayback' || permission == 'videoPlayback') {
     final request = requested is Map
         ? hostJsonObjectOrEmpty(requested)
@@ -361,6 +375,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
       hostJsonObjectOrEmpty(rawQrScanner),
     );
   }
+  final rawShare = normalized['share'];
+  if (rawShare != null) {
+    if (rawShare is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.share must be an object.',
+      );
+    }
+    normalized['share'] = validateAcceptedHostShare(
+      hostJsonObjectOrEmpty(rawShare),
+    );
+  }
   for (final permission in const <String>['audioPlayback', 'videoPlayback']) {
     final raw = normalized[permission];
     if (raw == null) continue;
@@ -429,6 +454,38 @@ Map<String, Object?> validateAcceptedHostQrScanner(Map<String, Object?> value) {
       );
     }
   }
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostShare(Map<String, Object?> value) {
+  final normalized = deepHostJsonObjectCopy(value);
+  for (final key in const <String>{
+    'enabled',
+    'allowText',
+    'allowUrls',
+    'allowMedia',
+  }) {
+    if (normalized[key] is! bool) {
+      throw MiniProgramHostException(
+        'Accepted permissions.share.$key must be a boolean.',
+      );
+    }
+  }
+  if (normalized['enabled'] == true &&
+      normalized['allowText'] != true &&
+      normalized['allowUrls'] != true &&
+      normalized['allowMedia'] != true) {
+    throw const MiniProgramHostException(
+      'Enabled permissions.share must allow at least one content type.',
+    );
+  }
+  final maxMediaItems = positiveHostInt(normalized['maxMediaItems']);
+  if (maxMediaItems == null || maxMediaItems > 10) {
+    throw const MiniProgramHostException(
+      'Accepted permissions.share.maxMediaItems must be an integer from 1 to 10.',
+    );
+  }
+  normalized['maxMediaItems'] = maxMediaItems;
   return sortedHostJsonObject(normalized);
 }
 

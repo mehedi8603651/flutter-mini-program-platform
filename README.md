@@ -118,6 +118,17 @@ torch while open. Scanned values are returned as inert data and are never
 opened as URLs or executed automatically. QR generation needs no host
 capability.
 
+For host-approved Android system sharing, install the chooser adapter once and
+review each app's accepted `permissions.share` policy:
+
+```powershell
+miniprogram host capability init share --platform android --project-root .\coupon_host
+```
+
+Mini-programs may share bounded text, one absolute HTTPS URL, and app-owned
+opaque media references. The provider exposes no paths or content URIs and
+reports only that Android opened the chooser, not that sharing completed.
+
 ## Optional Runtime API
 
 Publisher API Contract V1 is a runtime API standard only; host opening still uses `appId + artifactBaseUrl`.

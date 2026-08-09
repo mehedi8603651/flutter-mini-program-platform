@@ -44,6 +44,7 @@ class MiniProgramPage extends StatelessWidget {
         mediaPlaybackProvider: resolvedRuntime.mediaPlaybackProvider,
         flashlightProvider: resolvedRuntime.flashlightProvider,
         qrScannerProvider: resolvedRuntime.qrScannerProvider,
+        shareProvider: resolvedRuntime.shareProvider,
         authController: resolvedRuntime.authController,
         featureFlagEvaluator: resolvedRuntime.featureFlagEvaluator,
         assetCache: resolvedRuntime.cacheBundle.assetCache,

@@ -389,6 +389,32 @@ The scan target contains `rawValue`, `format`, `valueType`, and
 `scannedAtUtc`. Treat `rawValue` as untrusted text. The runtime never opens a
 scanned URL or performs another action automatically.
 
+## System Sharing
+
+System sharing must run from an explicit button or other user gesture. A host
+must install a platform provider and accept `permissions.share` for the app.
+
+```dart
+Mp.button(
+  text: 'Share note',
+  action: Mp.share.open(
+    title: 'Share note',
+    text: '{{state.note.text}}',
+    url: 'https://example.com/notes/42',
+    mediaRefs: '{{state.note.mediaRefs}}',
+    targetState: 'share.result',
+    statusState: 'share.status',
+    errorState: 'share.error',
+  ),
+);
+```
+
+`mediaRefs` are opaque temporary resources already owned by the mini-program,
+such as delegated camera results. The result is
+`{"chooserOpened": true}`; it does not indicate whether the user selected a
+target or completed sharing. Native paths, content URIs, and raw bytes are
+never accepted.
+
 ## Streamed Audio And Inline Video
 
 Media sources are either immutable artifact assets or relative Publisher API

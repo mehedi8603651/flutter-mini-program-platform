@@ -763,13 +763,13 @@ void main() {
 
       expect(digests, <String, String>{
         'endpoints':
-            'ec577604c380ffe5a4dee3a89dbb78d192048de1a1759b4728d100038df186f7',
+            '9f8fb8145ecea936aa392b755a3addad2cdb96e04a52e0324cdb3405d96dd01c',
         'registry':
             'c9352bd447397efb77696c2b2efbcd17fb951c3807a36c6faef7f4d79dbd11c3',
         'policies':
             'f198f00ae5bfb85f7463def7b3515773d192c03b2187d5a6c5d687abae9db990',
         'resolver':
-            '53cb8152c9e115610bbb794b37908e30837f0bc43495d5c14c98b81ee48fbba2',
+            '3b329ffc6e8587db2321a4067ec9a6b6c143b822ddce102b5b0c288c30eb9c90',
       });
     });
   });

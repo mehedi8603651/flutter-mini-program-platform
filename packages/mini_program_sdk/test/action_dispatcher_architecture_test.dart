@@ -47,6 +47,7 @@ void main() {
       'media_playback.dart',
       'navigation.dart',
       'qr.dart',
+      'share.dart',
       'shared.dart',
       'state.dart',
     });

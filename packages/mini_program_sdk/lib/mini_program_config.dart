@@ -16,6 +16,7 @@ import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
+import 'share/mini_program_share.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
@@ -33,6 +34,7 @@ class MiniProgramConfig {
     this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
+    this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -59,6 +61,7 @@ class MiniProgramConfig {
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
+  final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -81,6 +84,7 @@ class MiniProgramConfig {
       mediaPlaybackProvider: mediaPlaybackProvider,
       flashlightProvider: flashlightProvider,
       qrScannerProvider: qrScannerProvider,
+      shareProvider: shareProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,
       featureFlagEvaluator: featureFlagEvaluator,

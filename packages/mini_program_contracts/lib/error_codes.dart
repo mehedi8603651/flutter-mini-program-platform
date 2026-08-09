@@ -99,6 +99,15 @@ abstract final class MiniProgramErrorCodes {
   static const String qrInvalidResult = 'qr_invalid_result';
   static const String qrUserGestureRequired = 'qr_user_gesture_required';
   static const String qrOperationFailed = 'qr_operation_failed';
+
+  static const String shareNotAccepted = 'share_not_accepted';
+  static const String shareUnavailable = 'share_unavailable';
+  static const String shareUserGestureRequired = 'share_user_gesture_required';
+  static const String shareInvalidContent = 'share_invalid_content';
+  static const String shareMediaNotOwned = 'share_media_not_owned';
+  static const String shareTooManyItems = 'share_too_many_items';
+  static const String shareRequestInProgress = 'share_request_in_progress';
+  static const String shareOperationFailed = 'share_operation_failed';
   static const String mediaNotAccepted = 'media_not_accepted';
   static const String mediaProviderUnavailable = 'media_provider_unavailable';
   static const String mediaInvalidSource = 'media_invalid_source';

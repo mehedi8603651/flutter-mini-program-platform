@@ -90,6 +90,7 @@ String buildHostEndpointFile(
         '      flashlightPolicy: flashlightPolicyForMiniProgram($mapKey),',
       )
       ..writeln('      qrPolicy: qrPolicyForMiniProgram($mapKey),')
+      ..writeln('      sharePolicy: sharePolicyForMiniProgram($mapKey),')
       ..writeln(
         '      mediaPlaybackPolicy: mediaPlaybackPolicyForMiniProgram($mapKey),',
       )

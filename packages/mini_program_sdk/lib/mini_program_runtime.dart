@@ -16,6 +16,7 @@ import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
+import 'share/mini_program_share.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 /// Shared embedded runtime that existing apps configure once, then reuse to
@@ -36,6 +37,7 @@ class MiniProgramRuntime {
     this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
+    this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
     this.featureFlagEvaluator = const AllowAllFeatureFlagEvaluator(),
@@ -56,6 +58,7 @@ class MiniProgramRuntime {
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
+  final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
   final FeatureFlagEvaluator featureFlagEvaluator;
@@ -77,6 +80,7 @@ class MiniProgramRuntime {
     MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
     MiniProgramFlashlightProvider? flashlightProvider,
     MiniProgramQrScannerProvider? qrScannerProvider,
+    MiniProgramShareProvider? shareProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
     FeatureFlagEvaluator? featureFlagEvaluator,
@@ -99,6 +103,7 @@ class MiniProgramRuntime {
           mediaPlaybackProvider ?? this.mediaPlaybackProvider,
       flashlightProvider: flashlightProvider ?? this.flashlightProvider,
       qrScannerProvider: qrScannerProvider ?? this.qrScannerProvider,
+      shareProvider: shareProvider ?? this.shareProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
           disposeAuthController ?? this.disposeAuthController,
@@ -171,6 +176,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
             oldWidget.runtime.mediaPlaybackProvider ||
         runtime.flashlightProvider != oldWidget.runtime.flashlightProvider ||
         runtime.qrScannerProvider != oldWidget.runtime.qrScannerProvider ||
+        runtime.shareProvider != oldWidget.runtime.shareProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=
             oldWidget.runtime.disposeAuthController ||

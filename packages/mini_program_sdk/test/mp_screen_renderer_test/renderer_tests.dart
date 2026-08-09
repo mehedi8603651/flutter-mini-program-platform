@@ -6108,5 +6108,68 @@ void _mpScreenRendererTests() {
         state.dispose();
       },
     );
+
+    testWidgets(
+      'system sharing requires a gesture and reports chooser opening',
+      (tester) async {
+        final state = MpStateManager()
+          ..set('share.result', <String, dynamic>{'old': true});
+        final provider = _ResultShareProvider();
+        final manager = MiniProgramShareManager(provider);
+        final action = _jsonAction(
+          Mp.share.open(
+            text: '{{state.note}}',
+            url: 'https://example.com/note',
+            targetState: 'share.result',
+            statusState: 'share.status',
+            errorState: 'share.error',
+            requestId: 'share-one',
+          ),
+        );
+        state.set('note', 'Hello');
+
+        final automatic =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  shareManager: manager,
+                  sharePolicy: const MiniProgramSharePolicy(enabled: true),
+                )
+                as HostActionResult;
+        expect(
+          automatic.errorCode,
+          MiniProgramErrorCodes.shareUserGestureRequired,
+        );
+        expect(provider.request, isNull);
+        expect(
+          state.get<Map<String, dynamic>>('share.result'),
+          <String, dynamic>{'old': true},
+        );
+
+        final success =
+            await _runMpAction(
+                  tester,
+                  action,
+                  stateManager: state,
+                  shareManager: manager,
+                  sharePolicy: const MiniProgramSharePolicy(enabled: true),
+                  userGesture: true,
+                )
+                as HostActionResult;
+        expect(success.isSuccess, isTrue);
+        expect(success.requestId, 'share-one');
+        expect(provider.request?.text, 'Hello');
+        expect(provider.request?.url, Uri.parse('https://example.com/note'));
+        expect(state.get<String>('share.status'), 'success');
+        expect(state.contains('share.error'), isFalse);
+        expect(
+          state.get<Map<String, dynamic>>('share.result'),
+          <String, dynamic>{'chooserOpened': true},
+        );
+        manager.dispose();
+        state.dispose();
+      },
+    );
   });
 }

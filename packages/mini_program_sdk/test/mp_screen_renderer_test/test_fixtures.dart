@@ -777,6 +777,8 @@ Future<Object?> _runMpAction(
       const MiniProgramFlashlightPolicy(),
   MiniProgramQrManager? qrManager,
   MiniProgramQrPolicy qrPolicy = const MiniProgramQrPolicy(),
+  MiniProgramShareManager? shareManager,
+  MiniProgramSharePolicy sharePolicy = const MiniProgramSharePolicy(),
   MiniProgramMediaPlaybackManager? mediaPlaybackManager,
   MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy =
       const MiniProgramMediaPlaybackPolicy(),
@@ -809,6 +811,8 @@ Future<Object?> _runMpAction(
         flashlightPolicy: flashlightPolicy,
         qrManager: qrManager,
         qrPolicy: qrPolicy,
+        shareManager: shareManager,
+        sharePolicy: sharePolicy,
         mediaPlaybackManager: mediaPlaybackManager,
         mediaPlaybackPolicy: mediaPlaybackPolicy,
         mediaAssetSource: mediaAssetSource,
@@ -1029,6 +1033,16 @@ class _ResultQrProvider implements MiniProgramQrScannerProvider {
 
   @override
   Future<bool> cancel(String scanId) async => true;
+}
+
+class _ResultShareProvider implements MiniProgramShareProvider {
+  MiniProgramShareRequest? request;
+
+  @override
+  Future<MiniProgramShareResult> open(MiniProgramShareRequest request) async {
+    this.request = request;
+    return const MiniProgramShareResult(chooserOpened: true);
+  }
 }
 
 class _TestMediaProvider implements MiniProgramMediaProvider {

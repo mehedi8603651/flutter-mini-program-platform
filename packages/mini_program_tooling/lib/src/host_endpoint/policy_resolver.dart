@@ -233,6 +233,43 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('}')
     ..writeln()
     ..writeln(
+      'MiniProgramSharePolicy sharePolicyForMiniProgram(String appId) {',
+    )
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final share = permissions['share'] is Map
+        ? hostJsonObjectOrEmpty(permissions['share'])
+        : const <String, Object?>{
+            'enabled': false,
+            'allowText': true,
+            'allowUrls': true,
+            'allowMedia': true,
+            'maxMediaItems': 10,
+          };
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramSharePolicy('
+        'enabled: ${share['enabled'] == true}, '
+        'allowText: ${share['allowText'] == true}, '
+        'allowUrls: ${share['allowUrls'] == true}, '
+        'allowMedia: ${share['allowMedia'] == true}, '
+        'maxMediaItems: ${share['maxMediaItems']});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramSharePolicy();')
+    ..writeln('  }')
+    ..writeln('}')
+    ..writeln()
+    ..writeln(
       'MiniProgramMediaPlaybackPolicy mediaPlaybackPolicyForMiniProgram(',
     )
     ..writeln('  String appId,')

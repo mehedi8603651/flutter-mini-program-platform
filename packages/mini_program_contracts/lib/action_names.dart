@@ -21,6 +21,7 @@ abstract final class ActionNames {
   static const String flashlightToggle = 'flashlight.toggle';
   static const String flashlightGetStatus = 'flashlight.getStatus';
   static const String qrScan = 'qr.scan';
+  static const String shareOpen = 'share.open';
   static const String audioPlay = 'audio.play';
   static const String audioPause = 'audio.pause';
   static const String audioSeek = 'audio.seek';

@@ -17,6 +17,7 @@ import 'network/mini_program_backend_store.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
+import 'share/mini_program_share.dart';
 import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -75,6 +76,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrManager,
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.shareManager,
+    this.sharePolicy = const MiniProgramSharePolicy(),
     this.authController,
     required this.cacheManager,
     required this.cachePolicy,
@@ -113,6 +116,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramQrManager? qrManager;
   final MiniProgramQrPolicy qrPolicy;
+  final MiniProgramShareManager? shareManager;
+  final MiniProgramSharePolicy sharePolicy;
   final MiniProgramAuthController? authController;
   final MiniProgramCacheManager cacheManager;
   final MiniProgramCachePolicy cachePolicy;
@@ -162,6 +167,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         flashlightPolicy != oldWidget.flashlightPolicy ||
         qrManager != oldWidget.qrManager ||
         qrPolicy != oldWidget.qrPolicy ||
+        shareManager != oldWidget.shareManager ||
+        sharePolicy != oldWidget.sharePolicy ||
         authController != oldWidget.authController ||
         cacheManager != oldWidget.cacheManager ||
         cachePolicy != oldWidget.cachePolicy ||

@@ -1,3 +1,10 @@
+## 0.6.7
+
+- Add provider-neutral, host-policy-controlled system sharing with explicit
+  user-gesture enforcement and stable chooser-opened acknowledgements.
+- Validate text, HTTPS URLs, and app-owned media references before invoking a
+  host provider, without exposing native paths, content URIs, or file bytes.
+
 ## 0.6.6
 
 - Add provider-neutral, app-scoped streamed audio and inline video playback

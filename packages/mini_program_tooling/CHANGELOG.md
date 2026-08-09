@@ -1,3 +1,13 @@
+## 0.7.7
+
+- Import requested system-share policy with safe default denial and generate
+  accepted text, URL, media, and item-count limits for host endpoints.
+- Add idempotent Android system-share capability installation backed by the
+  platform chooser and the existing app-owned media registry, with no new
+  Android permission or dependency.
+- Generate mini-programs against UI `0.2.6` and hosts/preview hosts against
+  contracts `0.3.12` and SDK `0.6.7`.
+
 ## 0.7.6
 
 - Place generated Android capability sources under one dedicated

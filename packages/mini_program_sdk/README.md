@@ -8,9 +8,8 @@ Host applications should use the supported package barrel:
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 ```
 
-Version `0.6.0` promotes the feature-oriented runtime internals to the stable
-baseline without changing public APIs, historical public import paths, or wire
-formats.
+The `0.6.x` line uses feature-oriented runtime internals while preserving
+public APIs, historical public import paths, and wire formats.
 
 The SDK stays provider-neutral:
 
@@ -130,6 +129,20 @@ validates its size, type, format, and UTC timestamp, but deliberately does not
 open URLs, join Wi-Fi, add contacts, or execute any scanned content. Scanner
 torch controls belong to the scanner session and are separate from
 `MiniProgramFlashlightProvider`.
+
+## Optional System Sharing
+
+`share.open` invokes a host `MiniProgramShareProvider` only after an explicit
+user gesture and accepted `MiniProgramSharePolicy`. The SDK validates bounded
+text, one absolute HTTPS URL, and up to the accepted number of opaque media
+references. Media ownership is revalidated against `MiniProgramMediaManager`
+before the provider is called.
+
+Providers return `MiniProgramShareResult(chooserOpened: true)` when platform
+sharing UI opens. The SDK intentionally does not report share completion,
+because Android's chooser does not provide a reliable completion result.
+Native paths, content URIs, authorization data, and media bytes remain inside
+the trusted host integration.
 
 ## Optional Publisher File Transfers
 

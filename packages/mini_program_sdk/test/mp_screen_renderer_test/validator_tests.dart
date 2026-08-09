@@ -198,6 +198,49 @@ void _mpScreenValidatorTests() {
       );
     });
 
+    test('accepts system sharing and rejects unsafe share URLs', () {
+      final valid = _jsonMap(
+        MpProgram(
+          screens: <String, MpScreenBuilder>{
+            'coupon_home': () => Mp.primaryButton(
+              label: 'Share',
+              action: Mp.share.open(
+                text: '{{state.note.text}}',
+                url: '{{state.note.url}}',
+                mediaRefs: '{{state.note.media_refs}}',
+                statusState: 'share.status',
+              ),
+            ),
+          },
+        ).buildScreensJson()['coupon_home']!,
+      );
+      const MpScreenValidator().validate(
+        valid,
+        expectedScreenId: 'coupon_home',
+      );
+
+      final invalid = _screenWith((json) {
+        json['root'] = <String, dynamic>{
+          'type': 'primaryButton',
+          'props': <String, dynamic>{
+            'label': 'Share',
+            'action': <String, dynamic>{
+              'type': 'share.open',
+              'props': <String, dynamic>{'url': 'http://example.com'},
+            },
+          },
+          'children': <Object?>[],
+        };
+      });
+      expect(
+        () => const MpScreenValidator().validate(
+          invalid,
+          expectedScreenId: 'coupon_home',
+        ),
+        throwsA(isA<MiniProgramRenderException>()),
+      );
+    });
+
     test('accepts file actions and rejects unsafe transfer endpoints', () {
       final valid = _jsonMap(
         MpProgram(

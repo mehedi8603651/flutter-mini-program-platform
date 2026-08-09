@@ -16,6 +16,7 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'camera' &&
         entry.key != 'flashlight' &&
         entry.key != 'qrScanner' &&
+        entry.key != 'share' &&
         entry.key != 'audioPlayback' &&
         entry.key != 'videoPlayback') {
       throw MiniProgramPartnerHandoffException(
@@ -37,6 +38,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'qrScanner') {
       normalized['qrScanner'] = _normalizeRequestedQrScanner(entry.value);
+      continue;
+    }
+    if (entry.key == 'share') {
+      normalized['share'] = _normalizeRequestedShare(entry.value);
       continue;
     }
     if (entry.key == 'audioPlayback' || entry.key == 'videoPlayback') {
@@ -97,6 +102,59 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         });
   }
   return Map<String, Object?>.unmodifiable(normalized);
+}
+
+Map<String, Object?> _normalizeRequestedShare(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'MiniProgram partner handoff requestedPermissions.share must be an object.',
+    );
+  }
+  const allowedKeys = <String>{
+    'enabled',
+    'reason',
+    'text',
+    'urls',
+    'media',
+    'recommendedMaxMediaItems',
+  };
+  for (final key in raw.keys) {
+    if (key is! String || !allowedKeys.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'MiniProgram partner handoff requestedPermissions.share contains an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  final text = raw['text'] ?? true;
+  final urls = raw['urls'] ?? true;
+  final media = raw['media'] ?? false;
+  final reason = raw['reason'];
+  if (enabled is! bool || text is! bool || urls is! bool || media is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.share enabled, text, urls, and media must be booleans.',
+    );
+  }
+  if (enabled && !text && !urls && !media) {
+    throw const MiniProgramPartnerHandoffException(
+      'Enabled requestedPermissions.share must request at least one content type.',
+    );
+  }
+  _validateRequestedPermissionReason(reason, 'share');
+  final maxMediaItems = _positiveIntOrDefault(
+    raw['recommendedMaxMediaItems'],
+    10,
+    'requestedPermissions.share.recommendedMaxMediaItems',
+    max: 10,
+  );
+  return Map<String, Object?>.unmodifiable(<String, Object?>{
+    'enabled': enabled,
+    'reason': (reason! as String).trim(),
+    'text': text,
+    'urls': urls,
+    'media': media,
+    'recommendedMaxMediaItems': maxMediaItems,
+  });
 }
 
 Map<String, Object?> _normalizeRequestedPlayback(

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.6
+
+- Add `Mp.share.open` for user-initiated system sharing of bounded text,
+  absolute HTTPS URLs, and app-owned opaque media references.
+- Keep native paths, content URIs, file bytes, and share-completion claims out
+  of authored JSON and live state.
+
 ## 0.2.5
 
 - Add trusted artifact and Publisher API audio/video source models.

@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.6` generates mini-program projects against
-`mini_program_ui: ^0.2.5` and Flutter host projects against
-`mini_program_sdk: ^0.6.6`.
+Tooling `0.7.7` generates mini-program projects against
+`mini_program_ui: ^0.2.6` and Flutter host projects against
+`mini_program_sdk: ^0.6.7`.
 
 The CLI supports the current MVP architecture:
 
@@ -375,6 +375,20 @@ Kit QR-only detection, a host-owned MethodChannel adapter, and generated host
 setup wiring. It is idempotent and does not accept policy for any app. The
 scanner controls its own torch and never opens scanned URLs.
 
+A handoff may request `requestedPermissions.share` with independent text, URL,
+and app-owned media support plus a recommended media-item limit. New requests
+default to denied. Install Android's platform chooser adapter once per host:
+
+```powershell
+miniprogram host capability init share --platform android --project-root .
+```
+
+The installer adds no Android permission or external dependency. It reuses the
+shared opaque-media registry for camera results and other host-owned temporary
+media, grants receiving apps temporary URI access through Android's chooser,
+and never exposes those URIs to mini-program state. A successful result means
+only that the chooser opened.
+
 A handoff may independently request `requestedPermissions.audioPlayback` and
 `requestedPermissions.videoPlayback`, plus `requestedCache.audio` or
 `requestedCache.video`. All new permissions default to denied. Install the
@@ -407,6 +421,7 @@ mini_program/
     |-- camera/
     |-- flashlight/
     |-- qr/
+    |-- share/
     |-- media_playback/
     `-- shared/
 ```
@@ -414,7 +429,7 @@ mini_program/
 QR and Media3 dependencies live in
 `android/app/mini_program/mini_program_capabilities.gradle`, applied by
 one stable block in the app Gradle file. Installation is order-independent
-across location, files, camera, flashlight, QR, and media playback. Re-running
+across location, files, camera, flashlight, QR, sharing, and media playback. Re-running
 any capability atomically migrates recognized older generated sources and
 inline dependency blocks, preserves unrelated host code, and rolls back a
 failed multi-file update. Ambiguous or unrecognized legacy native files are
@@ -677,6 +692,7 @@ miniprogram env status --json
 | `miniprogram host capability init camera --platform android` | Install delegated Android system-camera photo capture. |
 | `miniprogram host capability init flashlight --platform android` | Install Android CameraManager flashlight control. |
 | `miniprogram host capability init qr --platform android` | Install Android CameraX and bundled ML Kit QR-only scanning. |
+| `miniprogram host capability init share --platform android` | Install Android system chooser sharing for accepted apps. |
 | `miniprogram host capability init audio --platform android` | Install shared Android Media3 audio/video playback. |
 | `miniprogram host capability init video --platform android` | Install shared Android Media3 audio/video playback. |
 | `miniprogram host run -d <device>` | Run the host app with Flutter. |

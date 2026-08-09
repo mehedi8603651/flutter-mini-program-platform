@@ -14,6 +14,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   MiniProgramCameraManager? _cameraManager;
   MiniProgramFlashlightManager? _flashlightManager;
   MiniProgramQrManager? _qrManager;
+  MiniProgramShareManager? _shareManager;
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
@@ -41,6 +42,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     _cameraManager = _cameraManagerFor(widget.cameraProvider, _mediaManager);
     _flashlightManager = _flashlightManagerFor(widget.flashlightProvider);
     _qrManager = _qrManagerFor(widget.qrScannerProvider);
+    _shareManager = _shareManagerFor(widget.shareProvider);
     _rebuildRendererRegistry();
     _restartLoad();
   }
@@ -62,6 +64,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider ||
         widget.flashlightProvider != oldWidget.flashlightProvider ||
         widget.qrScannerProvider != oldWidget.qrScannerProvider ||
+        widget.shareProvider != oldWidget.shareProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
         widget.manifestCache != oldWidget.manifestCache ||
@@ -97,6 +100,10 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       if (widget.qrScannerProvider != oldWidget.qrScannerProvider) {
         unawaited(_qrManager?.dispose());
         _qrManager = _qrManagerFor(widget.qrScannerProvider);
+      }
+      if (widget.shareProvider != oldWidget.shareProvider) {
+        _shareManager?.dispose();
+        _shareManager = _shareManagerFor(widget.shareProvider);
       }
       if (widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider) {
         unawaited(_mediaPlaybackManager?.dispose());
@@ -151,6 +158,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     unawaited(_mediaManager?.dispose());
     unawaited(_flashlightManager?.dispose());
     unawaited(_qrManager?.dispose());
+    _shareManager?.dispose();
     unawaited(_mediaPlaybackManager?.dispose());
     super.dispose();
   }
@@ -197,6 +205,10 @@ class _MiniProgramHostState extends State<MiniProgramHost>
 
   MiniProgramQrManager? _qrManagerFor(MiniProgramQrScannerProvider? provider) =>
       provider == null ? null : MiniProgramQrManager(provider);
+
+  MiniProgramShareManager? _shareManagerFor(
+    MiniProgramShareProvider? provider,
+  ) => provider == null ? null : MiniProgramShareManager(provider);
 
   MiniProgramMediaPlaybackManager? _mediaPlaybackManagerFor(
     MiniProgramMediaPlaybackProvider? provider,

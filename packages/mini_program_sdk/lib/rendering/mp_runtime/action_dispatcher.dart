@@ -212,6 +212,11 @@ abstract final class _MpActionDispatcher {
           props,
           userGesture: callContext.userGesture,
         ),
+        'share.open' => _MpShareActionHandler._open(
+          scope,
+          props,
+          userGesture: callContext.userGesture,
+        ),
         'audio.play' ||
         'audio.preload' ||
         'audio.pause' ||

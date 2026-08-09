@@ -62,6 +62,14 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     return const MiniProgramQrPolicy();
   }
 
+  MiniProgramSharePolicy _sharePolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramSharePolicyProvider) {
+      return (source as MiniProgramSharePolicyProvider).sharePolicyFor(appId);
+    }
+    return const MiniProgramSharePolicy();
+  }
+
   MiniProgramMediaPlaybackPolicy _mediaPlaybackPolicyFor(String appId) {
     final source = widget.source;
     if (source is MiniProgramMediaPlaybackPolicyProvider) {

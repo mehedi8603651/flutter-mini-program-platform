@@ -12,6 +12,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramCameraPolicyProvider,
         MiniProgramFlashlightPolicyProvider,
         MiniProgramQrPolicyProvider,
+        MiniProgramSharePolicyProvider,
         MiniProgramMediaPlaybackPolicyProvider,
         MiniProgramDeliveryContextProvider,
         MiniProgramPublisherBackendContractSource,
@@ -152,6 +153,11 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramQrPolicy qrPolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).qrPolicy;
+  }
+
+  @override
+  MiniProgramSharePolicy sharePolicyFor(String miniProgramId) {
+    return _endpointFor(miniProgramId).sharePolicy;
   }
 
   @override
