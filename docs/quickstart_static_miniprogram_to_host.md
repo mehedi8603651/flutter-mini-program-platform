@@ -532,6 +532,15 @@ flutter build apk
 
 Android build notes:
 
+- The repository reference hosts use Flutter `3.47.1`, AGP `9.1.0`, Gradle
+  `9.3.1`, Kotlin `2.4.0`, and Java `17`. AGP supplies built-in Kotlin, so their
+  app modules use `kotlin.compilerOptions` instead of applying `kotlin-android`.
+  They retain `android.newDsl=false` for Flutter's legacy Android DSL support.
+  Fresh hosts inherit Android versions from the installed Flutter SDK;
+  `embed init` preserves an existing host's versions.
+- When upgrading an existing host checkout, run `flutter pub upgrade` after
+  changing the Android toolchain so its ignored local lockfile refreshes the
+  Android plugins used by Gradle.
 - Keep at least 5-8 GB free on `C:` for Gradle and Flutter build caches.
 - If release icon tree-shaking reports missing Cupertino icons, add
   `cupertino_icons: ^1.0.8` to the host app dependencies.

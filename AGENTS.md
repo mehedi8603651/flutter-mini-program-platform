@@ -1173,6 +1173,21 @@ hosts/{super_app_host,partner_app_host}/
 
 Bundled host assets are copies, not authoring source. Synchronize maintained examples with `tools/sync_assets.ps1` instead of hand-editing both locations.
 
+All three reference Android hosts use Flutter `3.47.1` (the host package
+constraint is `>=3.47.0`), AGP `9.1.0`, Gradle `9.3.1`, Kotlin `2.4.0`, and Java
+`17`. Keep their `settings.gradle.kts`, Gradle wrapper, and app compiler
+configuration aligned. AGP supplies built-in Kotlin;
+do not apply `kotlin-android` to the app module. Configure the JVM target through
+`kotlin.compilerOptions`, keep `android.builtInKotlin=true` and
+`android.newDsl=false` for Flutter's legacy Android DSL integration, and disable
+Kotlin incremental compilation for the Windows C: pub-cache / D: checkout
+layout. Repository smoke CI pins the same Flutter version. Preview hosts inherit
+their Android toolchain from the installed `flutter create`; embedding and
+capability installers preserve the host's toolchain versions. After upgrading an
+existing host checkout, run `flutter pub upgrade` so ignored local lockfiles do
+not retain an older Android plugin build that is incompatible with the new
+cross-drive Kotlin configuration.
+
 Generated host integration normally lives in an application's `lib/mini_program/` directory:
 
 ```text
