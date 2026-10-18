@@ -1,3 +1,7 @@
+## 0.6.14
+
+- Add independent host-controlled clipboard read/write, short system haptic effects, and user-controlled phone dialer providers. Enforce explicit gestures, foreground visibility, runtime value limits, and safe stale clipboard completion.
+
 ## 0.6.13
 
 - Add optional microphone providers, default-denied per-app recording policy,

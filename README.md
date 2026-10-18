@@ -220,3 +220,6 @@ and sharing integration.
 Android foreground voice notes are available through the optional
 [`microphone` capability](docs/android_microphone_recording.md), with Record,
 Stop, Cancel, host policy limits, and app-owned playback/upload/share references.
+
+Clipboard, short system haptic feedback, and the user-controlled Android dialer
+are optional host capabilities. See [setup and authoring](docs/android_clipboard_vibration_phone.md).

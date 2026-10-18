@@ -20,6 +20,7 @@ import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
+import 'system/mini_program_system.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 /// Shared embedded runtime that existing apps configure once, then reuse to
@@ -43,6 +44,9 @@ class MiniProgramRuntime {
     this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
+    this.clipboardProvider,
+    this.vibrationProvider,
+    this.phoneProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -67,6 +71,9 @@ class MiniProgramRuntime {
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
+  final MiniProgramClipboardProvider? clipboardProvider;
+  final MiniProgramVibrationProvider? vibrationProvider;
+  final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -92,6 +99,9 @@ class MiniProgramRuntime {
     MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
     MiniProgramFlashlightProvider? flashlightProvider,
     MiniProgramQrScannerProvider? qrScannerProvider,
+    MiniProgramClipboardProvider? clipboardProvider,
+    MiniProgramVibrationProvider? vibrationProvider,
+    MiniProgramPhoneProvider? phoneProvider,
     MiniProgramShareProvider? shareProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
@@ -119,6 +129,9 @@ class MiniProgramRuntime {
           mediaPlaybackProvider ?? this.mediaPlaybackProvider,
       flashlightProvider: flashlightProvider ?? this.flashlightProvider,
       qrScannerProvider: qrScannerProvider ?? this.qrScannerProvider,
+      clipboardProvider: clipboardProvider ?? this.clipboardProvider,
+      vibrationProvider: vibrationProvider ?? this.vibrationProvider,
+      phoneProvider: phoneProvider ?? this.phoneProvider,
       shareProvider: shareProvider ?? this.shareProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
@@ -196,6 +209,9 @@ class MiniProgramRuntimeScope extends InheritedWidget {
             oldWidget.runtime.mediaPlaybackProvider ||
         runtime.flashlightProvider != oldWidget.runtime.flashlightProvider ||
         runtime.qrScannerProvider != oldWidget.runtime.qrScannerProvider ||
+        runtime.clipboardProvider != oldWidget.runtime.clipboardProvider ||
+        runtime.vibrationProvider != oldWidget.runtime.vibrationProvider ||
+        runtime.phoneProvider != oldWidget.runtime.phoneProvider ||
         runtime.shareProvider != oldWidget.runtime.shareProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=

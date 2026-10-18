@@ -34,6 +34,7 @@ import 'network/mini_program_source_exception.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
+import 'system/mini_program_system.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 import 'sdk_context.dart';
 import 'state/mp_state.dart';
@@ -75,6 +76,9 @@ class MiniProgramHost extends StatefulWidget {
     this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
+    this.clipboardProvider,
+    this.vibrationProvider,
+    this.phoneProvider,
     this.shareProvider,
     this.authController,
     this.assetCache,
@@ -105,6 +109,9 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
+  final MiniProgramClipboardProvider? clipboardProvider;
+  final MiniProgramVibrationProvider? vibrationProvider;
+  final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final AssetCache? assetCache;

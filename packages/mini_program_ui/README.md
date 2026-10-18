@@ -600,3 +600,13 @@ record action; `Mp.microphone.cancel()` discards partial audio and preserves the
 previous target. Use `MpAudioSource.hostMedia('{{state.voice.note.mediaRef}}')`
 for accepted audio playback and `Mp.media.release` for cleanup. See the
 [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).
+
+## Clipboard, vibration and phone dialer
+
+Use `Mp.clipboard.writeText(text: 'booking code')` and
+`Mp.clipboard.readText(targetState: 'paste')` for explicit plain-text copy/paste,
+`Mp.vibration.trigger(effect: MpVibrationEffect.success)` for short system
+haptics, and `Mp.phone.openDialer(number: '+15550101234')` to open a
+user-controlled dialer. These actions require a user gesture, foreground
+visibility, a host provider and accepted policy. Clipboard reads require
+separate acceptance. See [Android setup and limits](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).

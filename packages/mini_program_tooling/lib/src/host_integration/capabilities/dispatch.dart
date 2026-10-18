@@ -9,6 +9,7 @@ import 'media_playback/installer.dart' as media_playback;
 import 'models.dart';
 import 'qr/installer.dart' as qr;
 import 'share/installer.dart' as share;
+import 'system/installer.dart' as system;
 
 const String locationCapability = location.locationCapability;
 const String fileCapability = file.fileCapability;
@@ -27,6 +28,9 @@ const String androidPlatform = location.androidPlatform;
 Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
   MiniProgramHostCapabilityInitRequest request,
 ) async => await switch (request.capability.trim().toLowerCase()) {
+  'clipboard' ||
+  'vibration' ||
+  'phone' => system.initializeSystemCapability(request),
   locationCapability => location.initializeMiniProgramHostCapability(request),
   fileCapability => file.initializeMiniProgramHostFileCapability(request),
   cameraCapability => camera.initializeMiniProgramHostCameraCapability(request),
@@ -49,6 +53,6 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
     'Unsupported host capability "${request.capability}". Supported '
     'capabilities: $locationCapability, $fileCapability, $cameraCapability, '
     '$flashlightCapability, $displayBrightnessCapability, $qrCapability, $shareCapability, '
-    '$audioCapability, $videoCapability, $galleryCapability, $microphoneCapability.',
+    '$audioCapability, $videoCapability, $galleryCapability, $microphoneCapability, clipboard, vibration, phone.',
   ),
 };

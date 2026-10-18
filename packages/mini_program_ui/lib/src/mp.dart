@@ -1,3 +1,4 @@
+import 'features/system/system_actions.dart';
 import 'core/mp_action.dart';
 import 'core/mp_node.dart';
 import 'features/auth/auth_actions.dart';
@@ -45,6 +46,12 @@ import 'features/skeleton/skeleton_nodes.dart';
 import 'features/state/state_actions.dart';
 import 'features/theme/theme_nodes.dart';
 
+export 'features/system/system_actions.dart'
+    show
+        MpClipboardActions,
+        MpVibrationActions,
+        MpVibrationEffect,
+        MpPhoneActions;
 export 'features/auth/auth_actions.dart' show MpAuthActions;
 export 'features/backend/backend_actions.dart' show MpBackendActions;
 export 'features/backend/search.dart' show MpSearch;
@@ -76,6 +83,15 @@ export 'features/state/state_actions.dart' show MpStateActions;
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
+  /// Explicit host-approved clipboard access.
+  static const clipboard = MpClipboardActions();
+
+  /// Short system haptic effects.
+  static const vibration = MpVibrationActions();
+
+  /// Opens user-controlled system dialing UI.
+  static const phone = MpPhoneActions();
+
   /// User-initiated gallery photo selection and cancellation.
   static const gallery = MpGalleryActions();
 

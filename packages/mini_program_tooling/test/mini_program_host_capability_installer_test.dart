@@ -23,6 +23,89 @@ void main() {
     }
   });
 
+  for (final feature in ['clipboard', 'vibration', 'phone']) {
+    final title = '${feature[0].toUpperCase()}${feature.substring(1)}';
+    test(
+      '$feature installation preserves host edits and needs no Android permission',
+      () async {
+        const installer = MiniProgramHostCapabilityInstaller();
+        final request = MiniProgramHostCapabilityInitRequest(
+          projectRootPath: hostRootPath,
+          capability: feature,
+          platform: 'android',
+        );
+        final manifest = File(
+          p.join(hostRootPath, 'android/app/src/main/AndroidManifest.xml'),
+        );
+        final beforeManifest = await manifest.readAsString();
+        expect((await installer.initialize(request)).alreadyInstalled, isFalse);
+        final provider = File(
+          p.join(
+            hostRootPath,
+            'lib/mini_program/app_android_${feature}_provider.dart',
+          ),
+        );
+        await provider.writeAsString(
+          '${await provider.readAsString()}\n// Host customization.\n',
+        );
+        expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+        expect(
+          await provider.readAsString(),
+          contains('// Host customization.'),
+        );
+        expect(await manifest.readAsString(), beforeManifest);
+        expect(
+          await _nativeSetupFile(hostRootPath).readAsString(),
+          contains('MiniProgram${title}Channel.register(flutterEngine)'),
+        );
+        final native = await _nativeGeneratedFile(
+          hostRootPath,
+          feature,
+          'MiniProgram${title}Channel.kt',
+        ).readAsString();
+        expect(native, contains('hasWindowFocus()'));
+        if (feature == 'clipboard') {
+          expect(native, isNot(contains('coerceToText(')));
+          expect(native, contains('item?.uri == null && item?.intent == null'));
+        } else if (feature == 'phone') {
+          expect(native, contains('Intent.ACTION_DIAL'));
+          expect(native, isNot(contains('Intent.ACTION_CALL')));
+        } else {
+          expect(native, contains('performHapticFeedback(feedback)'));
+          expect(native, isNot(contains('IGNORE_GLOBAL_SETTING')));
+        }
+      },
+    );
+    test(
+      '$feature file conflict fails before writing any host files',
+      () async {
+        final conflict = _nativeGeneratedFile(
+          hostRootPath,
+          feature,
+          'MiniProgram${title}Channel.kt',
+        );
+        await conflict.parent.create(recursive: true);
+        await conflict.writeAsString('// Unrecognized host file');
+        Future<Map<String, String>> snapshot() async => {
+          await for (final f in Directory(hostRootPath).list(recursive: true))
+            if (f is File) f.path: await f.readAsString(),
+        };
+        final before = await snapshot();
+        await expectLater(
+          const MiniProgramHostCapabilityInstaller().initialize(
+            MiniProgramHostCapabilityInitRequest(
+              projectRootPath: hostRootPath,
+              capability: feature,
+              platform: 'android',
+            ),
+          ),
+          throwsA(isA<MiniProgramHostCapabilityException>()),
+        );
+        expect(await snapshot(), before);
+      },
+    );
+  }
+
   test(
     'microphone installation is idempotent and keeps host provider changes',
     () async {

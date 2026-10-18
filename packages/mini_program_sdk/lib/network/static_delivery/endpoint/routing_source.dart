@@ -15,6 +15,9 @@ class EndpointRoutingMiniProgramSource
         MiniProgramMicrophonePolicyProvider,
         MiniProgramFlashlightPolicyProvider,
         MiniProgramQrPolicyProvider,
+        MiniProgramClipboardPolicyProvider,
+        MiniProgramVibrationPolicyProvider,
+        MiniProgramPhonePolicyProvider,
         MiniProgramSharePolicyProvider,
         MiniProgramMediaPlaybackPolicyProvider,
         MiniProgramDeliveryContextProvider,
@@ -174,6 +177,18 @@ class EndpointRoutingMiniProgramSource
   MiniProgramQrPolicy qrPolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).qrPolicy;
   }
+
+  @override
+  MiniProgramClipboardPolicy clipboardPolicyFor(String miniProgramId) =>
+      _endpointFor(miniProgramId).clipboardPolicy;
+
+  @override
+  MiniProgramVibrationPolicy vibrationPolicyFor(String miniProgramId) =>
+      _endpointFor(miniProgramId).vibrationPolicy;
+
+  @override
+  MiniProgramPhonePolicy phonePolicyFor(String miniProgramId) =>
+      _endpointFor(miniProgramId).phonePolicy;
 
   @override
   MiniProgramSharePolicy sharePolicyFor(String miniProgramId) {

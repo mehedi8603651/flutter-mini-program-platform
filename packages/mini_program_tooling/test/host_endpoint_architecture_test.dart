@@ -35,6 +35,7 @@ void main() {
         'records.dart',
         'registry_file.dart',
         'runner.dart',
+        'system_policy.dart',
         'validation.dart',
       ],
     );

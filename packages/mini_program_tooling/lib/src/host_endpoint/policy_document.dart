@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import 'json_values.dart';
 import 'models.dart';
+import 'system_policy.dart';
 
 const Map<String, Object?> defaultHostLiveStatePolicy = <String, Object?>{
   'maxBytes': 2 * 1024 * 1024,
@@ -236,6 +237,18 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'minimumFreeBytes': 256 * 1024 * 1024,
     });
   }
+  if (const ['clipboard', 'vibration', 'phone'].contains(permission)) {
+    final value = hostJsonObjectOrEmpty(requested);
+    return validateAcceptedSystemPermission(permission, {
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && value['enabled'] == true,
+      if (permission == 'clipboard') ...{
+        'allowRead': acceptRequested && value['read'] == true,
+        'allowWrite': acceptRequested && value['write'] == true,
+        'maxTextLength': value['recommendedMaxTextLength'] ?? 32768,
+      },
+    });
+  }
   if (permission == 'gallery') {
     final request = requested is Map
         ? hostJsonObjectOrEmpty(requested)
@@ -376,6 +389,19 @@ Map<String, Object?> validateAcceptedHostPermissions(
       );
     }
     normalized['location'] = sortedHostJsonObject(location);
+  }
+  for (final feature in const ['clipboard', 'vibration', 'phone']) {
+    final raw = normalized[feature];
+    if (raw == null) continue;
+    if (raw is! Map) {
+      throw MiniProgramHostException(
+        'Accepted permissions.$feature must be an object.',
+      );
+    }
+    normalized[feature] = validateAcceptedSystemPermission(
+      feature,
+      hostJsonObjectOrEmpty(raw),
+    );
   }
   final rawGallery = normalized['gallery'];
   if (rawGallery != null) {

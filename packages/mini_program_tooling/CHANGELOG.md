@@ -1,3 +1,7 @@
+## 0.7.13
+
+- Add optional Android `clipboard`, `vibration`, and `phone` capability installers, accepted/requested policy generation, and safe regeneration alongside separate tasks. No extra Android permissions are required.
+
 ## 0.7.12
 
 - Add `host capability init microphone --platform android`: foreground AAC/M4A

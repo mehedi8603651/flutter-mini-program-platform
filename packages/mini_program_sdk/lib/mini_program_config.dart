@@ -20,6 +20,7 @@ import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
+import 'system/mini_program_system.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
@@ -40,6 +41,9 @@ class MiniProgramConfig {
     this.mediaPlaybackProvider,
     this.flashlightProvider,
     this.qrScannerProvider,
+    this.clipboardProvider,
+    this.vibrationProvider,
+    this.phoneProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -70,6 +74,9 @@ class MiniProgramConfig {
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
   final MiniProgramQrScannerProvider? qrScannerProvider;
+  final MiniProgramClipboardProvider? clipboardProvider;
+  final MiniProgramVibrationProvider? vibrationProvider;
+  final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -96,6 +103,9 @@ class MiniProgramConfig {
       mediaPlaybackProvider: mediaPlaybackProvider,
       flashlightProvider: flashlightProvider,
       qrScannerProvider: qrScannerProvider,
+      clipboardProvider: clipboardProvider,
+      vibrationProvider: vibrationProvider,
+      phoneProvider: phoneProvider,
       shareProvider: shareProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,

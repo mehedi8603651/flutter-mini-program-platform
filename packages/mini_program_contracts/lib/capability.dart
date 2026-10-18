@@ -7,6 +7,11 @@ typedef CapabilityId = String;
 
 /// Standard capability IDs used by published mini-program manifests.
 abstract final class CapabilityIds {
+  static const CapabilityId clipboardRead = 'clipboard.read';
+  static const CapabilityId clipboardWrite = 'clipboard.write';
+  static const CapabilityId vibration = 'vibration';
+  static const CapabilityId phoneDialer = 'phone.dialer';
+
   /// Host can provide publisher-owned or host-owned authentication support.
   static const CapabilityId auth = 'auth';
 
@@ -85,6 +90,10 @@ abstract final class CapabilityIds {
     qrScanner,
     systemShare,
     displayBrightness,
+    clipboardRead,
+    clipboardWrite,
+    vibration,
+    phoneDialer,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

@@ -211,35 +211,23 @@ abstract final class _MpActionDispatcher {
           props,
           userGesture: callContext.userGesture,
         ),
+        'clipboard.readText' ||
+        'clipboard.writeText' ||
+        'vibration.trigger' ||
+        'phone.openDialer' => _MpSystemActionHandler._run(
+          context,
+          scope,
+          action.type,
+          props,
+          userGesture: callContext.userGesture,
+        ),
         'share.open' => _MpShareActionHandler._open(
           scope,
           props,
           userGesture: callContext.userGesture,
         ),
-        'audio.play' ||
-        'audio.preload' ||
-        'audio.pause' ||
-        'audio.seek' ||
-        'audio.stop' ||
-        'audio.setVolume' ||
-        'audio.setSpeed' ||
-        'audio.getStatus' ||
-        'audio.release' ||
-        'video.play' ||
-        'video.pause' ||
-        'video.seek' ||
-        'video.stop' ||
-        'video.setMuted' ||
-        'video.setVolume' ||
-        'video.setSpeed' ||
-        'video.enterFullscreen' ||
-        'video.exitFullscreen' ||
-        'video.getStatus' ||
-        'video.release' => _MpMediaPlaybackActionHandler._run(
-          scope,
-          action.type,
-          props,
-        ),
+        final type when _MpMediaPlaybackActionHandler._actions.contains(type) =>
+          _MpMediaPlaybackActionHandler._run(scope, action.type, props),
         'cache.set' => _MpCacheActionHandler._cacheSet(scope, props),
         'cache.get' => _MpCacheActionHandler._cacheGet(scope, props),
         'cache.has' => _MpCacheActionHandler._cacheHas(scope, props),

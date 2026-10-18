@@ -51,6 +51,7 @@ void main() {
       'qr.dart',
       'share.dart',
       'shared.dart',
+      'system.dart',
       'state.dart',
     });
 

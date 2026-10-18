@@ -750,6 +750,10 @@ class MpScreenValidator {
       'flashlight.getStatus' => _parseFlashlightAction(type, props, path),
       'media.release' => _parseMediaReleaseAction(type, props, path),
       'qr.scan' => _parseQrScanAction(type, props, path),
+      'clipboard.readText' ||
+      'clipboard.writeText' ||
+      'vibration.trigger' ||
+      'phone.openDialer' => _parseSystemAction(type, props, path),
       'share.open' => _parseShareOpenAction(type, props, path),
       'audio.play' ||
       'audio.preload' ||

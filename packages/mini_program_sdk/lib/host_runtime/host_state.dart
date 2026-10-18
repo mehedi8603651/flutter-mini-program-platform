@@ -89,6 +89,9 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider ||
         widget.flashlightProvider != oldWidget.flashlightProvider ||
         widget.qrScannerProvider != oldWidget.qrScannerProvider ||
+        widget.clipboardProvider != oldWidget.clipboardProvider ||
+        widget.vibrationProvider != oldWidget.vibrationProvider ||
+        widget.phoneProvider != oldWidget.phoneProvider ||
         widget.shareProvider != oldWidget.shareProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||

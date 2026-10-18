@@ -142,9 +142,17 @@ once:
 
 ```bash
 miniprogram host capability init share --platform android
+miniprogram host capability init clipboard --platform android
+miniprogram host capability init vibration --platform android
+miniprogram host capability init phone --platform android
 ```
 
-The adapter adds no Android permission or dependency. It shares bounded text,
+These adapters add no Android permission or dependency. Clipboard reads require
+independent `permissions.clipboard.allowRead` acceptance; haptics honor system
+settings and phone support opens the user-controlled dialer. All require a
+foreground user gesture and accepted policy.
+
+The share adapter adds no Android permission or dependency. It shares bounded text,
 HTTPS URLs, and app-owned opaque media through Android's chooser, reports only
 that the chooser opened, and leaves every mini-program denied until its
 `permissions.share` policy is accepted.

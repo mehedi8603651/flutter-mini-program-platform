@@ -1,5 +1,6 @@
 import 'json_values.dart';
 import 'policy_document.dart';
+import 'system_policy.dart';
 
 const List<String> hostPolicyCacheBucketOrder = <String>[
   'memory',
@@ -400,6 +401,7 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('  }')
     ..writeln('}')
     ..writeln();
+  buffer.writeln(buildSystemPolicyResolvers(apps));
   return buffer.toString();
 }
 

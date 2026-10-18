@@ -229,6 +229,9 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
+  MiniProgramClipboardProvider? clipboardProvider,
+  MiniProgramVibrationProvider? vibrationProvider,
+  MiniProgramPhoneProvider? phoneProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -245,6 +248,9 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
+    clipboardProvider: clipboardProvider,
+    vibrationProvider: vibrationProvider,
+    phoneProvider: phoneProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,
@@ -338,6 +344,18 @@ MiniProgramQrPolicy qrPolicyForMiniProgram(String appId) {
   return const MiniProgramQrPolicy();
 }
 
+MiniProgramClipboardPolicy clipboardPolicyForMiniProgram(String appId) {
+  return const MiniProgramClipboardPolicy();
+}
+
+MiniProgramVibrationPolicy vibrationPolicyForMiniProgram(String appId) {
+  return const MiniProgramVibrationPolicy();
+}
+
+MiniProgramPhonePolicy phonePolicyForMiniProgram(String appId) {
+  return const MiniProgramPhonePolicy();
+}
+
 MiniProgramSharePolicy sharePolicyForMiniProgram(String appId) {
   return const MiniProgramSharePolicy();
 }
@@ -401,6 +419,9 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
+  MiniProgramClipboardProvider? clipboardProvider,
+  MiniProgramVibrationProvider? vibrationProvider,
+  MiniProgramPhoneProvider? phoneProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -423,6 +444,10 @@ MiniProgramConfig buildMiniProgramConfig({
     if (mediaProvider != null || galleryProvider != null) CapabilityIds.mediaPreview,
     if (flashlightProvider != null) CapabilityIds.flashlightControl,
     if (qrScannerProvider != null) CapabilityIds.qrScanner,
+    if (clipboardProvider != null) CapabilityIds.clipboardRead,
+    if (clipboardProvider != null) CapabilityIds.clipboardWrite,
+    if (vibrationProvider != null) CapabilityIds.vibration,
+    if (phoneProvider != null) CapabilityIds.phoneDialer,
     if (shareProvider != null) CapabilityIds.systemShare,
     if (displayBrightnessProvider != null) CapabilityIds.displayBrightness,
     if (mediaPlaybackProvider != null) CapabilityIds.mediaAudio,
@@ -452,6 +477,9 @@ MiniProgramConfig buildMiniProgramConfig({
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
+    clipboardProvider: clipboardProvider,
+    vibrationProvider: vibrationProvider,
+    phoneProvider: phoneProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,

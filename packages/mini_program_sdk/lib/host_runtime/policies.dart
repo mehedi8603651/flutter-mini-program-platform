@@ -1,6 +1,31 @@
 part of '../mini_program_host.dart';
 
 extension _MiniProgramHostPolicies on _MiniProgramHostState {
+  MiniProgramPhonePolicy _phonePolicyFor(String appId) {
+    final source = widget.source;
+    return source is MiniProgramPhonePolicyProvider
+        ? (source as MiniProgramPhonePolicyProvider).phonePolicyFor(appId)
+        : const MiniProgramPhonePolicy();
+  }
+
+  MiniProgramVibrationPolicy _vibrationPolicyFor(String appId) {
+    final source = widget.source;
+    return source is MiniProgramVibrationPolicyProvider
+        ? (source as MiniProgramVibrationPolicyProvider).vibrationPolicyFor(
+            appId,
+          )
+        : const MiniProgramVibrationPolicy();
+  }
+
+  MiniProgramClipboardPolicy _clipboardPolicyFor(String appId) {
+    final source = widget.source;
+    return source is MiniProgramClipboardPolicyProvider
+        ? (source as MiniProgramClipboardPolicyProvider).clipboardPolicyFor(
+            appId,
+          )
+        : const MiniProgramClipboardPolicy();
+  }
+
   MiniProgramGalleryPolicy _galleryPolicyFor(String appId) {
     final source = widget.source;
     if (source is MiniProgramGalleryPolicyProvider) {

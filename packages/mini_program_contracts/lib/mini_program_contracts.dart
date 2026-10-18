@@ -6,6 +6,7 @@ export 'action_payloads.dart';
 
 // Host capability contract values.
 export 'capability.dart';
+export 'mini_program_system.dart';
 
 // Stable cross-layer error code constants.
 export 'error_codes.dart';

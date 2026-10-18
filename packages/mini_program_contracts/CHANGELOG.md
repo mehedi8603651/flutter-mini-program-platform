@@ -1,3 +1,7 @@
+## 0.3.16
+
+- Add canonical clipboard, system haptic, and phone dialer actions, capabilities, errors, and safe ordinary phone number normalization.
+
 ## 0.3.15
 
 - Add `microphone.record`, `microphone.stop`, and `microphone.cancel`, the

@@ -107,7 +107,7 @@ extension CliHostPartnerCommands on CliContext {
     if (results.flag('help')) {
       _stdout.writeln(
         'Usage: miniprogram host capability init '
-        '<location|file|camera|gallery|microphone|flashlight|display-brightness|qr|share|audio|video> '
+        '<location|file|camera|gallery|microphone|flashlight|display-brightness|qr|share|clipboard|vibration|phone|audio|video> '
         '--platform android [options]',
       );
       _stdout.writeln(parser.usage);
@@ -144,6 +144,9 @@ extension CliHostPartnerCommands on CliContext {
       'flashlight' => 'Android CameraManager flashlight support',
       'display-brightness' => 'Android temporary window brightness support',
       'qr' => 'Android CameraX and ML Kit QR scanner support',
+      'clipboard' => 'Android plain-text clipboard support',
+      'vibration' => 'Android system haptic feedback',
+      'phone' => 'Android user-controlled phone dialer',
       'share' => 'Android system share chooser support',
       'audio' => 'Android streamed audio playback support',
       'video' => 'Android inline video playback support',

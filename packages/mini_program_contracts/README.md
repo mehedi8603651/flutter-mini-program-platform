@@ -62,3 +62,8 @@ Microphone contracts include `MiniProgramMicrophoneResult`,
 `CapabilityIds.microphoneRecord`, recording actions, and stable errors. Voice
 notes expose bounded AAC/M4A metadata and opaque references. See the
 [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).
+
+Clipboard, haptic feedback and phone dialing use canonical action/capability IDs
+and stable errors. `MiniProgramVibrationEffect` defines bounded system effects;
+`normalizeMiniProgramPhoneNumber` rejects schemes, USSD and pause sequences.
+See the [Android system capability guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).

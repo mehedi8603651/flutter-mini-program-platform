@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.15` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.11` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.13` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.12` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.16` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.12` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.14` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.13` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -111,6 +111,15 @@ These are system invariants, not preferences:
     completion, and rejected state updates clean partial/new recordings.
     Permission-dialog inactivity must not cancel recording. Results contain
     opaque app-owned AAC/M4A metadata only; no native paths, URIs, or bytes.
+
+24. Clipboard reads and writes are separate optional host permissions and
+    require an explicit foreground user gesture. Only bounded plain text crosses
+    the runtime boundary; no URI/Intent coercion, monitoring, or history access.
+25. Vibration uses short Android system haptics that honor device settings;
+    arbitrary durations and repeating patterns are unavailable.
+26. Phone support opens a user-controlled system dialer with an ordinary number.
+    Never place calls directly or request CALL_PHONE; reject schemes, USSD/MMI,
+    pauses, extensions, and control characters at every boundary.
 
 ## Repository Map
 
@@ -1878,6 +1887,14 @@ runtime setup must retain gallery provider arguments after `embed init --force`,
 including separate-task setup in either installation order. Requested gallery
 permissions remain advisory; generated endpoint policy uses accepted values
 only. See `docs/android_gallery_photo_picker.md` for limits and lifecycle.
+
+Clipboard, vibration and phone authoring are under `features/system/` and
+SDK provider/policy interfaces under `system/mini_program_system.dart`. Native
+installers share a transactional planner under `capabilities/system/` while
+generating independent providers and channels. `clipboard` has separate accepted
+read/write flags; `vibration` and `phone` are independently accepted. No new
+Android permissions or Gradle dependencies are needed. See
+`docs/android_clipboard_vibration_phone.md` for setup and limits.
 
 ## Release Conventions
 

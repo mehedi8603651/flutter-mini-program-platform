@@ -26,7 +26,7 @@ void _registerCoreAndPreviewTests() {
     expect(
       output,
       contains(
-        'host capability init <location|file|camera|gallery|microphone|flashlight|display-brightness|qr|share|audio|video> '
+        'host capability init <location|file|camera|gallery|microphone|flashlight|display-brightness|qr|share|clipboard|vibration|phone|audio|video> '
         '--platform android',
       ),
     );

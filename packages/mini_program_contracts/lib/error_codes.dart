@@ -1,5 +1,31 @@
 /// Stable error code constants shared across contracts, SDK, and hosts.
 abstract final class MiniProgramErrorCodes {
+  static const String clipboardNotAccepted = 'clipboard_not_accepted';
+  static const String clipboardUnavailable = 'clipboard_unavailable';
+  static const String clipboardUserGestureRequired =
+      'clipboard_user_gesture_required';
+  static const String clipboardForegroundRequired =
+      'clipboard_foreground_required';
+  static const String clipboardInvalidRequest = 'clipboard_invalid_request';
+  static const String clipboardOperationFailed = 'clipboard_operation_failed';
+  static const String clipboardRequestCancelled = 'clipboard_request_cancelled';
+  static const String vibrationNotAccepted = 'vibration_not_accepted';
+  static const String vibrationUnavailable = 'vibration_unavailable';
+  static const String vibrationUserGestureRequired =
+      'vibration_user_gesture_required';
+  static const String vibrationForegroundRequired =
+      'vibration_foreground_required';
+  static const String vibrationInvalidRequest = 'vibration_invalid_request';
+  static const String vibrationOperationFailed = 'vibration_operation_failed';
+  static const String vibrationRequestCancelled = 'vibration_request_cancelled';
+  static const String phoneNotAccepted = 'phone_not_accepted';
+  static const String phoneUnavailable = 'phone_unavailable';
+  static const String phoneUserGestureRequired = 'phone_user_gesture_required';
+  static const String phoneForegroundRequired = 'phone_foreground_required';
+  static const String phoneInvalidRequest = 'phone_invalid_request';
+  static const String phoneOperationFailed = 'phone_operation_failed';
+  static const String phoneRequestCancelled = 'phone_request_cancelled';
+
   static const String manifestParseFailure = 'manifest_parse_failure';
   static const String unsupportedContractVersion =
       'unsupported_contract_version';

@@ -244,3 +244,12 @@ foreground-only, and bounded by accepted duration/byte limits. Backgrounding
 finalizes a voice note; cancellation/disposal discard partial capture. Opaque
 references work with accepted local audio playback, uploads, sharing, and
 explicit release. See the [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).
+
+## Clipboard, vibration and phone dialer
+
+Optional `MiniProgramClipboardProvider`, `MiniProgramVibrationProvider`, and
+`MiniProgramPhoneProvider` adapters can be passed to `MiniProgramConfig`. Each
+endpoint has a separate denied-by-default policy. Clipboard read/write
+acceptance is independent, haptics use short system effects, and the dialer
+never places a call directly. Explicit gestures and foreground visibility are
+required. See [Android installation, policies and behavior](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).

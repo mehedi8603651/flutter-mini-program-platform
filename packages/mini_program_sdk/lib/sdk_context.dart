@@ -21,6 +21,7 @@ import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
+import 'system/mini_program_system.dart';
 import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -85,6 +86,13 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrManager,
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.clipboardProvider,
+    this.clipboardPolicy = const MiniProgramClipboardPolicy(),
+    this.vibrationProvider,
+    this.vibrationPolicy = const MiniProgramVibrationPolicy(),
+    this.phoneProvider,
+    this.phonePolicy = const MiniProgramPhonePolicy(),
+    this.isForeground = true,
     this.shareManager,
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.authController,
@@ -131,6 +139,13 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramQrManager? qrManager;
   final MiniProgramQrPolicy qrPolicy;
+  final MiniProgramClipboardProvider? clipboardProvider;
+  final MiniProgramClipboardPolicy clipboardPolicy;
+  final MiniProgramVibrationProvider? vibrationProvider;
+  final MiniProgramVibrationPolicy vibrationPolicy;
+  final MiniProgramPhoneProvider? phoneProvider;
+  final MiniProgramPhonePolicy phonePolicy;
+  final bool isForeground;
   final MiniProgramShareManager? shareManager;
   final MiniProgramSharePolicy sharePolicy;
   final MiniProgramAuthController? authController;
@@ -188,6 +203,13 @@ class MiniProgramSdkScope extends InheritedWidget {
         flashlightPolicy != oldWidget.flashlightPolicy ||
         qrManager != oldWidget.qrManager ||
         qrPolicy != oldWidget.qrPolicy ||
+        clipboardProvider != oldWidget.clipboardProvider ||
+        clipboardPolicy != oldWidget.clipboardPolicy ||
+        vibrationProvider != oldWidget.vibrationProvider ||
+        vibrationPolicy != oldWidget.vibrationPolicy ||
+        phoneProvider != oldWidget.phoneProvider ||
+        phonePolicy != oldWidget.phonePolicy ||
+        isForeground != oldWidget.isForeground ||
         shareManager != oldWidget.shareManager ||
         sharePolicy != oldWidget.sharePolicy ||
         authController != oldWidget.authController ||

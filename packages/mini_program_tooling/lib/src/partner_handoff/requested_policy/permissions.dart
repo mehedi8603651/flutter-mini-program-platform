@@ -19,6 +19,9 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'flashlight' &&
         entry.key != 'qrScanner' &&
         entry.key != 'share' &&
+        entry.key != 'clipboard' &&
+        entry.key != 'vibration' &&
+        entry.key != 'phone' &&
         entry.key != 'displayBrightness' &&
         entry.key != 'audioPlayback' &&
         entry.key != 'videoPlayback') {
@@ -26,6 +29,13 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         'MiniProgram partner handoff requestedPermissions contains an '
         'unsupported permission: ${entry.key}.',
       );
+    }
+    if (const ['clipboard', 'vibration', 'phone'].contains(entry.key)) {
+      normalized[entry.key as String] = _normalizeRequestedSystem(
+        entry.key as String,
+        entry.value,
+      );
+      continue;
     }
     if (entry.key == 'files') {
       normalized['files'] = _normalizeRequestedFiles(entry.value);
@@ -576,4 +586,59 @@ int _positiveIntOrDefault(
     );
   }
   return value;
+}
+
+Map<String, Object?> _normalizeRequestedSystem(String feature, Object? raw) {
+  if (raw is! Map) {
+    throw MiniProgramPartnerHandoffException(
+      'requestedPermissions.$feature must be an object.',
+    );
+  }
+  final allowed = {
+    'enabled',
+    'reason',
+    if (feature == 'clipboard') ...[
+      'read',
+      'write',
+      'recommendedMaxTextLength',
+    ],
+  };
+  for (final key in raw.keys) {
+    if (!allowed.contains(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'Unsupported requestedPermissions.$feature property: $key.',
+      );
+    }
+  }
+  if (raw['enabled'] is! bool) {
+    throw MiniProgramPartnerHandoffException(
+      'requestedPermissions.$feature.enabled must be boolean.',
+    );
+  }
+  _validateRequestedPermissionReason(raw['reason'], feature);
+  final result = <String, Object?>{
+    'enabled': raw['enabled'],
+    'reason': (raw['reason'] as String).trim(),
+  };
+  if (feature == 'clipboard') {
+    final read = raw['read'] ?? false;
+    final write = raw['write'] ?? true;
+    final maximum = raw['recommendedMaxTextLength'] ?? 32768;
+    if (read is! bool ||
+        write is! bool ||
+        maximum is! int ||
+        maximum < 1 ||
+        maximum > 32768 ||
+        raw['enabled'] == true && !read && !write) {
+      throw const MiniProgramPartnerHandoffException(
+        'Invalid requested clipboard access or text limit.',
+      );
+    }
+    result.addAll({
+      'read': read,
+      'write': write,
+      'recommendedMaxTextLength': maximum,
+    });
+  }
+  return result;
 }

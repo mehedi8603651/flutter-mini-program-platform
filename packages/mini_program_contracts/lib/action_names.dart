@@ -1,5 +1,10 @@
 /// Stable wire names for host-dispatched mobile MVP actions.
 abstract final class ActionNames {
+  static const String clipboardReadText = 'clipboard.readText';
+  static const String clipboardWriteText = 'clipboard.writeText';
+  static const String vibrationTrigger = 'vibration.trigger';
+  static const String phoneOpenDialer = 'phone.openDialer';
+
   static const String openNativeScreen = 'openNativeScreen';
   static const String callSecureApi = 'callSecureApi';
   static const String trackEvent = 'trackEvent';

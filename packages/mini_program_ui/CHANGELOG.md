@@ -1,3 +1,7 @@
+## 0.2.12
+
+- Add `Mp.clipboard.readText/writeText`, `Mp.vibration.trigger`, and `Mp.phone.openDialer` with pure-Dart validation and deterministic JSON.
+
 ## 0.2.11
 
 - Add foreground `Mp.microphone.record`, `stop`, and `cancel` authoring.

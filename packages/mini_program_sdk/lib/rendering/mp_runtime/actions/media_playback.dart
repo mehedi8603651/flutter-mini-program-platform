@@ -1,6 +1,29 @@
 part of '../../mp_screen_renderer.dart';
 
 abstract final class _MpMediaPlaybackActionHandler {
+  static const _actions = <String>{
+    'audio.play',
+    'audio.preload',
+    'audio.pause',
+    'audio.seek',
+    'audio.stop',
+    'audio.setVolume',
+    'audio.setSpeed',
+    'audio.getStatus',
+    'audio.release',
+    'video.play',
+    'video.pause',
+    'video.seek',
+    'video.stop',
+    'video.setMuted',
+    'video.setVolume',
+    'video.setSpeed',
+    'video.enterFullscreen',
+    'video.exitFullscreen',
+    'video.getStatus',
+    'video.release',
+  };
+
   static Future<HostActionResult> _run(
     MiniProgramSdkScope scope,
     String actionName,

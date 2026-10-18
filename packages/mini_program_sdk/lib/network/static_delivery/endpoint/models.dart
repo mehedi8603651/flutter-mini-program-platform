@@ -29,6 +29,9 @@ class MiniProgramEndpoint {
     this.microphonePolicy = const MiniProgramMicrophonePolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.clipboardPolicy = const MiniProgramClipboardPolicy(),
+    this.vibrationPolicy = const MiniProgramVibrationPolicy(),
+    this.phonePolicy = const MiniProgramPhonePolicy(),
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
@@ -53,6 +56,9 @@ class MiniProgramEndpoint {
     this.microphonePolicy = const MiniProgramMicrophonePolicy(),
     this.flashlightPolicy = const MiniProgramFlashlightPolicy(),
     this.qrPolicy = const MiniProgramQrPolicy(),
+    this.clipboardPolicy = const MiniProgramClipboardPolicy(),
+    this.vibrationPolicy = const MiniProgramVibrationPolicy(),
+    this.phonePolicy = const MiniProgramPhonePolicy(),
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
@@ -72,6 +78,9 @@ class MiniProgramEndpoint {
   final MiniProgramMicrophonePolicy microphonePolicy;
   final MiniProgramFlashlightPolicy flashlightPolicy;
   final MiniProgramQrPolicy qrPolicy;
+  final MiniProgramClipboardPolicy clipboardPolicy;
+  final MiniProgramVibrationPolicy vibrationPolicy;
+  final MiniProgramPhonePolicy phonePolicy;
   final MiniProgramSharePolicy sharePolicy;
   final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
 }
