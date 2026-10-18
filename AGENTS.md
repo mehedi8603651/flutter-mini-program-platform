@@ -1843,7 +1843,9 @@ The working tree may contain user changes. Never discard, reset, or overwrite un
 - Run analysis and full tests for every affected package.
 - Run `tools/verify_mp_engine_release.ps1` for a coordinated engine release.
 - Publish generated code and package metadata, but not build/cache directories.
-- SDK and tooling pin `publish_to: https://pub.dev` so dependency mirrors do not redirect package uploads.
+- Omit `publish_to` from packages intended for pub.dev; its server rejects any explicit value, including `https://pub.dev`.
+- When `PUB_HOSTED_URL` points to a dependency mirror, temporarily set it to `https://pub.dev` for publication and publication dry runs, then restore its previous value in `finally`. Preserve permanent mirror settings and `FLUTTER_STORAGE_BASE_URL`.
+- A successful `pub publish --dry-run` validates the package locally; it does not prove acceptance by pub.dev's upload validation.
 - Do not publish packages, create commits, or push unless the user explicitly requests it.
 - Git line-ending warnings on Windows are informational unless a diff shows unintended whole-file churn.
 - Use `git commit -m "message"`; `git commit "message"` treats the text as a pathspec and does not commit.
