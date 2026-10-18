@@ -41,6 +41,7 @@ void main() {
       'feedback_forms_lazy.dart',
       'file.dart',
       'flashlight.dart',
+      'gallery.dart',
       'location.dart',
       'math.dart',
       'media.dart',

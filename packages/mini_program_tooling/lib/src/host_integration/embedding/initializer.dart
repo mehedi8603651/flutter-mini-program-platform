@@ -12,8 +12,8 @@ import 'models.dart';
 import 'pubspec_editor.dart';
 import 'readme_template.dart';
 
-const String _miniProgramSdkConstraint = '^0.6.9';
-const String _miniProgramContractsConstraint = '^0.3.13';
+const String _miniProgramSdkConstraint = '^0.6.12';
+const String _miniProgramContractsConstraint = '^0.3.14';
 
 Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
   MiniProgramEmbeddingInitRequest request,
@@ -74,9 +74,7 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
           (await tasksFile.readAsString()).contains(
             androidTasksGeneratedMarker,
           ));
-  final sdkConstraint = androidSeparateTasks
-      ? '^0.6.11'
-      : _miniProgramSdkConstraint;
+  final sdkConstraint = _miniProgramSdkConstraint;
   final updatedPubspecSource = ensureEmbeddingDependencies(
     pubspecSource,
     projectRootPath: projectRootPath,

@@ -21,7 +21,7 @@ Future<String> resolveScaffoldMiniProgramUiDependency() async {
   }
 
   return '''
-  mini_program_ui: ^0.2.8
+  mini_program_ui: ^0.2.10
 ''';
 }
 

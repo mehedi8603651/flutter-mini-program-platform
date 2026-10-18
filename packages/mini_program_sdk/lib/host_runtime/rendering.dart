@@ -54,6 +54,8 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           displayBrightnessPolicy: _displayBrightnessPolicyFor(manifest.id),
           filePolicy: _filePolicyFor(manifest.id),
           cameraManager: _cameraManager,
+          galleryManager: _galleryManager,
+          galleryPolicy: _galleryPolicyFor(manifest.id),
           mediaManager: _mediaManager,
           mediaPlaybackManager: _mediaPlaybackManager,
           mediaPlaybackPolicy: _mediaPlaybackPolicyFor(manifest.id),

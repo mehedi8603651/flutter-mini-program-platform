@@ -14,6 +14,7 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     if (entry.key != 'location' &&
         entry.key != 'files' &&
         entry.key != 'camera' &&
+        entry.key != 'gallery' &&
         entry.key != 'flashlight' &&
         entry.key != 'qrScanner' &&
         entry.key != 'share' &&
@@ -31,6 +32,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'camera') {
       normalized['camera'] = _normalizeRequestedCamera(entry.value);
+      continue;
+    }
+    if (entry.key == 'gallery') {
+      normalized['gallery'] = _normalizeRequestedGallery(entry.value);
       continue;
     }
     if (entry.key == 'flashlight') {
@@ -261,6 +266,47 @@ Map<String, Object?> _normalizeRequestedQrScanner(Object? raw) {
     'reason': (reason! as String).trim(),
     'allowTorch': allowTorch,
   });
+}
+
+Map<String, Object?> _normalizeRequestedGallery(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.gallery must be an object.',
+    );
+  }
+  const limits = {
+    'recommendedMaxImages': (9, 30),
+    'recommendedMaxImageBytes': (20971520, 104857600),
+    'recommendedMaxTotalBytes': (52428800, 314572800),
+  };
+  for (final key in raw.keys) {
+    if (key != 'enabled' && key != 'reason' && !limits.containsKey(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'requestedPermissions.gallery contains an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  if (enabled is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.gallery.enabled must be a boolean.',
+    );
+  }
+  _validateRequestedPermissionReason(raw['reason'], 'gallery');
+  final result = <String, Object?>{
+    'enabled': enabled,
+    'reason': (raw['reason'] as String).trim(),
+  };
+  for (final entry in limits.entries) {
+    final value = raw[entry.key] ?? entry.value.$1;
+    if (value is! int || value < 1 || value > entry.value.$2) {
+      throw MiniProgramPartnerHandoffException(
+        'requestedPermissions.gallery.${entry.key} must be an integer from 1 to ${entry.value.$2}.',
+      );
+    }
+    result[entry.key] = value;
+  }
+  return Map<String, Object?>.unmodifiable(result);
 }
 
 Map<String, Object?> _normalizeRequestedCamera(Object? raw) {

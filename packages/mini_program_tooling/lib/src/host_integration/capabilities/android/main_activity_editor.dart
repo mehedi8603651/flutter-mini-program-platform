@@ -11,6 +11,7 @@ const List<String> androidCapabilityRegistrations = <String>[
   'MiniProgramLocationChannel.register(flutterEngine)',
   'MiniProgramFileTransferChannel.register(flutterEngine)',
   'MiniProgramCameraChannel.register(flutterEngine)',
+  'MiniProgramGalleryChannel.register(flutterEngine)',
   'MiniProgramFlashlightChannel.register(flutterEngine)',
   'MiniProgramQrScannerChannel.register(flutterEngine)',
   'MiniProgramShareChannel.register(flutterEngine)',
@@ -54,6 +55,9 @@ String patchAndroidMainActivityRegistration(
 
   final needsFragmentActivity =
       requiresFragmentActivity ||
+      registrations.contains(
+        'MiniProgramGalleryChannel.register(flutterEngine)',
+      ) ||
       registrations.contains(
         'MiniProgramCameraChannel.register(flutterEngine)',
       );

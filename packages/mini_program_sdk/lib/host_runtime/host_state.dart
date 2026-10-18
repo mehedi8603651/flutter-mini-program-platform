@@ -13,6 +13,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   MiniProgramMediaManager? _mediaManager;
   MiniProgramMediaPlaybackManager? _mediaPlaybackManager;
   MiniProgramCameraManager? _cameraManager;
+  MiniProgramGalleryManager? _galleryManager;
   MiniProgramFlashlightManager? _flashlightManager;
   MiniProgramQrManager? _qrManager;
   MiniProgramShareManager? _shareManager;
@@ -45,7 +46,10 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     _displayBrightnessManager = _displayBrightnessManagerFor(
       widget.displayBrightnessProvider,
     );
-    _mediaManager = _mediaManagerFor(widget.mediaProvider);
+    _mediaManager = _mediaManagerFor(
+      widget.mediaProvider ?? widget.galleryProvider,
+    );
+    _galleryManager = _galleryManagerFor(widget.galleryProvider, _mediaManager);
     _mediaPlaybackManager = _mediaPlaybackManagerFor(
       widget.mediaPlaybackProvider,
     );
@@ -72,6 +76,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         widget.displayBrightnessProvider !=
             oldWidget.displayBrightnessProvider ||
         widget.cameraProvider != oldWidget.cameraProvider ||
+        widget.galleryProvider != oldWidget.galleryProvider ||
         widget.mediaProvider != oldWidget.mediaProvider ||
         widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider ||
         widget.flashlightProvider != oldWidget.flashlightProvider ||
@@ -101,12 +106,21 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         );
       }
       if (widget.cameraProvider != oldWidget.cameraProvider ||
+          widget.galleryProvider != oldWidget.galleryProvider ||
           widget.mediaProvider != oldWidget.mediaProvider) {
         unawaited(_cameraManager?.dispose());
-        if (widget.mediaProvider != oldWidget.mediaProvider) {
+        unawaited(_galleryManager?.dispose());
+        if (widget.mediaProvider != oldWidget.mediaProvider ||
+            widget.galleryProvider != oldWidget.galleryProvider) {
           unawaited(_mediaManager?.dispose());
-          _mediaManager = _mediaManagerFor(widget.mediaProvider);
+          _mediaManager = _mediaManagerFor(
+            widget.mediaProvider ?? widget.galleryProvider,
+          );
         }
+        _galleryManager = _galleryManagerFor(
+          widget.galleryProvider,
+          _mediaManager,
+        );
         _cameraManager = _cameraManagerFor(
           widget.cameraProvider,
           _mediaManager,
@@ -152,6 +166,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       unawaited(_fileTransferManager?.cancelAllFor(activeAppId));
       unawaited(_displayBrightnessManager?.releaseAllFor(activeAppId));
       unawaited(_cameraManager?.releaseAllFor(activeAppId));
+      unawaited(_galleryManager?.releaseAllFor(activeAppId));
       unawaited(_mediaManager?.releaseAllFor(activeAppId));
       unawaited(_flashlightManager?.releaseFor(activeAppId));
       unawaited(_qrManager?.releaseFor(activeAppId));
@@ -184,6 +199,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     unawaited(_fileTransferManager?.dispose());
     unawaited(_displayBrightnessManager?.dispose());
     unawaited(_cameraManager?.dispose());
+    unawaited(_galleryManager?.dispose());
     unawaited(_mediaManager?.dispose());
     unawaited(_flashlightManager?.dispose());
     unawaited(_qrManager?.dispose());
@@ -278,6 +294,13 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   ) => provider == null
       ? null
       : MiniProgramCameraManager(provider, mediaManager: mediaManager);
+
+  MiniProgramGalleryManager? _galleryManagerFor(
+    MiniProgramGalleryProvider? provider,
+    MiniProgramMediaManager? mediaManager,
+  ) => provider == null || mediaManager == null
+      ? null
+      : MiniProgramGalleryManager(provider, mediaManager: mediaManager);
 
   MiniProgramDisplayBrightnessManager? _displayBrightnessManagerFor(
     MiniProgramDisplayBrightnessProvider? provider,

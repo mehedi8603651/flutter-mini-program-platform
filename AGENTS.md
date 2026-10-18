@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.13` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.9` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.11` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.10` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.14` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.10` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.12` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.11` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -97,6 +97,12 @@ These are system invariants, not preferences:
     mounted mini-program subtree. The host clamps the requested level and must
     restore normal system-controlled brightness on unmount, backgrounding,
     app changes, and host disposal; it never writes global brightness settings.
+
+22. Gallery photo selection is an optional gesture-gated host capability.
+    Only accepted host count/byte limits authorize it. Selected images are
+    imported into private temporary storage and expose opaque app-owned media
+    references only. Picker-induced activity pauses must not cancel selection;
+    disposal, app changes, cancellation, and stale completion clean new resources.
 
 ## Repository Map
 
@@ -886,8 +892,8 @@ capability adapter files are host-owned after creation and must not be
 overwritten automatically.
 
 Android native capability installation is order-independent. Location, file,
-camera, flashlight, QR, and media playback registrations must go through the
-shared `capabilities/android/main_activity_editor.dart`; QR and Media3 native
+camera, gallery, flashlight, QR, and media playback registrations must go through the
+shared `capabilities/android/main_activity_editor.dart`; gallery, QR, and Media3 native
 dependencies must go through `capabilities/android/gradle_editor.dart`.
 Feature installers own provider/channel templates and feature-specific Dart or
 manifest edits, but must commit the complete write plan through
@@ -1834,6 +1840,16 @@ The working tree may contain user changes. Never discard, reset, or overwrite un
 - For UI smoothness, verify that local state changes rebuild only subscribed subtrees and preserve stable screen identity.
 - For Android-facing changes, run host widget/unit tests and an emulator smoke test when the environment permits.
 - For static delivery, verify checksums and test the exact served URL, including CORS and path casing.
+
+Gallery authoring lives in `mini_program_ui/lib/src/features/gallery/` and
+SDK ownership/policy in `mini_program_sdk/lib/gallery/`. Its action handlers
+and validators remain renderer parts. The Android installer and templates
+live under `host_integration/capabilities/gallery/`; install with
+`miniprogram host capability init gallery --platform android`. Generated
+runtime setup must retain gallery provider arguments after `embed init --force`,
+including separate-task setup in either installation order. Requested gallery
+permissions remain advisory; generated endpoint policy uses accepted values
+only. See `docs/android_gallery_photo_picker.md` for limits and lifecycle.
 
 ## Release Conventions
 

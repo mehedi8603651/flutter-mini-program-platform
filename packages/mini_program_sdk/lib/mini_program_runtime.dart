@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import 'cache/mini_program_cache_bundle.dart';
 import 'camera/mini_program_camera.dart';
+import 'gallery/mini_program_gallery.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
@@ -35,6 +36,7 @@ class MiniProgramRuntime {
     this.fileTransferProvider,
     this.displayBrightnessProvider,
     this.cameraProvider,
+    this.galleryProvider,
     this.mediaProvider,
     this.mediaPlaybackProvider,
     this.flashlightProvider,
@@ -57,6 +59,7 @@ class MiniProgramRuntime {
   final MiniProgramFileTransferProvider? fileTransferProvider;
   final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
   final MiniProgramCameraProvider? cameraProvider;
+  final MiniProgramGalleryProvider? galleryProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
@@ -80,6 +83,7 @@ class MiniProgramRuntime {
     MiniProgramFileTransferProvider? fileTransferProvider,
     MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
     MiniProgramCameraProvider? cameraProvider,
+    MiniProgramGalleryProvider? galleryProvider,
     MiniProgramMediaProvider? mediaProvider,
     MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
     MiniProgramFlashlightProvider? flashlightProvider,
@@ -104,6 +108,7 @@ class MiniProgramRuntime {
       displayBrightnessProvider:
           displayBrightnessProvider ?? this.displayBrightnessProvider,
       cameraProvider: cameraProvider ?? this.cameraProvider,
+      galleryProvider: galleryProvider ?? this.galleryProvider,
       mediaProvider: mediaProvider ?? this.mediaProvider,
       mediaPlaybackProvider:
           mediaPlaybackProvider ?? this.mediaPlaybackProvider,
@@ -179,6 +184,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.displayBrightnessProvider !=
             oldWidget.runtime.displayBrightnessProvider ||
         runtime.cameraProvider != oldWidget.runtime.cameraProvider ||
+        runtime.galleryProvider != oldWidget.runtime.galleryProvider ||
         runtime.mediaProvider != oldWidget.runtime.mediaProvider ||
         runtime.mediaPlaybackProvider !=
             oldWidget.runtime.mediaPlaybackProvider ||

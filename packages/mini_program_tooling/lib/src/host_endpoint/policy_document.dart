@@ -236,6 +236,18 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'minimumFreeBytes': 256 * 1024 * 1024,
     });
   }
+  if (permission == 'gallery') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostGallery(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'maxImages': request['recommendedMaxImages'] ?? 9,
+      'maxImageBytes': request['recommendedMaxImageBytes'] ?? 20971520,
+      'maxTotalBytes': request['recommendedMaxTotalBytes'] ?? 52428800,
+    });
+  }
   if (permission == 'camera') {
     final request = requested is Map
         ? hostJsonObjectOrEmpty(requested)
@@ -354,6 +366,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
     }
     normalized['location'] = sortedHostJsonObject(location);
   }
+  final rawGallery = normalized['gallery'];
+  if (rawGallery != null) {
+    if (rawGallery is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.gallery must be an object.',
+      );
+    }
+    normalized['gallery'] = validateAcceptedHostGallery(
+      hostJsonObjectOrEmpty(rawGallery),
+    );
+  }
   final rawCamera = normalized['camera'];
   if (rawCamera != null) {
     if (rawCamera is! Map) {
@@ -434,6 +457,30 @@ Map<String, Object?> validateAcceptedHostPlaybackPermission(
     throw MiniProgramHostException(
       'Accepted permissions.$permission.enabled must be a boolean.',
     );
+  }
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostGallery(Map<String, Object?> value) {
+  final normalized = deepHostJsonObjectCopy(value);
+  if (normalized['enabled'] is! bool) {
+    throw const MiniProgramHostException(
+      'Accepted permissions.gallery.enabled must be a boolean.',
+    );
+  }
+  const limits = {
+    'maxImages': (9, 30),
+    'maxImageBytes': (20971520, 104857600),
+    'maxTotalBytes': (52428800, 314572800),
+  };
+  for (final entry in limits.entries) {
+    final number = normalized[entry.key] ?? entry.value.$1;
+    if (number is! int || number < 1 || number > entry.value.$2) {
+      throw MiniProgramHostException(
+        'Accepted permissions.gallery.${entry.key} must be an integer from 1 to ${entry.value.$2}.',
+      );
+    }
+    normalized[entry.key] = number;
   }
   return sortedHostJsonObject(normalized);
 }

@@ -30,23 +30,6 @@ class MpActionRunner {
   }
 }
 
-class _MpActionCallContext {
-  const _MpActionCallContext({
-    this.stack = const <String>[],
-    this.userGesture = false,
-  });
-
-  static const int maxDepth = 16;
-
-  final List<String> stack;
-  final bool userGesture;
-
-  _MpActionCallContext push(String name) => _MpActionCallContext(
-    stack: List<String>.unmodifiable(<String>[...stack, name]),
-    userGesture: userGesture,
-  );
-}
-
 abstract final class _MpActionDispatcher {
   static Future<Object?> dispatch(
     BuildContext context,
@@ -198,6 +181,13 @@ abstract final class _MpActionDispatcher {
           props,
         ),
         'camera.cancel' => _MpCameraActionHandler._cancel(scope, props),
+        'gallery.pickImages' => _MpGalleryActionHandler._pickImages(
+          context,
+          scope,
+          props,
+          userGesture: callContext.userGesture,
+        ),
+        'gallery.cancel' => _MpGalleryActionHandler._cancel(scope),
         'flashlight.turnOn' ||
         'flashlight.turnOff' ||
         'flashlight.toggle' ||

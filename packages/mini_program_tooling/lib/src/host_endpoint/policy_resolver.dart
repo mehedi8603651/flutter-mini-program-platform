@@ -151,6 +151,36 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('  }')
     ..writeln('}')
     ..writeln()
+    ..writeln(
+      'MiniProgramGalleryPolicy galleryPolicyForMiniProgram(String appId) {',
+    )
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final gallery = permissions['gallery'] is Map
+        ? hostJsonObjectOrEmpty(permissions['gallery'])
+        : const <String, Object?>{};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramGalleryPolicy('
+        'enabled: ${gallery['enabled'] == true}, '
+        'maxImages: ${gallery['maxImages'] ?? 9}, '
+        'maxImageBytes: ${gallery['maxImageBytes'] ?? 20971520}, '
+        'maxTotalBytes: ${gallery['maxTotalBytes'] ?? 52428800});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramGalleryPolicy();')
+    ..writeln('  }')
+    ..writeln('}')
+    ..writeln()
     ..writeln('MiniProgramCameraPolicy cameraPolicyForMiniProgram(')
     ..writeln('  String appId,')
     ..writeln(') {')

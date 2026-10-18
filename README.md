@@ -211,3 +211,8 @@ Recommended runtime response shapes:
 - [Optional separate Android task setup](docs/android_separate_tasks_setup.md)
 - [Android native windows compatibility](docs/android_native_windows_compatibility.md)
 - [Future one-window workspace design (deferred)](docs/android_in_app_workspace_future.md)
+
+Android gallery photo selection is available through the optional
+[`gallery` capability](docs/android_gallery_photo_picker.md), including native
+Photo Picker selection, private photo copies, previews, and existing upload
+and sharing integration.

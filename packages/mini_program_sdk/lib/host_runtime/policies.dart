@@ -1,6 +1,16 @@
 part of '../mini_program_host.dart';
 
 extension _MiniProgramHostPolicies on _MiniProgramHostState {
+  MiniProgramGalleryPolicy _galleryPolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramGalleryPolicyProvider) {
+      return (source as MiniProgramGalleryPolicyProvider).galleryPolicyFor(
+        appId,
+      );
+    }
+    return const MiniProgramGalleryPolicy();
+  }
+
   MiniProgramCachePolicy _cachePolicyFor(String appId) {
     final source = widget.source;
     if (source is MiniProgramCachePolicyProvider) {

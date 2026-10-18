@@ -46,3 +46,20 @@ class _MpAction {
 class _MpValidationState {
   int nodeCount = 0;
 }
+
+class _MpActionCallContext {
+  const _MpActionCallContext({
+    this.stack = const <String>[],
+    this.userGesture = false,
+  });
+
+  static const int maxDepth = 16;
+
+  final List<String> stack;
+  final bool userGesture;
+
+  _MpActionCallContext push(String name) => _MpActionCallContext(
+    stack: List<String>.unmodifiable(<String>[...stack, name]),
+    userGesture: userGesture,
+  );
+}

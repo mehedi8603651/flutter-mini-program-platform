@@ -51,3 +51,9 @@ New code should use `CapabilityId` strings and the constants in
 `CapabilityIds`, for example `CapabilityIds.auth` or
 `CapabilityIds.mediaVideo`. The old `Capability` enum remains available as a
 deprecated compatibility API while the Mp engine branch migrates callers.
+
+Gallery contracts include `MiniProgramGalleryImage`,
+`MiniProgramGalleryResult`, `CapabilityIds.galleryImages`, and stable
+`gallery.*` action names/errors. Selection metadata contains bounded image
+properties and opaque media references; native paths, URIs, and bytes are
+never part of the wire result.

@@ -579,3 +579,15 @@ the final fallback.
 code and it does not contain renderer logic. Runtime validation,
 auth sessions, runtime API headers, and bridge dispatch are owned by
 `mini_program_sdk`.
+
+## Gallery photo selection
+
+`Mp.gallery.pickImages(targetState: 'photos', maxImages: 3)` opens a
+host-installed native photo picker after a user gesture. Optional
+`statusState` and `errorState` bindings report progress. Cancellation keeps the
+previous selection; `Mp.gallery.cancel()` logically cancels an active request.
+Use `Mp.image(source: MpImageSource.hostMedia, src: '{{state.photos.images.0.mediaRef}}')`
+inside `Mp.stateBuilder(keys: const ['photos'], child: ...)` for a reactive
+preview, and `Mp.media.release` when finished. File upload and system sharing
+independently require host acceptance. See the
+[Android gallery guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_gallery_photo_picker.md).

@@ -1,3 +1,16 @@
+## 0.7.11
+
+- Add `host capability init gallery --platform android` with Android's system
+  Photo Picker, document-picker fallback, single/multiple selection, and
+  private app-cache imports without broad gallery or storage permissions.
+- Normalize photo orientation, bound decoding and resizing, encode JPEG copies
+  without source EXIF metadata, and enforce host count/byte limits atomically.
+- Generate a host-owned Dart adapter, private FileProvider, shared native
+  registrations, and AndroidX dependencies compatible with separate tasks.
+- Add requested/accepted gallery policy handling; installation never grants
+  a mini-program permission. Generate against contracts 0.3.14, UI 0.2.10,
+  and SDK 0.6.12.
+
 ## 0.7.10
 
 - Add optional `embed init --android-separate-tasks` generation for Kotlin

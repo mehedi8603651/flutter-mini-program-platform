@@ -74,6 +74,18 @@ abstract final class MiniProgramErrorCodes {
   static const String cameraRequestInProgress = 'camera_request_in_progress';
   static const String cameraInvalidResult = 'camera_invalid_result';
   static const String cameraStorageUnavailable = 'camera_storage_unavailable';
+  static const String galleryNotAccepted = 'gallery_not_accepted';
+  static const String galleryUnavailable = 'gallery_unavailable';
+  static const String galleryUserGestureRequired =
+      'gallery_user_gesture_required';
+  static const String gallerySelectionCancelled = 'gallery_selection_cancelled';
+  static const String galleryRequestInProgress = 'gallery_request_in_progress';
+  static const String galleryInvalidRequest = 'gallery_invalid_request';
+  static const String galleryInvalidResult = 'gallery_invalid_result';
+  static const String galleryLimitExceeded = 'gallery_limit_exceeded';
+  static const String galleryUnsupportedImage = 'gallery_unsupported_image';
+  static const String galleryStorageUnavailable = 'gallery_storage_unavailable';
+  static const String galleryOperationFailed = 'gallery_operation_failed';
   static const String mediaUnavailable = 'media_unavailable';
   static const String mediaNotFound = 'media_not_found';
   static const String mediaNotOwned = 'media_not_owned';

@@ -739,6 +739,8 @@ class MpScreenValidator {
         path,
       ),
       'camera.cancel' => _parseCameraCancelAction(type, props, path),
+      'gallery.pickImages' => _parseGalleryPickImagesAction(type, props, path),
+      'gallery.cancel' => _parseGalleryCancelAction(type, props, path),
       'flashlight.turnOn' ||
       'flashlight.turnOff' ||
       'flashlight.toggle' ||

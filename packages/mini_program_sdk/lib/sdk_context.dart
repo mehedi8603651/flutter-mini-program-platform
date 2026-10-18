@@ -4,6 +4,7 @@ import 'capability_registry.dart';
 import 'auth/mini_program_auth.dart';
 import 'cache/runtime_cache.dart';
 import 'camera/mini_program_camera.dart';
+import 'gallery/mini_program_gallery.dart';
 import 'feature_flag_evaluator.dart';
 import 'data/mini_program_data_resource.dart';
 import 'host_bridge.dart';
@@ -70,6 +71,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.displayBrightnessPolicy = const MiniProgramDisplayBrightnessPolicy(),
     this.filePolicy = const MiniProgramFilePolicy(),
     this.cameraManager,
+    this.galleryManager,
+    this.galleryPolicy = const MiniProgramGalleryPolicy(),
     this.mediaManager,
     this.mediaPlaybackManager,
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
@@ -112,6 +115,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramDisplayBrightnessPolicy displayBrightnessPolicy;
   final MiniProgramFilePolicy filePolicy;
   final MiniProgramCameraManager? cameraManager;
+  final MiniProgramGalleryManager? galleryManager;
+  final MiniProgramGalleryPolicy galleryPolicy;
   final MiniProgramMediaManager? mediaManager;
   final MiniProgramMediaPlaybackManager? mediaPlaybackManager;
   final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
@@ -165,6 +170,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         displayBrightnessPolicy != oldWidget.displayBrightnessPolicy ||
         filePolicy != oldWidget.filePolicy ||
         cameraManager != oldWidget.cameraManager ||
+        galleryManager != oldWidget.galleryManager ||
+        galleryPolicy != oldWidget.galleryPolicy ||
         mediaManager != oldWidget.mediaManager ||
         mediaPlaybackManager != oldWidget.mediaPlaybackManager ||
         mediaPlaybackPolicy != oldWidget.mediaPlaybackPolicy ||

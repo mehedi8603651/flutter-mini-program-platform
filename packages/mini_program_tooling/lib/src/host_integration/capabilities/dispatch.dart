@@ -1,4 +1,5 @@
 import 'camera/installer.dart' as camera;
+import 'gallery/installer.dart' as gallery;
 import 'file_transfer/installer.dart' as file;
 import 'flashlight/installer.dart' as flashlight;
 import 'display_brightness/installer.dart' as display_brightness;
@@ -11,6 +12,7 @@ import 'share/installer.dart' as share;
 const String locationCapability = location.locationCapability;
 const String fileCapability = file.fileCapability;
 const String cameraCapability = camera.cameraCapability;
+const String galleryCapability = gallery.galleryCapability;
 const String flashlightCapability = flashlight.flashlightCapability;
 const String displayBrightnessCapability =
     display_brightness.displayBrightnessCapability;
@@ -26,6 +28,9 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
   locationCapability => location.initializeMiniProgramHostCapability(request),
   fileCapability => file.initializeMiniProgramHostFileCapability(request),
   cameraCapability => camera.initializeMiniProgramHostCameraCapability(request),
+  galleryCapability => gallery.initializeMiniProgramHostGalleryCapability(
+    request,
+  ),
   flashlightCapability =>
     flashlight.initializeMiniProgramHostFlashlightCapability(request),
   displayBrightnessCapability =>
@@ -40,6 +45,6 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
     'Unsupported host capability "${request.capability}". Supported '
     'capabilities: $locationCapability, $fileCapability, $cameraCapability, '
     '$flashlightCapability, $displayBrightnessCapability, $qrCapability, $shareCapability, '
-    '$audioCapability, $videoCapability.',
+    '$audioCapability, $videoCapability, $galleryCapability.',
   ),
 };

@@ -11,6 +11,7 @@ export 'cache/screen_cache.dart';
 export 'feature_flag_evaluator.dart';
 export 'file/mini_program_file.dart';
 export 'camera/mini_program_camera.dart';
+export 'gallery/mini_program_gallery.dart';
 export 'flashlight/mini_program_flashlight.dart';
 export 'data/mini_program_data_resource.dart';
 export 'display/mini_program_display.dart';

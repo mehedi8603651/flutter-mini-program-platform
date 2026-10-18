@@ -30,6 +30,7 @@ export 'mini_program_file.dart';
 
 // Provider-neutral camera capture values.
 export 'mini_program_camera.dart';
+export 'mini_program_gallery.dart';
 
 // Provider-neutral flashlight status values.
 export 'mini_program_flashlight.dart';

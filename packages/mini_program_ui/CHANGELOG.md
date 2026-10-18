@@ -1,3 +1,9 @@
+## 0.2.10
+
+- Add `Mp.gallery.pickImages` and `Mp.gallery.cancel` for single or multiple
+  photo selection, bounded resizing, and JPEG quality requests.
+- Reuse host-media image previews, sharing, uploads, and explicit release.
+
 # Changelog
 
 ## 0.2.9

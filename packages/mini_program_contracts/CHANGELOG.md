@@ -1,3 +1,9 @@
+## 0.3.14
+
+- Add gallery image-selection metadata, `gallery.images`, gallery action names,
+  and stable picker errors. Selected photos expose only opaque references and
+  bounded JSON-safe metadata.
+
 ## 0.3.13
 
 - Add the `display.brightness` capability and stable temporary window-

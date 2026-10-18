@@ -24,6 +24,7 @@ void main() {
           androidCapabilityRegistrations[3],
           androidCapabilityRegistrations[2],
           androidCapabilityRegistrations[6],
+          ...androidCapabilityRegistrations.skip(8),
         ],
       ];
       final outputs = <String>[];

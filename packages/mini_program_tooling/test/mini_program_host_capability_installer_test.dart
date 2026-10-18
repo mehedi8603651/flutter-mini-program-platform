@@ -23,6 +23,112 @@ void main() {
     }
   });
 
+  test(
+    'gallery installation is idempotent and keeps host provider changes',
+    () async {
+      const installer = MiniProgramHostCapabilityInstaller();
+      final request = MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'gallery',
+        platform: 'android',
+      );
+      expect((await installer.initialize(request)).alreadyInstalled, isFalse);
+      final provider = File(
+        p.join(
+          hostRootPath,
+          'lib',
+          'mini_program',
+          'app_android_gallery_provider.dart',
+        ),
+      );
+      await provider.writeAsString(
+        '${await provider.readAsString()}\n// Host customization.\n',
+      );
+      expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+      expect(await provider.readAsString(), contains('// Host customization.'));
+      final manifest = await File(
+        p.join(
+          hostRootPath,
+          'android',
+          'app',
+          'src',
+          'main',
+          'AndroidManifest.xml',
+        ),
+      ).readAsString();
+      expect(
+        manifest,
+        contains(r'${applicationId}.mini_program_gallery_files'),
+      );
+      expect(manifest, isNot(contains('READ_MEDIA_IMAGES')));
+      expect(manifest, isNot(contains('READ_EXTERNAL_STORAGE')));
+      expect(
+        await _mainActivityFile(hostRootPath).readAsString(),
+        contains('FlutterFragmentActivity'),
+      );
+      expect(
+        await _nativeSetupFile(hostRootPath).readAsString(),
+        contains('MiniProgramGalleryChannel.register'),
+      );
+      expect(
+        await _nativeCapabilityGradleFile(hostRootPath).readAsString(),
+        contains('androidx.activity:activity:1.10.1'),
+      );
+    },
+  );
+
+  test(
+    'gallery manifest conflicts fail before creating adapter files',
+    () async {
+      final manifest = File(
+        p.join(
+          hostRootPath,
+          'android',
+          'app',
+          'src',
+          'main',
+          'AndroidManifest.xml',
+        ),
+      );
+      final source = (await manifest.readAsString()).replaceFirst(
+        '</application>',
+        r'''
+      <provider android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.mini_program_gallery_files"
+        android:exported="true" android:grantUriPermissions="true">
+        <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/mini_program_gallery_paths" />
+      </provider>
+    </application>''',
+      );
+      await manifest.writeAsString(source);
+      final mainSource = await _mainActivityFile(hostRootPath).readAsString();
+      await expectLater(
+        const MiniProgramHostCapabilityInstaller().initialize(
+          MiniProgramHostCapabilityInitRequest(
+            projectRootPath: hostRootPath,
+            capability: 'gallery',
+            platform: 'android',
+          ),
+        ),
+        throwsA(isA<MiniProgramHostCapabilityException>()),
+      );
+      expect(await manifest.readAsString(), source);
+      expect(await _mainActivityFile(hostRootPath).readAsString(), mainSource);
+      expect(
+        await File(
+          p.join(
+            hostRootPath,
+            'lib',
+            'mini_program',
+            'app_android_gallery_provider.dart',
+          ),
+        ).exists(),
+        isFalse,
+      );
+      expect(await _nativeCapabilityGradleFile(hostRootPath).exists(), isFalse);
+    },
+  );
+
   test('installs Android system sharing with opaque media support', () async {
     final installer = const MiniProgramHostCapabilityInstaller();
     final request = MiniProgramHostCapabilityInitRequest(

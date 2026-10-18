@@ -11,6 +11,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramFilePolicyProvider,
         MiniProgramDisplayBrightnessPolicyProvider,
         MiniProgramCameraPolicyProvider,
+        MiniProgramGalleryPolicyProvider,
         MiniProgramFlashlightPolicyProvider,
         MiniProgramQrPolicyProvider,
         MiniProgramSharePolicyProvider,
@@ -151,6 +152,11 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramCameraPolicy cameraPolicyFor(String miniProgramId) {
     return _endpointFor(miniProgramId).cameraPolicy;
+  }
+
+  @override
+  MiniProgramGalleryPolicy galleryPolicyFor(String miniProgramId) {
+    return _endpointFor(miniProgramId).galleryPolicy;
   }
 
   @override

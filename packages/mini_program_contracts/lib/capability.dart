@@ -43,6 +43,9 @@ abstract final class CapabilityIds {
   /// Host can delegate one-time still-photo capture to the device camera UI.
   static const CapabilityId cameraCapturePhoto = 'camera.capture_photo';
 
+  /// Host can select gallery photos through trusted, user-initiated UI.
+  static const CapabilityId galleryImages = 'gallery.images';
+
   /// Host can render app-owned opaque temporary media references.
   static const CapabilityId mediaPreview = 'media.preview';
 
@@ -72,6 +75,7 @@ abstract final class CapabilityIds {
     fileUpload,
     fileDownload,
     cameraCapturePhoto,
+    galleryImages,
     mediaPreview,
     flashlightControl,
     qrScanner,

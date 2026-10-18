@@ -91,6 +91,10 @@ class MiniProgramMediaManager {
   bool owns(String miniProgramId, String mediaRef) =>
       _owners[_validReference(mediaRef)] == miniProgramId;
 
+  /// Whether any mini-program already owns this reference.
+  /// Available only to trusted host code, never to mini-program bindings.
+  bool isRegistered(String mediaRef) => _owners.containsKey(mediaRef);
+
   void requireOwned(String miniProgramId, Iterable<String> mediaRefs) {
     _ensureActive();
     for (final mediaRef in mediaRefs) {

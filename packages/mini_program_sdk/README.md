@@ -221,3 +221,16 @@ opening a cache, participates in audio focus, pauses when audio becomes noisy
 or the host leaves the foreground, and supports native fullscreen video.
 Permanent offline downloads and background playback are not part of this
 release.
+
+## Android gallery photos
+
+Install optional native photo selection with
+`miniprogram host capability init gallery --platform android`. Supply
+`MiniProgramConfig.galleryProvider` and explicitly accept each app's
+`MiniProgramEndpoint.galleryPolicy`. Generated adapters register capabilities
+automatically; installation never accepts a mini-program permission.
+
+Gallery metadata uses the existing opaque media registry for previews, uploads,
+sharing, and release. Activity pauses and retained task switches keep selections;
+app changes and disposal release owned copies. See the
+[Android gallery guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_gallery_photo_picker.md).

@@ -1,3 +1,12 @@
+## 0.6.12
+
+- Add host-controlled gallery providers and per-app accepted count/byte limits.
+- Require an explicit user gesture, preserve the previous selection on cancel,
+  validate returned metadata, and clean up late or rejected results.
+- Keep selected media across activity pauses and retained Android task switches;
+  release app-owned copies on mini-program disposal or explicit media release.
+- Integrate gallery references with existing previews, sharing, and uploads.
+
 ## 0.6.11
 
 - Add `MiniProgramVisibility` for persistent host surfaces.
