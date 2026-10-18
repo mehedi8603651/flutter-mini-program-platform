@@ -1,3 +1,8 @@
+## 0.7.15
+
+- List `maps` in `host capability init --help` alongside the other supported
+  Android capability installers.
+
 ## 0.7.14
 
 - Add optional Android `host capability init maps` generation with host-controlled Google Maps/Amap/Baidu app preferences, explicit coordinate handling, requested/accepted policy, and separate-task-safe regeneration.

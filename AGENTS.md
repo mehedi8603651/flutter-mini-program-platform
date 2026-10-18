@@ -30,7 +30,7 @@ These versions are the repository's current development/release line. Check each
 | `mini_program_contracts` | `0.3.17` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.2.13` | Pure-Dart authoring API that serializes UI and actions to JSON |
 | `mini_program_sdk` | `0.6.15` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.14` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_tooling` | `0.7.15` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
