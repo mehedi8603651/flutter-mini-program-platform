@@ -57,3 +57,8 @@ Gallery contracts include `MiniProgramGalleryImage`,
 `gallery.*` action names/errors. Selection metadata contains bounded image
 properties and opaque media references; native paths, URIs, and bytes are
 never part of the wire result.
+
+Microphone contracts include `MiniProgramMicrophoneResult`,
+`CapabilityIds.microphoneRecord`, recording actions, and stable errors. Voice
+notes expose bounded AAC/M4A metadata and opaque references. See the
+[Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).

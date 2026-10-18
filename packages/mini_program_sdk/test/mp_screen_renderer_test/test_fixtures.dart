@@ -772,6 +772,9 @@ Future<Object?> _runMpAction(
   MiniProgramCameraManager? cameraManager,
   MiniProgramGalleryManager? galleryManager,
   MiniProgramGalleryPolicy galleryPolicy = const MiniProgramGalleryPolicy(),
+  MiniProgramMicrophoneManager? microphoneManager,
+  MiniProgramMicrophonePolicy microphonePolicy =
+      const MiniProgramMicrophonePolicy(),
   MiniProgramMediaManager? mediaManager,
   MiniProgramCameraPolicy cameraPolicy = const MiniProgramCameraPolicy(),
   MiniProgramFlashlightManager? flashlightManager,
@@ -812,6 +815,8 @@ Future<Object?> _runMpAction(
         cameraManager: cameraManager,
         galleryManager: galleryManager,
         galleryPolicy: galleryPolicy,
+        microphoneManager: microphoneManager,
+        microphonePolicy: microphonePolicy,
         mediaManager: mediaManager,
         cameraPolicy: cameraPolicy,
         flashlightManager: flashlightManager,

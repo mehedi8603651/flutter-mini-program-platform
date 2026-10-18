@@ -15,6 +15,7 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'files' &&
         entry.key != 'camera' &&
         entry.key != 'gallery' &&
+        entry.key != 'microphone' &&
         entry.key != 'flashlight' &&
         entry.key != 'qrScanner' &&
         entry.key != 'share' &&
@@ -36,6 +37,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'gallery') {
       normalized['gallery'] = _normalizeRequestedGallery(entry.value);
+      continue;
+    }
+    if (entry.key == 'microphone') {
+      normalized['microphone'] = _normalizeRequestedMicrophone(entry.value);
       continue;
     }
     if (entry.key == 'flashlight') {
@@ -302,6 +307,46 @@ Map<String, Object?> _normalizeRequestedGallery(Object? raw) {
     if (value is! int || value < 1 || value > entry.value.$2) {
       throw MiniProgramPartnerHandoffException(
         'requestedPermissions.gallery.${entry.key} must be an integer from 1 to ${entry.value.$2}.',
+      );
+    }
+    result[entry.key] = value;
+  }
+  return Map<String, Object?>.unmodifiable(result);
+}
+
+Map<String, Object?> _normalizeRequestedMicrophone(Object? raw) {
+  if (raw is! Map) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.microphone must be an object.',
+    );
+  }
+  const limits = {
+    'recommendedMaxDurationSeconds': (60, 600),
+    'recommendedMaxBytes': (20971520, 104857600),
+  };
+  for (final key in raw.keys) {
+    if (key != 'enabled' && key != 'reason' && !limits.containsKey(key)) {
+      throw MiniProgramPartnerHandoffException(
+        'requestedPermissions.microphone contains an unsupported property: $key.',
+      );
+    }
+  }
+  final enabled = raw['enabled'];
+  if (enabled is! bool) {
+    throw const MiniProgramPartnerHandoffException(
+      'requestedPermissions.microphone.enabled must be a boolean.',
+    );
+  }
+  _validateRequestedPermissionReason(raw['reason'], 'microphone');
+  final result = <String, Object?>{
+    'enabled': enabled,
+    'reason': (raw['reason'] as String).trim(),
+  };
+  for (final entry in limits.entries) {
+    final value = raw[entry.key] ?? entry.value.$1;
+    if (value is! int || value < 1 || value > entry.value.$2) {
+      throw MiniProgramPartnerHandoffException(
+        'requestedPermissions.microphone.${entry.key} must be an integer from 1 to ${entry.value.$2}.',
       );
     }
     result[entry.key] = value;

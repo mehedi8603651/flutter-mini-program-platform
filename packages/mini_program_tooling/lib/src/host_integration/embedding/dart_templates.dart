@@ -225,6 +225,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramFileTransferProvider? fileTransferProvider,
   MiniProgramCameraProvider? cameraProvider,
   MiniProgramGalleryProvider? galleryProvider,
+  MiniProgramMicrophoneProvider? microphoneProvider,
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
@@ -240,6 +241,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     fileTransferProvider: fileTransferProvider,
     cameraProvider: cameraProvider,
     galleryProvider: galleryProvider,
+    microphoneProvider: microphoneProvider,
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,
@@ -320,6 +322,10 @@ MiniProgramGalleryPolicy galleryPolicyForMiniProgram(String appId) {
   return const MiniProgramGalleryPolicy();
 }
 
+MiniProgramMicrophonePolicy microphonePolicyForMiniProgram(String appId) {
+  return const MiniProgramMicrophonePolicy();
+}
+
 MiniProgramCameraPolicy cameraPolicyForMiniProgram(String appId) {
   return const MiniProgramCameraPolicy();
 }
@@ -391,6 +397,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramFileTransferProvider? fileTransferProvider,
   MiniProgramCameraProvider? cameraProvider,
   MiniProgramGalleryProvider? galleryProvider,
+  MiniProgramMicrophoneProvider? microphoneProvider,
   MiniProgramMediaProvider? mediaProvider,
   MiniProgramFlashlightProvider? flashlightProvider,
   MiniProgramQrScannerProvider? qrScannerProvider,
@@ -412,6 +419,7 @@ MiniProgramConfig buildMiniProgramConfig({
     if (fileTransferProvider != null) CapabilityIds.fileDownload,
     if (cameraProvider != null) CapabilityIds.cameraCapturePhoto,
     if (galleryProvider != null) CapabilityIds.galleryImages,
+    if (microphoneProvider != null) CapabilityIds.microphoneRecord,
     if (mediaProvider != null || galleryProvider != null) CapabilityIds.mediaPreview,
     if (flashlightProvider != null) CapabilityIds.flashlightControl,
     if (qrScannerProvider != null) CapabilityIds.qrScanner,
@@ -440,6 +448,7 @@ MiniProgramConfig buildMiniProgramConfig({
     fileTransferProvider: fileTransferProvider,
     cameraProvider: cameraProvider,
     galleryProvider: galleryProvider,
+    microphoneProvider: microphoneProvider,
     mediaProvider: mediaProvider,
     flashlightProvider: flashlightProvider,
     qrScannerProvider: qrScannerProvider,

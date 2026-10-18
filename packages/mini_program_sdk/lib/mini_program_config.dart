@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'cache/mini_program_cache_bundle.dart';
 import 'camera/mini_program_camera.dart';
 import 'gallery/mini_program_gallery.dart';
+import 'microphone/mini_program_microphone.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
@@ -34,6 +35,7 @@ class MiniProgramConfig {
     this.displayBrightnessProvider,
     this.cameraProvider,
     this.galleryProvider,
+    this.microphoneProvider,
     this.mediaProvider,
     this.mediaPlaybackProvider,
     this.flashlightProvider,
@@ -63,6 +65,7 @@ class MiniProgramConfig {
   final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramGalleryProvider? galleryProvider;
+  final MiniProgramMicrophoneProvider? microphoneProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
@@ -88,6 +91,7 @@ class MiniProgramConfig {
       displayBrightnessProvider: displayBrightnessProvider,
       cameraProvider: cameraProvider,
       galleryProvider: galleryProvider,
+      microphoneProvider: microphoneProvider,
       mediaProvider: mediaProvider,
       mediaPlaybackProvider: mediaPlaybackProvider,
       flashlightProvider: flashlightProvider,

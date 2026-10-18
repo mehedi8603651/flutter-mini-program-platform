@@ -8,6 +8,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart'
 import 'cache/asset_cache.dart';
 import 'camera/mini_program_camera.dart';
 import 'gallery/mini_program_gallery.dart';
+import 'microphone/mini_program_microphone.dart';
 import 'cache/manifest_cache.dart';
 import 'cache/runtime_cache.dart';
 import 'cache/screen_cache.dart';
@@ -69,6 +70,7 @@ class MiniProgramHost extends StatefulWidget {
     this.displayBrightnessProvider,
     this.cameraProvider,
     this.galleryProvider,
+    this.microphoneProvider,
     this.mediaProvider,
     this.mediaPlaybackProvider,
     this.flashlightProvider,
@@ -98,6 +100,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramGalleryProvider? galleryProvider;
+  final MiniProgramMicrophoneProvider? microphoneProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;

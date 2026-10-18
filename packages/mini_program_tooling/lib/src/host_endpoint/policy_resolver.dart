@@ -181,6 +181,35 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('  }')
     ..writeln('}')
     ..writeln()
+    ..writeln(
+      'MiniProgramMicrophonePolicy microphonePolicyForMiniProgram(String appId) {',
+    )
+    ..writeln('  switch (appId) {');
+  for (final entry in sortedEntries) {
+    final accepted = hostJsonObjectOrEmpty(
+      hostJsonObjectOrEmpty(entry.value)['accepted'],
+    );
+    final permissions = validateAcceptedHostPermissions(
+      hostJsonObjectOrEmpty(accepted['permissions']),
+    );
+    final microphone = permissions['microphone'] is Map
+        ? hostJsonObjectOrEmpty(permissions['microphone'])
+        : const <String, Object?>{};
+    buffer
+      ..writeln('    case ${hostDartString(entry.key)}:')
+      ..writeln(
+        '      return const MiniProgramMicrophonePolicy('
+        'enabled: ${microphone['enabled'] == true}, '
+        'maxDurationSeconds: ${microphone['maxDurationSeconds'] ?? 60}, '
+        'maxBytes: ${microphone['maxBytes'] ?? 20971520});',
+      );
+  }
+  buffer
+    ..writeln('    default:')
+    ..writeln('      return const MiniProgramMicrophonePolicy();')
+    ..writeln('  }')
+    ..writeln('}')
+    ..writeln()
     ..writeln('MiniProgramCameraPolicy cameraPolicyForMiniProgram(')
     ..writeln('  String appId,')
     ..writeln(') {')

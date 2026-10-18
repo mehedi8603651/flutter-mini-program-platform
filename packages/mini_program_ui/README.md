@@ -591,3 +591,12 @@ inside `Mp.stateBuilder(keys: const ['photos'], child: ...)` for a reactive
 preview, and `Mp.media.release` when finished. File upload and system sharing
 independently require host acceptance. See the
 [Android gallery guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_gallery_photo_picker.md).
+
+## Microphone voice notes
+
+Use `Mp.microphone.record(targetState: 'voice.note', statusState: 'voice.status')`
+from a user gesture. A separate `Mp.microphone.stop()` finalizes the pending
+record action; `Mp.microphone.cancel()` discards partial audio and preserves the
+previous target. Use `MpAudioSource.hostMedia('{{state.voice.note.mediaRef}}')`
+for accepted audio playback and `Mp.media.release` for cleanup. See the
+[Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).

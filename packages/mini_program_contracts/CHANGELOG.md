@@ -1,3 +1,9 @@
+## 0.3.15
+
+- Add `microphone.record`, `microphone.stop`, and `microphone.cancel`, the
+  `microphone.record` capability, stable recording errors, and bounded AAC/M4A
+  voice-note metadata with opaque app-owned media references.
+
 ## 0.3.14
 
 - Add gallery image-selection metadata, `gallery.images`, gallery action names,

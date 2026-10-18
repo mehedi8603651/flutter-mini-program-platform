@@ -228,6 +228,14 @@ Future<MiniProgramMediaPlaybackSession> _loadMediaSession(
       message: 'Temporary media caching is not accepted by host policy.',
     );
   }
+  if (source['kind'] == 'hostMedia' &&
+      (kind != MiniProgramMediaPlaybackKind.audio ||
+          cacheMode != MiniProgramMediaCacheMode.streaming)) {
+    throw const MiniProgramMediaPlaybackException(
+      errorCode: MiniProgramErrorCodes.mediaInvalidSource,
+      message: 'App-owned recordings support direct audio playback only.',
+    );
+  }
   final resolved = await _resolveMediaPlaybackSource(scope, source);
   final bucket = kind == MiniProgramMediaPlaybackKind.audio
       ? MiniProgramCacheBucket.audio
@@ -260,6 +268,18 @@ Future<MiniProgramResolvedPlaybackSource> _resolveMediaPlaybackSource(
   Map<String, dynamic> source,
 ) async {
   switch (_stringProp(source, 'kind')) {
+    case 'hostMedia':
+      final ref = _stringProp(source, 'mediaRef');
+      final media = scope.mediaManager;
+      if (media == null || !media.owns(scope.miniProgramId, ref)) {
+        throw const MiniProgramMediaPlaybackException(
+          errorCode: MiniProgramErrorCodes.mediaNotOwned,
+          message: 'This mini-program does not own the audio reference.',
+        );
+      }
+      return MiniProgramResolvedPlaybackSource(
+        candidateUris: [Uri(scheme: 'miniprogram-media', path: ref)],
+      );
     case 'asset':
       final assetSource = scope.mediaAssetSource;
       final version = scope.miniProgramVersion;

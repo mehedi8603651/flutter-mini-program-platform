@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'cache/mini_program_cache_bundle.dart';
 import 'camera/mini_program_camera.dart';
 import 'gallery/mini_program_gallery.dart';
+import 'microphone/mini_program_microphone.dart';
 import 'auth/mini_program_auth.dart';
 import 'capability_registry.dart';
 import 'feature_flag_evaluator.dart';
@@ -37,6 +38,7 @@ class MiniProgramRuntime {
     this.displayBrightnessProvider,
     this.cameraProvider,
     this.galleryProvider,
+    this.microphoneProvider,
     this.mediaProvider,
     this.mediaPlaybackProvider,
     this.flashlightProvider,
@@ -60,6 +62,7 @@ class MiniProgramRuntime {
   final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
   final MiniProgramCameraProvider? cameraProvider;
   final MiniProgramGalleryProvider? galleryProvider;
+  final MiniProgramMicrophoneProvider? microphoneProvider;
   final MiniProgramMediaProvider? mediaProvider;
   final MiniProgramMediaPlaybackProvider? mediaPlaybackProvider;
   final MiniProgramFlashlightProvider? flashlightProvider;
@@ -84,6 +87,7 @@ class MiniProgramRuntime {
     MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
     MiniProgramCameraProvider? cameraProvider,
     MiniProgramGalleryProvider? galleryProvider,
+    MiniProgramMicrophoneProvider? microphoneProvider,
     MiniProgramMediaProvider? mediaProvider,
     MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
     MiniProgramFlashlightProvider? flashlightProvider,
@@ -109,6 +113,7 @@ class MiniProgramRuntime {
           displayBrightnessProvider ?? this.displayBrightnessProvider,
       cameraProvider: cameraProvider ?? this.cameraProvider,
       galleryProvider: galleryProvider ?? this.galleryProvider,
+      microphoneProvider: microphoneProvider ?? this.microphoneProvider,
       mediaProvider: mediaProvider ?? this.mediaProvider,
       mediaPlaybackProvider:
           mediaPlaybackProvider ?? this.mediaPlaybackProvider,
@@ -185,6 +190,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
             oldWidget.runtime.displayBrightnessProvider ||
         runtime.cameraProvider != oldWidget.runtime.cameraProvider ||
         runtime.galleryProvider != oldWidget.runtime.galleryProvider ||
+        runtime.microphoneProvider != oldWidget.runtime.microphoneProvider ||
         runtime.mediaProvider != oldWidget.runtime.mediaProvider ||
         runtime.mediaPlaybackProvider !=
             oldWidget.runtime.mediaPlaybackProvider ||

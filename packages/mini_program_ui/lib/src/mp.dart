@@ -8,6 +8,7 @@ import 'features/backend/search.dart';
 import 'features/cache/cache_actions.dart';
 import 'features/camera/camera_actions.dart';
 import 'features/gallery/gallery_actions.dart';
+import 'features/microphone/microphone_actions.dart';
 import 'features/charts/chart_nodes.dart';
 import 'features/collections/collection_nodes.dart';
 import 'features/composition/action_actions.dart';
@@ -51,6 +52,7 @@ export 'features/cache/cache_actions.dart'
     show MpCacheActions, MpCacheBucketActions;
 export 'features/camera/camera_actions.dart' show MpCameraActions;
 export 'features/gallery/gallery_actions.dart' show MpGalleryActions;
+export 'features/microphone/microphone_actions.dart' show MpMicrophoneActions;
 export 'features/composition/action_actions.dart' show MpActionActions;
 export 'features/data/data_actions.dart' show MpDataActions;
 export 'features/display/display_nodes.dart' show MpDisplay;
@@ -76,6 +78,9 @@ export 'features/state/state_actions.dart' show MpStateActions;
 abstract final class Mp {
   /// User-initiated gallery photo selection and cancellation.
   static const gallery = MpGalleryActions();
+
+  /// User-initiated foreground voice recording, stop, and cancellation.
+  static const microphone = MpMicrophoneActions();
 
   /// Email authentication actions.
   static const auth = MpAuthActions();

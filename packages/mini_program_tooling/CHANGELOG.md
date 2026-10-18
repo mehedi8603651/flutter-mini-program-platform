@@ -1,3 +1,18 @@
+## 0.7.12
+
+- Add `host capability init microphone --platform android`: foreground AAC/M4A
+  recording, runtime RECORD_AUDIO permission, private FileProvider/cache, and a
+  process-wide recorder guard shared by separate Android tasks. Keep recorder
+  setup/finalization and file work on a dedicated worker to avoid blocking UI.
+- Use a distinct microphone FileProvider component so recording, gallery,
+  playback, uploads, and sharing can coexist in the same host.
+- Add requested/accepted microphone policy handling without accepting app
+  permissions during installation; preserve host-owned Dart providers and force
+  refresh composition.
+- Upgrade tooling-managed Media3 support to play owned audio references through
+  the shared native media registry, preserving host-owned Dart adapters.
+- Generate against contracts 0.3.15, UI 0.2.11, and SDK 0.6.13.
+
 ## 0.7.11
 
 - Add `host capability init gallery --platform android` with Android's system

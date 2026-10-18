@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.11` generates mini-program projects against
-`mini_program_ui: ^0.2.10` and Flutter host projects against
-`mini_program_sdk: ^0.6.12` and `mini_program_contracts: ^0.3.14`.
+Tooling `0.7.12` generates mini-program projects against
+`mini_program_ui: ^0.2.11` and Flutter host projects against
+`mini_program_sdk: ^0.6.13` and `mini_program_contracts: ^0.3.15`.
 Standard in-host navigation and optional `--android-separate-tasks` are supported.
 
 The CLI supports the current MVP architecture:
@@ -761,6 +761,19 @@ Installs Android's Photo Picker with document-picker fallback, single/multiple
 selection, private normalized image copies, and a host-owned Dart adapter. No
 broad storage/photo permissions are added. Each app's gallery policy remains
 denied until the host accepts it. Installation works with standard embedding
-and optional separate Android tasks. Existing hosts need SDK `^0.6.12` and
-contracts `^0.3.14`. See the
+and optional separate Android tasks. Existing hosts need SDK `^0.6.13` and
+contracts `^0.3.15`. See the
 [Android gallery guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_gallery_photo_picker.md).
+
+## Android microphone recording
+
+```powershell
+miniprogram host capability init microphone --platform android --project-root .
+```
+
+Installs a foreground AAC/M4A recorder, runtime microphone permission, private
+FileProvider, and host-owned Dart adapter. Mini-program permission remains
+default-denied. Works with standard embedding and separate Android tasks. Run
+`host capability init audio --platform android` to install or refresh native
+playback support for opaque voice notes. Requires SDK `^0.6.13` and contracts
+`^0.3.15`. See the [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).

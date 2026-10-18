@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.14` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.10` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.12` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.11` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.15` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.11` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.13` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.12` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -83,8 +83,9 @@ These are system invariants, not preferences:
     scan values remain inert and scanner-local torch state is not shared with
     the standalone flashlight capability.
 19. Audio and video playback may resolve only artifact-relative assets or
-    relative routes on the accepted Publisher API. Media URLs, authorization
-    headers, native paths, and buffered bytes must never enter mini-program
+    relative routes on the accepted Publisher API. Audio may also use an
+    app-owned opaque host-media reference after ownership revalidation. Media
+    URLs, authorization headers, native paths, and buffered bytes must never enter mini-program
     state; playback sessions and temporary cache ownership are app-scoped. The
     host independently accepts each media kind and owns playback, buffering,
     audio focus, foreground lifecycle, fullscreen, and cache enforcement.
@@ -103,6 +104,13 @@ These are system invariants, not preferences:
     imported into private temporary storage and expose opaque app-owned media
     references only. Picker-induced activity pauses must not cancel selection;
     disposal, app changes, cancellation, and stale completion clean new resources.
+
+23. Microphone recording is an optional gesture-gated foreground capability.
+    Host-accepted duration/byte limits and a host provider authorize capture.
+    Backgrounding finalizes audio; cancellation, disposal, app changes, stale
+    completion, and rejected state updates clean partial/new recordings.
+    Permission-dialog inactivity must not cancel recording. Results contain
+    opaque app-owned AAC/M4A metadata only; no native paths, URIs, or bytes.
 
 ## Repository Map
 
@@ -158,6 +166,7 @@ packages/mini_program_contracts/
 |   |-- mini_program_flashlight.dart            # JSON-safe flashlight availability and enabled status
 |   |-- mini_program_qr.dart                    # Inert, bounded QR scan result metadata
 |   |-- mini_program_playback.dart              # Playback kind, status, and bounded session snapshot
+|   |-- mini_program_microphone.dart            # Bounded opaque AAC/M4A recording metadata
 |   |-- mini_program_share.dart                 # System chooser-opened result contract
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
@@ -214,6 +223,7 @@ packages/mini_program_ui/
 |       |   |-- location/                       # Host-controlled current-location action
 |       |   |-- file/                           # Publisher API upload, download, and cancellation actions
 |       |   |-- camera/                         # Delegated system-camera capture and cancellation actions
+|       |   |-- microphone/                     # Foreground recording, stop, and cancellation actions
 |       |   |-- flashlight/                     # Foreground flashlight control and status actions
 |       |   |-- media/                          # Temporary host-media release actions
 |       |   |-- qr/                             # Local QR rendering and host-controlled scan actions
@@ -319,6 +329,8 @@ packages/mini_program_sdk/
 |   |   `-- mini_program_camera.dart            # Delegated photo provider, accepted policy, ownership, and cleanup
 |   |-- media/
 |   |   `-- mini_program_media.dart             # Opaque ownership registry, bounded previews, and release
+|   |-- microphone/
+|   |   `-- mini_program_microphone.dart        # Accepted recording policy, provider, ownership, and cleanup
 |   |-- flashlight/
 |   |   `-- mini_program_flashlight.dart        # Torch provider, accepted policy, app ownership, and cleanup
 |   |-- qr/
@@ -480,6 +492,7 @@ packages/mini_program_sdk/
 |   |       |   |-- file.dart                   # Streaming upload/download execution, progress, and cancellation
 |   |       |   |-- camera.dart                 # Delegated still-photo capture and cancellation
 |   |       |   |-- flashlight.dart             # App-owned torch control and status execution
+|   |       |   |-- microphone.dart             # Gesture/policy-gated voice recording execution
 |   |       |   |-- media.dart                  # Temporary host-media release execution
 |   |       |   |-- qr.dart                     # Gesture-gated accepted QR scanning and state projection
 |   |       |   |-- share.dart                  # Gesture-gated text, URL, and owned-media sharing
@@ -690,6 +703,7 @@ packages/mini_program_tooling/
 |       |           |-- dart_provider_template.dart # Dart MethodChannel transfer provider
 |       |           `-- android_channel_template.dart # Picker, MediaStore, and streaming Kotlin adapter
 |       |       |-- camera/                      # System-camera, Activity Result, and FileProvider installer modules
+|       |       |-- microphone/                  # Foreground recorder, private FileProvider, permission, and host wiring installer
 |       |       |-- shared_media/                # App-owned native media registry template shared by camera/files
 |       |       |-- flashlight/                  # CameraManager, TorchCallback, and permission installer modules
 |       |       |-- qr/                          # CameraX, bundled ML Kit, MethodChannel, and host wiring installer
@@ -892,8 +906,9 @@ capability adapter files are host-owned after creation and must not be
 overwritten automatically.
 
 Android native capability installation is order-independent. Location, file,
-camera, gallery, flashlight, QR, and media playback registrations must go through the
-shared `capabilities/android/main_activity_editor.dart`; gallery, QR, and Media3 native
+camera, gallery, microphone, flashlight, QR, and media playback registrations
+must go through the shared `capabilities/android/main_activity_editor.dart`;
+gallery, QR, and Media3 native
 dependencies must go through `capabilities/android/gradle_editor.dart`.
 Feature installers own provider/channel templates and feature-specific Dart or
 manifest edits, but must commit the complete write plan through
@@ -1323,6 +1338,18 @@ permission or dependency, and restores system-controlled brightness whenever
 the owning scope ends or the host leaves the foreground. Installation does not
 accept `permissions.displayBrightness` for any mini-program.
 
+Android microphone recording installs a foreground MediaRecorder channel, a
+host-owned Dart adapter, RECORD_AUDIO permission, and a private FileProvider
+subclass/cache path. Its provider must have a distinct component class so
+Android does not confuse its authority with the camera or gallery provider.
+Run `miniprogram host capability init microphone --platform android`.
+Accepted per-app `permissions.microphone` remains disabled until host review.
+Only one recorder captures across task engines; background/hidden transitions
+finalize audio and disposal cancels capture. Re-running the audio capability
+installer refreshes tooling-managed Media3 to resolve owned audio references
+without replacing the host-owned Dart playback adapter. See
+`docs/android_microphone_recording.md` for API, limits, and lifecycle details.
+
 `embed init --force` refreshes scaffold-generated files but must preserve
 `mini_program_host_setup.dart`, `app_host_bridge.dart`,
 `mini_program_policies.json`, and endpoint-import generated output. Read
@@ -1363,6 +1390,7 @@ docs/
 |-- android_separate_tasks_setup.md             # Optional task CLI setup, wiring, ownership, and verification
 |-- android_native_windows_compatibility.md     # Native task behavior, confirmed Vivo card filtering, and diagnostics
 |-- android_in_app_workspace_future.md          # Deferred optional one-window workspace and state-handover design
+|-- android_microphone_recording.md             # Foreground voice-note setup, accepted policy, ownership, and verification
 |-- static_artifact_runtime_api_e2e_guide.md    # Complete static artifact plus optional runtime API flow
 |-- middle_server_api_lambda_dynamodb.md        # Concrete provider example, not a platform dependency
 `-- publisher_backend_https_api_roadmap.md      # Publisher API contract/runtime guidance and future evolution

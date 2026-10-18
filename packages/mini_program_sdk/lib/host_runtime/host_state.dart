@@ -14,6 +14,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   MiniProgramMediaPlaybackManager? _mediaPlaybackManager;
   MiniProgramCameraManager? _cameraManager;
   MiniProgramGalleryManager? _galleryManager;
+  MiniProgramMicrophoneManager? _microphoneManager;
   MiniProgramFlashlightManager? _flashlightManager;
   MiniProgramQrManager? _qrManager;
   MiniProgramShareManager? _shareManager;
@@ -47,9 +48,15 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       widget.displayBrightnessProvider,
     );
     _mediaManager = _mediaManagerFor(
-      widget.mediaProvider ?? widget.galleryProvider,
+      widget.mediaProvider ??
+          widget.galleryProvider ??
+          widget.microphoneProvider,
     );
     _galleryManager = _galleryManagerFor(widget.galleryProvider, _mediaManager);
+    _microphoneManager = _microphoneManagerFor(
+      widget.microphoneProvider,
+      _mediaManager,
+    );
     _mediaPlaybackManager = _mediaPlaybackManagerFor(
       widget.mediaPlaybackProvider,
     );
@@ -77,6 +84,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
             oldWidget.displayBrightnessProvider ||
         widget.cameraProvider != oldWidget.cameraProvider ||
         widget.galleryProvider != oldWidget.galleryProvider ||
+        widget.microphoneProvider != oldWidget.microphoneProvider ||
         widget.mediaProvider != oldWidget.mediaProvider ||
         widget.mediaPlaybackProvider != oldWidget.mediaPlaybackProvider ||
         widget.flashlightProvider != oldWidget.flashlightProvider ||
@@ -107,18 +115,27 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       }
       if (widget.cameraProvider != oldWidget.cameraProvider ||
           widget.galleryProvider != oldWidget.galleryProvider ||
+          widget.microphoneProvider != oldWidget.microphoneProvider ||
           widget.mediaProvider != oldWidget.mediaProvider) {
         unawaited(_cameraManager?.dispose());
         unawaited(_galleryManager?.dispose());
+        unawaited(_microphoneManager?.dispose());
         if (widget.mediaProvider != oldWidget.mediaProvider ||
-            widget.galleryProvider != oldWidget.galleryProvider) {
+            widget.galleryProvider != oldWidget.galleryProvider ||
+            widget.microphoneProvider != oldWidget.microphoneProvider) {
           unawaited(_mediaManager?.dispose());
           _mediaManager = _mediaManagerFor(
-            widget.mediaProvider ?? widget.galleryProvider,
+            widget.mediaProvider ??
+                widget.galleryProvider ??
+                widget.microphoneProvider,
           );
         }
         _galleryManager = _galleryManagerFor(
           widget.galleryProvider,
+          _mediaManager,
+        );
+        _microphoneManager = _microphoneManagerFor(
+          widget.microphoneProvider,
           _mediaManager,
         );
         _cameraManager = _cameraManagerFor(
@@ -167,6 +184,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       unawaited(_displayBrightnessManager?.releaseAllFor(activeAppId));
       unawaited(_cameraManager?.releaseAllFor(activeAppId));
       unawaited(_galleryManager?.releaseAllFor(activeAppId));
+      unawaited(_microphoneManager?.releaseAllFor(activeAppId));
       unawaited(_mediaManager?.releaseAllFor(activeAppId));
       unawaited(_flashlightManager?.releaseFor(activeAppId));
       unawaited(_qrManager?.releaseFor(activeAppId));
@@ -200,6 +218,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     unawaited(_displayBrightnessManager?.dispose());
     unawaited(_cameraManager?.dispose());
     unawaited(_galleryManager?.dispose());
+    unawaited(_microphoneManager?.dispose());
     unawaited(_mediaManager?.dispose());
     unawaited(_flashlightManager?.dispose());
     unawaited(_qrManager?.dispose());
@@ -221,6 +240,16 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         state != AppLifecycleState.detached) {
       return;
     }
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      final appId = _manifest?.id;
+      if (appId != null) {
+        unawaited(
+          _bestEffort(_microphoneManager?.stopFor(appId, background: true)),
+        );
+      }
+    }
     _appIsForeground = false;
     _scheduleForegroundLifecycle();
   }
@@ -241,6 +270,13 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   Future<void> _applyForegroundLifecycle() async {
     if (_hostDisposed) {
       return;
+    }
+    final recordingAppId = _manifest?.id;
+    if (_surfaceVisibility != MiniProgramVisibility.foreground &&
+        recordingAppId != null) {
+      await _bestEffort(
+        _microphoneManager?.stopFor(recordingAppId, background: true),
+      );
     }
     if (_shouldKeepForegroundResources) {
       if (_foregroundResourcesSuspended) {
@@ -301,6 +337,13 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   ) => provider == null || mediaManager == null
       ? null
       : MiniProgramGalleryManager(provider, mediaManager: mediaManager);
+
+  MiniProgramMicrophoneManager? _microphoneManagerFor(
+    MiniProgramMicrophoneProvider? provider,
+    MiniProgramMediaManager? mediaManager,
+  ) => provider == null || mediaManager == null
+      ? null
+      : MiniProgramMicrophoneManager(provider, mediaManager: mediaManager);
 
   MiniProgramDisplayBrightnessManager? _displayBrightnessManagerFor(
     MiniProgramDisplayBrightnessProvider? provider,

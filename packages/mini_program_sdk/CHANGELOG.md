@@ -1,3 +1,12 @@
+## 0.6.13
+
+- Add optional microphone providers, default-denied per-app recording policy,
+  duration/size limits, gesture checks, and atomic recording state updates.
+- Finalize recording on background/hidden lifecycle transitions while keeping
+  permission-dialog inactivity safe; cancel and clean on disposal/app changes.
+- Integrate opaque recordings with ownership-checked playback, uploads, sharing,
+  and release; clean late, cancelled, invalid, and quota-rejected audio.
+
 ## 0.6.12
 
 - Add host-controlled gallery providers and per-app accepted count/byte limits.

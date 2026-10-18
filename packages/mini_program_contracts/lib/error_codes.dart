@@ -129,6 +129,24 @@ abstract final class MiniProgramErrorCodes {
   static const String displayBrightnessOperationFailed =
       'display_brightness_operation_failed';
   static const String mediaNotAccepted = 'media_not_accepted';
+  static const String microphoneNotAccepted = 'microphone_not_accepted';
+  static const String microphoneUnavailable = 'microphone_unavailable';
+  static const String microphonePermissionDenied =
+      'microphone_permission_denied';
+  static const String microphonePermissionDeniedPermanently =
+      'microphone_permission_denied_permanently';
+  static const String microphoneUserGestureRequired =
+      'microphone_user_gesture_required';
+  static const String microphoneRequestInProgress =
+      'microphone_request_in_progress';
+  static const String microphoneRecordingCancelled =
+      'microphone_recording_cancelled';
+  static const String microphoneInvalidRequest = 'microphone_invalid_request';
+  static const String microphoneInvalidResult = 'microphone_invalid_result';
+  static const String microphoneLimitExceeded = 'microphone_limit_exceeded';
+  static const String microphoneStorageUnavailable =
+      'microphone_storage_unavailable';
+  static const String microphoneOperationFailed = 'microphone_operation_failed';
   static const String mediaProviderUnavailable = 'media_provider_unavailable';
   static const String mediaInvalidSource = 'media_invalid_source';
   static const String mediaSourceExpired = 'media_source_expired';

@@ -11,6 +11,15 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
     return const MiniProgramGalleryPolicy();
   }
 
+  MiniProgramMicrophonePolicy _microphonePolicyFor(String appId) {
+    final source = widget.source;
+    if (source is MiniProgramMicrophonePolicyProvider) {
+      return (source as MiniProgramMicrophonePolicyProvider)
+          .microphonePolicyFor(appId);
+    }
+    return const MiniProgramMicrophonePolicy();
+  }
+
   MiniProgramCachePolicy _cachePolicyFor(String appId) {
     final source = widget.source;
     if (source is MiniProgramCachePolicyProvider) {

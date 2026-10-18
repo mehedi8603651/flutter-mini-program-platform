@@ -24,6 +24,253 @@ void main() {
   });
 
   test(
+    'microphone installation is idempotent and keeps host provider changes',
+    () async {
+      const installer = MiniProgramHostCapabilityInstaller();
+      final request = MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'microphone',
+        platform: 'android',
+      );
+      expect((await installer.initialize(request)).alreadyInstalled, isFalse);
+      final provider = File(
+        p.join(
+          hostRootPath,
+          'lib',
+          'mini_program',
+          'app_android_microphone_provider.dart',
+        ),
+      );
+      await provider.writeAsString(
+        '${await provider.readAsString()}\n// Host customization.\n',
+      );
+      expect((await installer.initialize(request)).alreadyInstalled, isTrue);
+      expect(await provider.readAsString(), contains('// Host customization.'));
+      final manifest = await File(
+        p.join(
+          hostRootPath,
+          'android',
+          'app',
+          'src',
+          'main',
+          'AndroidManifest.xml',
+        ),
+      ).readAsString();
+      expect(
+        manifest,
+        contains(r'${applicationId}.mini_program_microphone_files'),
+      );
+      expect(
+        manifest,
+        contains('com.example.host_app.MiniProgramMicrophoneFileProvider'),
+      );
+      expect(manifest, isNot(contains('READ_MEDIA_IMAGES')));
+      expect(manifest, isNot(contains('READ_EXTERNAL_STORAGE')));
+      expect(
+        await _mainActivityFile(hostRootPath).readAsString(),
+        contains('FlutterActivity'),
+      );
+      expect(
+        await _nativeSetupFile(hostRootPath).readAsString(),
+        contains('MiniProgramMicrophoneChannel.register'),
+      );
+      expect(manifest, contains('android.permission.RECORD_AUDIO'));
+      expect(await _nativeCapabilityGradleFile(hostRootPath).exists(), isFalse);
+    },
+  );
+
+  for (final first in ['gallery', 'microphone']) {
+    test(
+      'microphone and gallery use distinct providers with $first first',
+      () async {
+        const installer = MiniProgramHostCapabilityInstaller();
+        for (final capability in [
+          first,
+          first == 'gallery' ? 'microphone' : 'gallery',
+        ]) {
+          await installer.initialize(
+            MiniProgramHostCapabilityInitRequest(
+              projectRootPath: hostRootPath,
+              capability: capability,
+              platform: 'android',
+            ),
+          );
+        }
+        final manifest = File(
+          p.join(
+            hostRootPath,
+            'android',
+            'app',
+            'src',
+            'main',
+            'AndroidManifest.xml',
+          ),
+        );
+        final installed = await manifest.readAsString();
+        final providerNames = RegExp(
+          r'<provider\s+android:name="([^"]+)"',
+        ).allMatches(installed).map((match) => match.group(1)).toList();
+        expect(providerNames, hasLength(2));
+        expect(providerNames.toSet(), hasLength(2));
+        // Recognized older installs migrate only the microphone component.
+        await manifest.writeAsString(
+          installed.replaceFirst(
+            'com.example.host_app.MiniProgramMicrophoneFileProvider',
+            'androidx.core.content.FileProvider',
+          ),
+        );
+        await installer.initialize(
+          MiniProgramHostCapabilityInitRequest(
+            projectRootPath: hostRootPath,
+            capability: 'microphone',
+            platform: 'android',
+          ),
+        );
+        expect(await manifest.readAsString(), installed);
+      },
+    );
+  }
+
+  test(
+    'microphone manifest conflicts fail before creating adapter files',
+    () async {
+      final manifest = File(
+        p.join(
+          hostRootPath,
+          'android',
+          'app',
+          'src',
+          'main',
+          'AndroidManifest.xml',
+        ),
+      );
+      final source = (await manifest.readAsString()).replaceFirst(
+        '</application>',
+        r'''
+      <provider android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.mini_program_microphone_files"
+        android:exported="true" android:grantUriPermissions="true">
+        <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/mini_program_microphone_paths" />
+      </provider>
+    </application>''',
+      );
+      await manifest.writeAsString(source);
+      final mainSource = await _mainActivityFile(hostRootPath).readAsString();
+      await expectLater(
+        const MiniProgramHostCapabilityInstaller().initialize(
+          MiniProgramHostCapabilityInitRequest(
+            projectRootPath: hostRootPath,
+            capability: 'microphone',
+            platform: 'android',
+          ),
+        ),
+        throwsA(isA<MiniProgramHostCapabilityException>()),
+      );
+      expect(await manifest.readAsString(), source);
+      expect(await _mainActivityFile(hostRootPath).readAsString(), mainSource);
+      expect(
+        await File(
+          p.join(
+            hostRootPath,
+            'lib',
+            'mini_program',
+            'app_android_microphone_provider.dart',
+          ),
+        ).exists(),
+        isFalse,
+      );
+      expect(await _nativeCapabilityGradleFile(hostRootPath).exists(), isFalse);
+    },
+  );
+
+  test('restricted microphone permission fails before any host writes', () async {
+    final manifest = File(
+      p.join(
+        hostRootPath,
+        'android',
+        'app',
+        'src',
+        'main',
+        'AndroidManifest.xml',
+      ),
+    );
+    final original = (await manifest.readAsString()).replaceFirst(
+      '<application',
+      '<uses-permission android:name="android.permission.RECORD_AUDIO" android:maxSdkVersion="28" />\n<application',
+    );
+    await manifest.writeAsString(original);
+    Future<Map<String, String>> snapshot() async => {
+      await for (final file in Directory(hostRootPath).list(recursive: true))
+        if (file is File)
+          p.relative(file.path, from: hostRootPath): await file.readAsString(),
+    };
+    final before = await snapshot();
+    await expectLater(
+      const MiniProgramHostCapabilityInstaller().initialize(
+        MiniProgramHostCapabilityInitRequest(
+          projectRootPath: hostRootPath,
+          capability: 'microphone',
+          platform: 'android',
+        ),
+      ),
+      throwsA(isA<MiniProgramHostCapabilityException>()),
+    );
+    expect(await snapshot(), before);
+  });
+
+  for (final first in ['audio', 'microphone']) {
+    test(
+      'owned audio playback resolves the shared registry with $first installed first',
+      () async {
+        const installer = MiniProgramHostCapabilityInstaller();
+        for (final capability in [
+          first,
+          first == 'audio' ? 'microphone' : 'audio',
+        ]) {
+          await installer.initialize(
+            MiniProgramHostCapabilityInitRequest(
+              projectRootPath: hostRootPath,
+              capability: capability,
+              platform: 'android',
+            ),
+          );
+        }
+        final nativeRoot = p.join(
+          hostRootPath,
+          'android',
+          'app',
+          'src',
+          'main',
+          'kotlin',
+          'com',
+          'example',
+          'host_app',
+          'mini_program',
+          'generated',
+        );
+        expect(
+          await File(
+            p.join(nativeRoot, 'shared', 'MiniProgramHostMediaRegistry.kt'),
+          ).exists(),
+          isTrue,
+        );
+        final plugin = await File(
+          p.join(
+            nativeRoot,
+            'media_playback',
+            'MiniProgramMediaPlaybackPlugin.kt',
+          ),
+        ).readAsString();
+        expect(plugin, contains('MiniProgramHostMediaRegistry.findOwned('));
+        expect(
+          plugin,
+          contains('DefaultDataSource.Factory(context, httpFactory)'),
+        );
+      },
+    );
+  }
+
+  test(
     'gallery installation is idempotent and keeps host provider changes',
     () async {
       const installer = MiniProgramHostCapabilityInstaller();
@@ -1172,7 +1419,7 @@ class MainActivity : FlutterActivity() {
       installer.initialize(
         MiniProgramHostCapabilityInitRequest(
           projectRootPath: hostRootPath,
-          capability: 'microphone',
+          capability: 'calendar',
           platform: 'android',
         ),
       ),

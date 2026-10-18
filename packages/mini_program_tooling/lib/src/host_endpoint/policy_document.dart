@@ -248,6 +248,17 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       'maxTotalBytes': request['recommendedMaxTotalBytes'] ?? 52428800,
     });
   }
+  if (permission == 'microphone') {
+    final request = requested is Map
+        ? hostJsonObjectOrEmpty(requested)
+        : <String, Object?>{};
+    return validateAcceptedHostMicrophone(<String, Object?>{
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && request['enabled'] == true,
+      'maxDurationSeconds': request['recommendedMaxDurationSeconds'] ?? 60,
+      'maxBytes': request['recommendedMaxBytes'] ?? 20971520,
+    });
+  }
   if (permission == 'camera') {
     final request = requested is Map
         ? hostJsonObjectOrEmpty(requested)
@@ -377,6 +388,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
       hostJsonObjectOrEmpty(rawGallery),
     );
   }
+  final rawMicrophone = normalized['microphone'];
+  if (rawMicrophone != null) {
+    if (rawMicrophone is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.microphone must be an object.',
+      );
+    }
+    normalized['microphone'] = validateAcceptedHostMicrophone(
+      hostJsonObjectOrEmpty(rawMicrophone),
+    );
+  }
   final rawCamera = normalized['camera'];
   if (rawCamera != null) {
     if (rawCamera is! Map) {
@@ -478,6 +500,31 @@ Map<String, Object?> validateAcceptedHostGallery(Map<String, Object?> value) {
     if (number is! int || number < 1 || number > entry.value.$2) {
       throw MiniProgramHostException(
         'Accepted permissions.gallery.${entry.key} must be an integer from 1 to ${entry.value.$2}.',
+      );
+    }
+    normalized[entry.key] = number;
+  }
+  return sortedHostJsonObject(normalized);
+}
+
+Map<String, Object?> validateAcceptedHostMicrophone(
+  Map<String, Object?> value,
+) {
+  final normalized = deepHostJsonObjectCopy(value);
+  if (normalized['enabled'] is! bool) {
+    throw const MiniProgramHostException(
+      'Accepted permissions.microphone.enabled must be a boolean.',
+    );
+  }
+  const limits = {
+    'maxDurationSeconds': (60, 600),
+    'maxBytes': (20971520, 104857600),
+  };
+  for (final entry in limits.entries) {
+    final number = normalized[entry.key] ?? entry.value.$1;
+    if (number is! int || number < 1 || number > entry.value.$2) {
+      throw MiniProgramHostException(
+        'Accepted permissions.microphone.${entry.key} must be an integer from 1 to ${entry.value.$2}.',
       );
     }
     normalized[entry.key] = number;

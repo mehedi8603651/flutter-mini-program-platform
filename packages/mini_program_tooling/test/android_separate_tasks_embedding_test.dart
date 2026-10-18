@@ -85,7 +85,7 @@ dependencies:
         await read('lib/mini_program/mini_program.dart'),
         isNot(contains('android_tasks')),
       );
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.12'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.13'));
     },
   );
 
@@ -140,7 +140,7 @@ dependencies:
       expect(taskActivity, contains('"miniProgramTaskMain"'));
       expect(taskActivity, isNot(contains('finish()')));
       expect(await read('android/app/build.gradle.kts'), beforeGradle);
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.12'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.13'));
       expect(
         await read('lib/mini_program/README.md'),
         contains('navigationDelegate: openMiniProgramInAndroidTask'),
@@ -195,10 +195,17 @@ dependencies:
         await initialize(tasks: tasksFirst);
         await install('camera');
         await install('gallery');
+        await install('microphone');
         await install('share');
         if (!tasksFirst) await initialize(force: true);
         final nativeSetup = await read(setupPath);
-        for (final channel in ['Camera', 'Gallery', 'Share', 'Task']) {
+        for (final channel in [
+          'Camera',
+          'Gallery',
+          'Microphone',
+          'Share',
+          'Task',
+        ]) {
           expect(
             'MiniProgram${channel}Channel.register(flutterEngine)'.allMatches(
               nativeSetup,
@@ -221,9 +228,18 @@ dependencies:
         final original = await snapshot();
         await install('camera');
         await install('gallery');
+        await install('microphone');
         await install('share');
         await initialize(force: true);
         expect(await snapshot(), original);
+        expect(
+          await read('lib/mini_program/mini_program_runtime_setup.dart'),
+          contains('microphoneProvider: microphoneProvider'),
+        );
+        expect(
+          await read('lib/mini_program/mini_program_host_setup.dart'),
+          contains('microphoneProvider: resolvedMicrophoneProvider'),
+        );
       },
     );
   }

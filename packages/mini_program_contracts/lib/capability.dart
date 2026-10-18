@@ -46,6 +46,9 @@ abstract final class CapabilityIds {
   /// Host can select gallery photos through trusted, user-initiated UI.
   static const CapabilityId galleryImages = 'gallery.images';
 
+  /// Host can record foreground voice notes after explicit user consent.
+  static const CapabilityId microphoneRecord = 'microphone.record';
+
   /// Host can render app-owned opaque temporary media references.
   static const CapabilityId mediaPreview = 'media.preview';
 
@@ -76,6 +79,7 @@ abstract final class CapabilityIds {
     fileDownload,
     cameraCapturePhoto,
     galleryImages,
+    microphoneRecord,
     mediaPreview,
     flashlightControl,
     qrScanner,

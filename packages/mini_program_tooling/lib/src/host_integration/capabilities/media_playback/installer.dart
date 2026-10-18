@@ -8,6 +8,7 @@ import '../android/integration_editor.dart';
 import '../file_transaction.dart';
 import '../location/installer.dart' show androidPlatform;
 import '../models.dart';
+import '../shared_media/android_registry_template.dart';
 import 'android_plugin_template.dart';
 import 'dart_provider_template.dart';
 import 'source_editors.dart';
@@ -150,6 +151,17 @@ initializeMiniProgramHostMediaPlaybackCapability(
     toolingGeneratedMarker: 'Media3 bridge',
   );
   final nativeSource = nativeMigration.source;
+  final registryMigration = await resolveAndroidGeneratedSource(
+    generatedFile: nativeIntegration.paths.generatedFile(
+      'shared',
+      'MiniProgramHostMediaRegistry.kt',
+    ),
+    legacyFile: nativeIntegration.paths.legacyFile(
+      'MiniProgramHostMediaRegistry.kt',
+    ),
+    requiredMarker: 'object MiniProgramHostMediaRegistry',
+    buildSource: () => buildAndroidHostMediaRegistrySource(packageName),
+  );
   validateMediaPlaybackOwnedFile(
     file: provider,
     source: providerSource,
@@ -186,6 +198,7 @@ initializeMiniProgramHostMediaPlaybackCapability(
         isLegacyGeneratedMediaPlaybackProvider(providerSource))
       provider.path: androidMediaPlaybackProviderSource,
     ...nativeMigration.writes,
+    ...registryMigration.writes,
     ...nativeIntegration.writes,
     if (patchedHost != hostSource) hostSetup.path: patchedHost,
     if (patchedRuntime != runtimeSource) runtimeSetup.path: patchedRuntime,
@@ -197,6 +210,7 @@ initializeMiniProgramHostMediaPlaybackCapability(
   };
   final deletes = <String>{
     ...nativeMigration.deletes,
+    ...registryMigration.deletes,
     if (legacyGeneratedGradleSource != null) legacyGeneratedGradle.path,
   };
   if (writes.isEmpty && !installed) {

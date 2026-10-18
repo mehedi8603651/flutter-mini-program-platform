@@ -7,6 +7,7 @@ import 'package:mini_program_contracts/mini_program_contracts.dart'
 import '../cache/runtime_cache.dart';
 import '../camera/mini_program_camera.dart';
 import '../gallery/mini_program_gallery.dart';
+import '../microphone/mini_program_microphone.dart';
 import '../flashlight/mini_program_flashlight.dart';
 import '../location/mini_program_location.dart';
 import '../file/mini_program_file.dart';

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -25,6 +26,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheKeyFactory
@@ -355,6 +357,22 @@ private class NativeSession(
     }
 
     init {
+        val declaredUri = Uri.parse(uri)
+        val ownedMedia = if (declaredUri.scheme == "miniprogram-media") {
+            if (kind != "audio" || cacheMode != "streaming" ||
+                !Regex("^[A-Za-z0-9_-]{1,160}$").matches(declaredUri.schemeSpecificPart)
+            ) {
+                throw NativeMediaException("media_invalid_source", "The audio reference is invalid.")
+            }
+            val entry = MiniProgramHostMediaRegistry.findOwned(
+                miniProgramId, declaredUri.schemeSpecificPart,
+            ) ?: throw NativeMediaException("media_not_owned", "The audio reference is not owned by this mini-program.")
+            if (!entry.mimeType.startsWith("audio/") || !entry.file.isFile || entry.size <= 0L) {
+                throw NativeMediaException("media_invalid_source", "The audio reference is unavailable.")
+            }
+            entry
+        } else null
+        val playbackUri = ownedMedia?.uri ?: declaredUri
         val headers = (arguments["headers"] as? Map<*, *>)
             ?.entries
             ?.associate { it.key.toString() to it.value.toString() }
@@ -392,7 +410,9 @@ private class NativeSession(
                 })
         } else {
             cacheLease = null
-            dataSourceFactory = httpFactory
+            dataSourceFactory = if (ownedMedia != null) {
+                DefaultDataSource.Factory(context, httpFactory)
+            } else httpFactory
         }
         val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
         player = ExoPlayer.Builder(context)
@@ -411,7 +431,7 @@ private class NativeSession(
         player.volume = if (muted) 0f else requestedVolume.coerceIn(0f, 1f)
         player.setPlaybackSpeed(speed.coerceIn(0.25f, 3f))
         player.addListener(this)
-        player.setMediaItem(MediaItem.fromUri(uri))
+        player.setMediaItem(MediaItem.fromUri(playbackUri))
     }
 
     fun prepare(result: MethodChannel.Result, onFailed: () -> Unit) {

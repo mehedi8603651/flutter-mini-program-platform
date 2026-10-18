@@ -188,6 +188,15 @@ abstract final class _MpActionDispatcher {
           userGesture: callContext.userGesture,
         ),
         'gallery.cancel' => _MpGalleryActionHandler._cancel(scope),
+        'microphone.record' ||
+        'microphone.stop' ||
+        'microphone.cancel' => _MpMicrophoneActionHandler._run(
+          context,
+          scope,
+          action.type,
+          props,
+          userGesture: callContext.userGesture,
+        ),
         'flashlight.turnOn' ||
         'flashlight.turnOff' ||
         'flashlight.toggle' ||

@@ -46,6 +46,7 @@ class MiniProgramPage extends StatelessWidget {
         displayBrightnessProvider: resolvedRuntime.displayBrightnessProvider,
         cameraProvider: resolvedRuntime.cameraProvider,
         galleryProvider: resolvedRuntime.galleryProvider,
+        microphoneProvider: resolvedRuntime.microphoneProvider,
         mediaProvider: resolvedRuntime.mediaProvider,
         mediaPlaybackProvider: resolvedRuntime.mediaPlaybackProvider,
         flashlightProvider: resolvedRuntime.flashlightProvider,

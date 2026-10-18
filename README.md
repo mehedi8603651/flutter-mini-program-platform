@@ -216,3 +216,7 @@ Android gallery photo selection is available through the optional
 [`gallery` capability](docs/android_gallery_photo_picker.md), including native
 Photo Picker selection, private photo copies, previews, and existing upload
 and sharing integration.
+
+Android foreground voice notes are available through the optional
+[`microphone` capability](docs/android_microphone_recording.md), with Record,
+Stop, Cancel, host policy limits, and app-owned playback/upload/share references.

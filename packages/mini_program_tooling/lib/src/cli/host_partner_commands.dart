@@ -107,7 +107,7 @@ extension CliHostPartnerCommands on CliContext {
     if (results.flag('help')) {
       _stdout.writeln(
         'Usage: miniprogram host capability init '
-        '<location|file|camera|gallery|flashlight|display-brightness|qr|share|audio|video> '
+        '<location|file|camera|gallery|microphone|flashlight|display-brightness|qr|share|audio|video> '
         '--platform android [options]',
       );
       _stdout.writeln(parser.usage);

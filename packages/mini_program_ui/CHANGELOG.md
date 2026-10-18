@@ -1,3 +1,8 @@
+## 0.2.11
+
+- Add foreground `Mp.microphone.record`, `stop`, and `cancel` authoring.
+- Add `MpAudioSource.hostMedia` for playback of app-owned voice notes.
+
 ## 0.2.10
 
 - Add `Mp.gallery.pickImages` and `Mp.gallery.cancel` for single or multiple

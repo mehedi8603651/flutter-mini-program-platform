@@ -88,6 +88,9 @@ String buildHostEndpointFile(
       ..writeln('      cameraPolicy: cameraPolicyForMiniProgram($mapKey),')
       ..writeln('      galleryPolicy: galleryPolicyForMiniProgram($mapKey),')
       ..writeln(
+        '      microphonePolicy: microphonePolicyForMiniProgram($mapKey),',
+      )
+      ..writeln(
         '      flashlightPolicy: flashlightPolicyForMiniProgram($mapKey),',
       )
       ..writeln('      qrPolicy: qrPolicyForMiniProgram($mapKey),')

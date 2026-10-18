@@ -66,6 +66,7 @@ extension _MpMediaPlaybackActionValidation on MpScreenValidator {
           'source': _parseMediaPlaybackSource(
             props['source'],
             path: '$path.props.source',
+            allowHostMedia: true,
           ),
         if (sourceAction && props.containsKey('statusState'))
           'statusState': _requiredStateKey(
@@ -128,12 +129,25 @@ String _parseMediaCacheMode(Map<String, dynamic> props, String path) {
 Map<String, dynamic> _parseMediaPlaybackSource(
   Object? raw, {
   required String path,
+  bool allowHostMedia = false,
 }) {
   if (raw is! Map) {
     _fail('Mp media source must be an object.', path: path);
   }
   final source = Map<String, dynamic>.from(raw);
   final kind = source['kind'];
+  if (kind == 'hostMedia' && allowHostMedia) {
+    _validateObjectKeys(source, const <String>{'kind', 'mediaRef'}, path: path);
+    final ref = _requiredString(source, 'mediaRef', path: path);
+    if (!_MpBindingResolver.isSingleBindingExpression(ref) &&
+        !RegExp(r'^[A-Za-z0-9_-]{1,160}$').hasMatch(ref)) {
+      _fail(
+        'Mp audio mediaRef must be an opaque reference or full binding.',
+        path: '$path.mediaRef',
+      );
+    }
+    return <String, dynamic>{'kind': 'hostMedia', 'mediaRef': ref};
+  }
   if (kind == 'asset') {
     _validateObjectKeys(source, const <String>{'kind', 'asset'}, path: path);
     final asset = _requiredStableString(source, 'asset', path: path);

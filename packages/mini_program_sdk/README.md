@@ -234,3 +234,13 @@ Gallery metadata uses the existing opaque media registry for previews, uploads,
 sharing, and release. Activity pauses and retained task switches keep selections;
 app changes and disposal release owned copies. See the
 [Android gallery guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_gallery_photo_picker.md).
+
+## Android microphone recording
+
+Install `miniprogram host capability init microphone --platform android`, then
+supply `MiniProgramConfig.microphoneProvider` and explicitly accept each app
+through `MiniProgramEndpoint.microphonePolicy`. Recording is gesture-gated,
+foreground-only, and bounded by accepted duration/byte limits. Backgrounding
+finalizes a voice note; cancellation/disposal discard partial capture. Opaque
+references work with accepted local audio playback, uploads, sharing, and
+explicit release. See the [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).

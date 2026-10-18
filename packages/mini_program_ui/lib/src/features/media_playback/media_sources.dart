@@ -1,4 +1,5 @@
 import '../../core/authoring_validation.dart';
+import '../../core/binding_validation.dart';
 
 const int _maxMediaAssetPathLength = 256;
 const int _maxMediaEndpointLength = 1024;
@@ -15,6 +16,19 @@ final class MpAudioSource {
   factory MpAudioSource.asset(String asset) => MpAudioSource._(
     <String, Object?>{'kind': 'asset', 'asset': _mediaAsset(asset)},
   );
+
+  /// Plays an app-owned voice note without exposing its native location.
+  factory MpAudioSource.hostMedia(String mediaRef) {
+    if (!isFullBinding(mediaRef) &&
+        !RegExp(r'^[A-Za-z0-9_-]{1,160}$').hasMatch(mediaRef)) {
+      throw ArgumentError.value(
+        mediaRef,
+        'mediaRef',
+        'Expected an opaque reference or full binding.',
+      );
+    }
+    return MpAudioSource._({'kind': 'hostMedia', 'mediaRef': mediaRef});
+  }
 
   factory MpAudioSource.publisher({
     required String endpoint,
