@@ -1,3 +1,16 @@
+## 0.6.11
+
+- Add `MiniProgramVisibility` for persistent host surfaces.
+- Keep hidden mini-program pages mounted so in-memory state and internal
+  navigation resume without reloading.
+- Pause or release foreground-only playback, camera, flashlight, QR, and
+  brightness resources when a mini-program is hidden or the host backgrounds.
+- Ignore system Back events for hidden mini-program pages while preserving
+  foreground page navigation.
+- Allow SDK loading and error views to scroll in short Android viewports.
+- Document native Android windows as the current integration focus; defer the
+  SDK-provided in-app workspace and presentation transfer to a future design.
+
 ## 0.6.10
 
 - Render page-inherited responsive breakpoints, local-width layout variants,

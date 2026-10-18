@@ -208,3 +208,6 @@ Recommended runtime response shapes:
 - [Static artifact and runtime API E2E guide](docs/static_artifact_runtime_api_e2e_guide.md)
 - [Publisher API runtime contract roadmap](docs/publisher_backend_https_api_roadmap.md)
 - [Embedding an existing Flutter app](docs/embed_existing_flutter_app.md)
+- [Optional separate Android task setup](docs/android_separate_tasks_setup.md)
+- [Android native windows compatibility](docs/android_native_windows_compatibility.md)
+- [Future one-window workspace design (deferred)](docs/android_in_app_workspace_future.md)

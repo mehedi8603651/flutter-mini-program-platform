@@ -29,6 +29,7 @@ export 'mini_program_launcher.dart';
 export 'mini_program_page.dart';
 export 'mini_program_runtime.dart';
 export 'mini_program_scope.dart';
+export 'mini_program_visibility.dart';
 export 'network/asset_resolver.dart';
 export 'network/http_mini_program_source.dart';
 export 'network/local_backend_defaults.dart';

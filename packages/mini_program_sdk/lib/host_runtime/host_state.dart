@@ -20,6 +20,8 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
   late Future<void> _loadFuture;
+  late MiniProgramVisibility _surfaceVisibility;
+  Future<void> _foregroundLifecycleTail = Future<void>.value();
   int _loadGeneration = 0;
   MiniProgramManifest? _manifest;
   String? _activeCacheAppId;
@@ -29,10 +31,14 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   bool _usedStaleManifestCache = false;
   List<_RenderedMiniProgramScreen> _screenStack =
       const <_RenderedMiniProgramScreen>[];
+  bool _appIsForeground = true;
+  bool _foregroundResourcesSuspended = false;
+  bool _hostDisposed = false;
 
   @override
   void initState() {
     super.initState();
+    _surfaceVisibility = widget.visibility;
     WidgetsBinding.instance.addObserver(this);
     _cacheManager = widget.cacheManager ?? MiniProgramCacheManager.inMemory();
     _fileTransferManager = _managerFor(widget.fileTransferProvider);
@@ -127,6 +133,11 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       _rebuildRendererRegistry();
       _restartLoad();
     }
+
+    if (widget.visibility != oldWidget.visibility) {
+      _surfaceVisibility = widget.visibility;
+      _scheduleForegroundLifecycle();
+    }
   }
 
   void _rebuildRendererRegistry() {
@@ -158,10 +169,13 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     _stateManager.clear();
     _dataResourceManager.clear();
     _loadFuture = _loadMiniProgram(_loadGeneration);
+    _foregroundResourcesSuspended = false;
+    _scheduleForegroundLifecycle();
   }
 
   @override
   void dispose() {
+    _hostDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
     _closeActiveCacheApp();
     _disposeOwnedBackendConnector();
@@ -181,7 +195,8 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_displayBrightnessManager?.resume());
+      _appIsForeground = true;
+      _scheduleForegroundLifecycle();
       return;
     }
     if (state != AppLifecycleState.inactive &&
@@ -190,10 +205,59 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         state != AppLifecycleState.detached) {
       return;
     }
-    unawaited(_displayBrightnessManager?.suspend());
+    _appIsForeground = false;
+    _scheduleForegroundLifecycle();
+  }
+
+  bool get _shouldKeepForegroundResources {
+    return _appIsForeground &&
+        _surfaceVisibility == MiniProgramVisibility.foreground;
+  }
+
+  void _scheduleForegroundLifecycle() {
+    _foregroundLifecycleTail = _foregroundLifecycleTail
+        .then<void>((_) => _applyForegroundLifecycle())
+        .catchError((Object _, StackTrace __) {
+          // Foreground cleanup must not surface provider errors to the host.
+        });
+  }
+
+  Future<void> _applyForegroundLifecycle() async {
+    if (_hostDisposed) {
+      return;
+    }
+    if (_shouldKeepForegroundResources) {
+      if (_foregroundResourcesSuspended) {
+        _foregroundResourcesSuspended = false;
+        await _bestEffort(_displayBrightnessManager?.resume());
+      }
+      return;
+    }
+
+    if (_foregroundResourcesSuspended) {
+      return;
+    }
+    _foregroundResourcesSuspended = true;
+    await _bestEffort(_displayBrightnessManager?.suspend());
+
     final appId = _manifest?.id;
-    if (appId != null) {
-      unawaited(_mediaPlaybackManager?.pauseAllFor(appId));
+    if (appId == null) {
+      return;
+    }
+    await _bestEffort(_mediaPlaybackManager?.pauseAllFor(appId));
+    await _bestEffort(_cameraManager?.cancelFor(appId));
+    await _bestEffort(_flashlightManager?.releaseFor(appId));
+    await _bestEffort(_qrManager?.releaseFor(appId));
+  }
+
+  Future<void> _bestEffort<T>(Future<T>? operation) async {
+    if (operation == null) {
+      return;
+    }
+    try {
+      await operation;
+    } on Object {
+      // Foreground lifecycle cleanup is best effort.
     }
   }
 

@@ -87,6 +87,43 @@ Opening a mini-program requires only `appId + artifactBaseUrl`. The publisher
 owns the optional runtime API declaration; the host owns only permission to use
 it.
 
+## Android Native Mini-Program Windows
+
+The current Android integration focuses on separate native windows: one host
+task and one Activity/task for each opened mini-program. The reference
+[`mp_only_host`](../../hosts/mp_only_host/README.md) uses this flow directly,
+with five reusable mini-program slots. No presentation-mode build flag is
+required. Reopening an app brings its existing task forward; Back and the
+mini-program toolbar return to the host while retaining the mini-program.
+
+Android Activity/task creation belongs to the host's Kotlin and manifest
+integration. Importing the Dart SDK alone does not install native windows.
+For generated host setup, run
+`miniprogram embed init --project-root . --android-separate-tasks` and wire
+`navigationDelegate: openMiniProgramInAndroidTask` on `MiniProgramScope`.
+Plain `embed init` and the SDK's default navigation still open pages inside the
+host. See [optional separate Android tasks](../../docs/android_separate_tasks_setup.md).
+The SDK supplies rendering, app-scoped state, navigation, and capability
+lifecycle handling inside each window. Existing `MiniProgramPage` embedding
+and route-based APIs remain available.
+
+`MiniProgramVisibility` remains an optional lifecycle signal for a host-owned
+page. Marking a mounted page hidden pauses or releases foreground-only
+resources without reloading its screen stack. Android lifecycle events also
+suspend those resources when a native window enters the background. In-memory
+state lasts while its Activity, Flutter engine, and process remain alive;
+durable drafts need an explicit persistence policy.
+
+Some OEM launchers filter separate Recent apps cards even when the tasks stay
+alive. This was confirmed on the inspected Vivo S10 Pro launcher; no measured
+worldwide affected-device percentage is established. See
+[Android native windows compatibility](../../docs/android_native_windows_compatibility.md)
+for device evidence and verification steps.
+
+An SDK-provided scrollable in-app workspace and live transfer between native
+and in-app presentation are deferred. Their requirements are recorded in the
+[future one-window workspace design](../../docs/android_in_app_workspace_future.md).
+
 ## Optional Current Location
 
 `location.getCurrent` is provider-neutral. A host opts in by accepting a

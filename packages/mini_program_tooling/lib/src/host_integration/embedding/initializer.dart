@@ -2,7 +2,11 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
+import '../capabilities/file_transaction.dart';
+import '../capabilities/models.dart';
 import 'android_integration.dart';
+import 'android_tasks/native_templates.dart';
+import 'android_tasks/planner.dart';
 import 'dart_templates.dart';
 import 'models.dart';
 import 'pubspec_editor.dart';
@@ -55,11 +59,29 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
       ? request.hostVersion!.trim()
       : extractEmbeddingVersion(pubspecSource);
   final normalizedRoutePath = _normalizeRoutePath(request.nativeRoutePath);
+  final tasksFile = File(
+    path.join(
+      projectRootPath,
+      'lib',
+      'mini_program',
+      'mini_program_android_tasks.dart',
+    ),
+  );
+  // A scaffold refresh must not silently disable a previously opted-in host.
+  final androidSeparateTasks =
+      request.androidSeparateTasks ||
+      (await tasksFile.exists() &&
+          (await tasksFile.readAsString()).contains(
+            androidTasksGeneratedMarker,
+          ));
+  final sdkConstraint = androidSeparateTasks
+      ? '^0.6.11'
+      : _miniProgramSdkConstraint;
   final updatedPubspecSource = ensureEmbeddingDependencies(
     pubspecSource,
     projectRootPath: projectRootPath,
     repoRootPath: repoRootPath,
-    sdkConstraint: _miniProgramSdkConstraint,
+    sdkConstraint: sdkConstraint,
     contractsConstraint: _miniProgramContractsConstraint,
   );
 
@@ -76,14 +98,17 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
     ),
     path.join(integrationRootPath, 'mini_program_launcher.dart'):
         buildEmbeddingLauncher(),
-    path.join(integrationRootPath, 'mini_program.dart'): buildEmbeddingBarrel(),
+    path.join(integrationRootPath, 'mini_program.dart'): buildEmbeddingBarrel(
+      androidSeparateTasks: androidSeparateTasks,
+    ),
     path.join(integrationRootPath, 'README.md'): buildEmbeddingReadme(
       packageName: packageName,
       repoRootPath: repoRootPath,
       hostAppId: resolvedHostAppId,
       hostVersion: resolvedHostVersion,
-      sdkConstraint: _miniProgramSdkConstraint,
+      sdkConstraint: sdkConstraint,
       contractsConstraint: _miniProgramContractsConstraint,
+      androidSeparateTasks: androidSeparateTasks,
     ),
   };
   final endpointImportGeneratedFiles = <String, String>{
@@ -112,6 +137,43 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
     throw MiniProgramEmbeddingInitException(
       'Embedding adapter already exists: $integrationRootPath '
       '(use --force to overwrite scaffold-managed files)',
+    );
+  }
+
+  if (androidSeparateTasks) {
+    final nativeTaskFiles = await planAndroidSeparateTasks(
+      projectRootPath: projectRootPath,
+      platformFiles: platformIntegrationFiles,
+    );
+    final writes = <String, String>{
+      if (updatedPubspecSource != pubspecSource)
+        pubspecPath: updatedPubspecSource,
+      ...scaffoldGeneratedFiles,
+      for (final entry in endpointImportGeneratedFiles.entries)
+        if (!await File(entry.key).exists()) entry.key: entry.value,
+      for (final entry in hostOwnedFiles.entries)
+        if (!await File(entry.key).exists()) entry.key: entry.value,
+      ...platformIntegrationFiles,
+      ...nativeTaskFiles,
+    };
+    try {
+      await writeCapabilityFiles(
+        projectRootPath: projectRootPath,
+        capability: 'android-separate-tasks',
+        platform: 'android',
+        writes: writes,
+      );
+    } on MiniProgramHostCapabilityException catch (error) {
+      throw MiniProgramEmbeddingInitException(error.message);
+    }
+    return MiniProgramEmbeddingInitResult(
+      projectRootPath: projectRootPath,
+      repoRootPath: repoRootPath,
+      packageName: packageName,
+      hostAppId: resolvedHostAppId,
+      hostVersion: resolvedHostVersion,
+      nativeRoutePath: normalizedRoutePath,
+      createdPaths: writes.keys.toList(),
     );
   }
 

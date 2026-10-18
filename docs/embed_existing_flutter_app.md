@@ -12,6 +12,14 @@ This creates the complete integration under `lib/mini_program/`. Ordinary host
 UI imports only `mini_program.dart`; host-owned setup, bridge, and accepted
 policy are preserved by later tooling refreshes.
 
+The standard setup opens mini-programs as Flutter pages inside the host. To
+generate separate native Android tasks, use
+`miniprogram embed init --project-root D:\my_host_app --android-separate-tasks`
+and add `navigationDelegate: openMiniProgramInAndroidTask` to the host's
+`MiniProgramScope`. Add `--force` when enabling it on an existing integration.
+See [optional separate Android task setup](android_separate_tasks_setup.md)
+for the generated entrypoint, per-engine configuration, and task behavior.
+
 ## 2. Import A Static Artifact Partner Package
 
 ```powershell

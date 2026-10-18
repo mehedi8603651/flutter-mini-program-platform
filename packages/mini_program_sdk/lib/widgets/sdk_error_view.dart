@@ -15,7 +15,7 @@ class SdkErrorView extends StatelessWidget {
     final diagnostics = _buildDiagnostics(failure.details);
 
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),

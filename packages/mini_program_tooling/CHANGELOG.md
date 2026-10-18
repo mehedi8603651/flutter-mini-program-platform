@@ -1,3 +1,15 @@
+## 0.7.10
+
+- Add optional `embed init --android-separate-tasks` generation for Kotlin
+  Android hosts, with five reusable Activity/task slots, a retained Dart
+  entrypoint, and an SDK navigation delegate. Standard embedding remains the
+  default and keeps its existing generated output.
+- Preserve host code, endpoint imports, accepted policies, and native
+  capability registrations during task setup and scaffold refreshes. Validate
+  conflicts before committing the complete optional setup in one transaction.
+- Generate separate-task hosts against SDK `0.6.11` and document independent
+  engine configuration, task capacity, Back behavior, and ROM limitations.
+
 ## 0.7.9
 
 - Generate Android Media3 fullscreen playback in an opaque immersive window

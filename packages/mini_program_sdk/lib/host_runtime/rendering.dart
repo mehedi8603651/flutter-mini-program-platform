@@ -14,6 +14,8 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
   }
 
   Widget _buildHost(BuildContext context) {
+    final handlesSystemBack =
+        widget.visibility == MiniProgramVisibility.foreground;
     return FutureBuilder<void>(
       future: _loadFuture,
       builder: (context, snapshot) {
@@ -86,9 +88,9 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           popToMiniProgramRoot: _popToMiniProgramRoot,
           popToMiniProgramScreen: _popToMiniProgramScreen,
           child: PopScope<void>(
-            canPop: _screenStack.length <= 1,
+            canPop: !handlesSystemBack || _screenStack.length <= 1,
             onPopInvokedWithResult: (didPop, _) async {
-              if (!didPop) {
+              if (!didPop && handlesSystemBack) {
                 await _handleWillPop();
               }
             },

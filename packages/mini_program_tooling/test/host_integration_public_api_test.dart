@@ -35,6 +35,7 @@ void main() {
 
     expect(embeddingInitializer, isA<MiniProgramEmbeddingInitializer>());
     expect(embeddingRequest.force, isFalse);
+    expect(embeddingRequest.androidSeparateTasks, isFalse);
     expect(embeddingResult.toJson()['hostAppId'], 'host_app');
     expect(embeddingError.toString(), 'failure');
     expect(capabilityInstaller, isA<MiniProgramHostCapabilityInstaller>());

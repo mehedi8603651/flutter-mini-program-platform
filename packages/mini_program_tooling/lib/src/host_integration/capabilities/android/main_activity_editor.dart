@@ -16,6 +16,7 @@ const List<String> androidCapabilityRegistrations = <String>[
   'MiniProgramShareChannel.register(flutterEngine)',
   'MiniProgramDisplayBrightnessChannel.register(flutterEngine)',
   'MiniProgramMediaPlaybackPlugin.register(flutterEngine)',
+  'MiniProgramTaskChannel.register(flutterEngine)',
 ];
 
 String patchAndroidMainActivityRegistration(

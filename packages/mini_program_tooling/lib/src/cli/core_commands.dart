@@ -604,6 +604,11 @@ extension CliCoreCommands on CliContext {
             'Deprecated compatibility option. Generated lean adapters no longer create route aliases.',
       )
       ..addFlag(
+        'android-separate-tasks',
+        negatable: false,
+        help: 'Generate optional separate Android tasks for mini-programs.',
+      )
+      ..addFlag(
         'force',
         negatable: false,
         help: 'Overwrite scaffold-managed files if the target already exists.',
@@ -628,6 +633,7 @@ extension CliCoreCommands on CliContext {
         hostAppId: results.option('host-app-id'),
         hostVersion: results.option('host-version'),
         nativeRoutePath: results.option('native-route-path')!,
+        androidSeparateTasks: results.flag('android-separate-tasks'),
         force: results.flag('force'),
       ),
     );

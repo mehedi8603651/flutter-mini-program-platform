@@ -192,7 +192,7 @@ class RegisteredMiniProgramLauncher extends StatelessWidget {
 ''';
 }
 
-String buildEmbeddingBarrel() {
+String buildEmbeddingBarrel({bool androidSeparateTasks = false}) {
   return '''
 export 'package:mini_program_sdk/mini_program_sdk.dart';
 
@@ -203,7 +203,7 @@ export 'mini_program_launcher.dart';
 export 'mini_program_policy_resolver.dart';
 export 'mini_program_registry.dart';
 export 'mini_program_runtime_setup.dart';
-''';
+${androidSeparateTasks ? "export 'mini_program_android_tasks.dart';\n" : ''}''';
 }
 
 String buildEmbeddingHostSetup() {

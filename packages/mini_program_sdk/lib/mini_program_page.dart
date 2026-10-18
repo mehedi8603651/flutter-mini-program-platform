@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'mini_program_host.dart';
 import 'mini_program_runtime.dart';
+import 'mini_program_visibility.dart';
 import 'widgets/sdk_error_view.dart';
 import 'widgets/sdk_loading_view.dart';
 
@@ -12,6 +13,7 @@ class MiniProgramPage extends StatelessWidget {
     required this.miniProgramId,
     this.title,
     this.runtime,
+    this.visibility = MiniProgramVisibility.foreground,
     this.showAppBar = true,
     this.backgroundColor = const Color(0xFFF8FAFC),
   });
@@ -19,6 +21,7 @@ class MiniProgramPage extends StatelessWidget {
   final String miniProgramId;
   final String? title;
   final MiniProgramRuntime? runtime;
+  final MiniProgramVisibility visibility;
   final bool showAppBar;
   final Color backgroundColor;
 
@@ -27,7 +30,7 @@ class MiniProgramPage extends StatelessWidget {
     final resolvedRuntime = runtime ?? MiniProgramRuntimeScope.of(context);
     final resolvedTitle = title ?? _defaultTitle(miniProgramId);
 
-    return Scaffold(
+    final page = Scaffold(
       appBar: showAppBar ? AppBar(title: Text(resolvedTitle)) : null,
       backgroundColor: backgroundColor,
       body: MiniProgramHost(
@@ -36,6 +39,7 @@ class MiniProgramPage extends StatelessWidget {
         source: resolvedRuntime.source,
         hostBridge: resolvedRuntime.hostBridge,
         capabilityRegistry: resolvedRuntime.capabilityRegistry,
+        visibility: visibility,
         backendConnector: resolvedRuntime.backendConnector,
         locationProvider: resolvedRuntime.locationProvider,
         fileTransferProvider: resolvedRuntime.fileTransferProvider,
@@ -64,6 +68,12 @@ class MiniProgramPage extends StatelessWidget {
           return SdkErrorView(failure: failure);
         },
       ),
+    );
+
+    final isForeground = visibility == MiniProgramVisibility.foreground;
+    return TickerMode(
+      enabled: isForeground,
+      child: Offstage(offstage: !isForeground, child: page),
     );
   }
 

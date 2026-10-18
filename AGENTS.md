@@ -29,8 +29,8 @@ These versions are the repository's current development/release line. Check each
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.13` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.2.9` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.10` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.9` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_sdk` | `0.6.11` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.10` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -254,6 +254,7 @@ packages/mini_program_sdk/
 |   |   |-- failures.dart                       # Source/load/render exception conversion and SDK error view selection
 |   |   `-- models.dart                         # Rendered screen, route result, asset counts, and navigation identity
 |   |-- mini_program_page.dart                  # Public page widget for a loaded mini-program
+|   |-- mini_program_visibility.dart            # Foreground/hidden lifecycle signal for retained pages
 |   |-- mini_program_launcher.dart              # Launch orchestration from app ID/options to runtime page
 |   |-- mini_program_launch_options.dart        # Per-launch route/input/options model
 |   |-- mini_program_config.dart                # Host-provided SDK dependencies and defaults
@@ -657,6 +658,7 @@ packages/mini_program_tooling/
 |       |   |   |-- pubspec_editor.dart          # Host pubspec metadata and dependency updates
 |       |   |   |-- dart_templates.dart          # Generated Dart integration source templates
 |       |   |   |-- readme_template.dart         # Generated host integration guide
+|       |   |   |-- android_tasks/              # Optional separate Android task planning, editors, and templates
 |       |   |   `-- android_integration.dart     # Existing Android network permission planning
 |       |   `-- capabilities/
 |       |       |-- models.dart                  # Capability request, result, and stable exception
@@ -893,6 +895,22 @@ manifest edits, but must commit the complete write plan through
 or Gradle blocks. Recognized legacy generated blocks may be migrated, while
 malformed managed blocks and unrecognized host-owned files must fail before
 any file is changed.
+
+`embed init --android-separate-tasks` is an explicit opt-in. Plain `embed init`
+retains standard in-host Flutter route navigation and its existing generated
+output. Optional task integration lives under `embedding/android_tasks/`,
+uses the same shared Android native setup registry and file transaction as
+capability installers, and must preserve capability registrations in either
+installation order. It generates five reusable non-exported task Activities,
+a navigation delegate, and managed entrypoint blocks in the host's
+`lib/main.dart`. Host UI opts in with
+`MiniProgramScope(navigationDelegate: openMiniProgramInAndroidTask, ...)`.
+The created-once `app_android_task_setup.dart` owns per-engine initialization;
+Dart runtime/auth/cache objects are not shared across engines. Scaffold force
+refreshes retain an installed task integration and preserve host-owned task
+setup, composition, policies, and imported endpoints. Validate conflicts before
+any writes. See `docs/android_separate_tasks_setup.md` for supported launch
+options, capacity, build-target handling, and integration verification.
 
 Host run and endpoint-import public classes stay in
 `mini_program_host_controller.dart`. Implementation belongs in normal Dart
@@ -1154,8 +1172,9 @@ hosts/
 
 hosts/mp_only_host/
 |-- lib/main.dart                               # Entire minimal host, bundled source, bridge, and launch example
+|-- android/app/src/main/kotlin/.../             # Host Activity plus five reusable mini-program Activity/task slots
 |-- assets/                                     # Bundled static profile fixture used by the minimal host
-|-- test/widget_test.dart                       # Minimal host loading/rendering smoke test
+|-- test/widget_test.dart                       # Default native bridge, catalog layout, and launch failure smoke tests
 |-- android/, ios/, web/, ...                   # Flutter-generated platform runners and configuration
 `-- pubspec.yaml                                # Flutter dependencies and bundled assets
 
@@ -1172,6 +1191,36 @@ hosts/{super_app_host,partner_app_host}/
 ```
 
 Bundled host assets are copies, not authoring source. Synchronize maintained examples with `tools/sync_assets.ps1` instead of hand-editing both locations.
+
+The minimal host uses native Android windows directly, without a presentation
+mode flag or in-app tab-strip fallback. It has a separate named task affinity
+for the host and each of five live mini-program slots. Each slot has a real
+Activity component with `singleTask` launch mode; app IDs are assigned from
+Android's existing task records, and reopening an app brings that task forward. A full pool reports a
+limit without silently disposing another app. Back returns to the host without
+finishing the mini-program. Native tasks belong to the host's Activity and
+manifest integration; the Dart SDK supplies runtime and lifecycle handling.
+Changes to native window integration require release-APK testing as well
+as Flutter tests. Verify both native task IDs and visible Recent apps cards on
+target OEM ROMs; emulator task dumps alone do not establish phone compatibility.
+`tools/inspect_android_windows.ps1` captures a connected device's installed build,
+launcher version, task records, affinities, and running activities without
+rebuilding or installing.
+
+Actual Vivo S10 Pro / Android 13 / OriginOS 3 testing on 2026-10-18 found that
+launcher `com.bbk.launcher2` version `13.5.1.280` filters ordinary apps to one
+visible Recent apps card per package/user despite separate live native tasks.
+Inspection of its `VivoTaskRules` confirmed explicit WeChat `.AppBrandUI`
+exceptions. Separate processes do not bypass this package-based rule. Do not
+claim universal separate-card support or rebuild speculatively for this ROM.
+See `docs/android_native_windows_compatibility.md` for evidence and integration
+limits; other launcher versions require their own verification.
+
+The SDK-provided one-window workspace, running-app strip, and live transfer
+between native and in-app presentation are deferred. Preserve their proposed
+behavior in `docs/android_in_app_workspace_future.md`; do not present them as
+available SDK features or add automatic OEM fallback. Keep existing
+`MiniProgramPage`/route APIs and `MiniProgramVisibility` lifecycle support.
 
 All three reference Android hosts use Flutter `3.47.1` (the host package
 constraint is `>=3.47.0`), AGP `9.1.0`, Gradle `9.3.1`, Kotlin `2.4.0`, and Java
@@ -1200,6 +1249,8 @@ lib/mini_program/
 |-- mini_program_policies.json                  # Host-owned requested/accepted policy source of truth
 |-- mini_program_policy_resolver.dart           # Generated Dart mapping for accepted cache/state/device policy
 |-- mini_program_launcher.dart                  # Generated dynamic and registry-based launch helpers
+|-- mini_program_android_tasks.dart             # Optional generated task delegate/root widget
+|-- app_android_task_setup.dart                 # Optional host-owned secondary-engine composition
 |-- app_android_location_provider.dart          # Optional host-owned adapter installed by the location capability command
 |-- app_android_file_transfer_provider.dart     # Optional host-owned streaming file adapter
 |-- app_android_camera_provider.dart            # Optional host-owned delegated system-camera adapter
@@ -1303,6 +1354,9 @@ docs/
 |-- quickstart_static_miniprogram_to_host.md    # Beginner path from static app source to host loading
 |-- mini_program_authoring.md                   # `Mp` nodes/actions, bindings, state, backend, and lazy patterns
 |-- embed_existing_flutter_app.md               # Add SDK and generated integration to an existing Flutter host
+|-- android_separate_tasks_setup.md             # Optional task CLI setup, wiring, ownership, and verification
+|-- android_native_windows_compatibility.md     # Native task behavior, confirmed Vivo card filtering, and diagnostics
+|-- android_in_app_workspace_future.md          # Deferred optional one-window workspace and state-handover design
 |-- static_artifact_runtime_api_e2e_guide.md    # Complete static artifact plus optional runtime API flow
 |-- middle_server_api_lambda_dynamodb.md        # Concrete provider example, not a platform dependency
 `-- publisher_backend_https_api_roadmap.md      # Publisher API contract/runtime guidance and future evolution
@@ -1789,6 +1843,7 @@ The working tree may contain user changes. Never discard, reset, or overwrite un
 - Run analysis and full tests for every affected package.
 - Run `tools/verify_mp_engine_release.ps1` for a coordinated engine release.
 - Publish generated code and package metadata, but not build/cache directories.
+- SDK and tooling pin `publish_to: https://pub.dev` so dependency mirrors do not redirect package uploads.
 - Do not publish packages, create commits, or push unless the user explicitly requests it.
 - Git line-ending warnings on Windows are informational unless a diff shows unintended whole-file churn.
 - Use `git commit -m "message"`; `git commit "message"` treats the text as a pathspec and does not commit.
@@ -1828,6 +1883,7 @@ Keep this section for unfinished platform work only. Remove items when completed
 5. Expand `Mp.lazy.chunk` examples for product lists, news feeds, chat history, order history, and search results.
 6. Add a provider-neutral static artifact host checklist covering headers, cache control, immutable screen paths, latest manifest path, and local server testing.
 7. Add release automation that verifies MVP documentation presents static artifact opening plus optional publisher middle-server APIs without reintroducing provider coupling.
+8. Design and implement an optional one-window workspace only when that work is explicitly resumed; requirements are in `docs/android_in_app_workspace_future.md`. Live presentation transfer needs a separate state-handover design.
 
 ## Agent Start Checklist
 

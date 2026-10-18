@@ -33,7 +33,7 @@ class SdkLoadingView extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),

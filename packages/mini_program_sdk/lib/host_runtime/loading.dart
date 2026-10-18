@@ -67,5 +67,6 @@ extension _MiniProgramHostLoading on _MiniProgramHostState {
       _usedStaleManifestCache = loadedMiniProgram.usedStaleManifestCache;
       _screenStack = <_RenderedMiniProgramScreen>[initialScreen];
     });
+    _scheduleForegroundLifecycle();
   }
 }

@@ -23,6 +23,7 @@ import 'media/mini_program_media.dart';
 import 'media_playback/mini_program_media_playback.dart';
 import 'manifest_loader.dart';
 import 'mini_program_failure.dart';
+import 'mini_program_visibility.dart';
 import 'network/asset_resolver.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_backend_store.dart';
@@ -60,6 +61,7 @@ class MiniProgramHost extends StatefulWidget {
     required this.source,
     required this.hostBridge,
     required this.capabilityRegistry,
+    this.visibility = MiniProgramVisibility.foreground,
     this.backendConnector,
     this.locationProvider,
     this.fileTransferProvider,
@@ -87,6 +89,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramSource source;
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
+  final MiniProgramVisibility visibility;
   final MiniProgramBackendConnector? backendConnector;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;

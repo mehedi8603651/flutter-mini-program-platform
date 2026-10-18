@@ -2,9 +2,10 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.9` generates mini-program projects against
+Tooling `0.7.10` generates mini-program projects against
 `mini_program_ui: ^0.2.8` and Flutter host projects against
-`mini_program_sdk: ^0.6.9`.
+`mini_program_sdk: ^0.6.9`. Optional `--android-separate-tasks` setup generates
+hosts against `mini_program_sdk: ^0.6.11`.
 
 The CLI supports the current MVP architecture:
 
@@ -258,6 +259,29 @@ Use once per host app.
 cd D:\my_profile_host
 miniprogram embed init --project-root .
 ```
+
+This standard setup opens mini-programs as Flutter pages inside the host. To
+generate optional separate Android tasks instead, use:
+
+```powershell
+miniprogram embed init --project-root . --android-separate-tasks
+```
+
+For an already initialized host, add `--force`. This generates five reusable
+native Activity/task slots, a retained entrypoint in `lib/main.dart`, and
+`mini_program_android_tasks.dart`. Wire
+`navigationDelegate: openMiniProgramInAndroidTask` on the host's
+`MiniProgramScope`; normal SDK launch calls then open/resume Android tasks.
+The standard flow remains available by omitting that delegate. Android setup
+requires a Kotlin `MainActivity.kt`; it does not change Gradle versions.
+
+Each task builds its own runtime through the created-once
+`app_android_task_setup.dart` and the host's existing configuration. Capability
+installers work before or after task setup. Back returns to the live host;
+reopening an app resumes its task while Android keeps its Activity/process
+alive. Task creation cannot guarantee visible Recent apps cards on every ROM.
+See [separate Android task setup](../../docs/android_separate_tasks_setup.md)
+for wiring, ownership, launch semantics, and verification.
 
 What it does:
 

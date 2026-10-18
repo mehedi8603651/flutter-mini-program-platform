@@ -5,6 +5,7 @@ String buildEmbeddingReadme({
   required String hostVersion,
   required String sdkConstraint,
   required String contractsConstraint,
+  bool androidSeparateTasks = false,
 }) {
   return '''
 # Embedded Mini-Program Adapter
@@ -53,7 +54,7 @@ Future<void> main() async {
   runApp(
     MiniProgramScope(
       config: miniProgramConfig,
-      child: const MyApp(),
+${androidSeparateTasks ? '      navigationDelegate: openMiniProgramInAndroidTask,\n' : ''}      child: const MyApp(),
     ),
   );
 }
@@ -238,5 +239,49 @@ preserves host-owned files and endpoint-import output.
 
 State management still stays app-owned. `MiniProgramScope` can compose with
 Riverpod, Provider, Bloc, GetX, GoRouter, custom architecture, or plain Flutter.
-''';
+${androidSeparateTasks ? _androidTasksReadme : ''}''';
 }
+
+const _androidTasksReadme = '''
+
+## Optional separate Android tasks
+
+This host was initialized with `--android-separate-tasks`. Add
+`navigationDelegate: openMiniProgramInAndroidTask` to the host's root
+`MiniProgramScope`, as shown above. Ordinary SDK launch calls and generated
+launcher widgets then open/resume native Android tasks. Omitting the delegate
+keeps normal in-host navigation. Other platforms use normal Flutter routes.
+
+The command installs five reusable, non-exported Activity slots with separate
+task affinities, wires the shared native registry, and adds a retained
+`miniProgramTaskMain` wrapper in `lib/main.dart`. Build with the normal Flutter
+commands; no Dart define or alternative build target is needed. If your app
+uses a different `--target`, copy both managed entrypoint blocks from
+`lib/main.dart` into that root library and adjust the relative import.
+
+Each mini-program has its own Flutter engine. Customize its dependencies and
+theme in the created-once, host-owned `app_android_task_setup.dart`, which calls
+the same `buildHostMiniProgramConfig()` as the main host. Capability installers
+register providers in every engine. Objects from the host engine, including
+in-memory auth sessions, providers, and cache managers, are not shared. Put
+reusable initialization in the host setup, restore authentication independently,
+and use storage that supports concurrent engines if persistence is enabled.
+
+Reopening the same appId resumes its existing task and current state. Back and
+the app-bar arrow return to the host without finishing the mini-program.
+Close a task in Recent apps to release its slot. A sixth different app returns
+`PlatformException(code: 'mini_program_task_limit')`; no live app is evicted.
+Launch completes with null when the task opens/resumes; it does not await a
+Flutter route result. Per-launch initialData, source, version, and routeBuilder
+are rejected because they cannot transfer a runtime into another engine;
+configure sources and accepted policies in the host setup and endpoint map.
+
+MainActivity uses singleTask so returning reuses the host. Existing custom
+native handlers, host composition, endpoint imports, and accepted policies are
+preserved. Rerun with `--force` to refresh generated scaffolding; an installed
+task setup stays enabled even when the flag is omitted during a refresh.
+
+Separate Android tasks do not guarantee separate visible Recent apps cards:
+some launchers filter by package. Process death, force stop, or removing a task
+can discard in-memory state. No automatic one-window workspace is installed.
+''';
