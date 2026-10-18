@@ -221,6 +221,14 @@ abstract final class _MpActionDispatcher {
           props,
           userGesture: callContext.userGesture,
         ),
+        'maps.openLocation' ||
+        'maps.openDirections' => _MpMapsActionHandler._run(
+          context,
+          scope,
+          action.type,
+          props,
+          userGesture: callContext.userGesture,
+        ),
         'share.open' => _MpShareActionHandler._open(
           scope,
           props,

@@ -23,7 +23,7 @@ void main() {
     }
   });
 
-  for (final feature in ['clipboard', 'vibration', 'phone']) {
+  for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
     final title = '${feature[0].toUpperCase()}${feature.substring(1)}';
     test(
       '$feature installation preserves host edits and needs no Android permission',
@@ -70,6 +70,10 @@ void main() {
         } else if (feature == 'phone') {
           expect(native, contains('Intent.ACTION_DIAL'));
           expect(native, isNot(contains('Intent.ACTION_CALL')));
+        } else if (feature == 'maps') {
+          expect(native, contains('Intent.ACTION_VIEW'));
+          expect(native, contains('maps_coordinate_system_unsupported'));
+          expect(native, isNot(contains('Intent.FLAG_ACTIVITY_NEW_TASK')));
         } else {
           expect(native, contains('performHapticFeedback(feedback)'));
           expect(native, isNot(contains('IGNORE_GLOBAL_SETTING')));

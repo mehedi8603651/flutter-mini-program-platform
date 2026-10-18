@@ -1,3 +1,7 @@
+## 0.2.13
+
+- Add pure-Dart `Mp.maps.openLocation` and `Mp.maps.openDirections` with bounded destinations and runtime coordinate bindings.
+
 ## 0.2.12
 
 - Add `Mp.clipboard.readText/writeText`, `Mp.vibration.trigger`, and `Mp.phone.openDialer` with pure-Dart validation and deterministic JSON.

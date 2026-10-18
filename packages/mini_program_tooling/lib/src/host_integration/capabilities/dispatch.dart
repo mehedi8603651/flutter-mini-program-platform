@@ -30,7 +30,8 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
 ) async => await switch (request.capability.trim().toLowerCase()) {
   'clipboard' ||
   'vibration' ||
-  'phone' => system.initializeSystemCapability(request),
+  'phone' ||
+  'maps' => system.initializeSystemCapability(request),
   locationCapability => location.initializeMiniProgramHostCapability(request),
   fileCapability => file.initializeMiniProgramHostFileCapability(request),
   cameraCapability => camera.initializeMiniProgramHostCameraCapability(request),
@@ -53,6 +54,6 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
     'Unsupported host capability "${request.capability}". Supported '
     'capabilities: $locationCapability, $fileCapability, $cameraCapability, '
     '$flashlightCapability, $displayBrightnessCapability, $qrCapability, $shareCapability, '
-    '$audioCapability, $videoCapability, $galleryCapability, $microphoneCapability, clipboard, vibration, phone.',
+    '$audioCapability, $videoCapability, $galleryCapability, $microphoneCapability, clipboard, vibration, phone, maps.',
   ),
 };

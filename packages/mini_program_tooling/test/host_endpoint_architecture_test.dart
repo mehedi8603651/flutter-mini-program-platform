@@ -29,6 +29,7 @@ void main() {
         'coordinator.dart',
         'endpoint_file.dart',
         'json_values.dart',
+        'maps_policy.dart',
         'models.dart',
         'policy_document.dart',
         'policy_resolver.dart',

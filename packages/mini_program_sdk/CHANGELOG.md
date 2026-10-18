@@ -1,3 +1,11 @@
+## 0.6.15
+
+- Add optional, default-denied external map providers and per-app policy. Enforce strict destination validation, user gestures, foreground routes, safe async completion, and atomic result state.
+- Opening an external map preserves the calling mini-program session; results
+  confirm launch acceptance only. Travel mode and routing remain provider-owned.
+- Document the observed Google Maps walking-mode limitation and remaining real
+  Amap/Baidu device validation in the Android shop-location guide.
+
 ## 0.6.14
 
 - Add independent host-controlled clipboard read/write, short system haptic effects, and user-controlled phone dialer providers. Enforce explicit gestures, foreground visibility, runtime value limits, and safe stale clipboard completion.

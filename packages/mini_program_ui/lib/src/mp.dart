@@ -1,3 +1,4 @@
+import 'features/maps/maps_actions.dart';
 import 'features/system/system_actions.dart';
 import 'core/mp_action.dart';
 import 'core/mp_node.dart';
@@ -46,6 +47,8 @@ import 'features/skeleton/skeleton_nodes.dart';
 import 'features/state/state_actions.dart';
 import 'features/theme/theme_nodes.dart';
 
+export 'features/maps/maps_actions.dart'
+    show MpMapsActions, MpMapCoordinateSystem, MpMapTravelMode;
 export 'features/system/system_actions.dart'
     show
         MpClipboardActions,
@@ -83,6 +86,9 @@ export 'features/state/state_actions.dart' show MpStateActions;
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
+  /// Shop pins and route planning in a host-approved external map app.
+  static const maps = MpMapsActions();
+
   /// Explicit host-approved clipboard access.
   static const clipboard = MpClipboardActions();
 

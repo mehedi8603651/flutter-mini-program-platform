@@ -1,5 +1,7 @@
 /// Stable wire names for host-dispatched mobile MVP actions.
 abstract final class ActionNames {
+  static const mapsOpenLocation = 'maps.openLocation';
+  static const mapsOpenDirections = 'maps.openDirections';
   static const String clipboardReadText = 'clipboard.readText';
   static const String clipboardWriteText = 'clipboard.writeText';
   static const String vibrationTrigger = 'vibration.trigger';

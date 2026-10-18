@@ -27,9 +27,18 @@ function Invoke-Step {
   Write-Host "    $Command $($Arguments -join ' ')"
   Push-Location $WorkingDirectory
   try {
-    & $Command @Arguments
-    if ($LASTEXITCODE -ne 0) {
-      throw "$Name failed with exit code $LASTEXITCODE."
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+      # Windows PowerShell treats informational native stderr as an error.
+      # Preserve mirror notices and use the native exit code for success.
+      $ErrorActionPreference = 'Continue'
+      & $Command @Arguments
+      $stepExitCode = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($stepExitCode -ne 0) {
+      throw "$Name failed with exit code $stepExitCode."
     }
   } finally {
     Pop-Location

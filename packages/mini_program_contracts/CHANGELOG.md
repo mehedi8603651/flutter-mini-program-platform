@@ -1,3 +1,7 @@
+## 0.3.17
+
+- Add known map destination contracts, explicit coordinate systems, driving/walking modes, and stable map action/capability/error names.
+
 ## 0.3.16
 
 - Add canonical clipboard, system haptic, and phone dialer actions, capabilities, errors, and safe ordinary phone number normalization.

@@ -1,4 +1,5 @@
 import '../errors.dart';
+import 'maps.dart';
 
 Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
   if (raw == null) {
@@ -22,6 +23,7 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'clipboard' &&
         entry.key != 'vibration' &&
         entry.key != 'phone' &&
+        entry.key != 'maps' &&
         entry.key != 'displayBrightness' &&
         entry.key != 'audioPlayback' &&
         entry.key != 'videoPlayback') {
@@ -35,6 +37,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key as String,
         entry.value,
       );
+      continue;
+    }
+    if (entry.key == 'maps') {
+      normalized['maps'] = normalizeRequestedMaps(entry.value);
       continue;
     }
     if (entry.key == 'files') {

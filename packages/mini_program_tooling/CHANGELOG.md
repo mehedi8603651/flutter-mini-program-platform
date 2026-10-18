@@ -1,3 +1,12 @@
+## 0.7.14
+
+- Add optional Android `host capability init maps` generation with host-controlled Google Maps/Amap/Baidu app preferences, explicit coordinate handling, requested/accepted policy, and separate-task-safe regeneration.
+- Generate mini-programs against UI `0.2.13` and hosts/preview hosts against
+  SDK `0.6.15` and contracts `0.3.17`.
+- Keep native maps optional without extra Android permissions, embedded map
+  dependencies, or API keys. Provider behavior and validation limits are
+  documented in the Android shop-location guide.
+
 ## 0.7.13
 
 - Add optional Android `clipboard`, `vibration`, and `phone` capability installers, accepted/requested policy generation, and safe regeneration alongside separate tasks. No extra Android permissions are required.

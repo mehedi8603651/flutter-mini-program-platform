@@ -1,3 +1,4 @@
+import 'maps_policy.dart';
 import 'json_values.dart';
 import 'policy_document.dart';
 import 'system_policy.dart';
@@ -402,6 +403,7 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
     ..writeln('}')
     ..writeln();
   buffer.writeln(buildSystemPolicyResolvers(apps));
+  buffer.writeln(buildMapsPolicyResolver(apps));
   return buffer.toString();
 }
 

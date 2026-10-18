@@ -34,6 +34,7 @@ void main() {
         'models.dart',
         'requested_policy/cache.dart',
         'requested_policy/json_values.dart',
+        'requested_policy/maps.dart',
         'requested_policy/permissions.dart',
         'requested_policy/publisher_api.dart',
         'validation.dart',

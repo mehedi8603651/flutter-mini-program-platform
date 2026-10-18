@@ -1,3 +1,4 @@
+import 'maps_policy.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -249,6 +250,15 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       },
     });
   }
+  if (permission == 'maps') {
+    final value = hostJsonObjectOrEmpty(requested);
+    return validateAcceptedMapsPermission({
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && value['enabled'] == true,
+      'allowOpenLocation': value['openLocation'] != false,
+      'allowDirections': value['directions'] != false,
+    });
+  }
   if (permission == 'gallery') {
     final request = requested is Map
         ? hostJsonObjectOrEmpty(requested)
@@ -412,6 +422,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
     }
     normalized['gallery'] = validateAcceptedHostGallery(
       hostJsonObjectOrEmpty(rawGallery),
+    );
+  }
+  final maps = normalized['maps'];
+  if (maps != null) {
+    if (maps is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.maps must be an object.',
+      );
+    }
+    normalized['maps'] = validateAcceptedMapsPermission(
+      hostJsonObjectOrEmpty(maps),
     );
   }
   final rawMicrophone = normalized['microphone'];

@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.13` generates mini-program projects against
-`mini_program_ui: ^0.2.12` and Flutter host projects against
-`mini_program_sdk: ^0.6.14` and `mini_program_contracts: ^0.3.16`.
+Tooling `0.7.14` generates mini-program projects against
+`mini_program_ui: ^0.2.13` and Flutter host projects against
+`mini_program_sdk: ^0.6.15` and `mini_program_contracts: ^0.3.17`.
 Standard in-host navigation and optional `--android-separate-tasks` are supported.
 
 The CLI supports the current MVP architecture:
@@ -761,8 +761,8 @@ Installs Android's Photo Picker with document-picker fallback, single/multiple
 selection, private normalized image copies, and a host-owned Dart adapter. No
 broad storage/photo permissions are added. Each app's gallery policy remains
 denied until the host accepts it. Installation works with standard embedding
-and optional separate Android tasks. Existing hosts need SDK `^0.6.14` and
-contracts `^0.3.16`. See the
+and optional separate Android tasks. Existing hosts need SDK `^0.6.15` and
+contracts `^0.3.17`. See the
 [Android gallery guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_gallery_photo_picker.md).
 
 ## Android microphone recording
@@ -775,8 +775,8 @@ Installs a foreground AAC/M4A recorder, runtime microphone permission, private
 FileProvider, and host-owned Dart adapter. Mini-program permission remains
 default-denied. Works with standard embedding and separate Android tasks. Run
 `host capability init audio --platform android` to install or refresh native
-playback support for opaque voice notes. Requires SDK `^0.6.14` and contracts
-`^0.3.16`. See the [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).
+playback support for opaque voice notes. Requires SDK `^0.6.15` and contracts
+`^0.3.17`. See the [Android microphone guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_microphone_recording.md).
 
 ## Android clipboard, vibration and phone dialer
 
@@ -791,3 +791,8 @@ They preserve host edits and separate-task setup. Installation does not accept
 mini-program policy; review `accepted.permissions.clipboard`, `vibration`, and
 `phone` and regenerate the policy resolver. Clipboard reading is independently
 denied by default. See the [complete guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).
+
+
+## Shop location and directions
+
+See the [Android shop location guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_shop_location_directions.md) for setup, host acceptance, coordinate systems and provider limits.

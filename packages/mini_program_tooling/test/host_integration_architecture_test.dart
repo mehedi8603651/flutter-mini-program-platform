@@ -64,6 +64,8 @@ void main() {
         'capabilities/location/installer.dart',
         'capabilities/location/source_editors.dart',
         'capabilities/location/source_files.dart',
+        'capabilities/maps/android_channel_template.dart',
+        'capabilities/maps/dart_provider_template.dart',
         'capabilities/media_playback/android_plugin_template.dart',
         'capabilities/media_playback/dart_provider_template.dart',
         'capabilities/media_playback/installer.dart',

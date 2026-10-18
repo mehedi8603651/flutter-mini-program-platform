@@ -107,6 +107,7 @@ String patchSystemRuntimeSetup(String source, String feature) {
     'clipboard' => ['clipboardRead', 'clipboardWrite'],
     'vibration' => ['vibration'],
     'phone' => ['phoneDialer'],
+    'maps' => ['mapsOpenLocation', 'mapsOpenDirections'],
     _ => throw ArgumentError.value(feature),
   }) {
     if (!next

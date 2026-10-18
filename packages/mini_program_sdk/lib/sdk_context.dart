@@ -22,6 +22,7 @@ import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
+import 'maps/mini_program_maps.dart';
 import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -91,7 +92,9 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.vibrationProvider,
     this.vibrationPolicy = const MiniProgramVibrationPolicy(),
     this.phoneProvider,
+    this.mapsProvider,
     this.phonePolicy = const MiniProgramPhonePolicy(),
+    this.mapsPolicy = const MiniProgramMapsPolicy(),
     this.isForeground = true,
     this.shareManager,
     this.sharePolicy = const MiniProgramSharePolicy(),
@@ -144,7 +147,9 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramVibrationProvider? vibrationProvider;
   final MiniProgramVibrationPolicy vibrationPolicy;
   final MiniProgramPhoneProvider? phoneProvider;
+  final MiniProgramMapsProvider? mapsProvider;
   final MiniProgramPhonePolicy phonePolicy;
+  final MiniProgramMapsPolicy mapsPolicy;
   final bool isForeground;
   final MiniProgramShareManager? shareManager;
   final MiniProgramSharePolicy sharePolicy;
@@ -208,7 +213,9 @@ class MiniProgramSdkScope extends InheritedWidget {
         vibrationProvider != oldWidget.vibrationProvider ||
         vibrationPolicy != oldWidget.vibrationPolicy ||
         phoneProvider != oldWidget.phoneProvider ||
+        mapsProvider != oldWidget.mapsProvider ||
         phonePolicy != oldWidget.phonePolicy ||
+        mapsPolicy != oldWidget.mapsPolicy ||
         isForeground != oldWidget.isForeground ||
         shareManager != oldWidget.shareManager ||
         sharePolicy != oldWidget.sharePolicy ||

@@ -8,6 +8,13 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
         : const MiniProgramPhonePolicy();
   }
 
+  MiniProgramMapsPolicy _mapsPolicyFor(String appId) {
+    final source = widget.source;
+    return source is MiniProgramMapsPolicyProvider
+        ? (source as MiniProgramMapsPolicyProvider).mapsPolicyFor(appId)
+        : const MiniProgramMapsPolicy();
+  }
+
   MiniProgramVibrationPolicy _vibrationPolicyFor(String appId) {
     final source = widget.source;
     return source is MiniProgramVibrationPolicyProvider

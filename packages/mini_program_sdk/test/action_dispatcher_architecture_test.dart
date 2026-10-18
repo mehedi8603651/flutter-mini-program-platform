@@ -43,6 +43,7 @@ void main() {
       'flashlight.dart',
       'gallery.dart',
       'location.dart',
+      'maps.dart',
       'math.dart',
       'media.dart',
       'media_playback.dart',

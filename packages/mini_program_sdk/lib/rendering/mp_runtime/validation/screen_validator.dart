@@ -754,6 +754,8 @@ class MpScreenValidator {
       'clipboard.writeText' ||
       'vibration.trigger' ||
       'phone.openDialer' => _parseSystemAction(type, props, path),
+      'maps.openLocation' ||
+      'maps.openDirections' => _parseMapsAction(type, props, path),
       'share.open' => _parseShareOpenAction(type, props, path),
       'audio.play' ||
       'audio.preload' ||

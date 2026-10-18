@@ -67,3 +67,8 @@ Clipboard, haptic feedback and phone dialing use canonical action/capability IDs
 and stable errors. `MiniProgramVibrationEffect` defines bounded system effects;
 `normalizeMiniProgramPhoneNumber` rejects schemes, USSD and pause sequences.
 See the [Android system capability guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).
+
+
+## Shop location and directions
+
+See the [Android shop location guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_shop_location_directions.md) for setup, host acceptance, coordinate systems and provider limits.

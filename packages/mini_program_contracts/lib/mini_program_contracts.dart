@@ -52,3 +52,5 @@ export 'screen_format.dart';
 
 // SDK semver compatibility helpers.
 export 'sdk_version.dart';
+
+export 'mini_program_maps.dart';

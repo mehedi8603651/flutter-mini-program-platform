@@ -223,3 +223,5 @@ Stop, Cancel, host policy limits, and app-owned playback/upload/share references
 
 Clipboard, short system haptic feedback, and the user-controlled Android dialer
 are optional host capabilities. See [setup and authoring](docs/android_clipboard_vibration_phone.md).
+
+For optional shop pins and external directions, see the [Android maps guide](docs/android_shop_location_directions.md).

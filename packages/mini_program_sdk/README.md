@@ -253,3 +253,8 @@ endpoint has a separate denied-by-default policy. Clipboard read/write
 acceptance is independent, haptics use short system effects, and the dialer
 never places a call directly. Explicit gestures and foreground visibility are
 required. See [Android installation, policies and behavior](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).
+
+
+## Shop location and directions
+
+See the [Android shop location guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_shop_location_directions.md) for setup, host acceptance, coordinate systems and provider limits.

@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.16` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.12` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.14` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.13` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.17` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.13` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.15` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.14` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -120,6 +120,11 @@ These are system invariants, not preferences:
 26. Phone support opens a user-controlled system dialer with an ordinary number.
     Never place calls directly or request CALL_PHONE; reject schemes, USSD/MMI,
     pauses, extensions, and control characters at every boundary.
+27. External shop maps and directions require a foreground user gesture and
+    host-accepted operation policy. Mini-programs supply bounded coordinates,
+    coordinate system, name, and address; the host chooses compatible installed
+    map apps and encodes native links. Preserve the calling Activity and state,
+    never request device location or treat an accepted launch as a completed route.
 
 ## Repository Map
 
@@ -1896,6 +1901,20 @@ read/write flags; `vibration` and `phone` are independently accepted. No new
 Android permissions or Gradle dependencies are needed. See
 `docs/android_clipboard_vibration_phone.md` for setup and limits.
 
+Shop-location and directions contracts are in `mini_program_contracts/lib/mini_program_maps.dart`,
+authoring is under `features/maps/`, and SDK provider/policy interfaces are under
+`maps/mini_program_maps.dart`. Renderer actions and validation remain separate
+parts. The shared transactional system installer generates the maps-specific
+Dart/Kotlin templates under `capabilities/maps/`; install with
+`miniprogram host capability init maps --platform android`. The mini-program
+supplies only bounded known coordinates/name/address and an explicit coordinate
+system. Host code chooses supported external apps; accepted policy independently
+controls pins and directions. No device location permission, arbitrary Intent/URL,
+embedded map SDK, or silent coordinate-system conversion is allowed. Preserve the
+calling mini-program Activity/state when launching map UI. See
+`docs/android_shop_location_directions.md`. Maps require contracts `0.3.17`, UI
+`0.2.13`, SDK `0.6.15`, and tooling `0.7.14` or newer compatible versions.
+
 ## Release Conventions
 
 - Package changelogs describe the pending release before publishing.
@@ -1947,6 +1966,7 @@ Keep this section for unfinished platform work only. Remove items when completed
 6. Add a provider-neutral static artifact host checklist covering headers, cache control, immutable screen paths, latest manifest path, and local server testing.
 7. Add release automation that verifies MVP documentation presents static artifact opening plus optional publisher middle-server APIs without reintroducing provider coupling.
 8. Design and implement an optional one-window workspace only when that work is explicitly resumed; requirements are in `docs/android_in_app_workspace_future.md`. Live presentation transfer needs a separate state-handover design.
+9. Expand shop-maps physical-device coverage with real Amap/Baidu routing and recheck Google Maps walking mode after manual origin entry with location denied. The observed provider limitation and current validation coverage are in `docs/android_shop_location_directions.md`.
 
 ## Agent Start Checklist
 

@@ -1,5 +1,15 @@
 /// Stable error code constants shared across contracts, SDK, and hosts.
 abstract final class MiniProgramErrorCodes {
+  static const String mapsNotAccepted = 'maps_not_accepted';
+  static const String mapsUnavailable = 'maps_unavailable';
+  static const String mapsUserGestureRequired = 'maps_user_gesture_required';
+  static const String mapsForegroundRequired = 'maps_foreground_required';
+  static const String mapsInvalidRequest = 'maps_invalid_request';
+  static const String mapsCoordinateSystemUnsupported =
+      'maps_coordinate_system_unsupported';
+  static const String mapsRequestCancelled = 'maps_request_cancelled';
+  static const String mapsOperationFailed = 'maps_operation_failed';
+
   static const String clipboardNotAccepted = 'clipboard_not_accepted';
   static const String clipboardUnavailable = 'clipboard_unavailable';
   static const String clipboardUserGestureRequired =

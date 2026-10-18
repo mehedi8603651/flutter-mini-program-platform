@@ -21,6 +21,7 @@ import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
+import 'maps/mini_program_maps.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 /// Shared embedded runtime that existing apps configure once, then reuse to
@@ -47,6 +48,7 @@ class MiniProgramRuntime {
     this.clipboardProvider,
     this.vibrationProvider,
     this.phoneProvider,
+    this.mapsProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -74,6 +76,7 @@ class MiniProgramRuntime {
   final MiniProgramClipboardProvider? clipboardProvider;
   final MiniProgramVibrationProvider? vibrationProvider;
   final MiniProgramPhoneProvider? phoneProvider;
+  final MiniProgramMapsProvider? mapsProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -102,6 +105,7 @@ class MiniProgramRuntime {
     MiniProgramClipboardProvider? clipboardProvider,
     MiniProgramVibrationProvider? vibrationProvider,
     MiniProgramPhoneProvider? phoneProvider,
+    MiniProgramMapsProvider? mapsProvider,
     MiniProgramShareProvider? shareProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
@@ -132,6 +136,7 @@ class MiniProgramRuntime {
       clipboardProvider: clipboardProvider ?? this.clipboardProvider,
       vibrationProvider: vibrationProvider ?? this.vibrationProvider,
       phoneProvider: phoneProvider ?? this.phoneProvider,
+      mapsProvider: mapsProvider ?? this.mapsProvider,
       shareProvider: shareProvider ?? this.shareProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
@@ -212,6 +217,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.clipboardProvider != oldWidget.runtime.clipboardProvider ||
         runtime.vibrationProvider != oldWidget.runtime.vibrationProvider ||
         runtime.phoneProvider != oldWidget.runtime.phoneProvider ||
+        runtime.mapsProvider != oldWidget.runtime.mapsProvider ||
         runtime.shareProvider != oldWidget.runtime.shareProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=

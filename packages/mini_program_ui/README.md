@@ -610,3 +610,8 @@ haptics, and `Mp.phone.openDialer(number: '+15550101234')` to open a
 user-controlled dialer. These actions require a user gesture, foreground
 visibility, a host provider and accepted policy. Clipboard reads require
 separate acceptance. See [Android setup and limits](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_clipboard_vibration_phone.md).
+
+
+## Shop location and directions
+
+`Mp.maps.openLocation` displays a known shop; `Mp.maps.openDirections` opens driving or walking route planning in a host-approved external map app. See the [Android shop location guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_shop_location_directions.md) for setup, host acceptance, coordinate systems and provider limits.

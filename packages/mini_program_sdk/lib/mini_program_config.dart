@@ -21,6 +21,7 @@ import 'observability/sdk_logger.dart';
 import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
+import 'maps/mini_program_maps.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
@@ -44,6 +45,7 @@ class MiniProgramConfig {
     this.clipboardProvider,
     this.vibrationProvider,
     this.phoneProvider,
+    this.mapsProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -77,6 +79,7 @@ class MiniProgramConfig {
   final MiniProgramClipboardProvider? clipboardProvider;
   final MiniProgramVibrationProvider? vibrationProvider;
   final MiniProgramPhoneProvider? phoneProvider;
+  final MiniProgramMapsProvider? mapsProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -106,6 +109,7 @@ class MiniProgramConfig {
       clipboardProvider: clipboardProvider,
       vibrationProvider: vibrationProvider,
       phoneProvider: phoneProvider,
+      mapsProvider: mapsProvider,
       shareProvider: shareProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,

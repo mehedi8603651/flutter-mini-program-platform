@@ -232,6 +232,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramClipboardProvider? clipboardProvider,
   MiniProgramVibrationProvider? vibrationProvider,
   MiniProgramPhoneProvider? phoneProvider,
+  MiniProgramMapsProvider? mapsProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -251,6 +252,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     clipboardProvider: clipboardProvider,
     vibrationProvider: vibrationProvider,
     phoneProvider: phoneProvider,
+    mapsProvider: mapsProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,
@@ -356,6 +358,10 @@ MiniProgramPhonePolicy phonePolicyForMiniProgram(String appId) {
   return const MiniProgramPhonePolicy();
 }
 
+MiniProgramMapsPolicy mapsPolicyForMiniProgram(String appId) {
+  return const MiniProgramMapsPolicy();
+}
+
 MiniProgramSharePolicy sharePolicyForMiniProgram(String appId) {
   return const MiniProgramSharePolicy();
 }
@@ -422,6 +428,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramClipboardProvider? clipboardProvider,
   MiniProgramVibrationProvider? vibrationProvider,
   MiniProgramPhoneProvider? phoneProvider,
+  MiniProgramMapsProvider? mapsProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -448,6 +455,8 @@ MiniProgramConfig buildMiniProgramConfig({
     if (clipboardProvider != null) CapabilityIds.clipboardWrite,
     if (vibrationProvider != null) CapabilityIds.vibration,
     if (phoneProvider != null) CapabilityIds.phoneDialer,
+    if (mapsProvider != null) CapabilityIds.mapsOpenLocation,
+    if (mapsProvider != null) CapabilityIds.mapsOpenDirections,
     if (shareProvider != null) CapabilityIds.systemShare,
     if (displayBrightnessProvider != null) CapabilityIds.displayBrightness,
     if (mediaPlaybackProvider != null) CapabilityIds.mediaAudio,
@@ -480,6 +489,7 @@ MiniProgramConfig buildMiniProgramConfig({
     clipboardProvider: clipboardProvider,
     vibrationProvider: vibrationProvider,
     phoneProvider: phoneProvider,
+    mapsProvider: mapsProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,

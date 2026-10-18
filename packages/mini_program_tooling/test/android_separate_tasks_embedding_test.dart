@@ -85,7 +85,7 @@ dependencies:
         await read('lib/mini_program/mini_program.dart'),
         isNot(contains('android_tasks')),
       );
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.14'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.15'));
     },
   );
 
@@ -140,7 +140,7 @@ dependencies:
       expect(taskActivity, contains('"miniProgramTaskMain"'));
       expect(taskActivity, isNot(contains('finish()')));
       expect(await read('android/app/build.gradle.kts'), beforeGradle);
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.14'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.6.15'));
       expect(
         await read('lib/mini_program/README.md'),
         contains('navigationDelegate: openMiniProgramInAndroidTask'),
@@ -197,7 +197,7 @@ dependencies:
         await install('gallery');
         await install('microphone');
         await install('share');
-        for (final feature in ['clipboard', 'vibration', 'phone']) {
+        for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
           await install(feature);
         }
         if (!tasksFirst) await initialize(force: true);
@@ -210,6 +210,7 @@ dependencies:
           'Clipboard',
           'Vibration',
           'Phone',
+          'Maps',
           'Task',
         ]) {
           expect(
@@ -231,7 +232,7 @@ dependencies:
           await read('lib/mini_program/mini_program_host_setup.dart'),
           contains('resolvedCameraProvider'),
         );
-        for (final feature in ['clipboard', 'vibration', 'phone']) {
+        for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
           expect(
             await read('lib/mini_program/mini_program_host_setup.dart'),
             contains('${feature}Provider: resolved'),
@@ -246,7 +247,7 @@ dependencies:
         await install('gallery');
         await install('microphone');
         await install('share');
-        for (final feature in ['clipboard', 'vibration', 'phone']) {
+        for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
           await install(feature);
         }
         await initialize(force: true);

@@ -137,20 +137,21 @@ It owns its torch while scanning, returns inert data, never opens scanned
 URLs, and leaves every mini-program denied until its `permissions.qrScanner`
 policy is accepted.
 
-For Android apps that request system sharing, install the chooser adapter
-once:
+Install only the system adapters needed by the Android host:
 
 ```bash
 miniprogram host capability init share --platform android
 miniprogram host capability init clipboard --platform android
 miniprogram host capability init vibration --platform android
 miniprogram host capability init phone --platform android
+miniprogram host capability init maps --platform android
 ```
 
 These adapters add no Android permission or dependency. Clipboard reads require
 independent `permissions.clipboard.allowRead` acceptance; haptics honor system
-settings and phone support opens the user-controlled dialer. All require a
-foreground user gesture and accepted policy.
+settings and phone support opens the user-controlled dialer. Maps opens a known
+shop or directions in a host-approved installed map app, without location access.
+Each adapter requires a foreground user gesture and accepted policy.
 
 The share adapter adds no Android permission or dependency. It shares bounded text,
 HTTPS URLs, and app-owned opaque media through Android's chooser, reports only

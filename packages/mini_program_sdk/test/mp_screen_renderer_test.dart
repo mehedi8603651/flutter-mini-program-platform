@@ -17,6 +17,7 @@ part 'mp_screen_renderer_test/media_playback_tests.dart';
 part 'mp_screen_renderer_test/gallery_tests.dart';
 part 'mp_screen_renderer_test/microphone_tests.dart';
 part 'mp_screen_renderer_test/system_tests.dart';
+part 'mp_screen_renderer_test/maps_tests.dart';
 part 'mp_screen_renderer_test/test_fixtures.dart';
 
 void main() {
@@ -26,4 +27,5 @@ void main() {
   _mpGalleryTests();
   _mpMicrophoneTests();
   _mpSystemTests();
+  _mpMapsTests();
 }

@@ -10,6 +10,9 @@ abstract final class CapabilityIds {
   static const CapabilityId clipboardRead = 'clipboard.read';
   static const CapabilityId clipboardWrite = 'clipboard.write';
   static const CapabilityId vibration = 'vibration';
+  static const CapabilityId mapsOpenLocation = 'maps.open_location';
+  static const CapabilityId mapsOpenDirections = 'maps.open_directions';
+
   static const CapabilityId phoneDialer = 'phone.dialer';
 
   /// Host can provide publisher-owned or host-owned authentication support.
@@ -94,6 +97,8 @@ abstract final class CapabilityIds {
     clipboardWrite,
     vibration,
     phoneDialer,
+    mapsOpenLocation,
+    mapsOpenDirections,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(
