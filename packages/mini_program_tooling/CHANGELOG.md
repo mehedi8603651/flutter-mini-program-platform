@@ -1,3 +1,7 @@
+## 0.7.17
+
+- Generate mini-programs against UI `0.2.15` and embedded/separate-task hosts and preview hosts against SDK `0.6.17`, including all four standalone floating action button variants. Contracts remain `0.3.18`.
+
 ## 0.7.16
 
 - Generate mini-programs against UI `0.2.14` and hosts/preview hosts against SDK `0.6.16` and contracts `0.3.18`, including the three `Mp.dateTime` fields. Existing embedding and separate Android tasks remain supported.

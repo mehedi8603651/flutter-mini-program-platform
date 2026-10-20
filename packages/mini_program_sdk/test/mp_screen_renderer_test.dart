@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:collection';
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -19,6 +19,7 @@ part 'mp_screen_renderer_test/microphone_tests.dart';
 part 'mp_screen_renderer_test/system_tests.dart';
 part 'mp_screen_renderer_test/maps_tests.dart';
 part 'mp_screen_renderer_test/date_time_tests.dart';
+part 'mp_screen_renderer_test/floating_action_button_tests.dart';
 part 'mp_screen_renderer_test/test_fixtures.dart';
 
 void main() {
@@ -30,4 +31,5 @@ void main() {
   _mpSystemTests();
   _mpMapsTests();
   _mpDateTimeTests();
+  _mpFloatingActionButtonTests();
 }

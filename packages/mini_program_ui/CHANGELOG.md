@@ -1,3 +1,7 @@
+## 0.2.15
+
+- Add pure-Dart standalone `Mp.floatingActionButton(...)`, `.small`, `.large`, and `.extended` builders with existing actions, accessible names, disabled state, and optional colors. Position them with existing stack/positioned nodes; no page API changes or new dependencies.
+
 ## 0.2.14
 
 - Add pure-Dart `Mp.dateTime.dateField`, `timeField`, and `dateRangeField` with state keys, form names, literal date limits, initial selections, required/disabled options, and change actions. No new dependencies.

@@ -27,6 +27,17 @@ The SDK stays provider-neutral:
 - optional runtime data uses the artifact-owned `publisher_backend.json`
 - provider SDKs, database clients, payment clients, secrets, and business rules stay outside the host app
 
+## Floating action buttons
+
+The SDK renders the four standalone `Mp.floatingActionButton` variants with
+Material buttons, accessible names, disabled state, and existing action
+dispatch. Positioning uses existing stack/positioned nodes. Extended labels
+fit narrow bounds, pending actions ignore duplicate presses, and multiple
+buttons coexist during navigation without default Hero tags. No new
+dependency, native setup, or page parameter is required. See the
+[floating action button guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/floating_action_buttons.md).
+Requires UI `0.2.15` and SDK `0.6.17` or newer compatible versions.
+
 ## Date and time fields
 
 The SDK renders `Mp.dateTime.dateField`, `timeField`, and `dateRangeField`

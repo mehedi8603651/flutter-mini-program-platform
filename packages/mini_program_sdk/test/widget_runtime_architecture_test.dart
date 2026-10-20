@@ -26,6 +26,7 @@ void main() {
       'content.dart',
       'controls.dart',
       'feedback.dart',
+      'floating_action_button.dart',
       'forms/backend_search_input.dart',
       'forms/date_time.dart',
       'forms/form_container.dart',

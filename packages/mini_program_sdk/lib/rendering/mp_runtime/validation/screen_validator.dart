@@ -590,6 +590,11 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'floatingActionButton' => _parseFloatingActionButtonNode(
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'textInput' => _parseTextInputNode(
         type: type,
         props: props,

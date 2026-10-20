@@ -20,6 +20,7 @@ import 'features/content/image_models.dart';
 import 'features/content/image_nodes.dart';
 import 'features/content/text_nodes.dart';
 import 'features/controls/button_nodes.dart';
+import 'features/controls/floating_action_button_nodes.dart';
 import 'features/controls/list_tile_nodes.dart';
 import 'features/controls/selection_nodes.dart';
 import 'features/data/data_actions.dart';
@@ -66,6 +67,8 @@ export 'features/camera/camera_actions.dart' show MpCameraActions;
 export 'features/gallery/gallery_actions.dart' show MpGalleryActions;
 export 'features/microphone/microphone_actions.dart' show MpMicrophoneActions;
 export 'features/composition/action_actions.dart' show MpActionActions;
+export 'features/controls/floating_action_button_nodes.dart'
+    show MpFloatingActionButton;
 export 'features/data/data_actions.dart' show MpDataActions;
 export 'features/display/display_nodes.dart' show MpDisplay;
 export 'features/forms/form_models.dart' show MpOption;
@@ -88,6 +91,9 @@ export 'features/state/state_actions.dart' show MpStateActions;
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
+  /// Standalone standard, small, large, and extended floating action buttons.
+  static const floatingActionButton = MpFloatingActionButton();
+
   /// Pure-Dart date, time, and date-range selection fields.
   static const dateTime = MpDateTime();
 

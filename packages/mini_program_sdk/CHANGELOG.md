@@ -1,3 +1,8 @@
+## 0.6.17
+
+- Render standalone standard, small, large, and extended floating action buttons with strict JSON validation, accessible names, host-theme colors, and existing gesture-aware action dispatch.
+- Prevent duplicate taps while actions are pending, safely handle disposal, constrain extended labels on narrow screens, and disable default Hero tags so several buttons coexist during navigation. Existing page and Android task integrations remain unchanged; no new dependencies or permissions.
+
 ## 0.6.16
 
 - Render state-bound date, time, and date-range fields using Flutter's built-in Material pickers, with strict JSON/value validation and existing form submission support.

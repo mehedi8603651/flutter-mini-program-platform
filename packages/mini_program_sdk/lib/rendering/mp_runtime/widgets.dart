@@ -147,6 +147,10 @@ class _MpNodeView extends StatelessWidget {
         child: _MpNodeView(node: node.children.single, bindings: bindings),
       ),
       'iconButton' => _MpIconButton(node: node, bindings: bindings),
+      'floatingActionButton' => _MpFloatingActionButton(
+        node: node,
+        bindings: bindings,
+      ),
       'textInput' => _MpTextInputField(node: node, multiline: false),
       'searchInput' => _MpSearchInputField(node: node, bindings: bindings),
       'searchField' => _MpStateSearchField(node: node, bindings: bindings),

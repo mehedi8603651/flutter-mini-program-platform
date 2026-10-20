@@ -28,9 +28,9 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.18` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.14` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.16` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.16` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_ui` | `0.2.15` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.17` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.17` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -1474,10 +1474,11 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 73 unique SDK runtime node types. There are
-77 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 79 public builder entry points when the two aliases are
-also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
+The authoring API currently maps to 74 unique SDK runtime node types. There are
+81 distinct public constructors when the five `Mp.skeleton` variants and four
+`Mp.floatingActionButton` variants are counted separately, and 83 public builder
+entry points when the two aliases are also counted. Actions such as
+`Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
 `Mp.qr.scan`, `Mp.audio.*`, and `Mp.video.*` are not widgets and are excluded
 from these totals.
@@ -1539,6 +1540,7 @@ Inputs and controls:
 - `Mp.secondaryButton`: renders the standard lower-emphasis command button.
 - `Mp.button`: renders a fully styled text command button with stable dimensions.
 - `Mp.iconButton`: renders a semantic icon command with explicit size and decoration.
+- `Mp.floatingActionButton`, `.small`, `.large`, and `.extended`: render standalone Material action buttons; position them with existing stack/positioned nodes.
 - `Mp.tap`: makes an arbitrary child subtree a semantic action target without changing its visual structure.
 - `Mp.listTile`: renders a scan-friendly row with title, subtitle, leading/trailing content, and optional action.
 - `Mp.textInput`: edits one single-line form/state value.
@@ -1927,6 +1929,14 @@ after quota-enforced writes. Fields own their exact dialog routes and reject sta
 results after backgrounding, disposal, app/store/key/config changes, or external
 state edits. Dates/times are civil values with no timezone conversion. See
 `docs/date_time_selection_fields.md` for authoring and lifecycle behavior.
+
+Floating action button authoring lives in `features/controls/floating_action_button_nodes.dart`.
+The SDK validator and widget are renderer parts named `floating_action_button.dart`.
+All four variants share one strict `floatingActionButton` node. Keep action
+dispatch gesture-aware, guard duplicate taps while pending, and disable default
+Hero tags so several buttons coexist. Extended text must fit bounded narrow
+layouts. Do not add page API or native setup for these standalone controls.
+See `docs/floating_action_buttons.md`.
 
 ## Release Conventions
 

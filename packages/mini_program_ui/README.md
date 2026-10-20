@@ -20,6 +20,15 @@ organized into dependency-free core values, program assembly, and
 feature-owned node/action builders. The temporary legacy `src` compatibility
 re-exports were removed in `0.2.0`; direct internal imports are unsupported.
 
+## Floating action buttons
+
+Standalone `Mp.floatingActionButton(...)`, `.small`, `.large`, and `.extended`
+builders dispatch existing `MpAction`s. Position them with `Mp.stack` and
+`Mp.positioned`. Icons, accessible labels, disabled state, and optional colors
+are validated in pure Dart; no rendering framework dependency is added.
+Requires SDK `0.6.17` or newer compatible versions. See the
+[floating action button guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/floating_action_buttons.md).
+
 ## Program Shape
 
 ```dart
