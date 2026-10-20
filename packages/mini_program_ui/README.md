@@ -20,6 +20,18 @@ organized into dependency-free core values, program assembly, and
 feature-owned node/action builders. The temporary legacy `src` compatibility
 re-exports were removed in `0.2.0`; direct internal imports are unsupported.
 
+## App bars
+
+`Mp.appBar(...)` lets mini-program developers own their header's title, leading
+control, actions, colors, alignment, sizing, spacing, and elevation. It is a
+standalone pure-Dart builder placed with the existing page and column layouts.
+Use existing `MpAction`s for toolbar buttons. Uncolored text and icons inherit
+toolbar defaults; explicit child styling takes priority.
+
+UI `0.3.0` removes `Mp.topBar` without an alias. Rebuild earlier test artifacts
+and use SDK `0.7.0`. See the [app bar guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/app_bars.md)
+for examples, layout bounds, and host setup.
+
 ## Floating action buttons
 
 Standalone `Mp.floatingActionButton(...)`, `.small`, `.large`, and `.extended`
@@ -61,7 +73,7 @@ MpNode buildCouponHome() {
   return Mp.page(
     child: Mp.column(
       children: <MpNode>[
-        Mp.topBar(
+        Mp.appBar(
           leading: Mp.icon('coupon', semanticLabel: 'Coupons'),
           title: Mp.heading('Coupon Center'),
           actions: <MpNode>[
@@ -94,7 +106,7 @@ MpNode buildCouponHome() {
 ```
 
 Use `Mp.page` for new full-screen mini-program screens. It owns the safe area
-and avoids legacy outer scroll padding. Keep `Mp.topBar` outside the expanded
+and avoids legacy outer scroll padding. Keep `Mp.appBar` outside the expanded
 scrolling body so headers do not move or compress when the keyboard opens.
 
 Configure responsive thresholds once at the screen root. Values are Flutter

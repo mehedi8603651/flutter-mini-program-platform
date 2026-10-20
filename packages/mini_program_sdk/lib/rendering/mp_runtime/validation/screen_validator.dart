@@ -445,7 +445,7 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
-      'topBar' => _parseTopBarNode(
+      'appBar' => _parseAppBarNode(
         props: props,
         children: parsedChildren,
         path: path,

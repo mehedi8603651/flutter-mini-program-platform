@@ -20,6 +20,7 @@ part 'mp_screen_renderer_test/system_tests.dart';
 part 'mp_screen_renderer_test/maps_tests.dart';
 part 'mp_screen_renderer_test/date_time_tests.dart';
 part 'mp_screen_renderer_test/floating_action_button_tests.dart';
+part 'mp_screen_renderer_test/app_bar_tests.dart';
 part 'mp_screen_renderer_test/test_fixtures.dart';
 
 void main() {
@@ -32,4 +33,5 @@ void main() {
   _mpMapsTests();
   _mpDateTimeTests();
   _mpFloatingActionButtonTests();
+  _mpAppBarTests();
 }

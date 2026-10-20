@@ -277,7 +277,9 @@ class _MpIconButtonState extends State<_MpIconButton> {
                 size: (node.props['iconSize'] as num).toDouble(),
                 color: _mpColor(
                   node.props['color'] as String?,
-                  fallback: const Color(0xFF9CA3AF),
+                  fallback:
+                      _MpAppBarScope.maybeOf(context)?.foregroundColor ??
+                      const Color(0xFF9CA3AF),
                 ),
               ),
             ),

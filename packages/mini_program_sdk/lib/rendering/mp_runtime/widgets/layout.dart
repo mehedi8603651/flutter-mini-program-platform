@@ -124,55 +124,6 @@ class _MpConstrainedContent extends StatelessWidget {
   }
 }
 
-class _MpTopBar extends StatelessWidget {
-  const _MpTopBar({required this.node, required this.bindings});
-
-  final _MpNode node;
-  final _MpRenderBindings bindings;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasLeading = _bool(node, 'hasLeading');
-    final actionCount = _int(node, 'actionCount', fallback: 0);
-    final spacing = _double(node, 'spacing', fallback: 8);
-    var index = 0;
-    final leading = hasLeading ? node.children[index++] : null;
-    final title = node.children[index++];
-    final actions = node.children.skip(index).take(actionCount).toList();
-    final children = <Widget>[
-      if (leading != null) ...<Widget>[
-        _MpNodeView(node: leading, bindings: bindings),
-        SizedBox(width: spacing),
-      ],
-      Expanded(
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: _MpNodeView(node: title, bindings: bindings),
-        ),
-      ),
-      for (final action in actions) ...<Widget>[
-        SizedBox(width: spacing),
-        _MpNodeView(node: action, bindings: bindings),
-      ],
-    ];
-    return SizedBox(
-      height: _double(node, 'height', fallback: 64),
-      child: ColoredBox(
-        color: _mpColor(
-          node.props['backgroundColor'] as String?,
-          fallback: Colors.transparent,
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: _double(node, 'paddingHorizontal', fallback: 12),
-          ),
-          child: Center(child: Row(children: children)),
-        ),
-      ),
-    );
-  }
-}
-
 class _MpColumn extends StatelessWidget {
   const _MpColumn({required this.node, required this.bindings});
 

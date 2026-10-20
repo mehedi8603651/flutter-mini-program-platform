@@ -17,6 +17,7 @@ void main() {
         .toSet();
 
     expect(relativePaths, <String>{
+      'app_bar.dart',
       'backend/auth_builder.dart',
       'backend/helpers.dart',
       'backend/pagination.dart',

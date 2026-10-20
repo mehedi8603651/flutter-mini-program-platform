@@ -279,15 +279,16 @@ class _MpIcon extends StatelessWidget {
       name: _string(node, 'name'),
       size: _double(node, 'size', fallback: 20),
       color: node.props['color'] == null
-          ? _mpThemeToken(
-              bindings.theme,
-              'icon',
-              fallback: _mpThemeToken(
-                bindings.theme,
-                'textMuted',
-                fallback: const Color(0xFF4B5563),
-              ),
-            )
+          ? _MpAppBarScope.maybeOf(context)?.foregroundColor ??
+                _mpThemeToken(
+                  bindings.theme,
+                  'icon',
+                  fallback: _mpThemeToken(
+                    bindings.theme,
+                    'textMuted',
+                    fallback: const Color(0xFF4B5563),
+                  ),
+                )
           : _mpColor(
               node.props['color'] as String?,
               fallback: const Color(0xFF4B5563),

@@ -2,11 +2,11 @@ import 'package:mini_program_ui/mini_program_ui.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('page and topBar serialize explicit responsive screen ownership', () {
+  test('page and appBar serialize explicit responsive screen ownership', () {
     expect(
       Mp.page(
         backgroundColor: '#FF000000',
-        child: Mp.topBar(
+        child: Mp.appBar(
           leading: Mp.icon('arrowBack', semanticLabel: 'Back'),
           title: Mp.text('Editor', maxLines: 1, overflow: 'ellipsis'),
           actions: <MpNode>[
@@ -26,12 +26,15 @@ void main() {
         },
         'children': <Object?>[
           <String, Object?>{
-            'type': 'topBar',
+            'type': 'appBar',
             'props': <String, Object?>{
               'actionCount': 1,
+              'centerTitle': false,
+              'elevation': 0,
               'backgroundColor': '#FF303030',
               'hasLeading': true,
               'height': 64,
+              'leadingWidth': 56,
               'paddingHorizontal': 12,
               'spacing': 8,
             },
@@ -83,13 +86,13 @@ void main() {
     );
   });
 
-  test('topBar rejects dimensions and excessive actions', () {
+  test('appBar rejects dimensions and excessive actions', () {
     expect(
-      () => Mp.topBar(title: Mp.text('Title'), height: 47),
+      () => Mp.appBar(title: Mp.text('Title'), height: 47),
       throwsArgumentError,
     );
     expect(
-      () => Mp.topBar(
+      () => Mp.appBar(
         title: Mp.text('Title'),
         actions: List<MpNode>.filled(5, Mp.text('Action')),
       ),

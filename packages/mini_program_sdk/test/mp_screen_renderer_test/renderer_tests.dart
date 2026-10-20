@@ -2,7 +2,7 @@ part of '../mp_screen_renderer_test.dart';
 
 void _mpScreenRendererTests() {
   group('MpScreenRenderer', () {
-    testWidgets('page owns full-bleed layout and topBar stays responsive', (
+    testWidgets('page owns full-bleed layout and appBar stays responsive', (
       tester,
     ) async {
       final screenJson = _jsonMap(
@@ -10,7 +10,7 @@ void _mpScreenRendererTests() {
           screens: <String, MpScreenBuilder>{
             'coupon_home': () => Mp.page(
               backgroundColor: '#FF000000',
-              child: Mp.topBar(
+              child: Mp.appBar(
                 leading: Mp.icon('arrowBack', semanticLabel: 'Back'),
                 title: Mp.text(
                   'A deliberately long editor title',
@@ -48,7 +48,14 @@ void _mpScreenRendererTests() {
         ),
       );
 
-      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SingleChildScrollView &&
+              widget.scrollDirection == Axis.vertical,
+        ),
+        findsNothing,
+      );
       expect(find.text('SAVE'), findsOneWidget);
       expect(tester.takeException(), isNull);
       expect(tester.getTopLeft(find.byType(ColoredBox).last).dx, 0);

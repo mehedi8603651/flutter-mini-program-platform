@@ -79,60 +79,6 @@ MpNode buildConstrainedContentNode({
   );
 }
 
-MpNode buildTopBarNode({
-  required MpNode title,
-  MpNode? leading,
-  List<MpNode> actions = const <MpNode>[],
-  num height = 64,
-  num paddingHorizontal = 12,
-  num spacing = 8,
-  String? backgroundColor,
-}) {
-  if (!height.isFinite || height < 48 || height > 120) {
-    throw ArgumentError.value(
-      height,
-      'height',
-      'Top-bar height must be between 48 and 120.',
-    );
-  }
-  if (!paddingHorizontal.isFinite ||
-      paddingHorizontal < 0 ||
-      paddingHorizontal > 48) {
-    throw ArgumentError.value(
-      paddingHorizontal,
-      'paddingHorizontal',
-      'Top-bar horizontal padding must be between 0 and 48.',
-    );
-  }
-  if (!spacing.isFinite || spacing < 0 || spacing > 24) {
-    throw ArgumentError.value(
-      spacing,
-      'spacing',
-      'Top-bar spacing must be between 0 and 24.',
-    );
-  }
-  if (actions.length > 4) {
-    throw ArgumentError.value(
-      actions,
-      'actions',
-      'Mp.topBar supports at most four actions.',
-    );
-  }
-  return MpNode(
-    'topBar',
-    props: <String, Object?>{
-      'actionCount': actions.length,
-      if (backgroundColor != null)
-        'backgroundColor': widgetColor(backgroundColor, 'backgroundColor'),
-      'hasLeading': leading != null,
-      'height': height,
-      'paddingHorizontal': paddingHorizontal,
-      'spacing': spacing,
-    },
-    children: <MpNode>[if (leading != null) leading, title, ...actions],
-  );
-}
-
 MpNode buildSizedBoxNode({num? width, num? height}) {
   if (width == null && height == null) {
     throw ArgumentError('Provide width, height, or both for Mp.sizedBox.');

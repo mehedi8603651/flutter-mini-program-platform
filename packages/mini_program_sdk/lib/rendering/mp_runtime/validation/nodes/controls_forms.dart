@@ -151,7 +151,8 @@ extension _MpControlFormNodeValidation on MpScreenValidator {
         'action': _parseAction(props['action'], path: '$path.props.action'),
         'size': size,
         'iconSize': iconSize,
-        'color': _requiredHexColor(props, 'color', path: '$path.props'),
+        if (props.containsKey('color'))
+          'color': _requiredHexColor(props, 'color', path: '$path.props'),
         'backgroundColor': _requiredHexColor(
           props,
           'backgroundColor',

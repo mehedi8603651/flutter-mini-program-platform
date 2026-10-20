@@ -8,10 +8,11 @@ Host applications should use the supported package barrel:
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 ```
 
-The `0.6.x` line uses feature-oriented runtime internals while preserving
-public APIs, historical public import paths, and wire formats.
+The `0.7.x` line adds mini-program-owned Material app bars and removes the old
+`topBar` node. Rebuild those test artifacts with UI `0.3.0`. Historical public
+SDK import paths remain supported.
 
-New screens can use a root `Mp.page` plus `Mp.topBar` to opt into explicit
+New screens can use a root `Mp.page` plus `Mp.appBar` to opt into explicit
 safe-area ownership and stable fixed headers. Existing artifacts retain the
 legacy outer padding and scrolling behavior.
 
@@ -26,6 +27,19 @@ The SDK stays provider-neutral:
 - artifact opening uses `MiniProgramEndpoint.public(apiBaseUri: artifactBaseUrl)`
 - optional runtime data uses the artifact-owned `publisher_backend.json`
 - provider SDKs, database clients, payment clients, secrets, and business rules stay outside the host app
+
+## App bars
+
+The SDK validates and renders `Mp.appBar` content using Flutter's Material
+`AppBar`. Mini-programs choose their own title, leading control, action widgets,
+and styling. The standalone node fits existing layouts, inherits host toolbar
+defaults, and bounds long action groups with horizontal scrolling. Back and
+drawer controls are explicit mini-program actions; the bar does not infer them
+from a surrounding host Scaffold or Navigator.
+
+For mini-program-owned headers, set `showAppBar: false` in the shared host launch
+options (including separate Android tasks), or directly on `MiniProgramPage`.
+See the [app bar guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/app_bars.md).
 
 ## Floating action buttons
 

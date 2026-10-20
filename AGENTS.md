@@ -28,9 +28,9 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.18` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.15` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.17` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.17` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_ui` | `0.3.0` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.7.0` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.18` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -1488,7 +1488,7 @@ Layout and structure:
 - `Mp.page`: owns a screen's safe area and background without legacy outer padding; it is valid only at the root.
 - `Mp.responsive`: selects compact, medium, or expanded content from local available width and inherited page breakpoints.
 - `Mp.constrainedContent`: centers content under a maximum logical width with bounded horizontal padding.
-- `Mp.topBar`: reserves bounded leading, title, and action regions for stable compact screen headers.
+- `Mp.appBar`: renders a standalone Material app bar with custom title/leading/action slots, colors, alignment, sizing, spacing, and elevation; mini-programs own its UI.
 - `Mp.column`: lays out children vertically in source order.
 - `Mp.row`: lays out children horizontally in source order.
 - `Mp.sizedBox`: reserves a validated fixed width, height, or both.
@@ -1937,6 +1937,16 @@ dispatch gesture-aware, guard duplicate taps while pending, and disable default
 Hero tags so several buttons coexist. Extended text must fit bounded narrow
 layouts. Do not add page API or native setup for these standalone controls.
 See `docs/floating_action_buttons.md`.
+
+App-bar authoring lives in `mini_program_ui/lib/src/features/layout/app_bar_nodes.dart`.
+The SDK validator and widget are renderer parts named `app_bar.dart`. `Mp.appBar`
+replaces the removed `Mp.topBar` and old `topBar` JSON completely in UI `0.3.0` /
+SDK `0.7.0`; rebuild test artifacts rather than adding compatibility aliases.
+The node uses the existing layout and explicit action controls. Keep Material
+toolbar sizing bounded, narrow action groups horizontally scrollable, safe-area
+ownership outside the toolbar, and automatic host back/drawer controls disabled.
+Unstyled toolbar text/icons inherit scoped defaults; explicit child styling and
+normal defaults outside the bar remain intact. See `docs/app_bars.md`.
 
 ## Release Conventions
 

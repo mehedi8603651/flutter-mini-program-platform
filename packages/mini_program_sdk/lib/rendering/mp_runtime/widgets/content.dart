@@ -14,6 +14,10 @@ class _MpText extends StatelessWidget {
         ? const Color(0xFF111827)
         : const Color(0xFF263238);
     final defaultHeight = isHeading ? 1.2 : 1.35;
+    final toolbar = _MpAppBarScope.maybeOf(context);
+    final toolbarTextStyle = toolbar == null || isHeading
+        ? null
+        : DefaultTextStyle.of(context).style;
     final explicitProps = Set<String>.from(
       node.props['_explicitTextProps'] as List? ?? const <String>[],
     );
@@ -25,17 +29,17 @@ class _MpText extends StatelessWidget {
     final resolvedColor = explicitProps.contains('color')
         ? _mpColor(node.props['color'] as String?, fallback: defaultColor)
         : variantColor == null
-        ? defaultColor
+        ? toolbar?.foregroundColor ?? defaultColor
         : _mpThemeColor(variantColor, bindings.theme, fallback: defaultColor);
     final resolvedSize = explicitProps.contains('size')
         ? _optionalDouble(node, 'size') ?? _defaultTextSize(node)
-        : variant?.size ?? _defaultTextSize(node);
+        : variant?.size ?? toolbarTextStyle?.fontSize ?? _defaultTextSize(node);
     final resolvedWeight = explicitProps.contains('weight')
         ? _string(node, 'weight')
         : variant?.weight ?? _string(node, 'weight');
     final resolvedHeight = explicitProps.contains('lineHeight')
         ? _optionalDouble(node, 'lineHeight') ?? defaultHeight
-        : variant?.lineHeight ?? defaultHeight;
+        : variant?.lineHeight ?? toolbarTextStyle?.height ?? defaultHeight;
     return Text(
       data,
       maxLines: node.props['maxLines'] as int?,
@@ -47,7 +51,9 @@ class _MpText extends StatelessWidget {
       style: TextStyle(
         color: resolvedColor,
         fontSize: resolvedSize,
-        fontWeight: _mpFontWeight(resolvedWeight),
+        fontWeight: !explicitProps.contains('weight') && variant?.weight == null
+            ? toolbarTextStyle?.fontWeight ?? _mpFontWeight(resolvedWeight)
+            : _mpFontWeight(resolvedWeight),
         height: resolvedHeight,
       ),
     );

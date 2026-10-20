@@ -30,6 +30,7 @@ import 'features/file/file_actions.dart';
 import 'features/flashlight/flashlight_actions.dart';
 import 'features/forms/form_models.dart';
 import 'features/forms/form_nodes.dart';
+import 'features/layout/app_bar_nodes.dart';
 import 'features/layout/layout_nodes.dart';
 import 'features/layout/responsive_models.dart';
 import 'features/lazy/lazy_nodes.dart';
@@ -554,23 +555,37 @@ abstract final class Mp {
     paddingHorizontal: paddingHorizontal,
   );
 
-  /// Creates a compact responsive top bar with a flexible title slot.
-  static MpNode topBar({
+  /// Creates a standalone Material-style app bar with custom content slots.
+  ///
+  /// Leading and action controls use existing Mp widgets and actions. No back
+  /// or menu button is inserted automatically. Keep the bar outside scrolling
+  /// content when it should stay fixed; the surrounding layout owns safe areas.
+  static MpNode appBar({
     required MpNode title,
     MpNode? leading,
     List<MpNode> actions = const <MpNode>[],
+    String? backgroundColor,
+    String? foregroundColor,
+    String? shadowColor,
+    bool centerTitle = false,
     num height = 64,
+    num leadingWidth = 56,
     num paddingHorizontal = 12,
     num spacing = 8,
-    String? backgroundColor,
-  }) => buildTopBarNode(
+    num elevation = 0,
+  }) => buildAppBarNode(
     title: title,
     leading: leading,
     actions: actions,
+    backgroundColor: backgroundColor,
+    foregroundColor: foregroundColor,
+    shadowColor: shadowColor,
+    centerTitle: centerTitle,
     height: height,
+    leadingWidth: leadingWidth,
     paddingHorizontal: paddingHorizontal,
     spacing: spacing,
-    backgroundColor: backgroundColor,
+    elevation: elevation,
   );
 
   /// Shows or hides [child] while optionally preserving layout/state.
@@ -1060,7 +1075,7 @@ abstract final class Mp {
     required MpAction action,
     num size = 48,
     num iconSize = 24,
-    String color = '#9CA3AF',
+    String? color,
     String backgroundColor = '#00000000',
     String borderColor = '#00000000',
     num borderWidth = 0,

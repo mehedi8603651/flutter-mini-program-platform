@@ -1,3 +1,8 @@
+## 0.7.0
+
+- Breaking: remove `topBar` JSON and its renderer; use artifacts rebuilt with UI `0.3.0` and the new `appBar` node.
+- Render standalone Material app bars with mini-program-owned content and styling, scoped text/icon defaults, bounded scrollable actions on narrow screens, and strict metadata/value validation. Do not imply host back/drawer controls or add status-bar padding; existing navigation and Android task handling remain independent.
+
 ## 0.6.17
 
 - Render standalone standard, small, large, and extended floating action buttons with strict JSON validation, accessible names, host-theme colors, and existing gesture-aware action dispatch.

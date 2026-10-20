@@ -1,3 +1,8 @@
+## 0.3.0
+
+- Breaking: replace `Mp.topBar` with the standalone pure-Dart `Mp.appBar` builder. Rebuild mini-program artifacts and upgrade hosts to SDK `0.7.0`; the old `topBar` node is removed without an alias.
+- Add custom title, leading and action content, centered titles, literal colors, toolbar/leading sizing, spacing, and elevation. Icon buttons without an explicit color inherit toolbar foreground styling while retaining their usual default outside an app bar.
+
 ## 0.2.15
 
 - Add pure-Dart standalone `Mp.floatingActionButton(...)`, `.small`, `.large`, and `.extended` builders with existing actions, accessible names, disabled state, and optional colors. Position them with existing stack/positioned nodes; no page API changes or new dependencies.

@@ -2,9 +2,9 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.17` generates mini-program projects against
-`mini_program_ui: ^0.2.15` and Flutter host projects against
-`mini_program_sdk: ^0.6.17` and `mini_program_contracts: ^0.3.18`.
+Tooling `0.7.18` generates mini-program projects against
+`mini_program_ui: ^0.3.0` and Flutter host projects against
+`mini_program_sdk: ^0.7.0` and `mini_program_contracts: ^0.3.18`.
 Standard in-host navigation and optional `--android-separate-tasks` are supported.
 
 The CLI supports the current MVP architecture:
