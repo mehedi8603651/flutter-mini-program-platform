@@ -1,3 +1,9 @@
+## 0.6.16
+
+- Render state-bound date, time, and date-range fields using Flutter's built-in Material pickers, with strict JSON/value validation and existing form submission support.
+- Keep confirmed selections across retained Android task switches. Cancellation, backgrounding, disposal, owner/configuration changes, and external state edits invalidate owned dialogs and stale results. Enforce live-state quotas before updating forms or running change actions.
+- Store timezone-free `YYYY-MM-DD`, `HH:mm`, and `{start, end}` values while formatting selections through host Material localizations. No native bridge, permissions, or new dependencies.
+
 ## 0.6.15
 
 - Add optional, default-denied external map providers and per-app policy. Enforce strict destination validation, user gestures, foreground routes, safe async completion, and atomic result state.

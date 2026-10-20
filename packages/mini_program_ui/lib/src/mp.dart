@@ -1,4 +1,5 @@
 import 'features/maps/maps_actions.dart';
+import 'features/date_time/date_time_nodes.dart';
 import 'features/system/system_actions.dart';
 import 'core/mp_action.dart';
 import 'core/mp_node.dart';
@@ -49,6 +50,7 @@ import 'features/theme/theme_nodes.dart';
 
 export 'features/maps/maps_actions.dart'
     show MpMapsActions, MpMapCoordinateSystem, MpMapTravelMode;
+export 'features/date_time/date_time_nodes.dart' show MpDateTime;
 export 'features/system/system_actions.dart'
     show
         MpClipboardActions,
@@ -86,6 +88,9 @@ export 'features/state/state_actions.dart' show MpStateActions;
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
+  /// Pure-Dart date, time, and date-range selection fields.
+  static const dateTime = MpDateTime();
+
   /// Shop pins and route planning in a host-approved external map app.
   static const maps = MpMapsActions();
 

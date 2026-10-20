@@ -1,3 +1,7 @@
+## 0.7.16
+
+- Generate mini-programs against UI `0.2.14` and hosts/preview hosts against SDK `0.6.16` and contracts `0.3.18`, including the three `Mp.dateTime` fields. Existing embedding and separate Android tasks remain supported.
+
 ## 0.7.15
 
 - List `maps` in `host capability init --help` alongside the other supported

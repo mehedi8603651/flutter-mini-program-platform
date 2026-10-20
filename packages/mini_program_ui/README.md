@@ -121,6 +121,16 @@ Mp.grid(
 );
 ```
 
+## Date and time selection
+
+Use `Mp.dateTime.dateField`, `Mp.dateTime.timeField`, or
+`Mp.dateTime.dateRangeField` with a `stateKey` and `label`. Optional initial
+values use `YYYY-MM-DD`, `HH:mm`, or `{start, end}` dates. Fields integrate with
+`Mp.form`, support required/disabled controls, and preserve selections on cancel.
+Authoring stays pure Dart; the host SDK uses Flutter's built-in pickers.
+See [date/time fields](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/date_time_selection_fields.md) for complete
+examples, date bounds, form names, and state/lifecycle behavior.
+
 ## Auth
 
 ```dart

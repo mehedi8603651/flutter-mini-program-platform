@@ -54,3 +54,6 @@ export 'screen_format.dart';
 export 'sdk_version.dart';
 
 export 'mini_program_maps.dart';
+
+// Canonical civil date, clock time, and inclusive date-range values.
+export 'mini_program_date_time.dart';

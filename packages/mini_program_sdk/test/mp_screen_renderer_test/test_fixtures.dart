@@ -925,6 +925,9 @@ class _TestJsonAssetSource implements MiniProgramJsonAssetSource {
 Widget _scopedApp({
   required MiniProgramBackendStore backendStore,
   required Map<String, dynamic> screenJson,
+  String miniProgramId = 'coupon',
+  bool isForeground = true,
+  bool? alwaysUse24HourFormat,
   MiniProgramBackendConnector? backendConnector,
   MiniProgramLocationProvider? locationProvider,
   MiniProgramLocationPolicy locationPolicy = const MiniProgramLocationPolicy(),
@@ -946,8 +949,17 @@ Widget _scopedApp({
   Map<String, dynamic> routeParams = const <String, dynamic>{},
 }) {
   return MaterialApp(
+    builder: alwaysUse24HourFormat == null
+        ? null
+        : (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(alwaysUse24HourFormat: alwaysUse24HourFormat),
+            child: child!,
+          ),
     home: MiniProgramSdkScope(
-      miniProgramId: 'coupon',
+      miniProgramId: miniProgramId,
+      isForeground: isForeground,
       hostBridge: _NoopHostBridge(),
       capabilityRegistry: CapabilityRegistry(const <CapabilityId>[
         CapabilityIds.auth,

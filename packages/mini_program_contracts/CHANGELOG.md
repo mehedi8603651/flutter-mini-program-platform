@@ -1,3 +1,7 @@
+## 0.3.18
+
+- Add strict, shared civil-date, 24-hour time, and inclusive date-range value validation. Reject normalized invalid dates, malformed times, and reversed ranges.
+
 ## 0.3.17
 
 - Add known map destination contracts, explicit coordinate systems, driving/walking modes, and stable map action/capability/error names.

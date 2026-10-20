@@ -18,6 +18,7 @@ runtime/tooling packages.
 - SDK semver compatibility helpers
 - stable error codes and feature flag keys
 - provider-neutral file-transfer progress, capability, and error contracts
+- strict civil-date, clock-time, and inclusive date-range value validation
 
 ## Who should depend on it
 

@@ -27,6 +27,16 @@ The SDK stays provider-neutral:
 - optional runtime data uses the artifact-owned `publisher_backend.json`
 - provider SDKs, database clients, payment clients, secrets, and business rules stay outside the host app
 
+## Date and time fields
+
+The SDK renders `Mp.dateTime.dateField`, `timeField`, and `dateRangeField`
+with Flutter's built-in Material dialogs, without new packages or native
+permissions. Selections use canonical civil date/time values in app-owned state
+and integrate with existing form validation/submission. Owned dialogs reject
+stale results after backgrounding, disposal, owner changes, or external edits.
+See [date/time fields](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/date_time_selection_fields.md) for setup and
+behavior. This requires UI `0.2.14`, SDK `0.6.16`, and contracts `0.3.18` or newer.
+
 ## Static Opening
 
 ```dart

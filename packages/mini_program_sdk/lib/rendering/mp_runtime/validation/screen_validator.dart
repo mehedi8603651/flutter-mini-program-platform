@@ -622,6 +622,12 @@ class MpScreenValidator {
         children: parsedChildren,
         path: path,
       ),
+      'dateField' || 'timeField' || 'dateRangeField' => _parseDateTimeFieldNode(
+        type: type,
+        props: props,
+        children: parsedChildren,
+        path: path,
+      ),
       'checkbox' => _parseCheckboxNode(
         props: props,
         children: parsedChildren,

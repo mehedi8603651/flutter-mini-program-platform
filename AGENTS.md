@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.17` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.2.13` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.6.15` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.15` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.18` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.2.14` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.6.16` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.16` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -1474,9 +1474,9 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 70 unique SDK runtime node types. There are
-74 distinct public constructors when the five `Mp.skeleton` variants are
-counted separately, and 76 public builder entry points when the two aliases are
+The authoring API currently maps to 73 unique SDK runtime node types. There are
+77 distinct public constructors when the five `Mp.skeleton` variants are
+counted separately, and 79 public builder entry points when the two aliases are
 also counted. Actions such as `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
 `Mp.qr.scan`, `Mp.audio.*`, and `Mp.video.*` are not widgets and are excluded
@@ -1549,6 +1549,9 @@ Inputs and controls:
 - `Mp.dropdown`: selects one value from validated labeled options.
 - `Mp.checkbox`: edits a boolean form/state value.
 - `Mp.radioGroup`: selects one value from a visible group of labeled options.
+- `Mp.dateTime.dateField`: selects a Gregorian date using a host Material calendar dialog.
+- `Mp.dateTime.timeField`: selects a clock time using a host Material time dialog.
+- `Mp.dateTime.dateRangeField`: selects an inclusive start/end date range.
 - `Mp.form`: groups controls under a form identifier for validation and submission.
 - `Mp.formSubmit`: validates and submits a form through its configured action behavior.
 
@@ -1914,6 +1917,16 @@ embedded map SDK, or silent coordinate-system conversion is allowed. Preserve th
 calling mini-program Activity/state when launching map UI. See
 `docs/android_shop_location_directions.md`. Maps require contracts `0.3.17`, UI
 `0.2.13`, SDK `0.6.15`, and tooling `0.7.14` or newer compatible versions.
+
+Date/time authoring lives under `mini_program_ui/lib/src/features/date_time/`.
+Shared canonical value validation is in `mini_program_contracts/lib/mini_program_date_time.dart`;
+SDK node validation and rendering live in the renderer's `nodes/date_time.dart` and
+`widgets/forms/date_time.dart` parts. Use existing Flutter Material dialogs without
+new plugins or native permissions. State is authoritative; form values update only
+after quota-enforced writes. Fields own their exact dialog routes and reject stale
+results after backgrounding, disposal, app/store/key/config changes, or external
+state edits. Dates/times are civil values with no timezone conversion. See
+`docs/date_time_selection_fields.md` for authoring and lifecycle behavior.
 
 ## Release Conventions
 

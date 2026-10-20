@@ -27,6 +27,7 @@ void main() {
       'controls.dart',
       'feedback.dart',
       'forms/backend_search_input.dart',
+      'forms/date_time.dart',
       'forms/form_container.dart',
       'forms/models.dart',
       'forms/selection_controls.dart',

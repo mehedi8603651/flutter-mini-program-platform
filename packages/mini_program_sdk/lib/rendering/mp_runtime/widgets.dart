@@ -155,6 +155,9 @@ class _MpNodeView extends StatelessWidget {
       'dropdown' => _MpDropdownField(node: node),
       'checkbox' => _MpCheckboxField(node: node),
       'radioGroup' => _MpRadioGroupField(node: node),
+      'dateField' ||
+      'timeField' ||
+      'dateRangeField' => _MpDateTimeField(node: node, bindings: bindings),
       'form' => _MpForm(node: node, bindings: bindings),
       'formSubmit' => _MpFormSubmitButton(node: node, bindings: bindings),
       'authBuilder' => _MpAuthBuilder(node: node, bindings: bindings),
