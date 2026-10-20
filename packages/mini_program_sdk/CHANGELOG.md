@@ -1,3 +1,8 @@
+## 0.7.1
+
+- Validate and render standalone Material 3 bottom navigation bars with local state subscriptions, controlled selection, accessible destinations, styling, and narrow-layout scrolling. Section content and its retained state use existing APIs.
+- Enforce gesture-aware actions, disabled destinations, and duplicate-tap protection while actions are pending; safely handle completion after disposal. No native setup or new dependencies.
+
 ## 0.7.0
 
 - Breaking: remove `topBar` JSON and its renderer; use artifacts rebuilt with UI `0.3.0` and the new `appBar` node.

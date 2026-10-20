@@ -1,3 +1,7 @@
+## 0.3.1
+
+- Add pure-Dart `Mp.bottomNavigationBar` and `MpBottomNavigationItem` for 2–5 destinations, state-bound selection, existing actions, selected icons, disabled items, label visibility, and styling. No new dependencies or page parameters.
+
 ## 0.3.0
 
 - Breaking: replace `Mp.topBar` with the standalone pure-Dart `Mp.appBar` builder. Rebuild mini-program artifacts and upgrade hosts to SDK `0.7.0`; the old `topBar` node is removed without an alias.

@@ -1,3 +1,7 @@
+## 0.7.19
+
+- Generate mini-programs against UI `0.3.1` and embedded, separate-task, and preview hosts against SDK `0.7.1`, including standalone bottom navigation. Contracts remain `0.3.18`.
+
 ## 0.7.18
 
 - Generate mini-programs against UI `0.3.0` and embedded, separate-task and preview hosts against SDK `0.7.0` for the `Mp.appBar` replacement. Contracts remain `0.3.18`.

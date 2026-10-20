@@ -28,9 +28,9 @@ These versions are the repository's current development/release line. Check each
 | Package | Current version | Role |
 | --- | ---: | --- |
 | `mini_program_contracts` | `0.3.18` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.3.0` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.7.0` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.18` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_ui` | `0.3.1` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.7.1` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.19` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -1474,9 +1474,9 @@ Rules:
 
 ### Current Widget Catalog
 
-The authoring API currently maps to 74 unique SDK runtime node types. There are
-81 distinct public constructors when the five `Mp.skeleton` variants and four
-`Mp.floatingActionButton` variants are counted separately, and 83 public builder
+The authoring API currently maps to 75 unique SDK runtime node types. There are
+82 distinct public constructors when the five `Mp.skeleton` variants and four
+`Mp.floatingActionButton` variants are counted separately, and 84 public builder
 entry points when the two aliases are also counted. Actions such as
 `Mp.state.*`, `Mp.math.*`, `Mp.cache.*`,
 `Mp.location.*`, `Mp.file.*`, `Mp.camera.*`, `Mp.flashlight.*`, and
@@ -1541,6 +1541,7 @@ Inputs and controls:
 - `Mp.button`: renders a fully styled text command button with stable dimensions.
 - `Mp.iconButton`: renders a semantic icon command with explicit size and decoration.
 - `Mp.floatingActionButton`, `.small`, `.large`, and `.extended`: render standalone Material action buttons; position them with existing stack/positioned nodes.
+- `Mp.bottomNavigationBar`: renders Material 3 section navigation with 2–5 items, state-controlled selection, existing actions, selected icons, label behavior, disabled items, and styling.
 - `Mp.tap`: makes an arbitrary child subtree a semantic action target without changing its visual structure.
 - `Mp.listTile`: renders a scan-friendly row with title, subtitle, leading/trailing content, and optional action.
 - `Mp.textInput`: edits one single-line form/state value.
@@ -1947,6 +1948,15 @@ toolbar sizing bounded, narrow action groups horizontally scrollable, safe-area
 ownership outside the toolbar, and automatic host back/drawer controls disabled.
 Unstyled toolbar text/icons inherit scoped defaults; explicit child styling and
 normal defaults outside the bar remain intact. See `docs/app_bars.md`.
+
+Bottom-navigation authoring and `MpBottomNavigationItem` live in
+`features/controls/bottom_navigation_bar_nodes.dart`; SDK validation and rendering
+are renderer parts named `bottom_navigation_bar.dart`. Keep selection controlled
+by literal indices or safe full bindings, subscribe only to referenced state paths,
+and run existing gesture-aware actions without automatic state writes or navigation.
+The surrounding layout owns safe areas and content retention. Invalid runtime
+selection falls back to index zero without mutating state; disabled and pending
+actions ignore taps. See `docs/bottom_navigation_bars.md`.
 
 ## Release Conventions
 

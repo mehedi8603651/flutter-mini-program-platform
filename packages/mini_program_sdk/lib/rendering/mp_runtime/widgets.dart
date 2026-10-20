@@ -87,6 +87,10 @@ class _MpNodeView extends StatelessWidget {
         bindings: bindings,
       ),
       'appBar' => _MpAppBar(node: node, bindings: bindings),
+      'bottomNavigationBar' => _MpBottomNavigationBar(
+        node: node,
+        bindings: bindings,
+      ),
       'scrollView' => _MpScrollView(node: node, bindings: bindings),
       'listView' => _MpListView(node: node, bindings: bindings),
       'repeat' => _MpRepeat(node: node, bindings: bindings),

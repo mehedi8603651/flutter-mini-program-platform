@@ -20,6 +20,7 @@ import 'features/content/image_models.dart';
 import 'features/content/image_nodes.dart';
 import 'features/content/text_nodes.dart';
 import 'features/controls/button_nodes.dart';
+import 'features/controls/bottom_navigation_bar_nodes.dart';
 import 'features/controls/floating_action_button_nodes.dart';
 import 'features/controls/list_tile_nodes.dart';
 import 'features/controls/selection_nodes.dart';
@@ -70,6 +71,8 @@ export 'features/microphone/microphone_actions.dart' show MpMicrophoneActions;
 export 'features/composition/action_actions.dart' show MpActionActions;
 export 'features/controls/floating_action_button_nodes.dart'
     show MpFloatingActionButton;
+export 'features/controls/bottom_navigation_bar_nodes.dart'
+    show MpBottomNavigationItem;
 export 'features/data/data_actions.dart' show MpDataActions;
 export 'features/display/display_nodes.dart' show MpDisplay;
 export 'features/forms/form_models.dart' show MpOption;
@@ -586,6 +589,34 @@ abstract final class Mp {
     paddingHorizontal: paddingHorizontal,
     spacing: spacing,
     elevation: elevation,
+  );
+
+  /// Creates a standalone Material 3 bottom navigation bar with 2–5 items.
+  ///
+  /// [selectedIndex] accepts a literal item index or a full binding. State
+  /// bindings update only this bar. Item actions own selection changes; the
+  /// bar does not navigate or write state automatically. The surrounding
+  /// layout owns its position, safe areas, and section-content retention.
+  static MpNode bottomNavigationBar({
+    required List<MpBottomNavigationItem> items,
+    Object selectedIndex = 0,
+    String labelBehavior = 'alwaysShow',
+    num height = 80,
+    num elevation = 0,
+    String? backgroundColor,
+    String? indicatorColor,
+    String? selectedItemColor,
+    String? unselectedItemColor,
+  }) => buildBottomNavigationBarNode(
+    items: items,
+    selectedIndex: selectedIndex,
+    labelBehavior: labelBehavior,
+    height: height,
+    elevation: elevation,
+    backgroundColor: backgroundColor,
+    indicatorColor: indicatorColor,
+    selectedItemColor: selectedItemColor,
+    unselectedItemColor: unselectedItemColor,
   );
 
   /// Shows or hides [child] while optionally preserving layout/state.

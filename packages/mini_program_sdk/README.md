@@ -28,6 +28,17 @@ The SDK stays provider-neutral:
 - optional runtime data uses the artifact-owned `publisher_backend.json`
 - provider SDKs, database clients, payment clients, secrets, and business rules stay outside the host app
 
+## Bottom navigation
+
+The SDK validates and renders standalone `Mp.bottomNavigationBar` nodes using
+Material 3 `NavigationBar`. Only referenced live-state paths rebuild the bar.
+Item actions control selection and content; pending actions suppress duplicate
+taps. Disabled destinations, selected icons, label visibility, host-theme defaults,
+and explicit colors are supported. Long labels truncate with accessible full
+labels; very narrow layouts scroll horizontally to keep destinations usable.
+Use UI `0.3.1` and SDK `0.7.1`. See the
+[bottom navigation guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/bottom_navigation_bars.md).
+
 ## App bars
 
 The SDK validates and renders `Mp.appBar` content using Flutter's Material

@@ -20,6 +20,16 @@ organized into dependency-free core values, program assembly, and
 feature-owned node/action builders. The temporary legacy `src` compatibility
 re-exports were removed in `0.2.0`; direct internal imports are unsupported.
 
+## Bottom navigation
+
+`Mp.bottomNavigationBar(...)` describes a standalone Material 3 navigation bar
+with 2–5 `MpBottomNavigationItem`s. Selection can bind to live state; destinations
+run existing actions. It supports selected icons, disabled items, label visibility,
+colors, and height. Place it below an expanded content area using existing layouts.
+Requires UI `0.3.1` and SDK `0.7.1`; no new dependencies or native setup.
+See the [bottom navigation guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/bottom_navigation_bars.md)
+for a complete state-preserving section example.
+
 ## App bars
 
 `Mp.appBar(...)` lets mini-program developers own their header's title, leading
