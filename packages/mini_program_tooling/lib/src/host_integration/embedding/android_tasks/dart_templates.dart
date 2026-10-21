@@ -48,11 +48,36 @@ Future<T?> openMiniProgramInAndroidTask<T>(
 
 /// Root widget used only by the generated secondary Dart entrypoint.
 /// Customize each engine's configuration in app_android_task_setup.dart.
-class AndroidMiniProgramTaskApp extends StatelessWidget {
+class AndroidMiniProgramTaskApp extends StatefulWidget {
   const AndroidMiniProgramTaskApp({super.key, required this.config, this.theme});
 
   final MiniProgramConfig config;
   final ThemeData? theme;
+
+  @override
+  State<AndroidMiniProgramTaskApp> createState() => _AndroidMiniProgramTaskAppState();
+}
+
+class _AndroidMiniProgramTaskAppState extends State<AndroidMiniProgramTaskApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _androidTasks.setMethodCallHandler((call) async {
+      if (call.method != 'handleBack') throw MissingPluginException();
+      final navigator = _navigatorKey.currentState;
+      // Pop owned Flutter panels or let the SDK's inner screen stack handle
+      // Back first. Android returns to the retained host only at the root.
+      return navigator != null && await navigator.maybePop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _androidTasks.setMethodCallHandler(null);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,12 +109,13 @@ class AndroidMiniProgramTaskApp extends StatelessWidget {
       ),
     ));
     return MiniProgramScope(
-      config: config,
+      config: widget.config,
       navigationDelegate: openMiniProgramInAndroidTask,
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: title,
         debugShowCheckedModeBanner: false,
-        theme: theme,
+        theme: widget.theme,
         // Android's initial route carries our launch metadata, not a Flutter
         // navigation stack. Always create exactly one root page.
         onGenerateInitialRoutes: (_) => <Route<dynamic>>[

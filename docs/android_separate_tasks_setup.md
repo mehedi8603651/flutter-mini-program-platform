@@ -8,7 +8,7 @@ Separate-task generation requires tooling `0.7.10` or later and SDK `0.6.11`
 or later. Install the CLI:
 
 ```powershell
-dart pub global activate mini_program_tooling 0.7.10
+dart pub global activate mini_program_tooling 0.7.20
 ```
 
 When testing a development checkout, activate the local CLI from the
@@ -34,6 +34,13 @@ requires `lib/main.dart`, an Android manifest, and one Kotlin `MainActivity.kt`
 extending `FlutterActivity` or `FlutterFragmentActivity`. Unsupported custom
 declarations and conflicting files produce an error before any files change.
 It does not change AGP, Gradle, Kotlin, or accepted mini-program permissions.
+
+Tooling `0.7.20` fixes native Back priority: dismiss the
+keyboard, then Flutter panels and the mini-program's inner screens, then return
+to the retained host at the root. Refresh both generated Dart and Kotlin files
+with the updated CLI and `--force` when adopting
+[drawers, sheets, and dialogs](drawers_sheets_dialogs.md). Older generated
+Activities bypass Flutter and return straight to the host.
 
 ## Connect the generated navigation
 

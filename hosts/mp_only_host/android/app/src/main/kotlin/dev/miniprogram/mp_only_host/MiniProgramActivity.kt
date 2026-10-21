@@ -9,6 +9,9 @@ import android.os.Bundle
 import android.util.Log
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -25,6 +28,7 @@ import io.flutter.plugin.common.MethodChannel
  */
 abstract class MiniProgramActivity : FlutterActivity() {
     private var backCallback: OnBackInvokedCallback? = null
+    private var backRequestPending = false
 
     companion object {
         const val CHANNEL_NAME = "dev.miniprogram.mp_only_host/mini_program_window"
@@ -87,11 +91,11 @@ abstract class MiniProgramActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val callback = OnBackInvokedCallback {
-                showHostActivity()
+                handleBack()
             }
             backCallback = callback
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_OVERLAY,
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
                 callback,
             )
         }
@@ -146,7 +150,35 @@ abstract class MiniProgramActivity : FlutterActivity() {
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        showHostActivity()
+        handleBack()
+    }
+
+    private fun handleBack() {
+        if (backRequestPending || isFinishing || isDestroyed) return
+        val view = window.decorView
+        if (ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime()) == true) {
+            WindowInsetsControllerCompat(window, view).hide(WindowInsetsCompat.Type.ime())
+            return
+        }
+        val messenger = flutterEngine?.dartExecutor?.binaryMessenger
+        if (messenger == null) {
+            showHostActivity()
+            return
+        }
+        backRequestPending = true
+        MethodChannel(messenger, CHANNEL_NAME).invokeMethod(
+            "handleBack", null, object : MethodChannel.Result {
+                private fun complete(handled: Boolean) {
+                    backRequestPending = false
+                    if (!handled && !isFinishing && !isDestroyed && hasWindowFocus()) {
+                        showHostActivity()
+                    }
+                }
+                override fun success(result: Any?) { complete(result == true) }
+                override fun error(code: String, message: String?, details: Any?) { complete(false) }
+                override fun notImplemented() { complete(false) }
+            },
+        )
     }
 
     private fun showHostActivity() {

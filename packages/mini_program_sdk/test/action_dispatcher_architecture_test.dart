@@ -39,6 +39,7 @@ void main() {
       'composition.dart',
       'data.dart',
       'feedback_forms_lazy.dart',
+      'overlays.dart',
       'file.dart',
       'flashlight.dart',
       'gallery.dart',

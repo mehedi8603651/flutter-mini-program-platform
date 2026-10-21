@@ -2,10 +2,16 @@
 
 Command-line tooling for the Flutter mini-program platform.
 
-Tooling `0.7.19` generates mini-program projects against
-`mini_program_ui: ^0.3.1` and Flutter host projects against
-`mini_program_sdk: ^0.7.1` and `mini_program_contracts: ^0.3.18`.
+Tooling `0.7.20` generates mini-program projects against
+`mini_program_ui: ^0.3.2` and Flutter host projects against
+`mini_program_sdk: ^0.7.2` and `mini_program_contracts: ^0.3.19`.
 Standard in-host navigation and optional `--android-separate-tasks` are supported.
+
+Tooling `0.7.20` gives the keyboard, Flutter panels, and inner
+mini-program screens priority on Back before returning to the retained host.
+Refresh existing generated integrations with the updated CLI and
+`embed init --android-separate-tasks --force` when adopting the
+[drawer/sheet/dialog APIs](../../docs/drawers_sheets_dialogs.md).
 
 The CLI supports the current MVP architecture:
 

@@ -85,7 +85,7 @@ dependencies:
         await read('lib/mini_program/mini_program.dart'),
         isNot(contains('android_tasks')),
       );
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.1'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.2'));
     },
   );
 
@@ -138,9 +138,22 @@ dependencies:
         contains('MiniProgramNativeSetup.register(flutterEngine)'),
       );
       expect(taskActivity, contains('"miniProgramTaskMain"'));
+      expect(
+        taskActivity,
+        contains('OnBackInvokedDispatcher.PRIORITY_DEFAULT'),
+      );
+      expect(taskActivity, isNot(contains('PRIORITY_OVERLAY')));
+      expect(taskActivity, contains('WindowInsetsCompat.Type.ime()'));
+      expect(taskActivity, contains('"handleBack", null'));
+      final taskDart = await read(
+        'lib/mini_program/mini_program_android_tasks.dart',
+      );
+      expect(taskDart, contains('await navigator.maybePop()'));
+      expect(taskDart, contains("call.method != 'handleBack'"));
+      expect(taskDart, contains('navigatorKey: _navigatorKey'));
       expect(taskActivity, isNot(contains('finish()')));
       expect(await read('android/app/build.gradle.kts'), beforeGradle);
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.1'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.2'));
       expect(
         await read('lib/mini_program/README.md'),
         contains('navigationDelegate: openMiniProgramInAndroidTask'),

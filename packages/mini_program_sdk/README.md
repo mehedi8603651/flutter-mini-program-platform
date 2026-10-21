@@ -28,6 +28,19 @@ The SDK stays provider-neutral:
 - optional runtime data uses the artifact-owned `publisher_backend.json`
 - provider SDKs, database clients, payment clients, secrets, and business rules stay outside the host app
 
+## Drawers, sheets, and dialogs
+
+The SDK renders custom side panels, top/bottom sheets, and dialogs as owned
+Material routes while keeping the underlying screen mounted. Panels use the
+current mini-program state and accepted host policies. Back, explicit close,
+keyboard layout, and owner/lifecycle cleanup preserve route ownership.
+No new dependencies or native permissions are needed. Existing separate-task
+hosts must refresh generated Back handling with tooling `0.7.20` or newer;
+standard embedded hosts need no setup change. See the
+[panel guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/drawers_sheets_dialogs.md)
+for setup. Requires UI `0.3.2`, SDK `0.7.2`, and contracts `0.3.19` or newer
+compatible versions.
+
 ## Bottom navigation
 
 The SDK validates and renders standalone `Mp.bottomNavigationBar` nodes using

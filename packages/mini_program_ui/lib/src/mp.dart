@@ -27,6 +27,7 @@ import 'features/controls/selection_nodes.dart';
 import 'features/data/data_actions.dart';
 import 'features/display/display_nodes.dart';
 import 'features/feedback/feedback_actions.dart';
+import 'features/overlays/overlay_actions.dart';
 import 'features/file/file_actions.dart';
 import 'features/flashlight/flashlight_actions.dart';
 import 'features/forms/form_models.dart';
@@ -54,6 +55,8 @@ import 'features/theme/theme_nodes.dart';
 export 'features/maps/maps_actions.dart'
     show MpMapsActions, MpMapCoordinateSystem, MpMapTravelMode;
 export 'features/date_time/date_time_nodes.dart' show MpDateTime;
+export 'features/overlays/overlay_actions.dart'
+    show MpDrawerActions, MpSheetActions, MpDialogActions;
 export 'features/system/system_actions.dart'
     show
         MpClipboardActions,
@@ -95,6 +98,15 @@ export 'features/state/state_actions.dart' show MpStateActions;
 
 /// Author-friendly namespace for Mp widget and action builders.
 abstract final class Mp {
+  /// Opens and closes custom left/right side panels.
+  static const drawer = MpDrawerActions();
+
+  /// Opens and closes custom bottom/top sheets.
+  static const sheet = MpSheetActions();
+
+  /// Alerts, confirmations, custom dialogs, and explicit dismissal.
+  static const dialog = MpDialogActions();
+
   /// Standalone standard, small, large, and extended floating action buttons.
   static const floatingActionButton = MpFloatingActionButton();
 
@@ -1314,15 +1326,4 @@ abstract final class Mp {
   /// Creates a toast/snackbar-style UI feedback action.
   static MpAction toast({required String message, int durationMs = 2400}) =>
       buildToastAction(message: message, durationMs: durationMs);
-
-  /// Creates a modal confirmation/info dialog action.
-  static MpAction dialog({
-    String? title,
-    required String message,
-    String confirmLabel = 'OK',
-  }) => buildDialogAction(
-    title: title,
-    message: message,
-    confirmLabel: confirmLabel,
-  );
 }

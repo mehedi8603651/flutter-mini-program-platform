@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.18` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.3.1` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.7.1` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.19` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.19` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.3.2` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.7.2` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.20` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -1957,6 +1957,31 @@ and run existing gesture-aware actions without automatic state writes or navigat
 The surrounding layout owns safe areas and content retention. Invalid runtime
 selection falls back to index zero without mutating state; disabled and pending
 actions ignore taps. See `docs/bottom_navigation_bars.md`.
+
+Drawer/sheet/dialog authoring lives in `features/overlays/overlay_actions.dart`.
+`Mp.drawer.left/right`, `Mp.sheet.bottom/top`, and their close actions describe
+owned modal routes. `Mp.dialog` is a callable namespace preserving the earlier
+basic JSON and adding custom content, explicit close, and optional callbacks.
+SDK action validation and execution are `actions/overlays.dart` renderer parts;
+ownership and content rendering are in `widgets/overlays.dart` and
+`widgets/overlay_content.dart`. Forward all current trusted scope services and
+accepted policies into modal routes, including future additions to
+`MiniProgramSdkScope`. Preserve named actions, item/form bindings, and the
+underlying mounted screen. Close only the current owned route of the requested
+family; cleanup removes exact routes after app/store changes, explicit hiding,
+and disposal. Retain pure UI during OS pauses so delegated pickers can finish;
+foreground capabilities retain their existing host lifecycle enforcement.
+Limit live nesting to eight and validate complete
+mixed node/action trees before parsing, including total node and depth budgets.
+Keep these as standalone actions without new page/native setup parameters.
+See `docs/drawers_sheets_dialogs.md`. Panels require UI `0.3.2`, SDK `0.7.2`,
+and contracts `0.3.19` or newer compatible versions.
+Separate-task Back must give the keyboard, Flutter panels, and the SDK's inner
+screen stack priority before returning to the retained host. Keep generated
+Activity and Dart task-root handling in sync with `hosts/mp_only_host`.
+Existing generated task hosts need an `embed init` refresh with tooling `0.7.20` or newer and
+`--android-separate-tasks --force` for this behavior. Never use an overlay-priority native Back
+callback that bypasses Flutter or the IME.
 
 ## Release Conventions
 

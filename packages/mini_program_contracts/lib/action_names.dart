@@ -1,5 +1,12 @@
 /// Stable wire names for host-dispatched mobile MVP actions.
 abstract final class ActionNames {
+  static const drawerOpen = 'ui.drawer.open';
+  static const drawerClose = 'ui.drawer.close';
+  static const sheetOpen = 'ui.sheet.open';
+  static const sheetClose = 'ui.sheet.close';
+  static const dialogOpen = 'ui.dialog';
+  static const dialogClose = 'ui.dialog.close';
+
   static const mapsOpenLocation = 'maps.openLocation';
   static const mapsOpenDirections = 'maps.openDirections';
   static const String clipboardReadText = 'clipboard.readText';

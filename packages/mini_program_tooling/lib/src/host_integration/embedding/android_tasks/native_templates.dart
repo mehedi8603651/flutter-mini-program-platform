@@ -92,12 +92,17 @@ import android.os.Build
 import android.os.Bundle
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 /** Each slot has its own Activity, task affinity, Flutter engine, and live state. */
 abstract class MiniProgramTaskActivity : FlutterFragmentActivity() {
     private var backCallback: OnBackInvokedCallback? = null
+    private var backRequestPending = false
 
     companion object {
         private const val APP_ID = "mini_program_app_id"
@@ -180,10 +185,10 @@ abstract class MiniProgramTaskActivity : FlutterFragmentActivity() {
         @Suppress("DEPRECATION")
         setTaskDescription(ActivityManager.TaskDescription(intent.getStringExtra(TITLE) ?: "Mini-program"))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val callback = OnBackInvokedCallback { showHost(this) }
+            val callback = OnBackInvokedCallback { handleBack() }
             backCallback = callback
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback,
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback,
             )
         }
     }
@@ -197,7 +202,35 @@ abstract class MiniProgramTaskActivity : FlutterFragmentActivity() {
     }
 
     @Suppress("DEPRECATION")
-    override fun onBackPressed() { showHost(this) }
+    override fun onBackPressed() { handleBack() }
+
+    private fun handleBack() {
+        if (backRequestPending || isFinishing || isDestroyed) return
+        val view = window.decorView
+        if (ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime()) == true) {
+            WindowInsetsControllerCompat(window, view).hide(WindowInsetsCompat.Type.ime())
+            return
+        }
+        val messenger = flutterEngine?.dartExecutor?.binaryMessenger
+        if (messenger == null) {
+            showHost(this)
+            return
+        }
+        backRequestPending = true
+        MethodChannel(messenger, "mini_program/android_tasks").invokeMethod(
+            "handleBack", null, object : MethodChannel.Result {
+                private fun complete(handled: Boolean) {
+                    backRequestPending = false
+                    if (!handled && !isFinishing && !isDestroyed && hasWindowFocus()) {
+                        showHost(this@MiniProgramTaskActivity)
+                    }
+                }
+                override fun success(result: Any?) { complete(result == true) }
+                override fun error(code: String, message: String?, details: Any?) { complete(false) }
+                override fun notImplemented() { complete(false) }
+            },
+        )
+    }
 }
 
 class MiniProgramTaskActivity0 : MiniProgramTaskActivity()

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mp_only_host/main.dart';
@@ -10,6 +13,47 @@ void main() {
   setUp(() {
     // Asset futures must not carry a previous widget test's fake async zone.
     rootBundle.clear();
+  });
+
+  testWidgets('native Back dismisses Flutter panels before leaving the task', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.defaultRouteNameTestValue =
+        '/mini-program/mp_profile_center?title=Profile';
+    addTearDown(
+      tester.binding.platformDispatcher.clearDefaultRouteNameTestValue,
+    );
+    await miniProgramMain();
+    await tester.pumpAndSettle();
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
+    const codec = StandardMethodCodec();
+    Future<bool> nativeBack() async {
+      final response = Completer<ByteData?>();
+      tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        _windowChannel.name,
+        codec.encodeMethodCall(const MethodCall('handleBack')),
+        response.complete,
+      );
+      await tester.pumpAndSettle();
+      return codec.decodeEnvelope((await response.future)!) as bool;
+    }
+
+    expect(await nativeBack(), isFalse);
+    unawaited(
+      navigator.push<void>(
+        RawDialogRoute<void>(
+          pageBuilder: (_, _, _) => const Center(child: Text('Owned panel')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Owned panel'), findsOneWidget);
+    expect(await nativeBack(), isTrue);
+    expect(find.text('Owned panel'), findsNothing);
+    expect(await nativeBack(), isFalse);
+    expect(navigator.mounted, isTrue);
   });
 
   testWidgets(

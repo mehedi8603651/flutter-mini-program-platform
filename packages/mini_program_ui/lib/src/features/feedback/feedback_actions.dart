@@ -11,18 +11,3 @@ MpAction buildToastAction({required String message, int durationMs = 2400}) {
     },
   );
 }
-
-MpAction buildDialogAction({
-  String? title,
-  required String message,
-  String confirmLabel = 'OK',
-}) {
-  return MpAction(
-    'ui.dialog',
-    props: <String, Object?>{
-      if (title != null) 'title': requiredAuthoringString(title, 'title'),
-      'message': requiredAuthoringString(message, 'message'),
-      'confirmLabel': requiredAuthoringString(confirmLabel, 'confirmLabel'),
-    },
-  );
-}

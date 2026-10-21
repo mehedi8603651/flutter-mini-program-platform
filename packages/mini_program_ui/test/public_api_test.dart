@@ -19,6 +19,9 @@ void main() {
       MpTimer(),
       MpLazy(),
       MpSkeleton(),
+      MpDrawerActions(),
+      MpSheetActions(),
+      MpDialogActions(),
     ];
 
     const option = MpOption(value: 'one', label: 'One');
@@ -31,7 +34,7 @@ void main() {
     final document = MpScreenDocument(screenId: 'home', root: node);
     final buildWriter = writeMpBuildOutput;
 
-    expect(namespaces, hasLength(15));
+    expect(namespaces, hasLength(18));
     expect(option.toJson(), <String, Object?>{'label': 'One', 'value': 'one'});
     expect(breakpoints.mediumMinWidth, 600);
     expect(action.type, 'state.clear');

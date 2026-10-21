@@ -77,27 +77,4 @@ extension _MpFeedbackFormLazyActionValidation on MpScreenValidator {
       },
     );
   }
-
-  _MpAction _parseDialogAction(
-    String type,
-    Map<String, dynamic> props,
-    String path,
-  ) {
-    _validateObjectKeys(props, const <String>{
-      'title',
-      'message',
-      'confirmLabel',
-    }, path: '$path.props');
-    return _MpAction(
-      type: type,
-      props: <String, dynamic>{
-        if (props.containsKey('title'))
-          'title': _requiredString(props, 'title', path: '$path.props'),
-        'message': _requiredString(props, 'message', path: '$path.props'),
-        'confirmLabel': props.containsKey('confirmLabel')
-            ? _requiredString(props, 'confirmLabel', path: '$path.props')
-            : 'OK',
-      },
-    );
-  }
 }

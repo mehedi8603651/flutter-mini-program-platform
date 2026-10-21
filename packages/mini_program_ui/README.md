@@ -20,6 +20,15 @@ organized into dependency-free core values, program assembly, and
 feature-owned node/action builders. The temporary legacy `src` compatibility
 re-exports were removed in `0.2.0`; direct internal imports are unsupported.
 
+## Drawers, sheets, and dialogs
+
+`Mp.drawer.left/right`, `Mp.sheet.bottom/top`, and `Mp.dialog.custom` open
+custom content through existing actions. Each namespace provides `close()`;
+`Mp.dialog(...)` preserves its existing call syntax and adds optional button
+callbacks. Content uses the same pure-Dart nodes, state, and actions.
+See the [panel guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/drawers_sheets_dialogs.md).
+Requires UI `0.3.2`, SDK `0.7.2`, and contracts `0.3.19` or newer compatible versions.
+
 ## Bottom navigation
 
 `Mp.bottomNavigationBar(...)` describes a standalone Material 3 navigation bar

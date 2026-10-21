@@ -1,3 +1,10 @@
+## 0.3.2
+
+- Add pure-Dart `Mp.drawer.left/right/close` and `Mp.sheet.bottom/top/close`
+  actions with custom node content, bounded styling, and dismissal options.
+- Preserve `Mp.dialog(...)` through a callable namespace and add confirmation
+  callbacks, `Mp.dialog.custom(...)`, and `Mp.dialog.close()`.
+
 ## 0.3.1
 
 - Add pure-Dart `Mp.bottomNavigationBar` and `MpBottomNavigationItem` for 2–5 destinations, state-bound selection, existing actions, selected icons, disabled items, label visibility, and styling. No new dependencies or page parameters.

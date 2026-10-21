@@ -1,3 +1,13 @@
+## 0.7.2
+
+- Validate and render owned left/right drawers, top/bottom sheets, and custom
+  or confirmation dialogs. Forward current app state, bindings, accepted host
+  policies, and gesture-aware actions into panel routes.
+- Preserve underlying screens; close only exact owned routes, handle Back,
+  keyboard/narrow layouts, nested-panel limits, and lifecycle cancellation.
+- Bound mixed node/action payloads so nested panel definitions cannot reset
+  screen validation budgets. No new dependencies or native setup.
+
 ## 0.7.1
 
 - Validate and render standalone Material 3 bottom navigation bars with local state subscriptions, controlled selection, accessible destinations, styling, and narrow-layout scrolling. Section content and its retained state use existing APIs.

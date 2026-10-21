@@ -28,6 +28,8 @@ void main() {
       'content.dart',
       'controls.dart',
       'feedback.dart',
+      'overlays.dart',
+      'overlay_content.dart',
       'floating_action_button.dart',
       'forms/backend_search_input.dart',
       'forms/date_time.dart',

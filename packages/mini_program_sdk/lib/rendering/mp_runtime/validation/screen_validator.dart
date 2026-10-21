@@ -19,7 +19,7 @@ class MpScreenRenderer extends MiniProgramScreenRenderer {
       request.screenJson,
       expectedScreenId: request.screenId,
     );
-    return _MpScreenView(screen: screen);
+    return _MpOverlayHost(child: _MpScreenView(screen: screen));
   }
 }
 
@@ -181,24 +181,7 @@ class MpScreenValidator {
     Map<String, dynamic> json, {
     required String expectedScreenId,
   }) {
-    final int payloadBytes;
-    try {
-      payloadBytes = utf8.encode(jsonEncode(json)).length;
-    } catch (error) {
-      _fail(
-        'Mp screen payload must be JSON-safe.',
-        path: r'$',
-        details: <String, dynamic>{'error': error.toString()},
-      );
-    }
-    if (payloadBytes > maxPayloadBytes) {
-      _fail(
-        'Mp screen payload exceeds the $maxPayloadBytes byte limit.',
-        path: r'$',
-        details: <String, dynamic>{'payloadBytes': payloadBytes},
-      );
-    }
-
+    _validateMpPayloadBudget(json, path: r'$');
     _validateObjectKeys(json, const <String>{
       'schemaVersion',
       'screenId',
@@ -713,7 +696,12 @@ class MpScreenValidator {
       'search.loadMore' => _parseSearchLoadMoreAction(type, props, path),
       'form.submit' => _parseFormSubmitAction(type, props, path),
       'ui.toast' => _parseToastAction(type, props, path),
-      'ui.dialog' => _parseDialogAction(type, props, path),
+      ActionNames.dialogOpen => _parseOverlayDialogAction(type, props, path),
+      ActionNames.drawerOpen ||
+      ActionNames.sheetOpen => _parseOverlayOpenAction(type, props, path),
+      ActionNames.drawerClose ||
+      ActionNames.sheetClose ||
+      ActionNames.dialogClose => _parseNoPropsAction(type, props, path),
       'state.set' || 'state.put' => _parseStateSetAction(type, props, path),
       'state.setDefault' => _parseStateSetAction(type, props, path),
       'state.patch' => _parseStatePatchAction(type, props, path),

@@ -1,5 +1,10 @@
 /// Stable error code constants shared across contracts, SDK, and hosts.
 abstract final class MiniProgramErrorCodes {
+  static const overlayUnavailable = 'overlay_unavailable';
+  static const overlayForegroundRequired = 'overlay_foreground_required';
+  static const overlayLimitExceeded = 'overlay_limit_exceeded';
+  static const overlayRequestCancelled = 'overlay_request_cancelled';
+
   static const String mapsNotAccepted = 'maps_not_accepted';
   static const String mapsUnavailable = 'maps_unavailable';
   static const String mapsUserGestureRequired = 'maps_user_gesture_required';

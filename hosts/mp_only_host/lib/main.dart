@@ -168,52 +168,84 @@ Future<void> _openMiniProgramWindow(
   }
 }
 
-class _MiniProgramWindowApp extends StatelessWidget {
+class _MiniProgramWindowApp extends StatefulWidget {
   const _MiniProgramWindowApp({required this.request});
 
   final _MiniProgramRequest request;
 
   @override
+  State<_MiniProgramWindowApp> createState() => _MiniProgramWindowAppState();
+}
+
+class _MiniProgramWindowAppState extends State<_MiniProgramWindowApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _miniProgramWindowChannel.setMethodCallHandler((call) async {
+      if (call.method != 'handleBack') throw MissingPluginException();
+      final navigator = _navigatorKey.currentState;
+      return navigator != null && await navigator.maybePop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _miniProgramWindowChannel.setMethodCallHandler(null);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final request = widget.request;
+    final taskHome = Builder(
+      builder: (context) {
+        final runtime = MiniProgramScope.of(context).controller.runtime;
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(request.title),
+            leading: IconButton(
+              tooltip: 'Return to host',
+              onPressed: () =>
+                  _miniProgramWindowChannel.invokeMethod<void>('showHost'),
+              icon: const Icon(Icons.arrow_back),
+            ),
+            actions: <Widget>[
+              IconButton(
+                tooltip: 'Close mini-program',
+                onPressed: () =>
+                    _miniProgramWindowChannel.invokeMethod<void>('showHost'),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          body: MiniProgramPage(
+            miniProgramId: request.appId,
+            title: request.title,
+            runtime: runtime,
+            showAppBar: false,
+          ),
+        );
+      },
+    );
     return MiniProgramScope(
       config: _buildMiniProgramConfig(),
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: request.title,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF006B5E)),
         ),
-        home: Builder(
-          builder: (context) {
-            final runtime = MiniProgramScope.of(context).controller.runtime;
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(request.title),
-                leading: IconButton(
-                  tooltip: 'Return to host',
-                  onPressed: () =>
-                      _miniProgramWindowChannel.invokeMethod<void>('showHost'),
-                  icon: const Icon(Icons.arrow_back),
-                ),
-                actions: <Widget>[
-                  IconButton(
-                    tooltip: 'Close mini-program',
-                    onPressed: () => _miniProgramWindowChannel
-                        .invokeMethod<void>('showHost'),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              body: MiniProgramPage(
-                miniProgramId: request.appId,
-                title: request.title,
-                runtime: runtime,
-                showAppBar: false,
-              ),
-            );
-          },
-        ),
+        onGenerateInitialRoutes: (_) => <Route<dynamic>>[
+          MaterialPageRoute<void>(
+            settings: const RouteSettings(name: '/'),
+            builder: (_) => taskHome,
+          ),
+        ],
+        routes: <String, WidgetBuilder>{'/': (_) => taskHome},
       ),
     );
   }

@@ -1,3 +1,12 @@
+## 0.7.20
+
+- Let optional Android tasks handle keyboard dismissal and Flutter panels or
+  inner navigation before returning to the retained host at the root. Refresh
+  existing generated integrations with `embed init --android-separate-tasks --force`.
+- Generate mini-programs against UI `0.3.2` and embedded, separate-task, and
+  preview hosts against SDK `0.7.2` and contracts `0.3.19` for drawers, sheets,
+  and custom or confirmation dialogs.
+
 ## 0.7.19
 
 - Generate mini-programs against UI `0.3.1` and embedded, separate-task, and preview hosts against SDK `0.7.1`, including standalone bottom navigation. Contracts remain `0.3.18`.

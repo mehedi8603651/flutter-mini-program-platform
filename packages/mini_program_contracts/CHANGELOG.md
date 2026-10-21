@@ -1,3 +1,8 @@
+## 0.3.19
+
+- Add canonical drawer, sheet, and dialog action names and stable panel
+  availability, foreground, nesting-limit, and cancellation errors.
+
 ## 0.3.18
 
 - Add strict, shared civil-date, 24-hour time, and inclusive date-range value validation. Reject normalized invalid dates, malformed times, and reversed ranges.

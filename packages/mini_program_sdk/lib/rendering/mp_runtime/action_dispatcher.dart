@@ -13,6 +13,7 @@ class MpActionRunner {
     Map<String, dynamic>? form,
     bool userGesture = false,
   }) {
+    _validateMpPayloadBudget(actionJson, path: r'$.action');
     final action = const MpScreenValidator()._parseAction(
       actionJson,
       path: r'$.action',
@@ -37,7 +38,7 @@ abstract final class _MpActionDispatcher {
     _MpRenderBindings bindings, [
     _MpActionCallContext callContext = const _MpActionCallContext(),
   ]) async {
-    final scope = MiniProgramSdkScope.maybeOf(context);
+    final scope = context.mounted ? MiniProgramSdkScope.maybeOf(context) : null;
     if (scope == null) {
       return HostActionResult.failed(
         actionName: action.type,
@@ -98,10 +99,8 @@ abstract final class _MpActionDispatcher {
           context,
           props,
         ),
-        'ui.dialog' => _MpFeedbackFormLazyActionHandler._showDialog(
-          context,
-          props,
-        ),
+        final type when _MpOverlayActionHandler._actions.contains(type) =>
+          _MpOverlayActionHandler.run(context, action.type, props, bindings),
         'state.set' || 'state.put' => _MpStateActionHandler._setState(
           scope,
           action.type,

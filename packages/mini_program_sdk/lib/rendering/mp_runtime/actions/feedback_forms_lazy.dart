@@ -49,23 +49,4 @@ abstract final class _MpFeedbackFormLazyActionHandler {
     entry.remove();
     return HostActionResult.success(actionName: 'ui.toast');
   }
-
-  static Future<HostActionResult> _showDialog(
-    BuildContext context,
-    Map<String, dynamic> props,
-  ) async {
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss',
-      barrierColor: const Color(0x66000000),
-      transitionDuration: const Duration(milliseconds: 120),
-      pageBuilder: (context, animation, secondaryAnimation) => _MpDialogView(
-        title: _optionalStringProp(props, 'title'),
-        message: _stringProp(props, 'message'),
-        confirmLabel: _optionalStringProp(props, 'confirmLabel') ?? 'OK',
-      ),
-    );
-    return HostActionResult.success(actionName: 'ui.dialog');
-  }
 }
