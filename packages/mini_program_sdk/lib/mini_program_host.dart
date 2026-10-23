@@ -36,6 +36,7 @@ import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
+import 'bluetooth/mini_program_bluetooth.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 import 'sdk_context.dart';
 import 'state/mp_state.dart';
@@ -81,6 +82,7 @@ class MiniProgramHost extends StatefulWidget {
     this.vibrationProvider,
     this.phoneProvider,
     this.mapsProvider,
+    this.bluetoothProvider,
     this.shareProvider,
     this.authController,
     this.assetCache,
@@ -115,6 +117,7 @@ class MiniProgramHost extends StatefulWidget {
   final MiniProgramVibrationProvider? vibrationProvider;
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
+  final MiniProgramBluetoothProvider? bluetoothProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final AssetCache? assetCache;

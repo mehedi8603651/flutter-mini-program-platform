@@ -58,3 +58,4 @@ export 'widgets/sdk_loading_view.dart';
 export 'widgets/sdk_offline_notice.dart';
 
 export 'maps/mini_program_maps.dart';
+export 'bluetooth/mini_program_bluetooth.dart';

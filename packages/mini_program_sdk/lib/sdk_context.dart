@@ -23,6 +23,7 @@ import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
+import 'bluetooth/mini_program_bluetooth.dart';
 import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -93,6 +94,8 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.vibrationPolicy = const MiniProgramVibrationPolicy(),
     this.phoneProvider,
     this.mapsProvider,
+    this.bluetoothManager,
+    this.bluetoothPolicy = const MiniProgramBluetoothPolicy(),
     this.phonePolicy = const MiniProgramPhonePolicy(),
     this.mapsPolicy = const MiniProgramMapsPolicy(),
     this.isForeground = true,
@@ -148,6 +151,8 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramVibrationPolicy vibrationPolicy;
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
+  final MiniProgramBluetoothManager? bluetoothManager;
+  final MiniProgramBluetoothPolicy bluetoothPolicy;
   final MiniProgramPhonePolicy phonePolicy;
   final MiniProgramMapsPolicy mapsPolicy;
   final bool isForeground;
@@ -214,6 +219,8 @@ class MiniProgramSdkScope extends InheritedWidget {
         vibrationPolicy != oldWidget.vibrationPolicy ||
         phoneProvider != oldWidget.phoneProvider ||
         mapsProvider != oldWidget.mapsProvider ||
+        bluetoothManager != oldWidget.bluetoothManager ||
+        bluetoothPolicy != oldWidget.bluetoothPolicy ||
         phonePolicy != oldWidget.phonePolicy ||
         mapsPolicy != oldWidget.mapsPolicy ||
         isForeground != oldWidget.isForeground ||

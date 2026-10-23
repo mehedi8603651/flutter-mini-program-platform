@@ -55,6 +55,7 @@ class MiniProgramPage extends StatelessWidget {
         vibrationProvider: resolvedRuntime.vibrationProvider,
         phoneProvider: resolvedRuntime.phoneProvider,
         mapsProvider: resolvedRuntime.mapsProvider,
+        bluetoothProvider: resolvedRuntime.bluetoothProvider,
         shareProvider: resolvedRuntime.shareProvider,
         authController: resolvedRuntime.authController,
         featureFlagEvaluator: resolvedRuntime.featureFlagEvaluator,

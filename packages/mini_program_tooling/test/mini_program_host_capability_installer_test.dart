@@ -23,6 +23,109 @@ void main() {
     }
   });
 
+  test(
+    'BLE installation is optional, idempotent and adds no Gradle dependencies',
+    () async {
+      const installer = MiniProgramHostCapabilityInstaller();
+      final request = MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'bluetooth',
+        platform: 'android',
+      );
+      final gradle = File(p.join(hostRootPath, 'android/app/build.gradle.kts'));
+      final before = await gradle.readAsString();
+      expect((await installer.initialize(request)).alreadyInstalled, false);
+      final manifest = await File(
+        p.join(hostRootPath, 'android/app/src/main/AndroidManifest.xml'),
+      ).readAsString();
+      expect(manifest, contains('android.permission.BLUETOOTH_SCAN'));
+      expect(
+        manifest,
+        contains('android:usesPermissionFlags="neverForLocation"'),
+      );
+      expect(manifest, contains('android.permission.BLUETOOTH_CONNECT'));
+      expect(
+        manifest,
+        contains(
+          'android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"',
+        ),
+      );
+      expect(
+        manifest,
+        contains('android.hardware.bluetooth_le" android:required="false"'),
+      );
+      expect(manifest, isNot(contains('BLUETOOTH_ADVERTISE')));
+      expect(manifest, isNot(contains('ACCESS_BACKGROUND_LOCATION')));
+      expect(await gradle.readAsString(), before);
+      final provider = File(
+        p.join(
+          hostRootPath,
+          'lib/mini_program/app_android_bluetooth_provider.dart',
+        ),
+      );
+      await provider.writeAsString(
+        '${await provider.readAsString()}\n// Host BLE customization.\n',
+      );
+      final repeated = await installer.initialize(request);
+      expect(
+        repeated.alreadyInstalled,
+        true,
+        reason: repeated.toJson().toString(),
+      );
+      expect(
+        await provider.readAsString(),
+        contains('// Host BLE customization.'),
+      );
+      expect(
+        await _nativeSetupFile(hostRootPath).readAsString(),
+        contains('MiniProgramBluetoothChannel.register(flutterEngine)'),
+      );
+      final runtime = await File(
+        p.join(
+          hostRootPath,
+          'lib/mini_program/mini_program_runtime_setup.dart',
+        ),
+      ).readAsString();
+      expect(runtime, contains('CapabilityIds.bluetoothBle'));
+    },
+  );
+
+  test('BLE manifest conflict fails without partial host changes', () async {
+    final manifest = File(
+      p.join(hostRootPath, 'android/app/src/main/AndroidManifest.xml'),
+    );
+    final conflict = (await manifest.readAsString()).replaceFirst(
+      '<application',
+      '<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n<application',
+    );
+    await manifest.writeAsString(conflict);
+    final setup = File(
+      p.join(hostRootPath, 'lib/mini_program/mini_program_host_setup.dart'),
+    );
+    final before = await setup.readAsString();
+    await expectLater(
+      const MiniProgramHostCapabilityInstaller().initialize(
+        MiniProgramHostCapabilityInitRequest(
+          projectRootPath: hostRootPath,
+          capability: 'bluetooth',
+          platform: 'android',
+        ),
+      ),
+      throwsA(isA<MiniProgramHostCapabilityException>()),
+    );
+    expect(await setup.readAsString(), before);
+    expect(await manifest.readAsString(), conflict);
+    expect(
+      await File(
+        p.join(
+          hostRootPath,
+          'lib/mini_program/app_android_bluetooth_provider.dart',
+        ),
+      ).exists(),
+      false,
+    );
+  });
+
   for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
     final title = '${feature[0].toUpperCase()}${feature.substring(1)}';
     test(

@@ -32,6 +32,7 @@ void main() {
         'files.dart',
         'handoff.dart',
         'models.dart',
+        'requested_policy/bluetooth.dart',
         'requested_policy/cache.dart',
         'requested_policy/json_values.dart',
         'requested_policy/maps.dart',

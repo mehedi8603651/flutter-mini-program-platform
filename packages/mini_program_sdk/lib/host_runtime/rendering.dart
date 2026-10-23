@@ -75,6 +75,8 @@ extension _MiniProgramHostRendering on _MiniProgramHostState {
           vibrationPolicy: _vibrationPolicyFor(manifest.id),
           phoneProvider: widget.phoneProvider,
           mapsProvider: widget.mapsProvider,
+          bluetoothManager: _bluetoothManager,
+          bluetoothPolicy: _bluetoothPolicyFor(manifest.id),
           phonePolicy: _phonePolicyFor(manifest.id),
           mapsPolicy: _mapsPolicyFor(manifest.id),
           isForeground: _shouldKeepForegroundResources,

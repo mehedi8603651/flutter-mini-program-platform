@@ -791,6 +791,9 @@ Future<Object?> _runMpAction(
       const MiniProgramVibrationPolicy(),
   MiniProgramPhoneProvider? phoneProvider,
   MiniProgramMapsProvider? mapsProvider,
+  MiniProgramBluetoothManager? bluetoothManager,
+  MiniProgramBluetoothPolicy bluetoothPolicy =
+      const MiniProgramBluetoothPolicy(),
   MiniProgramPhonePolicy phonePolicy = const MiniProgramPhonePolicy(),
   MiniProgramMapsPolicy mapsPolicy = const MiniProgramMapsPolicy(),
   MiniProgramShareManager? shareManager,
@@ -841,6 +844,8 @@ Future<Object?> _runMpAction(
         vibrationPolicy: vibrationPolicy,
         phoneProvider: phoneProvider,
         mapsProvider: mapsProvider,
+        bluetoothManager: bluetoothManager,
+        bluetoothPolicy: bluetoothPolicy,
         phonePolicy: phonePolicy,
         mapsPolicy: mapsPolicy,
         shareManager: shareManager,

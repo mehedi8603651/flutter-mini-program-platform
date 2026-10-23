@@ -19,6 +19,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramVibrationPolicyProvider,
         MiniProgramPhonePolicyProvider,
         MiniProgramMapsPolicyProvider,
+        MiniProgramBluetoothPolicyProvider,
         MiniProgramSharePolicyProvider,
         MiniProgramMediaPlaybackPolicyProvider,
         MiniProgramDeliveryContextProvider,
@@ -190,6 +191,10 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramPhonePolicy phonePolicyFor(String miniProgramId) =>
       _endpointFor(miniProgramId).phonePolicy;
+
+  @override
+  MiniProgramBluetoothPolicy bluetoothPolicyFor(String miniProgramId) =>
+      _endpointFor(miniProgramId).bluetoothPolicy;
 
   @override
   MiniProgramMapsPolicy mapsPolicyFor(String miniProgramId) =>

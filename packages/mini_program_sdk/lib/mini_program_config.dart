@@ -22,6 +22,7 @@ import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
+import 'bluetooth/mini_program_bluetooth.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
@@ -46,6 +47,7 @@ class MiniProgramConfig {
     this.vibrationProvider,
     this.phoneProvider,
     this.mapsProvider,
+    this.bluetoothProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -80,6 +82,7 @@ class MiniProgramConfig {
   final MiniProgramVibrationProvider? vibrationProvider;
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
+  final MiniProgramBluetoothProvider? bluetoothProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -110,6 +113,7 @@ class MiniProgramConfig {
       vibrationProvider: vibrationProvider,
       phoneProvider: phoneProvider,
       mapsProvider: mapsProvider,
+      bluetoothProvider: bluetoothProvider,
       shareProvider: shareProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,

@@ -1,6 +1,15 @@
 part of '../mini_program_host.dart';
 
 extension _MiniProgramHostPolicies on _MiniProgramHostState {
+  MiniProgramBluetoothPolicy _bluetoothPolicyFor(String appId) {
+    final source = widget.source;
+    return source is MiniProgramBluetoothPolicyProvider
+        ? (source as MiniProgramBluetoothPolicyProvider).bluetoothPolicyFor(
+            appId,
+          )
+        : const MiniProgramBluetoothPolicy();
+  }
+
   MiniProgramPhonePolicy _phonePolicyFor(String appId) {
     final source = widget.source;
     return source is MiniProgramPhonePolicyProvider

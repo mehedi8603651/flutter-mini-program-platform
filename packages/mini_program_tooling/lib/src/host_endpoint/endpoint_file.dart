@@ -102,6 +102,9 @@ String buildHostEndpointFile(
       )
       ..writeln('      phonePolicy: phonePolicyForMiniProgram($mapKey),')
       ..writeln('      mapsPolicy: mapsPolicyForMiniProgram($mapKey),')
+      ..writeln(
+        '      bluetoothPolicy: bluetoothPolicyForMiniProgram($mapKey),',
+      )
       ..writeln('      sharePolicy: sharePolicyForMiniProgram($mapKey),')
       ..writeln(
         '      displayBrightnessPolicy: displayBrightnessPolicyForMiniProgram($mapKey),',

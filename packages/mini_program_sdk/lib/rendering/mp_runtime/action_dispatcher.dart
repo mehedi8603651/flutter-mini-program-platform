@@ -220,6 +220,8 @@ abstract final class _MpActionDispatcher {
           props,
           userGesture: callContext.userGesture,
         ),
+        final type when MiniProgramBluetooth.actions.contains(type) =>
+          _MpBluetoothActionHandler.run(context, action, props, callContext),
         'maps.openLocation' ||
         'maps.openDirections' => _MpMapsActionHandler._run(
           context,

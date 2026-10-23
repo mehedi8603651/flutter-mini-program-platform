@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add optional `host capability init bluetooth --platform android` using native Android BLE APIs without extra Gradle dependencies. Generate Android permissions, providers, and registration for embedded/separate-task hosts; preserve host edits and accepted policy across regeneration.
+
 ## 0.7.20
 
 - Let optional Android tasks handle keyboard dismissal and Flutter panels or

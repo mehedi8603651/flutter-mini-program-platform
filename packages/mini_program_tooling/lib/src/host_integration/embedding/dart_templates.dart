@@ -233,6 +233,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramVibrationProvider? vibrationProvider,
   MiniProgramPhoneProvider? phoneProvider,
   MiniProgramMapsProvider? mapsProvider,
+  MiniProgramBluetoothProvider? bluetoothProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -253,6 +254,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     vibrationProvider: vibrationProvider,
     phoneProvider: phoneProvider,
     mapsProvider: mapsProvider,
+    bluetoothProvider: bluetoothProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,
@@ -358,6 +360,10 @@ MiniProgramPhonePolicy phonePolicyForMiniProgram(String appId) {
   return const MiniProgramPhonePolicy();
 }
 
+MiniProgramBluetoothPolicy bluetoothPolicyForMiniProgram(String appId) {
+  return const MiniProgramBluetoothPolicy();
+}
+
 MiniProgramMapsPolicy mapsPolicyForMiniProgram(String appId) {
   return const MiniProgramMapsPolicy();
 }
@@ -429,6 +435,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramVibrationProvider? vibrationProvider,
   MiniProgramPhoneProvider? phoneProvider,
   MiniProgramMapsProvider? mapsProvider,
+  MiniProgramBluetoothProvider? bluetoothProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -455,6 +462,7 @@ MiniProgramConfig buildMiniProgramConfig({
     if (clipboardProvider != null) CapabilityIds.clipboardWrite,
     if (vibrationProvider != null) CapabilityIds.vibration,
     if (phoneProvider != null) CapabilityIds.phoneDialer,
+    if (bluetoothProvider != null) CapabilityIds.bluetoothBle,
     if (mapsProvider != null) CapabilityIds.mapsOpenLocation,
     if (mapsProvider != null) CapabilityIds.mapsOpenDirections,
     if (shareProvider != null) CapabilityIds.systemShare,
@@ -490,6 +498,7 @@ MiniProgramConfig buildMiniProgramConfig({
     vibrationProvider: vibrationProvider,
     phoneProvider: phoneProvider,
     mapsProvider: mapsProvider,
+    bluetoothProvider: bluetoothProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,

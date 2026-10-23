@@ -1,5 +1,6 @@
 // Stable wire names for host-dispatched actions.
 export 'action_names.dart';
+export 'mini_program_bluetooth.dart';
 
 // Typed payload models for MVP host actions.
 export 'action_payloads.dart';

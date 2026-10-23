@@ -1,4 +1,5 @@
 import 'features/maps/maps_actions.dart';
+import 'features/bluetooth/bluetooth_actions.dart';
 import 'features/date_time/date_time_nodes.dart';
 import 'features/system/system_actions.dart';
 import 'core/mp_action.dart';
@@ -52,6 +53,7 @@ import 'features/skeleton/skeleton_nodes.dart';
 import 'features/state/state_actions.dart';
 import 'features/theme/theme_nodes.dart';
 
+export 'features/bluetooth/bluetooth_actions.dart' show MpBluetoothActions;
 export 'features/maps/maps_actions.dart'
     show MpMapsActions, MpMapCoordinateSystem, MpMapTravelMode;
 export 'features/date_time/date_time_nodes.dart' show MpDateTime;
@@ -115,6 +117,9 @@ abstract final class Mp {
 
   /// Shop pins and route planning in a host-approved external map app.
   static const maps = MpMapsActions();
+
+  /// Optional host-controlled foreground Bluetooth Low Energy operations.
+  static const bluetooth = MpBluetoothActions();
 
   /// Explicit host-approved clipboard access.
   static const clipboard = MpClipboardActions();

@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add pure-Dart `Mp.bluetooth` foreground BLE scanning, connecting, discovery, read/write, notification subscription, and cleanup actions. No Flutter dependency.
+
 ## 0.3.2
 
 - Add pure-Dart `Mp.drawer.left/right/close` and `Mp.sheet.bottom/top/close`

@@ -1,5 +1,15 @@
 /// Stable wire names for host-dispatched mobile MVP actions.
 abstract final class ActionNames {
+  static const bluetoothGetState = 'bluetooth.getState';
+  static const bluetoothScan = 'bluetooth.scan';
+  static const bluetoothStopScan = 'bluetooth.stopScan';
+  static const bluetoothConnect = 'bluetooth.connect';
+  static const bluetoothDisconnect = 'bluetooth.disconnect';
+  static const bluetoothDiscoverServices = 'bluetooth.discoverServices';
+  static const bluetoothRead = 'bluetooth.read';
+  static const bluetoothWrite = 'bluetooth.write';
+  static const bluetoothSubscribe = 'bluetooth.subscribe';
+  static const bluetoothUnsubscribe = 'bluetooth.unsubscribe';
   static const drawerOpen = 'ui.drawer.open';
   static const drawerClose = 'ui.drawer.close';
   static const sheetOpen = 'ui.sheet.open';

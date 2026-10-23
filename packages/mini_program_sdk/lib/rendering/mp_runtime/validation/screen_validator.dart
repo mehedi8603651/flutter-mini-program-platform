@@ -758,6 +758,8 @@ class MpScreenValidator {
       'clipboard.writeText' ||
       'vibration.trigger' ||
       'phone.openDialer' => _parseSystemAction(type, props, path),
+      final type when MiniProgramBluetooth.actions.contains(type) =>
+        _parseBluetoothAction(type, props, path),
       'maps.openLocation' ||
       'maps.openDirections' => _parseMapsAction(type, props, path),
       'share.open' => _parseShareOpenAction(type, props, path),

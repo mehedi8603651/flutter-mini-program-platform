@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add optional default-denied BLE providers and app/session ownership, strict action/result validation, per-app service/write/value limits, latest-value notifications, and foreground cleanup that preserves UI state.
+
 ## 0.7.2
 
 - Validate and render owned left/right drawers, top/bottom sheets, and custom

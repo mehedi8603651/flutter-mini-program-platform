@@ -31,7 +31,8 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
   'clipboard' ||
   'vibration' ||
   'phone' ||
-  'maps' => system.initializeSystemCapability(request),
+  'maps' ||
+  'bluetooth' => system.initializeSystemCapability(request),
   locationCapability => location.initializeMiniProgramHostCapability(request),
   fileCapability => file.initializeMiniProgramHostFileCapability(request),
   cameraCapability => camera.initializeMiniProgramHostCameraCapability(request),
@@ -54,6 +55,6 @@ Future<MiniProgramHostCapabilityInitResult> dispatchHostCapability(
     'Unsupported host capability "${request.capability}". Supported '
     'capabilities: $locationCapability, $fileCapability, $cameraCapability, '
     '$flashlightCapability, $displayBrightnessCapability, $qrCapability, $shareCapability, '
-    '$audioCapability, $videoCapability, $galleryCapability, $microphoneCapability, clipboard, vibration, phone, maps.',
+    '$audioCapability, $videoCapability, $galleryCapability, $microphoneCapability, clipboard, vibration, phone, maps, bluetooth.',
   ),
 };

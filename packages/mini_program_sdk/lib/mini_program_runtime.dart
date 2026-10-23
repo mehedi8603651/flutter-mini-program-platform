@@ -22,6 +22,7 @@ import 'qr/mini_program_qr.dart';
 import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
+import 'bluetooth/mini_program_bluetooth.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 /// Shared embedded runtime that existing apps configure once, then reuse to
@@ -49,6 +50,7 @@ class MiniProgramRuntime {
     this.vibrationProvider,
     this.phoneProvider,
     this.mapsProvider,
+    this.bluetoothProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -77,6 +79,7 @@ class MiniProgramRuntime {
   final MiniProgramVibrationProvider? vibrationProvider;
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
+  final MiniProgramBluetoothProvider? bluetoothProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -106,6 +109,7 @@ class MiniProgramRuntime {
     MiniProgramVibrationProvider? vibrationProvider,
     MiniProgramPhoneProvider? phoneProvider,
     MiniProgramMapsProvider? mapsProvider,
+    MiniProgramBluetoothProvider? bluetoothProvider,
     MiniProgramShareProvider? shareProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
@@ -137,6 +141,7 @@ class MiniProgramRuntime {
       vibrationProvider: vibrationProvider ?? this.vibrationProvider,
       phoneProvider: phoneProvider ?? this.phoneProvider,
       mapsProvider: mapsProvider ?? this.mapsProvider,
+      bluetoothProvider: bluetoothProvider ?? this.bluetoothProvider,
       shareProvider: shareProvider ?? this.shareProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
@@ -218,6 +223,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.vibrationProvider != oldWidget.runtime.vibrationProvider ||
         runtime.phoneProvider != oldWidget.runtime.phoneProvider ||
         runtime.mapsProvider != oldWidget.runtime.mapsProvider ||
+        runtime.bluetoothProvider != oldWidget.runtime.bluetoothProvider ||
         runtime.shareProvider != oldWidget.runtime.shareProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=

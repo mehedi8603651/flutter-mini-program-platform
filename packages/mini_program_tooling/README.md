@@ -802,3 +802,10 @@ denied by default. See the [complete guide](https://github.com/mehedi8603651/flu
 ## Shop location and directions
 
 See the [Android shop location guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_shop_location_directions.md) for setup, host acceptance, coordinate systems and provider limits.
+
+## Optional Android Bluetooth BLE (unreleased)
+
+Foreground BLE scanning, connection, GATT read/write, and latest-value notifications
+use pure-Dart `Mp.bluetooth` actions and a host-installed native Android adapter.
+The adapter needs no dedicated Bluetooth library. Hosts independently accept
+service access, writes, and scan/value limits. See the [BLE setup and lifecycle guide](../../docs/android_bluetooth_ble.md).

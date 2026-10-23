@@ -210,7 +210,13 @@ dependencies:
         await install('gallery');
         await install('microphone');
         await install('share');
-        for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
+        for (final feature in [
+          'clipboard',
+          'vibration',
+          'phone',
+          'maps',
+          'bluetooth',
+        ]) {
           await install(feature);
         }
         if (!tasksFirst) await initialize(force: true);
@@ -224,6 +230,7 @@ dependencies:
           'Vibration',
           'Phone',
           'Maps',
+          'Bluetooth',
           'Task',
         ]) {
           expect(
@@ -245,7 +252,13 @@ dependencies:
           await read('lib/mini_program/mini_program_host_setup.dart'),
           contains('resolvedCameraProvider'),
         );
-        for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
+        for (final feature in [
+          'clipboard',
+          'vibration',
+          'phone',
+          'maps',
+          'bluetooth',
+        ]) {
           expect(
             await read('lib/mini_program/mini_program_host_setup.dart'),
             contains('${feature}Provider: resolved'),
@@ -260,7 +273,13 @@ dependencies:
         await install('gallery');
         await install('microphone');
         await install('share');
-        for (final feature in ['clipboard', 'vibration', 'phone', 'maps']) {
+        for (final feature in [
+          'clipboard',
+          'vibration',
+          'phone',
+          'maps',
+          'bluetooth',
+        ]) {
           await install(feature);
         }
         await initialize(force: true);

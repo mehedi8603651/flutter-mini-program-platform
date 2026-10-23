@@ -1,5 +1,23 @@
 /// Stable error code constants shared across contracts, SDK, and hosts.
 abstract final class MiniProgramErrorCodes {
+  static const bluetoothNotAccepted = 'bluetooth_not_accepted';
+  static const bluetoothUnavailable = 'bluetooth_unavailable';
+  static const bluetoothDisabled = 'bluetooth_disabled';
+  static const bluetoothPermissionDenied = 'bluetooth_permission_denied';
+  static const bluetoothUserGestureRequired = 'bluetooth_user_gesture_required';
+  static const bluetoothForegroundRequired = 'bluetooth_foreground_required';
+  static const bluetoothInvalidRequest = 'bluetooth_invalid_request';
+  static const bluetoothInvalidResult = 'bluetooth_invalid_result';
+  static const bluetoothInUse = 'bluetooth_in_use';
+  static const bluetoothRequestInProgress = 'bluetooth_request_in_progress';
+  static const bluetoothRequestCancelled = 'bluetooth_request_cancelled';
+  static const bluetoothTimeout = 'bluetooth_timeout';
+  static const bluetoothDeviceNotFound = 'bluetooth_device_not_found';
+  static const bluetoothNotConnected = 'bluetooth_not_connected';
+  static const bluetoothCharacteristicUnsupported =
+      'bluetooth_characteristic_unsupported';
+  static const bluetoothLimitExceeded = 'bluetooth_limit_exceeded';
+  static const bluetoothOperationFailed = 'bluetooth_operation_failed';
   static const overlayUnavailable = 'overlay_unavailable';
   static const overlayForegroundRequired = 'overlay_foreground_required';
   static const overlayLimitExceeded = 'overlay_limit_exceeded';

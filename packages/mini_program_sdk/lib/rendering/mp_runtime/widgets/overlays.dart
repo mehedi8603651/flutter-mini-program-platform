@@ -309,6 +309,8 @@ MiniProgramSdkScope _mpPanelSdkScope(
   phoneProvider: s.phoneProvider,
   phonePolicy: s.phonePolicy,
   mapsProvider: s.mapsProvider,
+  bluetoothManager: s.bluetoothManager,
+  bluetoothPolicy: s.bluetoothPolicy,
   mapsPolicy: s.mapsPolicy,
   isForeground: s.isForeground,
   shareManager: s.shareManager,

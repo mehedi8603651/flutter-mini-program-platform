@@ -1,10 +1,11 @@
-import 'maps_policy.dart';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'bluetooth_policy.dart';
 import 'json_values.dart';
+import 'maps_policy.dart';
 import 'models.dart';
 import 'system_policy.dart';
 
@@ -250,6 +251,19 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       },
     });
   }
+  if (permission == 'bluetooth') {
+    final value = hostJsonObjectOrEmpty(requested);
+    return validateAcceptedBluetoothPermission({
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && value['enabled'] == true,
+      'allowWrite': acceptRequested && value['write'] == true,
+      'allowNotifications': value['notifications'] != false,
+      'allowedServices': value['serviceUuids'] ?? const [],
+      'maxScanMs': value['recommendedMaxScanMs'] ?? 10000,
+      'maxDevices': value['recommendedMaxDevices'] ?? 20,
+      'maxValueBytes': value['recommendedMaxValueBytes'] ?? 512,
+    });
+  }
   if (permission == 'maps') {
     final value = hostJsonObjectOrEmpty(requested);
     return validateAcceptedMapsPermission({
@@ -422,6 +436,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
     }
     normalized['gallery'] = validateAcceptedHostGallery(
       hostJsonObjectOrEmpty(rawGallery),
+    );
+  }
+  final bluetooth = normalized['bluetooth'];
+  if (bluetooth != null) {
+    if (bluetooth is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.bluetooth must be an object.',
+      );
+    }
+    normalized['bluetooth'] = validateAcceptedBluetoothPermission(
+      hostJsonObjectOrEmpty(bluetooth),
     );
   }
   final maps = normalized['maps'];

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,81 @@ import 'package:mini_program_sdk/mini_program_sdk.dart';
 import 'package:mini_program_ui/mini_program_ui.dart';
 
 void main() {
+  testWidgets(
+    'BLE releases on hiding, backgrounding and disposal while retaining screen state',
+    (tester) async {
+      final provider = _VisibilityBleProvider();
+      final source = _CountingVisibilitySource(bleEnabled: true);
+      final runtime = MiniProgramRuntime(
+        sdkVersion: '1.0.0',
+        source: source,
+        hostBridge: const _HostBridge(),
+        bluetoothProvider: provider,
+        capabilityRegistry: CapabilityRegistry(const [
+          CapabilityIds.bluetoothBle,
+        ]),
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpWidget(
+        MaterialApp(home: _VisibilityHarness(runtime: runtime)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Increment'));
+      await tester.tap(find.text('Scan BLE'));
+      await tester.pump();
+      final firstScan = provider.scans.single;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(provider.releasedSessions, isEmpty);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey<String>('hideMiniProgram')));
+      await tester.pumpAndSettle();
+      expect(provider.releasedSessions.length, 1);
+      await tester.tap(find.byKey(const ValueKey<String>('showMiniProgram')));
+      await tester.pumpAndSettle();
+      expect(find.text('Counter: 1'), findsOneWidget);
+      expect(source.manifestLoads, 1);
+      expect(source.screenLoads, 1);
+
+      await tester.tap(find.text('Rescan BLE'));
+      await tester.pump();
+      provider.scans.last.complete({'devices': []});
+      await tester.pumpAndSettle();
+      expect(find.text('BLE: success'), findsOneWidget);
+      firstScan.complete({'devices': []});
+      await tester.pumpAndSettle();
+      expect(find.text('BLE: success'), findsOneWidget);
+      expect(provider.releasedSessions.length, 1);
+
+      await tester.tap(find.text('Scan BLE'));
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(provider.releasedSessions.length, 1);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      provider.scans.last.complete({'devices': []});
+      await tester.pumpAndSettle();
+      expect(find.text('BLE: success'), findsOneWidget);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      expect(provider.releasedSessions.length, 2);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.text('Counter: 1'), findsOneWidget);
+
+      await tester.tap(find.text('Scan BLE'));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(provider.releasedSessions.length, 3);
+      provider.scans.last.complete({'devices': []});
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      runtime.dispose();
+    },
+  );
   testWidgets(
     'hiding and showing a mini-program keeps its state and load generation',
     (tester) async {
@@ -143,9 +219,16 @@ class _VisibilityHarnessState extends State<_VisibilityHarness> {
   }
 }
 
-class _CountingVisibilitySource implements MiniProgramSource {
+class _CountingVisibilitySource
+    implements MiniProgramSource, MiniProgramBluetoothPolicyProvider {
+  _CountingVisibilitySource({this.bleEnabled = false});
+  final bool bleEnabled;
   int manifestLoads = 0;
   int screenLoads = 0;
+
+  @override
+  MiniProgramBluetoothPolicy bluetoothPolicyFor(String miniProgramId) =>
+      MiniProgramBluetoothPolicy(enabled: bleEnabled);
 
   @override
   Future<MiniProgramManifest> loadManifest(String miniProgramId) async {
@@ -174,7 +257,7 @@ class _CountingVisibilitySource implements MiniProgramSource {
         'visibility_home': () => Mp.initialize(
           actions: <MpAction>[Mp.state.set('counter', 0)],
           child: Mp.stateBuilder(
-            keys: const <String>['counter'],
+            keys: <String>['counter', if (bleEnabled) 'ble.status'],
             child: Mp.column(
               children: <MpNode>[
                 Mp.text('Counter: {{state.counter}}'),
@@ -186,6 +269,23 @@ class _CountingVisibilitySource implements MiniProgramSource {
                   label: 'Open details',
                   action: Mp.navigation.openScreen('visibility_details'),
                 ),
+                if (bleEnabled) ...[
+                  Mp.text('BLE: {{state.ble.status}}'),
+                  Mp.primaryButton(
+                    label: 'Scan BLE',
+                    action: Mp.bluetooth.scan(
+                      targetState: 'ble.result',
+                      statusState: 'ble.status',
+                    ),
+                  ),
+                  Mp.primaryButton(
+                    label: 'Rescan BLE',
+                    action: Mp.bluetooth.scan(
+                      targetState: 'ble.result',
+                      statusState: 'ble.status',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -200,6 +300,32 @@ class _CountingVisibilitySource implements MiniProgramSource {
       },
     ).buildScreensJson()[screenId]!;
     return Map<String, dynamic>.from(jsonDecode(jsonEncode(json)) as Map);
+  }
+}
+
+class _VisibilityBleProvider implements MiniProgramBluetoothProvider {
+  final scans = <Completer<Map<String, dynamic>>>[];
+  final releasedSessions = <String>{};
+  @override
+  Stream<MiniProgramBluetoothEvent> get events => const Stream.empty();
+  @override
+  Future<Map<String, dynamic>> invoke({
+    required String miniProgramId,
+    required String sessionId,
+    required String action,
+    required Map<String, dynamic> arguments,
+  }) {
+    final scan = Completer<Map<String, dynamic>>();
+    scans.add(scan);
+    return scan.future;
+  }
+
+  @override
+  Future<void> release({
+    required String miniProgramId,
+    required String sessionId,
+  }) async {
+    releasedSessions.add(sessionId);
   }
 }
 

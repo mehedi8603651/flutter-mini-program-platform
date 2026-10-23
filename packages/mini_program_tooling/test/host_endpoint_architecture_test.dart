@@ -26,6 +26,7 @@ void main() {
           )
           .toList(),
       <String>[
+        'bluetooth_policy.dart',
         'coordinator.dart',
         'endpoint_file.dart',
         'json_values.dart',

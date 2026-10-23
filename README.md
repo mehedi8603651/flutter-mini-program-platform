@@ -225,3 +225,10 @@ Clipboard, short system haptic feedback, and the user-controlled Android dialer
 are optional host capabilities. See [setup and authoring](docs/android_clipboard_vibration_phone.md).
 
 For optional shop pins and external directions, see the [Android maps guide](docs/android_shop_location_directions.md).
+
+## Optional Android Bluetooth BLE (unreleased)
+
+Foreground BLE scanning, connection, GATT read/write, and latest-value notifications
+use pure-Dart `Mp.bluetooth` actions and a host-installed native Android adapter.
+The adapter needs no dedicated Bluetooth library. Hosts independently accept
+service access, writes, and scan/value limits. See the [BLE setup and lifecycle guide](docs/android_bluetooth_ble.md).

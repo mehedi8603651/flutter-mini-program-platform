@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add canonical foreground BLE actions/capability/errors and shared bounded UUID, opaque device-handle, hex-data, operation, and result validation.
+
 ## 0.3.19
 
 - Add canonical drawer, sheet, and dialog action names and stable panel

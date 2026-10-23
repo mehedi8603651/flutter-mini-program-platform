@@ -108,6 +108,7 @@ String patchSystemRuntimeSetup(String source, String feature) {
     'vibration' => ['vibration'],
     'phone' => ['phoneDialer'],
     'maps' => ['mapsOpenLocation', 'mapsOpenDirections'],
+    'bluetooth' => ['bluetoothBle'],
     _ => throw ArgumentError.value(feature),
   }) {
     if (!next

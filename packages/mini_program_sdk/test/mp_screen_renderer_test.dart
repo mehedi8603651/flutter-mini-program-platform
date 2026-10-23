@@ -18,6 +18,7 @@ part 'mp_screen_renderer_test/gallery_tests.dart';
 part 'mp_screen_renderer_test/microphone_tests.dart';
 part 'mp_screen_renderer_test/system_tests.dart';
 part 'mp_screen_renderer_test/maps_tests.dart';
+part 'mp_screen_renderer_test/bluetooth_tests.dart';
 part 'mp_screen_renderer_test/date_time_tests.dart';
 part 'mp_screen_renderer_test/floating_action_button_tests.dart';
 part 'mp_screen_renderer_test/app_bar_tests.dart';
@@ -33,6 +34,7 @@ void main() {
   _mpMicrophoneTests();
   _mpSystemTests();
   _mpMapsTests();
+  _mpBluetoothTests();
   _mpDateTimeTests();
   _mpFloatingActionButtonTests();
   _mpAppBarTests();

@@ -34,6 +34,7 @@ void main() {
     expect(actionFiles.map((file) => _fileName(file.path)).toSet(), <String>{
       'auth_backend.dart',
       'backend_search.dart',
+      'bluetooth.dart',
       'cache.dart',
       'camera.dart',
       'composition.dart',

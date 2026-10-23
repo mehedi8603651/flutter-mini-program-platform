@@ -25,6 +25,7 @@ class MiniProgramHostCapabilityInstaller {
   static const String vibrationCapability = 'vibration';
   static const String phoneCapability = 'phone';
   static const String mapsCapability = 'maps';
+  static const String bluetoothCapability = 'bluetooth';
   static const String shareCapability = capabilities.shareCapability;
   static const String audioCapability = capabilities.audioCapability;
   static const String videoCapability = capabilities.videoCapability;

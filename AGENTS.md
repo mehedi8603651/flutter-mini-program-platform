@@ -126,6 +126,15 @@ These are system invariants, not preferences:
     map apps and encodes native links. Preserve the calling Activity and state,
     never request device location or treat an accepted launch as a completed route.
 
+28. Bluetooth BLE central access is an optional foreground host capability.
+    Host-accepted service/operation/scan/value limits authorize access; writes
+    require separate acceptance. Only app/session-owned opaque device handles,
+    bounded UUID metadata, and hex values cross the boundary. Native adapters
+    serialize GATT work and enforce ownership across engines/tasks. Hidden or
+    disposed owners release scans, connections, and notifications without
+    clearing the mini-program's UI state. Permission-dialog inactivity is not
+    backgrounding. No background BLE, Classic Bluetooth, or automatic reconnect.
+
 ## Repository Map
 
 The trees below list maintained source and important generated boundaries. Flutter platform boilerplate (`android/`, `ios/`, `web/`, and similar generated runner files), package build output, and repetitive test fixtures are grouped instead of listing every generated file.
@@ -1982,6 +1991,20 @@ Activity and Dart task-root handling in sync with `hosts/mp_only_host`.
 Existing generated task hosts need an `embed init` refresh with tooling `0.7.20` or newer and
 `--android-separate-tasks --force` for this behavior. Never use an overlay-priority native Back
 callback that bypasses Flutter or the IME.
+
+Foreground BLE authoring is in `features/bluetooth/bluetooth_actions.dart`,
+shared wire validation is `mini_program_contracts/lib/mini_program_bluetooth.dart`,
+and SDK provider/policy/session ownership lives in `bluetooth/mini_program_bluetooth.dart`.
+Renderer action parsing/execution remain separate `bluetooth.dart` parts. The
+optional Android capability uses the transactional system installer with
+templates under `capabilities/bluetooth/`; install with
+`miniprogram host capability init bluetooth --platform android`. It adds no
+Gradle dependencies. Keep native session ownership process-wide across separate
+tasks, use API 33 value-bearing GATT callbacks with legacy fallbacks, bound pending
+notification deliveries, and close timed-out GATT connections before reuse.
+Requested Bluetooth policy remains advisory; runtime uses accepted policy only.
+The initial write limit is 20 bytes without implicit fragmentation; reads and
+notifications are bounded at 512 bytes. See `docs/android_bluetooth_ble.md`.
 
 ## Release Conventions
 

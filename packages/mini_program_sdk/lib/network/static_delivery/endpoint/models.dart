@@ -33,6 +33,7 @@ class MiniProgramEndpoint {
     this.vibrationPolicy = const MiniProgramVibrationPolicy(),
     this.phonePolicy = const MiniProgramPhonePolicy(),
     this.mapsPolicy = const MiniProgramMapsPolicy(),
+    this.bluetoothPolicy = const MiniProgramBluetoothPolicy(),
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
@@ -61,6 +62,7 @@ class MiniProgramEndpoint {
     this.vibrationPolicy = const MiniProgramVibrationPolicy(),
     this.phonePolicy = const MiniProgramPhonePolicy(),
     this.mapsPolicy = const MiniProgramMapsPolicy(),
+    this.bluetoothPolicy = const MiniProgramBluetoothPolicy(),
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
@@ -84,6 +86,7 @@ class MiniProgramEndpoint {
   final MiniProgramVibrationPolicy vibrationPolicy;
   final MiniProgramPhonePolicy phonePolicy;
   final MiniProgramMapsPolicy mapsPolicy;
+  final MiniProgramBluetoothPolicy bluetoothPolicy;
   final MiniProgramSharePolicy sharePolicy;
   final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
 }
