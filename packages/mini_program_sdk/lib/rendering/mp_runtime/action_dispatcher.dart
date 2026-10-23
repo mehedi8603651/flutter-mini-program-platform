@@ -222,6 +222,9 @@ abstract final class _MpActionDispatcher {
         ),
         final type when MiniProgramBluetooth.actions.contains(type) =>
           _MpBluetoothActionHandler.run(context, action, props, callContext),
+
+        final type when MiniProgramNfc.actions.contains(type) =>
+          _MpNfcActionHandler.run(context, action, props, callContext),
         'maps.openLocation' ||
         'maps.openDirections' => _MpMapsActionHandler._run(
           context,

@@ -109,6 +109,7 @@ String patchSystemRuntimeSetup(String source, String feature) {
     'phone' => ['phoneDialer'],
     'maps' => ['mapsOpenLocation', 'mapsOpenDirections'],
     'bluetooth' => ['bluetoothBle'],
+    'nfc' => ['nfcRead'],
     _ => throw ArgumentError.value(feature),
   }) {
     if (!next

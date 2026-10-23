@@ -226,9 +226,20 @@ are optional host capabilities. See [setup and authoring](docs/android_clipboard
 
 For optional shop pins and external directions, see the [Android maps guide](docs/android_shop_location_directions.md).
 
-## Optional Android Bluetooth BLE (unreleased)
+## Optional Android Bluetooth BLE
+
+Available with UI `0.3.3`, SDK `0.7.3`, contracts `0.3.20`, and tooling `0.7.21`.
 
 Foreground BLE scanning, connection, GATT read/write, and latest-value notifications
 use pure-Dart `Mp.bluetooth` actions and a host-installed native Android adapter.
 The adapter needs no dedicated Bluetooth library. Hosts independently accept
 service access, writes, and scan/value limits. See the [BLE setup and lifecycle guide](docs/android_bluetooth_ble.md).
+
+## Optional foreground NFC
+
+Available with UI `0.3.3`, SDK `0.7.3`, contracts `0.3.20`, and tooling `0.7.21`.
+
+Pure-Dart `Mp.nfc` actions read bounded standard NDEF Text and HTTPS URI records
+through an optional native Android adapter. Hosts accept access and limits per
+mini-program; task switches cancel reading while retaining UI state. Install with
+`miniprogram host capability init nfc --platform android`. See the [NFC guide](docs/android_nfc_ndef.md).

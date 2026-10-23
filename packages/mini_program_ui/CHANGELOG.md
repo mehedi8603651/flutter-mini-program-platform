@@ -1,5 +1,6 @@
-## Unreleased
+## 0.3.3
 
+- Add pure-Dart `Mp.nfc.getState`, `Mp.nfc.read`, and app-owned `Mp.nfc.cancel` actions for optional foreground NDEF reading.
 - Add pure-Dart `Mp.bluetooth` foreground BLE scanning, connecting, discovery, read/write, notification subscription, and cleanup actions. No Flutter dependency.
 
 ## 0.3.2

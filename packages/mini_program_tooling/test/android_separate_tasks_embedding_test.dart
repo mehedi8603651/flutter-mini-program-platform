@@ -85,7 +85,7 @@ dependencies:
         await read('lib/mini_program/mini_program.dart'),
         isNot(contains('android_tasks')),
       );
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.2'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.3'));
     },
   );
 
@@ -153,7 +153,7 @@ dependencies:
       expect(taskDart, contains('navigatorKey: _navigatorKey'));
       expect(taskActivity, isNot(contains('finish()')));
       expect(await read('android/app/build.gradle.kts'), beforeGradle);
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.2'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.3'));
       expect(
         await read('lib/mini_program/README.md'),
         contains('navigationDelegate: openMiniProgramInAndroidTask'),
@@ -216,6 +216,7 @@ dependencies:
           'phone',
           'maps',
           'bluetooth',
+          'nfc',
         ]) {
           await install(feature);
         }
@@ -231,6 +232,7 @@ dependencies:
           'Phone',
           'Maps',
           'Bluetooth',
+          'Nfc',
           'Task',
         ]) {
           expect(
@@ -258,6 +260,7 @@ dependencies:
           'phone',
           'maps',
           'bluetooth',
+          'nfc',
         ]) {
           expect(
             await read('lib/mini_program/mini_program_host_setup.dart'),
@@ -279,6 +282,7 @@ dependencies:
           'phone',
           'maps',
           'bluetooth',
+          'nfc',
         ]) {
           await install(feature);
         }

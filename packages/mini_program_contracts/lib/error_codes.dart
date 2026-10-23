@@ -1,5 +1,24 @@
 /// Stable error code constants shared across contracts, SDK, and hosts.
 abstract final class MiniProgramErrorCodes {
+  static const nfcNotAccepted = 'nfc_not_accepted';
+  static const nfcUnavailable = 'nfc_unavailable';
+  static const nfcDisabled = 'nfc_disabled';
+  static const nfcPermissionDenied = 'nfc_permission_denied';
+  static const nfcUserGestureRequired = 'nfc_user_gesture_required';
+  static const nfcForegroundRequired = 'nfc_foreground_required';
+  static const nfcInvalidRequest = 'nfc_invalid_request';
+  static const nfcInvalidResult = 'nfc_invalid_result';
+  static const nfcInUse = 'nfc_in_use';
+  static const nfcRequestInProgress = 'nfc_request_in_progress';
+  static const nfcRequestCancelled = 'nfc_request_cancelled';
+  static const nfcTimeout = 'nfc_timeout';
+  static const nfcUnsupportedTag = 'nfc_unsupported_tag';
+  static const nfcUnsupportedRecord = 'nfc_unsupported_record';
+  static const nfcInvalidData = 'nfc_invalid_data';
+  static const nfcTagLost = 'nfc_tag_lost';
+  static const nfcLimitExceeded = 'nfc_limit_exceeded';
+  static const nfcOperationFailed = 'nfc_operation_failed';
+
   static const bluetoothNotAccepted = 'bluetooth_not_accepted';
   static const bluetoothUnavailable = 'bluetooth_unavailable';
   static const bluetoothDisabled = 'bluetooth_disabled';

@@ -1,6 +1,7 @@
 import '../errors.dart';
 import 'maps.dart';
 import 'bluetooth.dart';
+import 'nfc.dart';
 
 Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
   if (raw == null) {
@@ -26,6 +27,7 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
         entry.key != 'phone' &&
         entry.key != 'maps' &&
         entry.key != 'bluetooth' &&
+        entry.key != 'nfc' &&
         entry.key != 'displayBrightness' &&
         entry.key != 'audioPlayback' &&
         entry.key != 'videoPlayback') {
@@ -43,6 +45,10 @@ Map<String, Object?> normalizePartnerHandoffRequestedPermissions(Object? raw) {
     }
     if (entry.key == 'bluetooth') {
       normalized['bluetooth'] = normalizeRequestedBluetooth(entry.value);
+      continue;
+    }
+    if (entry.key == 'nfc') {
+      normalized['nfc'] = normalizeRequestedNfc(entry.value);
       continue;
     }
     if (entry.key == 'maps') {

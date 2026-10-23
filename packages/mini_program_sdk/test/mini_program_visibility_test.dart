@@ -10,6 +10,69 @@ import 'package:mini_program_ui/mini_program_ui.dart';
 
 void main() {
   testWidgets(
+    'NFC cancels on task switches, backgrounding and disposal without losing UI state',
+    (tester) async {
+      final provider = _VisibilityNfcProvider();
+      final source = _CountingVisibilitySource(nfcEnabled: true);
+      final runtime = MiniProgramRuntime(
+        sdkVersion: '1.0.0',
+        source: source,
+        hostBridge: const _HostBridge(),
+        nfcProvider: provider,
+        capabilityRegistry: CapabilityRegistry(const [CapabilityIds.nfcRead]),
+        cacheBundle: MiniProgramCacheBundle.inMemory(),
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      addTearDown(
+        () => tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: _VisibilityHarness(runtime: runtime)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Increment'));
+      await tester.tap(find.text('Read NFC'));
+      await tester.pump();
+      final first = provider.reads.single;
+      await tester.tap(find.byKey(const ValueKey<String>('hideMiniProgram')));
+      await tester.pumpAndSettle();
+      expect(provider.released, hasLength(1));
+      await tester.tap(find.byKey(const ValueKey<String>('showMiniProgram')));
+      await tester.pumpAndSettle();
+      expect(find.text('Counter: 1'), findsOneWidget);
+      await tester.tap(find.text('Read again'));
+      await tester.pump();
+      provider.reads.last.complete(_visibilityNfcResult);
+      await tester.pumpAndSettle();
+      expect(find.text('NFC: success'), findsOneWidget);
+      first.complete(_visibilityNfcResult);
+      await tester.pumpAndSettle();
+      expect(find.text('NFC: success'), findsOneWidget);
+      expect(provider.released, hasLength(2));
+      await tester.tap(find.text('Read NFC'));
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      expect(provider.released, hasLength(3));
+      provider.reads.last.complete(_visibilityNfcResult);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.text('Counter: 1'), findsOneWidget);
+      expect(source.manifestLoads, 1);
+      expect(source.screenLoads, 1);
+      await tester.tap(find.text('Read NFC'));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.reads.last.complete(_visibilityNfcResult);
+      await tester.pumpAndSettle();
+      expect(provider.released, hasLength(4));
+      expect(tester.takeException(), isNull);
+      runtime.dispose();
+    },
+  );
+  testWidgets(
     'BLE releases on hiding, backgrounding and disposal while retaining screen state',
     (tester) async {
       final provider = _VisibilityBleProvider();
@@ -220,8 +283,16 @@ class _VisibilityHarnessState extends State<_VisibilityHarness> {
 }
 
 class _CountingVisibilitySource
-    implements MiniProgramSource, MiniProgramBluetoothPolicyProvider {
-  _CountingVisibilitySource({this.bleEnabled = false});
+    implements
+        MiniProgramSource,
+        MiniProgramBluetoothPolicyProvider,
+        MiniProgramNfcPolicyProvider {
+  _CountingVisibilitySource({this.bleEnabled = false, this.nfcEnabled = false});
+  final bool nfcEnabled;
+
+  @override
+  MiniProgramNfcPolicy nfcPolicyFor(String miniProgramId) =>
+      MiniProgramNfcPolicy(enabled: nfcEnabled);
   final bool bleEnabled;
   int manifestLoads = 0;
   int screenLoads = 0;
@@ -257,7 +328,11 @@ class _CountingVisibilitySource
         'visibility_home': () => Mp.initialize(
           actions: <MpAction>[Mp.state.set('counter', 0)],
           child: Mp.stateBuilder(
-            keys: <String>['counter', if (bleEnabled) 'ble.status'],
+            keys: <String>[
+              'counter',
+              if (bleEnabled) 'ble.status',
+              if (nfcEnabled) 'nfc.status',
+            ],
             child: Mp.column(
               children: <MpNode>[
                 Mp.text('Counter: {{state.counter}}'),
@@ -269,6 +344,23 @@ class _CountingVisibilitySource
                   label: 'Open details',
                   action: Mp.navigation.openScreen('visibility_details'),
                 ),
+                if (nfcEnabled) ...[
+                  Mp.text('NFC: {{state.nfc.status}}'),
+                  Mp.primaryButton(
+                    label: 'Read NFC',
+                    action: Mp.nfc.read(
+                      targetState: 'nfc.result',
+                      statusState: 'nfc.status',
+                    ),
+                  ),
+                  Mp.primaryButton(
+                    label: 'Read again',
+                    action: Mp.nfc.read(
+                      targetState: 'nfc.result',
+                      statusState: 'nfc.status',
+                    ),
+                  ),
+                ],
                 if (bleEnabled) ...[
                   Mp.text('BLE: {{state.ble.status}}'),
                   Mp.primaryButton(
@@ -326,6 +418,36 @@ class _VisibilityBleProvider implements MiniProgramBluetoothProvider {
     required String sessionId,
   }) async {
     releasedSessions.add(sessionId);
+  }
+}
+
+const _visibilityNfcResult = {
+  'records': [
+    {'type': 'text', 'text': 'product-42', 'language': 'en'},
+  ],
+};
+
+class _VisibilityNfcProvider implements MiniProgramNfcProvider {
+  final reads = <Completer<Map<String, dynamic>>>[];
+  final released = <String>[];
+  @override
+  Future<Map<String, dynamic>> invoke({
+    required String miniProgramId,
+    required String sessionId,
+    required String action,
+    required Map<String, dynamic> arguments,
+  }) {
+    final result = Completer<Map<String, dynamic>>();
+    reads.add(result);
+    return result.future;
+  }
+
+  @override
+  Future<void> release({
+    required String miniProgramId,
+    required String sessionId,
+  }) async {
+    released.add(sessionId);
   }
 }
 

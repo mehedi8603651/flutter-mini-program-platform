@@ -32,6 +32,7 @@ void main() {
         'json_values.dart',
         'maps_policy.dart',
         'models.dart',
+        'nfc_policy.dart',
         'policy_document.dart',
         'policy_resolver.dart',
         'records.dart',

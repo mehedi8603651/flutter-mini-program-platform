@@ -1,5 +1,6 @@
 import 'features/maps/maps_actions.dart';
 import 'features/bluetooth/bluetooth_actions.dart';
+import 'features/nfc/nfc_actions.dart';
 import 'features/date_time/date_time_nodes.dart';
 import 'features/system/system_actions.dart';
 import 'core/mp_action.dart';
@@ -54,6 +55,7 @@ import 'features/state/state_actions.dart';
 import 'features/theme/theme_nodes.dart';
 
 export 'features/bluetooth/bluetooth_actions.dart' show MpBluetoothActions;
+export 'features/nfc/nfc_actions.dart' show MpNfcActions;
 export 'features/maps/maps_actions.dart'
     show MpMapsActions, MpMapCoordinateSystem, MpMapTravelMode;
 export 'features/date_time/date_time_nodes.dart' show MpDateTime;
@@ -120,6 +122,9 @@ abstract final class Mp {
 
   /// Optional host-controlled foreground Bluetooth Low Energy operations.
   static const bluetooth = MpBluetoothActions();
+
+  /// Optional host-controlled foreground NDEF tag reading.
+  static const nfc = MpNfcActions();
 
   /// Explicit host-approved clipboard access.
   static const clipboard = MpClipboardActions();

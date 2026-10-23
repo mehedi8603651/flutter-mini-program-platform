@@ -23,6 +23,7 @@ import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
 import 'bluetooth/mini_program_bluetooth.dart';
+import 'nfc/mini_program_nfc.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 /// Shared embedded runtime that existing apps configure once, then reuse to
@@ -51,6 +52,7 @@ class MiniProgramRuntime {
     this.phoneProvider,
     this.mapsProvider,
     this.bluetoothProvider,
+    this.nfcProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -80,6 +82,7 @@ class MiniProgramRuntime {
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
   final MiniProgramBluetoothProvider? bluetoothProvider;
+  final MiniProgramNfcProvider? nfcProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -110,6 +113,7 @@ class MiniProgramRuntime {
     MiniProgramPhoneProvider? phoneProvider,
     MiniProgramMapsProvider? mapsProvider,
     MiniProgramBluetoothProvider? bluetoothProvider,
+    MiniProgramNfcProvider? nfcProvider,
     MiniProgramShareProvider? shareProvider,
     MiniProgramAuthController? authController,
     bool? disposeAuthController,
@@ -142,6 +146,7 @@ class MiniProgramRuntime {
       phoneProvider: phoneProvider ?? this.phoneProvider,
       mapsProvider: mapsProvider ?? this.mapsProvider,
       bluetoothProvider: bluetoothProvider ?? this.bluetoothProvider,
+      nfcProvider: nfcProvider ?? this.nfcProvider,
       shareProvider: shareProvider ?? this.shareProvider,
       authController: authController ?? this.authController,
       disposeAuthController:
@@ -224,6 +229,7 @@ class MiniProgramRuntimeScope extends InheritedWidget {
         runtime.phoneProvider != oldWidget.runtime.phoneProvider ||
         runtime.mapsProvider != oldWidget.runtime.mapsProvider ||
         runtime.bluetoothProvider != oldWidget.runtime.bluetoothProvider ||
+        runtime.nfcProvider != oldWidget.runtime.nfcProvider ||
         runtime.shareProvider != oldWidget.runtime.shareProvider ||
         runtime.authController != oldWidget.runtime.authController ||
         runtime.disposeAuthController !=

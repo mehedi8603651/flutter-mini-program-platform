@@ -24,6 +24,92 @@ void main() {
   });
 
   test(
+    'NFC installation preserves host edits and adds no Gradle dependencies',
+    () async {
+      const installer = MiniProgramHostCapabilityInstaller();
+      final request = MiniProgramHostCapabilityInitRequest(
+        projectRootPath: hostRootPath,
+        capability: 'nfc',
+        platform: 'android',
+      );
+      final gradle = File(p.join(hostRootPath, 'android/app/build.gradle.kts'));
+      final before = await gradle.readAsString();
+      expect((await installer.initialize(request)).alreadyInstalled, false);
+      final manifest = await File(
+        p.join(hostRootPath, 'android/app/src/main/AndroidManifest.xml'),
+      ).readAsString();
+      expect(manifest, contains('android.permission.NFC'));
+      expect(
+        manifest,
+        contains('android.hardware.nfc" android:required="false"'),
+      );
+      expect(manifest, isNot(contains('ACTION_NDEF_DISCOVERED')));
+      expect(await gradle.readAsString(), before);
+      final provider = File(
+        p.join(hostRootPath, 'lib/mini_program/app_android_nfc_provider.dart'),
+      );
+      await provider.writeAsString(
+        '${await provider.readAsString()}\n// Host NFC customization.\n',
+      );
+      expect((await installer.initialize(request)).alreadyInstalled, true);
+      expect(
+        await provider.readAsString(),
+        contains('// Host NFC customization.'),
+      );
+      expect(
+        await _nativeSetupFile(hostRootPath).readAsString(),
+        contains('MiniProgramNfcChannel.register(flutterEngine)'),
+      );
+      final runtime = await File(
+        p.join(
+          hostRootPath,
+          'lib/mini_program/mini_program_runtime_setup.dart',
+        ),
+      ).readAsString();
+      expect(runtime, contains('CapabilityIds.nfcRead'));
+    },
+  );
+
+  test(
+    'NFC manifest conflicts leave the entire installation unchanged',
+    () async {
+      final manifest = File(
+        p.join(hostRootPath, 'android/app/src/main/AndroidManifest.xml'),
+      );
+      final conflict = (await manifest.readAsString()).replaceFirst(
+        '<application',
+        '<uses-permission android:name="android.permission.NFC" tools:node="remove" /><application',
+      );
+      await manifest.writeAsString(conflict);
+      final setup = File(
+        p.join(hostRootPath, 'lib/mini_program/mini_program_host_setup.dart'),
+      );
+      final before = await setup.readAsString();
+      await expectLater(
+        const MiniProgramHostCapabilityInstaller().initialize(
+          MiniProgramHostCapabilityInitRequest(
+            projectRootPath: hostRootPath,
+            capability: 'nfc',
+            platform: 'android',
+          ),
+        ),
+        throwsA(isA<MiniProgramHostCapabilityException>()),
+      );
+      expect(await setup.readAsString(), before);
+      expect(await manifest.readAsString(), conflict);
+      expect(
+        await File(
+          p.join(
+            hostRootPath,
+            'lib/mini_program/app_android_nfc_provider.dart',
+          ),
+        ).exists(),
+        false,
+      );
+    },
+  );
+
+  test(
     'BLE installation is optional, idempotent and adds no Gradle dependencies',
     () async {
       const installer = MiniProgramHostCapabilityInstaller();

@@ -5,8 +5,8 @@ using Android's built-in `BluetoothLeScanner` and `BluetoothGatt` APIs. It adds
 no Bluetooth Flutter plugin, Android library, background service, or advertising
 permission. Mini-program authoring remains pure Dart.
 
-This is an unreleased feature. Use the repository tooling and local package
-dependencies when testing it; the previously published CLI does not install it.
+Requires UI `0.3.3`, SDK `0.7.3`, contracts `0.3.20`, and tooling `0.7.21`
+or newer compatible versions. Access remains optional and host-controlled.
 
 ## Host setup
 
@@ -16,12 +16,10 @@ After the normal `miniprogram embed init --project-root .`, install the adapter:
 miniprogram host capability init bluetooth --platform android --project-root .
 ```
 
-For this unreleased checkout, invoke the local CLI rather than the globally
-installed published version:
+Install or update the published CLI before running the installer:
 
 ```powershell
-cd D:\flutter-mini-program-platform\packages\mini_program_tooling
-dart run bin/miniprogram.dart host capability init bluetooth --platform android --project-root "D:\your_host_app"
+dart pub global activate mini_program_tooling 0.7.21
 ```
 
 The installer generates a host-owned `app_android_bluetooth_provider.dart`, the

@@ -105,6 +105,7 @@ String buildHostEndpointFile(
       ..writeln(
         '      bluetoothPolicy: bluetoothPolicyForMiniProgram($mapKey),',
       )
+      ..writeln('      nfcPolicy: nfcPolicyForMiniProgram($mapKey),')
       ..writeln('      sharePolicy: sharePolicyForMiniProgram($mapKey),')
       ..writeln(
         '      displayBrightnessPolicy: displayBrightnessPolicyForMiniProgram($mapKey),',

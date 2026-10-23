@@ -8,6 +8,7 @@ typedef CapabilityId = String;
 /// Standard capability IDs used by published mini-program manifests.
 abstract final class CapabilityIds {
   static const CapabilityId bluetoothBle = 'bluetooth.ble';
+  static const CapabilityId nfcRead = 'nfc.read';
   static const CapabilityId clipboardRead = 'clipboard.read';
   static const CapabilityId clipboardWrite = 'clipboard.write';
   static const CapabilityId vibration = 'vibration';
@@ -101,6 +102,7 @@ abstract final class CapabilityIds {
     mapsOpenLocation,
     mapsOpenDirections,
     bluetoothBle,
+    nfcRead,
   ];
 
   static final RegExp _capabilityIdPattern = RegExp(

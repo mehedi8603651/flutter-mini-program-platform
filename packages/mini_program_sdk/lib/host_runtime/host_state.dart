@@ -19,6 +19,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   MiniProgramQrManager? _qrManager;
   MiniProgramShareManager? _shareManager;
   MiniProgramBluetoothManager? _bluetoothManager;
+  MiniProgramNfcManager? _nfcManager;
 
   late MiniProgramScreenRendererRegistry _rendererRegistry;
   late MiniProgramCacheManager _cacheManager;
@@ -67,6 +68,9 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     _bluetoothManager = widget.bluetoothProvider == null
         ? null
         : MiniProgramBluetoothManager(widget.bluetoothProvider!);
+    _nfcManager = widget.nfcProvider == null
+        ? null
+        : MiniProgramNfcManager(widget.nfcProvider!);
     _shareManager = _shareManagerFor(widget.shareProvider);
     _rebuildRendererRegistry();
     _restartLoad();
@@ -98,6 +102,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
         widget.phoneProvider != oldWidget.phoneProvider ||
         widget.mapsProvider != oldWidget.mapsProvider ||
         widget.bluetoothProvider != oldWidget.bluetoothProvider ||
+        widget.nfcProvider != oldWidget.nfcProvider ||
         widget.shareProvider != oldWidget.shareProvider ||
         widget.authController != oldWidget.authController ||
         widget.assetCache != oldWidget.assetCache ||
@@ -176,6 +181,12 @@ class _MiniProgramHostState extends State<MiniProgramHost>
             ? null
             : MiniProgramBluetoothManager(widget.bluetoothProvider!);
       }
+      if (widget.nfcProvider != oldWidget.nfcProvider) {
+        unawaited(_nfcManager?.dispose());
+        _nfcManager = widget.nfcProvider == null
+            ? null
+            : MiniProgramNfcManager(widget.nfcProvider!);
+      }
       _rebuildRendererRegistry();
       _restartLoad();
     }
@@ -204,6 +215,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       unawaited(_flashlightManager?.releaseFor(activeAppId));
       unawaited(_qrManager?.releaseFor(activeAppId));
       unawaited(_bluetoothManager?.releaseFor(activeAppId));
+      unawaited(_nfcManager?.releaseFor(activeAppId));
       unawaited(_mediaPlaybackManager?.releaseAllFor(activeAppId));
     }
     _closeActiveCacheApp();
@@ -239,6 +251,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     unawaited(_flashlightManager?.dispose());
     unawaited(_qrManager?.dispose());
     unawaited(_bluetoothManager?.dispose());
+    unawaited(_nfcManager?.dispose());
     _shareManager?.dispose();
     unawaited(_mediaPlaybackManager?.dispose());
     super.dispose();
@@ -263,6 +276,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
       final appId = _manifest?.id;
       if (appId != null) {
         unawaited(_bestEffort(_bluetoothManager?.releaseFor(appId)));
+        unawaited(_bestEffort(_nfcManager?.releaseFor(appId)));
         unawaited(
           _bestEffort(_microphoneManager?.stopFor(appId, background: true)),
         );
@@ -293,6 +307,7 @@ class _MiniProgramHostState extends State<MiniProgramHost>
     if (_surfaceVisibility != MiniProgramVisibility.foreground &&
         recordingAppId != null) {
       await _bestEffort(_bluetoothManager?.releaseFor(recordingAppId));
+      await _bestEffort(_nfcManager?.releaseFor(recordingAppId));
       await _bestEffort(
         _microphoneManager?.stopFor(recordingAppId, background: true),
       );

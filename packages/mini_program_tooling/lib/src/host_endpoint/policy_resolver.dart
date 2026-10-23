@@ -1,5 +1,6 @@
 import 'maps_policy.dart';
 import 'bluetooth_policy.dart';
+import 'nfc_policy.dart';
 import 'json_values.dart';
 import 'policy_document.dart';
 import 'system_policy.dart';
@@ -406,6 +407,7 @@ String buildHostPolicyResolverFile(Map<String, Object?> policies) {
   buffer.writeln(buildSystemPolicyResolvers(apps));
   buffer.writeln(buildMapsPolicyResolver(apps));
   buffer.writeln(buildBluetoothPolicyResolver(apps));
+  buffer.writeln(buildNfcPolicyResolver(apps));
   return buffer.toString();
 }
 

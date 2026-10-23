@@ -10,7 +10,8 @@ void main() {
     ]) {
       final root = File(path).readAsStringSync();
 
-      expect(root.split('\n').length, lessThan(35), reason: path);
+      // Optional host providers add imports; implementation remains in parts.
+      expect(root.split('\n').length, lessThan(40), reason: path);
       expect(
         RegExp(
           r'^(?:class|abstract class|abstract interface class|enum|typedef)\s',

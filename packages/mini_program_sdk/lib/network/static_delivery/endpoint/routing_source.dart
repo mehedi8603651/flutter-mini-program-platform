@@ -20,6 +20,7 @@ class EndpointRoutingMiniProgramSource
         MiniProgramPhonePolicyProvider,
         MiniProgramMapsPolicyProvider,
         MiniProgramBluetoothPolicyProvider,
+        MiniProgramNfcPolicyProvider,
         MiniProgramSharePolicyProvider,
         MiniProgramMediaPlaybackPolicyProvider,
         MiniProgramDeliveryContextProvider,
@@ -195,6 +196,10 @@ class EndpointRoutingMiniProgramSource
   @override
   MiniProgramBluetoothPolicy bluetoothPolicyFor(String miniProgramId) =>
       _endpointFor(miniProgramId).bluetoothPolicy;
+
+  @override
+  MiniProgramNfcPolicy nfcPolicyFor(String miniProgramId) =>
+      _endpointFor(miniProgramId).nfcPolicy;
 
   @override
   MiniProgramMapsPolicy mapsPolicyFor(String miniProgramId) =>

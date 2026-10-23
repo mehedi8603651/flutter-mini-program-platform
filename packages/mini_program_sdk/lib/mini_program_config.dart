@@ -23,6 +23,7 @@ import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
 import 'bluetooth/mini_program_bluetooth.dart';
+import 'nfc/mini_program_nfc.dart';
 import 'rendering/mini_program_screen_renderer.dart';
 
 @immutable
@@ -48,6 +49,7 @@ class MiniProgramConfig {
     this.phoneProvider,
     this.mapsProvider,
     this.bluetoothProvider,
+    this.nfcProvider,
     this.shareProvider,
     this.authController,
     this.disposeAuthController = false,
@@ -83,6 +85,7 @@ class MiniProgramConfig {
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
   final MiniProgramBluetoothProvider? bluetoothProvider;
+  final MiniProgramNfcProvider? nfcProvider;
   final MiniProgramShareProvider? shareProvider;
   final MiniProgramAuthController? authController;
   final bool disposeAuthController;
@@ -114,6 +117,7 @@ class MiniProgramConfig {
       phoneProvider: phoneProvider,
       mapsProvider: mapsProvider,
       bluetoothProvider: bluetoothProvider,
+      nfcProvider: nfcProvider,
       shareProvider: shareProvider,
       authController: authController,
       disposeAuthController: disposeAuthController,

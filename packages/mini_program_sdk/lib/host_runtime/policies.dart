@@ -10,6 +10,13 @@ extension _MiniProgramHostPolicies on _MiniProgramHostState {
         : const MiniProgramBluetoothPolicy();
   }
 
+  MiniProgramNfcPolicy _nfcPolicyFor(String appId) {
+    final source = widget.source;
+    return source is MiniProgramNfcPolicyProvider
+        ? (source as MiniProgramNfcPolicyProvider).nfcPolicyFor(appId)
+        : const MiniProgramNfcPolicy();
+  }
+
   MiniProgramPhonePolicy _phonePolicyFor(String appId) {
     final source = widget.source;
     return source is MiniProgramPhonePolicyProvider

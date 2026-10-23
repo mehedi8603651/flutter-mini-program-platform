@@ -73,3 +73,12 @@ See the [Android system capability guide](https://github.com/mehedi8603651/flutt
 ## Shop location and directions
 
 See the [Android shop location guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_shop_location_directions.md) for setup, host acceptance, coordinate systems and provider limits.
+
+## Optional foreground NFC
+
+Available with UI `0.3.3`, SDK `0.7.3`, contracts `0.3.20`, and tooling `0.7.21`.
+
+Pure-Dart `Mp.nfc` actions read bounded standard NDEF Text and HTTPS URI records
+through an optional native Android adapter. Hosts accept access and limits per
+mini-program; task switches cancel reading while retaining UI state. Install with
+`miniprogram host capability init nfc --platform android`. See the [NFC guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_nfc_ndef.md).

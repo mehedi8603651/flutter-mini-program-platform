@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.19` | Shared wire models, action names, errors, capabilities, and manifest contracts |
-| `mini_program_ui` | `0.3.2` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.7.2` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.20` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_contracts` | `0.3.20` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_ui` | `0.3.3` | Pure-Dart authoring API that serializes UI and actions to JSON |
+| `mini_program_sdk` | `0.7.3` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.21` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -134,6 +134,14 @@ These are system invariants, not preferences:
     disposed owners release scans, connections, and notifications without
     clearing the mini-program's UI state. Permission-dialog inactivity is not
     backgrounding. No background BLE, Classic Bluetooth, or automatic reconnect.
+
+29. NFC NDEF reading is an optional gesture-gated foreground host capability.
+    Accepted record types, duration/count/byte limits and a host provider authorize
+    each one-shot read. Only bounded text and inert HTTPS URI records cross the
+    boundary. Native tags, UIDs, raw bytes, Intents and platform errors stay native.
+    Process-wide ownership isolates engines/tasks; hiding, Activity pauses and
+    disposal cancel I/O without clearing UI state. Writes, raw commands, card
+    emulation and background tag dispatch are outside this capability.
 
 ## Repository Map
 
@@ -2005,6 +2013,19 @@ notification deliveries, and close timed-out GATT connections before reuse.
 Requested Bluetooth policy remains advisory; runtime uses accepted policy only.
 The initial write limit is 20 bytes without implicit fragmentation; reads and
 notifications are bounded at 512 bytes. See `docs/android_bluetooth_ble.md`.
+
+Foreground NDEF authoring is in `features/nfc/nfc_actions.dart`; shared wire
+validation is `mini_program_contracts/lib/mini_program_nfc.dart`. SDK accepted
+policy/provider/session ownership is in `nfc/mini_program_nfc.dart`; renderer
+execution and validation remain `nfc.dart` parts and modal scopes forward NFC
+services. The transactional system installer uses `capabilities/nfc/` templates;
+install with `miniprogram host capability init nfc --platform android`. Add only
+the normal NFC manifest permission and an optional hardware feature. Preserve
+host merge declarations and separate-task installation/regeneration. Native
+reader-mode work runs off the UI thread, with bounded callbacks/workers and exact
+session cleanup. SDK/native watchdogs, byte/type limits and stale-result guards
+must remain independent. Reject a complete NDEF message when any record is
+unsupported, disallowed or malformed. See `docs/android_nfc_ndef.md`.
 
 ## Release Conventions
 

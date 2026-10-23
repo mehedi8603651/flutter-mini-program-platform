@@ -1,5 +1,6 @@
-## Unreleased
+## 0.7.3
 
+- Add default-denied foreground NFC policies/providers, bounded one-shot NDEF reading, atomic results, session-safe cancellation/timeouts, and lifecycle cleanup that preserves UI state.
 - Add optional default-denied BLE providers and app/session ownership, strict action/result validation, per-app service/write/value limits, latest-value notifications, and foreground cleanup that preserves UI state.
 
 ## 0.7.2

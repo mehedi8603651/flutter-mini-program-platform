@@ -1,6 +1,8 @@
-## Unreleased
+## 0.7.21
 
+- Add optional `host capability init nfc --platform android` with native reader-mode installation, accepted/requested policies, and standard/separate-task regeneration without new Gradle dependencies.
 - Add optional `host capability init bluetooth --platform android` using native Android BLE APIs without extra Gradle dependencies. Generate Android permissions, providers, and registration for embedded/separate-task hosts; preserve host edits and accepted policy across regeneration.
+- Generate mini-programs against UI `0.3.3` and embedded, separate-task, and preview hosts against SDK `0.7.3` and contracts `0.3.20` for optional BLE and NFC capabilities.
 
 ## 0.7.20
 

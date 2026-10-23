@@ -1,5 +1,6 @@
-## Unreleased
+## 0.3.20
 
+- Add bounded foreground NFC actions, capability/errors, and validated NDEF Text/HTTPS URI result contracts.
 - Add canonical foreground BLE actions/capability/errors and shared bounded UUID, opaque device-handle, hex-data, operation, and result validation.
 
 ## 0.3.19

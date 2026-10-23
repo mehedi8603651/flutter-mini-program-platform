@@ -792,6 +792,8 @@ Future<Object?> _runMpAction(
   MiniProgramPhoneProvider? phoneProvider,
   MiniProgramMapsProvider? mapsProvider,
   MiniProgramBluetoothManager? bluetoothManager,
+  MiniProgramNfcManager? nfcManager,
+  MiniProgramNfcPolicy nfcPolicy = const MiniProgramNfcPolicy(),
   MiniProgramBluetoothPolicy bluetoothPolicy =
       const MiniProgramBluetoothPolicy(),
   MiniProgramPhonePolicy phonePolicy = const MiniProgramPhonePolicy(),
@@ -845,6 +847,8 @@ Future<Object?> _runMpAction(
         phoneProvider: phoneProvider,
         mapsProvider: mapsProvider,
         bluetoothManager: bluetoothManager,
+        nfcManager: nfcManager,
+        nfcPolicy: nfcPolicy,
         bluetoothPolicy: bluetoothPolicy,
         phonePolicy: phonePolicy,
         mapsPolicy: mapsPolicy,

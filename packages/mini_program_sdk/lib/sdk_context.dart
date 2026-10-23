@@ -24,6 +24,7 @@ import 'share/mini_program_share.dart';
 import 'system/mini_program_system.dart';
 import 'maps/mini_program_maps.dart';
 import 'bluetooth/mini_program_bluetooth.dart';
+import 'nfc/mini_program_nfc.dart';
 import 'state/mp_state.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart'
     hide MiniProgramCachePolicy;
@@ -95,7 +96,9 @@ class MiniProgramSdkScope extends InheritedWidget {
     this.phoneProvider,
     this.mapsProvider,
     this.bluetoothManager,
+    this.nfcManager,
     this.bluetoothPolicy = const MiniProgramBluetoothPolicy(),
+    this.nfcPolicy = const MiniProgramNfcPolicy(),
     this.phonePolicy = const MiniProgramPhonePolicy(),
     this.mapsPolicy = const MiniProgramMapsPolicy(),
     this.isForeground = true,
@@ -152,7 +155,9 @@ class MiniProgramSdkScope extends InheritedWidget {
   final MiniProgramPhoneProvider? phoneProvider;
   final MiniProgramMapsProvider? mapsProvider;
   final MiniProgramBluetoothManager? bluetoothManager;
+  final MiniProgramNfcManager? nfcManager;
   final MiniProgramBluetoothPolicy bluetoothPolicy;
+  final MiniProgramNfcPolicy nfcPolicy;
   final MiniProgramPhonePolicy phonePolicy;
   final MiniProgramMapsPolicy mapsPolicy;
   final bool isForeground;
@@ -220,7 +225,9 @@ class MiniProgramSdkScope extends InheritedWidget {
         phoneProvider != oldWidget.phoneProvider ||
         mapsProvider != oldWidget.mapsProvider ||
         bluetoothManager != oldWidget.bluetoothManager ||
+        nfcManager != oldWidget.nfcManager ||
         bluetoothPolicy != oldWidget.bluetoothPolicy ||
+        nfcPolicy != oldWidget.nfcPolicy ||
         phonePolicy != oldWidget.phonePolicy ||
         mapsPolicy != oldWidget.mapsPolicy ||
         isForeground != oldWidget.isForeground ||

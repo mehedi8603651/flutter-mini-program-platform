@@ -234,6 +234,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
   MiniProgramPhoneProvider? phoneProvider,
   MiniProgramMapsProvider? mapsProvider,
   MiniProgramBluetoothProvider? bluetoothProvider,
+  MiniProgramNfcProvider? nfcProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -255,6 +256,7 @@ Future<MiniProgramConfig> buildHostMiniProgramConfig({
     phoneProvider: phoneProvider,
     mapsProvider: mapsProvider,
     bluetoothProvider: bluetoothProvider,
+    nfcProvider: nfcProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,
@@ -364,6 +366,10 @@ MiniProgramBluetoothPolicy bluetoothPolicyForMiniProgram(String appId) {
   return const MiniProgramBluetoothPolicy();
 }
 
+MiniProgramNfcPolicy nfcPolicyForMiniProgram(String appId) {
+  return const MiniProgramNfcPolicy();
+}
+
 MiniProgramMapsPolicy mapsPolicyForMiniProgram(String appId) {
   return const MiniProgramMapsPolicy();
 }
@@ -436,6 +442,7 @@ MiniProgramConfig buildMiniProgramConfig({
   MiniProgramPhoneProvider? phoneProvider,
   MiniProgramMapsProvider? mapsProvider,
   MiniProgramBluetoothProvider? bluetoothProvider,
+  MiniProgramNfcProvider? nfcProvider,
   MiniProgramShareProvider? shareProvider,
   MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
   MiniProgramMediaPlaybackProvider? mediaPlaybackProvider,
@@ -463,6 +470,7 @@ MiniProgramConfig buildMiniProgramConfig({
     if (vibrationProvider != null) CapabilityIds.vibration,
     if (phoneProvider != null) CapabilityIds.phoneDialer,
     if (bluetoothProvider != null) CapabilityIds.bluetoothBle,
+    if (nfcProvider != null) CapabilityIds.nfcRead,
     if (mapsProvider != null) CapabilityIds.mapsOpenLocation,
     if (mapsProvider != null) CapabilityIds.mapsOpenDirections,
     if (shareProvider != null) CapabilityIds.systemShare,
@@ -499,6 +507,7 @@ MiniProgramConfig buildMiniProgramConfig({
     phoneProvider: phoneProvider,
     mapsProvider: mapsProvider,
     bluetoothProvider: bluetoothProvider,
+    nfcProvider: nfcProvider,
     shareProvider: shareProvider,
     displayBrightnessProvider: displayBrightnessProvider,
     mediaPlaybackProvider: mediaPlaybackProvider,

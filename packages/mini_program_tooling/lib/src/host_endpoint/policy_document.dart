@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'bluetooth_policy.dart';
+import 'nfc_policy.dart';
 import 'json_values.dart';
 import 'maps_policy.dart';
 import 'models.dart';
@@ -251,6 +252,17 @@ Map<String, Object?> _acceptedHostPermissionFromRequested(
       },
     });
   }
+  if (permission == 'nfc') {
+    final value = hostJsonObjectOrEmpty(requested);
+    return validateAcceptedNfcPermission({
+      ...deepHostJsonObjectCopy(existing),
+      'enabled': acceptRequested && value['enabled'] == true,
+      'allowedRecordTypes': value['recordTypes'] ?? const ['text', 'uri'],
+      'maxReadMs': value['recommendedMaxReadMs'] ?? 15000,
+      'maxRecords': value['recommendedMaxRecords'] ?? 8,
+      'maxMessageBytes': value['recommendedMaxMessageBytes'] ?? 4096,
+    });
+  }
   if (permission == 'bluetooth') {
     final value = hostJsonObjectOrEmpty(requested);
     return validateAcceptedBluetoothPermission({
@@ -447,6 +459,17 @@ Map<String, Object?> validateAcceptedHostPermissions(
     }
     normalized['bluetooth'] = validateAcceptedBluetoothPermission(
       hostJsonObjectOrEmpty(bluetooth),
+    );
+  }
+  final nfc = normalized['nfc'];
+  if (nfc != null) {
+    if (nfc is! Map) {
+      throw const MiniProgramHostException(
+        'Accepted permissions.nfc must be an object.',
+      );
+    }
+    normalized['nfc'] = validateAcceptedNfcPermission(
+      hostJsonObjectOrEmpty(nfc),
     );
   }
   final maps = normalized['maps'];

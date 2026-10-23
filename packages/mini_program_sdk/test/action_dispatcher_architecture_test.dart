@@ -35,6 +35,7 @@ void main() {
       'auth_backend.dart',
       'backend_search.dart',
       'bluetooth.dart',
+      'nfc.dart',
       'cache.dart',
       'camera.dart',
       'composition.dart',

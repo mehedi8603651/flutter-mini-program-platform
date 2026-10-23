@@ -1,5 +1,8 @@
 /// Stable wire names for host-dispatched mobile MVP actions.
 abstract final class ActionNames {
+  static const nfcGetState = 'nfc.getState';
+  static const nfcRead = 'nfc.read';
+  static const nfcCancel = 'nfc.cancel';
   static const bluetoothGetState = 'bluetooth.getState';
   static const bluetoothScan = 'bluetooth.scan';
   static const bluetoothStopScan = 'bluetooth.stopScan';

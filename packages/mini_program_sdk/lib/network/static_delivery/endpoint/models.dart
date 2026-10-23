@@ -34,6 +34,7 @@ class MiniProgramEndpoint {
     this.phonePolicy = const MiniProgramPhonePolicy(),
     this.mapsPolicy = const MiniProgramMapsPolicy(),
     this.bluetoothPolicy = const MiniProgramBluetoothPolicy(),
+    this.nfcPolicy = const MiniProgramNfcPolicy(),
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
@@ -63,6 +64,7 @@ class MiniProgramEndpoint {
     this.phonePolicy = const MiniProgramPhonePolicy(),
     this.mapsPolicy = const MiniProgramMapsPolicy(),
     this.bluetoothPolicy = const MiniProgramBluetoothPolicy(),
+    this.nfcPolicy = const MiniProgramNfcPolicy(),
     this.sharePolicy = const MiniProgramSharePolicy(),
     this.mediaPlaybackPolicy = const MiniProgramMediaPlaybackPolicy(),
   });
@@ -87,6 +89,7 @@ class MiniProgramEndpoint {
   final MiniProgramPhonePolicy phonePolicy;
   final MiniProgramMapsPolicy mapsPolicy;
   final MiniProgramBluetoothPolicy bluetoothPolicy;
+  final MiniProgramNfcPolicy nfcPolicy;
   final MiniProgramSharePolicy sharePolicy;
   final MiniProgramMediaPlaybackPolicy mediaPlaybackPolicy;
 }
