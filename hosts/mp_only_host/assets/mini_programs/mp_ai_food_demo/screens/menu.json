@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "screenId": "menu",
+  "root": {
+    "type": "column",
+    "props": {},
+    "children": [
+      {
+        "type": "heading",
+        "props": {
+          "data": "Menu"
+        },
+        "children": []
+      },
+      {
+        "type": "text",
+        "props": {
+          "data": "Vegetarian noodles — 180 BDT per portion"
+        },
+        "children": []
+      },
+      {
+        "type": "primaryButton",
+        "props": {
+          "action": {
+            "type": "state.increment",
+            "props": {
+              "by": 1,
+              "key": "cart.quantity"
+            }
+          },
+          "label": "Add noodles"
+        },
+        "children": []
+      },
+      {
+        "type": "stateBuilder",
+        "props": {
+          "child": {
+            "type": "text",
+            "props": {
+              "data": "Cart quantity: {{state.cart.quantity}}"
+            },
+            "children": []
+          },
+          "keys": [
+            "cart.quantity"
+          ]
+        },
+        "children": []
+      },
+      {
+        "type": "primaryButton",
+        "props": {
+          "action": {
+            "type": "navigation.openScreen",
+            "props": {
+              "screenId": "cart"
+            }
+          },
+          "label": "View cart"
+        },
+        "children": []
+      }
+    ]
+  }
+}

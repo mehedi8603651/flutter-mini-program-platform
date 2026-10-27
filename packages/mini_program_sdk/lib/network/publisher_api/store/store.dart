@@ -13,6 +13,10 @@ class MiniProgramBackendStore extends ChangeNotifier {
       <String, MiniProgramPagedBackendQuery>{};
   int _generation = 0;
   bool _disposed = false;
+  int _revision = 0;
+
+  /// Monotonic notification counter, without exposing backend values.
+  int get revision => _revision;
 
   MiniProgramBackendSnapshot snapshot(String requestId) {
     return _snapshots[requestId] ?? MiniProgramBackendSnapshot.idle(requestId);
@@ -180,6 +184,7 @@ class MiniProgramBackendStore extends ChangeNotifier {
 
   void _notifyIfActive() {
     if (!_disposed) {
+      _revision++;
       notifyListeners();
     }
   }

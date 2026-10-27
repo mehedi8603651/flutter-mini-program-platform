@@ -81,6 +81,7 @@ void _notifyStoreChangedPaths(MpStore store, Set<String> changedPaths) {
   if (changedPaths.isEmpty) {
     return;
   }
+  store._revision++;
   for (final entry in store._watchers.entries) {
     if (changedPaths.any((changed) => _pathsRelated(entry.key, changed))) {
       entry.value.value = _cloneStateValue(
@@ -103,6 +104,7 @@ void _restoreStoreCheckpoint(MpStore store, _BatchCheckpoint checkpoint) {
 }
 
 void _notifyStoreRelated(MpStore store, String changedKey) {
+  store._revision++;
   for (final entry in store._watchers.entries) {
     if (_pathsRelated(entry.key, changedKey)) {
       entry.value.value = _cloneStateValue(

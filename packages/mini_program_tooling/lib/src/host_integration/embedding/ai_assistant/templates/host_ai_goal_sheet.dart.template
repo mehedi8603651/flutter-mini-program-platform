@@ -1,0 +1,151 @@
+import 'package:flutter/material.dart';
+
+class HostAiGoalSheet extends StatefulWidget {
+  const HostAiGoalSheet({
+    super.key,
+    required this.initialGoal,
+    required this.status,
+    required this.history,
+    required this.message,
+    required this.canContinue,
+    required this.decisions,
+    required this.tokens,
+    required this.costUsd,
+    required this.maxDecisions,
+    this.title = 'AI assistant',
+    this.continueGoal,
+    this.onGoalChanged,
+    this.onCancelTask,
+    this.isHost = false,
+  });
+  final String title;
+  final String initialGoal;
+  final String? continueGoal;
+  final ValueChanged<String>? onGoalChanged;
+  final VoidCallback? onCancelTask;
+  final String status;
+  final List<String> history;
+  final String message;
+  final bool canContinue;
+  final int decisions;
+  final int tokens;
+  final double? costUsd;
+  final int maxDecisions;
+  final bool isHost;
+
+  @override
+  State<HostAiGoalSheet> createState() => _HostAiGoalSheetState();
+}
+
+class _HostAiGoalSheetState extends State<HostAiGoalSheet> {
+  late final _goal = TextEditingController(text: widget.initialGoal);
+
+  @override
+  void dispose() {
+    _goal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      20,
+      16,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                IconButton(
+                  tooltip: widget.isHost
+                      ? 'Back to host'
+                      : 'Back to mini-program',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Up to ${widget.maxDecisions} decisions '
+              'per run. Keep the host or mini-program visible while it works.',
+            ),
+            const SizedBox(height: 8),
+            Text(widget.status, style: Theme.of(context).textTheme.titleSmall),
+            if (widget.message.isNotEmpty) Text(widget.message),
+            if (widget.decisions > 0)
+              Text(
+                '${widget.decisions} decisions · ${widget.tokens} tokens'
+                '${widget.costUsd == null ? '' : ' · reported \$${widget.costUsd!.toStringAsFixed(5)}'}',
+              ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _goal,
+              onChanged: widget.onGoalChanged,
+              decoration: const InputDecoration(
+                labelText: 'What should the AI do?',
+                border: OutlineInputBorder(),
+              ),
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 1000,
+            ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _goal,
+              builder: (context, value, _) => FilledButton(
+                onPressed: value.text.trim().isEmpty || value.text.length > 1000
+                    ? null
+                    : () => Navigator.of(context).pop(_goal.text.trim()),
+                child: Text(
+                  widget.canContinue &&
+                          (widget.continueGoal ?? widget.initialGoal)
+                              .trim()
+                              .isNotEmpty &&
+                          value.text.trim() ==
+                              (widget.continueGoal ?? widget.initialGoal).trim()
+                      ? 'Continue AI'
+                      : 'Start AI',
+                ),
+              ),
+            ),
+            if (widget.onCancelTask != null)
+              OutlinedButton.icon(
+                onPressed: () {
+                  widget.onCancelTask!();
+                  Navigator.of(context).pop();
+                },
+                icon: const Icon(Icons.stop_rounded),
+                label: const Text('Cancel task'),
+              ),
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.keyboard_arrow_down),
+              label: const Text('Minimize'),
+            ),
+            if (widget.history.isNotEmpty) ...[
+              const Divider(),
+              const Text('Recent actions'),
+              for (var i = 0; i < widget.history.length; i++)
+                Text('${i + 1}. ${widget.history[i]}'),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}

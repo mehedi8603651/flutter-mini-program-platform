@@ -1,0 +1,1653 @@
+{
+  "schemaVersion": 1,
+  "screenId": "catalog",
+  "root": {
+    "type": "page",
+    "props": {
+      "safeArea": true
+    },
+    "children": [
+      {
+        "type": "padding",
+        "props": {
+          "padding": {
+            "bottom": 18,
+            "left": 18,
+            "right": 18,
+            "top": 18
+          }
+        },
+        "children": [
+          {
+            "type": "column",
+            "props": {},
+            "children": [
+              {
+                "type": "heading",
+                "props": {
+                  "data": "Tea catalog"
+                },
+                "children": []
+              },
+              {
+                "type": "secondaryButton",
+                "props": {
+                  "action": {
+                    "type": "navigation.popScreen",
+                    "props": {}
+                  },
+                  "label": "Back to preferences"
+                },
+                "children": []
+              },
+              {
+                "type": "expanded",
+                "props": {
+                  "flex": 1
+                },
+                "children": [
+                  {
+                    "type": "scrollView",
+                    "props": {},
+                    "children": [
+                      {
+                        "type": "column",
+                        "props": {},
+                        "children": [
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 1"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 1 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 1"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 2"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 2 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 2"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 3"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 3 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 3"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 4"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 4 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 4"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 5"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 5 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 5"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 6"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 6 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 6"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 7"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 7 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 7"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 8"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 8 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 8"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 9"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 9 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 9"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 10"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 10 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 10"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 11"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 11 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 11"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 12"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 12 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 12"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 13"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 13 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 13"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 14"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 14 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 14"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 15"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 15 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 15"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 16"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 16 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 16"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 17"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 17 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 17"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 18"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 18 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 18"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 19"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 19 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 19"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 20"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 20 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 20"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 21"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 21 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 21"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 22"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 22 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 22"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 23"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 23 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 23"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "card",
+                            "props": {},
+                            "children": [
+                              {
+                                "type": "column",
+                                "props": {},
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "props": {
+                                      "data": "Catalog item 24"
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "type": "secondaryButton",
+                                    "props": {
+                                      "action": {
+                                        "type": "ui.dialog",
+                                        "props": {
+                                          "borderRadius": 24,
+                                          "child": {
+                                            "type": "column",
+                                            "props": {},
+                                            "children": [
+                                              {
+                                                "type": "heading",
+                                                "props": {
+                                                  "data": "Catalog item 24 details"
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "text",
+                                                "props": {
+                                                  "data": "This item is available for pickup."
+                                                },
+                                                "children": []
+                                              },
+                                              {
+                                                "type": "primaryButton",
+                                                "props": {
+                                                  "action": {
+                                                    "type": "ui.dialog.close",
+                                                    "props": {}
+                                                  },
+                                                  "label": "Close details"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          },
+                                          "dismissible": true,
+                                          "padding": 24,
+                                          "width": 420
+                                        }
+                                      },
+                                      "label": "Open item 24"
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

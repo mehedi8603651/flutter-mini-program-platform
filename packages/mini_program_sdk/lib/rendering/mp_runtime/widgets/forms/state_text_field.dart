@@ -98,6 +98,7 @@ class _MpStateTextFieldState extends State<_MpStateTextField> {
     if (_updatingController) {
       return;
     }
+    MiniProgramInteractionSurface.userInput(context);
     final state = _state;
     if (state == null) {
       return;
@@ -118,9 +119,9 @@ class _MpStateTextFieldState extends State<_MpStateTextField> {
       unawaited(_dispatchAction(action, generation));
       return;
     }
-    _debounceTimer = Timer(
+    _debounceTimer = MiniProgramInteractionExecution.delay(
       Duration(milliseconds: debounceMs),
-      () => unawaited(_dispatchAction(action, generation)),
+      () => _dispatchAction(action, generation),
     );
   }
 
@@ -215,35 +216,38 @@ class _MpStateTextFieldState extends State<_MpStateTextField> {
                     ),
                   ),
                 ),
-              EditableText(
-                controller: _controller,
-                focusNode: _focusNode,
-                autofocus: _bool(widget.node, 'autofocus'),
-                keyboardType: _stateTextKeyboardType(
-                  _string(widget.node, 'keyboardType'),
-                ),
-                textInputAction: _stateTextInputAction(
-                  _string(widget.node, 'textInputAction'),
-                ),
-                minLines: _int(widget.node, 'minLines', fallback: 1),
-                maxLines: _int(widget.node, 'maxLines', fallback: 1),
-                inputFormatters: <TextInputFormatter>[
-                  LengthLimitingTextInputFormatter(
-                    _int(widget.node, 'maxLength', fallback: 4096),
+              _MpEditableField(
+                label: widget.node.props['label'] as String? ?? '',
+                child: EditableText(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autofocus: _bool(widget.node, 'autofocus'),
+                  keyboardType: _stateTextKeyboardType(
+                    _string(widget.node, 'keyboardType'),
                   ),
-                ],
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: fontSize,
-                  height: 1.35,
+                  textInputAction: _stateTextInputAction(
+                    _string(widget.node, 'textInputAction'),
+                  ),
+                  minLines: _int(widget.node, 'minLines', fallback: 1),
+                  maxLines: _int(widget.node, 'maxLines', fallback: 1),
+                  inputFormatters: <TextInputFormatter>[
+                    LengthLimitingTextInputFormatter(
+                      _int(widget.node, 'maxLength', fallback: 4096),
+                    ),
+                  ],
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: fontSize,
+                    height: 1.35,
+                  ),
+                  cursorColor: _mpColor(
+                    _string(widget.node, 'cursorColor'),
+                    fallback: const Color(0xFF0B7A75),
+                  ),
+                  backgroundCursorColor: hintColor,
+                  onChanged: _handleChanged,
+                  onSubmitted: _handleSubmitted,
                 ),
-                cursorColor: _mpColor(
-                  _string(widget.node, 'cursorColor'),
-                  fallback: const Color(0xFF0B7A75),
-                ),
-                backgroundCursorColor: hintColor,
-                onChanged: _handleChanged,
-                onSubmitted: _handleSubmitted,
               ),
             ],
           ),

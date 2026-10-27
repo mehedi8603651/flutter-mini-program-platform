@@ -119,6 +119,7 @@ class _MpOverlayHostState extends State<_MpOverlayHost>
       'top' => const Offset(0, -1),
       _ => Offset.zero,
     };
+    final interactionRoute = MiniProgramInteractionSurface.routeBuilder(source);
     session.route = RawDialogRoute<void>(
       settings: RouteSettings(name: 'mini-program/panel/$kind'),
       barrierDismissible: props['dismissible'] == true,
@@ -130,7 +131,8 @@ class _MpOverlayHostState extends State<_MpOverlayHost>
               fallback: const Color(0x66000000),
             ),
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (_, _, _) => _MpOwnedPanel(session: session),
+      pageBuilder: (_, _, _) =>
+          interactionRoute(_MpOwnedPanel(session: session)),
       transitionBuilder: (_, animation, _, child) {
         final curve = CurvedAnimation(
           parent: animation,
@@ -146,6 +148,8 @@ class _MpOverlayHostState extends State<_MpOverlayHost>
       },
     );
     _sessions.add(session);
+    final interaction = MiniProgramInteractionExecution.current;
+    if (interaction != null) interaction.waitingForPanel = true;
     try {
       await navigator.push<void>(session.route);
       return session.cancelled
@@ -156,6 +160,7 @@ class _MpOverlayHostState extends State<_MpOverlayHost>
             )
           : HostActionResult.success(actionName: type);
     } finally {
+      if (interaction != null) interaction.waitingForPanel = false;
       _sessions.remove(session);
     }
   }

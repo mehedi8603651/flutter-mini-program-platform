@@ -4,15 +4,18 @@ import 'package:path/path.dart' as p;
 
 import '../../capabilities/android/integration_editor.dart';
 import '../../capabilities/models.dart';
+import '../ai_assistant/planner.dart';
 import '../models.dart';
 import 'dart_templates.dart';
 import 'native_templates.dart';
+import 'interaction_template.dart';
 import 'source_editors.dart';
 
 /// Builds the complete native write plan without changing the host project.
 Future<Map<String, String>> planAndroidSeparateTasks({
   required String projectRootPath,
   required Map<String, String> platformFiles,
+  bool aiAssistant = false,
 }) async {
   final mainDart = File(p.join(projectRootPath, 'lib', 'main.dart'));
   final manifest = File(
@@ -70,9 +73,18 @@ Future<Map<String, String>> planAndroidSeparateTasks({
     );
     final generated = <String, String>{
       integration.paths
+          .generatedFile('tasks', 'MiniProgramInteractionRelay.kt')
+          .path: buildAndroidInteractionRelay(
+        packageName,
+      ),
+      if (aiAssistant)
+        integration.paths.generatedFile('tasks', 'HostAiSessionRelay.kt').path:
+            await buildHostAiNativeRelay(packageName),
+      integration.paths
           .generatedFile('tasks', 'MiniProgramTaskChannel.kt')
           .path: buildAndroidTaskChannel(
         packageName,
+        aiAssistant: aiAssistant,
       ),
       integration.paths
           .generatedFile('tasks', 'MiniProgramTaskActivity.kt')
@@ -86,12 +98,18 @@ Future<Map<String, String>> planAndroidSeparateTasks({
         'lib',
         'mini_program',
         'mini_program_android_tasks.dart',
-      ): buildAndroidTasksDart(),
+      ): buildAndroidTasksDart(
+        aiAssistant: aiAssistant,
+      ),
     };
     for (final entry in generated.entries) {
       final file = File(entry.key);
       if (await file.exists() &&
-          !(await file.readAsString()).contains(androidTasksGeneratedMarker)) {
+          !(await file.readAsString()).contains(
+            entry.value.startsWith(aiAssistantGeneratedMarker)
+                ? aiAssistantGeneratedMarker
+                : androidTasksGeneratedMarker,
+          )) {
         throw MiniProgramEmbeddingInitException(
           'Refusing to overwrite the unrecognized Android task file ${file.path}. '
           'Move or reconcile it before retrying.',

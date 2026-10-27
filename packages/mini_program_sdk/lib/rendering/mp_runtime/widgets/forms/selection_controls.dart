@@ -107,19 +107,24 @@ class _MpDropdownFieldState extends State<_MpDropdownField> {
 
   Future<void> _chooseOption(BuildContext context) async {
     final options = _options(widget.node);
+    final interactionRoute = MiniProgramInteractionSurface.routeBuilder(
+      context,
+    );
     await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Choose option',
       barrierColor: const Color(0x66000000),
       transitionDuration: const Duration(milliseconds: 120),
-      pageBuilder: (context, animation, secondaryAnimation) => _MpOptionDialog(
-        title: _string(widget.node, 'label'),
-        options: options,
-        onSelected: (value) {
-          _form?.setValue(_name, value);
-          Navigator.of(context).pop();
-        },
+      pageBuilder: (_, animation, secondaryAnimation) => interactionRoute(
+        _MpOptionDialog(
+          title: _string(widget.node, 'label'),
+          options: options,
+          onSelected: (value) {
+            _form?.setValue(_name, value);
+            Navigator.of(context).pop();
+          },
+        ),
       ),
     );
   }

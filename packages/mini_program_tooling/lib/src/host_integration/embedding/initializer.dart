@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 
 import '../capabilities/file_transaction.dart';
 import '../capabilities/models.dart';
+import 'ai_assistant/planner.dart';
 import 'android_integration.dart';
 import 'android_tasks/native_templates.dart';
 import 'android_tasks/planner.dart';
@@ -12,8 +13,8 @@ import 'models.dart';
 import 'pubspec_editor.dart';
 import 'readme_template.dart';
 
-const String _miniProgramSdkConstraint = '^0.7.3';
-const String _miniProgramContractsConstraint = '^0.3.20';
+const String _miniProgramSdkConstraint = '^0.7.4';
+const String _miniProgramContractsConstraint = '^0.3.21';
 
 Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
   MiniProgramEmbeddingInitRequest request,
@@ -74,6 +75,21 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
           (await tasksFile.readAsString()).contains(
             androidTasksGeneratedMarker,
           ));
+  final assistantFile = File(
+    path.join(projectRootPath, 'lib', 'mini_program', 'mini_program_ai.dart'),
+  );
+  final aiAssistant =
+      request.aiAssistant ||
+      (await assistantFile.exists() &&
+          (await assistantFile.readAsString()).startsWith(
+            aiAssistantGeneratedMarker,
+          ));
+  if (aiAssistant && !androidSeparateTasks) {
+    throw const MiniProgramEmbeddingInitException(
+      '--ai-assistant currently requires --android-separate-tasks or a previously '
+      'installed Android task integration. No files were changed.',
+    );
+  }
   final sdkConstraint = _miniProgramSdkConstraint;
   final updatedPubspecSource = ensureEmbeddingDependencies(
     pubspecSource,
@@ -93,11 +109,13 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
     ): buildEmbeddingRuntimeSetup(
       hostAppId: resolvedHostAppId,
       hostVersion: resolvedHostVersion,
+      aiAssistant: aiAssistant,
     ),
     path.join(integrationRootPath, 'mini_program_launcher.dart'):
         buildEmbeddingLauncher(),
     path.join(integrationRootPath, 'mini_program.dart'): buildEmbeddingBarrel(
       androidSeparateTasks: androidSeparateTasks,
+      aiAssistant: aiAssistant,
     ),
     path.join(integrationRootPath, 'README.md'): buildEmbeddingReadme(
       packageName: packageName,
@@ -107,6 +125,7 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
       sdkConstraint: sdkConstraint,
       contractsConstraint: _miniProgramContractsConstraint,
       androidSeparateTasks: androidSeparateTasks,
+      aiAssistant: aiAssistant,
     ),
   };
   final endpointImportGeneratedFiles = <String, String>{
@@ -142,7 +161,14 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
     final nativeTaskFiles = await planAndroidSeparateTasks(
       projectRootPath: projectRootPath,
       platformFiles: platformIntegrationFiles,
+      aiAssistant: aiAssistant,
     );
+    final assistantFiles = aiAssistant
+        ? await planAiAssistant(
+            projectRootPath: projectRootPath,
+            pendingWrites: nativeTaskFiles,
+          )
+        : const <String, String>{};
     final writes = <String, String>{
       if (updatedPubspecSource != pubspecSource)
         pubspecPath: updatedPubspecSource,
@@ -153,6 +179,7 @@ Future<MiniProgramEmbeddingInitResult> initializeMiniProgramEmbedding(
         if (!await File(entry.key).exists()) entry.key: entry.value,
       ...platformIntegrationFiles,
       ...nativeTaskFiles,
+      ...assistantFiles,
     };
     try {
       await writeCapabilityFiles(

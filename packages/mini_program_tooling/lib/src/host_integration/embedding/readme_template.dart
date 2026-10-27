@@ -6,6 +6,7 @@ String buildEmbeddingReadme({
   required String sdkConstraint,
   required String contractsConstraint,
   bool androidSeparateTasks = false,
+  bool aiAssistant = false,
 }) {
   return '''
 # Embedded Mini-Program Adapter
@@ -248,7 +249,7 @@ preserves host-owned files and endpoint-import output.
 
 State management still stays app-owned. `MiniProgramScope` can compose with
 Riverpod, Provider, Bloc, GetX, GoRouter, custom architecture, or plain Flutter.
-${androidSeparateTasks ? _androidTasksReadme : ''}''';
+${androidSeparateTasks ? _androidTasksReadme : ''}${aiAssistant ? _aiAssistantReadme : ''}''';
 }
 
 const _androidTasksReadme = '''
@@ -293,4 +294,44 @@ task setup stays enabled even when the flag is omitted during a refresh.
 Separate Android tasks do not guarantee separate visible Recent apps cards:
 some launchers filter by package. Process death, force stop, or removing a task
 can discard in-memory state. No automatic one-window workspace is installed.
+''';
+
+const _aiAssistantReadme = '''
+
+## Optional shared AI assistant
+
+Installed with `--android-separate-tasks --ai-assistant`. The host's MaterialApp
+builder and generated task builders show one shared assistant on both surfaces.
+Existing builders and navigation keys are retained. The main host owns one model
+loop; task engines contain presentation clients only. No provider is selected.
+
+Edit the created-once `app_ai_setup.dart` to connect your own `HostAiModel` or
+the optional `HostAiHttpModel` to your authenticated HTTPS server. The default
+shows a setup message and makes no AI requests. Configure branding and limits
+there too. Tooling never overwrites this host-owned configuration, even --force.
+
+The SDK supplies current mini-program controls automatically. Register host
+buttons with `HostAiAction` from `mini_program.dart`; supply id, visible label,
+the host's onTap callback and child. Set opensMiniProgramId only when that
+callback successfully opens the corresponding native mini-program task. Hidden,
+disabled, duplicate or offscreen registrations cannot run. Chat, Wallet, nearby
+search and business services remain host/publisher integrations.
+
+Start observes the current foreground screen. Stop cancels the shared model
+request; manual input or leaving the app pauses work. Continue observes again.
+The editable goal and applied UI changes survive cancellation while the process
+lives. The assistant's own UI stays outside mini-program observation.
+
+Keep the generated mini_program_runtime_setup.dart in your configuration path
+so each task receives hostAiInteractionController. A custom MiniProgramConfig
+must supply its own MiniProgramInteractionController. Keep separate-task launch
+navigation configured as above. Refresh with the same flags and --force; plain
+force refresh also retains an installed assistant. The generated ai/ directory
+is tooling-managed. Put host customizations outside it.
+
+Automatic installation supports one MaterialApp or MaterialApp.router root under
+lib/, including a root in a separate library. If there are several, select the
+intended root with buildHostAiOverlay before rerunning. Syntax/source conflicts
+fail before any write. The assistant uses Flutter overlays within host-owned
+Activities and needs no system overlay permission, plugin or Gradle dependency.
 ''';

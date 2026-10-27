@@ -1,0 +1,132 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+import '../app_ai_setup.dart';
+import 'host_ai_actions.dart';
+import 'host_ai_coordinator.dart';
+import 'host_ai_workspace.dart';
+
+/// Installed in MaterialApp.builder (including MaterialApp.router).
+/// The original Navigator/Router remains the same child with the same bounds.
+Widget buildHostAiOverlay(BuildContext context, Widget? child) =>
+    _HostAiRoot(child: child ?? const SizedBox.shrink());
+
+TransitionBuilder composeHostAiBuilder(TransitionBuilder? original) =>
+    (context, child) =>
+        buildHostAiOverlay(context, original?.call(context, child) ?? child);
+
+class _HostAiRoot extends StatefulWidget {
+  const _HostAiRoot({required this.child});
+  final Widget child;
+  @override
+  State<_HostAiRoot> createState() => _HostAiRootState();
+}
+
+class _HostAiRootState extends State<_HostAiRoot> {
+  final _contentKey = GlobalKey();
+  final _actions = HostAiActions();
+  final _interaction = MiniProgramInteractionChannel();
+  late final _settings = buildHostAiSettings();
+  late final _coordinator = HostAiCoordinator(
+    actions: _actions,
+    miniProgramDispatch: _interaction.dispatch,
+    modelFactory: _settings.modelFactory,
+    limits: _settings.limits,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_coordinator.bind());
+  }
+
+  NavigatorState? _navigator() {
+    NavigatorState? navigator;
+    void visit(Element element) {
+      if (navigator != null) return;
+      if (element is StatefulElement && element.state is NavigatorState) {
+        navigator = element.state as NavigatorState;
+      } else {
+        element.visitChildElements(visit);
+      }
+    }
+
+    _contentKey.currentContext?.visitChildElements(visit);
+    return navigator;
+  }
+
+  @override
+  void dispose() {
+    _coordinator.dispose();
+    _actions.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => HostAiWorkspace(
+    navigator: _navigator,
+    session: _coordinator.runner,
+    isHost: true,
+    bubbleStyle: _settings.bubbleStyle,
+    child: HostAiActionScope(
+      actions: _actions,
+      child: KeyedSubtree(key: _contentKey, child: widget.child),
+    ),
+  );
+}
+
+/// Each secondary engine owns presentation only. It never creates a model.
+class HostAiTaskOverlay extends StatefulWidget {
+  const HostAiTaskOverlay({
+    super.key,
+    required this.appId,
+    required this.navigatorKey,
+    required this.child,
+  });
+  final String appId;
+  final GlobalKey<NavigatorState> navigatorKey;
+  final Widget child;
+  @override
+  State<HostAiTaskOverlay> createState() => _HostAiTaskOverlayState();
+}
+
+class _HostAiTaskOverlayState extends State<HostAiTaskOverlay> {
+  late HostAiSessionClient _session;
+  late final _settings = buildHostAiSettings();
+  @override
+  void initState() {
+    super.initState();
+    _attach();
+  }
+
+  void _attach() {
+    _session = HostAiSessionClient(appId: widget.appId);
+    unawaited(_session.bind());
+  }
+
+  @override
+  void didUpdateWidget(HostAiTaskOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.appId != widget.appId) {
+      _session.dispose();
+      _attach();
+    }
+  }
+
+  NavigatorState? _navigator() => widget.navigatorKey.currentState;
+  @override
+  void dispose() {
+    _session.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => HostAiWorkspace(
+    navigator: _navigator,
+    session: _session,
+    bubbleStyle: _settings.bubbleStyle,
+    child: widget.child,
+  );
+}

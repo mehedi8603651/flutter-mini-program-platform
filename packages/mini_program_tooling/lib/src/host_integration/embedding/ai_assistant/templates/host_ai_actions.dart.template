@@ -1,0 +1,226 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+
+/// Host controls are registered explicitly. SDK observation never reads host UI.
+class HostAiActions {
+  static const appId = '__host_ai__';
+  final _controls = <_HostAiActionState>{};
+  final _session = 'host-${DateTime.now().microsecondsSinceEpoch}';
+  int _revision = 0;
+  String _fingerprint = '';
+  bool _disposed = false;
+
+  void invalidate() => _revision++;
+
+  Map<String, dynamic> observe() {
+    final visible = _controls.where((control) => control.visible).toList();
+    final ids = <String>{};
+    final duplicates = <String>{};
+    for (final control in visible) {
+      if (!ids.add(control.widget.id)) duplicates.add(control.widget.id);
+    }
+    final nodes = [
+      {
+        'id': 'host-screen',
+        'role': 'text',
+        'label':
+            'Host app. Only registered visible host actions are available.',
+        'actions': <String>[],
+      },
+      for (final control in visible.take(64))
+        if (!duplicates.contains(control.widget.id))
+          {
+            'id': control.widget.id,
+            'role': 'button',
+            'label': control.widget.label,
+            'actions': ['tap'],
+          },
+    ];
+    final fingerprint = jsonEncode([
+      nodes,
+      for (final control in visible) control.bounds?.toString(),
+    ]);
+    if (fingerprint != _fingerprint) {
+      _fingerprint = fingerprint;
+      _revision++;
+    }
+    return {
+      'appId': appId,
+      'sessionId': _session,
+      'screenId': 'host',
+      'revision': _revision,
+      'status': _disposed ? 'unavailable' : 'ready',
+      'canGoBack': false,
+      'nodes': nodes,
+      if (visible.length > 64) 'truncated': true,
+    };
+  }
+
+  Future<Map<String, dynamic>> dispatch(Map<String, dynamic> envelope) async {
+    if (envelope['method'] == 'observe') return observe();
+    final request = envelope['request'];
+    if (_disposed || envelope['method'] != 'interact' || request is! Map) {
+      return {'status': 'rejected', 'code': 'invalid_request'};
+    }
+    final snapshot = observe();
+    if (request['sessionId'] != _session || request['revision'] != _revision) {
+      return {'status': 'rejected', 'code': 'stale_view'};
+    }
+    final matches = _controls
+        .where(
+          (control) =>
+              control.visible && control.widget.id == request['targetId'],
+        )
+        .toList();
+    if (request['action'] != 'tap' ||
+        matches.length != 1 ||
+        !(snapshot['nodes'] as List).any(
+          (node) => node['id'] == request['targetId'],
+        )) {
+      return {'status': 'rejected', 'code': 'target_unavailable'};
+    }
+    final control = matches.single.widget;
+    // Consume this revision before awaiting host work. Never replay a launch.
+    _revision++;
+    try {
+      await control.onTap();
+      return {
+        'status': 'completed',
+        if (control.opensMiniProgramId != null)
+          'nextAppId': control.opensMiniProgramId,
+      };
+    } on Object {
+      return {'status': 'rejected', 'code': 'host_action_failed'};
+    }
+  }
+
+  void dispose() {
+    _disposed = true;
+    _controls.clear();
+  }
+}
+
+class HostAiActionScope extends InheritedWidget {
+  const HostAiActionScope({
+    super.key,
+    required this.actions,
+    required super.child,
+  });
+  final HostAiActions actions;
+  @override
+  bool updateShouldNotify(HostAiActionScope oldWidget) =>
+      oldWidget.actions != actions;
+}
+
+/// Wrap the corresponding visible host control. Its ordinary onPressed should
+/// call the same host callback. Only this registered tap is offered to the bot.
+class HostAiAction extends StatefulWidget {
+  const HostAiAction({
+    super.key,
+    required this.id,
+    required this.label,
+    required this.onTap,
+    required this.child,
+    this.enabled = true,
+    this.opensMiniProgramId,
+  });
+  final String id;
+  final String label;
+  final Future<void> Function() onTap;
+  final Widget child;
+  final bool enabled;
+
+  /// Declare only when onTap successfully opens that native mini-program task.
+  final String? opensMiniProgramId;
+  @override
+  State<HostAiAction> createState() => _HostAiActionState();
+}
+
+class _HostAiActionState extends State<HostAiAction> {
+  HostAiActions? _owner;
+  Rect? get bounds {
+    final box = context.findRenderObject();
+    return box is RenderBox && box.attached && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+  }
+
+  bool get visible {
+    if (!mounted ||
+        !widget.enabled ||
+        widget.id.isEmpty ||
+        widget.id.length > 128 ||
+        widget.id == 'host-screen' ||
+        widget.label.isEmpty ||
+        widget.label.length > 240 ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return false;
+    }
+    final rect = bounds;
+    if (rect == null || rect.isEmpty || !rect.isFinite) return false;
+    final screen = Offset.zero & MediaQuery.sizeOf(context);
+    if (!screen.contains(rect.topLeft) ||
+        !screen.contains(rect.bottomRight - const Offset(1, 1))) {
+      return false;
+    }
+    RenderObject? node = context.findRenderObject();
+    while (node != null) {
+      if (node is RenderOffstage && node.offstage) return false;
+      if (node is RenderOpacity && node.opacity == 0) return false;
+      if (node is RenderAnimatedOpacity && node.opacity.value == 0) return false;
+      if (node is RenderIgnorePointer && node.ignoring) return false;
+      if (node is RenderAbsorbPointer && node.absorbing) return false;
+      final parent = node.parent;
+      if (parent is RenderIndexedStack) {
+        if (parent.index == null) return false;
+        var current = parent.firstChild;
+        for (var index = 0; index < parent.index! && current != null; index++) {
+          current = parent.childAfter(current);
+        }
+        if (current != node) return false;
+      }
+      if (node is RenderAbstractViewport && node is RenderBox) {
+        final box = node as RenderBox;
+        final clip = box.localToGlobal(Offset.zero) & box.size;
+        if (!clip.contains(rect.topLeft) ||
+            !clip.contains(rect.bottomRight - const Offset(1, 1))) {
+          return false;
+        }
+      }
+      node = parent;
+    }
+    return true;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final owner = context
+        .dependOnInheritedWidgetOfExactType<HostAiActionScope>()
+        ?.actions;
+    if (owner == _owner) return;
+    _owner?._controls.remove(this);
+    _owner?.invalidate();
+    _owner = owner;
+    owner?._controls.add(this);
+    owner?.invalidate();
+  }
+
+  @override
+  void didUpdateWidget(HostAiAction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _owner?.invalidate();
+  }
+
+  @override
+  void dispose() {
+    _owner?._controls.remove(this);
+    _owner?.invalidate();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}

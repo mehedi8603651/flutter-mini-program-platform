@@ -32,11 +32,14 @@ import '../network/mini_program_backend_store.dart';
 import '../network/mini_program_source_exception.dart';
 import '../sdk_context.dart';
 import '../state/mp_state.dart';
+import '../interaction/mini_program_interaction.dart';
+import '../interaction/execution.dart';
 import '../widgets/sdk_email_auth_sheet.dart';
 import 'mini_program_screen_renderer.dart';
 
 part 'mp_runtime/action_dispatcher.dart';
 part 'mp_runtime/actions/shared.dart';
+part 'mp_runtime/actions/interaction.dart';
 part 'mp_runtime/actions/auth_backend.dart';
 part 'mp_runtime/actions/backend_search.dart';
 part 'mp_runtime/actions/feedback_forms_lazy.dart';

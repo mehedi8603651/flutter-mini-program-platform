@@ -1,0 +1,93 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'host_ai_model.dart';
+
+/// Optional adapter for the HOST's own authenticated HTTPS server.
+/// POST body: HostAiModelContext.build(...).
+/// Reply: {"decision": {"action": ..., ...}, "tokens": 123, "costUsd": 0.001}.
+/// The server translates to its chosen provider. No provider API is assumed.
+class HostAiHttpModel implements HostAiModel {
+  HostAiHttpModel({required this.endpoint, this.headers}) {
+    if (endpoint.scheme != 'https' ||
+        endpoint.host.isEmpty ||
+        endpoint.userInfo.isNotEmpty ||
+        endpoint.hasFragment) {
+      throw ArgumentError(
+        'The host AI endpoint must be an absolute HTTPS URL.',
+      );
+    }
+  }
+  final Uri endpoint;
+  final Future<Map<String, String>> Function()? headers;
+  final _client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+  bool _closed = false;
+
+  @override
+  Future<HostAiReply> decide({
+    required String goal,
+    required Map<String, dynamic> snapshot,
+    required List<String> progress,
+  }) async {
+    try {
+      final authorization = await headers?.call() ?? const <String, String>{};
+      if (_closed) throw const HostAiServiceFailure('AI request cancelled');
+      final request = await _client.postUrl(endpoint);
+      request.followRedirects = false;
+      request.headers.contentType = ContentType.json;
+      authorization.forEach(request.headers.set);
+      request.write(
+        jsonEncode(
+          HostAiModelContext.build(
+            goal: goal,
+            snapshot: snapshot,
+            progress: progress,
+          ),
+        ),
+      );
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw HostAiServiceFailure(
+          'Host AI service returned HTTP ${response.statusCode}',
+        );
+      }
+      final bytes = <int>[];
+      await for (final chunk in response) {
+        if (_closed) throw const HostAiServiceFailure('AI request cancelled');
+        if (bytes.length + chunk.length > 32768) {
+          throw const FormatException('AI response exceeded its limit.');
+        }
+        bytes.addAll(chunk);
+      }
+      final value = jsonDecode(utf8.decode(bytes));
+      if (value is! Map || value['decision'] is! Map) {
+        throw const FormatException('Expected an AI decision object.');
+      }
+      final tokens = value['tokens'];
+      final cost = value['costUsd'];
+      if ((tokens != null &&
+              (tokens is! int || tokens < 0 || tokens > 2000000)) ||
+          (cost != null && (cost is! num || !cost.isFinite || cost < 0))) {
+        throw const FormatException('Invalid reported usage.');
+      }
+      return HostAiReply(
+        decision: HostAiReply.validateDecision(
+          Map<String, dynamic>.from(value['decision'] as Map),
+          snapshot,
+        ),
+        tokens: tokens as int? ?? 0,
+        costUsd: (cost as num?)?.toDouble(),
+      );
+    } on SocketException {
+      throw const HostAiServiceFailure('Cannot reach the host AI service');
+    } on HandshakeException {
+      throw const HostAiServiceFailure('Host AI secure connection failed');
+    }
+  }
+
+  @override
+  void close() {
+    _closed = true;
+    _client.close(force: true);
+  }
+}

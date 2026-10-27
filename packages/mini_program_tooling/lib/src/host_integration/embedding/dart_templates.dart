@@ -192,7 +192,10 @@ class RegisteredMiniProgramLauncher extends StatelessWidget {
 ''';
 }
 
-String buildEmbeddingBarrel({bool androidSeparateTasks = false}) {
+String buildEmbeddingBarrel({
+  bool androidSeparateTasks = false,
+  bool aiAssistant = false,
+}) {
   return '''
 export 'package:mini_program_sdk/mini_program_sdk.dart';
 
@@ -203,7 +206,7 @@ export 'mini_program_launcher.dart';
 export 'mini_program_policy_resolver.dart';
 export 'mini_program_registry.dart';
 export 'mini_program_runtime_setup.dart';
-${androidSeparateTasks ? "export 'mini_program_android_tasks.dart';\n" : ''}''';
+${androidSeparateTasks ? "export 'mini_program_android_tasks.dart';\n" : ''}${aiAssistant ? "export 'mini_program_ai.dart';\n" : ''}''';
 }
 
 String buildEmbeddingHostSetup() {
@@ -402,6 +405,7 @@ String buildEmptyEmbeddingPolicies() {
 String buildEmbeddingRuntimeSetup({
   required String hostAppId,
   required String hostVersion,
+  bool aiAssistant = false,
 }) {
   return '''
 import 'package:flutter/foundation.dart';
@@ -409,7 +413,7 @@ import 'package:flutter/widgets.dart';
 import 'package:mini_program_contracts/mini_program_contracts.dart';
 import 'package:mini_program_sdk/mini_program_sdk.dart';
 
-import 'app_host_bridge.dart';
+import 'app_host_bridge.dart';${aiAssistant ? "\nimport 'ai/host_ai_interaction.dart';" : ''}
 
 const String _hostAppId = '$hostAppId';
 const String _sdkVersion = '1.0.0';
@@ -490,7 +494,7 @@ MiniProgramConfig buildMiniProgramConfig({
       ? _buildDefaultHttpSource(deliveryContext)
       : _buildEndpointRoutingSource(endpoints, deliveryContext);
 
-  return MiniProgramConfig(
+  return MiniProgramConfig(${aiAssistant ? '\n    interactionController: hostAiInteractionController,' : ''}
     sdkVersion: _sdkVersion,
     source: source,
     hostBridge: AppHostBridge(openNativeRoute: openNativeRoute),

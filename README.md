@@ -71,6 +71,17 @@ miniprogram host endpoint import .\coupon_demo\coupon_demo.partner.json --projec
 miniprogram host run -d chrome --project-root .\coupon_host
 ```
 
+For optional Android separate tasks with one shared host-owned AI assistant:
+
+```powershell
+miniprogram embed init --project-root .\coupon_host --android-separate-tasks --ai-assistant --force
+```
+
+Connect the host's own AI service in `lib/mini_program/app_ai_setup.dart` and
+register host buttons with `HostAiAction`. The generator supplies the bubble,
+Stop/Continue controls and mini-program task connection. See
+[host AI assistant setup](docs/host_ai_assistant_setup.md).
+
 When an imported app requests one-time approximate location, install the
 generic Android host provider once, then review that app's accepted policy:
 
@@ -243,3 +254,11 @@ Pure-Dart `Mp.nfc` actions read bounded standard NDEF Text and HTTPS URI records
 through an optional native Android adapter. Hosts accept access and limits per
 mini-program; task switches cancel reading while retaining UI state. Install with
 `miniprogram host capability init nfc --platform android`. See the [NFC guide](docs/android_nfc_ndef.md).
+
+### Optional foreground AI interaction
+
+Hosts can expose automatic metadata from the current mini-program screen to
+their own AI server and execute existing UI operations through an opt-in
+controller. Mini-program authors keep their pure-Dart UI and existing actions.
+See [foreground AI interaction](docs/foreground_ai_interaction.md) for embedded
+and separate Android task setup, limits, and the emulator/live-model test.

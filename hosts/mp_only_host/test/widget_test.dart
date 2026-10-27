@@ -15,6 +15,22 @@ void main() {
     rootBundle.clear();
   });
 
+  for (final query in ['', '?title=', '?title=mp_orders']) {
+    testWidgets('restored task title uses the catalog for "$query"', (
+      tester,
+    ) async {
+      tester.binding.platformDispatcher.defaultRouteNameTestValue =
+          '/mini-program/mp_orders$query';
+      addTearDown(
+        tester.binding.platformDispatcher.clearDefaultRouteNameTestValue,
+      );
+      await miniProgramMain();
+      await tester.pump();
+      expect(find.text('Mp Orders'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   testWidgets('native Back dismisses Flutter panels before leaving the task', (
     tester,
   ) async {

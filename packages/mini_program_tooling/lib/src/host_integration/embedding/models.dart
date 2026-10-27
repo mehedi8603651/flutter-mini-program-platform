@@ -6,6 +6,7 @@ class MiniProgramEmbeddingInitRequest {
     this.hostVersion,
     this.nativeRoutePath = '/native/profile-editor',
     this.androidSeparateTasks = false,
+    this.aiAssistant = false,
     this.force = false,
   });
 
@@ -17,6 +18,9 @@ class MiniProgramEmbeddingInitRequest {
 
   /// Generate opt-in Android task integration. Standard embedding is unchanged.
   final bool androidSeparateTasks;
+
+  /// Install a provider-neutral host assistant across separate Android tasks.
+  final bool aiAssistant;
   final bool force;
 }
 

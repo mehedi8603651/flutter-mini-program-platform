@@ -1,0 +1,5 @@
+import 'package:mini_program_sdk/mini_program_sdk.dart';
+
+/// One controller per Flutter engine. The generated task app binds its own
+/// controller to the existing foreground interaction relay.
+final hostAiInteractionController = MiniProgramInteractionController();

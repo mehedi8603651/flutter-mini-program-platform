@@ -63,6 +63,7 @@ class _MpSearchInputFieldState extends State<_MpSearchInputField> {
   }
 
   void _handleChanged(String value) {
+    MiniProgramInteractionSurface.userInput(context);
     final scope = MiniProgramSdkScope.maybeOf(context);
     final state = scope?.stateManager;
     if (scope == null || state == null) {
@@ -91,9 +92,10 @@ class _MpSearchInputFieldState extends State<_MpSearchInputField> {
     final delay = Duration(
       milliseconds: _int(widget.node, 'debounceMs', fallback: 300),
     );
-    _debounceTimer = Timer(delay, () {
-      unawaited(_runSearch(generation, query));
-    });
+    _debounceTimer = MiniProgramInteractionExecution.delay(
+      delay,
+      () => _runSearch(generation, query),
+    );
   }
 
   Future<void> _runSearch(int generation, String query) async {
@@ -193,21 +195,24 @@ class _MpSearchInputFieldState extends State<_MpSearchInputField> {
         decoration: _fieldDecoration(focused: _focusNode.hasFocus),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          child: EditableText(
-            controller: _controller,
-            focusNode: _focusNode,
-            keyboardType: TextInputType.text,
-            obscureText: false,
-            minLines: 1,
-            maxLines: 1,
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontSize: 15,
-              height: 1.35,
+          child: _MpEditableField(
+            label: _string(widget.node, 'label'),
+            child: EditableText(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.text,
+              obscureText: false,
+              minLines: 1,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 15,
+                height: 1.35,
+              ),
+              cursorColor: const Color(0xFF0B7A75),
+              backgroundCursorColor: const Color(0xFFE5E7EB),
+              onChanged: _handleChanged,
             ),
-            cursorColor: const Color(0xFF0B7A75),
-            backgroundCursorColor: const Color(0xFFE5E7EB),
-            onChanged: _handleChanged,
           ),
         ),
       ),

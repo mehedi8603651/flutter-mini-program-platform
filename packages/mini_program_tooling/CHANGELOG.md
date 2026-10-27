@@ -1,3 +1,11 @@
+## 0.7.22
+
+- Add optional `embed init --android-separate-tasks --ai-assistant`: generate one host-owned assistant session, customizable bubble, text panel, visible Stop/Continue controls and native task clients. Preserve existing MaterialApp/router builders and host-owned AI setup across transactional refreshes.
+- Generate a provider-neutral `HostAiModel` adapter, optional bounded HTTPS connection to the host's own server, and explicit `HostAiAction` registrations for visible host buttons. No model provider/key, host plugin or Gradle dependency is installed; standard/task-only setups remain unchanged.
+- Recover separate-task mini-program identity from the owned task URI when Android restores a task without launch extras, preserving slot reuse and a valid initial app ID after process recreation.
+- Generate a bounded process-local foreground interaction relay for optional Android separate tasks and bind an opt-in controller from each task's configuration. Refresh existing integrations with `embed init --android-separate-tasks --force`.
+- Generate embedded/separate-task/preview hosts against SDK `0.7.4` and contracts `0.3.21` for foreground AI interaction. Standard embedding and mini-program authoring remain unchanged.
+
 ## 0.7.21
 
 - Add optional `host capability init nfc --platform android` with native reader-mode installation, accepted/requested policies, and standard/separate-task regeneration without new Gradle dependencies.

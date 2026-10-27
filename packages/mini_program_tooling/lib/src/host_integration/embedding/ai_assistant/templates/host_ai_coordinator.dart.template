@@ -1,0 +1,323 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
+
+import 'host_ai_actions.dart';
+import 'host_ai_model.dart';
+import 'host_ai_runner.dart';
+import 'host_ai_session.dart';
+
+const _sessionChannelName = 'dev.miniprogram/host_ai_session';
+
+/// One model loop in the host engine. Android tasks contain presentation
+/// clients only; dispatch still reaches only the currently focused UI.
+class HostAiCoordinator {
+  HostAiCoordinator({
+    required this.actions,
+    required this.miniProgramDispatch,
+    this.modelFactory = unconfiguredHostAiModel,
+    this.limits = const HostAiLimits(),
+    MethodChannel? channel,
+  }) : _channel = channel ?? const MethodChannel(_sessionChannelName) {
+    runner = HostAiRunner(
+      appId: '',
+      allowHostHandoff: true,
+      draft: '',
+      dispatch: _dispatch,
+      isForeground: () => !_disposed && (_focused || _focusGrace != null),
+      modelFactory: modelFactory,
+      limits: limits,
+    );
+    runner.addListener(_publish);
+  }
+
+  final HostAiActions actions;
+  final HostAiDispatch miniProgramDispatch;
+  final HostAiModelFactory modelFactory;
+  final HostAiLimits limits;
+  final MethodChannel _channel;
+  late final HostAiRunner runner;
+  Timer? _focusGrace;
+  bool _focused = false;
+  bool _disposed = false;
+  bool _bound = false;
+  int _commandEpoch = 0;
+  String? _handoffAppId;
+  DateTime? _handoffDeadline;
+
+  Future<void> bind() async {
+    _channel.setMethodCallHandler(_handle);
+    try {
+      await _channel.invokeMethod<void>('attach', {
+        'owner': true,
+        'appId': HostAiActions.appId,
+      });
+      _bound = true;
+      final focus = await _foreground();
+      _focusChanged(focus);
+      _publish();
+    } on MissingPluginException {
+      runner.stop('Assistant transport is unavailable');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _foreground() =>
+      _channel.invokeMapMethod<String, dynamic>('foreground');
+
+  Future<dynamic> _handle(MethodCall call) async {
+    if (_disposed) return null;
+    if (call.method == 'foregroundChanged') {
+      _focusChanged(
+        call.arguments is Map ? Map.from(call.arguments as Map) : null,
+      );
+      return null;
+    }
+    if (call.method != 'command' || call.arguments is! Map) {
+      throw MissingPluginException();
+    }
+    final envelope = call.arguments as Map;
+    final command = envelope['command'] as Map;
+    final method = command['method'];
+    final epoch = const {'start', 'stop', 'cancel'}.contains(method)
+        ? ++_commandEpoch
+        : _commandEpoch;
+    final focus = await _foreground();
+    if (_disposed || focus?['appId'] != envelope['appId']) {
+      return {'accepted': false};
+    }
+    if (method == 'start' &&
+        (epoch != _commandEpoch ||
+            (envelope['expiresAt'] is int &&
+                DateTime.now().millisecondsSinceEpoch >
+                    (envelope['expiresAt'] as int)))) {
+      return {'accepted': false};
+    }
+    switch (method) {
+      case 'start':
+        final goal = command['goal'];
+        if (goal is! String || goal.trim().isEmpty || goal.length > 1000) {
+          return {'accepted': false};
+        }
+        unawaited(
+          runner.start(goal, continuePrevious: command['continue'] == true),
+        );
+      case 'stop':
+        runner.stop('Paused — you took control');
+      case 'cancel':
+        runner.cancel();
+      case 'draft':
+        if (command['text'] is String) {
+          runner.updateDraft(command['text'] as String);
+        }
+      default:
+        return {'accepted': false};
+    }
+    return {'accepted': true};
+  }
+
+  void _focusChanged(Map? focus) {
+    if (_disposed) return;
+    if (focus == null && !_focused && _focusGrace != null) return;
+    _focused = focus?['appId'] is String;
+    _focusGrace?.cancel();
+    _focusGrace = null;
+    if (!_focused) {
+      // MainActivity pauses during a native task launch. Keep that expected
+      // handoff alive; hidden UI is still unavailable for observation/execution.
+      final handoffWait = _handoffDeadline?.difference(DateTime.now());
+      final wait = handoffWait != null && handoffWait > Duration.zero
+          ? handoffWait
+          : const Duration(milliseconds: 800);
+      _focusGrace = Timer(wait, () {
+        _focusGrace = null;
+        if (!_disposed && !_focused) {
+          runner.stop('Paused — host app left the foreground');
+        }
+      });
+    }
+  }
+
+  Future<Map<String, dynamic>> _dispatch(Map<String, dynamic> request) async {
+    final focus = await _foreground();
+    _focusChanged(focus);
+    if (_disposed || focus == null) {
+      return {'status': 'pending'};
+    }
+    if (focus['appId'] == HostAiActions.appId) {
+      final result = await actions.dispatch(request);
+      if (result['nextAppId'] is String) {
+        _handoffAppId = result['nextAppId'] as String;
+        _handoffDeadline = DateTime.now().add(const Duration(seconds: 8));
+        if (!_focused) {
+          _focusGrace?.cancel();
+          _focusGrace = null;
+          _focusChanged(null);
+        }
+      }
+      return result;
+    }
+    final result = await miniProgramDispatch(request);
+    if (request['method'] == 'observe' && focus['appId'] == _handoffAppId) {
+      if (result['status'] == 'ready') {
+        _handoffAppId = null;
+        _handoffDeadline = null;
+      } else if (_handoffDeadline?.isAfter(DateTime.now()) == true) {
+        // The Activity can have focus before its Flutter surface is mounted.
+        // Waiting after this trusted launch exports no hidden/previous UI.
+        return {'status': 'pending'};
+      }
+    }
+    return result;
+  }
+
+  void _publish() {
+    if (!_bound || _disposed) return;
+    unawaited(
+      _channel
+          .invokeMethod<void>('publish', {
+            'running': runner.running,
+            'outcome': runner.outcome.name,
+            'status': runner.status,
+            'message': runner.message,
+            'lastGoal': runner.lastGoal,
+            'draft': runner.draft,
+            'history': List.of(runner.history),
+            'decisions': runner.decisions,
+            'tokens': runner.tokens,
+            'costUsd': runner.costUsd,
+            'maxDecisions': limits.maxDecisions,
+          })
+          .catchError((Object _) {
+            runner.stop('Paused — assistant transport disconnected');
+          }),
+    );
+  }
+
+  void dispose() {
+    _disposed = true;
+    _focusGrace?.cancel();
+    runner.removeListener(_publish);
+    runner.dispose();
+    _channel.setMethodCallHandler(null);
+    unawaited(_channel.invokeMethod<void>('detach').catchError((Object _) {}));
+  }
+}
+
+/// A task-owned view of the single host assistant. It carries bounded status
+/// and goals over a process-local channel, with no API key or second model loop.
+class HostAiSessionClient extends HostAiSession {
+  HostAiSessionClient({required this.appId, MethodChannel? channel})
+    : _channel = channel ?? const MethodChannel(_sessionChannelName);
+
+  final String appId;
+  final MethodChannel _channel;
+  Map<String, dynamic> _state = {};
+  int _sequence = -1;
+  bool _disposed = false;
+
+  @override
+  bool get running => _state['running'] == true;
+  @override
+  bool get canContinue =>
+      !running &&
+      lastGoal.isNotEmpty &&
+      outcome != HostAiOutcome.completed &&
+      outcome != HostAiOutcome.idle;
+  @override
+  HostAiOutcome get outcome => HostAiOutcome.values.firstWhere(
+    (value) => value.name == _state['outcome'],
+    orElse: () => HostAiOutcome.idle,
+  );
+  @override
+  String get status =>
+      _state['status'] as String? ?? 'Connecting to host assistant';
+  @override
+  String get message => _state['message'] as String? ?? '';
+  @override
+  String get lastGoal => _state['lastGoal'] as String? ?? '';
+  @override
+  String get draft => _state['draft'] as String? ?? '';
+  @override
+  List<String> get history =>
+      List<String>.from(_state['history'] as List? ?? const []);
+  @override
+  int get decisions => _state['decisions'] as int? ?? 0;
+  @override
+  int get tokens => _state['tokens'] as int? ?? 0;
+  @override
+  double? get costUsd => (_state['costUsd'] as num?)?.toDouble();
+  @override
+  HostAiLimits get limits =>
+      HostAiLimits(maxDecisions: _state['maxDecisions'] as int? ?? 16);
+
+  Future<void> bind() async {
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'state') _receive(call.arguments);
+      return null;
+    });
+    try {
+      _receive(
+        await _channel.invokeMethod<dynamic>('attach', {'appId': appId}),
+      );
+    } on MissingPluginException {
+      _unavailable();
+    }
+  }
+
+  void _receive(dynamic envelope) {
+    if (_disposed || envelope is! Map || envelope['sequence'] is! int) return;
+    final sequence = envelope['sequence'] as int;
+    if (sequence <= _sequence || envelope['state'] is! Map) return;
+    _sequence = sequence;
+    _state = Map<String, dynamic>.from(envelope['state'] as Map);
+    notifyListeners();
+  }
+
+  void _unavailable() {
+    if (_disposed) return;
+    _state = {
+      ..._state,
+      'running': false,
+      'outcome': 'failed',
+      'status': 'Host assistant unavailable',
+      'message': 'Return to the host once to start its shared assistant.',
+    };
+    notifyListeners();
+  }
+
+  Future<void> _command(Map<String, dynamic> command) async {
+    if (_disposed) return;
+    try {
+      final result = await _channel.invokeMapMethod<String, dynamic>(
+        'command',
+        command,
+      );
+      if (result?['accepted'] != true) _unavailable();
+    } on Object {
+      _unavailable();
+    }
+  }
+
+  @override
+  Future<void> start(String goal, {bool continuePrevious = false}) =>
+      _command({'method': 'start', 'goal': goal, 'continue': continuePrevious});
+  @override
+  void stop([String reason = 'Paused by you']) =>
+      unawaited(_command({'method': 'stop'}));
+  @override
+  void cancel() => unawaited(_command({'method': 'cancel'}));
+  @override
+  void updateDraft(String value) {
+    if (_disposed || value.length > 1000 || draft == value) return;
+    _state = {..._state, 'draft': value};
+    unawaited(_command({'method': 'draft', 'text': value}));
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _channel.setMethodCallHandler(null);
+    unawaited(_channel.invokeMethod<void>('detach').catchError((Object _) {}));
+    super.dispose();
+  }
+}

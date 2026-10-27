@@ -2,7 +2,6 @@ part of '../mp_screen_renderer.dart';
 
 /// Runs validated Mp JSON actions against the active SDK scope.
 class MpActionRunner {
-  /// Creates an Mp action runner.
   const MpActionRunner();
 
   /// Parses and runs a single action JSON object.
@@ -37,7 +36,9 @@ abstract final class _MpActionDispatcher {
     _MpAction action,
     _MpRenderBindings bindings, [
     _MpActionCallContext callContext = const _MpActionCallContext(),
-  ]) async {
+  ]) => _MpInteractionActionHandler.run(action.type, callContext, (
+    callContext,
+  ) async {
     final scope = context.mounted ? MiniProgramSdkScope.maybeOf(context) : null;
     if (scope == null) {
       return HostActionResult.failed(
@@ -343,5 +344,5 @@ abstract final class _MpActionDispatcher {
         message: 'Unhandled Mp action failure.',
       );
     }
-  }
+  });
 }

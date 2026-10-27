@@ -85,7 +85,7 @@ dependencies:
         await read('lib/mini_program/mini_program.dart'),
         isNot(contains('android_tasks')),
       );
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.3'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.4'));
     },
   );
 
@@ -140,6 +140,16 @@ dependencies:
       expect(taskActivity, contains('"miniProgramTaskMain"'));
       expect(
         taskActivity,
+        contains('appIdForIntent(info.baseIntent, context.packageName)'),
+      );
+      expect(
+        taskActivity,
+        contains('.appendPath(appIdForIntent(intent, packageName))'),
+      );
+      expect(taskActivity, contains('uri.authority != packageName'));
+      expect(taskActivity, contains('uri.lastPathSegment.orEmpty()'));
+      expect(
+        taskActivity,
         contains('OnBackInvokedDispatcher.PRIORITY_DEFAULT'),
       );
       expect(taskActivity, isNot(contains('PRIORITY_OVERLAY')));
@@ -151,9 +161,24 @@ dependencies:
       expect(taskDart, contains('await navigator.maybePop()'));
       expect(taskDart, contains("call.method != 'handleBack'"));
       expect(taskDart, contains('navigatorKey: _navigatorKey'));
+      expect(taskDart, contains('widget.config.interactionController'));
+      expect(taskDart, contains('MiniProgramInteractionChannel()'));
+      final relay = await read(
+        '$nativeRoot/mini_program/generated/tasks/MiniProgramInteractionRelay.kt',
+      );
+      expect(relay, contains('current.hasWindowFocus()'));
+      expect(relay, contains('targets.singleOrNull()'));
+      expect(relay, contains('size > 20000'));
+      expect(relay, contains('handler.postDelayed(timeout, 5000)'));
+      expect(
+        await read(
+          '$nativeRoot/mini_program/generated/tasks/MiniProgramTaskChannel.kt',
+        ),
+        contains('MiniProgramInteractionRelay.register(flutterEngine)'),
+      );
       expect(taskActivity, isNot(contains('finish()')));
       expect(await read('android/app/build.gradle.kts'), beforeGradle);
-      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.3'));
+      expect(await read('pubspec.yaml'), contains('mini_program_sdk: ^0.7.4'));
       expect(
         await read('lib/mini_program/README.md'),
         contains('navigationDelegate: openMiniProgramInAndroidTask'),
@@ -354,6 +379,8 @@ dependencies:
   for (final conflict in <String, String>{
     '$nativeRoot/mini_program/generated/tasks/MiniProgramTaskChannel.kt':
         '// Host-owned channel',
+    '$nativeRoot/mini_program/generated/tasks/MiniProgramInteractionRelay.kt':
+        '// Host-owned interaction relay',
     setupPath: '// Host-owned native setup',
     'lib/mini_program/mini_program_android_tasks.dart':
         '// Host-owned task delegate',

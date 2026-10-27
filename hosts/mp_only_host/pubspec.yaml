@@ -16,6 +16,10 @@ dependencies:
     path: ../../packages/mini_program_sdk
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
+  mini_program_ui:
+    path: ../../packages/mini_program_ui
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
@@ -26,3 +30,10 @@ flutter:
     - assets/mini_programs/mp_profile_center/manifest.json
     - assets/mini_programs/mp_profile_center/screens/mp_profile_center_home.json
     - assets/mini_programs/mp_profile_center/screens/mp_profile_center_details.json
+    - assets/mini_programs/mp_ai_food_demo/manifest.json
+    - assets/mini_programs/mp_ai_food_demo/screens/home.json
+    - assets/mini_programs/mp_ai_food_demo/screens/menu.json
+    - assets/mini_programs/mp_ai_food_demo/screens/cart.json
+    - assets/mini_programs/mp_ai_controls_demo/manifest.json
+    - assets/mini_programs/mp_ai_controls_demo/screens/home.json
+    - assets/mini_programs/mp_ai_controls_demo/screens/catalog.json

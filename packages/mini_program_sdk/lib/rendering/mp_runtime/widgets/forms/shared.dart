@@ -1,5 +1,20 @@
 part of '../../../mp_screen_renderer.dart';
 
+// EditableText intentionally has no Material field wrapper. Supply an explicit
+// accessible focus operation and label, used by accessibility and UI automation.
+class _MpEditableField extends StatelessWidget {
+  const _MpEditableField({required this.label, required this.child});
+  final String label;
+  final EditableText child;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: label,
+    onTap: child.readOnly ? null : child.focusNode.requestFocus,
+    child: child,
+  );
+}
+
 class _MpFieldFrame extends StatelessWidget {
   const _MpFieldFrame({
     required this.label,

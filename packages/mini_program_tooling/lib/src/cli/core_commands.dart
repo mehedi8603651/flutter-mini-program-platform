@@ -609,6 +609,12 @@ extension CliCoreCommands on CliContext {
         help: 'Generate optional separate Android tasks for mini-programs.',
       )
       ..addFlag(
+        'ai-assistant',
+        negatable: false,
+        help:
+            'Install a shared host-owned AI assistant (requires Android separate tasks).',
+      )
+      ..addFlag(
         'force',
         negatable: false,
         help: 'Overwrite scaffold-managed files if the target already exists.',
@@ -634,6 +640,7 @@ extension CliCoreCommands on CliContext {
         hostVersion: results.option('host-version'),
         nativeRoutePath: results.option('native-route-path')!,
         androidSeparateTasks: results.flag('android-separate-tasks'),
+        aiAssistant: results.flag('ai-assistant'),
         force: results.flag('force'),
       ),
     );

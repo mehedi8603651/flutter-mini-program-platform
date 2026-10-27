@@ -7,6 +7,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MiniProgramInteractionRelay.register(flutterEngine)
+        HostAiSessionRelay.register(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             MiniProgramActivity.CHANNEL_NAME,
@@ -39,5 +41,10 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        HostAiSessionRelay.focusChanged()
     }
 }

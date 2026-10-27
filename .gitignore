@@ -22,6 +22,10 @@ Thumbs.db
 .mini_program/
 CODEX_HANDOFF.md
 
+# Python test tooling generated state
+__pycache__/
+*.pyc
+
 # Dart and Flutter generated state
 **/.dart_tool/
 **/.packages

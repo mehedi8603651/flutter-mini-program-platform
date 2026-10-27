@@ -1,8 +1,9 @@
 import 'native_templates.dart';
 
-String buildAndroidTasksDart() =>
-    '$androidTasksGeneratedMarker\n'
-    r'''
+String buildAndroidTasksDart({bool aiAssistant = false}) {
+  final source =
+      '$androidTasksGeneratedMarker\n'
+      r'''
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -60,10 +61,16 @@ class AndroidMiniProgramTaskApp extends StatefulWidget {
 
 class _AndroidMiniProgramTaskAppState extends State<AndroidMiniProgramTaskApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  MiniProgramInteractionChannel? _interactionChannel;
 
   @override
   void initState() {
     super.initState();
+    final controller = widget.config.interactionController;
+    if (controller != null) {
+      _interactionChannel = MiniProgramInteractionChannel();
+      _interactionChannel!.bind(controller);
+    }
     _androidTasks.setMethodCallHandler((call) async {
       if (call.method != 'handleBack') throw MissingPluginException();
       final navigator = _navigatorKey.currentState;
@@ -75,6 +82,7 @@ class _AndroidMiniProgramTaskAppState extends State<AndroidMiniProgramTaskApp> {
 
   @override
   void dispose() {
+    _interactionChannel?.dispose();
     _androidTasks.setMethodCallHandler(null);
     super.dispose();
   }
@@ -130,6 +138,20 @@ class _AndroidMiniProgramTaskAppState extends State<AndroidMiniProgramTaskApp> {
   }
 }
 ''';
+  if (!aiAssistant) return source;
+  return source
+      .replaceFirst(
+        "import 'package:mini_program_sdk/mini_program_sdk.dart';",
+        "import 'package:mini_program_sdk/mini_program_sdk.dart';\nimport 'ai/host_ai_root.dart';",
+      )
+      .replaceFirst(
+        '        navigatorKey: _navigatorKey,',
+        '        navigatorKey: _navigatorKey,\n'
+            '        builder: (context, child) => HostAiTaskOverlay(\n'
+            '          appId: appId, navigatorKey: _navigatorKey, child: child!,\n'
+            '        ),',
+      );
+}
 
 String buildAndroidTaskHostSetup() => r'''
 import 'package:flutter/widgets.dart';

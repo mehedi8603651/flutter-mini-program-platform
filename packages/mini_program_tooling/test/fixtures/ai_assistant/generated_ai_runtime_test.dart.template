@@ -1,0 +1,241 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../lib/mini_program/ai/host_ai_actions.dart';
+import '../lib/mini_program/ai/host_ai_coordinator.dart';
+import '../lib/mini_program/ai/host_ai_model.dart';
+import '../lib/mini_program/ai/host_ai_http_model.dart';
+import '../lib/mini_program/ai/host_ai_root.dart';
+import '../lib/mini_program/ai/host_ai_runner.dart';
+
+const _channel = MethodChannel('test/generated_ai');
+const _fast = HostAiLimits(observationInterval: Duration.zero, actionInterval: Duration.zero);
+
+Map<String, dynamic> _food({int revision = 1, bool added = false}) => {
+  'appId': 'food', 'sessionId': 'food-session', 'screenId': 'cart',
+  'status': 'ready', 'revision': revision, 'canGoBack': false,
+  'nodes': [
+    {'id': 'add', 'role': 'button', 'label': added ? 'Two portions' : 'Add food', 'actions': ['tap']},
+  ],
+};
+
+void main() {
+  test('host server adapter accepts only credential-free absolute HTTPS endpoints', () {
+    for (final uri in ['http://server.example/ai', '/ai',
+      'https://user:password@server.example/ai', 'https://server.example/ai#fragment']) {
+      expect(() => HostAiHttpModel(endpoint: Uri.parse(uri)), throwsArgumentError);
+    }
+    final model = HostAiHttpModel(endpoint: Uri.parse('https://server.example/ai'));
+    model.close();
+  });
+  test('model context exports current metadata and eight bounded progress entries', () {
+    final snapshot = _food()..['privateState'] = 'secret';
+    (snapshot['nodes'] as List).add({'id': 'text', 'role': 'text', 'label': 'visible',
+      'actions': [], 'rawAction': 'secret'});
+    (snapshot['nodes'] as List).add({'id': 'password', 'role': 'protectedField',
+      'protected': true, 'value': 'secret', 'actions': []});
+    final context = HostAiModelContext.build(goal: 'Choose food', snapshot: snapshot,
+      progress: List.generate(20, (i) => 'step $i ${'x' * 200}'));
+    expect(jsonEncode(context), isNot(contains('secret')));
+    expect(jsonEncode(context), isNot(contains('sessionId')));
+    expect(jsonEncode(context), isNot(contains('revision')));
+    expect(context['progress'], hasLength(8));
+    expect((context['progress'] as List).every((entry) => entry.length <= 160), isTrue);
+  });
+
+  test('default model explains host setup without a network request', () async {
+    final model = unconfiguredHostAiModel();
+    final reply = await model.decide(goal: 'Open food', snapshot: _food(), progress: []);
+    expect(reply.decision['action'], 'needsInput');
+    expect(reply.decision['message'], contains('app_ai_setup.dart'));
+    model.close();
+  });
+
+  test('injected model cannot select an unavailable or protected control', () {
+    for (final decision in [
+      {'action': 'tap', 'targetId': 'missing'},
+      {'action': 'back'},
+      {'action': 'tap', 'targetId': 'add', 'url': 'https://other.example'},
+      {'action': 'done', 'message': ''},
+    ]) {
+      expect(() => HostAiReply.validateDecision(decision, _food()), throwsFormatException);
+    }
+    final view = _food();
+    view['nodes'][0]['protected'] = true;
+    expect(() => HostAiReply.validateDecision({'action': 'tap', 'targetId': 'add'}, view), throwsFormatException);
+  });
+
+  test('Stop cancels a pending model and rejects its late decision', () async {
+    final pending = Completer<HostAiReply>();
+    final started = Completer<void>();
+    var operations = 0;
+    final model = _Model((_) { started.complete(); return pending.future; });
+    final runner = HostAiRunner(appId: 'food', isForeground: () => true,
+      modelFactory: () => model, limits: _fast,
+      dispatch: (request) async {
+        if (request['method'] == 'interact') operations++;
+        return _food();
+      });
+    final run = runner.start('Add food');
+    await started.future;
+    runner.cancel();
+    await run;
+    pending.complete(HostAiReply(decision: {'action': 'tap', 'targetId': 'add'}));
+    await Future<void>.delayed(Duration.zero);
+    expect(operations, 0);
+    expect(runner.outcome, HostAiOutcome.cancelled);
+    expect(runner.draft, 'Add food');
+    expect(model.closed, isTrue);
+    runner.dispose();
+  });
+
+  testWidgets('registered host taps reject stale requests and hidden controls', (tester) async {
+    final actions = HostAiActions();
+    var taps = 0;
+    await tester.pumpWidget(MaterialApp(home: HostAiActionScope(actions: actions,
+      child: Scaffold(body: Column(children: [
+        HostAiAction(id: 'visible', label: 'Visible', onTap: () async { taps++; },
+          child: const Text('Visible')),
+        Offstage(child: HostAiAction(id: 'hidden', label: 'Hidden', onTap: () async {}, child: const Text('Hidden'))),
+        IgnorePointer(child: HostAiAction(id: 'ignored', label: 'Ignored', onTap: () async {}, child: const Text('Ignored'))),
+        IndexedStack(index: 0, children: [const SizedBox.shrink(),
+          HostAiAction(id: 'inactive', label: 'Inactive', onTap: () async {}, child: const Text('Inactive'))]),
+        IndexedStack(index: null, children: [HostAiAction(id: 'no-index', label: 'No index',
+          onTap: () async {}, child: const Text('No index'))]),
+        FadeTransition(opacity: const AlwaysStoppedAnimation(0),
+          child: HostAiAction(id: 'faded', label: 'Faded',
+            onTap: () async {}, child: const Text('Faded'))),
+      ])),
+    )));
+    final view = actions.observe();
+    final ids = (view['nodes'] as List).map((node) => node['id']);
+    expect(ids, contains('visible'));
+    expect(ids, isNot(contains('hidden')));
+    expect(ids, isNot(contains('ignored')));
+    expect(ids, isNot(contains('inactive')));
+    expect(ids, isNot(contains('no-index')));
+    expect(ids, isNot(contains('faded')));
+    final request = {'method': 'interact', 'request': {
+      'sessionId': view['sessionId'], 'revision': view['revision'],
+      'action': 'tap', 'targetId': 'visible'}};
+    actions.invalidate();
+    expect((await actions.dispatch(request))['code'], 'stale_view');
+    expect(taps, 0);
+    final current = actions.observe();
+    (request['request'] as Map)['revision'] = current['revision'];
+    expect((await actions.dispatch(request))['status'], 'completed');
+    expect((await actions.dispatch(request))['code'], 'stale_view');
+    expect(taps, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    actions.dispose();
+  });
+
+  testWidgets('host popups and duplicate/disabled registrations hide host actions', (tester) async {
+    final actions = HostAiActions();
+    final navigator = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(navigatorKey: navigator,
+      home: HostAiActionScope(actions: actions, child: Scaffold(body: Column(children: [
+        for (var i = 0; i < 2; i++) HostAiAction(id: 'duplicate', label: 'Duplicate',
+          onTap: () async {}, child: const Text('Duplicate')),
+        HostAiAction(id: 'disabled', label: 'Disabled', enabled: false,
+          onTap: () async {}, child: const Text('Disabled')),
+        HostAiAction(id: 'visible', label: 'Visible', onTap: () async {}, child: const Text('Visible')),
+      ]))),
+    ));
+    var nodes = actions.observe()['nodes'] as List;
+    expect(nodes.where((node) => node['id'] == 'duplicate'), isEmpty);
+    expect(nodes.where((node) => node['id'] == 'disabled'), isEmpty);
+    navigator.currentState!.push(DialogRoute<void>(context: navigator.currentContext!,
+      builder: (_) => const AlertDialog(title: Text('Dialog'))));
+    await tester.pumpAndSettle();
+    nodes = actions.observe()['nodes'] as List;
+    expect(nodes.where((node) => node['id'] == 'visible'), isEmpty);
+    await tester.pumpWidget(const SizedBox.shrink());
+    actions.dispose();
+  });
+
+  testWidgets('one host runner opens a task and waits for its mounted foreground surface', (tester) async {
+    final actions = HostAiActions();
+    var opened = false;
+    var added = false;
+    var focusReads = 0;
+    var taskReads = 0;
+    var revision = 1;
+    var factories = 0;
+    await tester.pumpWidget(MaterialApp(home: HostAiActionScope(actions: actions,
+      child: Scaffold(body: HostAiAction(id: 'food', label: 'Open food',
+        opensMiniProgramId: 'food', onTap: () async { opened = true; }, child: const Text('Food'))),
+    )));
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(_channel, (call) async {
+      if (call.method == 'foreground') {
+        return {'appId': opened && ++focusReads >= 3 ? 'food' : HostAiActions.appId};
+      }
+      return null;
+    });
+    final model = _Model((snapshot) async => HostAiReply(decision:
+      snapshot['appId'] == HostAiActions.appId ? {'action': 'tap', 'targetId': 'food'} :
+      added ? {'action': 'done', 'message': 'Two portions are visible.'} :
+      {'action': 'tap', 'targetId': 'add'}));
+    final owner = HostAiCoordinator(actions: actions, channel: _channel, limits: _fast,
+      modelFactory: () { factories++; return model; },
+      miniProgramDispatch: (request) async {
+        if (request['method'] == 'interact') { added = true; revision++; return {'status': 'completed'}; }
+        if (taskReads++ < 2) return {'status': 'unavailable'};
+        return _food(revision: revision, added: added);
+      });
+    await owner.bind();
+    await tester.runAsync(() => owner.runner.start('Open food and prepare two portions'));
+    expect(owner.runner.outcome, HostAiOutcome.completed);
+    expect(added, isTrue);
+    expect(factories, 1);
+    expect(taskReads, greaterThan(2));
+    owner.dispose();
+    await tester.pumpWidget(const SizedBox.shrink());
+    actions.dispose();
+  });
+
+  testWidgets('automatic root finds the existing Navigator and retains host input/draft', (tester) async {
+    const native = MethodChannel('dev.miniprogram/host_ai_session');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(native, (call) async {
+      return call.method == 'foreground' ? {'appId': HostAiActions.appId} : null;
+    });
+    final text = TextEditingController(text: 'Host draft');
+    final navigator = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(navigatorKey: navigator,
+      builder: composeHostAiBuilder((context, child) => ColoredBox(color: Colors.white, child: child!)),
+      home: Scaffold(body: TextField(controller: text))));
+    await tester.pumpAndSettle();
+    final position = tester.getRect(find.byType(TextField));
+    await tester.tap(find.byKey(const ValueKey('host_ai_bubble')));
+    await tester.pumpAndSettle();
+    expect(find.text('What should the AI do?'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'Remember my goal');
+    await tester.tap(find.text('Minimize'));
+    await tester.pumpAndSettle();
+    expect(text.text, 'Host draft');
+    expect(tester.getRect(find.byType(TextField)), position);
+    await tester.tap(find.byKey(const ValueKey('host_ai_bubble')));
+    await tester.pumpAndSettle();
+    expect(find.text('Remember my goal'), findsOneWidget);
+    expect(navigator.currentState, isNotNull);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    text.dispose();
+  });
+}
+
+class _Model implements HostAiModel {
+  _Model(this.reply);
+  final Future<HostAiReply> Function(Map<String, dynamic> snapshot) reply;
+  bool closed = false;
+  @override
+  Future<HostAiReply> decide({required String goal, required Map<String, dynamic> snapshot,
+    required List<String> progress}) => reply(snapshot);
+  @override
+  void close() { closed = true; }
+}

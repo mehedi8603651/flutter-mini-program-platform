@@ -27,10 +27,10 @@ These versions are the repository's current development/release line. Check each
 
 | Package | Current version | Role |
 | --- | ---: | --- |
-| `mini_program_contracts` | `0.3.20` | Shared wire models, action names, errors, capabilities, and manifest contracts |
+| `mini_program_contracts` | `0.3.21` | Shared wire models, action names, errors, capabilities, and manifest contracts |
 | `mini_program_ui` | `0.3.3` | Pure-Dart authoring API that serializes UI and actions to JSON |
-| `mini_program_sdk` | `0.7.3` | Flutter host runtime, renderer, state, cache, loading, and host integration |
-| `mini_program_tooling` | `0.7.21` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
+| `mini_program_sdk` | `0.7.4` | Flutter host runtime, renderer, state, cache, loading, and host integration |
+| `mini_program_tooling` | `0.7.22` | `miniprogram` CLI, generators, validation, artifacts, preview, and host import |
 | `mini_program_vscode` | `0.4.1` | VS Code workflows that invoke the CLI |
 
 Dependency direction:
@@ -143,6 +143,13 @@ These are system invariants, not preferences:
     disposal cancel I/O without clearing UI state. Writes, raw commands, card
     emulation and background tag dispatch are outside this capability.
 
+30. Foreground AI interaction is an optional host-owned semantics boundary.
+    Observe only current rendered mini-program UI and owned SDK popup routes;
+    never export hidden state, passwords, host UI, raw action JSON or backend
+    credentials. Commands require a live session/revision and cannot manufacture
+    a native user gesture. Hosts own their authenticated AI server and model;
+    no provider client, network service or API key belongs in the SDK/artifact.
+
 ## Repository Map
 
 The trees below list maintained source and important generated boundaries. Flutter platform boilerplate (`android/`, `ios/`, `web/`, and similar generated runner files), package build output, and repetitive test fixtures are grouped instead of listing every generated file.
@@ -199,6 +206,7 @@ packages/mini_program_contracts/
 |   |-- mini_program_playback.dart              # Playback kind, status, and bounded session snapshot
 |   |-- mini_program_microphone.dart            # Bounded opaque AAC/M4A recording metadata
 |   |-- mini_program_share.dart                 # System chooser-opened result contract
+|   |-- mini_program_interaction.dart           # Bounded foreground UI snapshots, commands, and acknowledgements
 |   |-- feature_flags.dart                      # Feature flag contract and identifiers
 |   |-- mini_program_navigation_actions.dart    # Navigation action contracts
 |   |-- publisher_backend_contract.dart         # Optional publisher HTTPS API request/response contract
@@ -302,6 +310,7 @@ packages/mini_program_sdk/
 |   |   `-- models.dart                         # Rendered screen, route result, asset counts, and navigation identity
 |   |-- mini_program_page.dart                  # Public page widget for a loaded mini-program
 |   |-- mini_program_visibility.dart            # Foreground/hidden lifecycle signal for retained pages
+|   |-- interaction/                            # Opt-in host controller, owned semantics, execution origin, and task relay
 |   |-- mini_program_launcher.dart              # Launch orchestration from app ID/options to runtime page
 |   |-- mini_program_launch_options.dart        # Per-launch route/input/options model
 |   |-- mini_program_config.dart                # Host-provided SDK dependencies and defaults
@@ -964,6 +973,29 @@ setup, composition, policies, and imported endpoints. Validate conflicts before
 any writes. See `docs/android_separate_tasks_setup.md` for supported launch
 options, capacity, build-target handling, and integration verification.
 
+`embed init --android-separate-tasks --ai-assistant` is an additional explicit
+opt-in. Its planner and Dart AST source editor live under
+`embedding/ai_assistant/`; packaged `.template` resources generate provider-neutral
+Flutter host code without adding host dependencies. Use the existing file
+transaction after all task/assistant validation. Standard and task-only output
+remain unchanged. Parse the host's one MaterialApp/router root before composing
+its builder; preserve Navigator keys, Router config and existing builder behavior.
+Malformed or ambiguous roots and unmanaged file collisions fail before writes.
+Preserve the created-once `app_ai_setup.dart`, imported policy/endpoints and custom
+per-engine configuration, and retain installed AI integration on force refresh.
+The generated runtime supplies one interaction controller per engine. One host
+coordinator owns model work; task views are clients. The assistant relay observes
+window focus through ActivityAware/ViewTreeObserver instead of modifying custom
+host Activity lifecycle methods. It is registered by the optional task channel.
+Generated model interfaces and the optional bounded host-server HTTPS adapter
+must remain provider-neutral: no model IDs, provider keys or personal fixtures.
+HostAiAction registers only explicit visible host taps outside SDK semantics;
+duplicate, disabled, hidden, clipped and stale registrations cannot execute.
+Only a successful registered native launch authorizes an app/session handoff.
+See `docs/host_ai_assistant_setup.md` and run
+`tools/test_generated_ai_assistant.py` in an initialized disposable Flutter host
+to exercise the emitted source, not just its generator strings.
+
 Host run and endpoint-import public classes stay in
 `mini_program_host_controller.dart`. Implementation belongs in normal Dart
 libraries under `host_endpoint/` and must not import the public tooling barrel
@@ -1225,8 +1257,11 @@ hosts/
 hosts/mp_only_host/
 |-- lib/main.dart                               # Entire minimal host, bundled source, bridge, and launch example
 |-- android/app/src/main/kotlin/.../             # Host Activity plus five reusable mini-program Activity/task slots
-|-- assets/                                     # Bundled static profile fixture used by the minimal host
+|-- assets/                                     # Bundled static profile and pure-Dart food interaction fixtures
 |-- test/widget_test.dart                       # Default native bridge, catalog layout, and launch failure smoke tests
+|-- integration_test/foreground_interaction_test.dart # Embedded/task lifecycle and optional live-model flow
+|-- test_driver/integration_test.dart           # Device test driver; run without start-paused for multiple engines
+|-- tool/build_ai_food_fixture.dart             # Pure-Dart source for the food fixture; regenerate its assets here
 |-- android/, ios/, web/, ...                   # Flutter-generated platform runners and configuration
 `-- pubspec.yaml                                # Flutter dependencies and bundled assets
 
@@ -1558,7 +1593,7 @@ Inputs and controls:
 - `Mp.button`: renders a fully styled text command button with stable dimensions.
 - `Mp.iconButton`: renders a semantic icon command with explicit size and decoration.
 - `Mp.floatingActionButton`, `.small`, `.large`, and `.extended`: render standalone Material action buttons; position them with existing stack/positioned nodes.
-- `Mp.bottomNavigationBar`: renders Material 3 section navigation with 2–5 items, state-controlled selection, existing actions, selected icons, label behavior, disabled items, and styling.
+- `Mp.bottomNavigationBar`: renders Material 3 section navigation with 2â€“5 items, state-controlled selection, existing actions, selected icons, label behavior, disabled items, and styling.
 - `Mp.tap`: makes an arbitrary child subtree a semantic action target without changing its visual structure.
 - `Mp.listTile`: renders a scan-friendly row with title, subtitle, leading/trailing content, and optional action.
 - `Mp.textInput`: edits one single-line form/state value.
@@ -2026,6 +2061,81 @@ reader-mode work runs off the UI thread, with bounded callbacks/workers and exac
 session cleanup. SDK/native watchdogs, byte/type limits and stale-result guards
 must remain independent. Reject a complete NDEF message when any record is
 unsupported, disallowed or malformed. See `docs/android_nfc_ndef.md`.
+
+Foreground interaction contracts are in `mini_program_contracts/lib/mini_program_interaction.dart`.
+SDK controller/surface/semantics/task-channel code lives in `interaction/`;
+`interaction/execution.dart` carries AI origin through async actions and debounced
+field callbacks without granting native human-gesture authority. Keep snapshots
+bounded, use physical root semantics coordinates, and invalidate revisions on
+accepted state/backend writes, route changes, and manual input. Owned popup
+routes must carry the originating surface boundary. The optional native task
+relay is generated from `embedding/android_tasks/interaction_template.dart`;
+refresh existing task hosts with `embed init --android-separate-tasks --force`.
+Resolve restored task identity from its own package's `miniprogram` data URI
+when Android drops launch extras, both for slot reuse and the initial route;
+process recreation still starts fresh mini-program memory state.
+No AI provider or extra plugin dependency is required. The pure-Dart reference
+fixture source is `hosts/mp_only_host/tool/build_ai_food_fixture.dart`;
+`integration_test/foreground_interaction_test.dart` validates embedded and real
+separate-task flows. `tools/test_foreground_ai.py` is a bounded loopback-only
+OpenRouter test harness; keys stay in ignored `.env`, never assets/logs. See
+`docs/foreground_ai_interaction.md`.
+The reference host also has an explicitly enabled personal phone-test UI in
+`hosts/mp_only_host/lib/phone_ai/`. `tools/build_phone_ai_apk.py` reads the local
+key, injects it through a temporary Dart-define file, redacts build output, and
+builds one ARM64/x64 APK. This optional personal APK deliberately contains its
+authorized test key. Ordinary builds omit the phone-test UI/key; SDK packages
+and static mini-program artifacts never contain a model client or API key.
+The host-owned controls stay above the Navigator and outside observation;
+give the Navigator a separate semantic container so modal routes cannot hide
+the host controls from accessibility. Progress must not move rendered controls.
+Stop on manual input, backgrounding,
+stale/uncertain results, and disposal, and never replay an uncertain action.
+The personal test runner defaults to `openai/gpt-6-luna` (build-helper `--model`
+override); voice is deferred. `phone_ai_progress.dart` detects unchanged views
+and navigation cycles independently of transient semantic IDs/revisions.
+Keep terminal `done`, `needsInput`, and `blocked` decisions distinct, bound model
+and dispatch waits plus total run duration, and treat usage counters as reported
+feedback rather than a guaranteed provider billing cap. Stop cancels outstanding
+model work; Continue must observe anew and retain history only for the same
+goal/session. Configuration sheets wait for actual route removal before a run.
+`tool/build_ai_controls_fixture.dart` builds the normal pure-Dart search,
+dropdown, checkbox, date-picker and scrolling fixture. Host runner, controls,
+and workspace tests cover cancellation, stale replies, current-screen context,
+limits, progress, editable goals and stateful real-widget flows.
+The optional UI now uses `phone_ai/host_ai_bubble.dart`, a host-owned presentation
+helper with no SDK/provider dependency, instead of the fixed test strip. Keep its
+Flutter overlay above the Navigator, preserve the child's constraints/identity,
+and clamp only the floating controls around safe areas and the keyboard. Hosts
+configure branding, size and initial position; docking callbacks may persist a
+normalized position. The goal panel retains drafts on minimize/Back, pauses a run
+before opening, removes its exact route after owner replacement and waits for
+route removal before Start. Foreground loss during dismissal cancels queued Start.
+Dragging the bubble must not count as mini-program manual takeover. Stop remains
+accessible over owned SDK panels. The helper is reference-host source, not an
+SDK/Mp node. `phone_ai/host_ai_coordinator.dart` owns a single runner in the main
+host engine; task engines use `HostAiSessionClient` presentation clients only.
+The reference-only native `HostAiSessionRelay.kt` routes focused-client controls,
+shares bounded status/draft/progress, and tracks foreground Activity handoffs.
+`host_ai_catalog.dart` explicitly registers visible host catalog actions outside
+the SDK boundary. A successful trusted host launch may authorize the next app
+and session; unrelated identity changes still pause work. Internal task focus
+handoff is not app backgrounding. No hidden UI is observed during the handoff.
+The reference relay stays separate from SDK interaction templates. Optional
+`--ai-assistant` generates its own provider-neutral host relay and controls;
+neither is a runtime SDK API. Super-app Chat/Wallet actions remain host integrations.
+See `docs/host_ai_bubble.md`; voice is deferred.
+Paused/input-waiting/error tasks keep a visible Stop control and short status
+label. Explicit Stop/Cancel task ends that goal without undoing applied UI work;
+keep its editable draft, reject late replies and require a fresh Start. Opening
+the panel/manual takeover still pauses for an explicit Continue. Read Start's
+text from the controller at tap time rather than a stale builder capture.
+Stop uses visible text and its own accessible semantic container/action so
+Android modal-route filtering cannot hide it from TalkBack or UI automation.
+The reference task toolbar Back uses the SDK's screen/popup Back chain before
+exiting; Return to host switches directly. The controls fixture uses a bounded
+page with a pinned Back control and a separately scrolling catalog. Keep native
+entrypoint navigation tests isolated in `test/native_navigation_test.dart`.
 
 ## Release Conventions
 

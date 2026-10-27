@@ -33,6 +33,7 @@ void main() {
         .toList(growable: false);
     expect(actionFiles.map((file) => _fileName(file.path)).toSet(), <String>{
       'auth_backend.dart',
+      'interaction.dart',
       'backend_search.dart',
       'bluetooth.dart',
       'nfc.dart',

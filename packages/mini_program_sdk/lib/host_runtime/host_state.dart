@@ -352,7 +352,32 @@ class _MiniProgramHostState extends State<MiniProgramHost>
   }
 
   @override
-  Widget build(BuildContext context) => _buildHost(context);
+  Widget build(BuildContext context) {
+    final controller = widget.interactionController;
+    final child = _buildHost(context);
+    if (controller == null) return child;
+    return MiniProgramInteractionSurface(
+      controller: controller,
+      appId: widget.miniProgramId,
+      screenId: _screenStack.isEmpty ? '' : _screenStack.last.screenId,
+      screenIdProvider: () =>
+          _screenStack.isEmpty ? '' : _screenStack.last.screenId,
+      visibility: widget.visibility,
+      revisionToken: () => Object.hash(
+        _stateManager.store.revision,
+        _backendStore.revision,
+        _loadGeneration,
+        _screenStack.isEmpty ? null : _screenStack.last.navigationIdentity,
+      ),
+      onBack: () async {
+        if (_screenStack.length <= 1) return false;
+        await _handleWillPop();
+        return true;
+      },
+      canGoBack: () => _screenStack.length > 1,
+      child: child,
+    );
+  }
 
   MiniProgramFileTransferManager? _managerFor(
     MiniProgramFileTransferProvider? provider,

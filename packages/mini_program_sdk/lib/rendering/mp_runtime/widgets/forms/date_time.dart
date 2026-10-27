@@ -169,6 +169,12 @@ class _MpDateTimeFieldState extends State<_MpDateTimeField>
         scope?.isForeground == true;
   }
 
+  void _startChoosing() {
+    final future = _choose();
+    MiniProgramInteractionExecution.current?.track(future);
+    unawaited(future);
+  }
+
   Future<void> _choose() async {
     if (!_canInteract || _picker != null) return;
     final state = _state!;
@@ -176,19 +182,25 @@ class _MpDateTimeFieldState extends State<_MpDateTimeField>
     final generation = ++_generation;
     FocusScope.of(context).unfocus();
     final navigator = Navigator.of(context);
+    final interactionRoute = MiniProgramInteractionSurface.routeBuilder(
+      context,
+    );
     final route = DialogRoute<Object>(
       context: context,
       themes: InheritedTheme.capture(from: context, to: navigator.context),
       settings: RouteSettings(name: 'mini-program/date-time/$_key'),
-      builder: _buildPicker,
+      builder: (pickerContext) => interactionRoute(_buildPicker(pickerContext)),
     );
     _picker = route;
     _pickerNavigator = navigator;
     setState(() => _saveError = null);
     Object? result;
+    final interaction = MiniProgramInteractionExecution.current;
+    if (interaction != null) interaction.waitingForPanel = true;
     try {
       result = await navigator.push<Object>(route);
     } finally {
+      if (interaction != null) interaction.waitingForPanel = false;
       if (identical(_picker, route)) {
         _picker = null;
         _pickerNavigator = null;
@@ -344,13 +356,13 @@ class _MpDateTimeFieldState extends State<_MpDateTimeField>
         enabled: enabled,
         label: label,
         value: display ?? '',
-        onTap: enabled ? () => unawaited(_choose()) : null,
+        onTap: enabled ? _startChoosing : null,
         child: ExcludeSemantics(
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               key: ValueKey('mp-date-time-$_key'),
-              onTap: enabled ? () => unawaited(_choose()) : null,
+              onTap: enabled ? _startChoosing : null,
               borderRadius: BorderRadius.circular(8),
               child: InputDecorator(
                 decoration: InputDecoration(

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "screenId": "cart",
+  "root": {
+    "type": "column",
+    "props": {},
+    "children": [
+      {
+        "type": "heading",
+        "props": {
+          "data": "Your cart"
+        },
+        "children": []
+      },
+      {
+        "type": "stateBuilder",
+        "props": {
+          "child": {
+            "type": "text",
+            "props": {
+              "data": "Vegetarian noodles: {{state.cart.quantity}} portions"
+            },
+            "children": []
+          },
+          "keys": [
+            "cart.quantity"
+          ]
+        },
+        "children": []
+      },
+      {
+        "type": "stateTextField",
+        "props": {
+          "autofocus": false,
+          "backgroundColor": "#FFFFFFFF",
+          "borderColor": "#FFD1D5DB",
+          "borderRadius": 8,
+          "borderWidth": 1,
+          "cursorColor": "#FF0B7A75",
+          "debounceMs": 0,
+          "focusedBorderColor": "#FF0B7A75",
+          "fontSize": 15,
+          "hintColor": "#FF6B7280",
+          "initialValue": "",
+          "keyboardType": "text",
+          "label": "Delivery note",
+          "maxLength": 200,
+          "maxLines": 1,
+          "minLines": 1,
+          "paddingHorizontal": 12,
+          "paddingVertical": 10,
+          "stateKey": "delivery.note",
+          "textColor": "#FF111827",
+          "textInputAction": "done"
+        },
+        "children": []
+      },
+      {
+        "type": "primaryButton",
+        "props": {
+          "action": {
+            "type": "ui.dialog",
+            "props": {
+              "borderRadius": 24,
+              "child": {
+                "type": "column",
+                "props": {},
+                "children": [
+                  {
+                    "type": "heading",
+                    "props": {
+                      "data": "Order review"
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "stateBuilder",
+                    "props": {
+                      "child": {
+                        "type": "text",
+                        "props": {
+                          "data": "Vegetarian noodles: {{state.cart.quantity}} portions. Note: {{state.delivery.note}}"
+                        },
+                        "children": []
+                      },
+                      "keys": [
+                        "cart.quantity",
+                        "delivery.note"
+                      ]
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "text",
+                    "props": {
+                      "data": "Demo only. No order or payment has been submitted."
+                    },
+                    "children": []
+                  },
+                  {
+                    "type": "primaryButton",
+                    "props": {
+                      "action": {
+                        "type": "ui.dialog.close",
+                        "props": {}
+                      },
+                      "label": "Close review"
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              "dismissible": true,
+              "padding": 24,
+              "width": 420
+            }
+          },
+          "label": "Review order"
+        },
+        "children": []
+      }
+    ]
+  }
+}

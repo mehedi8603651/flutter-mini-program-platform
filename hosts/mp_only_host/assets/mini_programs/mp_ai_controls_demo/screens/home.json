@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "screenId": "home",
+  "root": {
+    "type": "scrollView",
+    "props": {},
+    "children": [
+      {
+        "type": "form",
+        "props": {
+          "id": "preferences"
+        },
+        "children": [
+          {
+            "type": "heading",
+            "props": {
+              "data": "Tea preferences"
+            },
+            "children": []
+          },
+          {
+            "type": "searchField",
+            "props": {
+              "debounceMs": 300,
+              "initialValue": "",
+              "label": "Search products",
+              "maxLength": 80,
+              "showClearButton": true,
+              "stateKey": "search.query"
+            },
+            "children": []
+          },
+          {
+            "type": "dropdown",
+            "props": {
+              "initialValue": "delivery",
+              "label": "Service",
+              "name": "service",
+              "options": [
+                {
+                  "label": "Delivery",
+                  "value": "delivery"
+                },
+                {
+                  "label": "Pickup",
+                  "value": "pickup"
+                }
+              ]
+            },
+            "children": []
+          },
+          {
+            "type": "checkbox",
+            "props": {
+              "label": "Use a reusable cup",
+              "name": "reusable"
+            },
+            "children": []
+          },
+          {
+            "type": "dateField",
+            "props": {
+              "enabled": true,
+              "initialValue": "2026-10-26",
+              "label": "Pickup date",
+              "maxDate": "2026-10-31",
+              "minDate": "2026-10-01",
+              "name": "date",
+              "required": false,
+              "stateKey": "pickup.date"
+            },
+            "children": []
+          },
+          {
+            "type": "primaryButton",
+            "props": {
+              "action": {
+                "type": "ui.dialog",
+                "props": {
+                  "borderRadius": 24,
+                  "child": {
+                    "type": "column",
+                    "props": {},
+                    "children": [
+                      {
+                        "type": "heading",
+                        "props": {
+                          "data": "Preference review"
+                        },
+                        "children": []
+                      },
+                      {
+                        "type": "stateBuilder",
+                        "props": {
+                          "child": {
+                            "type": "text",
+                            "props": {
+                              "data": "Search: {{state.search.query}}. Date: {{state.pickup.date}}."
+                            },
+                            "children": []
+                          },
+                          "keys": [
+                            "search.query",
+                            "pickup.date"
+                          ]
+                        },
+                        "children": []
+                      },
+                      {
+                        "type": "text",
+                        "props": {
+                          "data": "Service: {{form.service}}. Reusable cup: {{form.reusable}}."
+                        },
+                        "children": []
+                      },
+                      {
+                        "type": "primaryButton",
+                        "props": {
+                          "action": {
+                            "type": "ui.dialog.close",
+                            "props": {}
+                          },
+                          "label": "Close review"
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  "dismissible": true,
+                  "padding": 24,
+                  "width": 420
+                }
+              },
+              "label": "Review preferences"
+            },
+            "children": []
+          },
+          {
+            "type": "secondaryButton",
+            "props": {
+              "action": {
+                "type": "navigation.openScreen",
+                "props": {
+                  "screenId": "catalog"
+                }
+              },
+              "label": "Browse catalog"
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

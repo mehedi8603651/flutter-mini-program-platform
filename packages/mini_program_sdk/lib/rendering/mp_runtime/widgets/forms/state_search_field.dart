@@ -95,6 +95,7 @@ class _MpStateSearchFieldState extends State<_MpStateSearchField> {
   }
 
   void _handleChanged(String value, {bool immediate = false}) {
+    MiniProgramInteractionSurface.userInput(context);
     if (_updatingController) {
       return;
     }
@@ -117,9 +118,9 @@ class _MpStateSearchFieldState extends State<_MpStateSearchField> {
       unawaited(_dispatchAction(action, generation));
       return;
     }
-    _debounceTimer = Timer(
+    _debounceTimer = MiniProgramInteractionExecution.delay(
       Duration(milliseconds: _int(widget.node, 'debounceMs', fallback: 300)),
-      () => unawaited(_dispatchAction(action, generation)),
+      () => _dispatchAction(action, generation),
     );
   }
 
@@ -181,27 +182,30 @@ class _MpStateSearchFieldState extends State<_MpStateSearchField> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: EditableText(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  keyboardType: TextInputType.text,
-                  obscureText: false,
-                  minLines: 1,
-                  maxLines: 1,
-                  inputFormatters: <TextInputFormatter>[
-                    LengthLimitingTextInputFormatter(
-                      _int(widget.node, 'maxLength', fallback: 256),
+                child: _MpEditableField(
+                  label: _string(widget.node, 'label'),
+                  child: EditableText(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    keyboardType: TextInputType.text,
+                    obscureText: false,
+                    minLines: 1,
+                    maxLines: 1,
+                    inputFormatters: <TextInputFormatter>[
+                      LengthLimitingTextInputFormatter(
+                        _int(widget.node, 'maxLength', fallback: 256),
+                      ),
+                    ],
+                    style: const TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 15,
+                      height: 1.35,
                     ),
-                  ],
-                  style: const TextStyle(
-                    color: Color(0xFF111827),
-                    fontSize: 15,
-                    height: 1.35,
+                    cursorColor: const Color(0xFF0B7A75),
+                    backgroundCursorColor: const Color(0xFFE5E7EB),
+                    onChanged: _handleChanged,
+                    onSubmitted: _handleSubmitted,
                   ),
-                  cursorColor: const Color(0xFF0B7A75),
-                  backgroundCursorColor: const Color(0xFFE5E7EB),
-                  onChanged: _handleChanged,
-                  onSubmitted: _handleSubmitted,
                 ),
               ),
               if (_bool(widget.node, 'showClearButton') &&

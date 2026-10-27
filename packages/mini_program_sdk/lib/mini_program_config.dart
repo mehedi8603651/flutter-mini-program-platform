@@ -15,6 +15,7 @@ import 'location/mini_program_location.dart';
 import 'media/mini_program_media.dart';
 import 'media_playback/mini_program_media_playback.dart';
 import 'mini_program_runtime.dart';
+import 'interaction/mini_program_interaction.dart';
 import 'network/mini_program_backend_connector.dart';
 import 'network/mini_program_source.dart';
 import 'observability/sdk_logger.dart';
@@ -34,6 +35,7 @@ class MiniProgramConfig {
     required this.hostBridge,
     required this.capabilityRegistry,
     this.backendConnector,
+    this.interactionController,
     this.locationProvider,
     this.fileTransferProvider,
     this.displayBrightnessProvider,
@@ -70,6 +72,9 @@ class MiniProgramConfig {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+
+  /// Optional host-owned, foreground UI observation/interaction bridge.
+  final MiniProgramInteractionController? interactionController;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
   final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
@@ -102,6 +107,7 @@ class MiniProgramConfig {
       hostBridge: hostBridge,
       capabilityRegistry: capabilityRegistry,
       backendConnector: backendConnector,
+      interactionController: interactionController,
       locationProvider: locationProvider,
       fileTransferProvider: fileTransferProvider,
       displayBrightnessProvider: displayBrightnessProvider,

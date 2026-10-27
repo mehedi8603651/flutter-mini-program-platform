@@ -2,6 +2,7 @@
 export 'action_names.dart';
 export 'mini_program_bluetooth.dart';
 export 'mini_program_nfc.dart';
+export 'mini_program_interaction.dart';
 
 // Typed payload models for MVP host actions.
 export 'action_payloads.dart';

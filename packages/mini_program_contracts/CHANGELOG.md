@@ -1,3 +1,7 @@
+## 0.3.21
+
+- Add provider-neutral foreground UI snapshots, bounded element metadata, strict interaction requests, revisions, and execution acknowledgements for host-owned AI controllers.
+
 ## 0.3.20
 
 - Add bounded foreground NFC actions, capability/errors, and validated NDEF Text/HTTPS URI result contracts.

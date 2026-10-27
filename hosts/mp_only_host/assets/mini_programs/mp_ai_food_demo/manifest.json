@@ -1,0 +1,10 @@
+{
+  "id": "mp_ai_food_demo",
+  "version": "1.0.0",
+  "entry": "home",
+  "contractVersion": "1.0.0",
+  "sdkVersionRange": ">=1.0.0 <2.0.0",
+  "requiredCapabilities": [],
+  "screenFormat": "mp",
+  "screenSchemaVersion": 1
+}

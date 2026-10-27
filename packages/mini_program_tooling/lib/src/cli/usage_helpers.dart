@@ -22,7 +22,7 @@ Commands:
   host endpoint add <mini-program-id> --artifact-base-url <url> [--title <title>]
   host endpoint import <partner-package.json>
   host capability init <location|file|camera|gallery|microphone|flashlight|display-brightness|qr|share|clipboard|vibration|phone|maps|audio|video> --platform android [--project-root <path>]
-  embed init [--project-root <path>] [--android-separate-tasks]
+  embed init [--project-root <path>] [--android-separate-tasks] [--ai-assistant]
   artifact-host init [--root <path>]
   artifact-host start --port 8080
   artifact-host stop

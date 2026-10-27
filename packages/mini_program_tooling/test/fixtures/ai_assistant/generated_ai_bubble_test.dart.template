@@ -1,0 +1,278 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/semantics.dart';
+import '../lib/mini_program/ai/host_ai_bubble.dart';
+
+const _bubble = ValueKey('host_ai_bubble');
+const _stop = ValueKey('host_ai_bubble_stop');
+
+void main() {
+  testWidgets('Stop has its own accessible action above a modal route', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final navigator = GlobalKey<NavigatorState>();
+      var stops = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigator,
+          builder: (_, child) => HostAiBubble(
+            running: true,
+            status: 'Thinking',
+            onPressed: () {},
+            onStop: () => stops++,
+            child: child!,
+          ),
+          home: const Scaffold(body: Text('Mini-program body')),
+        ),
+      );
+      navigator.currentState!.push<void>(
+        DialogRoute<void>(
+          context: navigator.currentContext!,
+          builder: (_) => const AlertDialog(title: Text('Order review')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final stop = find.bySemanticsLabel('Stop AI');
+      expect(stop, findsOneWidget);
+      expect(
+        tester
+            .getSemantics(stop)
+            .getSemanticsData()
+            .hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+      expect(find.byKey(_stop).hitTestable(), findsOneWidget);
+      await tester.tap(find.byKey(_stop));
+      expect(stops, 1);
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets(
+    'paused tasks retain Stop and a readable status without moving content',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var stopped = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(2),
+              viewPadding: const EdgeInsets.fromLTRB(0, 28, 0, 24),
+              viewInsets: const EdgeInsets.only(bottom: 250),
+            ),
+            child: HostAiBubble(
+              canStop: true,
+              status: 'AI paused - run limit reached',
+              statusLabel: 'Paused - tap AI',
+              style: const HostAiBubbleStyle(
+                initialAlignment: Alignment.bottomRight,
+              ),
+              onPressed: () {},
+              onStop: () => stopped++,
+              child: child!,
+            ),
+          ),
+          home: const _Content(),
+        ),
+      );
+      final status = find.byKey(const ValueKey('host_ai_bubble_status'));
+      expect(
+        tester.getRect(find.byType(_Content)),
+        const Rect.fromLTWH(0, 0, 360, 640),
+      );
+      expect(tester.getRect(status).bottom, lessThanOrEqualTo(378));
+      expect(find.byKey(_stop).hitTestable(), findsOneWidget);
+      expect(find.text('Stop'), findsOneWidget);
+      await tester.drag(find.byKey(_bubble), const Offset(-400, 400));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byKey(_bubble)).left, 12);
+      expect(tester.getRect(status).bottom, lessThanOrEqualTo(378));
+      await tester.tap(find.byKey(_stop));
+      expect(stopped, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'the overlay preserves full content layout, state and hit testing',
+    (tester) async {
+      var stops = 0;
+      Widget app(bool running, {bool visible = true}) => MaterialApp(
+        builder: (_, child) => HostAiBubble(
+          running: running,
+          visible: visible,
+          status: running ? 'Thinking' : 'Ready',
+          onPressed: () {},
+          onStop: () => stops++,
+          child: child!,
+        ),
+        home: const _Content(),
+      );
+      await tester.pumpWidget(app(false));
+      final before = tester.getRect(find.byType(_Content));
+      expect(before, const Rect.fromLTWH(0, 0, 800, 600));
+      await tester.tap(find.text('Count 0'));
+      await tester.pump();
+      expect(find.text('Count 1'), findsOneWidget);
+      await tester.pumpWidget(app(true));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(_Content)), before);
+      expect(find.text('Count 1'), findsOneWidget);
+      expect(find.byKey(_stop).hitTestable(), findsOneWidget);
+      await tester.tap(find.byKey(_stop));
+      expect(stops, 1);
+      await tester.pumpWidget(app(false, visible: false));
+      await tester.pumpAndSettle();
+      expect(find.byKey(_bubble), findsNothing);
+      expect(find.text('Count 1'), findsOneWidget);
+      expect(tester.getRect(find.byType(_Content)), before);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'dragging docks at either edge and leaves Stop inside the viewport',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final positions = <Alignment>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (_, child) => HostAiBubble(
+            running: true,
+            status: 'Thinking',
+            onPressed: () {},
+            onStop: () {},
+            onDocked: positions.add,
+            child: child!,
+          ),
+          home: const _Content(),
+        ),
+      );
+      await tester.drag(find.byKey(_bubble), const Offset(-500, -150));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byKey(_bubble)).left, 12);
+      expect(positions.last.x, -1);
+      expect(tester.getRect(find.byKey(_stop)).right, lessThanOrEqualTo(348));
+      await tester.drag(find.byKey(_bubble), const Offset(500, 700));
+      await tester.pumpAndSettle();
+      final rect = tester.getRect(find.byKey(_bubble));
+      expect(rect.right, 348);
+      expect(rect.bottom, 628);
+      expect(positions.last, const Alignment(1, 1));
+      expect(find.byKey(_stop).hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'keyboard, safe areas, rotation and large text keep controls reachable',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      Widget app(double keyboard) => MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            viewPadding: const EdgeInsets.fromLTRB(16, 28, 16, 24),
+            viewInsets: EdgeInsets.only(bottom: keyboard),
+            textScaler: const TextScaler.linear(2),
+          ),
+          child: HostAiBubble(
+            running: true,
+            status: 'Thinking',
+            style: const HostAiBubbleStyle(
+              initialAlignment: Alignment.bottomRight,
+            ),
+            onPressed: () {},
+            onStop: () {},
+            child: child!,
+          ),
+        ),
+        home: const _Content(),
+      );
+      await tester.pumpWidget(app(0));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byKey(_bubble)).bottom, 604);
+      await tester.pumpWidget(app(300));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byKey(_bubble)).bottom, 328);
+      await tester.binding.setSurfaceSize(const Size(640, 320));
+      await tester.pumpWidget(app(140));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byKey(_bubble)).bottom, 168);
+      expect(tester.getRect(find.byKey(_bubble)).right, 612);
+      expect(find.byKey(_stop).hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('host branding and accessibility movement are customizable', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    var opened = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (_, child) => HostAiBubble(
+          status: 'Ready for your request',
+          onPressed: () => opened++,
+          style: const HostAiBubbleStyle(
+            label: 'Lumi assistant',
+            icon: Icon(Icons.smart_toy_outlined),
+            diameter: 72,
+            edgeMargin: 20,
+            initialAlignment: Alignment.topLeft,
+            backgroundColor: Colors.purple,
+            foregroundColor: Colors.white,
+          ),
+          child: child!,
+        ),
+        home: const _Content(),
+      ),
+    );
+    expect(tester.getSize(find.byKey(_bubble)), const Size.square(72));
+    expect(tester.getTopLeft(find.byKey(_bubble)), const Offset(20, 20));
+    expect(find.byIcon(Icons.smart_toy_outlined), findsOneWidget);
+    final material = tester.widget<Material>(
+      find.descendant(of: find.byKey(_bubble), matching: find.byType(Material)),
+    );
+    expect(material.color, Colors.purple);
+    final properties = tester.widget<Semantics>(find.byKey(_bubble)).properties;
+    expect(properties.label, 'Lumi assistant');
+    expect(properties.value, 'Ready for your request');
+    properties.customSemanticsActions!.entries
+        .firstWhere((entry) => entry.key.label == 'Move assistant right')
+        .value();
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(_bubble)).right, 780);
+    await tester.tap(find.byKey(_bubble));
+    expect(opened, 1);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+}
+
+class _Content extends StatefulWidget {
+  const _Content();
+  @override
+  State<_Content> createState() => _ContentState();
+}
+
+class _ContentState extends State<_Content> {
+  var count = 0;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: TextButton(
+        onPressed: () => setState(() => count++),
+        child: Text('Count $count'),
+      ),
+    ),
+  );
+}

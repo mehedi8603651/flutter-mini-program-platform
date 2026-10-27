@@ -103,7 +103,8 @@ String patchAndroidTaskManifest(String source, String packageName) {
   final insertion = updated.substring(lineStart, end).trim().isEmpty
       ? lineStart
       : end;
-  return updated.replaceRange(insertion, insertion, block);
+  final prefix = insertion > 0 && updated[insertion - 1] != '\n' ? newline : '';
+  return updated.replaceRange(insertion, insertion, '$prefix$block');
 }
 
 String patchAndroidTaskDartEntrypoint(String source) {

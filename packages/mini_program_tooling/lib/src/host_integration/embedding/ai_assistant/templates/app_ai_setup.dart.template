@@ -1,0 +1,18 @@
+import 'ai/host_ai.dart';
+
+/// Host-owned configuration. Tooling never overwrites this file, even --force.
+/// Connect your own authenticated AI server/model here. Only the main host
+/// creates model clients; mini-program tasks share its session and controls.
+HostAiSettings buildHostAiSettings() => const HostAiSettings(
+  modelFactory: unconfiguredHostAiModel,
+  bubbleStyle: HostAiBubbleStyle(label: 'AI assistant'),
+);
+
+// For an optional provider-neutral server adapter:
+// modelFactory: () => HostAiHttpModel(
+//   endpoint: Uri.parse('https://your-host-server.example/ai/decide'),
+//   headers: () async => {'Authorization': 'Bearer <your host session token>'},
+// ),
+// Or implement HostAiModel using your existing host AI service. The server owns
+// provider credentials, prompts, model selection and billing. No provider key
+// or model client belongs in mini-program artifacts or the SDK.

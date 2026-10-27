@@ -12,6 +12,7 @@ import 'file/mini_program_file.dart';
 import 'display/mini_program_display.dart';
 import 'flashlight/mini_program_flashlight.dart';
 import 'host_bridge.dart';
+import 'interaction/mini_program_interaction.dart';
 import 'location/mini_program_location.dart';
 import 'media/mini_program_media.dart';
 import 'media_playback/mini_program_media_playback.dart';
@@ -37,6 +38,7 @@ class MiniProgramRuntime {
     required this.capabilityRegistry,
     required this.cacheBundle,
     this.backendConnector,
+    this.interactionController,
     this.locationProvider,
     this.fileTransferProvider,
     this.displayBrightnessProvider,
@@ -67,6 +69,7 @@ class MiniProgramRuntime {
   final HostBridge hostBridge;
   final CapabilityRegistry capabilityRegistry;
   final MiniProgramBackendConnector? backendConnector;
+  final MiniProgramInteractionController? interactionController;
   final MiniProgramLocationProvider? locationProvider;
   final MiniProgramFileTransferProvider? fileTransferProvider;
   final MiniProgramDisplayBrightnessProvider? displayBrightnessProvider;
@@ -98,6 +101,7 @@ class MiniProgramRuntime {
     HostBridge? hostBridge,
     CapabilityRegistry? capabilityRegistry,
     MiniProgramBackendConnector? backendConnector,
+    MiniProgramInteractionController? interactionController,
     MiniProgramLocationProvider? locationProvider,
     MiniProgramFileTransferProvider? fileTransferProvider,
     MiniProgramDisplayBrightnessProvider? displayBrightnessProvider,
@@ -129,6 +133,8 @@ class MiniProgramRuntime {
       hostBridge: hostBridge ?? this.hostBridge,
       capabilityRegistry: capabilityRegistry ?? this.capabilityRegistry,
       backendConnector: backendConnector ?? this.backendConnector,
+      interactionController:
+          interactionController ?? this.interactionController,
       locationProvider: locationProvider ?? this.locationProvider,
       fileTransferProvider: fileTransferProvider ?? this.fileTransferProvider,
       displayBrightnessProvider:

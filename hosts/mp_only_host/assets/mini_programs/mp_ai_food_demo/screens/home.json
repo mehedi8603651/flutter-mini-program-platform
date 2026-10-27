@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "screenId": "home",
+  "root": {
+    "type": "column",
+    "props": {},
+    "children": [
+      {
+        "type": "heading",
+        "props": {
+          "data": "Green Kitchen"
+        },
+        "children": []
+      },
+      {
+        "type": "text",
+        "props": {
+          "data": "Fresh food prepared to order"
+        },
+        "children": []
+      },
+      {
+        "type": "primaryButton",
+        "props": {
+          "action": {
+            "type": "navigation.openScreen",
+            "props": {
+              "screenId": "menu"
+            }
+          },
+          "label": "Browse menu"
+        },
+        "children": []
+      }
+    ]
+  }
+}

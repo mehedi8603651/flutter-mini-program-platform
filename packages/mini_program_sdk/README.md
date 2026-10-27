@@ -335,3 +335,14 @@ Pure-Dart `Mp.nfc` actions read bounded standard NDEF Text and HTTPS URI records
 through an optional native Android adapter. Hosts accept access and limits per
 mini-program; task switches cancel reading while retaining UI state. Install with
 `miniprogram host capability init nfc --platform android`. See the [NFC guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_nfc_ndef.md).
+
+## Optional foreground AI interaction
+
+Pass a host-owned `MiniProgramInteractionController` to `MiniProgramConfig` or
+`MiniProgramHost`. Observe automatic metadata from the current live screen, send
+it to your own AI server, and apply one revision-bound UI interaction at a time.
+Existing buttons, fields, scroll areas, selection dialogs, and panels need no
+per-action AI descriptions. The SDK adds no model client or provider dependency;
+foreground lifecycle, host permissions, and native human-gesture requirements
+remain enforced. Separate Android tasks can use `MiniProgramInteractionChannel`.
+See the [foreground interaction guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/foreground_ai_interaction.md) for setup, limits, and emulator/live-model tests.

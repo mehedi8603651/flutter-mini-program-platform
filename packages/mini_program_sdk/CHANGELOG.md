@@ -1,3 +1,9 @@
+## 0.7.4
+
+- Add an optional foreground interaction controller that observes the current mini-program's live semantics and operates existing taps, text fields, scrolling, selection controls, owned panels, and Back without per-action AI descriptions.
+- Bind requests to live sessions/revisions, reject stale/replayed commands, track pending work, and interrupt old sequences after manual input, hiding, app changes, or controller replacement. Preserve existing permissions and native user-gesture requirements. Hidden state, password values, and host UI remain outside snapshots.
+- Add a process-local Android task channel for generated focused-Activity routing. No AI provider, model client, native permission, or new package dependency is required.
+
 ## 0.7.3
 
 - Add default-denied foreground NFC policies/providers, bounded one-shot NDEF reading, atomic results, session-safe cancellation/timeouts, and lifecycle cleanup that preserves UI state.

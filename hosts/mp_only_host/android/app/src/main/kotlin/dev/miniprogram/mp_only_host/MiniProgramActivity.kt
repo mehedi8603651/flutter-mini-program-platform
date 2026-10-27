@@ -45,6 +45,15 @@ abstract class MiniProgramActivity : FlutterActivity() {
             MiniProgramWindowActivity4::class.java,
         )
 
+        private fun appIdForIntent(source: Intent?, packageName: String): String {
+            source?.getStringExtra(EXTRA_APP_ID)?.takeIf { it.isNotBlank() }?.let { return it }
+            // Android can restore a task with its data URI but without extras.
+            val uri = source?.data ?: return ""
+            if (uri.scheme != "miniprogram" || uri.authority != packageName ||
+                uri.pathSegments.size != 2 || uri.pathSegments.first() != "active") return ""
+            return uri.lastPathSegment.orEmpty()
+        }
+
         fun openMiniProgram(context: Context, appId: String, title: String) {
             val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val tasks = manager.appTasks
@@ -57,8 +66,7 @@ abstract class MiniProgramActivity : FlutterActivity() {
                     MiniProgramTask(
                         info.taskId,
                         baseIntent?.component?.className.orEmpty(),
-                        baseIntent?.getStringExtra(EXTRA_APP_ID)
-                            ?: baseIntent?.data?.lastPathSegment.orEmpty(),
+                        appIdForIntent(baseIntent, context.packageName),
                     )
                 },
             )
@@ -82,8 +90,8 @@ abstract class MiniProgramActivity : FlutterActivity() {
     override fun getDartEntrypointFunctionName(): String = "miniProgramMain"
 
     override fun getInitialRoute(): String {
-        val appId = intent.getStringExtra(EXTRA_APP_ID).orEmpty()
-        val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        val appId = appIdForIntent(intent, packageName)
+        val title = intent.getStringExtra(EXTRA_TITLE)?.takeIf { it.isNotBlank() } ?: appId
         return "$ROUTE_PREFIX${Uri.encode(appId)}?title=${Uri.encode(title)}"
     }
 
@@ -99,8 +107,8 @@ abstract class MiniProgramActivity : FlutterActivity() {
                 callback,
             )
         }
-        updateTaskDescription(intent.getStringExtra(EXTRA_TITLE) ?: "Mini Program")
-        Log.i("MiniProgramWindow", "create task=$taskId appId=${intent.getStringExtra(EXTRA_APP_ID)} component=${componentName.className}")
+        updateTaskDescription(intent.getStringExtra(EXTRA_TITLE) ?: appIdForIntent(intent, packageName))
+        Log.i("MiniProgramWindow", "create task=$taskId appId=${appIdForIntent(intent, packageName)} component=${componentName.className}")
     }
 
     override fun onDestroy() {
@@ -114,11 +122,11 @@ abstract class MiniProgramActivity : FlutterActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        val previousAppId = this.intent?.getStringExtra(EXTRA_APP_ID)
-        val nextAppId = intent.getStringExtra(EXTRA_APP_ID)
+        val previousAppId = appIdForIntent(this.intent, packageName)
+        val nextAppId = appIdForIntent(intent, packageName)
         super.onNewIntent(intent)
         setIntent(intent)
-        updateTaskDescription(intent.getStringExtra(EXTRA_TITLE) ?: "Mini Program")
+        updateTaskDescription(intent.getStringExtra(EXTRA_TITLE) ?: nextAppId)
         if (!previousAppId.isNullOrEmpty() && previousAppId != nextAppId) {
             recreate()
         }
@@ -126,6 +134,8 @@ abstract class MiniProgramActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MiniProgramInteractionRelay.register(flutterEngine)
+        HostAiSessionRelay.register(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             CHANNEL_NAME,
@@ -138,6 +148,11 @@ abstract class MiniProgramActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        HostAiSessionRelay.focusChanged()
     }
 
     @Suppress("DEPRECATION")

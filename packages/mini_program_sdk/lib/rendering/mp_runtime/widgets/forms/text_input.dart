@@ -102,27 +102,33 @@ class _MpTextInputFieldState extends State<_MpTextInputField> {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          child: EditableText(
-            controller: _controller,
-            focusNode: _focusNode,
-            keyboardType: _keyboardType(
-              widget.node.props['keyboardType'] as String?,
+          child: _MpEditableField(
+            label: _string(widget.node, 'label'),
+            child: EditableText(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: _keyboardType(
+                widget.node.props['keyboardType'] as String?,
+              ),
+              obscureText: widget.node.props['obscureText'] == true,
+              minLines: widget.multiline
+                  ? widget.node.props['minLines'] as int? ?? 3
+                  : 1,
+              maxLines: widget.multiline
+                  ? widget.node.props['maxLines'] as int? ?? 6
+                  : 1,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 15,
+                height: 1.35,
+              ),
+              cursorColor: const Color(0xFF0B7A75),
+              backgroundCursorColor: const Color(0xFFE5E7EB),
+              onChanged: (value) {
+                MiniProgramInteractionSurface.userInput(context);
+                _form?.setValue(_name, value);
+              },
             ),
-            obscureText: widget.node.props['obscureText'] == true,
-            minLines: widget.multiline
-                ? widget.node.props['minLines'] as int? ?? 3
-                : 1,
-            maxLines: widget.multiline
-                ? widget.node.props['maxLines'] as int? ?? 6
-                : 1,
-            style: const TextStyle(
-              color: Color(0xFF111827),
-              fontSize: 15,
-              height: 1.35,
-            ),
-            cursorColor: const Color(0xFF0B7A75),
-            backgroundCursorColor: const Color(0xFFE5E7EB),
-            onChanged: (value) => _form?.setValue(_name, value),
           ),
         ),
       ),

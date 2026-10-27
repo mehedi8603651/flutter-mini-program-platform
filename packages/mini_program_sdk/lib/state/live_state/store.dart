@@ -18,6 +18,10 @@ class MpStore {
   MiniProgramLiveStatePolicy _policy;
   int _batchDepth = 0;
   bool _disposed = false;
+  int _revision = 0;
+
+  /// Monotonic accepted-write counter; contains no state values.
+  int get revision => _revision;
 
   MiniProgramLiveStatePolicy get policy => _policy;
 
@@ -92,6 +96,7 @@ class MpStore {
       return;
     }
     _branchMetrics.clear();
+    _revision++;
     for (final watcher in _watchers.values) {
       watcher.value = null;
     }

@@ -82,3 +82,11 @@ Pure-Dart `Mp.nfc` actions read bounded standard NDEF Text and HTTPS URI records
 through an optional native Android adapter. Hosts accept access and limits per
 mini-program; task switches cancel reading while retaining UI state. Install with
 `miniprogram host capability init nfc --platform android`. See the [NFC guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/android_nfc_ndef.md).
+
+## Foreground interaction contracts
+
+`MiniProgramInteractionSnapshot`, `MiniProgramInteractionNode`,
+`MiniProgramInteractionRequest`, and `MiniProgramInteractionResult` describe
+bounded current-screen UI observations and revision-bound UI commands. The
+contracts contain no AI provider dependencies, raw action payloads, or backend
+authority. See the [foreground interaction guide](https://github.com/mehedi8603651/flutter-mini-program-platform/blob/main/docs/foreground_ai_interaction.md).

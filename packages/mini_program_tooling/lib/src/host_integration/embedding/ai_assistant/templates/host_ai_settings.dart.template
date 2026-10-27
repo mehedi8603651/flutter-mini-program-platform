@@ -1,0 +1,14 @@
+import 'host_ai_bubble.dart';
+import 'host_ai_model.dart';
+import 'host_ai_runner.dart';
+
+class HostAiSettings {
+  const HostAiSettings({
+    required this.modelFactory,
+    this.bubbleStyle = const HostAiBubbleStyle(),
+    this.limits = const HostAiLimits(),
+  });
+  final HostAiModelFactory modelFactory;
+  final HostAiBubbleStyle bubbleStyle;
+  final HostAiLimits limits;
+}
